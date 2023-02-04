@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "keep"
+version = "0.1.0"
+description = "Alerting. for developers, by developers."
+authors = ["Paladin Data inc."]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+keep = "keep:main"
