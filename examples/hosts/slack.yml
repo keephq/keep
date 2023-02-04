@@ -1,5 +1,5 @@
-host: 
+host:
   id: slack
-  authentication: 
+  authentication:
     app-id: XXXXXX # TODO how oauth looks like
     app-secret: XXXXX

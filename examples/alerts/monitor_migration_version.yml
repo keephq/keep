@@ -1,6 +1,6 @@
 # Alert if the schemas versions of my customers are not the same
 #   (each schema version stored in ALEMBIC_VERSION table in the customer db)
-alert: 
+alert:
   id: db-migration
   description: Monitor that all DB's has the same db version
   trigger:
@@ -16,22 +16,22 @@ alert:
     - name: get-all-customers
       from: snowflake-prod
       # Get all customers
-      query: 'select customer_id from customers'   
-      # If the query fails, retry 5 times and finally if it fails 5 times, trigger the db-failure alert   
-      on_error:                                       
-          retry: 5
-          action: &db-failure
+      query: "select customer_id from customers"
+      # If the query fails, retry 5 times and finally if it fails 5 times, trigger the db-failure alert
+      on_error:
+        retry: 5
+        action: &db-failure
       # For each customer, check the schema version
-    - name: check-alembic-version                     
-      foreach: {{ steps.get-all-customers.results }}
+    - name: check-alembic-version
+      foreach: { { steps.get-all-customers.results } }
       from: snowflake-prod
-      query: 'select alembic_version from {{ steps.get-all-customers.results[i].customer_id }}'
-      condition: ' diff( {{steps.this.results[].alembic_version}} )' # Trigger if not all schema versions are the same
+      query: "select alembic_version from {{ steps.get-all-customers.results[i].customer_id }}"
+      condition: " diff( {{steps.this.results[].alembic_version}} )" # Trigger if not all schema versions are the same
   actions:
     - name: trigger-slack
       host: slack
       channel: schemas-are-different
       template: slack-message-template
       context:
-          - name: query-results
-            value: {{ steps.check-alembic-version.output }}
+        - name: query-results
+          value: { { steps.check-alembic-version.output } }

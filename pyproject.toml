@@ -11,6 +11,8 @@ python = "^3.11"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
+pre-commit-hooks = "^4.4.0"
+yamllint = "^1.29.0"
 
 [build-system]
 requires = ["poetry-core"]

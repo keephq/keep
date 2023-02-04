@@ -7,15 +7,12 @@ repos:
         language: system
         types: [python]
         require_serial: true
-      - id: check-added-large-files
-        name: Check for added large files
-        entry: check-added-large-files
-        language: system
-      - id: check-yaml
-        name: Check Yaml
-        entry: check-yaml
-        language: system
-        types: [yaml]
+    #  - id: yamllint
+    #    name: yamllint
+    #    description: This hook runs yamllint.
+    #    entry: yamllint
+    #    language: python
+    #    types: [file, yaml]
       - id: end-of-file-fixer
         name: Fix End of Files
         entry: end-of-file-fixer
@@ -35,10 +32,6 @@ repos:
         language: system
         types: [text]
         stages: [commit, push, manual]
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.6.0
-    hooks:
-      - id: prettier
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v2.1.1
     hooks:

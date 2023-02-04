@@ -1,7 +1,7 @@
-host: 
+host:
   id: snowflake-prod
   description: Snowflake Production
-  authentication: 
+  authentication:
     user: snowflake-prod-user
     password:  1234 # {{SNOWFLAKE_PROD_PASSWORD}} to read from secret store
     account: gcp1234.snowflake.com
