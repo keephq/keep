@@ -63,5 +63,4 @@ def run(file):
 
 
 if __name__ == "__main__":
-    logging.getLogger().addHandler(logging.StreamHandler())
     cli()
