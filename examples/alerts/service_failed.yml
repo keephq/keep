@@ -1,0 +1,33 @@
+alert: 
+  id: service-failed
+  description: Service failing with 5XX errors
+  trigger:
+    interval: 5m                     # Run every 5 minutes
+    duration: 5m                     # Look for the last 5 minutes (can be overrided in jobs)
+  ends: 01/02/2023                   # The alert will be disposed after 1.2.2023
+  dont_alert_if:
+    - name: fatigue
+      condition: len({{alerts.service-failed.prev.no_action}} ) > 3)
+  steps:
+    - name: service-failing-with-5xx
+      from: datadog
+      query: 'status>500'          # Datadog query language
+      threshold: 5                 # Number of 5XX
+      duration: 60s                # In the last 60 seconds
+      dont_alert_if:               # Don't alert if the db is down
+        - name: database-is-down
+          from: snowflake-prod
+          query: select * from API # Heartbeat
+          timeout: 5s              # If the database is not answering after 5 seconds  
+  actions:
+    - name: trigger-slack
+      host: slack
+      channel: service-is-down
+      template: hello {service-name}
+      context:
+        - name: service-name
+          value: {{ steps.service-failing-with-5xx.service_name }}
+        - name: database-latency
+          value: {{ steps.service-failing-with-5xx.database-is-down.dispatch_time }} 
+        - name: number-of-5xx
+          value: {{ len(steps.service-failing-with-5xx.database-is-down.results) }}

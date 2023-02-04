@@ -1,0 +1,6 @@
+host: 
+  id: datadog
+  description: Datadog Production
+  authentication: 
+    api_key:  1234-abcd-efgh-5678-1111 # {{DATADOG_API_KEY}} to read from secret store
+    account: us5.datadoghq.com

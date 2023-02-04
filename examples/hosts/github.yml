@@ -1,0 +1,5 @@
+host: 
+  id: github-prod
+  description: GitHub Production
+  authentication: 
+    pat:  abcdegh123456 # {{GITHUB_PAT}} to read from secret store

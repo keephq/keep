@@ -1,0 +1,28 @@
+# User failed to buy (got 5XX on payment) and 
+#   never tried to buy again (no following payments)
+
+alert: 
+  id: purchase-failed
+  description: User failed to pay and left without buying
+  trigger:
+    interval: 5m
+  steps:
+    - name: user-added-item
+      description: Get all users that failed to pay
+      from: elastic-prod
+      query: 'url: "/cart/pay" AND method: "POST" and status!: 200' # ELK language
+      duration: 5m
+    - name: user-did-not-buy
+      description: The user did not try again to buy
+      from: elastic-prod
+      query: 'url: "/cart/pay" AND method: "POST"'
+      after: {{steps.user-added-item.time_invoked}} + 15m           # No payment after 15 minutes
+      join: {{ steps.user-added-item.user_id }}                     # Join on the user id
+        
+  actions:
+    - name: trigger-pager-duty
+      host: pagerduty
+      context:
+        - name: number-of-users-failed-to-pay-and-then-left
+          value: {{ len(steps.user-did-not-buy.results) }}
+
