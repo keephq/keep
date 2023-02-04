@@ -49,9 +49,9 @@ def version():
     required=True,
 )
 @click.option(
-    "--hosts-dir",
+    "--providers-dir",
     type=click.Path(exists=True),
-    help="The path to the hosts directory",
+    help="The path to the providers directory",
     required=True,
 )
 def run(file):

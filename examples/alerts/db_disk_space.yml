@@ -33,3 +33,12 @@ alert:
           value: "{{ hosts.db-server.name }}"
         - name: disk-space
           value: "{{ steps.db-no-space.command.output }}"
+
+provider:
+  id: db-server
+  description: Database Production Server
+  provider_type: ssh
+  authentication:
+    user: monitoring
+    ssh_key:  ssh-rsa AASajsdnlajs # {{DB_SSH_KEY}} to read from secret store
+    hostname: db.production.com

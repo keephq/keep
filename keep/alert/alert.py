@@ -22,14 +22,24 @@ class Alert:
         self.alert_actions = alert_actions
         self.alert_context = {}
 
+    @property
+    def last_step(self):
+        return self.alert_steps[-1]
+
     def run(self):
         self.logger.debug(f"Running alert {self.alert_id}")
         for step in self.steps:
             try:
                 step_output = step.run(self.alert_context)
+                self.alert_context[step.step_id] = step_output
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 self._handle_failure(step)
+
+        # If we got here, all steps ran successfully and the last step finished with "True", we need
+        # to run the alert actions
+        if self.last_step.alert:
+            self._handle_actions()
         self.logger.debug(f"Alert {self.alert_id} ran successfully")
 
     def _handle_failure(self, step: Step):

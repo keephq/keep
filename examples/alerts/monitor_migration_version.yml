@@ -34,4 +34,4 @@ alert:
       template: slack-message-template
       context:
         - name: query-results
-          value: { { steps.check-alembic-version.output } }
+          value: "{{ steps.check-alembic-version.output }}"
