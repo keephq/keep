@@ -42,10 +42,16 @@ def version():
 
 @cli.command()
 @click.option(
-    "--file",
+    "--alerts-file",
     "-f",
     type=click.Path(exists=True),
     help="The path to the alert yaml",
+    required=True,
+)
+@click.option(
+    "--hosts-dir",
+    type=click.Path(exists=True),
+    help="The path to the hosts directory",
     required=True,
 )
 def run(file):

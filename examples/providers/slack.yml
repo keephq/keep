@@ -1,4 +1,4 @@
-host:
+provider:
   id: slack
   description: Paladin's slack
   provider_type: slack

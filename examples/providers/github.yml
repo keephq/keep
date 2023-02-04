@@ -1,4 +1,4 @@
-host:
+provider:
   id: github-prod
   description: GitHub Production
   provider_type: github

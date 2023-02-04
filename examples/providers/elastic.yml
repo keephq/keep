@@ -1,4 +1,4 @@
-host:
+provider:
   id: elastic
   description: Elastic Production
   provider_type: elasticsearch

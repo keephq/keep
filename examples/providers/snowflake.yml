@@ -1,4 +1,4 @@
-host:
+provider:
   id: snowflake-prod
   description: Snowflake Production
   provider_type: snowflake
