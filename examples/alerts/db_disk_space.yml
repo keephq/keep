@@ -30,6 +30,6 @@ alert:
       template: slack-error-template
       context:
         - name: db-name
-          value: { { hosts.db-server.name } }
+          value: "{{ hosts.db-server.name }}"
         - name: disk-space
-          value: { { steps.db-no-space.command.output } }
+          value: "{{ steps.db-no-space.command.output }}"
