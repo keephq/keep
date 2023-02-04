@@ -1,5 +1,6 @@
 host:
   id: slack
+  description: Paladin's slack
+  provider_type: slack
   authentication:
-    app-id: XXXXXX # TODO how oauth looks like
-    app-secret: XXXXX
+    webhook-url: https://yourorg.slack.com/webhooks-whatever1234

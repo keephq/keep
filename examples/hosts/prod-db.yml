@@ -1,6 +1,7 @@
 host:
   id: db-server
   description: Database Production Server
+  provider_type: mysql
   authentication:
     user: monitoring
     ssh_key:  ssh-rsa AASajsdnlajs # {{DB_SSH_KEY}} to read from secret store
