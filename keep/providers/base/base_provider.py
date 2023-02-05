@@ -18,6 +18,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # Initalize logger for every provider
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config
+        self.validate_config()
         self.logger.debug(
             "Initializing provider", extra={"provider": self.__class__.__name__}
         )
