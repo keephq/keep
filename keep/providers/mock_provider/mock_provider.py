@@ -15,13 +15,16 @@ class MockProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def query(self, context, **kwargs):
+    def query(self, **kwargs):
         """This is mock provider that just return the command output.
-
-        Args:
-            context (_type_): _description_
 
         Returns:
             _type_: _description_
         """
         return self.command_output
+
+    def dispose(self):
+        """
+        No need to dispose of anything, so just do nothing.
+        """
+        pass
