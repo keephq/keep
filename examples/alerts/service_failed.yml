@@ -12,8 +12,10 @@ alert:
     - name: service-failing-with-5xx
       from: datadog
       query: "status>500" # Datadog query language
-      threshold: 5 # Number of 5XX
       duration: 60s # In the last 60 seconds
+      condition:
+      - type: threshold
+        value: 5 # Number of 5XX
       dont_alert_if: # Don't alert if the db is down
         - name: database-is-down
           from: snowflake-prod

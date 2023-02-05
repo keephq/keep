@@ -10,7 +10,7 @@ class Alert:
         self,
         alert_id: str,
         alert_owners: typing.List[str],
-        alert_tags: typeing.List[str],
+        alert_tags: typing.List[str],
         alert_steps: typing.List[Step],
         alert_actions: typing.List[Action],
     ):
@@ -28,7 +28,7 @@ class Alert:
 
     def run(self):
         self.logger.debug(f"Running alert {self.alert_id}")
-        for step in self.steps:
+        for step in self.alert_steps:
             try:
                 step_output = step.run(self.alert_context)
                 self.alert_context[step.step_id] = step_output

@@ -18,6 +18,6 @@ class ProviderConfig:
     """
 
     id: str
-    provider_type: str
+    description: str
     authentication: dict
     description: Optional[str] = None

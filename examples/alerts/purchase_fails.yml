@@ -16,8 +16,8 @@ alert:
       description: The user did not try again to buy
       from: elastic-prod
       query: 'url: "/cart/pay" AND method: "POST"'
-      after: { { steps.user-added-item.time_invoked + 15m } } # No payment after 15 minutes
-      join: { { steps.user-added-item.user_id } } # Join on the user id
+      after: "{{ steps.user-added-item.time_invoked }} + 15m" # No payment after 15 minutes
+      join: "{{ steps.user-added-item.user_id }}" # Join on the user id
 
   actions:
     - name: trigger-pager-duty

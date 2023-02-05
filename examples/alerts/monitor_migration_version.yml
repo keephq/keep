@@ -26,7 +26,9 @@ alert:
       foreach: { { steps.get-all-customers.results } }
       from: snowflake-prod
       query: "select alembic_version from {{ steps.get-all-customers.results[i].customer_id }}"
-      condition: " diff( {{steps.this.results[].alembic_version}} )" # Trigger if not all schema versions are the same
+      condition:
+      - type: eval
+        value: "diff( {{steps.this.results[].alembic_version}} )" # Trigger if not all schema versions are the same
   actions:
     - name: trigger-slack
       host: slack
