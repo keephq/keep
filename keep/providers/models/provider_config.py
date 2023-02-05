@@ -18,6 +18,5 @@ class ProviderConfig:
     """
 
     id: str
-    description: str
     authentication: dict
     description: Optional[str] = None

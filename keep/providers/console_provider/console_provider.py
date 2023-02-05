@@ -16,6 +16,10 @@ class ConsoleProvider(BaseProvider):
         # e.g. if "pagerduty_api_key" is not present in self.config.authentication
         pass
 
+    def dispose(self):
+        # No need to dispose of anything, so just do nothing.
+        pass
+
     def notify(self, alert_message: str, **kwargs: dict):
         """
         Output alert message simply using the print method.
