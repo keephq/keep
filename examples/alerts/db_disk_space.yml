@@ -33,14 +33,18 @@ alert:
       provider:
         type: slack
         config: " {{ providers.paladin-slack }} "
-        channel: db-is-down
-        template: slack-error-template
-
+        with:
+          channel: db-is-down
+          message: >
+            The disk space of {{ db-id }} [{{db-description}}] is about to finish
+            Disk space left: {{ disk-space }}
       context:
-        - name: db-name
-          value: "{{ hosts.db-server.name }}"
+        - name: db-id
+          value:  "{{ providers.db-server-mock.id }}"
+        - name: db-description
+          value: "{{ providers.db-server-mock.description }}"
         - name: disk-space
-          value: "{{ steps.db-no-space.command.output }}"
+          value: "{{ steps.db-no-space.output }}"
 
 provider:
 - id: db-server-mock

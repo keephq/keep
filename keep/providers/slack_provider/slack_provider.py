@@ -7,8 +7,9 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class SlackProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
+    def __init__(self, config: ProviderConfig, **kwargs):
         super().__init__(config)
+        self.template = kwargs.get("message")
 
     def validate_config(self):
         if not self.config.authentication.get("webhook-url"):
@@ -21,6 +22,9 @@ class SlackProvider(BaseProvider):
         No need to dispose of anything, so just do nothing.
         """
         pass
+
+    def get_template(self):
+        return self.template
 
     def notify(self, alert_message: str, **context: dict):
         """

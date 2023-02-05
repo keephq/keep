@@ -140,10 +140,13 @@ class Parser:
         for _action in alert_actions:
             name = _action.get("name")
             context = _action.get("context")
-            provider_config = _action.get("provider").pop("config")
+            provider_config = _action.get("provider").get("config")
+            provider_with_config = _action.get("provider").get("with")
             provider_config = self._get_provider_config(provider_config)
             provider_type = _action.get("provider").get("type")
-            provider = ProvidersFactory.get_provider(provider_type, provider_config)
+            provider = ProvidersFactory.get_provider(
+                provider_type, provider_config, **provider_with_config
+            )
             provider_action_config = _action.get("provider")
             action = Action(
                 name=name,
