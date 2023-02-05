@@ -34,6 +34,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return self.config.id
 
     @abc.abstractmethod
+    def dispose(self):
+        """
+        Dispose of the provider.
+        """
+        raise NotImplementedError("dispose() method not implemented")
+
+    @abc.abstractmethod
     def validate_config():
         """
         Validate provider configuration.
