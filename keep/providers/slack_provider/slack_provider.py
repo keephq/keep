@@ -45,14 +45,18 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+
+    # Load environment variables
+    import os
+
+    slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+
     # Initalize the provider and provider config
     config = ProviderConfig(
         id="slack-test",
         provider_type="slack",
         description="Slack Output Provider",
-        authentication={
-            "webhook-url": "https://hooks.slack.com/services/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"
-        },
+        authentication={"webhook-url": slack_webhook_url},
     )
     provider = SlackProvider(config=config)
     provider.notify("Simple alert showing context with name: {name}", name="John Doe")
