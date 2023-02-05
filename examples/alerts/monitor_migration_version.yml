@@ -23,7 +23,7 @@ alert:
         action: &db-failure
       # For each customer, check the schema version
     - name: check-alembic-version
-      foreach: { { steps.get-all-customers.results } }
+      foreach: "{{ steps.get-all-customers.results }}"
       from: snowflake-prod
       query: "select alembic_version from {{ steps.get-all-customers.results[i].customer_id }}"
       condition:

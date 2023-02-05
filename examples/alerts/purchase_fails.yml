@@ -7,21 +7,25 @@ alert:
   trigger:
     interval: 5m
   steps:
-    - name: user-added-item
+    - name: user-failed-to-pay
       description: Get all users that failed to pay
       from: elastic-prod
       query: 'url: "/cart/pay" AND method: "POST" and status!: 200' # ELK language
       duration: 5m
     - name: user-did-not-buy
       description: The user did not try again to buy
-      from: elastic-prod
-      query: 'url: "/cart/pay" AND method: "POST"'
-      after: "{{ steps.user-added-item.time_invoked }} + 15m" # No payment after 15 minutes
-      join: "{{ steps.user-added-item.user_id }}" # Join on the user id
-
+      provider:
+          type: elastic
+          config: "{{ providers.elastic-prod }}"
+          query: 'url: "/cart/pay" AND method: "POST" {after} {join}'
+          with:
+            after: "{{ steps.user-added-item.time_invoked }} + 15m" # No payment after 15 minutes
+            join: "{{ steps.user-added-item.user_id }}" # Join on the user id
+      condition:
+        - type: results_exists
   actions:
     - name: trigger-pager-duty
       host: pagerduty
       context:
         - name: number-of-users-failed-to-pay-and-then-left
-          value: { { len(steps.user-did-not-buy.results) } }
+          value: "{{ len(steps.user-did-not-buy.results) }}"

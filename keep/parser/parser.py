@@ -143,10 +143,14 @@ class Parser:
             provider_config = _action.get("provider").pop("config")
             provider_config = self._get_provider_config(provider_config)
             provider_type = _action.get("provider").get("type")
-            provider = ProvidersFactory.get_provider(
-                provider_type, provider_config, **_action.get("provider")
+            provider = ProvidersFactory.get_provider(provider_type, provider_config)
+            provider_action_config = _action.get("provider")
+            action = Action(
+                name=name,
+                context=context,
+                provider=provider,
+                provider_action_config=provider_action_config,
             )
-            action = Action(**_action)
             alert_actions_parsed.append(action)
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
