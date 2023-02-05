@@ -47,6 +47,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("validate_config() method not implemented")
 
+    @abc.abstractmethod
+    def get_template(self):
+        """
+        Get the provider template.
+
+        Returns:
+            str: The provider template.
+        """
+        raise NotImplementedError("get_template() method not implemented")
+
     def notify(self, alert_message: str, **kwargs: dict):
         """
         Output alert message.

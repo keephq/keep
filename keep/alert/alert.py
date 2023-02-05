@@ -2,6 +2,7 @@ import logging
 import typing
 
 from keep.action.action import Action
+from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
 
@@ -22,7 +23,8 @@ class Alert:
         self.alert_steps = alert_steps
         self.alert_actions = alert_actions
         self.providers_config = providers_config
-        self.alert_context = {}
+        self.io_nandler = IOHandler()
+        self.steps_context = {}
 
     @property
     def last_step(self):
@@ -32,8 +34,10 @@ class Alert:
         self.logger.debug(f"Running alert {self.alert_id}")
         for step in self.alert_steps:
             try:
-                step_output = step.run(self.alert_context)
-                self.alert_context[step.step_id] = step_output
+                step_output = step.run(self.steps_context)
+                self.steps_context[step.step_id] = {
+                    "output": step_output,
+                }
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 self._handle_failure(step)
@@ -52,5 +56,9 @@ class Alert:
     def _handle_actions(self):
         self.logger.debug(f"Handling actisons for alert {self.alert_id}")
         for action in self.alert_actions:
-            action.run(self.last_step)
+            action.run(self.full_context)
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
+
+    @property
+    def full_context(self):
+        return {"providers": self.providers_config, "steps": self.steps_context}
