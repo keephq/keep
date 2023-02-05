@@ -42,13 +42,14 @@ class Parser:
         alert_owners = self._parse_owners(alert)
         alert_tags = self._parse_tags(alert)
         alert_steps = self._parse_steps(alert)
-        alert_actions = self._parse_action(alert)
+        alert_actions = self._parse_actions(alert)
         alert = Alert(
             alert_id=alert_id,
             alert_owners=alert_owners,
             alert_tags=alert_tags,
             alert_steps=alert_steps,
             alert_actions=alert_actions,
+            providers_config=self.config["providers"],
         )
         self.logger.debug("Alert parsed successfully")
         return alert
@@ -126,30 +127,49 @@ class Parser:
         step_provider = _step.get("provider")
         step_provider_config = step_provider.pop("config")
         step_provider_type = step_provider.pop("type")
-        step_provider_config = step_provider_config.split(".")
-        if len(step_provider_config) != 2:
-            raise ValueError(
-                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
-            )
-
-        provider_id = step_provider_config[1].replace("}}", "").strip()
-        provider_config = self.config.get("providers").get(provider_id)
-        if not provider_config:
-            raise ValueError(
-                f"Provider {provider_id} not found in configuration, did you configure it?"
-            )
-
+        provider_config = self._get_provider_config(step_provider_config)
         provider = ProvidersFactory.get_provider(
             step_provider_type, provider_config, **step_provider
         )
         return provider
 
-    def _parse_action(self, alert) -> typing.List[Action]:
+    def _parse_actions(self, alert) -> typing.List[Action]:
         self.logger.debug("Parsing actions")
-        alert_actions = alert.get("alert_actions", [])
+        alert_actions = alert.get("actions", [])
         alert_actions_parsed = []
         for _action in alert_actions:
+            name = _action.get("name")
+            context = _action.get("context")
+            provider_config = _action.get("provider").pop("config")
+            provider_config = self._get_provider_config(provider_config)
+            provider_type = _action.get("provider").get("type")
+            provider = ProvidersFactory.get_provider(
+                provider_type, provider_config, **_action.get("provider")
+            )
             action = Action(**_action)
             alert_actions_parsed.append(action)
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
+
+    def _get_provider_config(self, provider_type):
+        """Translate {{ <provider_id>.<config_id> }} to a provider config
+
+        Args:
+            provider_type (_type_): _description_
+
+        Raises:
+            ValueError: _description_
+        """
+        provider_type = provider_type.split(".")
+        if len(provider_type) != 2:
+            raise ValueError(
+                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
+            )
+
+        provider_id = provider_type[1].replace("}}", "").strip()
+        provider_config = self.config.get("providers").get(provider_id)
+        if not provider_config:
+            raise ValueError(
+                f"Provider {provider_id} not found in configuration, did you configure it?"
+            )
+        return provider_config
