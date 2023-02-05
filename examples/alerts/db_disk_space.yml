@@ -16,9 +16,14 @@ alert:
         type: alert
   steps:
     - name: db-no-space
-      from: db-server
-      command: df -h | grep /dev/sda1 | awk '{ print $4} ' # Check the disk space
-      threshold: 90% # Trigger if more than 90% full
+      provider:
+          type: mock
+          config: "{{ providers.db-server-mock }}"
+          command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}'  # Check the disk space
+          command_output: 16% # Mock
+      condition:
+        - id: threshold
+          value: 90% # Trigger if more than 90% full
       on_failure: # What to do if the SSH connection failed?
         - name: ssh-connection-failed
           retry: 5 # Retry 5 times
@@ -35,10 +40,6 @@ alert:
           value: "{{ steps.db-no-space.command.output }}"
 
 provider:
-  id: db-server
-  description: Database Production Server
-  provider_type: ssh
+- id: db-server-mock
+  description: mocks a db server
   authentication:
-    user: monitoring
-    ssh_key:  ssh-rsa AASajsdnlajs # {{DB_SSH_KEY}} to read from secret store
-    hostname: db.production.com

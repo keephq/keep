@@ -1,4 +1,5 @@
 import logging
+import sys
 from importlib import metadata
 
 import click
@@ -52,16 +53,22 @@ def version():
     "--providers-dir",
     type=click.Path(exists=True),
     help="The path to the providers directory",
-    required=True,
+    required=False,
 )
-def run(file):
+@pass_info
+def run(info: Info, alerts_file, providers_dir):
     """Run the alert."""
-    logger.debug(f"Running alert {file}")
+    logger.debug(f"Running alert {alerts_file}")
     alert_manager = AlertManager()
-    alert_manager.run(file)
-    logger.debug(f"Alert {file} ran successfully")
+    try:
+        alert_manager.run(alerts_file)
+    except Exception as e:
+        logger.error(f"Error running alert {alerts_file}: {e}")
+        if info.verbose:
+            raise e
+        sys.exit(1)
+    logger.debug(f"Alert {alerts_file} ran successfully")
 
 
 if __name__ == "__main__":
-    logging.getLogger().addHandler(logging.StreamHandler())
     cli()

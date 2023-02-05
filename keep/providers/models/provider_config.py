@@ -17,5 +17,4 @@ class ProviderConfig:
 
     id: str
     description: str
-    provider_type: str
     authentication: dict

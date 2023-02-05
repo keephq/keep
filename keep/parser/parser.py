@@ -1,25 +1,30 @@
 import logging
+import os
 import typing
 
 import yaml
 
 from keep.action.action import Action
 from keep.alert.alert import Alert
-from keep.providers.provider_factory.provider_factory import ProviderFactory
+from keep.providers.base.base_provider import BaseProvider
+from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step
 
 
 class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.config = {"providers": {}}
 
-    def parse(self, alert_file: str, providers_directory: str = None):
+    def parse(self, alert_file: str, providers_directory: str = None) -> Alert:
         # Parse the alert YAML
-        alert = self._parse_alerts_file_to_dict(alert_file)
+        parsed_alert_yaml = self._parse_alerts_file_to_dict(alert_file)
         # Parse the providers (from the alert yaml or from the providers directory)
-        providers = self._parse_providers(alert, providers_directory)
+        providers = self._parse_providers_config(parsed_alert_yaml, providers_directory)
+        self.providers = {provider.provider_id: provider for provider in providers}
         # Parse the alert itself
-        alert = self._parse_alerts_file_to_dict(alert_file)
+        alert = self._parse_alert(parsed_alert_yaml.get("alert"))
+        return alert
 
     def _parse_alerts_file_to_dict(self, alert_file: str) -> dict:
         self.logger.debug("Parsing alert")
@@ -48,27 +53,30 @@ class Parser:
         self.logger.debug("Alert parsed successfully")
         return alert
 
-    def _parse_providers(
+    def _parse_providers_config(
         self, alert: dict, providers_directory: str
-    ) -> typing.List[Host]:
-        self.logger.debug("Parsing hosts")
+    ) -> typing.List[BaseProvider]:
+        self.logger.debug("Parsing providers")
+        providers = []
         if providers_directory:
-            providers = self._parse_providers(providers_directory)
+            providers += self._parse_providers_from_providers_dir(providers_directory)
 
-        if alert_file.get("provider"):
+        if alert.get("provider"):
             providers += self._parse_providers_from_alert(alert)
 
         return providers
 
-    def _parse_providers_from_alert(self, alert: dict) -> typing.List[Provider]:
+    def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
         providers = []
         for provider in alert.get("provider"):
-            provider = Provider(**provider)
-            providers.append(provider)
+            provider_id = provider.get("id")
+            self.config["providers"][provider_id] = provider
         self.logger.debug("Providers parsed successfully")
         return providers
 
-    def _parse_providers(self, providers_directory: str) -> typing.List[Provider]:
+    def _parse_providers_from_providers_dir(
+        self, alert: dict, providers_directory: str
+    ) -> typing.List[BaseProvider]:
         providers = []
         for provider_file in os.listdir(providers_directory):
             provider_file_path = os.path.join(providers_directory, provider_file)
@@ -78,37 +86,63 @@ class Parser:
                 except yaml.YAMLError as e:
                     self.logger.error(f"Error parsing {provider_file_path}: {e}")
                     raise e
-            provider = provider_factory.get_provider(provider)
-            providers.append(provider)
-        self.logger.debug("Providers parsed successfully")
+            provider_id = provider.get("id")
+            self.config["providers"][provider_id] = provider
+
+        self.logger.debug("Providers config parsed successfully")
         return providers
 
     def _parse_id(self, alert) -> str:
-        alert_id = alert.get("alert_id")
+        alert_id = alert.get("id")
         if alert_id is None:
             raise ValueError("Alert ID is required")
         return alert_id
 
     def _parse_owners(self, alert) -> typing.List[str]:
-        alert_owners = alert.get("alert_owners", [])
+        alert_owners = alert.get("owners", [])
         return alert_owners
 
     def _parse_tags(self, alert) -> typing.List[str]:
-        alert_tags = alert.get("alert_tags", [])
+        alert_tags = alert.get("tags", [])
         return alert_tags
 
     def _parse_steps(self, alert) -> typing.List[Step]:
         self.logger.debug("Parsing steps")
-        alert_steps = alert.get("alert_steps", [])
+        alert_steps = alert.get("steps", [])
         alerts_steps_parsed = []
         for _step in alert_steps:
-            # extract the host
-            host = _step.get("from")
-
-            step = Step(**_step)
+            provider = self._get_step_provider(_step)
+            step_id = _step.get("name")
+            step = Step(
+                step_id=step_id,
+                step_config=_step,
+                provider=provider,
+            )
             alerts_steps_parsed.append(step)
         self.logger.debug("Steps parsed successfully")
         return alerts_steps_parsed
+
+    def _get_step_provider(self, _step: dict) -> dict:
+        step_provider = _step.get("provider")
+        step_provider_config = step_provider.pop("config")
+        step_provider_type = step_provider.pop("type")
+        step_provider_config = step_provider_config.split(".")
+        if len(step_provider_config) != 2:
+            raise ValueError(
+                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
+            )
+
+        provider_id = step_provider_config[1].replace("}}", "").strip()
+        provider_config = self.config.get("providers").get(provider_id)
+        if not provider_config:
+            raise ValueError(
+                f"Provider {provider_id} not found in configuration, did you configure it?"
+            )
+
+        provider = ProvidersFactory.get_provider(
+            step_provider_type, provider_config, **step_provider
+        )
+        return provider
 
     def _parse_action(self, alert) -> typing.List[Action]:
         self.logger.debug("Parsing actions")
