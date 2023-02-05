@@ -10,7 +10,7 @@ class ConsoleProvider(BaseProvider):
     def __init__(self, config: ProviderConfig):
         super().__init__(config)
 
-    def validate_config():
+    def validate_config(self):
         # No configuration to validate, so just do nothing.
         # For example, this could be the place where you validate that the expected keys are present in the configuration.
         # e.g. if "pagerduty_api_key" is not present in self.config.authentication
