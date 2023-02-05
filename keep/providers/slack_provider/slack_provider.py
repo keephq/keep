@@ -13,18 +13,24 @@ class SlackProvider(BaseProvider):
     def validate_config(self):
         if not self.config.authentication.get("webhook-url"):
             raise ProviderConfigException(
-                "SlackOutput requires a webhook-url in the authentication section of the configuration"
+                "Slack provider requires a webhook-url in the authentication section of the configuration"
             )
+
+    def dispose(self):
+        """
+        No need to dispose of anything, so just do nothing.
+        """
+        pass
 
     def notify(self, alert_message: str, **context: dict):
         """
-        Output alert message to Slack using the Slack Incoming Webhook API
+        Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
 
         Args:
             alert_message (str): The alert message to send to Slack
         """
-        self.logger.debug("Outputting alert message to Slack")
+        self.logger.debug("Notifying alert message to Slack")
         import requests
 
         webhook_url = self.config.authentication.get("webhook-url")
@@ -37,7 +43,7 @@ class SlackProvider(BaseProvider):
             self.logger.error(
                 "SlackOutput requires a webhook-url in the authentication section of the configuration"
             )
-        self.logger.debug("Alert message outputted to Slack")
+        self.logger.debug("Alert message notified to Slack")
 
 
 if __name__ == "__main__":
@@ -54,7 +60,6 @@ if __name__ == "__main__":
     # Initalize the provider and provider config
     config = ProviderConfig(
         id="slack-test",
-        provider_type="slack",
         description="Slack Output Provider",
         authentication={"webhook-url": slack_webhook_url},
     )

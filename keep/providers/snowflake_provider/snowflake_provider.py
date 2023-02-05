@@ -46,6 +46,12 @@ class SnowflakeProvider(BaseProvider):
         )
         return snowflake_connection
 
+    def dispose(self):
+        try:
+            self.client.close()
+        except Exception:
+            self.logger.exception("Error closing Snowflake connection")
+
     def validate_config(self):
         """
         Validates required configuration for Snowflake's provider.
@@ -93,14 +99,15 @@ if __name__ == "__main__":
 
     config = {
         "id": "snowflake-prod",
-        "provider_type": "snowflake",
         "authentication": {
             "user": "dbuser",
             "account": snowflake_account,
             "pkey": snowflake_private_key,
         },
     }
-    provider = ProvidersFactory.get_provider(config)
+    provider = ProvidersFactory.get_provider(
+        provider_type="snowflake", provider_config=config
+    )
     result = provider.query(
         "select * from {table} limit 10", table="TEST_DB.PUBLIC.CUSTOMERS"
     )
