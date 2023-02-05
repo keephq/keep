@@ -20,9 +20,9 @@ alert:
           type: mock
           config: "{{ providers.db-server-mock }}"
           command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}'  # Check the disk space
-          command_output: 16% # Mock
+          command_output: 91% # Mock
       condition:
-        - id: threshold
+        - type: threshold
           value: 90% # Trigger if more than 90% full
       on_failure: # What to do if the SSH connection failed?
         - name: ssh-connection-failed
@@ -30,9 +30,12 @@ alert:
           alert: true # Finally, alert
   actions:
     - name: trigger-slack
-      host: slack
-      channel: db-is-down
-      template: slack-error-template
+      provider:
+        type: slack
+        config: " {{ providers.paladin-slack }} "
+        channel: db-is-down
+        template: slack-error-template
+
       context:
         - name: db-name
           value: "{{ hosts.db-server.name }}"
@@ -43,3 +46,7 @@ provider:
 - id: db-server-mock
   description: mocks a db server
   authentication:
+- id: paladin-slack
+  description: Paladin's slack
+  authentication:
+    webhook-url: https://hooks.slack.com/services/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

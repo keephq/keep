@@ -1,7 +1,5 @@
 class Action:
-    def __init__(self, name, description, duration):
+    def __init__(self, name, context, provider):
         self.name = name
-
-        self.description = description
-
-        self.duration = duration
+        self.context = context
+        self.provider = provider
