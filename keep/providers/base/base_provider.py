@@ -8,7 +8,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
-    def __init__(self, config: ProviderConfig):
+    def __init__(self, config: ProviderConfig, **kwargs):
         """
         Initialize a provider.
 
@@ -22,6 +22,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.debug(
             "Initializing provider", extra={"provider": self.__class__.__name__}
         )
+
+    @property
+    def provider_id(self) -> str:
+        """
+        Get the provider id.
+
+        Returns:
+            str: The provider id.
+        """
+        return self.config.id
 
     @abc.abstractmethod
     def validate_config():

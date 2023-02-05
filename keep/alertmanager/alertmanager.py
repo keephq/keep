@@ -8,8 +8,8 @@ class AlertManager:
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
 
-    def run(self, alert_file: str, hosts_directory: str = None):
+    def run(self, alert_file: str, providers_direcotry: str = None):
         self.logger.info(f"Running alert {alert_file}")
-        alert = self.parser.parse(alert_file, hosts_directory)
+        alert = self.parser.parse(alert_file, providers_direcotry)
         alert.run()
         self.logger.info(f"Alert {alert_file} ran successfully")
