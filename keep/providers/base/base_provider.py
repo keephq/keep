@@ -57,6 +57,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("get_template() method not implemented")
 
+    @abc.abstractmethod
+    def get_parameters(self):
+        """
+        Get the provider query.
+
+        Returns:
+            str: The provider query.
+        """
+        raise NotImplementedError("get_query() method not implemented")
+
     def notify(self, alert_message: str, **kwargs: dict):
         """
         Output alert message.

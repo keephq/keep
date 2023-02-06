@@ -1,5 +1,8 @@
 from itertools import groupby
 
+_len = len
+_all = all
+
 
 def all(iterable):
     # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
@@ -10,3 +13,7 @@ def all(iterable):
 def diff(iterable):
     # Opposite of all - returns True if any element is different
     return not (all(iterable))
+
+
+def len(iterable):
+    return _len(iterable)

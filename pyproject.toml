@@ -14,6 +14,7 @@ snowflake-connector-python = "^3.0.0"
 paramiko = "^3.0.0"
 elasticsearch = "^8.6.1"
 chevron = "^0.14.0"
+python-dotenv = "^0.21.1"
 
 
 [tool.poetry.group.dev.dependencies]

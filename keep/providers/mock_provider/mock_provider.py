@@ -15,7 +15,7 @@ class MockProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def query(self, context, **kwargs):
+    def query(self, **kwargs):
         """This is mock provider that just return the command output.
 
         Returns:
@@ -30,4 +30,9 @@ class MockProvider(BaseProvider):
         pass
 
     def get_template(self):
-        return self.command
+        pass
+
+    def get_parameters(self):
+        return {
+            "command": self.command,
+        }

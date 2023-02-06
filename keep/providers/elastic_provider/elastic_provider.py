@@ -3,6 +3,7 @@ Simple Console Output Provider
 """
 import json
 
+import pandas as pd
 from elasticsearch import Elasticsearch
 
 from keep.exceptions.provider_config_exception import ProviderConfigException
@@ -13,9 +14,11 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 class ElasticProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
+    def __init__(self, config: ProviderConfig, **kwargs):
         super().__init__(config)
         self.client = self.__initialize_client()
+        self._query = kwargs.get("query")
+        self._index = kwargs.get("index")
 
     def __initialize_client(self) -> Elasticsearch:
         """
@@ -58,7 +61,7 @@ class ElasticProvider(BaseProvider):
         except Exception:
             self.logger.exception("Failed to close ElasticSearch client")
 
-    def query(self, query: str | dict, index: str) -> list[str]:
+    def query(self, query: str | dict, index: str = None) -> list[str]:
         """
         Query Elasticsearch index.
 
@@ -70,6 +73,22 @@ class ElasticProvider(BaseProvider):
             list[str]: hits found by the query
         """
         # Make sure query is a dict
+        if not index:
+            return self._run_sql_query(query)
+        else:
+            return self._run_eql_query(query, index)
+
+    def _run_sql_query(self, query: str) -> list[str]:
+        response = self.client.sql.query(body={"query": query})
+
+        results = pd.DataFrame(response["rows"])
+        columns = [col["name"] for col in response["columns"]]
+        results.rename(
+            columns={i: columns[i] for i in range(len(columns))}, inplace=True
+        )
+        return results
+
+    def _run_eql_query(self, query: str | dict, index: str) -> list[str]:
         if isinstance(query, str):
             query = json.loads(query)
 
@@ -83,6 +102,27 @@ class ElasticProvider(BaseProvider):
         if "hits" in response and "hits" in response["hits"]:
             return response["hits"]["hits"]
         return []
+
+    def get_template(self):
+        """
+        Get the provider template.
+
+        Returns:
+            str: The provider template.
+        """
+        pass
+
+    def get_parameters(self):
+        """
+        Get the provider query.
+
+        Returns:
+            str: The provider query.
+        """
+        return {
+            "query": self._query,
+            "index": self._index,
+        }
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ Base class for all conditions.
 import abc
 import logging
 
+from keep.iohandler.iohandler import IOHandler
+
 
 class BaseCondition(metaclass=abc.ABCMeta):
     def __init__(self, condition_type, condition_config, **kwargs):
@@ -17,12 +19,13 @@ class BaseCondition(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.condition_type = condition_type
         self.condition_config = condition_config
+        self.io_handler = IOHandler()
         self.logger.debug(
             "Initializing condition", extra={"condition": self.__class__.__name__}
         )
 
     @abc.abstractmethod
-    def apply(self, context, step_output) -> bool:
+    def apply(self, context) -> bool:
         """
         Validate provider configuration.
         """

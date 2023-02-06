@@ -34,24 +34,27 @@ class Alert:
         self.logger.debug(f"Running alert {self.alert_id}")
         for step in self.alert_steps:
             try:
-                step_output = step.run(self.steps_context)
+                step_output = step.run(self.full_context)
                 self.steps_context[step.step_id] = {
                     "output": step_output,
                 }
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
-                self._handle_failure(step)
+                self._handle_failure(step, e)
 
         # All steps are done, check if action needed
         if self.last_step.action_needed:
             self._handle_actions()
         self.logger.debug(f"Alert {self.alert_id} ran successfully")
 
-    def _handle_failure(self, step: Step):
-        self.logger.debug(f"Handling failure for step {step.step_id}")
-        for action in self.alert_actions:
-            action.run(step)
-        self.logger.debug(f"Failure handled for step {step.step_id}")
+    def _handle_failure(self, step: Step, exc):
+        # if the step has failure strategy, handle it
+        if step.failure_strategy:
+            step.handle_failure_strategy(step, self.full_context)
+        else:
+            raise StepError(
+                f"Step {step.step_id} failed to execute without error handling strategy - {str(exc)}"
+            )
 
     def _handle_actions(self):
         self.logger.debug(f"Handling actisons for alert {self.alert_id}")
