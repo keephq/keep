@@ -26,6 +26,9 @@ class SlackProvider(BaseProvider):
     def get_template(self):
         return self.template
 
+    def get_parameters(self):
+        pass
+
     def notify(self, alert_message: str, **context: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API

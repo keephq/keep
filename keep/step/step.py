@@ -1,3 +1,5 @@
+import chevron
+
 from keep.conditions.condition_factory import ConditionFactory
 from keep.providers.base.base_provider import BaseProvider
 
@@ -15,9 +17,19 @@ class Step:
             # Check if the step needs to run
             self._pre_step_validations()
             # Run the step query
-            step_output = self.provider.query(context)
+            parameters = self.provider.get_parameters()
+            # Inject the context to the parameters
+            for parameter in parameters:
+                parameters[parameter] = self._inject_context_to_parameter(
+                    parameters[parameter], context
+                )
+
+            step_output = self.provider.query(**parameters)
+            context["steps"][self.step_id] = {"results": step_output}
+            # this is an alias to the current step output
+            context["steps"]["this"] = {"results": step_output}
             # Validate the step output
-            self._post_step_validations(context, step_output)
+            self._post_step_validations(context)
         except Exception as e:
             raise StepError(e)
 
@@ -26,11 +38,11 @@ class Step:
     def _pre_step_validations(self):
         pass
 
-    def _post_step_validations(self, context, step_output):
+    def _post_step_validations(self, context):
         for condition in self.step_conditions:
             condition_type = condition.get("type")
             condition = ConditionFactory.get_condition(condition_type, condition)
-            condition_result = condition.apply(context, step_output)
+            condition_result = condition.apply(context)
             self.step_conditions_results[condition_type] = condition_result
 
     @property
@@ -41,6 +53,13 @@ class Step:
                 return True
         # All conditions does not apply
         return False
+
+    def _inject_context_to_parameter(self, template, context):
+        return chevron.render(template, context)
+
+    @property
+    def failure_strategy(self):
+        return self.step_config.get("failure_strategy")
 
 
 class StepError(Exception):

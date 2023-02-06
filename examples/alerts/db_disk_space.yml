@@ -24,7 +24,8 @@ alert:
       condition:
         - type: threshold
           value: 90% # Trigger if more than 90% full
-      on_failure: # What to do if the SSH connection failed?
+          compare_to: "{{ steps.this.results }}"
+      failure_strategy: # What to do if the SSH connection failed?
         - name: ssh-connection-failed
           retry: 5 # Retry 5 times
           alert: true # Finally, alert

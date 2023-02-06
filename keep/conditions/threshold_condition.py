@@ -1,3 +1,5 @@
+import chevron
+
 from keep.conditions.base_condition import BaseCondition
 
 
@@ -11,21 +13,22 @@ class ThresholdCondition(BaseCondition):
     def __init__(self, condition_type, condition_config):
         super().__init__(condition_type, condition_config)
 
-    def apply(self, context, step_output) -> bool:
+    def apply(self, context) -> bool:
         threshold = self.condition_config.get("value")
-        # validate they are both numeric or percentage
-        if self._is_percentage(threshold) and self._is_percentage(step_output):
-            return self._apply_threshold(step_output, threshold)
-        elif threshold.isnumeric() and step_output.isnumeric():
-            return self._apply_threshold(step_output, threshold)
-        else:
+        step_output = context.get("steps").get("this").get("results")
+        compare = self._get_what_to_compare(context)
+        # validate they are both the same type
+        if type(threshold) != type(compare):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
                     threshold, step_output
                 )
             )
+        return self._apply_threshold(compare, threshold)
 
     def _is_percentage(self, a):
+        if isinstance(a, int):
+            return False
         if not a.endswith("%"):
             return False
         a = a.strip("%")
@@ -45,3 +48,20 @@ class ThresholdCondition(BaseCondition):
             _type_: _description_
         """
         return step_output > threshold
+
+    def _get_what_to_compare(self, context):
+        """Get the value to compare.
+
+        Args:
+            step_output (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        compare_to = self.condition_config.get("compare_to")
+        # if the compare to is not available, just return the step output
+        if not compare_to:
+            return step_output
+
+        compare_to = self.io_handler.render(compare_to, context)
+        return compare_to
