@@ -7,9 +7,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class SlackProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig, **kwargs):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
-        self.template = kwargs.get("message")
 
     def validate_config(self):
         if not self.config.authentication.get("webhook-url"):
@@ -23,33 +22,26 @@ class SlackProvider(BaseProvider):
         """
         pass
 
-    def get_template(self):
-        return self.template
-
-    def get_parameters(self):
-        pass
-
-    def notify(self, alert_message: str, **context: dict):
+    def notify(self, **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
 
         Args:
-            alert_message (str): The alert message to send to Slack
+            kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Slack")
         import requests
 
         webhook_url = self.config.authentication.get("webhook-url")
-        if webhook_url:
-            requests.post(
-                webhook_url,
-                json={"text": alert_message.format(**context)},
-            )
-        else:
-            self.logger.error(
-                "SlackOutput requires a webhook-url in the authentication section of the configuration"
-            )
+        message = kwargs.pop("message", "")
+        blocks = kwargs.pop("blocks", [])
+
+        requests.post(
+            webhook_url,
+            json={"text": message, "blocks": blocks},
+        )
+
         self.logger.debug("Alert message notified to Slack")
 
 
@@ -71,4 +63,6 @@ if __name__ == "__main__":
         authentication={"webhook-url": slack_webhook_url},
     )
     provider = SlackProvider(config=config)
-    provider.notify("Simple alert showing context with name: {name}", name="John Doe")
+    provider.notify(
+        message="Simple alert showing context with name: {name}".format(name="John Doe")
+    )

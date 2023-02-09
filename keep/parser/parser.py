@@ -113,11 +113,13 @@ class Parser:
         alerts_steps_parsed = []
         for _step in alert_steps:
             provider = self._get_step_provider(_step)
+            provider_parameters = _step.get("provider", {}).get("with")
             step_id = _step.get("name")
             step = Step(
                 step_id=step_id,
                 step_config=_step,
                 provider=provider,
+                provider_parameters=provider_parameters,
             )
             alerts_steps_parsed.append(step)
         self.logger.debug("Steps parsed successfully")
@@ -128,9 +130,7 @@ class Parser:
         step_provider_config = step_provider.pop("config")
         step_provider_type = step_provider.pop("type")
         provider_config = self._get_provider_config(step_provider_config)
-        provider = ProvidersFactory.get_provider(
-            step_provider_type, provider_config, **step_provider
-        )
+        provider = ProvidersFactory.get_provider(step_provider_type, provider_config)
         return provider
 
     def _parse_actions(self, alert) -> typing.List[Action]:
@@ -139,20 +139,17 @@ class Parser:
         alert_actions_parsed = []
         for _action in alert_actions:
             name = _action.get("name")
-            context = _action.get("context")
             provider_config = _action.get("provider").get("config")
-            provider_with_config = _action.get("provider").get("with")
+            provider_context = _action.get("provider").get("with")
             provider_config = self._get_provider_config(provider_config)
             provider_type = _action.get("provider").get("type")
             provider = ProvidersFactory.get_provider(
-                provider_type, provider_config, **provider_with_config
+                provider_type, provider_config, **provider_context
             )
-            provider_action_config = _action.get("provider")
             action = Action(
                 name=name,
-                context=context,
                 provider=provider,
-                provider_action_config=provider_action_config,
+                provider_context=provider_context,
             )
             alert_actions_parsed.append(action)
         self.logger.debug("Actions parsed successfully")

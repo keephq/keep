@@ -6,9 +6,9 @@ import click
 import yaml
 from dotenv import find_dotenv, load_dotenv
 
-load_dotenv(find_dotenv())
-
 from keep.alertmanager.alertmanager import AlertManager
+
+load_dotenv(find_dotenv())
 
 logger = logging.getLogger(__name__)
 
