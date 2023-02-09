@@ -84,8 +84,15 @@ def version():
     help="The path to the providers directory",
     required=False,
 )
+@click.option("--api-key", help="The API key for keep's API", required=False)
+@click.option(
+    "--api-url",
+    help="The URL for keep's API",
+    required=False,
+    default="https://s.keephq.dev",
+)
 @pass_info
-def run(info: Info, alerts_file, providers_dir):
+def run(info: Info, alerts_file, providers_dir, api_key, api_url):
     """Run the alert."""
     logger.debug(f"Running alert {alerts_file}")
     alert_manager = AlertManager()
@@ -116,4 +123,4 @@ def init(info: Info, keep_config_file):
 
 
 if __name__ == "__main__":
-    cli()
+    cli(auto_envvar_prefix="KEEP")
