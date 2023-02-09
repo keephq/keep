@@ -52,7 +52,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Output alert message.
 
         Args:
-            alert_message (str): The alert mpessage to output.
+            message (str): The formatted alert message to output.
             **context (dict): Additional context used to enrich the alert message.
         """
         raise NotImplementedError("notify() method not implemented")

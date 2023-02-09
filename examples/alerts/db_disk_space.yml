@@ -19,8 +19,9 @@ alert:
       provider:
           type: mock
           config: "{{ providers.db-server-mock }}"
-          command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}'  # Check the disk space
-          command_output: 91% # Mock
+          with:
+            command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}'  # Check the disk space
+            command_output: 91% # Mock
       condition:
         - type: threshold
           value: 90% # Trigger if more than 90% full

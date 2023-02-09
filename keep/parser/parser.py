@@ -113,7 +113,7 @@ class Parser:
         alerts_steps_parsed = []
         for _step in alert_steps:
             provider = self._get_step_provider(_step)
-            provider_parameters = _step.get("provider")
+            provider_parameters = _step.get("provider", {}).get("with")
             step_id = _step.get("name")
             step = Step(
                 step_id=step_id,
