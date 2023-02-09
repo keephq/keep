@@ -16,7 +16,8 @@ class Action:
         self.provider_context = provider_context
         self.io_handler = IOHandler()
 
-        # Whether Keep should shorten urls in the message or not
+        # whether Keep should shorten urls in the message or not
+        # todo: have a specific parameter for this?
         self.shorten_urls = False
         self.click_context = click.get_current_context(silent=True)
         if (
@@ -87,8 +88,6 @@ class Action:
 
         Args:
             urls (list): list of urls to shorten
-            api_url (str): the keep api url
-            api_key (str): the keep api key
 
         Returns:
             dict: a dictionary containing the original url as key and the shortened url as value
