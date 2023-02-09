@@ -37,16 +37,20 @@ alert:
         config: " {{ providers.paladin-slack }} "
         with:
           channel: db-is-down
+          # Message is always mandatory
           message: >
-            The disk space of {{ db-id }} [{{db-description}}] is about to finish
-            Disk space left: {{ disk-space }}
-      context:
-        - name: db-id
-          value:  "{{ providers.db-server-mock.id }}"
-        - name: db-description
-          value: "{{ providers.db-server-mock.description }}"
-        - name: disk-space
-          value: "{{ steps.db-no-space.output }}"
+            The disk space of {{ providers.db-server-mock.id }} [{{ providers.db-server-mock.description }}] is about to finish
+            Disk space left: {{ steps.db-no-space.output }}
+          blocks:
+            - type: section
+              block_id: "section567"
+              text:
+                type: "mrkdwn"
+                text: "Space left on device: {{ steps.db-no-space.output }}"
+              accessory:
+                type: image
+                image_url: "https://datavizproject.com/wp-content/uploads/types/Line-Graph.png"
+                alt_text: "Graph"
 
 provider:
 - id: db-server-mock

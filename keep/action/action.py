@@ -2,34 +2,61 @@ import chevron
 
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
+from keep.providers.base.base_provider import BaseProvider
 
 
 class Action:
-    def __init__(self, name, context, provider, provider_action_config):
+    def __init__(self, name: str, provider: BaseProvider, provider_context: dict):
         self.name = name
-        # List of context to be added to the output template
-        self.output_context_list = context or []
         self.provider = provider
-        self.provider_action_config = provider_action_config
+        self.provider_context = provider_context
         self.io_handler = IOHandler()
 
     def run(self, alert_context):
         try:
-            context = {}
-            for output_context in self.output_context_list:
-                context[output_context.get("name")] = self._inject_context(
-                    output_context.get("value"), alert_context
-                )
-
-            # todo: consider changing keyword to template?
-            # it is a template that we "inject" context to
-            template = self.provider_action_config.pop("message")
-            alert_message = self._inject_context(template, context)
-            # also pass the whole context to the provider so you can practically do what ever you want with it
-            full_action_context = {**context, **self.provider_action_config}
-            self.provider.notify(alert_message, **full_action_context)
+            self._render_context(self.provider_context, alert_context)
+            self.provider.notify(**self.provider_context)
         except Exception as e:
             raise ActionError(e)
 
-    def _inject_context(self, template, context):
-        return chevron.render(template, context)
+    def _render_context(self, context_to_render: dict, alert_context: dict):
+        """
+        Iterates the provider context and renders it using the alert context.
+        """
+        for key, value in context_to_render.items():
+            if isinstance(value, str):
+                context_to_render[key] = self._render_template_with_context(
+                    value, alert_context
+                )
+            elif isinstance(value, list):
+                self._render_list_context(value, alert_context)
+            elif isinstance(value, dict):
+                self._render_context(value, alert_context)
+
+    def _render_list_context(self, context_to_render: list, alert_context: dict):
+        """
+        Iterates the provider context and renders it using the alert context.
+        """
+        for i in range(0, len(context_to_render)):
+            value = context_to_render[i]
+            if isinstance(value, str):
+                context_to_render[i] = self._render_template_with_context(
+                    value, alert_context
+                )
+            if isinstance(value, list):
+                self._render_list_context(value, alert_context)
+            if isinstance(value, dict):
+                self._render_context(value, alert_context)
+
+    def _render_template_with_context(self, template: str, alert_context: dict) -> str:
+        """
+        Renders a template with the given context.
+
+        Args:
+            template (str): template (string) to render
+            alert_context (dict): alert run context
+
+        Returns:
+            str: rendered template
+        """
+        return chevron.render(template, alert_context)

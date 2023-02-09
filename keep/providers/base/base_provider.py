@@ -47,13 +47,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("validate_config() method not implemented")
 
-    def notify(self, message, **kwargs):
+    def notify(self, **kwargs):
         """
         Output alert message.
 
         Args:
-            message (str): The formatted alert message to output.
-            **context (dict): Additional context used to enrich the alert message.
+            **kwargs (dict): The provider context (with statement)
         """
         raise NotImplementedError("notify() method not implemented")
 
@@ -62,7 +61,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Query the provider using the given query
 
         Args:
-            query (str): _description_
+            kwargs (dict): The provider context (with statement)
 
         Raises:
             NotImplementedError: _description_

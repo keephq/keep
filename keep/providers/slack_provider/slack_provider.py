@@ -22,19 +22,19 @@ class SlackProvider(BaseProvider):
         """
         pass
 
-    def notify(self, message, **kwargs: dict):
+    def notify(self, **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
 
         Args:
-            message (str): The alert message to send to Slack
-            kwargs (dict): Additional arguments to be used by the provider
+            kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Slack")
         import requests
 
         webhook_url = self.config.authentication.get("webhook-url")
+        message = kwargs.pop("message", "")
         blocks = kwargs.pop("blocks", [])
 
         requests.post(
@@ -63,4 +63,6 @@ if __name__ == "__main__":
         authentication={"webhook-url": slack_webhook_url},
     )
     provider = SlackProvider(config=config)
-    provider.notify("Simple alert showing context with name: {name}", name="John Doe")
+    provider.notify(
+        message="Simple alert showing context with name: {name}".format(name="John Doe")
+    )

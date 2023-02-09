@@ -139,19 +139,17 @@ class Parser:
         alert_actions_parsed = []
         for _action in alert_actions:
             name = _action.get("name")
-            context = _action.get("context")
             provider_config = _action.get("provider").get("config")
-            provider_with_config = _action.get("provider").get("with")
+            provider_context = _action.get("provider").get("with")
             provider_config = self._get_provider_config(provider_config)
             provider_type = _action.get("provider").get("type")
             provider = ProvidersFactory.get_provider(
-                provider_type, provider_config, **provider_with_config
+                provider_type, provider_config, **provider_context
             )
             action = Action(
                 name=name,
-                context=context,
                 provider=provider,
-                provider_action_config=provider_with_config,
+                provider_context=provider_context,
             )
             alert_actions_parsed.append(action)
         self.logger.debug("Actions parsed successfully")
