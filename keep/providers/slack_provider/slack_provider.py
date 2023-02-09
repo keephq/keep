@@ -2,6 +2,7 @@
 SlackOutput is a class that implements the BaseOutputProvider interface for Slack messages.
 """
 from keep.exceptions.provider_config_exception import ProviderConfigException
+from keep.exceptions.provider_notify_exception import ProviderNotifyException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -37,10 +38,14 @@ class SlackProvider(BaseProvider):
         message = kwargs.pop("message", "")
         blocks = kwargs.pop("blocks", [])
 
-        requests.post(
+        response = requests.post(
             webhook_url,
             json={"text": message, "blocks": blocks},
         )
+        if not response.ok:
+            raise ProviderNotifyException(
+                f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
+            )
 
         self.logger.debug("Alert message notified to Slack")
 
