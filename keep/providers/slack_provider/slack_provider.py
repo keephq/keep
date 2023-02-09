@@ -9,7 +9,6 @@ from keep.providers.models.provider_config import ProviderConfig
 class SlackProvider(BaseProvider):
     def __init__(self, config: ProviderConfig, **kwargs):
         super().__init__(config)
-        self.template = kwargs.get("message")
 
     def validate_config(self):
         if not self.config.authentication.get("webhook-url"):
@@ -23,33 +22,26 @@ class SlackProvider(BaseProvider):
         """
         pass
 
-    def get_template(self):
-        return self.template
-
-    def get_parameters(self):
-        pass
-
-    def notify(self, alert_message: str, **context: dict):
+    def notify(self, message, **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
 
         Args:
-            alert_message (str): The alert message to send to Slack
+            message (str): The alert message to send to Slack
+            kwargs (dict): Additional arguments to be used by the provider
         """
         self.logger.debug("Notifying alert message to Slack")
         import requests
 
         webhook_url = self.config.authentication.get("webhook-url")
-        if webhook_url:
-            requests.post(
-                webhook_url,
-                json={"text": alert_message.format(**context)},
-            )
-        else:
-            self.logger.error(
-                "SlackOutput requires a webhook-url in the authentication section of the configuration"
-            )
+        blocks = kwargs.pop("blocks", [])
+
+        requests.post(
+            webhook_url,
+            json={"text": message, "blocks": blocks},
+        )
+
         self.logger.debug("Alert message notified to Slack")
 
 

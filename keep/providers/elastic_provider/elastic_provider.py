@@ -103,27 +103,6 @@ class ElasticProvider(BaseProvider):
             return response["hits"]["hits"]
         return []
 
-    def get_template(self):
-        """
-        Get the provider template.
-
-        Returns:
-            str: The provider template.
-        """
-        pass
-
-    def get_parameters(self):
-        """
-        Get the provider query.
-
-        Returns:
-            str: The provider query.
-        """
-        return {
-            "query": self._query,
-            "index": self._index,
-        }
-
 
 if __name__ == "__main__":
     # Output debug messages

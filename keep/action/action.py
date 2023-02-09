@@ -1,5 +1,6 @@
 import chevron
 
+from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 
 
@@ -20,9 +21,13 @@ class Action:
                     output_context.get("value"), alert_context
                 )
 
-            template = self.provider.get_template()
+            # todo: consider changing keyword to template?
+            # it is a template that we "inject" context to
+            template = self.provider_action_config.pop("message")
             alert_message = self._inject_context(template, context)
-            self.provider.notify(alert_message)
+            # also pass the whole context to the provider so you can practically do what ever you want with it
+            full_action_context = {**context, **self.provider_action_config}
+            self.provider.notify(alert_message, **full_action_context)
         except Exception as e:
             raise ActionError(e)
 

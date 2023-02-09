@@ -47,37 +47,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("validate_config() method not implemented")
 
-    @abc.abstractmethod
-    def get_template(self):
-        """
-        Get the provider template.
-
-        Returns:
-            str: The provider template.
-        """
-        raise NotImplementedError("get_template() method not implemented")
-
-    @abc.abstractmethod
-    def get_parameters(self):
-        """
-        Get the provider query.
-
-        Returns:
-            str: The provider query.
-        """
-        raise NotImplementedError("get_query() method not implemented")
-
-    def notify(self, alert_message: str, **kwargs: dict):
+    def notify(self, message, **kwargs):
         """
         Output alert message.
 
         Args:
-            alert_message (str): The alert message to output.
+            alert_message (str): The alert mpessage to output.
             **context (dict): Additional context used to enrich the alert message.
         """
         raise NotImplementedError("notify() method not implemented")
 
-    def query(self, query: str, **kwargs: dict):
+    def query(self, **kwargs: dict):
         """
         Query the provider using the given query
 
