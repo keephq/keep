@@ -1,5 +1,6 @@
 import logging
 import sys
+from dataclasses import fields
 from importlib import metadata
 
 import click
@@ -7,6 +8,7 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 
 from keep.alertmanager.alertmanager import AlertManager
+from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
 
@@ -113,6 +115,69 @@ def init(info: Info, keep_config_file):
     with open(keep_config_file, "w") as f:
         f.write("api_key: " + click.prompt("Enter your api key", hide_input=True))
     click.echo(click.style(f"Config file created at {keep_config_file}", bold=True))
+
+
+@cli.group()
+def config():
+    """Set keep configuration."""
+    pass
+
+
+@config.command()
+@click.option(
+    "--provider-type",
+    "-p",
+    help="The provider to configure [e.g. elastic]",
+    required=True,
+)
+@click.option(
+    "--provider-name", "-n", help="The provider name [e.g. elastic-prod]", required=True
+)
+@click.option(
+    "--provider-config-file",
+    "-c",
+    help="The provider config",
+    required=False,
+    default="providers.yaml",
+)
+@pass_info
+def provider(info: Info, provider_type, provider_name, provider_config_file):
+    """Set the provider configuration."""
+    click.echo(click.style(f"Config file: {provider_config_file}", bold=True))
+    # create the file if it doesn't exist
+    with open(provider_config_file, "a+") as f:
+        pass
+    # read the appropriate provider config
+    config_class = ProvidersFactory.get_provider_neccessary_config(provider_type)
+    provider_config = {provider_name: {"type": provider_type}}
+    config = None
+    while not config:
+        # iterate necessary config and prompt for values
+        for field in fields(config_class):
+            optional = not field.metadata.get("required")
+            if optional:
+                default = field.default or ""
+                config_value = click.prompt(
+                    f"{field.metadata.get('description')}", default=default
+                )
+            else:
+                config_value = click.prompt(f"{field.metadata.get('description')}")
+            provider_config[provider_name][field.name] = config_value
+
+        try:
+            config = config_class(**provider_config[provider_name])
+        # If the validation failed, we need to reprompt the provider config
+        except Exception as e:
+            print(" -- Validation failed -- ")
+            print(str(e))
+            print(" -- Reconfiguring provider -- ")
+    # Finally, let's keep the provider config
+    with open(provider_config_file, "r") as f:
+        providers = yaml.safe_load(f) or {}
+    with open(provider_config_file, "w") as f:
+        providers.update(provider_config)
+        yaml.dump(providers, f)
+    click.echo(click.style(f"Config file created at {provider_config_file}", bold=True))
 
 
 if __name__ == "__main__":

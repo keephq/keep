@@ -30,3 +30,28 @@ class ProvidersFactory:
             module, provider_type.title().replace("_", "") + "Provider"
         )
         return provider_class(config=provider_config)
+
+    @staticmethod
+    def get_provider_neccessary_config(provider_type: str) -> dict:
+        """
+        Get the provider class from the provider type.
+
+        Args:
+            provider (dict): The provider configuration.
+
+        Returns:
+            BaseProvider: The provider class.
+        """
+        module = importlib.import_module(
+            f"keep.providers.{provider_type}_provider.{provider_type}_provider"
+        )
+        try:
+            provider_auth_config_class = getattr(
+                module, provider_type.title().replace("_", "") + "ProviderAuthConfig"
+            )
+            return provider_auth_config_class
+        except ImportError:
+            logging.getLogger(__name__).warning(
+                f"Provider {provider_type} does not have a provider auth config class"
+            )
+            return {}
