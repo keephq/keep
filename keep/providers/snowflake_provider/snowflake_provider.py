@@ -26,7 +26,7 @@ class SnowflakeProviderAuthConfig:
         metadata={"required": True, "description": "Snowflake account"}
     )
     pkey: str = dataclasses.field(
-        metadata={"required": False, "description": "Snowflake private key"}
+        metadata={"required": True, "description": "Snowflake private key"}
     )
     pkey_passphrase: typing.Optional[str] = dataclasses.field(
         metadata={"required": False, "description": "Snowflake password"}
