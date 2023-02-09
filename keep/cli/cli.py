@@ -35,6 +35,8 @@ def cli(info: Info, verbose: int):
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    else:
+        logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
     info.verbose = verbose
 
 
