@@ -3,6 +3,7 @@ import sys
 from importlib import metadata
 
 import click
+import yaml
 from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
@@ -18,6 +19,21 @@ class Info(object):
     def __init__(self):  # Note: This object must have an empty constructor.
         """Create a new instance."""
         self.verbose: int = 0
+        self.config = {}
+        self.logger = logging.getLogger(__name__)
+
+    def set_config(self, keep_config: str):
+        """Set the config file."""
+        try:
+            with open(file=keep_config, mode="r") as f:
+                self.logger.debug("Loading configuration file.")
+                self.config = yaml.safe_load(f)
+                self.logger.debug("Configuration file loaded.")
+        except FileNotFoundError:
+            logger.debug(
+                "Configuration file could not be found. Running without configuration."
+            )
+            pass
 
 
 # pass_info is a decorator for functions that pass 'Info' objects.
@@ -29,8 +45,15 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 # tasks).
 @click.group()
 @click.option("--verbose", "-v", count=True, help="Enable verbose output.")
+@click.option(
+    "--keep-config",
+    "-c",
+    help="The path to the keep config file",
+    required=False,
+    default="keep.yaml",
+)
 @pass_info
-def cli(info: Info, verbose: int):
+def cli(info: Info, verbose: int, keep_config: str):
     """Run Keep CLI."""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
@@ -38,6 +61,7 @@ def cli(info: Info, verbose: int):
     else:
         logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
     info.verbose = verbose
+    info.set_config(keep_config)
 
 
 @cli.command()
@@ -73,6 +97,22 @@ def run(info: Info, alerts_file, providers_dir):
             raise e
         sys.exit(1)
     logger.debug(f"Alert {alerts_file} ran successfully")
+
+
+@cli.command()
+@click.option(
+    "--keep-config-file",
+    type=click.Path(exists=False),
+    help="The path to keeps config file [default: keep.yaml]]",
+    required=False,
+    default="keep.yaml",
+)
+@pass_info
+def init(info: Info, keep_config_file):
+    """Set the config."""
+    with open(keep_config_file, "w") as f:
+        f.write("api_key: " + click.prompt("Enter your api key", hide_input=True))
+    click.echo(click.style(f"Config file created at {keep_config_file}", bold=True))
 
 
 if __name__ == "__main__":
