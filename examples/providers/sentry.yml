@@ -1,0 +1,5 @@
+provider:
+  id: sentry-prod
+  description: Sentry
+  authentication:
+    api_token:  "{{ env.SENTRY_API_TOKEN}}"

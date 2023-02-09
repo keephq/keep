@@ -1,3 +1,5 @@
+import logging
+
 import chevron
 
 from keep.conditions.condition_factory import ConditionFactory
@@ -11,6 +13,7 @@ class Step:
         self.step_conditions = step_config.get("condition", [])
         self.step_conditions_results = {}
         self.provider = provider
+        self.logger = logging.getLogger(__name__)
 
     def run(self, context):
         try:
@@ -23,8 +26,13 @@ class Step:
                 parameters[parameter] = self._inject_context_to_parameter(
                     parameters[parameter], context
                 )
-
-            step_output = self.provider.query(**parameters)
+            # query is mandatory also for providers that doesn't support them
+            # for example sentry provider
+            try:
+                query = parameters.pop("query")
+            except KeyError:
+                query = ""
+            step_output = self.provider.query(query, **parameters)
             context["steps"][self.step_id] = {"results": step_output}
             # this is an alias to the current step output
             context["steps"]["this"] = {"results": step_output}
@@ -36,14 +44,17 @@ class Step:
         return step_output
 
     def _pre_step_validations(self):
-        pass
+        self.logger.debug("Pre step validation")
+        self.logger.debug("Pre Step validation success")
 
     def _post_step_validations(self, context):
+        self.logger.debug("Post step validation")
         for condition in self.step_conditions:
             condition_type = condition.get("type")
             condition = ConditionFactory.get_condition(condition_type, condition)
             condition_result = condition.apply(context)
             self.step_conditions_results[condition_type] = condition_result
+        self.logger.debug("Post Step validation success")
 
     @property
     def action_needed(self):

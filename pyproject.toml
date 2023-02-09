@@ -15,6 +15,8 @@ paramiko = "^3.0.0"
 elasticsearch = "^8.6.1"
 chevron = "^0.14.0"
 python-dotenv = "^0.21.1"
+pygithub = "^1.57"
+sentry-sdk = "^1.15.0"
 
 
 [tool.poetry.group.dev.dependencies]

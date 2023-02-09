@@ -7,7 +7,7 @@ class Action:
     def __init__(self, name, context, provider, provider_action_config):
         self.name = name
         # List of context to be added to the output template
-        self.output_context_list = context
+        self.output_context_list = context or []
         self.provider = provider
         self.provider_action_config = provider_action_config
         self.io_handler = IOHandler()

@@ -23,7 +23,7 @@ class IOHandler:
         # remove the (
         func = func.strip("(")
         func = getattr(keep_functions, func)
-        output = func(arg)
+        output = func(val)
         return output
 
     def _parse_mustache(self, template):
