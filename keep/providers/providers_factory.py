@@ -14,7 +14,7 @@ class ProvidersFactory:
         provider_type: str, provider_config: dict, **kwargs
     ) -> BaseProvider:
         """
-        Get the provider class from the provider type.
+        Get the instantiated provider class according to the provider type.
 
         Args:
             provider (dict): The provider configuration.
@@ -29,4 +29,4 @@ class ProvidersFactory:
         provider_class = getattr(
             module, provider_type.title().replace("_", "") + "Provider"
         )
-        return provider_class(config=provider_config, **kwargs)
+        return provider_class(config=provider_config)

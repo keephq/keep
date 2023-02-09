@@ -7,32 +7,27 @@ from keep.providers.base.base_provider import BaseProvider
 
 
 class Step:
-    def __init__(self, step_id, step_config, provider: BaseProvider):
+    def __init__(
+        self, step_id, step_config, provider: BaseProvider, provider_parameters: dict
+    ):
         self.step_id = step_id
         self.step_config = step_config
         self.step_conditions = step_config.get("condition", [])
         self.step_conditions_results = {}
         self.provider = provider
+        self.provider_parameters = provider_parameters
         self.logger = logging.getLogger(__name__)
 
     def run(self, context):
         try:
             # Check if the step needs to run
             self._pre_step_validations()
-            # Run the step query
-            parameters = self.provider.get_parameters()
             # Inject the context to the parameters
-            for parameter in parameters:
-                parameters[parameter] = self._inject_context_to_parameter(
-                    parameters[parameter], context
+            for parameter in self.provider_parameters:
+                self.provider_parameters[parameter] = self._inject_context_to_parameter(
+                    self.provider_parameters[parameter], context
                 )
-            # query is mandatory also for providers that doesn't support them
-            # for example sentry provider
-            try:
-                query = parameters.pop("query")
-            except KeyError:
-                query = ""
-            step_output = self.provider.query(query, **parameters)
+            step_output = self.provider.query(**self.provider_parameters)
             context["steps"][self.step_id] = {"results": step_output}
             # this is an alias to the current step output
             context["steps"]["this"] = {"results": step_output}
