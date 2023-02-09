@@ -1,11 +1,10 @@
-# Query exceptions from sentry
 alert:
   id: sentry-example
   description: Multi Project Sentry Alert
   trigger:
     interval: 1h
   steps:
-    - name: get-events-from-sentry-python
+    - name: get-events-from-sentry-python-project
       provider:
           type: sentry
           config: "{{ providers.sentry-prod }}"
@@ -14,7 +13,7 @@ alert:
         - type: threshold
           value: 10
           compare_to: "len({{ steps.this.results }})"
-    - name: get-events-from-sentry-python-2
+    - name: get-events-from-sentry-python-2-project
       provider:
           type: sentry
           config: "{{ providers.sentry-prod }}"

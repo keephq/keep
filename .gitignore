@@ -161,3 +161,6 @@ cython_debug/
 
 # vscode
 .vscode/
+
+# keep configuration file
+keep.yaml
