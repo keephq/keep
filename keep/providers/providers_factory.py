@@ -29,4 +29,4 @@ class ProvidersFactory:
         provider_class = getattr(
             module, provider_type.title().replace("_", "") + "Provider"
         )
-        return provider_class(config=provider_config, **kwargs)
+        return provider_class(config=provider_config)

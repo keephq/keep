@@ -8,7 +8,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
-    def __init__(self, config: ProviderConfig, **kwargs):
+    def __init__(self, config: ProviderConfig):
         """
         Initialize a provider.
 

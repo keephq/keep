@@ -7,7 +7,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class SlackProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig, **kwargs):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
 
     def validate_config(self):
