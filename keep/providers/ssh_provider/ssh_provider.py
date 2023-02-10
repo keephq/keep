@@ -1,14 +1,50 @@
 """
 SshProvider is a class that provides a way to execute SSH commands and get the output.
 """
+import dataclasses
 import io
 
+import pydantic
 from paramiko import AutoAddPolicy, RSAKey, SSHClient
 
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
+
+
+@pydantic.dataclasses.dataclass
+class SshProviderAuthConfig:
+    """SSH authentication configuration.
+
+    Raises:
+        ValueError: pkey and password are both empty
+
+    """
+
+    # TODO: validate hostname because it seems pydantic doesn't have a validator for it
+    host: str = dataclasses.field(
+        metadata={"required": True, "description": "SSH hostname"}
+    )
+    user: str = dataclasses.field(
+        metadata={"required": True, "description": "SSH user"}
+    )
+    port: int = dataclasses.field(
+        default=22, metadata={"required": False, "description": "SSH port"}
+    )
+    pkey: str = dataclasses.field(
+        default="", metadata={"required": False, "description": "SSH private key"}
+    )
+    password: str = dataclasses.field(
+        default="", metadata={"required": False, "description": "SSH password"}
+    )
+
+    @pydantic.root_validator
+    def check_password_or_pkey(cls, values):
+        password, pkey = values.get("password"), values.get("pkey")
+        if password == "" and pkey == "":
+            raise ValueError("either password or pkey must be provided")
+        return values
 
 
 class SshProvider(BaseProvider):
@@ -26,11 +62,11 @@ class SshProvider(BaseProvider):
         ssh_client = SSHClient()
         ssh_client.set_missing_host_key_policy(AutoAddPolicy())
 
-        host = self.config.authentication.get("host")
-        port = self.config.authentication.get("port", 22)
-        user = self.config.authentication.get("user")
+        host = self.authentication_config.host
+        port = self.authentication_config.port
+        user = self.authentication_config.user
 
-        private_key = self.config.authentication.get("pkey")
+        private_key = self.authentication_config.pkey
         if private_key:
             # Connect using private key
             private_key_file = io.StringIO(private_key)
@@ -45,7 +81,7 @@ class SshProvider(BaseProvider):
                 host,
                 port,
                 user,
-                self.config.authentication.get("password"),
+                self.authentication_config.password,
             )
 
         return ssh_client
@@ -63,22 +99,8 @@ class SshProvider(BaseProvider):
         """
         Validates required configuration for SSH provider.
 
-        Raises:
-            ProviderConfigException: host is missing in authentication.
-            ProviderConfigException: user is missing in authentication.
-            ProviderConfigException: private key or password is missing in authentication.
         """
-        if "host" not in self.config.authentication:
-            raise ProviderConfigException("Missing host in authentication")
-        if "user" not in self.config.authentication:
-            raise ProviderConfigException("Missing user in authentication")
-        if (
-            "pkey" not in self.config.authentication
-            and "password" not in self.config.authentication
-        ):
-            raise ProviderConfigException(
-                "Missing private key or password in authentication"
-            )
+        self.authentication_config = SshProviderAuthConfig(**self.config.authentication)
 
     def query(self, query: str, **kwargs: dict):
         """

@@ -1,6 +1,9 @@
 """
 SentryProvider is a class that provides a way to read data from Sentry.
 """
+import dataclasses
+
+import pydantic
 import requests
 
 from keep.exceptions.provider_config_exception import ProviderConfigException
@@ -9,35 +12,35 @@ from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
 
+@pydantic.dataclasses.dataclass
+class SentryProviderAuthConfig:
+    """Sentry authentication configuration."""
+
+    api_key: str = dataclasses.field(
+        metadata={"required": True, "description": "Sentry Api Key"}
+    )
+    org_slug: str = dataclasses.field(
+        metadata={"required": True, "description": "Sentry organization slug"}
+    )
+
+
 class SentryProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig, **kwargs):
-        self.sentry_project = kwargs.get("project")
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.sentry_org_slug = self.config.authentication.get("org_slug")
-        # Use the 'discover' web API to get the list of events
-        query_param = f'project%3A{kwargs.get("project")}'
-        date_param = "14d" or kwargs.get("time")
-        self.sentry_events_url = f"https://{self.sentry_org_slug}.sentry.io/api/0/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
-                                  &query={query_param}&referrer=api.discover.query-table&sort=-timestamp&statsPeriod={date_param}"
+
+    def get_events_url(self, project, date="14d"):
+        return f"https://{self.sentry_org_slug}.sentry.io/api/0/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
+                                  &query={project}&referrer=api.discover.query-table&sort=-timestamp&statsPeriod={date}"
 
     def dispose(self):
         return
 
     def validate_config(self):
-        """
-        Validates required configuration for Sentry's provider.
-
-        Raises:
-            ProviderConfigException: dsn or token is missing in authentication.
-        """
-        if "api_token" not in self.config.authentication:
-            raise ProviderConfigException("missing token in authentication")
-
-        if "org_slug" not in self.config.authentication:
-            raise ProviderConfigException("missing org slug in authentication")
-
-        if not self.sentry_project:
-            raise ProviderConfigException("missing project in configuration")
+        """Validates required configuration for Sentry's provider."""
+        self.authentication_config = SentryProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def query(self, query: str, **kwargs: dict):
         """
@@ -52,8 +55,13 @@ class SentryProvider(BaseProvider):
         headers = {
             "Authorization": f"Bearer {self.config.authentication['api_token']}",
         }
+        time = kwargs.get("time", "14d")
+        project = kwargs.get("project")
+
         params = {"limit": 100}
-        response = requests.get(self.sentry_events_url, headers=headers, params=params)
+        response = requests.get(
+            self.get_events_url(project, time), headers=headers, params=params
+        )
         response.raise_for_status()
 
         events = response.json()

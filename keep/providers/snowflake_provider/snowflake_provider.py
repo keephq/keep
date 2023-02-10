@@ -2,6 +2,10 @@
 SnowflakeProvider is a class that provides a way to read data from Snowflake.
 """
 
+import dataclasses
+import typing
+
+import pydantic
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from snowflake.connector import connect
@@ -11,6 +15,22 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
+
+
+@pydantic.dataclasses.dataclass
+class SnowflakeProviderAuthConfig:
+    user: str = dataclasses.field(
+        metadata={"required": True, "description": "Snowflake user"}
+    )
+    account: str = dataclasses.field(
+        metadata={"required": True, "description": "Snowflake account"}
+    )
+    pkey: str = dataclasses.field(
+        metadata={"required": True, "description": "Snowflake private key"}
+    )
+    pkey_passphrase: typing.Optional[str] = dataclasses.field(
+        metadata={"required": False, "description": "Snowflake password"}
+    )
 
 
 class SnowflakeProvider(BaseProvider):
@@ -26,10 +46,10 @@ class SnowflakeProvider(BaseProvider):
             SnowflakeConnection: The connection to Snowflake.
         """
         # Todo: support username/password authentication
-        encoded_private_key = self.config.authentication.get("pkey").encode()
+        encoded_private_key = self.authentication_config.pkey.encode()
         private_key = serialization.load_pem_private_key(
             encoded_private_key,
-            password=self.config.authentication.get("pkey_passphrase"),
+            password=self.authentication_config.pkey_passphrase,
             backend=default_backend(),
         )
 
@@ -40,8 +60,8 @@ class SnowflakeProvider(BaseProvider):
         )
 
         snowflake_connection = connect(
-            user=self.config.authentication.get("user"),
-            account=self.config.authentication.get("account"),
+            user=self.authentication_config.user,
+            account=self.authentication_config.account,
             private_key=private_key_bytes,
         )
         return snowflake_connection
@@ -60,16 +80,9 @@ class SnowflakeProvider(BaseProvider):
             ProviderConfigException: user or account is missing in authentication.
             ProviderConfigException: private key
         """
-        if (
-            "user" not in self.config.authentication
-            or "account" not in self.config.authentication
-        ):
-            raise ProviderConfigException("missing user or account in authentication")
-        if (
-            "pkey" not in self.config.authentication
-            and "password" not in self.config.authentication
-        ):
-            raise ProviderConfigException("missing pkey or password in authentication")
+        self.authentication_config = SnowflakeProviderAuthConfig(
+            **config.authentication
+        )
 
     def query(self, query: str, **kwargs: dict):
         """
