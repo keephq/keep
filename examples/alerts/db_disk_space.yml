@@ -59,4 +59,4 @@ provider:
 - id: paladin-slack
   description: Paladin's slack
   authentication:
-    webhook-url: https://hooks.slack.com/services/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
+    webhook_url: https://hooks.slack.com/services/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
