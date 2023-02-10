@@ -164,3 +164,4 @@ cython_debug/
 
 # keep configuration file
 keep.yaml
+providers.yaml

@@ -17,6 +17,7 @@ chevron = "^0.14.0"
 python-dotenv = "^0.21.1"
 pygithub = "^1.57"
 sentry-sdk = "^1.15.0"
+pydantic = "^1.10.4"
 
 
 [tool.poetry.group.dev.dependencies]

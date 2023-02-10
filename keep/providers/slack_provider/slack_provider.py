@@ -1,9 +1,23 @@
 """
 SlackOutput is a class that implements the BaseOutputProvider interface for Slack messages.
 """
+import dataclasses
+
+import pydantic
+import requests
+
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
+
+@pydantic.dataclasses.dataclass
+class SlackProviderAuthConfig:
+    """Slack authentication configuration."""
+
+    webhook_url: str = dataclasses.field(
+        metadata={"required": True, "description": "Slack Webhook Url"}
+    )
 
 
 class SlackProvider(BaseProvider):
@@ -11,10 +25,9 @@ class SlackProvider(BaseProvider):
         super().__init__(config)
 
     def validate_config(self):
-        if not self.config.authentication.get("webhook-url"):
-            raise ProviderConfigException(
-                "Slack provider requires a webhook-url in the authentication section of the configuration"
-            )
+        self.authentication_config = SlackProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def dispose(self):
         """
@@ -31,9 +44,7 @@ class SlackProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Slack")
-        import requests
-
-        webhook_url = self.config.authentication.get("webhook-url")
+        webhook_url = self.authentication_config.webhook_url
         message = kwargs.pop("message", "")
         blocks = kwargs.pop("blocks", [])
 
@@ -60,7 +71,7 @@ if __name__ == "__main__":
     config = ProviderConfig(
         id="slack-test",
         description="Slack Output Provider",
-        authentication={"webhook-url": slack_webhook_url},
+        authentication={"webhook_url": slack_webhook_url},
     )
     provider = SlackProvider(config=config)
     provider.notify(

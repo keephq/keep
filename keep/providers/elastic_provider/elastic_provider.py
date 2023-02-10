@@ -1,9 +1,11 @@
 """
 Simple Console Output Provider
 """
+import dataclasses
 import json
 
 import pandas as pd
+import pydantic
 from elasticsearch import Elasticsearch
 
 from keep.exceptions.provider_config_exception import ProviderConfigException
@@ -13,12 +15,33 @@ from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
 
+@pydantic.dataclasses.dataclass
+class ElasticProviderAuthConfig:
+    """Elasticsearch authentication configuration."""
+
+    api_key: str = dataclasses.field(
+        metadata={"required": True, "description": "Elasticsearch Api Key"}
+    )
+    host: str = dataclasses.field(
+        default="", metadata={"required": False, "description": "Elasticsearch host"}
+    )
+    cloud_id: str = dataclasses.field(
+        default="",
+        metadata={"required": False, "description": "Elasticsearch cloud id"},
+    )
+
+    @pydantic.root_validator
+    def check_host_or_cloud_id(cls, values):
+        host, cloud_id = values.get("host"), values.get("cloud_id")
+        if host == "" and cloud_id == "":
+            raise ValueError("either host or cloud_id must be provided")
+        return values
+
+
 class ElasticProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig, **kwargs):
+    def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.client = self.__initialize_client()
-        self._query = kwargs.get("query")
-        self._index = kwargs.get("index")
 
     def __initialize_client(self) -> Elasticsearch:
         """
@@ -51,6 +74,13 @@ class ElasticProvider(BaseProvider):
             raise ProviderConfigException("Missing host or cloud_id in provider config")
         if "api_key" not in self.config.authentication:
             raise ProviderConfigException("Missing api_key in provider config")
+
+    @staticmethod
+    def get_neccessary_config_keys():
+        return {
+            "host": "Elastic hostname e.g host:port. for cloud_id use cloud_id",
+            "api_key": "Elastic Api Key",
+        }
 
     def dispose(self):
         """
