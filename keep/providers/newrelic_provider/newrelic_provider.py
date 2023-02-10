@@ -35,7 +35,7 @@ class NewrelicProvider(BaseProvider):
 
     def validate_config(self):
         """
-        Validates required configuration for Snowflake's provider.
+        Validates required configuration for New-Relic provider.
 
         Raises:
             ProviderConfigException: user or account is missing in authentication.
