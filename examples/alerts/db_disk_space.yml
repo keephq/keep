@@ -17,11 +17,11 @@ alert:
   steps:
     - name: db-no-space
       provider:
-          type: mock
-          config: "{{ providers.db-server-mock }}"
-          with:
-            command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}'  # Check the disk space
-            command_output: 91% # Mock
+        type: mock
+        config: "{{ providers.db-server-mock }}"
+        with:
+          command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}' # Check the disk space
+          command_output: 91% # Mock
       condition:
         - type: threshold
           value: 90% # Trigger if more than 90% full
@@ -53,10 +53,10 @@ alert:
                 alt_text: "Graph"
 
 provider:
-- id: db-server-mock
-  description: mocks a db server
-  authentication:
-- id: paladin-slack
-  description: Paladin's slack
-  authentication:
-    webhook_url: https://hooks.slack.com/services/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
+  - id: db-server-mock
+    description: mocks a db server
+    authentication:
+  - id: paladin-slack
+    description: Paladin's slack
+    authentication:
+      webhook_url: SLACK_URL
