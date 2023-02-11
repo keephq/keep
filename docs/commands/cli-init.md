@@ -1,0 +1,40 @@
+
+# cli init
+
+Set the config.
+
+## Usage
+
+```
+Usage: cli init [OPTIONS]
+```
+
+## Options
+* `keep_config_file`:
+  * Type: <click.types.Path object at 0x1017a0050>
+  * Default: `keep.yaml`
+  * Usage: `--keep-config-file`
+
+  The path to keeps config file [default: keep.yaml]
+
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+
+## CLI Help
+
+```
+Usage: cli init [OPTIONS]
+
+  Set the config.
+
+Options:
+  --keep-config-file PATH  The path to keeps config file [default: keep.yaml]
+  --help                   Show this message and exit.
+```
