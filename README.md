@@ -56,13 +56,13 @@ Brought to you by developers, EASY to use and managable by code.
 ### Run locally
 Try your first (mock) alert up and get it running in <5 minutes - Ready? Let's Go! ⏰
 
-1. First, clone Keep repository:
+<h5>First, clone Keep repository:</h5>
 
 ```shell
 git clone https://github.com/keephq/keep.git && cd keep
 ```
 
-2. Install Keep CLI
+<h5>Install Keep CLI</h5>
 
 ```shell
 pip install .
@@ -72,21 +72,20 @@ or
 poetry install
 ```
 
-3. From now on, Keep should be installed locally and accessible from your CLI. Test it with running:
+<h5>From now on, Keep should be installed locally and accessible from your CLI, test it by executing:</h5>
 
 ```
 keep version
 ```
 
-4. Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it
+<h5>Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it</h5>
 
 ```
 keep config provider --provider-type slack --provider-id slack-demo
 ```
+Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...) and you're good to go 👌
 
-5. Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...)
-
-Let's now execute our example "Paper DB has insufficient disk space" alert
+<h5>Let's now execute our example "Paper DB has insufficient disk space" alert</h5>
 
 ```bash
 keep run --alerts-file examples/alerts/db_disk_space.yml
@@ -98,7 +97,7 @@ Wanna have your alerts up and running in production? Go through our more detaile
 
 ## 🚨 Out of the box support for common providers
 
-We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues), providers include:
+We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
 
 -   **Cloud**: AWS, GCP, Azure, etc.
 -   **Monitoring**: Sentry, New Relic, Datadog, etc.
@@ -116,7 +115,7 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 
 ## 💪 Contributors
 
-Thank you for contributing and continuously making Keep better, you're awesome 🫶
+Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
 <a href="https://github.com/keephq/keep/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=keephq/keep" />
