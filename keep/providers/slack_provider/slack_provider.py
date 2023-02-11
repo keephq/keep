@@ -6,8 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
-from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.exceptions.provider_notify_exception import ProviderNotifyException
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -54,7 +53,7 @@ class SlackProvider(BaseProvider):
             json={"text": message, "blocks": blocks},
         )
         if not response.ok:
-            raise ProviderNotifyException(
+            raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
             )
 
