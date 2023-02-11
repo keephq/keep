@@ -34,7 +34,7 @@ alert:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.paladin-slack }} "
+        config: " {{ providers.slack-demo }} "
         with:
           channel: db-is-down
           # Message is always mandatory
@@ -52,11 +52,8 @@ alert:
                 image_url: "https://datavizproject.com/wp-content/uploads/types/Line-Graph.png"
                 alt_text: "Graph"
 
-provider:
-  - id: db-server-mock
+
+providers:
+  db-server-mock:
     description: mocks a db server
     authentication:
-  - id: paladin-slack
-    description: Paladin's slack
-    authentication:
-      webhook_url: SLACK_URL
