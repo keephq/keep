@@ -7,7 +7,9 @@
 <h1 align="center">Alerting. By developers, for developers.</h1>
 <br />
 <div align="center">
-    <img src="https://img.shields.io/github/license/keephq/keep" />
+    <a href="https://github.com/keephq/keep/blob/main/LICENSE">
+        <img src="https://img.shields.io/github/license/keephq/keep" />
+    </a>
     <a href="https://keephq.dev/slack">
         <img src="https://img.shields.io/badge/Chat-on%20Slack-blueviolet" alt="Slack community channel" />
     </a>
