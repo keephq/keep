@@ -81,7 +81,7 @@ class SnowflakeProvider(BaseProvider):
             ProviderConfigException: private key
         """
         self.authentication_config = SnowflakeProviderAuthConfig(
-            **config.authentication
+            **self.config.authentication
         )
 
     def query(self, query: str, **kwargs: dict):
