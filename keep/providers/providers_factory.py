@@ -11,7 +11,7 @@ from keep.providers.models.provider_config import ProviderConfig
 class ProvidersFactory:
     @staticmethod
     def get_provider(
-        provider_type: str, provider_config: dict, **kwargs
+        provider_id: str, provider_type: str, provider_config: dict, **kwargs
     ) -> BaseProvider:
         """
         Get the instantiated provider class according to the provider type.
@@ -29,10 +29,10 @@ class ProvidersFactory:
         provider_class = getattr(
             module, provider_type.title().replace("_", "") + "Provider"
         )
-        return provider_class(config=provider_config)
+        return provider_class(provider_id=provider_id, config=provider_config)
 
     @staticmethod
-    def get_provider_neccessary_config(provider_type: str) -> dict:
+    def get_provider_required_config(provider_type: str) -> dict:
         """
         Get the provider class from the provider type.
 
