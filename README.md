@@ -4,7 +4,7 @@
 
 </div>
 
-<h1 align="center">Simply Alerting. By developers, for developers.</h1>
+<h1 align="center">Alerting. By developers, for developers.</h1>
 <br />
 <div align="center">
     <img src="https://img.shields.io/github/license/keephq/keep" />
@@ -13,13 +13,13 @@
     </a>
 </div>
 
-<h3 align="center">
+<h4 align="center">
 Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
-</h3>
+</h4>
 
-<h3 align="center">
+<h4 align="center">
 Manage your alerts by code, write better more actionable and accurate alerts with Keep scoring system (coming soon).
-</h3>
+</h4>
 
 <p align="center">
     <br />
