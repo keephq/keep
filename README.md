@@ -9,17 +9,17 @@
 <div align="center">
     <img src="https://img.shields.io/github/license/keephq/keep" />
     <a href="https://keephq.dev/slack">
-        <img src="https://img.shields.io/badge/chat-on%20Slack-blueviolet" alt="Slack community channel" />
+        <img src="https://img.shields.io/badge/Chat-on%20Slack-blueviolet" alt="Slack community channel" />
     </a>
 </div>
 
-<div align="center">
-Easy to use Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
-</div>
+<h3 align="center">
+Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
+</h3>
 
-<div align="center">
+<h3 align="center">
 Manage your alerts by code, write better more actionable and accurate alerts with Keep scoring system (coming soon).
-</div>
+</h3>
 
 <p align="center">
     <br />
