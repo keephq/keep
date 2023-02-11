@@ -7,8 +7,8 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 class ConsoleProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
 
     def validate_config(self):
         # No configuration to validate, so just do nothing.

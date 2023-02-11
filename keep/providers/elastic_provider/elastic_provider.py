@@ -39,8 +39,8 @@ class ElasticProviderAuthConfig:
 
 
 class ElasticProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
         self.client = self.__initialize_client()
 
     def __initialize_client(self) -> Elasticsearch:
