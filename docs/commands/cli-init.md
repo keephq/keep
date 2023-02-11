@@ -6,7 +6,7 @@ Set the config.
 ## Usage
 
 ```
-Usage: cli init [OPTIONS]
+Usage: keep init [OPTIONS]
 ```
 
 ## Options
@@ -30,7 +30,7 @@ Usage: cli init [OPTIONS]
 ## CLI Help
 
 ```
-Usage: cli init [OPTIONS]
+Usage: keep init [OPTIONS]
 
   Set the config.
 

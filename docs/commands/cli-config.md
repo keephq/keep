@@ -6,7 +6,7 @@ Set keep configuration.
 ## Usage
 
 ```
-Usage: cli config [OPTIONS] COMMAND [ARGS]...
+Usage: keep config [OPTIONS] COMMAND [ARGS]...
 ```
 
 ## Options
@@ -22,7 +22,7 @@ Usage: cli config [OPTIONS] COMMAND [ARGS]...
 ## CLI Help
 
 ```
-Usage: cli config [OPTIONS] COMMAND [ARGS]...
+Usage: keep config [OPTIONS] COMMAND [ARGS]...
 
   Set keep configuration.
 

@@ -6,7 +6,7 @@ Run the alert.
 ## Usage
 
 ```
-Usage: cli run [OPTIONS]
+Usage: keep run [OPTIONS]
 ```
 
 ## Options
@@ -56,7 +56,7 @@ Usage: cli run [OPTIONS]
 ## CLI Help
 
 ```
-Usage: cli run [OPTIONS]
+Usage: keep run [OPTIONS]
 
   Run the alert.
 

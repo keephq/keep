@@ -6,7 +6,7 @@ Get the library version.
 ## Usage
 
 ```
-Usage: cli version [OPTIONS]
+Usage: keep version [OPTIONS]
 ```
 
 ## Options
@@ -22,7 +22,7 @@ Usage: cli version [OPTIONS]
 ## CLI Help
 
 ```
-Usage: cli version [OPTIONS]
+Usage: keep version [OPTIONS]
 
   Get the library version.
 

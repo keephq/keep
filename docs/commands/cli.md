@@ -6,7 +6,7 @@ Run Keep CLI.
 ## Usage
 
 ```
-Usage: cli [OPTIONS] COMMAND [ARGS]...
+Usage: keep [OPTIONS] COMMAND [ARGS]...
 ```
 
 ## Options
@@ -40,7 +40,7 @@ Usage: cli [OPTIONS] COMMAND [ARGS]...
 ## CLI Help
 
 ```
-Usage: cli [OPTIONS] COMMAND [ARGS]...
+Usage: keep [OPTIONS] COMMAND [ARGS]...
 
   Run Keep CLI.
 

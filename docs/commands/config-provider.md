@@ -6,7 +6,7 @@ Set the provider configuration.
 ## Usage
 
 ```
-Usage: cli config provider [OPTIONS]
+Usage: keep config provider [OPTIONS]
 ```
 
 ## Options
@@ -49,7 +49,7 @@ Usage: cli config provider [OPTIONS]
 ## CLI Help
 
 ```
-Usage: cli config provider [OPTIONS]
+Usage: keep config provider [OPTIONS]
 
   Set the provider configuration.
 
