@@ -41,24 +41,28 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     <a href="https://getkeep.dev/slack">Slack Community</a>
 </p>
 
-## 🗼 Keep at a glance
+## 🗼 at a glance
 
-Keep is a simple CLI tool that contains everything you need to start creating your alerts.
+Keep is a simple CLI tool that contains everything you need to start creating Alerts.
 
 -   10s of providers ready to use with your own data
 -   simple CLI tool to configure, trigger and test your alerts
 -   easyily deployable via docker, vercel, github actions, etc.
+
+Brought to you by developers, EASY to use and managable by code.
 
 ## 🚀 Quickstart
 
 ### Run locally
 Try your first (mock) alert up and get it running in <5 minutes - Ready? Let's Go! ⏰
 
-First, clone and install Keep:
+1. First, clone Keep repository:
 
 ```shell
 git clone https://github.com/keephq/keep.git && cd keep
 ```
+
+2. Install Keep CLI
 
 ```shell
 pip install .
@@ -68,19 +72,19 @@ or
 poetry install
 ```
 
-From now on, Keep should be installed locally and accessible from your CLI. Test it with running:
+3. From now on, Keep should be installed locally and accessible from your CLI. Test it with running:
 
 ```
 keep version
 ```
 
-Next, get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it
+4. Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it
 
 ```
 keep config provider --provider-type slack --provider-id slack-demo
 ```
 
-And paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/XXXX/XXXXXXXX/XXXXXXXXXXXX)
+5. Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...)
 
 Let's now execute our example "Paper DB has insufficient disk space" alert
 
@@ -88,6 +92,32 @@ Let's now execute our example "Paper DB has insufficient disk space" alert
 keep run --alerts-file examples/alerts/db_disk_space.yml
 ```
 
-Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
+<h5>Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.</h5>
 
 Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
+
+## 🚨 Out of the box support for common providers
+
+We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues), providers include:
+
+-   **Cloud**: AWS, GCP, Azure, etc.
+-   **Monitoring**: Sentry, New Relic, Datadog, etc.
+-   **Incident Management**: PagerDuty, OpsGenie, etc.
+-   **Communication**: Email, Slack, Console, etc.
+-   [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
+
+## 🔍 Learn more
+
+-   Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
+-   Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
+-   Explore the [documentation](https://keephq.wiki)
+-   [Adding a new provider](https://keephq.wiki/new-provider)
+-   Check out our [website](https://www.keephq.dev)
+
+## 💪 Contributors
+
+Thank you for contributing and continuously making Keep better, you're awesome 🫶
+
+<a href="https://github.com/keephq/keep/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=keephq/keep" />
+</a>
