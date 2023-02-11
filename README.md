@@ -41,13 +41,13 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     <a href="https://getkeep.dev/slack">Slack Community</a>
 </p>
 
-## 🗼 at a glance
+## 🗼 A glance of Keep
 
 Keep is a simple CLI tool that contains everything you need to start creating Alerts.
 
 -   10s of providers ready to use with your own data
 -   simple CLI tool to configure, trigger and test your alerts
--   easyily deployable via docker, vercel, github actions, etc.
+-   easily deployable via docker, vercel, github actions, etc.
 
 Brought to you by developers, EASY to use and managable by code.
 
