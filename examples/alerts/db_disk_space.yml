@@ -52,6 +52,7 @@ alert:
                 image_url: "https://datavizproject.com/wp-content/uploads/types/Line-Graph.png"
                 alt_text: "Graph"
 
+
 providers:
   db-server-mock:
     description: mocks a db server
