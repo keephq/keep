@@ -42,6 +42,11 @@ alert:
             The disk space of {{ providers.db-server-mock.id }} [{{ providers.db-server-mock.description }}] is about to finish
             Disk space left: {{ steps.db-no-space.output }}
           blocks:
+          - type: header
+            text:
+              type: plain_text
+              text: 'Alert! :alarm_clock:'
+              emoji: true
           - type: section
             text:
               type: mrkdwn
