@@ -34,7 +34,7 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     ·
     <a href="https://keephq.dev">Website</a>
     ·
-    <a href="https://keephq.wiki/new-provider">Add New Provider</a>
+    <a href="https://keephq.wiki/new-provider">Add Providers</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
