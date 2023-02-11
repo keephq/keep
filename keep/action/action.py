@@ -1,3 +1,4 @@
+import logging
 import re
 
 import chevron
@@ -12,6 +13,7 @@ from keep.providers.base.base_provider import BaseProvider
 class Action:
     def __init__(self, name: str, provider: BaseProvider, provider_context: dict):
         self.name = name
+        self.logger = logging.getLogger(__name__)
         self.provider = provider
         self.provider_context = provider_context
         self.io_handler = IOHandler()
@@ -22,8 +24,8 @@ class Action:
         self.click_context = click.get_current_context(silent=True)
         if (
             self.click_context
-            and "api_key" in self.click_context.params
-            and "api_url" in self.click_context.params
+            and self.click_context.params.get("api_key")
+            and self.click_context.params.get("api_url")
         ):
             self.shorten_urls = True
 
