@@ -40,34 +40,5 @@ class Action:
             self.provider.notify(**rendered_value)
 
     def _run_single(self):
-        self.io_handler.render_context(self.provider_context)
-        self.provider.notify(**self.provider_context)
-
-    def __get_short_urls(self, urls: list) -> dict:
-        """
-        Shorten URLs using Keep API.
-
-        Args:
-            urls (list): list of urls to shorten
-
-        Returns:
-            dict: a dictionary containing the original url as key and the shortened url as value
-        """
-        try:
-            api_url = self.context_manager.click_context.params.get("api_url")
-            api_key = self.context_manager.click_context.params.get("api_key")
-            response = requests.post(
-                f"{api_url}/s", json=urls, headers={"x-api-key": api_key}
-            )
-            if response.ok:
-                return response.json()
-            else:
-                self.logger.error(
-                    "Failed to request short URLs from API",
-                    extra={
-                        "response": response.text,
-                        "status_code": response.status_code,
-                    },
-                )
-        except Exception:
-            self.logger.exception("Failed to request short URLs from API")
+        rendered_value = self.io_handler.render_context(self.provider_context)
+        self.provider.notify(**rendered_value)

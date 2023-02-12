@@ -4,6 +4,7 @@ import logging
 import re
 
 import chevron
+import requests
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
@@ -19,8 +20,8 @@ class IOHandler:
         self.context_manager = ContextManager.get_instance()
         if (
             self.context_manager.click_context
-            and "api_key" in self.context_manager.click_context.params
-            and "api_url" in self.context_manager.click_context.params
+            and self.context_manager.click_context.params.get("api_key")
+            and self.context_manager.click_context.params.get("api_url")
         ):
             self.shorten_urls = True
 
@@ -216,3 +217,32 @@ class IOHandler:
         for url, shortened_url in shortened_urls.items():
             rendered_template = rendered_template.replace(url, shortened_url)
         return rendered_template
+
+    def __get_short_urls(self, urls: list) -> dict:
+        """
+        Shorten URLs using Keep API.
+
+        Args:
+            urls (list): list of urls to shorten
+
+        Returns:
+            dict: a dictionary containing the original url as key and the shortened url as value
+        """
+        try:
+            api_url = self.context_manager.click_context.params.get("api_url")
+            api_key = self.context_manager.click_context.params.get("api_key")
+            response = requests.post(
+                f"{api_url}/s", json=urls, headers={"x-api-key": api_key}
+            )
+            if response.ok:
+                return response.json()
+            else:
+                self.logger.error(
+                    "Failed to request short URLs from API",
+                    extra={
+                        "response": response.text,
+                        "status_code": response.status_code,
+                    },
+                )
+        except Exception:
+            self.logger.exception("Failed to request short URLs from API")

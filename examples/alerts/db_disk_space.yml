@@ -39,8 +39,8 @@ alert:
           channel: db-is-down
           # Message is always mandatory
           message: >
-            The disk space of {{ providers.db-server-mock.id }} [{{ providers.db-server-mock.description }}] is about to finish
-            Disk space left: {{ steps.db-no-space.output }}
+            The disk space of {{ providers.db-server-mock.description }} is about to finish
+            Disk space left: {{ steps.db-no-space.results }}
           blocks:
           - type: header
             text:
@@ -52,7 +52,6 @@ alert:
               type: mrkdwn
               text: |-
                 Hello, SRE and Assistant to the Regional Manager Dwight! *Michael Scott* wants to know what's going on with the servers in the paper warehouse, there is a critical issue on-going and paper *must be delivered on time*.
-
                 *This is the alert context:*
           - type: divider
           - type: section
@@ -60,10 +59,8 @@ alert:
               type: mrkdwn
               text: |-
                 Server *{{ providers.db-server-mock.description }}*
-                :floppy_disk: disk space is at {{ steps.db-no-space.output }} capacity
-
+                :floppy_disk: disk space is at {{ steps.db-no-space.results }} capacity
                 Seems like it prevents further inserts in to the database with some weird exception: 'This is a prank by Jim Halpert'
-
                 This means that paper production is currently on hold, Dunder Mifflin Paper Company *may lose revenue due to that*.
             accessory:
               type: image

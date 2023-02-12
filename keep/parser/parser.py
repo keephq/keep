@@ -118,8 +118,8 @@ class Parser:
         step_provider_type = step_provider.pop("type")
         try:
             step_provider_config = step_provider.pop("config")
-            provider_config = self._get_provider_config(step_provider_config)
             provider_id = self._get_provider_id(step_provider_config)
+            provider_config = self._get_provider_config(provider_id)
         # Support providers without config such as logfile or mock
         except KeyError:
             step_provider_config = {}
