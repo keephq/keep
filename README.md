@@ -95,6 +95,22 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 
 Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
 
+### Autocomplete
+
+Keep's CLI supports shell completion, which can make your life a lot more easier 😌
+
+If you're using zsh, add this to `~/.zshrc`
+```shell
+eval "$(_KEEP_COMPLETE=zsh_source keep)"
+```
+
+If you're using zsh, add this to `~/.bashrc`
+```bash
+eval "$(_KEEP_COMPLETE=bash_source keep)"
+```
+
+> Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that. You can generate the files ahead of time and distribute them with your program to save your users a step. See: https://click.palletsprojects.com/en/8.1.x/shell-completion/ for instructions on how to make that faster.
+
 ## 🚨 Out of the box support for common providers
 
 We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
@@ -110,7 +126,7 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 -   Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
 -   Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
 -   Explore the [documentation](https://keephq.wiki)
--   [Adding a new provider](https://keephq.wiki/new-provider)
+-   [Adding a new provider](https://keephq.wiki/providers/new-provider)
 -   Check out our [website](https://www.keephq.dev)
 
 ## 💪 Contributors
