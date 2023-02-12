@@ -97,7 +97,7 @@ Wanna have your alerts up and running in production? Go through our more detaile
 
 ### 👨🏻‍💻 Auto Completion
 
-Keep's CLI supports shell auto-completion, which can make your life a lot more easier 😌
+<h4>Keep's CLI supports shell auto-completion, which can make your life a lot more easier 😌</h4>
 
 If you're using zsh, add this to `~/.zshrc`
 ```shell
