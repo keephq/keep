@@ -162,7 +162,7 @@ def provider(info: Info, provider_type, provider_id, provider_config_file):
         pass
     # read the appropriate provider config
     config_class = ProvidersFactory.get_provider_required_config(provider_type)
-    provider_config = {"id": provider_id, "type": provider_type, "authentication": {}}
+    provider_config = {"authentication": {}}
     config = None
     while not config:
         # iterate necessary config and prompt for values
