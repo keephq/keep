@@ -20,7 +20,6 @@ class ProviderConfig:
         authentication (dict): The configuration for the provider.
     """
 
-    id: str
     authentication: dict
     description: Optional[str] = None
 

@@ -14,6 +14,7 @@ class Action:
         self, name: str, config, provider: BaseProvider, provider_context: dict
     ):
         self.name = name
+        self.logger = logging.getLogger(__name__)
         self.provider = provider
         self.provider_context = provider_context
         self.action_config = config

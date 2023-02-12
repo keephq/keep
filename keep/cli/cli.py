@@ -1,5 +1,6 @@
 import logging
 import sys
+from collections import OrderedDict
 from dataclasses import fields
 from importlib import metadata
 
@@ -81,10 +82,12 @@ def version():
     required=True,
 )
 @click.option(
-    "--providers-dir",
+    "--providers-file",
+    "-p",
     type=click.Path(exists=True),
-    help="The path to the providers directory",
+    help="The path to the providers yaml",
     required=False,
+    default="providers.yaml",
 )
 @click.option("--api-key", help="The API key for keep's API", required=False)
 @click.option(
@@ -94,12 +97,12 @@ def version():
     default="https://s.keephq.dev",
 )
 @pass_info
-def run(info: Info, alerts_file, providers_dir, api_key, api_url):
+def run(info: Info, alerts_file, providers_file, api_key, api_url):
     """Run the alert."""
     logger.debug(f"Running alert {alerts_file}")
     alert_manager = AlertManager()
     try:
-        alert_manager.run(alerts_file)
+        alert_manager.run(alerts_file, providers_file)
     except Exception as e:
         logger.error(f"Error running alert {alerts_file}: {e}")
         if info.verbose:
@@ -112,7 +115,7 @@ def run(info: Info, alerts_file, providers_dir, api_key, api_url):
 @click.option(
     "--keep-config-file",
     type=click.Path(exists=False),
-    help="The path to keeps config file [default: keep.yaml]]",
+    help="The path to keeps config file [default: keep.yaml]",
     required=False,
     default="keep.yaml",
 )
@@ -138,7 +141,10 @@ def config():
     required=True,
 )
 @click.option(
-    "--provider-name", "-n", help="The provider name [e.g. elastic-prod]", required=True
+    "--provider-id",
+    "-i",
+    help="The provider unique identifier [e.g. elastic-prod]",
+    required=True,
 )
 @click.option(
     "--provider-config-file",
@@ -148,15 +154,15 @@ def config():
     default="providers.yaml",
 )
 @pass_info
-def provider(info: Info, provider_type, provider_name, provider_config_file):
+def provider(info: Info, provider_type, provider_id, provider_config_file):
     """Set the provider configuration."""
     click.echo(click.style(f"Config file: {provider_config_file}", bold=True))
     # create the file if it doesn't exist
     with open(provider_config_file, "a+") as f:
         pass
     # read the appropriate provider config
-    config_class = ProvidersFactory.get_provider_neccessary_config(provider_type)
-    provider_config = {provider_name: {"type": provider_type}}
+    config_class = ProvidersFactory.get_provider_required_config(provider_type)
+    provider_config = {"id": provider_id, "type": provider_type, "authentication": {}}
     config = None
     while not config:
         # iterate necessary config and prompt for values
@@ -169,10 +175,10 @@ def provider(info: Info, provider_type, provider_name, provider_config_file):
                 )
             else:
                 config_value = click.prompt(f"{field.metadata.get('description')}")
-            provider_config[provider_name][field.name] = config_value
+            provider_config["authentication"][field.name] = config_value
 
         try:
-            config = config_class(**provider_config[provider_name])
+            config = config_class(**provider_config["authentication"])
         # If the validation failed, we need to reprompt the provider config
         except Exception as e:
             print(" -- Validation failed -- ")
@@ -182,7 +188,7 @@ def provider(info: Info, provider_type, provider_name, provider_config_file):
     with open(provider_config_file, "r") as f:
         providers = yaml.safe_load(f) or {}
     with open(provider_config_file, "w") as f:
-        providers.update(provider_config)
+        providers[provider_id] = provider_config
         yaml.dump(providers, f)
     click.echo(click.style(f"Config file created at {provider_config_file}", bold=True))
 

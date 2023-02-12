@@ -8,19 +8,21 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
-    def __init__(self, config: ProviderConfig):
+    def __init__(self, provider_id: str, config: ProviderConfig):
         """
         Initialize a provider.
 
         Args:
+            provider_id (str): The provider id.
             **kwargs: Provider configuration loaded from the provider yaml file.
         """
         # Initalize logger for every provider
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.id = provider_id
         self.config = config
         self.validate_config()
         self.logger.debug(
-            "Initializing provider", extra={"provider": self.__class__.__name__}
+            "Base provider initalized", extra={"provider": self.__class__.__name__}
         )
 
     @property
@@ -31,7 +33,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Returns:
             str: The provider id.
         """
-        return self.config.id
+        return self.id
 
     @abc.abstractmethod
     def dispose(self):

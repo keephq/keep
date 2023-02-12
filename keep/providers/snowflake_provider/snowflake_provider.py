@@ -34,8 +34,8 @@ class SnowflakeProviderAuthConfig:
 
 
 class SnowflakeProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
         self.client = self.__generate_client()
 
     def __generate_client(self) -> SnowflakeConnection:
@@ -81,7 +81,7 @@ class SnowflakeProvider(BaseProvider):
             ProviderConfigException: private key
         """
         self.authentication_config = SnowflakeProviderAuthConfig(
-            **config.authentication
+            **self.config.authentication
         )
 
     def query(self, query: str, **kwargs: dict):

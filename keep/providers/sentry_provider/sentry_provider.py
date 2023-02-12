@@ -25,8 +25,8 @@ class SentryProviderAuthConfig:
 
 
 class SentryProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("org_slug")
 
     def get_events_url(self, project, date="14d"):

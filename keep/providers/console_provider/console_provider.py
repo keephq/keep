@@ -7,8 +7,8 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 class ConsoleProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
 
     def validate_config(self):
         # No configuration to validate, so just do nothing.
@@ -20,7 +20,7 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def notify(self, alert_message: str, **kwargs: dict):
+    def notify(self, **kwargs: dict):
         """
         Output alert message simply using the print method.
 
@@ -28,7 +28,7 @@ class ConsoleProvider(BaseProvider):
             alert_message (str): The alert message to be printed in to the console
         """
         self.logger.debug("Outputting alert message to console")
-        print(alert_message.format(**kwargs))
+        print(kwargs.get("alert_message"))
         self.logger.debug("Alert message outputted to console")
 
 
@@ -40,9 +40,14 @@ if __name__ == "__main__":
     # Initalize the provider and provider config
     config = {
         "id": "console",
-        "provider_type": "console",
         "description": "Console Output Provider",
         "authentication": {},
     }
-    provider = ProvidersFactory.get_provider(config)
-    provider.notify("Simple alert showing context with name: {name}", name="John Doe")
+    provider = ProvidersFactory.get_provider(
+        provider_type="console", provider_config=config
+    )
+    provider.notify(
+        alert_message="Simple alert showing context with name: {name}".format(
+            name="John Doe"
+        )
+    )

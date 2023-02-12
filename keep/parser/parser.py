@@ -19,12 +19,11 @@ class Parser:
         self.context_manager = ContextManager.get_instance()
         self.io_handler = IOHandler()
 
-    def parse(self, alert_file: str, providers_directory: str = None) -> Alert:
+    def parse(self, alert_file: str, providers_file: str = None) -> Alert:
         # Parse the alert YAML
         parsed_alert_yaml = self._parse_alerts_file_to_dict(alert_file)
         # Parse the providers (from the alert yaml or from the providers directory)
-        providers = self._parse_providers_config(parsed_alert_yaml, providers_directory)
-        self.providers = {provider.provider_id: provider for provider in providers}
+        self._parse_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
         alert = self._parse_alert(parsed_alert_yaml.get("alert"))
         return alert
@@ -57,43 +56,30 @@ class Parser:
         return alert
 
     def _parse_providers_config(
-        self, alert: dict, providers_directory: str
+        self, alert: dict, providers_file: str
     ) -> typing.List[BaseProvider]:
         self.logger.debug("Parsing providers")
-        providers = []
-        if providers_directory:
-            providers += self._parse_providers_from_providers_dir(providers_directory)
+        if providers_file:
+            self._parse_providers_from_file(providers_file)
 
-        if alert.get("provider"):
-            providers += self._parse_providers_from_alert(alert)
-
-        return providers
+        if alert.get("providers"):
+            self._parse_providers_from_alert(alert)
 
     def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
-        providers = []
-        for provider in alert.get("provider"):
-            provider_id = provider.get("id")
-            self.context_manager.providers_context[provider_id] = provider
-        self.logger.debug("Providers parsed successfully")
-        return providers
+        self.context_manager.providers_context.update(alert.get("providers"))
+        self.logger.debug("Alert providers parsed successfully")
 
-    def _parse_providers_from_providers_dir(
-        self, alert: dict, providers_directory: str
+    def _parse_providers_from_file(
+        self, providers_file: str
     ) -> typing.List[BaseProvider]:
-        providers = []
-        for provider_file in os.listdir(providers_directory):
-            provider_file_path = os.path.join(providers_directory, provider_file)
-            with open(provider_file_path, "r") as file:
-                try:
-                    provider = yaml.safe_load(file)
-                except yaml.YAMLError as e:
-                    self.logger.error(f"Error parsing {provider_file_path}: {e}")
-                    raise e
-            provider_id = provider.get("id")
-            self.context_manager.providers_context[provider_id] = provider
-
+        with open(providers_file, "r") as file:
+            try:
+                providers = yaml.safe_load(file)
+            except yaml.YAMLError:
+                self.logger.exception(f"Error parsing providers file {providers_file}")
+                raise
+            self.context_manager.providers_context.update(providers)
         self.logger.debug("Providers config parsed successfully")
-        return providers
 
     def _parse_id(self, alert) -> str:
         alert_id = alert.get("id")
@@ -133,11 +119,15 @@ class Parser:
         try:
             step_provider_config = step_provider.pop("config")
             provider_config = self._get_provider_config(step_provider_config)
+            provider_id = self._get_provider_id(step_provider_config)
         # Support providers without config such as logfile or mock
         except KeyError:
             step_provider_config = {}
-            provider_config = {"id": step_provider_type, "authentication": {}}
-        provider = ProvidersFactory.get_provider(step_provider_type, provider_config)
+            provider_config = {"authentication": {}}
+            provider_id = step_provider_type
+        provider = ProvidersFactory.get_provider(
+            provider_id, step_provider_type, provider_config
+        )
         return provider
 
     def _parse_actions(self, alert) -> typing.List[Action]:
@@ -148,14 +138,14 @@ class Parser:
             name = _action.get("name")
             provider_config = _action.get("provider").get("config")
             provider_context = _action.get("provider").get("with")
-            provider_config = self._get_provider_config(provider_config)
-            provider_type = _action.get("provider").get("type")
+            provider_id = self._get_provider_id(provider_config)
+            provider_config = self._get_provider_config(provider_id)
+            provider_type = provider_config.pop("type")
             provider = ProvidersFactory.get_provider(
-                provider_type, provider_config, **provider_context
+                provider_id, provider_type, provider_config, **provider_context
             )
             action = Action(
                 name=name,
-                config=_action,
                 provider=provider,
                 provider_context=provider_context,
             )
@@ -163,8 +153,24 @@ class Parser:
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
 
-    def _get_provider_config(self, provider_type):
-        """Translate {{ <provider_id>.<config_id> }} to a provider config
+    def _get_provider_id(self, provider_type: str):
+        """
+        Translate {{ <provider_id>.<config_id> }} to a provider id
+
+        Args:
+            provider_type (str): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        provider_config = self.io_handler.render(provider_type)
+        return provider_id
+
+    def _get_provider_config(self, provider_id: str):
+        """Get provider config according to provider_id
 
         Args:
             provider_type (_type_): _description_
@@ -173,4 +179,9 @@ class Parser:
             ValueError: _description_
         """
         provider_config = self.io_handler.render(provider_type)
+
+        if not provider_config:
+            raise ValueError(
+                f"Provider {provider_id} not found in configuration, did you configure it?"
+            )
         return provider_config

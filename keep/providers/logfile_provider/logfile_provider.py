@@ -14,8 +14,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class LogfileProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
 
     def validate_config(self):
         pass
