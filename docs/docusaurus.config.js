@@ -56,6 +56,11 @@ const config = {
     ({
       // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
+      docs: {
+        sidebar: {
+          autoCollapseCategories: true,
+        }
+      },
       navbar: {
         title: 'Keep',
         logo: {
@@ -65,9 +70,14 @@ const config = {
         items: [
           {
             type: 'doc',
-            docId: 'intro',
+            docId: 'welcome',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Documentation',
+          },
+          {
+            href: 'https://keephq.dev/slack',
+            label: 'Slack',
+            position: 'right',
           },
           {
             href: 'https://github.com/keephq/keep',
@@ -83,7 +93,7 @@ const config = {
             title: 'Docs',
             items: [
               {
-                label: 'Tutorial',
+                label: 'Welcome',
                 to: '/',
               },
             ],
