@@ -1,5 +1,5 @@
 """
-Simple Console Output Provider
+Elasticsearch provider.
 """
 import dataclasses
 import json
