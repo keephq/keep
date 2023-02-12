@@ -83,7 +83,7 @@ def version():
 )
 @click.option(
     "--providers-file",
-    "-f",
+    "-p",
     type=click.Path(exists=True),
     help="The path to the providers yaml",
     required=False,

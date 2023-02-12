@@ -2,6 +2,7 @@ import logging
 import typing
 
 from keep.action.action import Action
+from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
@@ -14,7 +15,6 @@ class Alert:
         alert_tags: typing.List[str],
         alert_steps: typing.List[Step],
         alert_actions: typing.List[Action],
-        providers_config: typing.Dict[str, dict],
     ):
         self.logger = logging.getLogger(__name__)
         self.alert_id = alert_id
@@ -22,9 +22,8 @@ class Alert:
         self.alert_tags = alert_tags
         self.alert_steps = alert_steps
         self.alert_actions = alert_actions
-        self.providers_config = providers_config
         self.io_nandler = IOHandler()
-        self.steps_context = {}
+        self.context_manager = ContextManager.get_instance()
 
     @property
     def last_step(self):
@@ -35,11 +34,8 @@ class Alert:
         for step in self.alert_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step_output = step.run(self.full_context)
+                step_output = step.run()
                 self.logger.info("Step %s ran successfully", step.step_id)
-                self.steps_context[step.step_id] = {
-                    "output": step_output,
-                }
                 # If we need to halt the alert, stop here
                 if step.action_needed:
                     self.logger.info(
@@ -56,7 +52,7 @@ class Alert:
     def _handle_failure(self, step: Step, exc):
         # if the step has failure strategy, handle it
         if step.failure_strategy:
-            step.handle_failure_strategy(step, self.full_context)
+            step.handle_failure_strategy(step)
         else:
             self.logger.exception("Failed to run step")
             raise StepError(
@@ -66,9 +62,5 @@ class Alert:
     def _handle_actions(self):
         self.logger.debug(f"Handling actisons for alert {self.alert_id}")
         for action in self.alert_actions:
-            action.run(self.full_context)
+            action.run()
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
-
-    @property
-    def full_context(self):
-        return {"providers": self.providers_config, "steps": self.steps_context}
