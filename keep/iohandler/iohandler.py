@@ -76,7 +76,13 @@ class IOHandler:
         elif len(tokens) == 1:
             token = "".join(tokens[0])
             val = self._parse_token(token)
-            return val
+            # if the token is the same as the string, return the value because {{ value }} can be any type
+            if parsed_string.strip() == token:
+                return val
+            # however, if the token is part of a string, return the string with the token replaced with the value
+            else:
+                parsed_string = parsed_string.replace(token, str(val))
+                return parsed_string
 
         for token in tokens:
             token = "".join(token)
@@ -154,9 +160,9 @@ class IOHandler:
             if isinstance(value, str):
                 context_to_render[key] = self._render_template_with_context(value)
             elif isinstance(value, list):
-                return self._render_list_context(value)
+                context_to_render[key] = self._render_list_context(value)
             elif isinstance(value, dict):
-                return self._render_context(value)
+                context_to_render[key] = self.render_context(value)
         return context_to_render
 
     def _render_list_context(self, context_to_render: list):
@@ -168,9 +174,10 @@ class IOHandler:
             if isinstance(value, str):
                 context_to_render[i] = self._render_template_with_context(value)
             if isinstance(value, list):
-                return self._render_list_context(value)
+                context_to_render[i] = self._render_list_context(value)
             if isinstance(value, dict):
-                return self._render_context(value)
+                context_to_render[i] = self.render_context(value)
+        return context_to_render
 
     def _render_template_with_context(self, template: str) -> str:
         """

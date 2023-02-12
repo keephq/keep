@@ -4,6 +4,8 @@ LogfileProvider is a class that implements the BaseOutputProvider interface for 
 import datetime
 import io
 import os
+import re
+import uuid
 
 import datefinder
 from logmine_pkg.log_mine import LogMine
@@ -26,7 +28,6 @@ class LogfileProvider(BaseProvider):
         Returns:
             _type_: _description_
         """
-        import uuid
 
         filename = kwargs.get("filename")
         date = kwargs.get("time")
@@ -67,9 +68,9 @@ class LogfileProvider(BaseProvider):
             "sorted": "desc",
             "number_align": True,
             "pattern_placeholder": None,
-            "highlight_patterns": True,
+            "highlight_patterns": False,
             "mask_variables": True,
-            "highlight_variables": True,
+            "highlight_variables": False,
             "single_core": False,
         }
         logmine = LogMine(
@@ -111,6 +112,7 @@ class LogfileProvider(BaseProvider):
             raise ProviderConfigException(f"Error while running logmine: {e}")
         finally:
             os.unlink(tmp_filename)
+        output = [self._remove_ansi(o).replace("\n", "") for o in output]
         return output
 
     def dispose(self):
@@ -118,3 +120,21 @@ class LogfileProvider(BaseProvider):
         No need to dispose of anything, so just do nothing.
         """
         pass
+
+    def _remove_ansi(self, text):
+        ansi_escape = re.compile(
+            r"""
+            \x1B  # ESC
+            (?:   # 7-bit C1 Fe (except CSI)
+                [@-Z\\-_]
+            |     # or [ for CSI, followed by a control sequence
+                \[
+                [0-?]*  # Parameter bytes
+                [ -/]*  # Intermediate bytes
+                [@-~]   # Final byte
+            )
+        """,
+            re.VERBOSE,
+        )
+        result = ansi_escape.sub("", text)
+        return result

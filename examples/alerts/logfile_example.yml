@@ -8,7 +8,7 @@ alert:
           type: logfile
           with:
             filename: examples/access.log
-            time: 2d
+            time: 4d
       # use the condition on every result of the provider
       foreach:
         value: "{{steps.this.results}}"
@@ -32,5 +32,15 @@ alert:
         with:
           # Message is always mandatory
           message: >
-            Number of errors: {{ steps.grep.conditions.threshold.compare_to }} [threshold was set to {{ steps.grep.conditions.threshold.value }}]
-            Error: {{ foreach.value }}
+            Keep Alert
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  Number of errors: {{ steps.grep.conditions.threshold.compare_to }} [threshold was set to {{ steps.grep.conditions.threshold.value }}]
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  Full Error: `{{ foreach.value }}`

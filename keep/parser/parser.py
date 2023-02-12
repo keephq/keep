@@ -140,13 +140,14 @@ class Parser:
             provider_context = _action.get("provider").get("with")
             provider_id = self._get_provider_id(provider_config)
             provider_config = self._get_provider_config(provider_id)
-            provider_type = provider_config.pop("type")
+            provider_type = _action.get("provider").get("type")
             provider = ProvidersFactory.get_provider(
                 provider_id, provider_type, provider_config, **provider_context
             )
             action = Action(
                 name=name,
                 provider=provider,
+                config=_action,
                 provider_context=provider_context,
             )
             alert_actions_parsed.append(action)
@@ -166,7 +167,14 @@ class Parser:
         Returns:
             _type_: _description_
         """
-        provider_config = self.io_handler.render(provider_type)
+        # TODO FIX THIS SHIT
+        provider_type = provider_type.split(".")
+        if len(provider_type) != 2:
+            raise ValueError(
+                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
+            )
+
+        provider_id = provider_type[1].replace("}}", "").strip()
         return provider_id
 
     def _get_provider_config(self, provider_id: str):
@@ -178,8 +186,7 @@ class Parser:
         Raises:
             ValueError: _description_
         """
-        provider_config = self.io_handler.render(provider_type)
-
+        provider_config = self.context_manager.providers_context.get(provider_id)
         if not provider_config:
             raise ValueError(
                 f"Provider {provider_id} not found in configuration, did you configure it?"
