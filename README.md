@@ -38,7 +38,7 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
-    <a href="https://getkeep.dev/slack">Slack Community</a>
+    <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 
 ## 🗼 A glance of Keep
