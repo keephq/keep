@@ -95,21 +95,23 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 
 Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
 
-### Autocomplete
+### 👨🏻‍💻 Auto Completion
 
-Keep's CLI supports shell completion, which can make your life a lot more easier 😌
+Keep's CLI supports shell auto-completion, which can make your life a lot more easier 😌
 
 If you're using zsh, add this to `~/.zshrc`
 ```shell
 eval "$(_KEEP_COMPLETE=zsh_source keep)"
 ```
 
-If you're using zsh, add this to `~/.bashrc`
+
+If you're using bash, add this to `~/.bashrc`
 ```bash
 eval "$(_KEEP_COMPLETE=bash_source keep)"
 ```
 
-> Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that. You can generate the files ahead of time and distribute them with your program to save your users a step. See: https://click.palletsprojects.com/en/8.1.x/shell-completion/ for instructions on how to make that faster.
+
+> Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that.
 
 ## 🚨 Out of the box support for common providers
 
