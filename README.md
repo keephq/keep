@@ -95,7 +95,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 
 Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
 
-### 👨🏻‍💻 Auto Completion
+## 👨🏻‍💻 Auto Completion
 
 <h4>Keep's CLI supports shell auto-completion, which can make your life a lot more easier 😌</h4>
 
