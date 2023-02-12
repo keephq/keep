@@ -67,3 +67,21 @@ class ContextManager:
                 "result": result,
             }
         )
+
+    def get_actionable_results(self):
+        actionable_results = []
+        for step_id in self.steps_context:
+            if "conditions" in self.steps_context[step_id]:
+                for condition_id in self.steps_context[step_id]["conditions"]:
+                    for condition in self.steps_context[step_id]["conditions"][
+                        condition_id
+                    ]:
+                        if condition["result"] == True:
+                            actionable_results.append(
+                                {
+                                    "step_id": step_id,
+                                    "condition_id": condition_id,
+                                    "condition": condition,
+                                }
+                            )
+        return actionable_results

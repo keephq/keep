@@ -34,9 +34,3 @@ alert:
           message: >
             Number of errors: {{ steps.grep.conditions.threshold.compare_to }} [threshold was set to {{ steps.grep.conditions.threshold.value }}]
             Error: {{ foreach.value }}
-
-provider:
-- id: paladin-slack
-  description: Paladin's slack
-  authentication:
-    webhook_url: https://hooks.slack.com/services/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

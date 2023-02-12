@@ -30,9 +30,7 @@ class Action:
             raise ActionError(e)
 
     def _run_foreach(self):
-        foreach_iterator = self.io_handler.render(
-            self.action_config.get("foreach").get("value")
-        )
+        foreach_iterator = self.context_manager.get_actionable_results()
         for val in foreach_iterator:
             self.context_manager.set_for_each_context(val)
             rendered_value = self.io_handler.render_context(self.provider_context)

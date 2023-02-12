@@ -135,6 +135,7 @@ class IOHandler:
             elif isinstance(context, list):
                 val = self.context_manager.foreach_context
                 for c in context:
+                    # TODO: this is a hack, need to find a better way to do this
                     if c["raw_value"] == val:
                         context = c.get(k)
                         break
