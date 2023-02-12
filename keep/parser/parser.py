@@ -6,6 +6,8 @@ import yaml
 
 from keep.action.action import Action
 from keep.alert.alert import Alert
+from keep.contextmanager.contextmanager import ContextManager
+from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step
@@ -14,7 +16,8 @@ from keep.step.step import Step
 class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.config = {"providers": {}}
+        self.context_manager = ContextManager.get_instance()
+        self.io_handler = IOHandler()
 
     def parse(self, alert_file: str, providers_file: str = None) -> Alert:
         # Parse the alert YAML
@@ -48,7 +51,6 @@ class Parser:
             alert_tags=alert_tags,
             alert_steps=alert_steps,
             alert_actions=alert_actions,
-            providers_config=self.config["providers"],
         )
         self.logger.debug("Alert parsed successfully")
         return alert
@@ -64,7 +66,7 @@ class Parser:
             self._parse_providers_from_alert(alert)
 
     def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
-        self.config["providers"].update(alert.get("providers"))
+        self.context_manager.providers_context.update(alert.get("providers"))
         self.logger.debug("Alert providers parsed successfully")
 
     def _parse_providers_from_file(
@@ -76,7 +78,7 @@ class Parser:
             except yaml.YAMLError:
                 self.logger.exception(f"Error parsing providers file {providers_file}")
                 raise
-            self.config["providers"].update(providers)
+            self.context_manager.providers_context.update(providers)
         self.logger.debug("Providers config parsed successfully")
 
     def _parse_id(self, alert) -> str:
@@ -114,9 +116,15 @@ class Parser:
     def _get_step_provider(self, _step: dict) -> dict:
         step_provider = _step.get("provider")
         step_provider_type = step_provider.pop("type")
-        step_provider_config = step_provider.pop("config")
-        provider_id = self._get_provider_id(step_provider_config)
-        provider_config = self._get_provider_config(provider_id)
+        try:
+            step_provider_config = step_provider.pop("config")
+            provider_config = self._get_provider_config(step_provider_config)
+            provider_id = self._get_provider_id(step_provider_config)
+        # Support providers without config such as logfile or mock
+        except KeyError:
+            step_provider_config = {}
+            provider_config = {"authentication": {}}
+            provider_id = step_provider_type
         provider = ProvidersFactory.get_provider(
             provider_id, step_provider_type, provider_config
         )
@@ -132,13 +140,14 @@ class Parser:
             provider_context = _action.get("provider").get("with")
             provider_id = self._get_provider_id(provider_config)
             provider_config = self._get_provider_config(provider_id)
-            provider_type = provider_config.pop("type")
+            provider_type = _action.get("provider").get("type")
             provider = ProvidersFactory.get_provider(
                 provider_id, provider_type, provider_config, **provider_context
             )
             action = Action(
                 name=name,
                 provider=provider,
+                config=_action,
                 provider_context=provider_context,
             )
             alert_actions_parsed.append(action)
@@ -158,6 +167,7 @@ class Parser:
         Returns:
             _type_: _description_
         """
+        # TODO FIX THIS SHIT
         provider_type = provider_type.split(".")
         if len(provider_type) != 2:
             raise ValueError(
@@ -176,8 +186,7 @@ class Parser:
         Raises:
             ValueError: _description_
         """
-        provider_config = self.config.get("providers").get(provider_id)
-
+        provider_config = self.context_manager.providers_context.get(provider_id)
         if not provider_config:
             raise ValueError(
                 f"Provider {provider_id} not found in configuration, did you configure it?"
