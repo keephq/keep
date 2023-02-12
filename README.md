@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="/assets/keep.png?raw=true">
+<img src="/docs/static/img/keep.png?raw=true">
 
 </div>
 
@@ -54,7 +54,7 @@ Brought to you by developers, EASY to use and managable by code.
 ## 🚀 Quickstart
 
 ### Run locally
-Try your first (mock) alert up and get it running in <5 minutes - Ready? Let's Go! ⏰
+Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 <h5>First, clone Keep repository:</h5>
 
