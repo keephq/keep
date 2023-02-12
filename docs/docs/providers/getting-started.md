@@ -7,7 +7,7 @@ sidebar_position: 1
 
 We tried our best to cover all common providers.
 
-Click [here](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME) if you feel like we're missing some and we'll do our best to add them as soon as possible.
+Click [here](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME) if you feel like we're missing some and we'll do our best to add them ASAP.
 
 Common providers include:
 
