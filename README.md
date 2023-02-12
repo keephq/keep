@@ -34,7 +34,7 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     ·
     <a href="https://keephq.dev">Website</a>
     ·
-    <a href="https://keephq.wiki/new-provider">Add Providers</a>
+    <a href="https://keephq.wiki/providers/new-provider">Add Providers</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
@@ -78,7 +78,7 @@ poetry install
 keep version
 ```
 
-Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it:
+Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it:
 
 ```
 keep config provider --provider-type slack --provider-id slack-demo
