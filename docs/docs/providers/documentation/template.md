@@ -1,8 +1,9 @@
 ---
-sidebar_label: Snowflake Provider
+sidebar_label: Template
+sidebar_position: 1
 ---
 
-# Snowflake
+# Template
 
 :::note Brief Description
 Template Provider is a template for newly added provider's documentation

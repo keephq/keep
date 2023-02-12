@@ -3,3 +3,43 @@ sidebar_label: Console Provider
 ---
 
 # Console
+
+:::note Brief Description
+Console provider is sort of a mock provider that projects given alert message to the console.
+:::
+
+## Inputs
+- alert_message: The alert message to print to the console
+
+## Outputs
+This provider has no outputs
+
+## Authentication Parameters
+This provider has no authentication
+
+## Connecting with the Provider
+This provider doesn't require any connection
+
+## Notes
+*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+
+## Useful Links
+*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+
+## Example
+```python
+config = {
+        "description": "Console Output Provider",
+        "authentication": {},
+}
+provider = ProvidersFactory.get_provider(
+    provider_id='mock', provider_type="console", provider_config=config
+)
+provider.notify(
+    alert_message="Simple alert showing context with name: {name}".format(
+        name="John Doe"
+    )
+)
+```
+
+<img src="/img/console_provider_example.png" />

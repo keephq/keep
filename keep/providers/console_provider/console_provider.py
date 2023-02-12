@@ -39,12 +39,11 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     # Initalize the provider and provider config
     config = {
-        "id": "console",
         "description": "Console Output Provider",
         "authentication": {},
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="console", provider_config=config
+        provider_id="mock", provider_type="console", provider_config=config
     )
     provider.notify(
         alert_message="Simple alert showing context with name: {name}".format(
