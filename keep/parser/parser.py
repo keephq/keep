@@ -6,6 +6,8 @@ import yaml
 
 from keep.action.action import Action
 from keep.alert.alert import Alert
+from keep.contextmanager.contextmanager import ContextManager
+from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step
@@ -14,7 +16,8 @@ from keep.step.step import Step
 class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.config = {"providers": {}}
+        self.context_manager = ContextManager.get_instance()
+        self.io_handler = IOHandler()
 
     def parse(self, alert_file: str, providers_directory: str = None) -> Alert:
         # Parse the alert YAML
@@ -49,7 +52,6 @@ class Parser:
             alert_tags=alert_tags,
             alert_steps=alert_steps,
             alert_actions=alert_actions,
-            providers_config=self.config["providers"],
         )
         self.logger.debug("Alert parsed successfully")
         return alert
@@ -71,7 +73,7 @@ class Parser:
         providers = []
         for provider in alert.get("provider"):
             provider_id = provider.get("id")
-            self.config["providers"][provider_id] = provider
+            self.context_manager.providers_context[provider_id] = provider
         self.logger.debug("Providers parsed successfully")
         return providers
 
@@ -88,7 +90,7 @@ class Parser:
                     self.logger.error(f"Error parsing {provider_file_path}: {e}")
                     raise e
             provider_id = provider.get("id")
-            self.config["providers"][provider_id] = provider
+            self.context_manager.providers_context[provider_id] = provider
 
         self.logger.debug("Providers config parsed successfully")
         return providers
@@ -127,9 +129,14 @@ class Parser:
 
     def _get_step_provider(self, _step: dict) -> dict:
         step_provider = _step.get("provider")
-        step_provider_config = step_provider.pop("config")
         step_provider_type = step_provider.pop("type")
-        provider_config = self._get_provider_config(step_provider_config)
+        try:
+            step_provider_config = step_provider.pop("config")
+            provider_config = self._get_provider_config(step_provider_config)
+        # Support providers without config such as logfile or mock
+        except KeyError:
+            step_provider_config = {}
+            provider_config = {"id": step_provider_type, "authentication": {}}
         provider = ProvidersFactory.get_provider(step_provider_type, provider_config)
         return provider
 
@@ -148,6 +155,7 @@ class Parser:
             )
             action = Action(
                 name=name,
+                config=_action,
                 provider=provider,
                 provider_context=provider_context,
             )
@@ -164,16 +172,5 @@ class Parser:
         Raises:
             ValueError: _description_
         """
-        provider_type = provider_type.split(".")
-        if len(provider_type) != 2:
-            raise ValueError(
-                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
-            )
-
-        provider_id = provider_type[1].replace("}}", "").strip()
-        provider_config = self.config.get("providers").get(provider_id)
-        if not provider_config:
-            raise ValueError(
-                f"Provider {provider_id} not found in configuration, did you configure it?"
-            )
+        provider_config = self.io_handler.render(provider_type)
         return provider_config

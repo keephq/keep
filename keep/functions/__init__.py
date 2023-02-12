@@ -17,3 +17,11 @@ def diff(iterable):
 
 def len(iterable):
     return _len(iterable)
+
+
+def split(string, delimeter):
+    return string.strip().split(delimeter)
+
+
+def first(iterable):
+    return iterable[0]
