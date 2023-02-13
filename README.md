@@ -131,7 +131,7 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 -   [Adding a new provider](https://keephq.wiki/providers/new-provider)
 -   Check out our [website](https://www.keephq.dev)
 
-## 💪 Contributors
+## 🫵 Keepers
 
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
