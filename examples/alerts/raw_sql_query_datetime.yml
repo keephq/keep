@@ -1,0 +1,22 @@
+# Alert if the schemas versions of my customers are not the same
+#   (each schema version stored in ALEMBIC_VERSION table in the customer db)
+alert:
+  id: raw-sql-query
+  description: Monitor that time difference is no more than 1 hour
+  steps:
+    - name: get-max-datetime
+      from: db-prod-example
+      # Get max(datetime) from the random table
+      query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
+      from: mysql-prod
+      condition:
+      - type: eval
+        value: "diff( {{steps.this.results[].alembic_version}} )" # Trigger if not all schema versions are the same
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-demo }} "
+        with:
+          # Message is always mandatory
+          message: "Test"
