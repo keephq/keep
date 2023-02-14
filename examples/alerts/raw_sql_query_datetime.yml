@@ -5,13 +5,17 @@ alert:
   description: Monitor that time difference is no more than 1 hour
   steps:
     - name: get-max-datetime
-      from: db-prod-example
-      # Get max(datetime) from the random table
-      query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
-      from: mysql-prod
+      provider:
+        type: mysql
+        config: "{{ providers.mysql-prod }}"
+        with:
+          # Get max(datetime) from the random table
+          query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
       condition:
-      - type: eval
-        value: "diff( {{steps.this.results[].alembic_version}} )" # Trigger if not all schema versions are the same
+      - type: threshold
+        value: datetime_compare(utcnow(), to_utc({{ steps.this.results[0][0] }}))
+        compare_to: 1 # hours
+        compare_type: gt # greater than
   actions:
     - name: trigger-slack
       provider:
@@ -19,4 +23,4 @@ alert:
         config: " {{ providers.slack-demo }} "
         with:
           # Message is always mandatory
-          message: "Test"
+          message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold.0.value }}) is greater than 1! 🚨"

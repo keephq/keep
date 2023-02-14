@@ -27,7 +27,7 @@ class BaseCondition(metaclass=abc.ABCMeta):
         )
 
     @abc.abstractmethod
-    def apply(self) -> bool:
+    def apply(self, **kwargs) -> bool:
         """
         Validate provider configuration.
         """

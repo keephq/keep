@@ -28,7 +28,7 @@ alert:
         value: "{{steps.this.results}}"
       provider:
         type: slack
-        config: "{{ providers.paladin-slack }}"
+        config: "{{ providers.slack-demo }}"
         with:
           # Message is always mandatory
           message: >
