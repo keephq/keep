@@ -1,5 +1,5 @@
 ---
-sidebar_label: Getting Started
+sidebar_label: Deployment
 sidebar_position: 3
 ---
 
