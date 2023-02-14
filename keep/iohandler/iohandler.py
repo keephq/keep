@@ -1,8 +1,10 @@
 import ast
 import copy
+import json
 import logging
 import re
 
+import astunparse
 import chevron
 import requests
 
@@ -94,7 +96,6 @@ class IOHandler:
     def _parse_token(self, token):
         # if its just a {{ value }} - get the key and return the value
         if token.startswith("{{") and token.endswith("}}"):
-            token = token[2:-2]
             return self._get(key=token)
 
         # else, it contains a function e.g. len({{ value }}) or split({{ value }}, 'a', 'b')
@@ -106,50 +107,44 @@ class IOHandler:
                 func = tree.func
                 args = tree.args
                 # if its another function
-                if len(args) == 1:
-                    val = _parse(args[0])
-                    val = getattr(keep_functions, func.id)(val)
-                    return val
-                # constants
-                else:
-                    func_name = func.id
-                    # support {{ foreach.value }}
-                    if isinstance(args[0], ast.Set):
-                        key = ".".join(
-                            [
-                                args[0].elts[0].elts[0].value.id,
-                                args[0].elts[0].elts[0].attr,
-                            ]
-                        )
-                        arg1 = self._get(key)
-                    # if just string
+                _args = []
+                for arg in args:
+                    _arg = None
+                    if isinstance(arg, ast.Call):
+                        _arg = _parse(arg)
+                    elif isinstance(arg, ast.Str):
+                        _arg = arg.s
+                    # set is basically {{ value }}
+                    elif isinstance(arg, ast.Set):
+                        _arg = astunparse.unparse(arg).strip()
+                        _arg = self._get(_arg)
                     else:
-                        arg1 = args[0].value
-                    arg2 = args[1].value
-                    val = getattr(keep_functions, func_name)(arg1, arg2)
-                    return val
+                        arg = arg.value
+                    if _arg:
+                        _args.append(_arg)
+                val = getattr(keep_functions, func.id)(*_args)
+                return val
 
         tree = ast.parse(token)
         return _parse(tree)
 
     def _get(self, key):
+        # change [] to . for the key because thats what chevron uses
+        _key = key.replace("[", ".").replace("]", "")
+
         context = self.context_manager.get_full_context()
-        key = key.strip()
-        for k in key.split("."):
-            if k in context:
-                context = context[k]
-            # else, if its a list, look for the foreach current value
-            elif isinstance(context, list):
-                val = self.context_manager.foreach_context
-                for c in context:
-                    # TODO: this is a hack, need to find a better way to do this
-                    if c["raw_value"] == val:
-                        context = c.get(k)
-                        break
-            else:
-                return None
-        # strip quotes TODO - better way to do this (should be a trim function)
-        return context
+        rendered = chevron.render(_key, context)
+
+        # Try to convert it to python object if possible
+        if (rendered.startswith("[") and rendered.endswith("]")) or (
+            rendered.startswith("{") and rendered.endswith("}")
+        ):
+            try:
+                rendered = ast.literal_eval(rendered)
+            except ValueError:
+                pass
+
+        return rendered
 
     def render_context(self, context_to_render: dict):
         """
