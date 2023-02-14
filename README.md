@@ -1,7 +1,5 @@
 <div align="center">
-
-<img src="/docs/static/img/keep.png?raw=true">
-
+    <img src="/docs/static/img/keep.png?raw=true">
 </div>
 
 <h1 align="center">Alerting. By developers, for developers.</h1>
@@ -28,6 +26,8 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
     <a href="https://keephq.wiki/" rel="dofollow"><strong>Get started »</strong></a>
     <br />
     <br />
+    <a href="https://github.com/keephq/keep/tree/main/examples">Examples</a>
+    ·
     <a href="https://github.com/keephq/keep/tree/main/keep/providers">Providers</a>
     ·
     <a href="https://keephq.wiki/">Docs</a>
@@ -46,10 +46,23 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
 Keep is a simple CLI tool that contains everything you need to start creating Alerts.
 
 -   10s of providers ready to use with your own data
--   simple CLI tool to configure, trigger and test your alerts
--   easily deployable via docker, vercel, github actions, etc.
+-   Simple CLI tool to configure, trigger and test your alerts
+-   Easily deployable via docker, vercel, github actions, etc.
+-   Alerts are managed by simple yaml files that are human-readable
 
 Brought to you by developers, EASY to use and managable by code.
+
+## 🚨 Providers
+
+[Providers](https://keephq.wiki/providers/what-is-a-provider) are Keep's way of interacting with 3rd party products; Keep uses them either to query data or to send notifications.
+
+We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
+
+-   **Cloud**: AWS, GCP, Azure, etc.
+-   **Monitoring**: Sentry, New Relic, Datadog, etc.
+-   **Incident Management**: PagerDuty, OpsGenie, etc.
+-   **Communication**: Email, Slack, Console, etc.
+-   [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
 
 ## 🚀 Quickstart
 
@@ -91,19 +104,16 @@ Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...)
 keep run --alerts-file examples/alerts/db_disk_space.yml
 ```
 
-<h5>Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.</h5>
+<div align="center">
+    Voilà 🥳
+    <br />
+    <img src="/docs/static/img/alert-example.png">
+    <br />
+    You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
+    <br />
+</div>
 
-Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
-
-## 🚨 Out of the box support for common providers
-
-We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
-
--   **Cloud**: AWS, GCP, Azure, etc.
--   **Monitoring**: Sentry, New Relic, Datadog, etc.
--   **Incident Management**: PagerDuty, OpsGenie, etc.
--   **Communication**: Email, Slack, Console, etc.
--   [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
+##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
 
 ## 🔍 Learn more
 
