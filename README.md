@@ -54,7 +54,7 @@ Brought to you by developers, EASY to use and managable by code.
 
 ## 🚨 Providers
 
-Providers are Keep's way of interacting with 3rd party products; Keep uses them either to query data or to send notifications.
+[Providers](https://keephq.wiki/providers/what-is-a-provider) are Keep's way of interacting with 3rd party products; Keep uses them either to query data or to send notifications.
 
 We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
 
@@ -111,9 +111,10 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
     <img src="/docs/static/img/alert-example.png">
     <br />
     You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
+    <br />
 </div>
 
-Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
+##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
 
 ## 🔍 Learn more
 
