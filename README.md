@@ -92,8 +92,10 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 <div align="center">
     Voilà 🥳
     <br />
+    <br />
     <img src="/docs/static/img/alert-example.png">
 </div>
+<br />
 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
 
 Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
