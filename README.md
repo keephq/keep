@@ -107,7 +107,6 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 <div align="center">
     Voilà 🥳
     <br />
-    <br />
     <img src="/docs/static/img/alert-example.png">
     <br />
     You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
