@@ -13,26 +13,26 @@ class ThresholdCondition(BaseCondition):
     def __init__(self, condition_type, condition_config):
         super().__init__(condition_type, condition_config)
 
-    def apply(self) -> bool:
-        threshold = self.condition_config.get("value")
-        compare = self.get_what_to_compare()
-        if compare.isnumeric():
-            compare = float(compare)
-            threshold = float(threshold)
+    def apply(self, what_to_compare, compare_value) -> bool:
+        if str(what_to_compare).isnumeric():
+            what_to_compare = float(what_to_compare)
+            compare_value = float(compare_value)
         # validate they are both the same type
-        if type(threshold) != type(compare):
+        if type(compare_value) != type(what_to_compare):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    threshold, compare
+                    what_to_compare, compare_value
                 )
             )
-        if self._is_percentage(threshold) and not self._is_percentage(compare):
+        if self._is_percentage(what_to_compare) and not self._is_percentage(
+            compare_value
+        ):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    threshold, compare
+                    what_to_compare, compare_value
                 )
             )
-        return self._apply_threshold(compare, threshold)
+        return self._apply_threshold(compare_value, what_to_compare)
 
     def _is_percentage(self, a):
         if isinstance(a, int) or isinstance(a, float):
@@ -56,4 +56,8 @@ class ThresholdCondition(BaseCondition):
         Returns:
             _type_: _description_
         """
-        return step_output > threshold
+        if self.condition_config.get("compare_type", "gt") == "gt":
+            return step_output > threshold
+        elif self.condition_config.get("compare_type", "gt") == "lt":
+            return step_output < threshold
+        raise Exception("Invalid threshold type, currently support only gt and lt")
