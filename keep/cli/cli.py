@@ -18,6 +18,10 @@ logging_config = {
     "disable_existing_loggers": False,
     "formatters": {
         "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+        "json": {
+            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(lineno)d",
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+        },
     },
     "handlers": {
         "default": {
@@ -70,6 +74,7 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 # tasks).
 @click.group()
 @click.option("--verbose", "-v", count=True, help="Enable verbose output.")
+@click.option("--json", "-j", default=False, is_flag=True, help="Enable json output.")
 @click.option(
     "--keep-config",
     "-c",
@@ -78,13 +83,15 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
     default="keep.yaml",
 )
 @pass_info
-def cli(info: Info, verbose: int, keep_config: str):
+def cli(info: Info, verbose: int, json: bool, keep_config: str):
     """Run Keep CLI."""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         # set the verbosity level to debug
         logging_config["loggers"][""]["level"] = "DEBUG"
 
+    if json:
+        logging_config["handlers"]["default"]["formatter"] = "json"
     logging.config.dictConfig(logging_config)
     info.verbose = verbose
     info.set_config(keep_config)
