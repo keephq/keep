@@ -51,12 +51,12 @@ alert:
 
 ```
 
-As you can see, alert consists of
+Alert consists of:
 - some metadata (id, description. owners and tags will be added soon)
 - `steps` - list of steps
 - `actions` - list of actions
 
-Let's break it down.
+
 ### Steps
 ```
 steps:
@@ -103,9 +103,16 @@ Each condition consists of:
 ```
 actions:
 - name: trigger-slack
-    provider:
+  provider:
     type: slack
     config: " {{ providers.slack-demo }} "
     with:
-        message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold[0].value }}) is greater than 1! 🚨"
+       message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold[0].value }}) is greater than 1! 🚨"
 ```
+The last part of the alert is the actions.
+
+Each action consists of:
+- `name` - the name of the action.
+- `provider` - the provider that will trigger the action.
+
+The `provider` configuration already covered in [Providers](syntax#provider)

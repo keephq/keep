@@ -6,17 +6,6 @@ slug: /
 
 # Keep Documentation
 
-<div align="center">
-
-<img src="/img/keep.png" />
-
-</div>
-
-<h1 align="center">Alerting. By developers, for developers.</h1>
-
-<h4 align="center">
-Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
-</h4>
 
 ## 🗼 A glance of Keep
 
@@ -45,3 +34,16 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 -   Explore the [documentation](https://keephq.wiki)
 -   [Adding a new provider](https://keephq.wiki/new-provider)
 -   Check out our [website](https://www.keephq.dev)
+
+
+<div align="center">
+
+<img src="/img/keep.png" />
+
+</div>
+
+<h1 align="center">Alerting. By developers, for developers.</h1>
+
+<h4 align="center">
+Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
+</h4>
