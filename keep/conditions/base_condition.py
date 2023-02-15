@@ -33,8 +33,9 @@ class BaseCondition(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("apply() method not implemented")
 
-    def get_what_to_compare(self):
-        """Get the value to compare.
+    def get_compare_to(self):
+        """Get the comparison baseline.
+        For example, for threshold conditions it'll be the threshold.
 
         Args:
             step_output (_type_): _description_

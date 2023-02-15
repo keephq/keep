@@ -13,26 +13,31 @@ class ThresholdCondition(BaseCondition):
     def __init__(self, condition_type, condition_config):
         super().__init__(condition_type, condition_config)
 
-    def apply(self, what_to_compare, compare_value) -> bool:
-        if str(what_to_compare).isnumeric():
-            what_to_compare = float(what_to_compare)
+    def apply(self, compare_to, compare_value) -> bool:
+        """apply the condition.
+
+        Args:
+            compare_to (_type_): the threshold
+            compare_value (_type_): the actual value
+
+        """
+        if str(compare_to).isnumeric():
+            compare_to = float(compare_to)
             compare_value = float(compare_value)
         # validate they are both the same type
-        if type(compare_value) != type(what_to_compare):
+        if type(compare_value) != type(compare_to):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    what_to_compare, compare_value
+                    compare_to, compare_value
                 )
             )
-        if self._is_percentage(what_to_compare) and not self._is_percentage(
-            compare_value
-        ):
+        if self._is_percentage(compare_to) and not self._is_percentage(compare_value):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    what_to_compare, compare_value
+                    compare_to, compare_value
                 )
             )
-        return self._apply_threshold(compare_value, what_to_compare)
+        return self._apply_threshold(compare_value, compare_to)
 
     def _is_percentage(self, a):
         if isinstance(a, int) or isinstance(a, float):
