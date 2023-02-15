@@ -21,7 +21,8 @@ class ThresholdCondition(BaseCondition):
             compare_value (_type_): the actual value
 
         """
-        if str(compare_to).isnumeric():
+        # check if compare_to is a number (supports also float, hence the . replcae)
+        if str(compare_to).replace(".", "", 1).isdigit():
             compare_to = float(compare_to)
             compare_value = float(compare_value)
         # validate they are both the same type

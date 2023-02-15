@@ -64,7 +64,7 @@ class Step:
             for condition in self.step_conditions:
                 condition_type = condition.get("type")
                 condition = ConditionFactory.get_condition(condition_type, condition)
-                condition_what_to_compare = condition.get_what_to_compare()
+                condition_what_to_compare = condition.get_compare_to()
                 condition_compare_value = condition.get_compare_value()
                 condition_result = condition.apply(
                     condition_what_to_compare, condition_compare_value
@@ -85,14 +85,14 @@ class Step:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
             condition_result = condition.apply(
-                condition_compare_value, condition_compare_to
+                condition_compare_to, condition_compare_value
             )
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition_type,
                 condition,
-                condition_compare_value,
                 condition_compare_to,
+                condition_compare_value,
                 condition_result,
             )
         self.logger.debug("Post Step validation success")

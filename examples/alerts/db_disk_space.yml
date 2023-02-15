@@ -24,8 +24,8 @@ alert:
           command_output: 91% # Mock
       condition:
         - type: threshold
-          value: 90% # Trigger if more than 90% full
-          compare_to: "{{ steps.this.results }}"
+          value:  "{{ steps.this.results }}"
+          compare_to: 90% # Trigger if more than 90% full
       failure_strategy: # What to do if the SSH connection failed?
         - name: ssh-connection-failed
           retry: 5 # Retry 5 times
