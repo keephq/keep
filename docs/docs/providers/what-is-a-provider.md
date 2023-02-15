@@ -3,7 +3,7 @@ sidebar_label: What is a Provider?
 sidebar_position: 2
 ---
 
-# ❓ What is a Keep Provider?
+# ❓ What is a Provider
 
 
 ### TL;DR
