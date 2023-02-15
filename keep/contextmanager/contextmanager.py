@@ -49,7 +49,7 @@ class ContextManager:
         return context
 
     def set_condition_results(
-        self, step_id, condition_id, raw_value, comparer, actual_value, result
+        self, step_id, condition_id, raw_value, compare_to, compare_value, result
     ):
         if step_id not in self.steps_context:
             self.steps_context[step_id] = {"conditions": {}, "results": {}}
@@ -62,8 +62,8 @@ class ContextManager:
         self.steps_context[step_id]["conditions"][condition_id].append(
             {
                 "raw_value": raw_value,
-                "value": comparer,
-                "compare_to": actual_value,
+                "value": compare_value,
+                "compare_to": compare_to,
                 "result": result,
             }
         )
