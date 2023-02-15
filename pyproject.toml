@@ -22,6 +22,7 @@ datefinder = "^0.7.3"
 mysql-connector-python = "^8.0.32"
 logmine = "^0.4.1"
 astunparse = "^1.6.3"
+python-json-logger = "^2.0.6"
 
 
 [tool.poetry.group.dev.dependencies]
