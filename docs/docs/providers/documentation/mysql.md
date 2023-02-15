@@ -1,5 +1,5 @@
 ---
-sidebar_label: MySQL
+sidebar_label: MySQL Provider
 ---
 
 # MySQL
