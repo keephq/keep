@@ -18,9 +18,9 @@ If you have suggestions/improvments/bugs for Keep's syntax, please [open feature
 ### Special context
 Keep provides two special context containers - `providers` and `steps`
 
-#### Providers
+### Providers
 Provider configuration typically look like:
-```
+```yaml
 provider:
   type: mysql
   config: "{{ providers.mysql-prod }}"
@@ -30,15 +30,13 @@ provider:
 ```
 Here, `{{ providers.mysql-prod }}` is dynamically translated at runtime from the providers.yaml file.
 
-#### Steps
-The output of steps can be accessed from anywhere in the YAML using `{{ steps.step-id.results }}`. This output can be used in conditions, actions, or any other place.
-
-
+### Steps
+The output of steps can be accessed from anywhere in the YAML using `{{ steps.step-name.results }}`. This output can be used in conditions, actions, or any other place.
 
 ### Functions
-Keep's syntax allow to use functions on context blocks. For example, `len({{ steps.step-id.results }})` will return the number of results of `step-id` step.
+Keep's syntax allow to use functions on context blocks. For example, `len({{ steps.step-name.results }})` will return the number of results of `step-name` step.
 
-- [Se supported functions](functions/what-is-a-function.md)
+- [See supported functions](functions/what-is-a-function.md)
 - [Create new functions](functions/what-is-a-function.md)
 
 Under the hood, Keep uses Python's `ast` module to parse these expressions and evaluate them as best as possible.
