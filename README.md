@@ -49,10 +49,10 @@ Manage your alerts by code, write better more actionable and accurate alerts wit
 
 Keep is a simple CLI tool that contains everything you need to start creating Alerts.
 
--   10s of providers ready to use with your own data
--   Simple CLI tool to configure, trigger and test your alerts
--   Easily deployable via docker, vercel, github actions, etc.
--   Alerts are managed by simple yaml files that are human-readable
+- 10s of providers ready to use with your own data
+- Simple CLI tool to configure, trigger and test your alerts
+- Easily deployable via docker, vercel, github actions, etc.
+- Alerts are managed by simple yaml files that are human-readable
 
 Brought to you by developers, EASY to use and managable by code.
 
@@ -62,15 +62,16 @@ Brought to you by developers, EASY to use and managable by code.
 
 We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
 
--   **Cloud**: AWS, GCP, Azure, etc.
--   **Monitoring**: Sentry, New Relic, Datadog, etc.
--   **Incident Management**: PagerDuty, OpsGenie, etc.
--   **Communication**: Email, Slack, Console, etc.
--   [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
+- **Cloud**: AWS, GCP, Azure, etc.
+- **Monitoring**: Sentry, New Relic, Datadog, etc.
+- **Incident Management**: PagerDuty, OpsGenie, etc.
+- **Communication**: Email, Slack, Console, etc.
+- [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
 
 ## 🚀 Quickstart
 
 ### Run locally
+
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 <h5>First, clone Keep repository:</h5>
@@ -84,7 +85,9 @@ git clone https://github.com/keephq/keep.git && cd keep
 ```shell
 pip install .
 ```
+
 or
+
 ```shell
 poetry shell
 poetry install
@@ -101,7 +104,8 @@ Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messagi
 ```
 keep config provider --provider-type slack --provider-id slack-demo
 ```
-Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...) and you're good to go 👌
+
+Paste the Slack Incoming Webhook URL (e.g. <https://hooks.slack.com/services/...>) and you're good to go 👌
 
 <h5>Let's now execute our example "Paper DB has insufficient disk space" alert</h5>
 
@@ -118,15 +122,15 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
     <br />
 </div>
 
-##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
+##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
 ## 🔍 Learn more
 
--   Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
--   Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
--   Explore the [documentation](https://keephq.wiki)
--   [Adding a new provider](https://keephq.wiki/providers/new-provider)
--   Check out our [website](https://www.keephq.dev)
+- Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
+- Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
+- Explore the [documentation](https://keephq.wiki)
+- [Adding a new provider](https://keephq.wiki/providers/new-provider)
+- Check out our [website](https://www.keephq.dev)
 
 ## 🫵 Keepers
 
