@@ -86,6 +86,7 @@ pip install .
 ```
 or
 ```shell
+poetry shell
 poetry install
 ```
 
