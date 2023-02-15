@@ -1,5 +1,5 @@
 ---
-sidebar_label: Welcome
+sidebar_label: What's Keep?
 sidebar_position: 1
 slug: /
 ---
