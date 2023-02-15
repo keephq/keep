@@ -2,7 +2,7 @@
 sidebar_label: MySQL
 ---
 
-# Template
+# MySQL
 
 :::note Brief Description
 MySQL Provider is a provider used to query MySQL databases
