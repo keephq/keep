@@ -1,22 +1,11 @@
 ---
-sidebar_label: Welcome
+sidebar_label: Introduction
 sidebar_position: 1
 slug: /
 ---
 
-# Keep Documentation
+# Introduction
 
-<div align="center">
-
-<img src="/img/keep.png" />
-
-</div>
-
-<h1 align="center">Alerting. By developers, for developers.</h1>
-
-<h4 align="center">
-Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
-</h4>
 
 ## 🗼 A glance of Keep
 
