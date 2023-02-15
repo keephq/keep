@@ -1,3 +1,7 @@
+```diff
++ Missing a specific use case? no worries, hit us up and we will implement it for you! just open an issue.
+```
+<br />
 <div align="center">
     <img src="/docs/static/img/keep.png?raw=true">
 </div>
