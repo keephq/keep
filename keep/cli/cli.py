@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import sys
 from collections import OrderedDict
 from dataclasses import fields
@@ -12,7 +13,28 @@ from keep.alertmanager.alertmanager import AlertManager
 from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
-
+logging_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "default": {
+            "level": "DEBUG",
+            "formatter": "standard",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+        }
+    },
+    "loggers": {
+        "": {  # root logger
+            "handlers": ["default"],
+            "level": "INFO",
+            "propagate": False,
+        }
+    },
+}
 logger = logging.getLogger(__name__)
 
 
@@ -60,9 +82,10 @@ def cli(info: Info, verbose: int, keep_config: str):
     """Run Keep CLI."""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
-        logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    else:
-        logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
+        # set the verbosity level to debug
+        logging_config["loggers"][""]["level"] = "DEBUG"
+
+    logging.config.dictConfig(logging_config)
     info.verbose = verbose
     info.set_config(keep_config)
 
