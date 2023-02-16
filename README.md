@@ -99,7 +99,7 @@ poetry install
 keep version
 ```
 
-Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it:
+Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use Keep to configure it:
 
 ```
 keep config provider --provider-type slack --provider-id slack-demo
