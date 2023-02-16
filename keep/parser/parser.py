@@ -1,5 +1,4 @@
 import logging
-import os
 import typing
 
 import yaml
@@ -56,7 +55,7 @@ class Parser:
         return alert
 
     def _parse_providers_config(
-        self, alert: dict, providers_file: str
+        self, alert: dict, providers_file: str,
     ) -> typing.List[BaseProvider]:
         self.logger.debug("Parsing providers")
         if providers_file:
@@ -70,7 +69,7 @@ class Parser:
         self.logger.debug("Alert providers parsed successfully")
 
     def _parse_providers_from_file(
-        self, providers_file: str
+        self, providers_file: str,
     ) -> typing.List[BaseProvider]:
         with open(providers_file, "r") as file:
             try:
@@ -126,7 +125,7 @@ class Parser:
             provider_config = {"authentication": {}}
             provider_id = step_provider_type
         provider = ProvidersFactory.get_provider(
-            provider_id, step_provider_type, provider_config
+            provider_id, step_provider_type, provider_config,
         )
         return provider
 
@@ -142,7 +141,7 @@ class Parser:
             provider_config = self._get_provider_config(provider_id)
             provider_type = _action.get("provider").get("type")
             provider = ProvidersFactory.get_provider(
-                provider_id, provider_type, provider_config, **provider_context
+                provider_id, provider_type, provider_config, **provider_context,
             )
             action = Action(
                 name=name,
@@ -171,7 +170,7 @@ class Parser:
         provider_type = provider_type.split(".")
         if len(provider_type) != 2:
             raise ValueError(
-                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}"
+                "Provider config is not valid, should be in the format: {{ <provider_id>.<config_id> }}",
             )
 
         provider_id = provider_type[1].replace("}}", "").strip()
@@ -189,6 +188,6 @@ class Parser:
         provider_config = self.context_manager.providers_context.get(provider_id)
         if not provider_config:
             raise ValueError(
-                f"Provider {provider_id} not found in configuration, did you configure it?"
+                f"Provider {provider_id} not found in configuration, did you configure it?",
             )
         return provider_config

@@ -1,6 +1,5 @@
 import logging
 import sys
-from collections import OrderedDict
 from dataclasses import fields
 from importlib import metadata
 
@@ -16,7 +15,7 @@ load_dotenv(find_dotenv())
 logger = logging.getLogger(__name__)
 
 
-class Info(object):
+class Info():
     """An information object to pass data between CLI functions."""
 
     def __init__(self):  # Note: This object must have an empty constructor.
@@ -34,7 +33,7 @@ class Info(object):
                 self.logger.debug("Configuration file loaded.")
         except FileNotFoundError:
             logger.debug(
-                "Configuration file could not be found. Running without configuration."
+                "Configuration file could not be found. Running without configuration.",
             )
             pass
 
@@ -171,7 +170,7 @@ def provider(info: Info, provider_type, provider_id, provider_config_file):
             if optional:
                 default = field.default or ""
                 config_value = click.prompt(
-                    f"{field.metadata.get('description')}", default=default
+                    f"{field.metadata.get('description')}", default=default,
                 )
             else:
                 config_value = click.prompt(f"{field.metadata.get('description')}")

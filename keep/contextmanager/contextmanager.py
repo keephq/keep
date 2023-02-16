@@ -1,4 +1,3 @@
-from typing import Self
 
 import click
 
@@ -9,14 +8,14 @@ class ContextManager:
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
     @staticmethod
     def get_instance() -> "ContextManager":
-        if ContextManager.__instance == None:
+        if ContextManager.__instance is None:
             ContextManager()
         return ContextManager.__instance
 
     def __init__(self):
-        if ContextManager.__instance != None:
+        if ContextManager.__instance is not None:
             raise Exception(
-                "Singleton class is a singleton class and cannot be instantiated more than once."
+                "Singleton class is a singleton class and cannot be instantiated more than once.",
             )
         else:
             ContextManager.__instance = self
@@ -49,7 +48,7 @@ class ContextManager:
         return context
 
     def set_condition_results(
-        self, step_id, condition_id, raw_value, compare_to, compare_value, result
+        self, step_id, condition_id, raw_value, compare_to, compare_value, result,
     ):
         if step_id not in self.steps_context:
             self.steps_context[step_id] = {"conditions": {}, "results": {}}
@@ -65,7 +64,7 @@ class ContextManager:
                 "value": compare_value,
                 "compare_to": compare_to,
                 "result": result,
-            }
+            },
         )
 
     def get_actionable_results(self):
@@ -76,12 +75,12 @@ class ContextManager:
                     for condition in self.steps_context[step_id]["conditions"][
                         condition_id
                     ]:
-                        if condition["result"] == True:
+                        if condition["result"] is True:
                             actionable_results.append(
                                 {
                                     "step_id": step_id,
                                     "condition_id": condition_id,
                                     "condition": condition,
-                                }
+                                },
                             )
         return actionable_results

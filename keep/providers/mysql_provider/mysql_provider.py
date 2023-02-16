@@ -15,16 +15,16 @@ from keep.providers.models.provider_config import ProviderConfig
 @pydantic.dataclasses.dataclass
 class MysqlProviderAuthConfig:
     username: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL username"}
+        metadata={"required": True, "description": "MySQL username"},
     )
     password: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL password"}
+        metadata={"required": True, "description": "MySQL password"},
     )
     host: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL hostname"}
+        metadata={"required": True, "description": "MySQL hostname"},
     )
     database: str | None = dataclasses.field(
-        metadata={"required": False, "description": "MySQL database name"}
+        metadata={"required": False, "description": "MySQL database name"},
     )
 
 
@@ -59,7 +59,7 @@ class MysqlProvider(BaseProvider):
         Validates required configuration for MySQL's provider.
         """
         self.authentication_config = MysqlProviderAuthConfig(
-            **self.config.authentication
+            **self.config.authentication,
         )
 
     def query(self, **kwargs: dict) -> list | tuple:
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             "password": os.environ.get("MYSQL_PASSWORD"),
             "host": os.environ.get("MYSQL_HOST"),
             "database": os.environ.get("MYSQL_DATABASE"),
-        }
+        },
     )
     mysql_provider = MysqlProvider("mysql-prod", config)
     results = mysql_provider.query(query="SELECT MAX(datetime) FROM demo_table LIMIT 1")

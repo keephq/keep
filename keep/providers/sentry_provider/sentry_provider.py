@@ -6,7 +6,6 @@ import dataclasses
 import pydantic
 import requests
 
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -17,10 +16,10 @@ class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
 
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Sentry Api Key"}
+        metadata={"required": True, "description": "Sentry Api Key"},
     )
     org_slug: str = dataclasses.field(
-        metadata={"required": True, "description": "Sentry organization slug"}
+        metadata={"required": True, "description": "Sentry organization slug"},
     )
 
 
@@ -39,7 +38,7 @@ class SentryProvider(BaseProvider):
     def validate_config(self):
         """Validates required configuration for Sentry's provider."""
         self.authentication_config = SentryProviderAuthConfig(
-            **self.config.authentication
+            **self.config.authentication,
         )
 
     def query(self, query: str, **kwargs: dict):
@@ -60,7 +59,7 @@ class SentryProvider(BaseProvider):
 
         params = {"limit": 100}
         response = requests.get(
-            self.get_events_url(project, time), headers=headers, params=params
+            self.get_events_url(project, time), headers=headers, params=params,
         )
         response.raise_for_status()
 
@@ -92,7 +91,7 @@ if __name__ == "__main__":
         "authentication": {"api_token": sentry_api_token, "org_slug": sentry_org_slug},
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="sentry", provider_config=config, project=sentry_project
+        provider_type="sentry", provider_config=config, project=sentry_project,
     )
     result = provider.query("")
     print(result)

@@ -22,7 +22,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.config = config
         self.validate_config()
         self.logger.debug(
-            "Base provider initalized", extra={"provider": self.__class__.__name__}
+            "Base provider initalized", extra={"provider": self.__class__.__name__},
         )
 
     @property

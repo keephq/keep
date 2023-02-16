@@ -1,4 +1,3 @@
-import chevron
 
 from keep.conditions.base_condition import BaseCondition
 
@@ -26,22 +25,18 @@ class ThresholdCondition(BaseCondition):
             compare_to = float(compare_to)
             compare_value = float(compare_value)
         # validate they are both the same type
-        if type(compare_value) != type(compare_to):
+        if not isinstance(compare_value, type(compare_to)):
             raise Exception(
-                "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    compare_to, compare_value
-                )
+                f"Invalid threshold value, currently support only numeric and percentage values but got {compare_to} and {compare_value}",
             )
         if self._is_percentage(compare_to) and not self._is_percentage(compare_value):
             raise Exception(
-                "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    compare_to, compare_value
-                )
+                f"Invalid threshold value, currently support only numeric and percentage values but got {compare_to} and {compare_value}",
             )
         return self._apply_threshold(compare_value, compare_to)
 
     def _is_percentage(self, a):
-        if isinstance(a, int) or isinstance(a, float):
+        if isinstance(a, (float, int)):
             return False
 
         if not a.endswith("%"):

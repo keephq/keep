@@ -16,7 +16,7 @@ class SlackProviderAuthConfig:
     """Slack authentication configuration."""
 
     webhook_url: str = dataclasses.field(
-        metadata={"required": True, "description": "Slack Webhook Url"}
+        metadata={"required": True, "description": "Slack Webhook Url"},
     )
 
 
@@ -26,7 +26,7 @@ class SlackProvider(BaseProvider):
 
     def validate_config(self):
         self.authentication_config = SlackProviderAuthConfig(
-            **self.config.authentication
+            **self.config.authentication,
         )
 
     def dispose(self):
@@ -54,7 +54,7 @@ class SlackProvider(BaseProvider):
         )
         if not response.ok:
             raise ProviderException(
-                f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
+                f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}",
             )
 
         self.logger.debug("Alert message notified to Slack")
@@ -79,5 +79,5 @@ if __name__ == "__main__":
     )
     provider = SlackProvider(config=config)
     provider.notify(
-        message="Simple alert showing context with name: {name}".format(name="John Doe")
+        message="Simple alert showing context with name: John Doe",
     )

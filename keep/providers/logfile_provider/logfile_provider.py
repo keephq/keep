@@ -28,7 +28,6 @@ class LogfileProvider(BaseProvider):
         Returns:
             _type_: _description_
         """
-
         filename = kwargs.get("filename")
         date = kwargs.get("time")
 

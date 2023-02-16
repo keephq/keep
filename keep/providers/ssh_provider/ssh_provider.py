@@ -7,7 +7,6 @@ import io
 import pydantic
 from paramiko import AutoAddPolicy, RSAKey, SSHClient
 
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -24,19 +23,19 @@ class SshProviderAuthConfig:
 
     # TODO: validate hostname because it seems pydantic doesn't have a validator for it
     host: str = dataclasses.field(
-        metadata={"required": True, "description": "SSH hostname"}
+        metadata={"required": True, "description": "SSH hostname"},
     )
     user: str = dataclasses.field(
-        metadata={"required": True, "description": "SSH user"}
+        metadata={"required": True, "description": "SSH user"},
     )
     port: int = dataclasses.field(
-        default=22, metadata={"required": False, "description": "SSH port"}
+        default=22, metadata={"required": False, "description": "SSH port"},
     )
     pkey: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "SSH private key"}
+        default="", metadata={"required": False, "description": "SSH private key"},
     )
     password: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "SSH password"}
+        default="", metadata={"required": False, "description": "SSH password"},
     )
 
     @pydantic.root_validator
@@ -72,7 +71,7 @@ class SshProvider(BaseProvider):
             private_key_file = io.StringIO(private_key)
             private_key_file.seek(0)
             key = RSAKey.from_private_key(
-                private_key_file, self.config.authentication.get("pkey_passphrase")
+                private_key_file, self.config.authentication.get("pkey_passphrase"),
             )
             ssh_client.connect(host, port, user, pk=key)
         else:
@@ -140,7 +139,7 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="ssh", provider_config=config
+        provider_type="ssh", provider_config=config,
     )
     result = provider.query("df -h")
     print(result)

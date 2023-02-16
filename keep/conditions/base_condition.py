@@ -23,7 +23,7 @@ class BaseCondition(metaclass=abc.ABCMeta):
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.logger.debug(
-            "Initializing condition", extra={"condition": self.__class__.__name__}
+            "Initializing condition", extra={"condition": self.__class__.__name__},
         )
 
     @abc.abstractmethod

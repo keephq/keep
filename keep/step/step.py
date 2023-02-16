@@ -10,7 +10,7 @@ from keep.providers.base.base_provider import BaseProvider
 
 class Step:
     def __init__(
-        self, step_id, step_config, provider: BaseProvider, provider_parameters: dict
+        self, step_id, step_config, provider: BaseProvider, provider_parameters: dict,
     ):
         self.step_id = step_id
         self.step_config = step_config
@@ -29,7 +29,7 @@ class Step:
             # Inject the context to the parameters
             for parameter in self.provider_parameters:
                 self.provider_parameters[parameter] = self._inject_context_to_parameter(
-                    self.provider_parameters[parameter]
+                    self.provider_parameters[parameter],
                 )
             step_output = self.provider.query(**self.provider_parameters)
             self.context_manager.steps_context[self.step_id] = {"results": step_output}
@@ -56,7 +56,7 @@ class Step:
         self.logger.debug("Post Step validation success")
 
     def _post_each_step_validations(self, foreach_value_template):
-        context = self.context_manager.get_full_context()
+        self.context_manager.get_full_context()
         foreach_actual_value = self._get_actual_value(foreach_value_template)
         for value in foreach_actual_value:
             # will be use inside the io handler
@@ -67,7 +67,7 @@ class Step:
                 condition_what_to_compare = condition.get_compare_to()
                 condition_compare_value = condition.get_compare_value()
                 condition_result = condition.apply(
-                    condition_what_to_compare, condition_compare_value
+                    condition_what_to_compare, condition_compare_value,
                 )
                 self.context_manager.set_condition_results(
                     self.step_id,
@@ -85,7 +85,7 @@ class Step:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
             condition_result = condition.apply(
-                condition_compare_to, condition_compare_value
+                condition_compare_to, condition_compare_value,
             )
             self.context_manager.set_condition_results(
                 self.step_id,

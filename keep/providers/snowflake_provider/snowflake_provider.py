@@ -11,7 +11,6 @@ from cryptography.hazmat.primitives import serialization
 from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
 
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -20,16 +19,16 @@ from keep.providers.providers_factory import ProvidersFactory
 @pydantic.dataclasses.dataclass
 class SnowflakeProviderAuthConfig:
     user: str = dataclasses.field(
-        metadata={"required": True, "description": "Snowflake user"}
+        metadata={"required": True, "description": "Snowflake user"},
     )
     account: str = dataclasses.field(
-        metadata={"required": True, "description": "Snowflake account"}
+        metadata={"required": True, "description": "Snowflake account"},
     )
     pkey: str = dataclasses.field(
-        metadata={"required": True, "description": "Snowflake private key"}
+        metadata={"required": True, "description": "Snowflake private key"},
     )
     pkey_passphrase: typing.Optional[str] = dataclasses.field(
-        metadata={"required": False, "description": "Snowflake password"}
+        metadata={"required": False, "description": "Snowflake password"},
     )
 
 
@@ -81,7 +80,7 @@ class SnowflakeProvider(BaseProvider):
             ProviderConfigException: private key
         """
         self.authentication_config = SnowflakeProviderAuthConfig(
-            **self.config.authentication
+            **self.config.authentication,
         )
 
     def query(self, query: str, **kwargs: dict):
@@ -119,9 +118,9 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="snowflake", provider_config=config
+        provider_type="snowflake", provider_config=config,
     )
     result = provider.query(
-        "select * from {table} limit 10", table="TEST_DB.PUBLIC.CUSTOMERS"
+        "select * from {table} limit 10", table="TEST_DB.PUBLIC.CUSTOMERS",
     )
     print(result)

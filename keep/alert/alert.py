@@ -34,12 +34,12 @@ class Alert:
         for step in self.alert_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step_output = step.run()
+                step.run()
                 self.logger.info("Step %s ran successfully", step.step_id)
                 # If we need to halt the alert, stop here
                 if step.action_needed:
                     self.logger.info(
-                        f"Step {str(step.step_id)} got positive output, running actions and stopping"
+                        f"Step {str(step.step_id)} got positive output, running actions and stopping",
                     )
                     self._handle_actions()
                     return  # <--- stop HERE
@@ -56,7 +56,7 @@ class Alert:
         else:
             self.logger.exception("Failed to run step")
             raise StepError(
-                f"Step {step.step_id} failed to execute without error handling strategy - {str(exc)}"
+                f"Step {step.step_id} failed to execute without error handling strategy - {str(exc)}",
             )
 
     def _handle_actions(self):

@@ -20,10 +20,10 @@ class ElasticProviderAuthConfig:
     """Elasticsearch authentication configuration."""
 
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Elasticsearch Api Key"}
+        metadata={"required": True, "description": "Elasticsearch Api Key"},
     )
     host: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "Elasticsearch host"}
+        default="", metadata={"required": False, "description": "Elasticsearch host"},
     )
     cloud_id: str = dataclasses.field(
         default="",
@@ -69,7 +69,7 @@ class ElasticProvider(BaseProvider):
         Validate the provider config.
         """
         if not self.config.authentication.get(
-            "host"
+            "host",
         ) and not self.config.authentication.get("cloud_id"):
             raise ProviderConfigException("Missing host or cloud_id in provider config")
         if "api_key" not in self.config.authentication:
@@ -114,7 +114,7 @@ class ElasticProvider(BaseProvider):
         results = pd.DataFrame(response["rows"])
         columns = [col["name"] for col in response["columns"]]
         results.rename(
-            columns={i: columns[i] for i in range(len(columns))}, inplace=True
+            columns={i: columns[i] for i in range(len(columns))}, inplace=True,
         )
         return results
 
@@ -126,7 +126,7 @@ class ElasticProvider(BaseProvider):
         self.logger.debug(
             "Got elasticsearch hits",
             extra={
-                "num_of_hits": response.get("hits", {}).get("total", {}).get("value", 0)
+                "num_of_hits": response.get("hits", {}).get("total", {}).get("value", 0),
             },
         )
         if "hits" in response and "hits" in response["hits"]:
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="elastic", provider_config=config
+        provider_type="elastic", provider_config=config,
     )
     result = provider.query('{"match_all": {}}', index="test-index")
     print(result)

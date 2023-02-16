@@ -11,7 +11,7 @@ from keep.providers.models.provider_config import ProviderConfig
 class ProvidersFactory:
     @staticmethod
     def get_provider(
-        provider_id: str, provider_type: str, provider_config: dict, **kwargs
+        provider_id: str, provider_type: str, provider_config: dict, **kwargs,
     ) -> BaseProvider:
         """
         Get the instantiated provider class according to the provider type.
@@ -24,10 +24,10 @@ class ProvidersFactory:
         """
         provider_config = ProviderConfig(**provider_config)
         module = importlib.import_module(
-            f"keep.providers.{provider_type}_provider.{provider_type}_provider"
+            f"keep.providers.{provider_type}_provider.{provider_type}_provider",
         )
         provider_class = getattr(
-            module, provider_type.title().replace("_", "") + "Provider"
+            module, provider_type.title().replace("_", "") + "Provider",
         )
         return provider_class(provider_id=provider_id, config=provider_config)
 
@@ -43,15 +43,15 @@ class ProvidersFactory:
             BaseProvider: The provider class.
         """
         module = importlib.import_module(
-            f"keep.providers.{provider_type}_provider.{provider_type}_provider"
+            f"keep.providers.{provider_type}_provider.{provider_type}_provider",
         )
         try:
             provider_auth_config_class = getattr(
-                module, provider_type.title().replace("_", "") + "ProviderAuthConfig"
+                module, provider_type.title().replace("_", "") + "ProviderAuthConfig",
             )
             return provider_auth_config_class
         except ImportError:
             logging.getLogger(__name__).warning(
-                f"Provider {provider_type} does not have a provider auth config class"
+                f"Provider {provider_type} does not have a provider auth config class",
             )
             return {}

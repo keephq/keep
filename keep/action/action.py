@@ -1,7 +1,4 @@
 import logging
-import re
-
-import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
@@ -11,7 +8,7 @@ from keep.providers.base.base_provider import BaseProvider
 
 class Action:
     def __init__(
-        self, name: str, config, provider: BaseProvider, provider_context: dict
+        self, name: str, config, provider: BaseProvider, provider_context: dict,
     ):
         self.name = name
         self.logger = logging.getLogger(__name__)
@@ -34,7 +31,7 @@ class Action:
         foreach_iterator = self.context_manager.get_actionable_results()
         for val in foreach_iterator:
             self.context_manager.set_for_each_context(
-                val.get("condition").get("raw_value")
+                val.get("condition").get("raw_value"),
             )
             rendered_value = self.io_handler.render_context(self.provider_context)
             self.provider.notify(**rendered_value)

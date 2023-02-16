@@ -1,6 +1,5 @@
 import ast
 import copy
-import json
 import logging
 import re
 
@@ -34,12 +33,12 @@ class IOHandler:
         # check if inside the mustache is object in the context
         if template.count("}}") != template.count("{{"):
             raise Exception(
-                f"Invalid template - number of }} and {{ does not match {template}"
+                f"Invalid template - number of }} and {{ does not match {template}",
             )
         # TODO - better validate functions
         if template.count("(") != template.count(")"):
             raise Exception(
-                f"Invalid template - number of ( and ) does not match {template}"
+                f"Invalid template - number of ( and ) does not match {template}",
             )
         val = self.parse(template)
         return val
@@ -70,7 +69,7 @@ class IOHandler:
         #           first(split({{ foreach.value }},'a', 'b'))
 
         pattern = re.compile(
-            r"(\w+\(\s*\{\{.*?\}\}\s*.*?\))|(\w+\(\s*.*?\)\))|(\{\{.*?\}\})"
+            r"(\w+\(\s*\{\{.*?\}\}\s*.*?\))|(\w+\(\s*.*?\)\))|(\{\{.*?\}\})",
         )
         parsed_string = copy.copy(string)
         tokens = pattern.findall(parsed_string)
@@ -202,7 +201,7 @@ class IOHandler:
             rendered_template (str): The rendered template that might contain URLs
         """
         urls = re.findall(
-            "https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template
+            r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template,
         )
         # didn't find any url
         if not urls:
@@ -227,7 +226,7 @@ class IOHandler:
             api_url = self.context_manager.click_context.params.get("api_url")
             api_key = self.context_manager.click_context.params.get("api_key")
             response = requests.post(
-                f"{api_url}/s", json=urls, headers={"x-api-key": api_key}
+                f"{api_url}/s", json=urls, headers={"x-api-key": api_key},
             )
             if response.ok:
                 return response.json()
