@@ -28,14 +28,14 @@ logging_config = {
             "formatter": "standard",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
-        }
+        },
     },
     "loggers": {
         "": {  # root logger
             "handlers": ["default"],
             "level": "INFO",
             "propagate": False,
-        }
+        },
     },
 }
 logger = logging.getLogger(__name__)
