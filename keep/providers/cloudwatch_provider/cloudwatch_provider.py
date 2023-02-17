@@ -69,7 +69,7 @@ class CloudwatchLogsProvider(CloudwatchProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__("logs", provider_id, config)
 
-    def query(self, **kwargs: dict) -> list | tuple:
+    def query(self, **kwargs: dict) -> dict:
         log_group = kwargs.get("log_group")
         query = kwargs.get("query")
         hours = kwargs.get("hours", 24)
@@ -104,7 +104,7 @@ class CloudwatchMetricsProvider(CloudwatchProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__("cloudwatch", provider_id, config)
 
-    def query(self, **kwargs: dict) -> list | tuple:
+    def query(self, **kwargs: dict) -> None:
         raise NotImplementedError(
             'CloudwatchMetricsProvider does not support "query" method yet.'
         )
