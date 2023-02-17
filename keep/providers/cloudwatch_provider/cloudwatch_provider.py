@@ -38,7 +38,7 @@ class CloudwatchProvider(BaseProvider):
 
     def __init__(self, aws_client_type: str, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.client = self.__generate_client()
+        self.client = self.__generate_client(aws_client_type)
 
     def __generate_client(self, aws_client_type: str):
         client = boto3.client(
