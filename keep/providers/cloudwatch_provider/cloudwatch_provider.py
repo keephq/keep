@@ -105,8 +105,9 @@ class CloudwatchMetricsProvider(CloudwatchProvider):
         super().__init__("cloudwatch", provider_id, config)
 
     def query(self, **kwargs: dict) -> list | tuple:
-        results = []
-        return results
+        raise NotImplementedError(
+            'CloudwatchMetricsProvider does not support "query" method yet.'
+        )
 
 
 if __name__ == "__main__":
