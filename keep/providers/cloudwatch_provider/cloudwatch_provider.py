@@ -31,14 +31,18 @@ class CloudwatchProviderAuthConfig:
     )
 
 
-class CloudwatchLogsProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
+class CloudwatchProvider(BaseProvider):
+    """
+    CloudwatchProvider is a class that provides a way to read data from AWS Cloudwatch.
+    """
+
+    def __init__(self, aws_client_type: str, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
         self.client = self.__generate_client()
 
-    def __generate_client(self):
+    def __generate_client(self, aws_client_type: str):
         client = boto3.client(
-            "logs",
+            aws_client_type,
             aws_access_key_id=self.authentication_config.access_key,
             aws_secret_access_key=self.authentication_config.access_key_secret,
             region_name=self.authentication_config.region,
@@ -49,12 +53,21 @@ class CloudwatchLogsProvider(BaseProvider):
         try:
             self.client.close()
         except Exception:
-            self.logger.exception("Error closing MySQL connection")
+            self.logger.exception("Error closing boto3 connection")
 
     def validate_config(self):
         self.authentication_config = CloudwatchProviderAuthConfig(
             **self.config.authentication
         )
+
+
+class CloudwatchLogsProvider(CloudwatchProvider):
+    """
+    CloudwatchLogsProvider is a class that provides a way to read data from AWS Cloudwatch Logs.
+    """
+
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__("logs", provider_id, config)
 
     def query(self, **kwargs: dict) -> list | tuple:
         log_group = kwargs.get("log_group")
@@ -83,30 +96,13 @@ class CloudwatchLogsProvider(BaseProvider):
         return results
 
 
-class CloudwatchMetricsProvider(BaseProvider):
+class CloudwatchMetricsProvider(CloudwatchProvider):
+    """
+    CloudwatchMetricsProvider is a class that provides a way to read data from AWS Cloudwatch Metrics.
+    """
+
     def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
-        self.client = self.__generate_client()
-
-    def __generate_client(self):
-        client = boto3.client(
-            "cloudwatch",
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.access_key_secret,
-            region_name=self.authentication_config.region,
-        )
-        return client
-
-    def dispose(self):
-        try:
-            self.client.close()
-        except Exception:
-            self.logger.exception("Error closing MySQL connection")
-
-    def validate_config(self):
-        self.authentication_config = CloudwatchProviderAuthConfig(
-            **self.config.authentication
-        )
+        super().__init__("cloudwatch", provider_id, config)
 
     def query(self, **kwargs: dict) -> list | tuple:
         results = []
