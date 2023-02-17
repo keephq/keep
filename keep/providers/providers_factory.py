@@ -23,12 +23,31 @@ class ProvidersFactory:
             BaseProvider: The provider class.
         """
         provider_config = ProviderConfig(**provider_config)
+
+        provider_type_split = provider_type.split(
+            "."
+        )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
+        actual_provider_type = provider_type_split[
+            0
+        ]  # provider type is always the first part
+
         module = importlib.import_module(
-            f"keep.providers.{provider_type}_provider.{provider_type}_provider"
+            f"keep.providers.{actual_provider_type}_provider.{actual_provider_type}_provider"
         )
-        provider_class = getattr(
-            module, provider_type.title().replace("_", "") + "Provider"
-        )
+
+        # If the provider type doesn't include a sub-type, e.g. "cloudwatch.logs"
+        if len(provider_type_split) == 1:
+            provider_class = getattr(
+                module, actual_provider_type.title().replace("_", "") + "Provider"
+            )
+        # If the provider type includes a sub-type, e.g. "cloudwatch.metrics"
+        else:
+            provider_class = getattr(
+                module,
+                actual_provider_type.title().replace("_", "")
+                + provider_type_split[1].title().replace("_", "")
+                + "Provider",
+            )
         return provider_class(provider_id=provider_id, config=provider_config)
 
     @staticmethod

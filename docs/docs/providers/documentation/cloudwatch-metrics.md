@@ -1,11 +1,11 @@
 ---
-sidebar_label: CloudWatch
+sidebar_label: CloudWatch Metrics
 ---
 
 # AWS CloudWatch
 
 :::note Brief Description
-CloudWatch Provider is a provider used to query AWS CloudWatch
+CloudWatch Metrics Provider is a provider used to query AWS CloudWatch Metrics
 :::
 
 ## Inputs
