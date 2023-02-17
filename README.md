@@ -70,6 +70,16 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 
 ## 🚀 Quickstart
 
+
+### Docker
+Configure:
+```
+docker run -v ${PWD}:/app -it keep config provider --provider-type slack --provider-id slack-demo
+```
+Run:
+```
+docker run -v ${PWD}:/app -it keephq/cli -j run --alerts-file  examples/alerts/db_disk_space.yml
+```
 ### Run locally
 
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
