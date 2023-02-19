@@ -85,10 +85,3 @@ class HttpProvider(BaseProvider):
             return response.json()
         except JSONDecodeError:
             return response.text
-
-
-if __name__ == "__main__":
-    config = ProviderConfig(authentication={})
-    mysql_provider = HttpProvider("simple-http", config)
-    results = mysql_provider.query()
-    print(results)
