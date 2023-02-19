@@ -60,7 +60,7 @@ class Alert:
             )
 
     def _handle_actions(self):
-        self.logger.debug(f"Handling actisons for alert {self.alert_id}")
+        self.logger.debug(f"Handling actions for alert {self.alert_id}")
         for action in self.alert_actions:
             action.run()
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
