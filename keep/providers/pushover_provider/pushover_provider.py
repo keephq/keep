@@ -69,15 +69,16 @@ if __name__ == "__main__":
     # Load environment variables
     import os
 
-    slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    pushover_token = os.environ.get("PUSHOVER_TOKEN")
+    pushover_user_key = os.environ.get("PUSHOVER_USER_KEY")
 
     # Initalize the provider and provider config
     config = ProviderConfig(
-        id="slack-test",
-        description="Slack Output Provider",
-        authentication={"webhook_url": slack_webhook_url},
+        id="pushover-test",
+        description="Pushover Output Provider",
+        authentication={"token": pushover_token, "user_key": pushover_user_key},
     )
-    provider = SlackProvider(config=config)
+    provider = PushoverProvider(config=config)
     provider.notify(
         message="Simple alert showing context with name: {name}".format(name="John Doe")
     )
