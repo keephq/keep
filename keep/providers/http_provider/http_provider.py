@@ -25,6 +25,12 @@ class HttpProvider(BaseProvider):
         Not configuration to validate here
         """
 
+    def notify(self, **kwargs):
+        """
+        Send a HTTP request to the given url.
+        """
+        self.query(**kwargs)
+
     def query(
         self,
         url: str,
