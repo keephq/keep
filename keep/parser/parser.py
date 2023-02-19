@@ -116,15 +116,10 @@ class Parser:
     def _get_step_provider(self, _step: dict) -> dict:
         step_provider = _step.get("provider")
         step_provider_type = step_provider.pop("type")
-        try:
-            step_provider_config = step_provider.pop("config")
-            provider_id = self._get_provider_id(step_provider_config)
-            provider_config = self._get_provider_config(provider_id)
-        # Support providers without config such as logfile or mock
-        except KeyError:
-            step_provider_config = {}
-            provider_config = {"authentication": {}}
-            provider_id = step_provider_type
+        step_provider_config = step_provider.pop("config")
+        provider_id, provider_config = self._parse_provider_config(
+            step_provider_type, step_provider_config
+        )
         provider = ProvidersFactory.get_provider(
             provider_id, step_provider_type, provider_config
         )
@@ -138,9 +133,10 @@ class Parser:
             name = _action.get("name")
             provider_config = _action.get("provider").get("config")
             provider_context = _action.get("provider").get("with")
-            provider_id = self._get_provider_id(provider_config)
-            provider_config = self._get_provider_config(provider_id)
             provider_type = _action.get("provider").get("type")
+            provider_id, provider_config = self._parse_provider_config(
+                provider_type, provider_config
+            )
             provider = ProvidersFactory.get_provider(
                 provider_id, provider_type, provider_config, **provider_context
             )
@@ -154,7 +150,7 @@ class Parser:
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
 
-    def _get_provider_id(self, provider_type: str):
+    def _extract_provider_id(self, provider_type: str):
         """
         Translate {{ <provider_id>.<config_id> }} to a provider id
 
@@ -177,18 +173,37 @@ class Parser:
         provider_id = provider_type[1].replace("}}", "").strip()
         return provider_id
 
-    def _get_provider_config(self, provider_id: str):
-        """Get provider config according to provider_id
+    def _parse_provider_config(
+        self, provider_type: str, provider_config: str | dict | None
+    ) -> tuple:
+        """
+        Parse provider config.
+            If the provider config is a dict, return it as is.
+            If the provider config is None, return an empty dict.
+            If the provider config is a string, extract the config from the providers context.
+            * When provider config is either dict or None, provider config id is the same as the provider type.
 
         Args:
-            provider_type (_type_): _description_
+            provider_type (str): The provider type
+            provider_config (str | dict | None): The provider config
 
         Raises:
-            ValueError: _description_
+            ValueError: When the provider config is a string and the provider config id is not found in the providers context.
+
+        Returns:
+            tuple: provider id and provider parsed config
         """
-        provider_config = self.context_manager.providers_context.get(provider_id)
-        if not provider_config:
-            raise ValueError(
-                f"Provider {provider_id} not found in configuration, did you configure it?"
-            )
-        return provider_config
+        # Support providers without config such as logfile or mock
+        if isinstance(provider_config, dict):
+            return provider_type, provider_config
+        elif provider_config is None:
+            return provider_type, {"authentication": {}}
+        # extract config when using {{ <provider_id>.<config_id> }}
+        elif isinstance(provider_config, str):
+            config_id = self._extract_provider_id(provider_config)
+            provider_config = self.context_manager.providers_context.get(config_id)
+            if not provider_config:
+                raise ValueError(
+                    f"Provider {config_id} not found in configuration, did you configure it?"
+                )
+            return config_id, provider_config
