@@ -107,8 +107,8 @@ def version():
 @click.option(
     "--alerts-file",
     "-f",
-    type=click.Path(exists=True),
-    help="The path to the alert yaml",
+    type=click.Path(exists=True, dir_okay=True, file_okay=True),
+    help="The path to the alert yaml/alerts directory",
     required=True,
 )
 @click.option(
@@ -129,7 +129,7 @@ def version():
 @pass_info
 def run(info: Info, alerts_file, providers_file, api_key, api_url):
     """Run the alert."""
-    logger.debug(f"Running alert {alerts_file}")
+    logger.debug(f"Running alert in {alerts_file}")
     alert_manager = AlertManager()
     try:
         alert_manager.run(alerts_file, providers_file)
@@ -138,7 +138,7 @@ def run(info: Info, alerts_file, providers_file, api_key, api_url):
         if info.verbose:
             raise e
         sys.exit(1)
-    logger.debug(f"Alert {alerts_file} ran successfully")
+    logger.debug(f"Alert in {alerts_file} ran successfully")
 
 
 @cli.command()
