@@ -111,6 +111,14 @@ def version():
     required=True,
 )
 @click.option(
+    "--interval",
+    "-i",
+    type=int,
+    help="When interval is set, Keep will run the alert every INTERVAL seconds",
+    required=False,
+    default=0,
+)
+@click.option(
     "--providers-file",
     "-p",
     type=click.Path(exists=True),
@@ -126,12 +134,12 @@ def version():
     default="https://s.keephq.dev",
 )
 @pass_info
-def run(info: Info, alerts_file, providers_file, api_key, api_url):
+def run(info: Info, alerts_file, interval: int, providers_file, api_key, api_url):
     """Run the alert."""
     logger.debug(f"Running alert in {alerts_file}")
     alert_manager = AlertManager()
     try:
-        alert_manager.run(alerts_file, providers_file)
+        alert_manager.run(alerts_file, providers_file, interval=interval)
     except Exception as e:
         logger.error(f"Error running alert {alerts_file}: {e}")
         if info.verbose:
