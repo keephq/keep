@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import sys
-from collections import OrderedDict
 from dataclasses import fields
 from importlib import metadata
 
