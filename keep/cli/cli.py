@@ -107,7 +107,7 @@ def version():
 @click.option(
     "--alerts-file",
     "-f",
-    type=click.Path(exists=True),
+    type=click.Path(exists=True, dir_okay=True, file_okay=True),
     help="The path to the alert yaml",
     required=True,
 )
