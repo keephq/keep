@@ -1,7 +1,11 @@
+import io
+import json
 import logging
 import os
 import typing
 
+import requests
+import validators
 import yaml
 
 from keep.action.action import Action
@@ -21,21 +25,52 @@ class Parser:
 
     def parse(self, alert_file: str, providers_file: str = None) -> Alert:
         # Parse the alert YAML
-        parsed_alert_yaml = self._parse_alerts_file_to_dict(alert_file)
+        parsed_alert_yaml = self._parse_alert_to_dict(alert_file)
         # Parse the providers (from the alert yaml or from the providers directory)
-        self._parse_providers_config(parsed_alert_yaml, providers_file)
+        self._load_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
         alert = self._parse_alert(parsed_alert_yaml.get("alert"))
         return alert
 
-    def _parse_alerts_file_to_dict(self, alert_file: str) -> dict:
+    def _parse_alert_to_dict(self, alert_path: str) -> dict:
+        """
+        Parse an alert to a dictionary from either a file or a URL.
+
+        Args:
+            alert_path (str): a URL or a file path
+
+        Returns:
+            dict: Dictionary with the alert information
+        """
         self.logger.debug("Parsing alert")
-        with open(alert_file, "r") as file:
-            try:
-                alert = yaml.safe_load(file)
-            except yaml.YAMLError as e:
-                self.logger.error(f"Error parsing {alert_file}: {e}")
-                raise e
+        # If the alert is a URL, get the alert from the URL
+        if validators.url(alert_path) is True:
+            response = requests.get(alert_path)
+            return self._parse_alert_from_stream(io.StringIO(response.text))
+        else:
+            # else, get the alert from the file
+            with open(alert_path, "r") as file:
+                return self._parse_alert_from_stream(file)
+
+    def _parse_alert_from_stream(self, stream) -> dict:
+        """
+        Parse an alert from an IO stream.
+
+        Args:
+            stream (IOStream): The stream to read from
+
+        Raises:
+            e: If the stream is not a valid YAML
+
+        Returns:
+            dict: Dictionary with the alert information
+        """
+        self.logger.debug("Parsing alert")
+        try:
+            alert = yaml.safe_load(stream)
+        except yaml.YAMLError as e:
+            self.logger.error(f"Error parsing alert: {e}")
+            raise e
         return alert
 
     def _parse_alert(self, alert: dict) -> Alert:
@@ -55,23 +90,56 @@ class Parser:
         self.logger.debug("Alert parsed successfully")
         return alert
 
-    def _parse_providers_config(
-        self, alert: dict, providers_file: str
-    ) -> typing.List[BaseProvider]:
+    def _load_providers_config(self, alert: dict, providers_file: str):
         self.logger.debug("Parsing providers")
-        if providers_file:
+        if providers_file and os.path.exists(providers_file):
             self._parse_providers_from_file(providers_file)
 
         if alert.get("providers"):
             self._parse_providers_from_alert(alert)
 
+        self._parse_providers_from_env()
+        self.logger.debug("Providers parsed and loaded successfully")
+
+    def _parse_providers_from_env(self):
+        """
+        Parse providers from the KEEP_PROVIDERS environment variables.
+            Either KEEP_PROVIDERS to load multiple providers or KEEP_PROVIDER_<provider_name> can be used.
+
+        KEEP_PROVIDERS is a JSON string of the providers config.
+            (e.g. {"slack-prod": {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}})
+        """
+        providers_json = os.environ.get("KEEP_PROVIDERS")
+        if providers_json:
+            try:
+                self.context_manager.providers_context.update(
+                    json.loads(providers_json)
+                )
+            except json.JSONDecodeError:
+                self.logger.error(
+                    "Error parsing providers from KEEP_PROVIDERS environment variable"
+                )
+
+        for env in os.environ.keys():
+            if env.startswith("KEEP_PROVIDER_"):
+                # slack-prod
+                provider_name = env.replace("KEEP_PROVIDER_", "").lower()
+                try:
+                    # {'authentication': {'webhook_url': 'https://hooks.slack.com/services/...'}}
+                    provider_config = json.loads(os.environ.get(env))
+                    self.context_manager.providers_context[
+                        provider_name
+                    ] = provider_config
+                except json.JSONDecodeError:
+                    self.logger.error(
+                        f"Error parsing provider config from environment variable {env}"
+                    )
+
     def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
         self.context_manager.providers_context.update(alert.get("providers"))
         self.logger.debug("Alert providers parsed successfully")
 
-    def _parse_providers_from_file(
-        self, providers_file: str
-    ) -> typing.List[BaseProvider]:
+    def _parse_providers_from_file(self, providers_file: str):
         with open(providers_file, "r") as file:
             try:
                 providers = yaml.safe_load(file)
