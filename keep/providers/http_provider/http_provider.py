@@ -22,7 +22,7 @@ class HttpProvider(BaseProvider):
 
     def validate_config(self):
         """
-        Not configuration to validate here
+        No configuration to validate here
         """
 
     def notify(self, **kwargs):
