@@ -122,8 +122,10 @@ class Parser:
 
         for env in os.environ.keys():
             if env.startswith("KEEP_PROVIDER_"):
-                # slack-prod
-                provider_name = env.replace("KEEP_PROVIDER_", "").lower()
+                # KEEP_PROVIDER_SLACK_PROD
+                provider_name = (
+                    env.replace("KEEP_PROVIDER_", "").replace("_", "-").lower()
+                )
                 try:
                     # {'authentication': {'webhook_url': 'https://hooks.slack.com/services/...'}}
                     provider_config = json.loads(os.environ.get(env))
