@@ -2,6 +2,10 @@ import click
 
 
 class NotRequiredIf(click.Option):
+    """
+    https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is
+    """
+
     def __init__(self, *args, **kwargs):
         self.not_required_if = kwargs.pop("not_required_if")
         assert self.not_required_if, "'not_required_if' parameter required"
