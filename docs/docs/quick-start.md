@@ -45,40 +45,9 @@ Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...)
 keep run --alerts-file examples/alerts/db_disk_space.yml
 ```
 
-### Docker
-
-Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
-
-```bash
-docker run -v ${PWD}:/app -it keephq/cli config provider --provider-type slack --provider-id slack-demo
-```
-
-You should now have a providers.yaml file created locally
-
-Run Keep and execute our example "Paper DB has insufficient disk space" alert
-
-```bash
-docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
-```
-
-### Render
-Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-
-To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
-<br />
-When clicking the Deploy to Render button, you will be asked to provide the `KEEP_PROVIDER_SLACK_DEMO` environment variable, this is the expected format:
-
-```json
-{"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
-```
-
-\* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
-
 <h5>Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.</h5>
 
-Wanna have your alerts up and running in production? Go through our more detailed [Getting Started Guide](https://keephq.wiki/getting-started).
+Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
 
 ## Auto Completion
 
