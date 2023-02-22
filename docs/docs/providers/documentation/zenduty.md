@@ -5,6 +5,7 @@ sidebar_label: Zenduty Provider
 # Zenduty
 Zenduty docs
 
+![User key](zenduty.jpg?raw=true)
 ## Inputs
 The Zenduty provider gets "title", "summary" and "service" as an input which will be used for the incident.
 Configuration example:
