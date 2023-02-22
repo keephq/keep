@@ -15,6 +15,6 @@ jobs:
         with:
           python-version: '3.11.1'
       - run: python -m pip install .  # install requirements
-      - run: keep -v run --alerts-file examples/alerts/db_disk_space.yml
+      - run: keep run --alerts-file examples/alerts/db_disk_space.yml
         env:
           KEEP_PROVIDER_SLACK_DEMO: ${{ secrets.SLACK_DEMO_PROVIDER }}
