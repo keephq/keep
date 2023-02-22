@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import sys
-from collections import OrderedDict
 from dataclasses import fields
 from importlib import metadata
 
@@ -10,6 +9,7 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 
 from keep.alertmanager.alertmanager import AlertManager
+from keep.cli.click_extensions import NotRequiredIf
 from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
@@ -106,15 +106,30 @@ def version():
 @cli.command()
 @click.option(
     "--alerts-file",
-    "-f",
+    "-af",
     type=click.Path(exists=True, dir_okay=True, file_okay=True),
     help="The path to the alert yaml/alerts directory",
-    required=True,
+)
+@click.option(
+    "--alert-url",
+    "-au",
+    help="A url that can be used to download an alert yaml",
+    cls=NotRequiredIf,
+    multiple=True,
+    not_required_if="alerts_file",
+)
+@click.option(
+    "--interval",
+    "-i",
+    type=int,
+    help="When interval is set, Keep will run the alert every INTERVAL seconds",
+    required=False,
+    default=0,
 )
 @click.option(
     "--providers-file",
     "-p",
-    type=click.Path(exists=True),
+    type=click.Path(exists=False),
     help="The path to the providers yaml",
     required=False,
     default="providers.yaml",
@@ -127,18 +142,26 @@ def version():
     default="https://s.keephq.dev",
 )
 @pass_info
-def run(info: Info, alerts_file, providers_file, api_key, api_url):
+def run(
+    info: Info,
+    alerts_file: str,
+    alert_url: list[str],
+    interval: int,
+    providers_file,
+    api_key,
+    api_url,
+):
     """Run the alert."""
-    logger.debug(f"Running alert in {alerts_file}")
+    logger.debug(f"Running alert in {alerts_file or alert_url}")
     alert_manager = AlertManager()
     try:
-        alert_manager.run(alerts_file, providers_file)
+        alert_manager.run(alerts_file or alert_url, providers_file, interval=interval)
     except Exception as e:
-        logger.error(f"Error running alert {alerts_file}: {e}")
+        logger.error(f"Error running alert {alerts_file or alert_url}: {e}")
         if info.verbose:
             raise e
         sys.exit(1)
-    logger.debug(f"Alert in {alerts_file} ran successfully")
+    logger.debug(f"Alert in {alerts_file or alert_url} ran successfully")
 
 
 @cli.command()
