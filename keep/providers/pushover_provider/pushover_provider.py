@@ -10,7 +10,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 @pydantic.dataclasses.dataclass
 class PushoverProviderAuthConfig:
-    """Slack authentication configuration."""
+    """Pushover authentication configuration."""
 
     token: str = dataclasses.field(
         metadata={"required": True, "description": "Pushover app token"}

@@ -10,7 +10,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 @pydantic.dataclasses.dataclass
 class ZendutyProviderAuthConfig:
-    """Slack authentication configuration."""
+    """Zenduty authentication configuration."""
 
     api_key: str = dataclasses.field(
         metadata={"required": True, "description": "Zenduty api key"}
