@@ -1,0 +1,20 @@
+name: "Run Keep / Demo"
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # run every day at 12:00 AM
+  workflow_dispatch:
+
+jobs:
+  run:
+    name: run-keep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3  # checkout keep repo
+      - uses: actions/setup-python@v4  # install python 3.11.1
+        with:
+          python-version: '3.11.1'
+      - run: python -m pip install .  # install requirements
+      - run: keep -v run --alerts-file examples/alerts/db_disk_space.yml
+        env:
+          KEEP_PROVIDER_SLACK_DEMO: ${{ secrets.SLACK_DEMO_PROVIDER }}
