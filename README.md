@@ -18,18 +18,24 @@
 </div>
 
 <h4 align="center">
-Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
+Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
 </h4>
+<div align="center">
 
-<h4 align="center">
-Manage your alerts by code, write better more actionable and accurate alerts with Keep scoring system (coming soon).
-</h4>
+- Simple and intuitive (GitHub actions-like) syntax.
+- Declarative alerting that can be easily managed and versioned in your version control and service repository.
+- Alerts from multiple data sources for added context and insights.
+- Freedom from vendor lock-in, making it easier to switch to a different observability tool if and when needed.
+
+</div>
 
 <p align="center">
     <br />
     <a href="https://keephq.wiki/" rel="dofollow"><strong>Get started »</strong></a>
     <br />
     <br />
+    <a href="https://github.com/orgs/keephq/projects/1">Roadmap</a>
+    ·
     <a href="https://github.com/keephq/keep/tree/main/examples">Examples</a>
     ·
     <a href="https://github.com/keephq/keep/tree/main/keep/providers">Providers</a>
