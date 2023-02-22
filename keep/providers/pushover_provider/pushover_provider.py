@@ -1,6 +1,3 @@
-"""
-SlackOutput is a class that implements the BaseOutputProvider interface for Slack messages.
-"""
 import dataclasses
 
 import pydantic
