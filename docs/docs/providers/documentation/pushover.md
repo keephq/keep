@@ -4,7 +4,7 @@ sidebar_label: Pushover Provider
 
 # Pushover
 Pushover docs
-ען
+
 ## Inputs
 The Pushover provider gets "message" as an input which will be used as the notification message.
 Configuration example:

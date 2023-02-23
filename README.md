@@ -18,18 +18,24 @@
 </div>
 
 <h4 align="center">
-Simple Alerting tool, Builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
+Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
 </h4>
+<div align="center">
 
-<h4 align="center">
-Manage your alerts by code, write better more actionable and accurate alerts with Keep scoring system (coming soon).
-</h4>
+- Simple and intuitive (GitHub actions-like) syntax.
+- Declarative alerting that can be easily managed and versioned in your version control and service repository.
+- Alerts from multiple data sources for added context and insights.
+- Freedom from vendor lock-in, making it easier to switch to a different observability tool if and when needed.
+
+</div>
 
 <p align="center">
     <br />
     <a href="https://keephq.wiki/" rel="dofollow"><strong>Get started »</strong></a>
     <br />
     <br />
+    <a href="https://github.com/orgs/keephq/projects/1">Roadmap</a>
+    ·
     <a href="https://github.com/keephq/keep/tree/main/examples">Examples</a>
     ·
     <a href="https://github.com/keephq/keep/tree/main/keep/providers">Providers</a>
@@ -124,12 +130,35 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 
 
 ### Docker
+
+Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
+
 ```bash
-# Configure the Slack provider (you'll need the webhook url)
 docker run -v ${PWD}:/app -it keephq/cli config provider --provider-type slack --provider-id slack-demo
-# Run Keep
-docker run -v ${PWD}:/app -it keephq/cli -j run --alerts-file  examples/alerts/db_disk_space.yml
 ```
+
+You should now have a providers.yaml file created locally
+
+Run Keep and execute our example "Paper DB has insufficient disk space" alert
+
+```bash
+docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
+```
+
+### Render
+Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
+<br />
+When clicking the Deploy to Render button, you will be asked to provide the `KEEP_PROVIDER_SLACK_DEMO` environment variable, this is the expected format:
+
+```json
+{"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
+```
+
+\* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
 
 ##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
