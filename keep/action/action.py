@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import logging
 import re
 
@@ -41,4 +43,7 @@ class Action:
 
     def _run_single(self):
         rendered_value = self.io_handler.render_context(self.provider_context)
-        self.provider.notify(**rendered_value)
+        if inspect.iscoroutinefunction(self.provider.notify):
+            asyncio.run(self.provider.notify(**rendered_value))
+        else:
+            self.provider.notify(**rendered_value)
