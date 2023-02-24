@@ -87,4 +87,5 @@ class AlertManager:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
+                raise
             self.logger.info(f"Alert {alert.alert_id} ran successfully")

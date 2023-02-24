@@ -24,16 +24,20 @@ class PythonProvider(BaseProvider):
             _type_: _description_
         """
         code = kwargs.pop("code", "")
-        libraries = kwargs.pop("libraries", "")
-        for library in libraries.split(","):
+        modules = kwargs.pop("imports", "")
+        loaded_modules = {}
+        for module in modules.split(","):
             try:
-                __import__(library)
+                loaded_modules[module] = __import__(module)
             except Exception as e:
                 raise ProviderConfigException(
-                    f"{self.__class__.__name__} failed to import library: {library}"
+                    f"{self.__class__.__name__} failed to import library: {module}"
                 )
         parsed_code = self.io_handler.parse(code)
-        output = eval(parsed_code)
+        try:
+            output = eval(parsed_code, loaded_modules)
+        except Exception as e:
+            return {"status_code": "500", "output": str(e)}
         return output
 
     def dispose(self):
