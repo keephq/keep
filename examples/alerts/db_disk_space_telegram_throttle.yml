@@ -1,0 +1,32 @@
+# Database disk space is low (<10%)
+alert:
+  id: service-is-up
+  description: Check that the service is up
+  steps:
+    - name: service-is-up
+      provider:
+        type: python
+        with:
+          # any external libraries needed
+          imports: requests
+          code: requests.get("http://localhost:3000")
+      condition:
+        - type: assert
+          assert: "{{ steps.this.output.status }} != 200"
+  actions:
+    - name: trigger-telegram
+      throttle:
+        - type: one_until_resolved
+      provider:
+        type: telegram
+        config:
+          authentication:
+            bot_token:  "{{ env.TELEGRAM_BOT_TOKEN }}"
+        with:
+          chat_id: "{{ env.TELEGRAM_CHAT_ID }}"
+          message: Keep Alert Test
+
+providers:
+  db-server-mock:
+    description: Paper DB Server
+    authentication:

@@ -9,6 +9,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
+from keep.statemanager.statemanager import StateManager
 
 
 class Action:
@@ -22,8 +23,10 @@ class Action:
         self.action_config = config
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
+        self.state_manager = StateManager.get_instance()
 
     def run(self):
+        self._check_throttling()
         try:
             if self.action_config.get("foreach"):
                 self._run_foreach()
@@ -31,6 +34,24 @@ class Action:
                 self._run_single()
         except Exception as e:
             raise ActionError(e)
+
+    def _check_throttling(self):
+        throttling = self.action_config.get("throttling")
+        if throttling:
+            throttling_value = throttling.get("value")
+            throttling_unit = throttling.get("unit")
+            throttling_key = f"{self.name}_{self.provider.name}"
+            throttling_state = self.state_manager.get(throttling_key)
+            if throttling_state:
+                throttling_state = throttling_state.get("value")
+                throttling_state = throttling_state + 1
+                self.state_manager.set(throttling_key, throttling_state)
+                if throttling_state > throttling_value:
+                    raise ActionError(
+                        f"Throttling limit reached for action {self.name} and provider {self.provider.name}"
+                    )
+            else:
+                self.state_manager.set(throttling_key, 1)
 
     def _run_foreach(self):
         foreach_iterator = self.context_manager.get_actionable_results()
