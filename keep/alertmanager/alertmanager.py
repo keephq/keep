@@ -1,7 +1,9 @@
 import logging
 import os
 import time
+import typing
 
+from keep.alert.alert import Alert
 from keep.parser.parser import Parser
 
 
@@ -46,13 +48,13 @@ class AlertManager:
     def _run(self, alert_path: str | list[str], providers_file: str = None):
         if isinstance(alert_path, tuple):
             for alert_url in alert_path:
-                alert = self.parser.parse(alert_url, providers_file)
-                alert.run()
+                alerts = self.parser.parse(alert_url, providers_file)
+                self._run_alerts(alerts)
         elif os.path.isdir(alert_path):
             self.run_from_directory(alert_path, providers_file)
         else:
-            alert = self.parser.parse(alert_path, providers_file)
-            alert.run()
+            alerts = self.parser.parse(alert_path, providers_file)
+            self._run_alerts(alerts)
 
     def run_from_directory(self, alerts_dir: str, providers_file: str = None):
         """
@@ -66,10 +68,18 @@ class AlertManager:
             if file.endswith(".yaml") or file.endswith(".yml"):
                 self.logger.info(f"Running alert from {file}")
                 try:
-                    alert = self.parser.parse(os.path.join(alert, file), providers_file)
-                    alert.run()
+                    alerts = self.parser.parse(
+                        os.path.join(alert, file), providers_file
+                    )
+                    self._run_alerts(alerts)
                     self.logger.info(f"Alert from {file} ran successfully")
                 except Exception as e:
                     self.logger.error(
                         f"Error running alert from {file}", extra={"exception": e}
                     )
+
+    def _run_alerts(self, alerts: typing.List[Alert]):
+        for alert in alerts:
+            self.logger.info(f"Running alert {alert.alert_id}")
+            alert.run()
+            self.logger.info(f"Alert {alert.alert_id} ran successfully")

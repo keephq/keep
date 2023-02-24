@@ -23,14 +23,20 @@ class Parser:
         self.context_manager = ContextManager.get_instance()
         self.io_handler = IOHandler()
 
-    def parse(self, alert_file: str, providers_file: str = None) -> Alert:
+    def parse(self, alert_file: str, providers_file: str = None) -> typing.List[Alert]:
         # Parse the alert YAML
         parsed_alert_yaml = self._parse_alert_to_dict(alert_file)
         # Parse the providers (from the alert yaml or from the providers directory)
         self._load_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
-        alert = self._parse_alert(parsed_alert_yaml.get("alert"))
-        return alert
+        if parsed_alert_yaml.get("alerts"):
+            alerts = [
+                self._parse_alert(alert) for alert in parsed_alert_yaml.get("alerts")
+            ]
+        else:
+            alert = self._parse_alert(parsed_alert_yaml.get("alert"))
+            alerts = [alert]
+        return alerts
 
     def _parse_alert_to_dict(self, alert_path: str) -> dict:
         """
