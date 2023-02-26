@@ -1,3 +1,4 @@
+import os
 from typing import Self
 
 import click
@@ -32,6 +33,7 @@ class ContextManager:
             "providers": self.providers_context,
             "steps": self.steps_context,
             "foreach": {"value": self.foreach_context},
+            "env": os.environ,
         }
 
     def set_for_each_context(self, value):
