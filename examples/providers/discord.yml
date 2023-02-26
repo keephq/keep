@@ -1,0 +1,6 @@
+provider:
+  id: discord
+  description: description's slack
+  provider_type: discord
+  authentication:
+    webhook-url: https://yourorg.discord.com/webhooks-whatever1234
