@@ -46,12 +46,15 @@ class DiscordProvider(BaseProvider):
         webhook_url = self.authentication_config.webhook_url
         content = kwargs.pop("content", "")
         components = kwargs.pop("components", [])
+
+        if not content and not components:
+            raise ProviderException(
+                f"{self.__class__.__name__} Keyword Arguments Missing : content or components atleast one of them needed to trigger message"
+            )
+
         response = requests.post(
             webhook_url,
             json={"content": content, "components": components},
-            headers={
-                "Content-Type": "application/json"
-            }
         )
         if response.status_code != 204:
             raise ProviderException(
