@@ -5,7 +5,7 @@ sidebar_label: Discord Provider
 # Discord
 
 :::note Brief Description
-Template Provider is a template for newly added provider's documentation
+Discord provider is a provider that allows to send notifications to Discord
 :::
 
 ## Inputs

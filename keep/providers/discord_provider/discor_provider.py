@@ -1,5 +1,5 @@
 """
-DiscordOutput is a class that implements the BaseOutputProvider interface for Discord messages.
+DiscordProvider is a class that implements the BaseOutputProvider interface for Discord messages.
 """
 import dataclasses
 import pydantic
