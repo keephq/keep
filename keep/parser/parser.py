@@ -27,7 +27,7 @@ class Parser:
         # Parse the alert YAML
         parsed_alert_yaml = self._parse_alert_to_dict(alert_file)
         # Parse the providers (from the alert yaml or from the providers directory)
-        self._load_providers_config(parsed_alert_yaml, providers_file)
+        self.load_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
         if parsed_alert_yaml.get("alerts"):
             alerts = [
@@ -96,7 +96,7 @@ class Parser:
         self.logger.debug("Alert parsed successfully")
         return alert
 
-    def _load_providers_config(self, alert: dict, providers_file: str):
+    def load_providers_config(self, alert: dict, providers_file: str):
         self.logger.debug("Parsing providers")
         if providers_file and os.path.exists(providers_file):
             self._parse_providers_from_file(providers_file)

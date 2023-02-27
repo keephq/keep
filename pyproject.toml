@@ -27,6 +27,8 @@ boto3 = "^1.26.72"
 validators = "^0.20.0"
 zenduty-api = "^0.2"
 python-telegram-bot = "^20.1"
+fastapi = "^0.92.0"
+uvicorn = "^0.20.0"
 
 
 [tool.poetry.group.dev.dependencies]

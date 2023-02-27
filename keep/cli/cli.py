@@ -105,6 +105,25 @@ def version():
 
 @cli.command()
 @click.option(
+    "--providers-file",
+    "-p",
+    type=click.Path(exists=False),
+    help="The path to the providers yaml",
+    required=False,
+    default="providers.yaml",
+)
+def api(providers_file: str):
+    """Start the API."""
+    from keep.api.main import get_app, run
+
+    ctx = click.get_current_context()
+    app = get_app()
+    app.dependency_overrides[click.get_current_context] = lambda: ctx
+    run(app)
+
+
+@cli.command()
+@click.option(
     "--alerts-file",
     "-af",
     type=click.Path(exists=True, dir_okay=True, file_okay=True),

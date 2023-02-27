@@ -26,7 +26,10 @@ class ContextManager:
         self.providers_context = {}
         self.alerts_context = {}
         self.foreach_context = {}
-        self.click_context = click.get_current_context()
+        try:
+            self.click_context = click.get_current_context()
+        except RuntimeError:
+            self.click_context = {}
 
     def get_full_context(self):
         return {
