@@ -1,5 +1,5 @@
 """
-LogfileProvider is a class that implements the BaseOutputProvider interface for Mock messages.
+PythonProvider is a class that implements the BaseOutputProvider.
 """
 
 
