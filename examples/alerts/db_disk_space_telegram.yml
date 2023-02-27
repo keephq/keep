@@ -2,18 +2,6 @@
 alert:
   id: db-disk-space
   description: Check that the DB has enough disk space
-  owners:
-    - github-shahargl
-    - slack-talboren
-  services:
-    - db
-    - api
-  trigger:
-    # Run every hour or if the service-is-failing alert is triggered
-    interval: 1h
-    event:
-      - id: service-is-failing
-        type: alert
   steps:
     - name: db-no-space
       provider:
