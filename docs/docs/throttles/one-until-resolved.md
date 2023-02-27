@@ -6,7 +6,7 @@ sidebar_position: 2
 # 🎯 One Until Resolved
 
 ## Intro
-The action will happen once until alert is resolved.
+The action will trigger once the alert is resolved.
 
 For example:
 
