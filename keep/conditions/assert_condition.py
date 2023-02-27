@@ -4,7 +4,7 @@ from keep.conditions.base_condition import BaseCondition
 
 
 class AssertCondition(BaseCondition):
-    """Checks if a number is above or below a threshold.
+    """Use python assert to check if a condition is true.
 
     Args:
         BaseCondition (_type_): _description_

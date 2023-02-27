@@ -24,16 +24,16 @@ class ContextManager:
 
         self.steps_context = {}
         self.providers_context = {}
-        self.alerts_context = {}
+        self.alert_context = {}
         self.foreach_context = {}
         self.click_context = click.get_current_context()
 
     # TODO - If we want to support multiple alerts at once we need to change this
     def set_alert_context(self, alert_context):
-        self.alerts_context = alert_context
+        self.alert_context = alert_context
 
     def get_alert_id(self):
-        return self.alerts_context.get("alert_id")
+        return self.alert_context.get("alert_id")
 
     def get_full_context(self):
         return {

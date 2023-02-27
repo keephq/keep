@@ -1,3 +1,4 @@
+import enum
 import logging
 import typing
 
@@ -6,6 +7,11 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.statemanager.statemanager import StateManager
 from keep.step.step import Step, StepError
+
+
+class AlertStatus(enum.Enum):
+    RESOLVED = "resolved"
+    FIRING = "firing"
 
 
 class Alert:
@@ -58,7 +64,11 @@ class Alert:
                 self._handle_failure(step, e)
                 raise
 
-        alert_status = "RESOLVED" if not self.last_step.action_needed else "FIRING"
+        alert_status = (
+            AlertStatus.RESOLVED.value
+            if not self.last_step.action_needed
+            else AlertStatus.FIRING.value
+        )
         self.state_manager.set_last_alert_run(
             alert_id=self.alert_id,
             alert_context=self._get_alert_context(),
