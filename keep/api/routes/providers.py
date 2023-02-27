@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get(
     "/",
-    description="Get configured providers",
+    description="Get providers",
 )
 def get_providers(context: click.Context = Depends(click.get_current_context)):
     parser = Parser()

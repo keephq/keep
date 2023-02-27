@@ -105,6 +105,20 @@ def version():
 
 @cli.command()
 @click.option(
+    "--alerts-file",
+    "-af",
+    type=click.Path(exists=True, dir_okay=True, file_okay=True),
+    help="The path to the alert yaml/alerts directory",
+)
+@click.option(
+    "--alert-url",
+    "-au",
+    help="A url that can be used to download an alert yaml",
+    cls=NotRequiredIf,
+    multiple=True,
+    not_required_if="alerts_file",
+)
+@click.option(
     "--providers-file",
     "-p",
     type=click.Path(exists=False),
@@ -112,9 +126,9 @@ def version():
     required=False,
     default="providers.yaml",
 )
-def api(providers_file: str):
+def api(alerts_file: str, alert_url: list[str], providers_file: str):
     """Start the API."""
-    from keep.api.main import get_app, run
+    from keep.api.api import get_app, run
 
     ctx = click.get_current_context()
     app = get_app()

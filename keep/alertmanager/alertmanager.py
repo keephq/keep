@@ -45,18 +45,26 @@ class AlertManager:
             extra={"interval": interval},
         )
 
-    def _run(self, alert_path: str | list[str], providers_file: str = None):
+    def get_alerts(
+        self, alert_path: str | tuple[str], providers_file: str = None
+    ) -> list[Alert]:
+        alerts = []
         if isinstance(alert_path, tuple):
             for alert_url in alert_path:
-                alerts = self.parser.parse(alert_url, providers_file)
-                self._run_alerts(alerts)
+                alerts.extend(self.parser.parse(alert_url, providers_file))
         elif os.path.isdir(alert_path):
-            self.run_from_directory(alert_path, providers_file)
+            alerts.extend(self._get_alerts_from_directory(alert_path, providers_file))
         else:
             alerts = self.parser.parse(alert_path, providers_file)
-            self._run_alerts(alerts)
+        return alerts
 
-    def run_from_directory(self, alerts_dir: str, providers_file: str = None):
+    def _run(self, alert_path: str | tuple[str], providers_file: str = None):
+        alerts = self.get_alerts(alert_path, providers_file)
+        self._run_alerts(alerts)
+
+    def _get_alerts_from_directory(
+        self, alerts_dir: str, providers_file: str = None
+    ) -> list[Alert]:
         """
         Run alerts from a directory.
 
@@ -64,19 +72,22 @@ class AlertManager:
             alerts_dir (str): A directory containing alert yamls.
             providers_file (str, optional): The path to the providers yaml. Defaults to None.
         """
+        alerts = []
         for file in os.listdir(alerts_dir):
             if file.endswith(".yaml") or file.endswith(".yml"):
-                self.logger.info(f"Running alert from {file}")
+                self.logger.info(f"Getting alerts from {file}")
                 try:
-                    alerts = self.parser.parse(
-                        os.path.join(alert, file), providers_file
+                    alerts.extend(
+                        self.parser.parse(
+                            os.path.join(alerts_dir, file), providers_file
+                        )
                     )
-                    self._run_alerts(alerts)
-                    self.logger.info(f"Alert from {file} ran successfully")
+                    self.logger.info(f"Alert from {file} fetched successfully")
                 except Exception as e:
                     self.logger.error(
                         f"Error running alert from {file}", extra={"exception": e}
                     )
+        return alerts
 
     def _run_alerts(self, alerts: typing.List[Alert]):
         for alert in alerts:

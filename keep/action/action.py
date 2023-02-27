@@ -1,9 +1,8 @@
 import asyncio
 import inspect
 import logging
-import re
 
-import requests
+from pydantic.dataclasses import dataclass
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
@@ -11,21 +10,21 @@ from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 
 
+@dataclass(config={"arbitrary_types_allowed": True})
 class Action:
-    def __init__(
-        self, name: str, config, provider: BaseProvider, provider_context: dict
-    ):
-        self.name = name
+    name: str
+    config: dict
+    provider: BaseProvider
+    provider_context: dict
+
+    def __post_init__(self):
         self.logger = logging.getLogger(__name__)
-        self.provider = provider
-        self.provider_context = provider_context
-        self.action_config = config
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
 
     def run(self):
         try:
-            if self.action_config.get("foreach"):
+            if self.config.get("foreach"):
                 self._run_foreach()
             else:
                 self._run_single()

@@ -1,6 +1,8 @@
 import logging
+from dataclasses import field
 
 import chevron
+from pydantic.dataclasses import dataclass
 
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
@@ -8,16 +10,17 @@ from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 
 
+@dataclass(config={"arbitrary_types_allowed": True})
 class Step:
-    def __init__(
-        self, step_id, step_config, provider: BaseProvider, provider_parameters: dict
-    ):
-        self.step_id = step_id
-        self.step_config = step_config
-        self.step_conditions = step_config.get("condition", [])
-        self.step_conditions_results = {}
-        self.provider = provider
-        self.provider_parameters = provider_parameters
+    step_id: str
+    step_config: dict
+    provider: BaseProvider
+    provider_parameters: dict
+    step_conditions_results: dict = field(default_factory=dict)
+    step_conditions: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.step_conditions = self.step_config.get("condition", [])
         self.io_handler = IOHandler()
         self.logger = logging.getLogger(__name__)
         self.context_manager = ContextManager.get_instance()

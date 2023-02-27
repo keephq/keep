@@ -1,27 +1,24 @@
 import logging
 import typing
 
+from pydantic.dataclasses import dataclass
+
 from keep.action.action import Action
 from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
 
+@dataclass
 class Alert:
-    def __init__(
-        self,
-        alert_id: str,
-        alert_owners: typing.List[str],
-        alert_tags: typing.List[str],
-        alert_steps: typing.List[Step],
-        alert_actions: typing.List[Action],
-    ):
+    alert_id: str
+    alert_owners: typing.List[str]
+    alert_tags: typing.List[str]
+    alert_steps: typing.List[Step]
+    alert_actions: typing.List[Action]
+
+    def __post_init__(self):
         self.logger = logging.getLogger(__name__)
-        self.alert_id = alert_id
-        self.alert_owners = alert_owners
-        self.alert_tags = alert_tags
-        self.alert_steps = alert_steps
-        self.alert_actions = alert_actions
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
 
@@ -34,7 +31,7 @@ class Alert:
         for step in self.alert_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step_output = step.run()
+                step.run()
                 self.logger.info("Step %s ran successfully", step.step_id)
                 # If we need to halt the alert, stop here
                 if step.action_needed:
