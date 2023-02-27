@@ -29,7 +29,7 @@ class Action:
     def run(self):
         throttled = self._check_throttling(self.action_config.get("name"))
         if throttled:
-            self.logger.debug("Action %s is throttled", self.action_config.get("name"))
+            self.logger.info("Action %s is throttled", self.action_config.get("name"))
             return
         try:
             if self.action_config.get("foreach"):

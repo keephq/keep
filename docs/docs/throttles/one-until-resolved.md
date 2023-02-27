@@ -10,10 +10,10 @@ The action will happen once until alert is resolved.
 
 For example:
 
-1. Alert triggered -> Action triggered
-2. Alert triggered again -> Action is not triggered
-3. Alert resolved ->  Action is not triggered, since alert resolved
-4. Alert triggered again -> Action is triggered
+1. Alert executed and action were triggered as a result -> the alert status is now "Firing".
+2. Alert executed again and action should be triggered -> the action will be throttled.
+3. Alert executed and no action is required -> the alert status is now "Resolved".
+4. Alert exectued and action were triggered -> the action is triggered
 
 ## How to use
 Add the following attribute to your action:
