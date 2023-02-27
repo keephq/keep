@@ -1,10 +1,17 @@
+import enum
 import logging
 import typing
 
 from keep.action.action import Action
 from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
+from keep.statemanager.statemanager import StateManager
 from keep.step.step import Step, StepError
+
+
+class AlertStatus(enum.Enum):
+    RESOLVED = "resolved"
+    FIRING = "firing"
 
 
 class Alert:
@@ -24,13 +31,22 @@ class Alert:
         self.alert_actions = alert_actions
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
+        self.state_manager = StateManager.get_instance()
 
     @property
     def last_step(self):
         return self.alert_steps[-1]
 
+    def _get_alert_context(self):
+        return {
+            "alert_id": self.alert_id,
+            "alert_owners": self.alert_owners,
+            "alert_tags": self.alert_tags,
+        }
+
     def run(self):
         self.logger.debug(f"Running alert {self.alert_id}")
+        self.context_manager.set_alert_context(self._get_alert_context())
         for step in self.alert_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
@@ -42,11 +58,22 @@ class Alert:
                         f"Step {str(step.step_id)} got positive output, running actions and stopping"
                     )
                     self._handle_actions()
-                    return  # <--- stop HERE
+                    break  # <--- stop HERE
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 self._handle_failure(step, e)
+                raise
 
+        alert_status = (
+            AlertStatus.RESOLVED.value
+            if not self.last_step.action_needed
+            else AlertStatus.FIRING.value
+        )
+        self.state_manager.set_last_alert_run(
+            alert_id=self.alert_id,
+            alert_context=self._get_alert_context(),
+            alert_status=alert_status,
+        )
         self.logger.debug(f"Alert {self.alert_id} ran successfully")
 
     def _handle_failure(self, step: Step, exc):
