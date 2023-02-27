@@ -44,6 +44,8 @@ class StateManager:
                 state = json.load(f)
         except:
             state = {alert_id: []}
+        if alert_id not in state:
+            state[alert_id] = []
         state[alert_id].append(
             {
                 "alert_status": alert_status,

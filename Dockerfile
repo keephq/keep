@@ -15,10 +15,6 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
-
-COPY pyproject.toml ./
-RUN poetry export -f requirements.txt | /venv/bin/pip install -r /dev/stdin
-
 COPY . .
 RUN poetry build && /venv/bin/pip install dist/*.whl
 
