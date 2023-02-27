@@ -8,6 +8,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
+from keep.statemanager.statemanager import StateManager
+from keep.throttles.throttle_factory import ThrottleFactory
 
 
 @dataclass(config={"arbitrary_types_allowed": True})
@@ -21,8 +23,13 @@ class Action:
         self.logger = logging.getLogger(__name__)
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
+        self.state_manager = StateManager.get_instance()
 
     def run(self):
+        throttled = self._check_throttling(self.action_config.get("name"))
+        if throttled:
+            self.logger.info("Action %s is throttled", self.action_config.get("name"))
+            return
         try:
             if self.config.get("foreach"):
                 self._run_foreach()
@@ -30,6 +37,18 @@ class Action:
                 self._run_single()
         except Exception as e:
             raise ActionError(e)
+
+    def _check_throttling(self, action_name):
+        throttling = self.action_config.get("throttle")
+        # if there is no throttling, return
+        if not throttling:
+            return False
+
+        throttling_type = throttling.get("type")
+        throttling_config = throttling.get("with")
+        throttle = ThrottleFactory.get_instance(throttling_type, throttling_config)
+        alert_id = self.context_manager.get_alert_id()
+        return throttle.check_throttling(action_name, alert_id)
 
     def _run_foreach(self):
         foreach_iterator = self.context_manager.get_actionable_results()

@@ -134,7 +134,6 @@ class IOHandler:
 
         context = self.context_manager.get_full_context()
         rendered = chevron.render(_key, context)
-
         # Try to convert it to python object if possible
         if (rendered.startswith("[") and rendered.endswith("]")) or (
             rendered.startswith("{") and rendered.endswith("}")
