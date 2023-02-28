@@ -24,7 +24,7 @@ docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubus
 ## Render
 Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
 
 To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
 <br />
