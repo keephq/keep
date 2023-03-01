@@ -15,6 +15,7 @@ class AlertStatus(enum.Enum):
     RESOLVED = "resolved"
     FIRING = "firing"
 
+
 @dataclass
 class Alert:
     alert_id: str
@@ -39,6 +40,12 @@ class Alert:
             "alert_owners": self.alert_owners,
             "alert_tags": self.alert_tags,
         }
+
+    def run_step(self, step: Step):
+        self.logger.info("Running step %s", step.step_id)
+        step_output = step.run()
+        self.logger.info("Step %s ran successfully", step.step_id)
+        return step_output
 
     def run(self):
         self.logger.debug(f"Running alert {self.alert_id}")

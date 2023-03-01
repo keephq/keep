@@ -99,3 +99,15 @@ class AlertManager:
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
             self.logger.info(f"Alert {alert.alert_id} ran successfully")
+
+    def run_step(self, alert_id: str, step: str):
+        self.logger.info(f"Running step {step} of alert {alert.alert_id}")
+        try:
+            alert = self.get_alerts(alert_id)
+            alert.run_step(step)
+        except Exception as e:
+            self.logger.error(
+                f"Error running step {step} of alert {alert.alert_id}",
+                extra={"exception": e},
+            )
+        self.logger.info(f"Step {step} of alert {alert.alert_id} ran successfully")
