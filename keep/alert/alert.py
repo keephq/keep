@@ -52,22 +52,27 @@ class Alert:
                 self.logger.info("Running step %s", step.step_id)
                 step_output = step.run()
                 self.logger.info("Step %s ran successfully", step.step_id)
-                # If we need to halt the alert, stop here
-                if step.action_needed:
-                    self.logger.info(
-                        f"Step {str(step.step_id)} got positive output, running actions and stopping"
-                    )
-                    self._handle_actions()
-                    break  # <--- stop HERE
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 self._handle_failure(step, e)
                 raise
 
+        actions_firing = []
+        for action in self.alert_actions:
+            try:
+                self.logger.info("Running action %s", action.name)
+                actions_firing.append(action.run())
+                self.logger.info("Action %s ran successfully", action.name)
+            except Exception as e:
+                self.logger.error(f"Action {action.name} failed: {e}")
+                raise
+
+        # Save the state
+        #   alert is firing if one its actions is firing
         alert_status = (
-            AlertStatus.RESOLVED.value
-            if not self.last_step.action_needed
-            else AlertStatus.FIRING.value
+            AlertStatus.FIRING.value
+            if any(actions_firing)
+            else AlertStatus.RESOLVED.value
         )
         self.state_manager.set_last_alert_run(
             alert_id=self.alert_id,

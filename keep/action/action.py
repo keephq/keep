@@ -27,6 +27,13 @@ class Action:
         self.state_manager = StateManager.get_instance()
 
     def run(self):
+        # Check if needs to run
+        need_to_run = self._check_conditions()
+        if not need_to_run:
+            self.logger.info(
+                "Action %s evaluated NOT to run", self.action_config.get("name")
+            )
+            return
         throttled = self._check_throttling(self.action_config.get("name"))
         if throttled:
             self.logger.info("Action %s is throttled", self.action_config.get("name"))
@@ -36,8 +43,35 @@ class Action:
                 self._run_foreach()
             else:
                 self._run_single()
+            return True
         except Exception as e:
             raise ActionError(e)
+
+    def _check_conditions(self):
+        self.logger.debug(
+            "Checking conditions for action %s", self.action_config.get("name")
+        )
+        full_context = self.context_manager.get_full_context()
+        conditions_eval = self.action_config.get("if", [])
+        # default behaviour should be ALL conditions should be met
+        if not conditions_eval:
+            for step in full_context.get("steps"):
+                # TODO - wrap it else
+                if step == "this":
+                    continue
+                for condition in full_context.get("steps").get(step).get("conditions"):
+                    # One of the conditions has been met
+                    if condition.get("result"):
+                        return True
+
+        # if there's a condition, evaluate it
+        else:
+            condition_met = self.io_handler.render(conditions_eval)
+            condition_met = eval(condition_met)
+            if condition_met:
+                return True
+            else:
+                return False
 
     def _check_throttling(self, action_name):
         throttling = self.action_config.get("throttle")
