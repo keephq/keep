@@ -28,8 +28,11 @@ alert:
         value: datetime_compare(utcnow(), to_utc({{ steps.this.results[0][0] }}))
         compare_to: 1 # hours
         compare_type: gt # greater than
+        alias: A
   actions:
     - name: trigger-slack
+      # redundant for "single step" example, but for "multi step" alerts this can be useful
+      if: {{ A }}
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
@@ -101,6 +104,11 @@ condition:
 ```yaml
 actions:
 - name: trigger-slack
+  # OPTIONAL: trigger the action only if both conditions are met:
+  if: "{{ A }} or {{ B }}"
+  # OPTIONAL: throttle the action according to some throttling strategy
+  throttle:
+        type: one_until_resolved
   provider:
     type: slack
     config: " {{ providers.slack-demo }} "
@@ -113,5 +121,7 @@ actions:
 `Action` is built of:
 - `name` - the name of the action.
 - `provider` - the provider that will trigger the action.
+- `throttle` - you can [throttle](throttles/what-is-throttle.md) the action.
+- `if` - action can be limited to when certain [conditions](conditions/what-is-a-condition.md) are met.
 
 The `provider` configuration is already covered in [Providers](syntax#provider)

@@ -66,6 +66,7 @@ class Step:
             self.context_manager.set_for_each_context(value)
             for condition in self.step_conditions:
                 condition_type = condition.get("type")
+                condition_alias = condition.get("alias")
                 condition = ConditionFactory.get_condition(condition_type, condition)
                 condition_what_to_compare = condition.get_compare_to()
                 condition_compare_value = condition.get_compare_value()
@@ -79,11 +80,13 @@ class Step:
                     condition_compare_value,
                     condition_what_to_compare,
                     condition_result,
+                    condition_alias=condition_alias,
                 )
 
     def _post_single_step_validations(self):
         for condition in self.step_conditions:
             condition_type = condition.get("type")
+            condition_alias = condition.get("alias")
             condition = ConditionFactory.get_condition(condition_type, condition)
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
@@ -97,6 +100,7 @@ class Step:
                 condition_compare_to,
                 condition_compare_value,
                 condition_result,
+                condition_alias=condition_alias,
             )
         self.logger.debug("Post Step validation success")
 
