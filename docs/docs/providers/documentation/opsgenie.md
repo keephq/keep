@@ -12,6 +12,7 @@ OpsGenie Provider is a provider that allows to create alerts in OpsGenie.
 The `notify` function in the `OpsgenieProvider` use OpsGenie [CreateAlertPayload](https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md):
 
 ### Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **user** | **str** | Display name of the request owner | [optional]
@@ -28,13 +29,6 @@ Name | Type | Description | Notes
 **entity** | **str** | Entity field of the alert that is generally used to specify which domain alert is related to | [optional]
 **priority** | **str** | Priority level of the alert | [optional]
 
-### Recipient
-
-## Properties
-Name | Type | Description | Notes
------------- | ------------- | ------------- | -------------
-**type** | **str** |  |
-**id** | **str** |  | [optional]
 
 ## Authentication Parameters
 The OpsgenieProviderAuthConfig class takes the following parameters:
