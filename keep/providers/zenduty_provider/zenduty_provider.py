@@ -1,7 +1,7 @@
 import dataclasses
 
 import pydantic
-import zenduty
+import requests
 
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -20,9 +20,6 @@ class ZendutyProviderAuthConfig:
 class ZendutyProvider(BaseProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.zenduty_client = zenduty.IncidentsApi(
-            zenduty.ApiClient(self.authentication_config.api_key)
-        )
 
     def validate_config(self):
         self.authentication_config = ZendutyProviderAuthConfig(
@@ -63,7 +60,13 @@ class ZendutyProvider(BaseProvider):
             "title": title,
             "summary": summary,
         }
-        resp = self.zenduty_client.create_incident(body)
+        # https://github.com/Zenduty/zenduty-python-sdk/blob/master/zenduty/api_client.py#L11
+        headers = {
+            "Authorization": "Token " + self.authentication_config.api_key,
+        }
+        resp = requests.post(
+            url="https://www.zenduty.com/api/incidents/", json=body, headers=headers
+        )
         assert resp.status == 201
         self.logger.debug("Alert message notified to Zenduty")
 
