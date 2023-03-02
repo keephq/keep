@@ -1,45 +1,46 @@
 ---
-sidebar_label: Pagerduty Provider
+sidebar_label: Opsgenie Provider
 ---
 
-# Pagerduty Provider
+# OpsGenie Provider
 
 :::note Brief Description
-Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty.
+OpsGenie Provider is a provider that allows to create alerts in OpsGenie.
 :::
 
 ## Inputs
-The `notify` function in the `PagerdutyProvider` class takes the following parameters:
-```python
-kwargs (dict):
-    title (str): Title of the alert or incident. *Required*
-    alert_body (str): UTF-8 string of custom message for alert. Shown in incident body for events, and in the body for incidents. *Required for events, optional for incidents*
-    dedup (str | None): Any string, max 255 characters, used to deduplicate alerts for events. *Required for events, optional for incidents*
-    service_id (str): ID of the service for incidents. *Required for incidents, optional for events*
-    body (dict): Body of the incident. *Required for incidents, optional for events*
-    requester (str): Requester of the incident. *Required for incidents, optional for events*
-    incident_key (str | None): Key to identify the incident. If not given, a UUID will be generated. *Required for incidents, optional for events*
-```
+The `notify` function in the `OpsgenieProvider` use OpsGenie [CreateAlertPayload](https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md):
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**user** | **str** | Display name of the request owner | [optional]
+**note** | **str** | Additional note that will be added while creating the alert | [optional]
+**source** | **str** | Source field of the alert. Default value is IP address of the incoming request | [optional]
+**message** | **str** | Message of the alert |
+**alias** | **str** | Client-defined identifier of the alert, that is also the key element of alert deduplication. | [optional]
+**description** | **str** | Description field of the alert that is generally used to provide a detailed information about the alert. | [optional]
+**responders** | [**list[Recipient]**](Recipient.md) | Responders that the alert will be routed to send notifications | [optional]
+**visible_to** | [**list[Recipient]**](Recipient.md) | Teams and users that the alert will become visible to without sending any notification | [optional]
+**actions** | **list[str]** | Custom actions that will be available for the alert | [optional]
+**tags** | **list[str]** | Tags of the alert | [optional]
+**details** | **dict(str, str)** | Map of key-value pairs to use as custom properties of the alert | [optional]
+**entity** | **str** | Entity field of the alert that is generally used to specify which domain alert is related to | [optional]
+**priority** | **str** | Priority level of the alert | [optional]
 
 ## Authentication Parameters
-The PagerdutyProviderAuthConfig class takes the following parameters:
-python
-routing_key (str | None): Routing key, which is an integration or ruleset key. Optional, default is `None`. *Required for events, optional for incidents*
-api_key (str | None): API key, which is a user or team API key. Optional, default is `None`. *Required for incidents, optional for events*
+The OpsgenieProviderAuthConfig class takes the following parameters:
+```python
+api_key (str | None): API key, which is a user or team API key. Optional, default is `None`. *Required*
+```
 
 ## Connecting with the Provider
 
-To use the PagerdutyProvider, you'll need to provide either a routing_key or an api_key.
+To use the Opsgenie Provider, you'll need to provide api_key.
 
-You can find your integration key or routing key in the PagerDuty web app under **Configuration** > **Integrations**, and select the integration you want to use.
-You can find your API key in the PagerDuty web app under **Configuration** > **API Access**.
-
-The routing_key is used to post events to Pagerduty using the events API.
-The api_key is used to create incidents using the incidents API.
-
-## Notes
-The provider uses either the events API or the incidents API to create an alert or an incident. The choice of API to use is determined by the presence of either a routing_key or an api_key.
+You can create an integration key under Settings -> Integrations -> Add API
+Note: if you are in the free tier, the integration key can be created under Teams -> Your team -> Integrations -> Add Integration (API)
 
 ## Useful Links
-- Pagerduty Events API documentation: https://v2.developer.pagerduty.com/docs/send-an-event-events-api-v2
-- Pagerduty Incidents API documentation: https://v2.developer.pagerduty.com/docs/create-an-incident-incidents-api-v2
+- How to create Opsgenie API Integration - https://support.atlassian.com/opsgenie/docs/create-a-default-api-integration/
+- How to get Opsgenie Integration Api Key - https://community.atlassian.com/t5/Opsgenie-questions/OpsGenie-API-Create-alert-Authentication-problem/qaq-p/1531047?utm_source=atlcomm&utm_medium=email&utm_campaign=immediate_general_question&utm_content=topic#U1531256
