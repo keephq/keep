@@ -15,4 +15,5 @@ Common providers include:
 -   **Monitoring**: Sentry, New Relic, Datadog, etc.
 -   **Incident Management**: PagerDuty, OpsGenie, etc.
 -   **Communication**: Email, Slack, Discord, etc.
+-   **Databases**: MySQL, Postgresql etc.
 -   [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
