@@ -1,0 +1,6 @@
+provider:
+  id: teams
+  description: Teams production
+  provider_type: teams
+  authentication:
+    webhook-url: https://yourorg.webhook.office.com/webhookb2/123@456/IncomingWebhook/789/000
