@@ -166,3 +166,4 @@ cython_debug/
 keep.yaml
 providers.yaml
 .vercel
+keepstate.json

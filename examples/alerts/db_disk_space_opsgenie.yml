@@ -14,20 +14,18 @@ alert:
         - type: threshold
           value: "{{ steps.this.results }}"
           compare_to: 90% # Trigger if more than 90% full
-      failure_strategy: # What to do if the SSH connection failed?
-        - name: ssh-connection-failed
-          retry: 5 # Retry 5 times
-          alert: true # Finally, alert
   actions:
-    - name: trigger-telegram
+    - name: trigger-opsgenie
       provider:
-        type: telegram
-        config:
-          authentication:
-            bot_token:  "{{ env.TELEGRAM_BOT_TOKEN }}"
-        with:
-          chat_id: "{{ env.TELEGRAM_CHAT_ID }}"
-          message: Keep Alert Test
+        type: opsgenie
+        config: " {{ providers.opsgenie-test }} " # see documentation for options
+        with: # parameters changes when incident/event mode, see documentation for more information
+          message: "Simple alert showing context with name John Doe"
+          note: "Simple alert"
+          user: "John Doe"
+          tags:
+            - db
+            - disk
 
 providers:
   db-server-mock:
