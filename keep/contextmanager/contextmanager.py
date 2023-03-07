@@ -56,12 +56,23 @@ class ContextManager:
         self,
         step_id,
         condition_type,
-        raw_value,
         compare_to,
         compare_value,
         result,
         condition_alias=None,
+        raw_value=None,
     ):
+        """_summary_
+
+        Args:
+            step_id (_type_): id of the step
+            condition_type (_type_): type of the condition
+            compare_to (_type_): _description_
+            compare_value (_type_): _description_
+            result (_type_): _description_
+            condition_alias (_type_, optional): _description_. Defaults to None.
+            raw_value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
+        """
         if step_id not in self._steps_context:
             self._steps_context[step_id] = {"conditions": [], "results": {}}
         if "conditions" not in self._steps_context[step_id]:
@@ -122,4 +133,4 @@ class ContextManager:
 
     # TODO - add step per alert?
     def get_step_context(self, step_id):
-        return self._steps_context.get(step_id)
+        return {"step_id": step_id, "step_context": self._steps_context.get(step_id)}

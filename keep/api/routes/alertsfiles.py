@@ -1,11 +1,13 @@
 import os
+from typing import List
 
 import click
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from keep.alert.alert import Alert
 from keep.alertmanager.alertmanager import AlertManager
+from keep.api.models.step_context import StepContext
 from keep.contextmanager.contextmanager import ContextManager
 
 router = APIRouter()
@@ -90,19 +92,20 @@ def run_step(
 
 
 @router.post(
-    "/{alerts_file_id}/alert/{alert_id}/action/{action_id}",
+    "/{alerts_file_id}/alert/{alert_id}/action/{action_name}",
     description="Run action",
 )
-def run_action(
+async def run_action(
     alerts_file_id: str,
     alert_id: str,
-    action_id: str,
-    context: click.Context = Depends(click.get_current_context),
+    action_name: str,
+    click_context: click.Context = Depends(click.get_current_context),
+    steps_context: list[StepContext] = None,
 ) -> list[Alert]:
     alert_manager = AlertManager()
-    alerts_file = context.params.get("alerts_file")
-    alerts_url = context.params.get("alert_url")
-    providers_file = context.params.get("providers_file")
+    alerts_file = click_context.params.get("alerts_file")
+    alerts_url = click_context.params.get("alert_url")
+    providers_file = click_context.params.get("providers_file")
     alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
     alert = [
         alert
@@ -115,11 +118,12 @@ def run_action(
             detail="Multiple alerts with the same id within the same file",
         )
     alert = alert[0]
-
-    action = [action for action in alert.alert_actions if action.action_id == action_id]
+    action = [action for action in alert.alert_actions if action.name == action_name]
     if len(action) != 1:
         raise HTTPException(status_code=502, detail="Multiple actions with the same id")
 
     action = action[0]
+    alert.load_context(steps_context)
+    alert.run_missing_steps()
     action_output = alert.run_action(action)
     return JSONResponse(content={"action_output": action_output})

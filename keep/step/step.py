@@ -74,11 +74,11 @@ class Step:
                 self.context_manager.set_condition_results(
                     self.step_id,
                     condition_type,
-                    value,
                     condition_compare_value,
                     condition_what_to_compare,
                     condition_result,
                     condition_alias=condition_alias,
+                    raw_value=value,
                 )
 
     def _post_single_step_validations(self):
@@ -94,7 +94,6 @@ class Step:
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition_type,
-                condition,
                 condition_compare_to,
                 condition_compare_value,
                 condition_result,

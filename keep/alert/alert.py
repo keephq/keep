@@ -114,3 +114,32 @@ class Alert:
         for action in self.alert_actions:
             action.run()
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
+
+    def load_context(self, steps_context: list = []):
+        """Loads steps context for API usage (when the alert is run by the API)
+
+        Args:
+            steps_context (list, optional): _description_. Defaults to [].
+        """
+        # if steps context supplied, load it
+        # this is the case for example when the action being run by the API
+        for step in steps_context:
+            self.context_manager.load_step_context(
+                step.step_id,
+                step_results=step.step_context.get("results"),
+                step_conditions=step.step_context.get("conditions"),
+            )
+
+    def run_missing_steps(self):
+        """Runs steps without context (when the alert is run by the API)"""
+        self.logger.debug(f"Running missing steps for alert {self.alert_id}")
+        steps_context = self.context_manager.get_full_context().get("steps")
+        for step in self.alert_steps:
+            if step.step_id not in steps_context:
+                try:
+                    self.run_step(step)
+                except StepError as e:
+                    self.logger.error(f"Step {step.step_id} failed: {e}")
+                    self._handle_failure(step, e)
+                    raise
+        self.logger.debug(f"Missing steps for alert {self.alert_id} ran successfully")
