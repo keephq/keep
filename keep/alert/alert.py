@@ -19,20 +19,19 @@ class AlertStatus(enum.Enum):
 @dataclass
 class Alert:
     alert_id: str
+    alert_source: str
     alert_owners: typing.List[str]
     alert_tags: typing.List[str]
     alert_steps: typing.List[Step]
     alert_actions: typing.List[Action]
+    alert_file: str = None
 
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
+        self.alert_file = self.alert_source.split("/")[-1]
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.state_manager = StateManager.get_instance()
-
-    @property
-    def last_step(self):
-        return self.alert_steps[-1]
 
     def _get_alert_context(self):
         return {

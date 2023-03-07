@@ -23,18 +23,32 @@ class Parser:
         self.context_manager = ContextManager.get_instance()
         self.io_handler = IOHandler()
 
-    def parse(self, alert_file: str, providers_file: str = None) -> typing.List[Alert]:
+    def parse(
+        self, alert_source: str, providers_file: str = None
+    ) -> typing.List[Alert]:
+        """_summary_
+
+        Args:
+            alert_source (str): could be a url or a file path
+            providers_file (str, optional): _description_. Defaults to None.
+
+        Returns:
+            typing.List[Alert]: _description_
+        """
         # Parse the alert YAML
-        parsed_alert_yaml = self._parse_alert_to_dict(alert_file)
+        parsed_alert_yaml = self._parse_alert_to_dict(alert_source)
         # Parse the providers (from the alert yaml or from the providers directory)
         self.load_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
         if parsed_alert_yaml.get("alerts"):
             alerts = [
-                self._parse_alert(alert) for alert in parsed_alert_yaml.get("alerts")
+                self._parse_alert(alert, alert_source=alert_source)
+                for alert in parsed_alert_yaml.get("alerts")
             ]
         else:
-            alert = self._parse_alert(parsed_alert_yaml.get("alert"))
+            alert = self._parse_alert(
+                parsed_alert_yaml.get("alert"), alert_source=alert_source
+            )
             alerts = [alert]
         return alerts
 
@@ -79,7 +93,7 @@ class Parser:
             raise e
         return alert
 
-    def _parse_alert(self, alert: dict) -> Alert:
+    def _parse_alert(self, alert: dict, alert_source: str) -> Alert:
         self.logger.debug("Parsing alert")
         alert_id = self._parse_id(alert)
         alert_owners = self._parse_owners(alert)
@@ -88,6 +102,7 @@ class Parser:
         alert_actions = self._parse_actions(alert)
         alert = Alert(
             alert_id=alert_id,
+            alert_source=alert_source,
             alert_owners=alert_owners,
             alert_tags=alert_tags,
             alert_steps=alert_steps,

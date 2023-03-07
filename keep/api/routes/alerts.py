@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/",
+    "",
     description="Get alerts",
 )
 def get_alerts(
