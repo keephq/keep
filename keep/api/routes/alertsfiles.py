@@ -4,6 +4,9 @@ import click
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
+from keep.alert.alert import Alert
+from keep.alertmanager.alertmanager import AlertManager
+
 router = APIRouter()
 
 
@@ -25,3 +28,22 @@ def get_alerts_files(
         alertsfiles.append(alerts_url.split("/")[-1])
 
     return alertsfiles
+
+
+@router.get(
+    "/{alertsfile}",
+    description="Get alerts file",
+)
+def get_alert(
+    alertsfile: str,
+    context: click.Context = Depends(click.get_current_context),
+) -> list[Alert]:
+    alert_manager = AlertManager()
+    alerts_file = context.params.get("alerts_file")
+    alerts_url = context.params.get("alert_url")
+    providers_file = context.params.get("providers_file")
+    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
+    alerts = [alert for alert in alerts if alert.alert_file == alertsfile]
+    if not alerts:
+        raise HTTPException(status_code=404, detail="Alert file not found")
+    return alerts
