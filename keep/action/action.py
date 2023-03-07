@@ -29,13 +29,11 @@ class Action:
         # Check if needs to run
         need_to_run = self._check_conditions()
         if not need_to_run:
-            self.logger.info(
-                "Action %s evaluated NOT to run", self.action_config.get("name")
-            )
+            self.logger.info("Action %s evaluated NOT to run", self.config.get("name"))
             return
-        throttled = self._check_throttling(self.action_config.get("name"))
+        throttled = self._check_throttling(self.config.get("name"))
         if throttled:
-            self.logger.info("Action %s is throttled", self.action_config.get("name"))
+            self.logger.info("Action %s is throttled", self.config.get("name"))
             return
         try:
             if self.config.get("foreach"):
@@ -47,11 +45,9 @@ class Action:
             raise ActionError(e)
 
     def _check_conditions(self):
-        self.logger.debug(
-            "Checking conditions for action %s", self.action_config.get("name")
-        )
+        self.logger.debug("Checking conditions for action %s", self.config.get("name"))
         full_context = self.context_manager.get_full_context()
-        conditions_eval = self.action_config.get("if", [])
+        conditions_eval = self.config.get("if", [])
         # default behaviour should be ALL conditions should be met
         if not conditions_eval:
             for step in full_context.get("steps"):
@@ -73,7 +69,7 @@ class Action:
                 return False
 
     def _check_throttling(self, action_name):
-        throttling = self.action_config.get("throttle")
+        throttling = self.config.get("throttle")
         # if there is no throttling, return
         if not throttling:
             return False
@@ -87,9 +83,7 @@ class Action:
     def _run_foreach(self):
         foreach_iterator = self.context_manager.get_actionable_results()
         for val in foreach_iterator:
-            self.context_manager.set_for_each_context(
-                val.get("condition").get("raw_value")
-            )
+            self.context_manager.set_for_each_context(val.get("raw_value"))
             rendered_value = self.io_handler.render_context(self.provider_context)
             self.provider.notify(**rendered_value)
 

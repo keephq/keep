@@ -35,9 +35,7 @@ class Step:
                     self.provider_parameters[parameter]
                 )
             step_output = self.provider.query(**self.provider_parameters)
-            self.context_manager.steps_context[self.step_id] = {"results": step_output}
-            # this is an alias to the current step output
-            self.context_manager.steps_context["this"] = {"results": step_output}
+            self.context_manager.set_step_context(self.step_id, results=step_output)
             # Validate the step output
             self._post_step_validations()
         except Exception as e:
@@ -107,21 +105,6 @@ class Step:
     def _get_actual_value(self, foreach_value_template):
         val = self.io_handler.render(foreach_value_template)
         return val
-
-    @property
-    def action_needed(self):
-        # iterate over all conditions:
-        for condition in self.step_conditions:
-            condition_type = condition.get("type")
-            # for each condition, iterate over results
-            for result in self.context_manager.steps_context[self.step_id][
-                "conditions"
-            ][condition_type]:
-                # if any of the results is true, then action should be run
-                if result.get("result"):
-                    return True
-        # All conditions does not apply
-        return False
 
     def _inject_context_to_parameter(self, template):
         context = self.context_manager.get_full_context()

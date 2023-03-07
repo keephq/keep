@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from keep.api.routes import alerts, alertsfiles, providers
+from keep.api.routes import alertsfiles, providers
 
 
 def get_app() -> FastAPI:
@@ -19,7 +19,6 @@ def get_app() -> FastAPI:
     )
 
     app.include_router(providers.router, prefix="/providers")
-    app.include_router(alerts.router, prefix="/alerts")
     app.include_router(alertsfiles.router, prefix="/alertsfiles")
     return app
 

@@ -22,7 +22,7 @@ class ContextManager:
         else:
             ContextManager.__instance = self
 
-        self.steps_context = {}
+        self._steps_context = {}
         self.providers_context = {}
         self.alert_context = {}
         self.foreach_context = {}
@@ -42,7 +42,7 @@ class ContextManager:
     def get_full_context(self):
         full_context = {
             "providers": self.providers_context,
-            "steps": self.steps_context,
+            "steps": self._steps_context,
             "foreach": {"value": self.foreach_context},
             "env": os.environ,
         }
@@ -62,18 +62,19 @@ class ContextManager:
         result,
         condition_alias=None,
     ):
-        if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"conditions": {}, "results": {}}
-        if "conditions" not in self.steps_context[step_id]:
-            self.steps_context[step_id]["conditions"] = []
+        if step_id not in self._steps_context:
+            self._steps_context[step_id] = {"conditions": [], "results": {}}
+        if "conditions" not in self._steps_context[step_id]:
+            self._steps_context[step_id]["conditions"] = []
 
-        self.steps_context[step_id]["conditions"].append(
+        self._steps_context[step_id]["conditions"].append(
             {
                 "raw_value": raw_value,
                 "value": compare_value,
                 "compare_to": compare_to,
                 "result": result,
                 "condition_type": condition_type,
+                "condition_alias": condition_alias,
             }
         )
         if condition_alias:
@@ -81,18 +82,44 @@ class ContextManager:
 
     def get_actionable_results(self):
         actionable_results = []
-        for step_id in self.steps_context:
-            if "conditions" in self.steps_context[step_id]:
-                for condition_type in self.steps_context[step_id]["conditions"]:
-                    for condition in self.steps_context[step_id]["conditions"][
-                        condition_type
-                    ]:
-                        if condition["result"] == True:
-                            actionable_results.append(
-                                {
-                                    "step_id": step_id,
-                                    "condition_type": condition_type,
-                                    "condition": condition,
-                                }
-                            )
+        for step_id in self._steps_context:
+            if "conditions" in self._steps_context[step_id]:
+                for condition in self._steps_context[step_id]["conditions"]:
+                    if condition["result"] == True:
+                        actionable_results.append(condition)
         return actionable_results
+
+    def set_step_context(self, step_id, results):
+        if step_id not in self._steps_context:
+            self._steps_context[step_id] = {"conditions": [], "results": {}}
+        self._steps_context[step_id]["results"] = results
+        # this is an alias to the current step output
+        self._steps_context["this"] = self._steps_context[step_id]
+
+    def load_step_context(self, step_id, step_results, step_conditions):
+        """Load a step context
+
+        Args:
+            step_id (_type_): _description_
+            step_results (_type_): _description_
+            step_conditions (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        self._steps_context[step_id] = {"results": step_results}
+        for condition in step_conditions:
+            self.set_condition_results(
+                step_id,
+                condition["condition_type"],
+                condition["raw_value"],
+                condition["compare_to"],
+                condition["value"],
+                condition["result"],
+                condition.get("alias"),
+            )
+        return True
+
+    # TODO - add step per alert?
+    def get_step_context(self, step_id):
+        return self._steps_context.get(step_id)

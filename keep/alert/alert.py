@@ -32,6 +32,8 @@ class Alert:
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.state_manager = StateManager.get_instance()
+        # keep the state of the steps
+        self.steps_ran = {step.step_id: False for step in self.alert_steps}
 
     def _get_alert_context(self):
         return {
@@ -43,31 +45,45 @@ class Alert:
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
         step_output = step.run()
+        self.steps_ran[step.step_id] = True
         self.logger.info("Step %s ran successfully", step.step_id)
         return step_output
 
-    def run(self):
-        self.logger.debug(f"Running alert {self.alert_id}")
-        self.context_manager.set_alert_context(self._get_alert_context())
+    def run_steps(self):
+        self.logger.debug(f"Running steps for alert {self.alert_id}")
         for step in self.alert_steps:
             try:
-                self.logger.info("Running step %s", step.step_id)
-                step.run()
-                self.logger.info("Step %s ran successfully", step.step_id)
+                self.run_step(step)
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 self._handle_failure(step, e)
                 raise
+        self.logger.debug(f"Steps for alert {self.alert_id} ran successfully")
 
+    def run_action(self, action: Action):
+        self.logger.info("Running action %s", action.name)
+        try:
+            action_status = action.run()
+            self.logger.info("Action %s ran successfully", action.name)
+        except Exception as e:
+            self.logger.error(f"Action {action.name} failed: {e}")
+            raise
+        self.logger.info("Action %s ran successfully", action.name)
+        return action_status
+
+    def run_actions(self):
+        self.logger.debug("Running actions")
         actions_firing = []
         for action in self.alert_actions:
-            try:
-                self.logger.info("Running action %s", action.name)
-                actions_firing.append(action.run())
-                self.logger.info("Action %s ran successfully", action.name)
-            except Exception as e:
-                self.logger.error(f"Action {action.name} failed: {e}")
-                raise
+            actions_firing.append(self.run_action(action))
+        self.logger.debug("Actions ran successfully")
+        return actions_firing
+
+    def run(self):
+        self.logger.debug(f"Running alert {self.alert_id}")
+        self.context_manager.set_alert_context(self._get_alert_context())
+        self.run_steps()
+        actions_firing = self.run_actions()
 
         # Save the state
         #   alert is firing if one its actions is firing
