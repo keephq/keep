@@ -69,8 +69,8 @@ class MysqlProvider(BaseProvider):
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        self.__generate_client()
-        cursor = self.client.cursor()
+        client = self.__generate_client()
+        cursor = client.cursor()
 
         query = kwargs.pop("query")
         formatted_query = query.format(**kwargs)
