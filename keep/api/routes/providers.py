@@ -1,8 +1,7 @@
 import click
 from fastapi import APIRouter, Depends
 
-from keep.contextmanager.contextmanager import ContextManager
-from keep.parser.parser import Parser
+from keep.alertmanager.alertmanager import AlertManager
 
 router = APIRouter()
 
@@ -12,7 +11,18 @@ router = APIRouter()
     description="Get providers",
 )
 def get_providers(context: click.Context = Depends(click.get_current_context)):
-    parser = Parser()
-    parser.load_providers_config({}, context.params.get("providers_file"))
-    context_manager = ContextManager.get_instance()
-    return context_manager.providers_context
+    providers = {}
+    alert_manager = AlertManager()
+    providers_file = context.params.get("providers_file")
+    alerts_file = context.params.get("alerts_file")
+    alerts_url = context.params.get("alert_url")
+    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
+    for alert in alerts:
+        for step in alert.alert_steps + alert.alert_actions:
+            if step.provider.provider_id not in providers:
+                providers[step.provider.provider_id] = {
+                    "id": step.provider.provider_id,
+                    "config": step.provider.config,
+                    "type": step.provider.__class__.__name__,
+                }
+    return list(providers.values())
