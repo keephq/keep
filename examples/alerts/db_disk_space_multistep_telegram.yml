@@ -30,7 +30,7 @@ alert:
   actions:
     - name: trigger-telegram
       # trigger the action only if both conditions are met:
-      if: "{{ A }} and {{ B }}"
+      if: "{{ A }} or {{ B }}"
       provider:
         type: telegram
         config:

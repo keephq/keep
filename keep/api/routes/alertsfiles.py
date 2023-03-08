@@ -1,8 +1,8 @@
 import os
-from typing import List
 
 import click
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from keep.alert.alert import Alert
@@ -91,7 +91,7 @@ def run_step(
     alert.run_step(step)
     context_manager = ContextManager.get_instance()
     step_context = context_manager.get_step_context(step.step_id)
-    return JSONResponse(content=step_context)
+    return jsonable_encoder(step_context)
 
 
 @router.post(
