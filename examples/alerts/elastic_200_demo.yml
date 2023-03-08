@@ -4,40 +4,35 @@ alert:
   description: Check for http status code other than 200
   services:
     - elastic
-  trigger:
-    # Run every hour or
-    interval: 1h
   steps:
     - name: elastic-no-errors
       provider:
           type: elastic
           config: "{{ providers.elastic-prod }}"
-          query: "SELECT * FROM \"test-index\" where status_code>'500' and status_code is not NULL"
+          with:
+            query: "SELECT * FROM \"test-index\" where status_code>'500' and status_code is not NULL"
       condition:
         - type: threshold
-          value: 0
-          compare_to: "len({{ steps.elastic-no-errors.results }})"
+          value: "len({{ steps.elastic-no-errors.results }})"
+          compare_to: 0
   actions:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.paladin-slack }} "
+        config: " {{ providers.slack-demo }} "
         with:
           message: >
             There are 5XX's in production
-      context:
-        - name: query
-          value:  "{{ providers.elastic.query }}"
-        - name: results
-          value: "{{ steps.elastic-no-errors.output }}"
 
-provider:
-- id: elastic-prod
-  description: elasticsearch productions
-  authentication:
-    api_key: "{{ env.ELASTICSEARCH_API_KEY }}"
-    cloud_id: "{{ env.ELASTICSEARCH_CLOUD_ID}}"
-- id: paladin-slack
-  description: Paladin's slack
-  authentication:
-    webhook-url: https://hooks.slack.com/services/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
+providers:
+elastic-prod:
+  config: "{{ providers.elastic-prod }}"
+  with:
+slack-demo:
+  config: "{{ providers.slack-demo }}"
+  with:
+    channel: db-is-down
+    # Message is always mandatory
+    message: >
+      The disk space of {{ providers.elastic-prod.description }} is about to finish
+      Disk space left: {{ steps.db-no-space.results }}
