@@ -94,7 +94,7 @@ class AlertManager:
                     self.logger.info(f"Alert from {file} fetched successfully")
                 except Exception as e:
                     self.logger.error(
-                        f"Error running alert from {file}", extra={"exception": e}
+                        f"Error parsing alert from {file}", extra={"exception": e}
                     )
         return alerts
 
