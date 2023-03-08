@@ -90,6 +90,12 @@ class Action:
     def _run_single(self):
         rendered_value = self.io_handler.render_context(self.provider_context)
         if inspect.iscoroutinefunction(self.provider.notify):
-            asyncio.run(self.provider.notify(**rendered_value))
+            # if Keep ran in API mode, than FastAPI handles the event loop
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.provider.notify(**rendered_value))
+            # if CLI mode we need to do that ourselves
+            except:
+                asyncio.run(self.provider.notify(**rendered_value))
         else:
             self.provider.notify(**rendered_value)

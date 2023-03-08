@@ -2,25 +2,43 @@ import os
 from typing import Self
 
 import click
+from starlette_context import context
+
+
+def get_context_manager_id():
+    request_id = context.data.get("X-Request-ID")
+    # If we are running as part of FastAPI, we need context_manager per request
+    if request_id:
+        return request_id
+    else:
+        return "main"
 
 
 class ContextManager:
-    __instance = None
+    __instances = {}
 
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
     @staticmethod
     def get_instance() -> "ContextManager":
-        if ContextManager.__instance == None:
-            ContextManager()
-        return ContextManager.__instance
+        context_manager_id = get_context_manager_id()
+        if context_manager_id not in ContextManager.__instances:
+            ContextManager.__instances[context_manager_id] = ContextManager()
+        return ContextManager.__instances[context_manager_id]
+
+    @staticmethod
+    def delete_instance():
+        context_manager_id = get_context_manager_id()
+        if context_manager_id in ContextManager.__instances:
+            del ContextManager.__instances[context_manager_id]
 
     def __init__(self):
-        if ContextManager.__instance != None:
+        context_manager_id = get_context_manager_id()
+        if context_manager_id in ContextManager.__instances:
             raise Exception(
                 "Singleton class is a singleton class and cannot be instantiated more than once."
             )
         else:
-            ContextManager.__instance = self
+            ContextManager.__instances[context_manager_id] = self
 
         self._steps_context = {}
         self.providers_context = {}

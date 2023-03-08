@@ -62,6 +62,8 @@ def run_step(
     step_id: str,
     context: click.Context = Depends(click.get_current_context),
 ) -> JSONResponse:
+    import asyncio
+
     alert_manager = AlertManager()
     alerts_file = context.params.get("alerts_file")
     alerts_url = context.params.get("alert_url")
@@ -100,7 +102,7 @@ async def run_action(
     alert_id: str,
     action_name: str,
     click_context: click.Context = Depends(click.get_current_context),
-    steps_context: list[StepContext] = None,
+    steps_context: list[StepContext] = [],
 ) -> list[Alert]:
     alert_manager = AlertManager()
     alerts_file = click_context.params.get("alerts_file")
@@ -112,14 +114,27 @@ async def run_action(
         for alert in alerts
         if alert.alert_id == alert_id and alert.alert_file == alerts_file_id
     ]
-    if len(alert) != 1:
+    if len(alert) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Alert not found in Keep, did you load the alerts file?",
+        )
+
+    elif len(alert) > 1:
         raise HTTPException(
             status_code=502,
             detail="Multiple alerts with the same id within the same file",
         )
     alert = alert[0]
     action = [action for action in alert.alert_actions if action.name == action_name]
-    if len(action) != 1:
+
+    if len(action) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Action not found in alert, did you use the correct action name?",
+        )
+
+    elif len(action) != 1:
         raise HTTPException(status_code=502, detail="Multiple actions with the same id")
 
     action = action[0]
