@@ -41,4 +41,9 @@ def get_app() -> FastAPI:
 
 
 def run(app: FastAPI):
+    # https://stackoverflow.com/questions/46827007/runtimeerror-this-event-loop-is-already-running-in-python
+    # Shahar: I hate it but that's seem the only workaround..
+    import nest_asyncio
+
+    nest_asyncio.apply()
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

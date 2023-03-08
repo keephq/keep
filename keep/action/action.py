@@ -90,12 +90,17 @@ class Action:
     def _run_single(self):
         rendered_value = self.io_handler.render_context(self.provider_context)
         if inspect.iscoroutinefunction(self.provider.notify):
-            # if Keep ran in API mode, than FastAPI handles the event loop
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.provider.notify(**rendered_value))
-            # if CLI mode we need to do that ourselves
-            except:
-                asyncio.run(self.provider.notify(**rendered_value))
+            result = self._run_single_async()
         else:
             self.provider.notify(**rendered_value)
+
+    def _run_single_async(self):
+        rendered_value = self.io_handler.render_context(self.provider_context)
+        # if Keep ran in API mode, than FastAPI handles the event loop
+        loop = asyncio.new_event_loop()
+        task = loop.create_task(self.provider.notify(**rendered_value))
+        try:
+            loop.run_until_complete(task)
+        except Exception as e:
+            raise ActionError(e)
+        print(task)

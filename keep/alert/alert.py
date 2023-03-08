@@ -64,26 +64,30 @@ class Alert:
         self.logger.info("Running action %s", action.name)
         try:
             action_status = action.run()
+            action_error = None
             self.logger.info("Action %s ran successfully", action.name)
         except Exception as e:
             self.logger.error(f"Action {action.name} failed: {e}")
-            raise
-        self.logger.info("Action %s ran successfully", action.name)
-        return action_status
+            action_status = False
+            action_error = str(e)
+        return action_status, action_error
 
     def run_actions(self):
         self.logger.debug("Running actions")
         actions_firing = []
+        actions_errors = []
         for action in self.alert_actions:
-            actions_firing.append(self.run_action(action))
-        self.logger.debug("Actions ran successfully")
-        return actions_firing
+            action_status, action_error = self.run_action(action)
+            actions_firing.append(action_status)
+            actions_errors.append(action_error)
+        self.logger.debug("Actions run")
+        return actions_firing, actions_errors
 
     def run(self):
         self.logger.debug(f"Running alert {self.alert_id}")
         self.context_manager.set_alert_context(self._get_alert_context())
         self.run_steps()
-        actions_firing = self.run_actions()
+        actions_firing, actions_errors = self.run_actions()
 
         # Save the state
         #   alert is firing if one its actions is firing
@@ -97,7 +101,8 @@ class Alert:
             alert_context=self._get_alert_context(),
             alert_status=alert_status,
         )
-        self.logger.debug(f"Alert {self.alert_id} ran successfully")
+        self.logger.debug(f"Finish to run alert {self.alert_id}")
+        return actions_errors
 
     def _handle_failure(self, step: Step, exc):
         # if the step has failure strategy, handle it

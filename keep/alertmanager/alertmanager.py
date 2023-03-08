@@ -39,11 +39,19 @@ class AlertManager:
                 time.sleep(interval)
         # If interval is not set, run the alert once
         else:
-            self._run(alerts_path, providers_file)
-        self.logger.info(
-            f"Alert(s) from {alerts_path} ran successfully",
-            extra={"interval": interval},
-        )
+            errors = self._run(alerts_path, providers_file)
+        # TODO: errors should be part of the Alert/Action/Step class so it'll be distinguishable
+        if any(errors):
+            self.logger.error(
+                f"Alert(s) from {alerts_path} ran with errors",
+                extra={"interval": interval},
+            )
+            raise Exception("Alert(s) ran with errors")
+        else:
+            self.logger.info(
+                f"Alert(s) from {alerts_path} ran successfully",
+                extra={"interval": interval},
+            )
 
     def get_alerts(
         self, alert_path: str | tuple[str], providers_file: str = None
@@ -60,7 +68,8 @@ class AlertManager:
 
     def _run(self, alert_path: str | tuple[str], providers_file: str = None):
         alerts = self.get_alerts(alert_path, providers_file)
-        self._run_alerts(alerts)
+        errors = self._run_alerts(alerts)
+        return errors
 
     def _get_alerts_from_directory(
         self, alerts_dir: str, providers_file: str = None
@@ -90,16 +99,21 @@ class AlertManager:
         return alerts
 
     def _run_alerts(self, alerts: typing.List[Alert]):
+        alerts_errors = []
         for alert in alerts:
             self.logger.info(f"Running alert {alert.alert_id}")
             try:
-                alert.run()
+                errors = alert.run()
             except Exception as e:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
-                raise
-            self.logger.info(f"Alert {alert.alert_id} ran successfully")
+            if any(errors):
+                self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
+            else:
+                self.logger.info(f"Alert {alert.alert_id} ran successfully")
+            alerts_errors.extend(errors)
+        return alerts_errors
 
     def run_step(self, alert_id: str, step: str):
         self.logger.info(f"Running step {step} of alert {alert.alert_id}")

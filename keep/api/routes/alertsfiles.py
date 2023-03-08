@@ -141,11 +141,12 @@ async def run_action(
     action = action[0]
     alert.load_context(steps_context)
     alert.run_missing_steps()
-    action_output = alert.run_action(action)
+    action_status, action_error = alert.run_action(action)
     # TODO: add reason why action run or not
     return JSONResponse(
         content={
-            "action_run": True if action_output else False,
+            "action_run": True if action_status else False,
             "action_id": action.name,
+            "action_error": action_error,
         }
     )
