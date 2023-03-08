@@ -6,11 +6,11 @@ from starlette_context import context
 
 
 def get_context_manager_id():
-    request_id = context.data.get("X-Request-ID")
-    # If we are running as part of FastAPI, we need context_manager per request
-    if request_id:
+    try:
+        # If we are running as part of FastAPI, we need context_manager per request
+        request_id = context.data.get("X-Request-ID")
         return request_id
-    else:
+    except:
         return "main"
 
 
@@ -102,8 +102,8 @@ class ContextManager:
                 "value": compare_value,
                 "compare_to": compare_to,
                 "result": result,
-                "condition_type": condition_type,
-                "condition_alias": condition_alias,
+                "type": condition_type,
+                "alias": condition_alias,
             }
         )
         if condition_alias:
@@ -140,12 +140,12 @@ class ContextManager:
         for condition in step_conditions:
             self.set_condition_results(
                 step_id,
-                condition["condition_type"],
-                condition["raw_value"],
+                condition["type"],
                 condition["compare_to"],
                 condition["value"],
                 condition["result"],
-                condition.get("alias"),
+                condition_alias=condition.get("alias"),
+                raw_value=condition.get("raw_value"),
             )
         return True
 

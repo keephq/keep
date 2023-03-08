@@ -61,6 +61,7 @@ def run_step(
     alert_id: str,
     step_id: str,
     context: click.Context = Depends(click.get_current_context),
+    steps_context: list[StepContext] = [],
 ) -> JSONResponse:
     import asyncio
 
@@ -80,14 +81,14 @@ def run_step(
             detail="Multiple alerts with the same id within the same file",
         )
     alert = alert[0]
-
     step = [step for step in alert.alert_steps if step.step_id == step_id]
     if len(step) != 1:
         raise HTTPException(status_code=502, detail="Multiple steps with the same id")
 
     step = step[0]
+    alert.load_context(steps_context)
+    alert.run_missing_steps(end_step=step)
     alert.run_step(step)
-
     context_manager = ContextManager.get_instance()
     step_context = context_manager.get_step_context(step.step_id)
     return JSONResponse(content=step_context)
@@ -141,4 +142,10 @@ async def run_action(
     alert.load_context(steps_context)
     alert.run_missing_steps()
     action_output = alert.run_action(action)
-    return JSONResponse(content={"action_output": action_output})
+    # TODO: add reason why action run or not
+    return JSONResponse(
+        content={
+            "action_run": True if action_output else False,
+            "action_id": action.name,
+        }
+    )

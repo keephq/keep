@@ -130,11 +130,15 @@ class Alert:
                 step_conditions=step.step_context.get("conditions"),
             )
 
-    def run_missing_steps(self):
+    def run_missing_steps(self, end_step=None):
         """Runs steps without context (when the alert is run by the API)"""
         self.logger.debug(f"Running missing steps for alert {self.alert_id}")
         steps_context = self.context_manager.get_full_context().get("steps")
         for step in self.alert_steps:
+            # if we reached the end step, stop
+            if end_step and step.step_id == end_step.step_id:
+                break
+
             if step.step_id not in steps_context:
                 try:
                     self.run_step(step)
