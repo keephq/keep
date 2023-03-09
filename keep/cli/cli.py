@@ -105,8 +105,9 @@ def version():
 
 @cli.command()
 @click.option(
+    "--alerts-directory",
     "--alerts-file",
-    "-af",
+    "-ad",
     type=click.Path(exists=True, dir_okay=True, file_okay=True),
     help="The path to the alert yaml/alerts directory",
 )
@@ -116,7 +117,7 @@ def version():
     help="A url that can be used to download an alert yaml",
     cls=NotRequiredIf,
     multiple=True,
-    not_required_if="alerts_file",
+    not_required_if="alerts_directory",
 )
 @click.option(
     "--providers-file",
@@ -126,7 +127,7 @@ def version():
     required=False,
     default="providers.yaml",
 )
-def api(alerts_file: str, alert_url: list[str], providers_file: str):
+def api(alerts_directory: str, alert_url: list[str], providers_file: str):
     """Start the API."""
     from keep.api.api import get_app, run
 
@@ -138,6 +139,7 @@ def api(alerts_file: str, alert_url: list[str], providers_file: str):
 
 @cli.command()
 @click.option(
+    "--alerts-directory",
     "--alerts-file",
     "-af",
     type=click.Path(exists=True, dir_okay=True, file_okay=True),
@@ -149,7 +151,7 @@ def api(alerts_file: str, alert_url: list[str], providers_file: str):
     help="A url that can be used to download an alert yaml",
     cls=NotRequiredIf,
     multiple=True,
-    not_required_if="alerts_file",
+    not_required_if="alerts_directory",
 )
 @click.option(
     "--interval",
@@ -177,7 +179,7 @@ def api(alerts_file: str, alert_url: list[str], providers_file: str):
 @pass_info
 def run(
     info: Info,
-    alerts_file: str,
+    alerts_directory: str,
     alert_url: list[str],
     interval: int,
     providers_file,
@@ -185,16 +187,18 @@ def run(
     api_url,
 ):
     """Run the alert."""
-    logger.debug(f"Running alert in {alerts_file or alert_url}")
+    logger.debug(f"Running alert in {alerts_directory or alert_url}")
     alert_manager = AlertManager()
     try:
-        alert_manager.run(alerts_file or alert_url, providers_file, interval=interval)
+        alert_manager.run(
+            alerts_directory or alert_url, providers_file, interval=interval
+        )
     except Exception as e:
-        logger.error(f"Error running alert {alerts_file or alert_url}: {e}")
+        logger.error(f"Error running alert {alerts_directory or alert_url}: {e}")
         if info.verbose:
             raise e
         sys.exit(1)
-    logger.debug(f"Alert in {alerts_file or alert_url} ran successfully")
+    logger.debug(f"Alert in {alerts_directory or alert_url} ran successfully")
 
 
 @cli.command()

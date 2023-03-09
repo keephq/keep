@@ -44,7 +44,9 @@ class LogfileProvider(BaseProvider):
                 lines = f.readlines()
         except FileNotFoundError:
             self.logger.exception(f"File {filename} not found")
-            raise ProviderConfigException(f"File {filename} not found")
+            raise ProviderConfigException(
+                f"File {filename} not found", provider_id=self.provider_id
+            )
 
         relevant_lines = []
         for l in lines:

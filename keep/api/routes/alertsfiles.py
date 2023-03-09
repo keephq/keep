@@ -1,3 +1,4 @@
+import json
 import os
 
 import click
@@ -9,6 +10,7 @@ from keep.alert.alert import Alert
 from keep.alertmanager.alertmanager import AlertManager
 from keep.api.models.step_context import StepContext
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_config_exception import ProviderConfigException
 
 router = APIRouter()
 
@@ -21,11 +23,11 @@ def get_alerts_files(
     context: click.Context = Depends(click.get_current_context),
 ) -> list[str]:
     alertsfiles = []
-    alerts_file = context.params.get("alerts_file")
-    if alerts_file and os.path.isdir(alerts_file):
-        alertsfiles += os.listdir(alerts_file)
-    elif alerts_file:
-        alertsfiles.append(alerts_file.split("/")[-1])
+    alerts_directory = context.params.get("alerts_directory")
+    if alerts_directory and os.path.isdir(alerts_directory):
+        alertsfiles += os.listdir(alerts_directory)
+    elif alerts_directory:
+        alertsfiles.append(alerts_directory.split("/")[-1])
     alerts_urls = context.params.get("alert_url")
     for alerts_url in alerts_urls:
         alertsfiles.append(alerts_url.split("/")[-1])
@@ -40,16 +42,15 @@ def get_alerts_files(
 def get_alert(
     alertsfile: str,
     context: click.Context = Depends(click.get_current_context),
-) -> list[Alert]:
-    alert_manager = AlertManager()
-    alerts_file = context.params.get("alerts_file")
+) -> str:
+    alerts_directory = context.params.get("alerts_directory")
     alerts_url = context.params.get("alert_url")
     providers_file = context.params.get("providers_file")
-    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
-    alerts = [alert for alert in alerts if alert.alert_file == alertsfile]
-    if not alerts:
+    try:
+        with open("/".join([alerts_directory, alertsfile]), "r") as f:
+            return f.read()
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Alert file not found")
-    return alerts
 
 
 @router.post(
@@ -66,10 +67,22 @@ def run_step(
     import asyncio
 
     alert_manager = AlertManager()
-    alerts_file = context.params.get("alerts_file")
+    alerts_directory = context.params.get("alerts_directory")
     alerts_url = context.params.get("alert_url")
     providers_file = context.params.get("providers_file")
-    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
+    if alerts_directory:
+        alert_path = "/".join([alerts_directory, alerts_file_id])
+    else:
+        alert_path = alerts_url
+    try:
+        alerts = alert_manager.get_alerts(alert_path, providers_file)
+    except ProviderConfigException as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider {e.provider_id} is not configured: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
     alert = [
         alert
         for alert in alerts
@@ -106,10 +119,22 @@ async def run_action(
     steps_context: list[StepContext] = [],
 ) -> list[Alert]:
     alert_manager = AlertManager()
-    alerts_file = click_context.params.get("alerts_file")
+    alerts_directory = click_context.params.get("alerts_directory")
     alerts_url = click_context.params.get("alert_url")
     providers_file = click_context.params.get("providers_file")
-    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
+    if alerts_directory:
+        alert_path = "/".join([alerts_directory, alerts_file_id])
+    else:
+        alert_path = alerts_url
+    try:
+        alerts = alert_manager.get_alerts(alert_path, providers_file)
+    except ProviderConfigException as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider {e.provider_id} is not configured: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
     alert = [
         alert
         for alert in alerts
@@ -118,7 +143,7 @@ async def run_action(
     if len(alert) == 0:
         raise HTTPException(
             status_code=404,
-            detail="Alert not found in Keep, did you load the alerts file?",
+            detail=f"Alert {alert_id} not found in Keep, did you load the alerts file?",
         )
 
     elif len(alert) > 1:

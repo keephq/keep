@@ -307,7 +307,8 @@ class Parser:
             config_id = self._extract_provider_id(provider_config)
             provider_config = self.context_manager.providers_context.get(config_id)
             if not provider_config:
-                raise ValueError(
+                self.logger.warning(
                     f"Provider {config_id} not found in configuration, did you configure it?"
                 )
+                provider_config = {"authentication": {}}
             return config_id, provider_config

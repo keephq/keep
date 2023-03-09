@@ -77,9 +77,14 @@ class ElasticProvider(BaseProvider):
         if not self.config.authentication.get(
             "host"
         ) and not self.config.authentication.get("cloud_id"):
-            raise ProviderConfigException("Missing host or cloud_id in provider config")
+            raise ProviderConfigException(
+                "Missing host or cloud_id in provider config",
+                provider_id=self.provider_id,
+            )
         if "api_key" not in self.config.authentication:
-            raise ProviderConfigException("Missing api_key in provider config")
+            raise ProviderConfigException(
+                "Missing api_key in provider config", provider_id=self.provider_id
+            )
 
     @staticmethod
     def get_neccessary_config_keys():

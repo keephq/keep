@@ -23,16 +23,3 @@ alert:
         with:
           message: >
             There are 5XX's in production
-
-providers:
-elastic-prod:
-  config: "{{ providers.elastic-prod }}"
-  with:
-slack-demo:
-  config: "{{ providers.slack-demo }}"
-  with:
-    channel: db-is-down
-    # Message is always mandatory
-    message: >
-      The disk space of {{ providers.elastic-prod.description }} is about to finish
-      Disk space left: {{ steps.db-no-space.results }}

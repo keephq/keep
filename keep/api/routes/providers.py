@@ -14,9 +14,9 @@ def get_providers(context: click.Context = Depends(click.get_current_context)):
     providers = {}
     alert_manager = AlertManager()
     providers_file = context.params.get("providers_file")
-    alerts_file = context.params.get("alerts_file")
+    alerts_directory = context.params.get("alerts_directory")
     alerts_url = context.params.get("alert_url")
-    alerts = alert_manager.get_alerts(alerts_file or alerts_url, providers_file)
+    alerts = alert_manager.get_alerts(alerts_directory or alerts_url, providers_file)
     for alert in alerts:
         for step in alert.alert_steps + alert.alert_actions:
             if step.provider.provider_id not in providers:
