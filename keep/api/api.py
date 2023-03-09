@@ -13,7 +13,7 @@ from keep.contextmanager.contextmanager import ContextManager
 
 
 async def dispose_context_manager() -> None:
-    """Close current after every request."""
+    """Dump context manager after every request."""
     # https://stackoverflow.com/questions/75486472/flask-teardown-request-equivalent-in-fastapi
     yield
     ContextManager.delete_instance()

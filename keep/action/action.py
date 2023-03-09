@@ -103,7 +103,7 @@ class Action:
             ActionError: _description_
         """
         rendered_value = self.io_handler.render_context(self.provider_context)
-        # if Keep ran in API mode, than FastAPI handles the event loop
+        # This is "magically solved" because of nest_asyncio but probably isn't best practice
         loop = asyncio.new_event_loop()
         task = loop.create_task(self.provider.notify(**rendered_value))
         try:
