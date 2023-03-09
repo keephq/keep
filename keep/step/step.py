@@ -1,6 +1,8 @@
 import logging
+from dataclasses import field
 
 import chevron
+from pydantic.dataclasses import dataclass
 
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
@@ -8,16 +10,17 @@ from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 
 
+@dataclass(config={"arbitrary_types_allowed": True})
 class Step:
-    def __init__(
-        self, step_id, step_config, provider: BaseProvider, provider_parameters: dict
-    ):
-        self.step_id = step_id
-        self.step_config = step_config
-        self.step_conditions = step_config.get("condition", [])
-        self.step_conditions_results = {}
-        self.provider = provider
-        self.provider_parameters = provider_parameters
+    step_id: str
+    step_config: dict
+    provider: BaseProvider
+    provider_parameters: dict
+    step_conditions_results: dict = field(default_factory=dict)
+    step_conditions: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.step_conditions = self.step_config.get("condition", [])
         self.io_handler = IOHandler()
         self.logger = logging.getLogger(__name__)
         self.context_manager = ContextManager.get_instance()
@@ -32,9 +35,7 @@ class Step:
                     self.provider_parameters[parameter]
                 )
             step_output = self.provider.query(**self.provider_parameters)
-            self.context_manager.steps_context[self.step_id] = {"results": step_output}
-            # this is an alias to the current step output
-            self.context_manager.steps_context["this"] = {"results": step_output}
+            self.context_manager.set_step_context(self.step_id, results=step_output)
             # Validate the step output
             self._post_step_validations()
         except Exception as e:
@@ -73,11 +74,11 @@ class Step:
                 self.context_manager.set_condition_results(
                     self.step_id,
                     condition_type,
-                    value,
                     condition_compare_value,
                     condition_what_to_compare,
                     condition_result,
                     condition_alias=condition_alias,
+                    raw_value=value,
                 )
 
     def _post_single_step_validations(self):
@@ -93,7 +94,6 @@ class Step:
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition_type,
-                condition,
                 condition_compare_to,
                 condition_compare_value,
                 condition_result,
@@ -104,21 +104,6 @@ class Step:
     def _get_actual_value(self, foreach_value_template):
         val = self.io_handler.render(foreach_value_template)
         return val
-
-    @property
-    def action_needed(self):
-        # iterate over all conditions:
-        for condition in self.step_conditions:
-            condition_type = condition.get("type")
-            # for each condition, iterate over results
-            for result in self.context_manager.steps_context[self.step_id][
-                "conditions"
-            ][condition_type]:
-                # if any of the results is true, then action should be run
-                if result.get("result"):
-                    return True
-        # All conditions does not apply
-        return False
 
     def _inject_context_to_parameter(self, template):
         context = self.context_manager.get_full_context()

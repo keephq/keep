@@ -1,9 +1,8 @@
 import asyncio
 import inspect
 import logging
-import re
 
-import requests
+from pydantic.dataclasses import dataclass
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
@@ -13,15 +12,15 @@ from keep.statemanager.statemanager import StateManager
 from keep.throttles.throttle_factory import ThrottleFactory
 
 
+@dataclass(config={"arbitrary_types_allowed": True})
 class Action:
-    def __init__(
-        self, name: str, config, provider: BaseProvider, provider_context: dict
-    ):
-        self.name = name
+    name: str
+    config: dict
+    provider: BaseProvider
+    provider_context: dict
+
+    def __post_init__(self):
         self.logger = logging.getLogger(__name__)
-        self.provider = provider
-        self.provider_context = provider_context
-        self.action_config = config
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.state_manager = StateManager.get_instance()
@@ -30,16 +29,14 @@ class Action:
         # Check if needs to run
         need_to_run = self._check_conditions()
         if not need_to_run:
-            self.logger.info(
-                "Action %s evaluated NOT to run", self.action_config.get("name")
-            )
+            self.logger.info("Action %s evaluated NOT to run", self.config.get("name"))
             return
-        throttled = self._check_throttling(self.action_config.get("name"))
+        throttled = self._check_throttling(self.config.get("name"))
         if throttled:
-            self.logger.info("Action %s is throttled", self.action_config.get("name"))
+            self.logger.info("Action %s is throttled", self.config.get("name"))
             return
         try:
-            if self.action_config.get("foreach"):
+            if self.config.get("foreach"):
                 self._run_foreach()
             else:
                 self._run_single()
@@ -48,11 +45,9 @@ class Action:
             raise ActionError(e)
 
     def _check_conditions(self):
-        self.logger.debug(
-            "Checking conditions for action %s", self.action_config.get("name")
-        )
+        self.logger.debug("Checking conditions for action %s", self.config.get("name"))
         full_context = self.context_manager.get_full_context()
-        conditions_eval = self.action_config.get("if", [])
+        conditions_eval = self.config.get("if", [])
         # default behaviour should be ALL conditions should be met
         if not conditions_eval:
             for step in full_context.get("steps"):
@@ -74,7 +69,7 @@ class Action:
                 return False
 
     def _check_throttling(self, action_name):
-        throttling = self.action_config.get("throttle")
+        throttling = self.config.get("throttle")
         # if there is no throttling, return
         if not throttling:
             return False
@@ -88,15 +83,30 @@ class Action:
     def _run_foreach(self):
         foreach_iterator = self.context_manager.get_actionable_results()
         for val in foreach_iterator:
-            self.context_manager.set_for_each_context(
-                val.get("condition").get("raw_value")
-            )
+            self.context_manager.set_for_each_context(val.get("raw_value"))
             rendered_value = self.io_handler.render_context(self.provider_context)
             self.provider.notify(**rendered_value)
 
     def _run_single(self):
         rendered_value = self.io_handler.render_context(self.provider_context)
+        # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
-            asyncio.run(self.provider.notify(**rendered_value))
+            result = self._run_single_async()
+        # else, just run the provider
         else:
             self.provider.notify(**rendered_value)
+
+    def _run_single_async(self):
+        """For async providers, run them in a new event loop
+
+        Raises:
+            ActionError: _description_
+        """
+        rendered_value = self.io_handler.render_context(self.provider_context)
+        # This is "magically solved" because of nest_asyncio but probably isn't best practice
+        loop = asyncio.new_event_loop()
+        task = loop.create_task(self.provider.notify(**rendered_value))
+        try:
+            loop.run_until_complete(task)
+        except Exception as e:
+            raise ActionError(e)

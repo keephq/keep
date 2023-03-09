@@ -8,7 +8,8 @@ alert:
       provider:
           type: sentry
           config: "{{ providers.sentry-prod }}"
-          project: python2
+          with:
+            project: python2
       condition:
         - type: threshold
           value: 10
@@ -17,7 +18,8 @@ alert:
       provider:
           type: sentry
           config: "{{ providers.sentry-prod }}"
-          project: python2
+          with:
+            project: python2
       condition:
         - type: threshold
           value: 5
@@ -26,18 +28,7 @@ alert:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.paladin-slack }} "
+        config: " {{ providers.slack-demo }} "
         with:
           message: >
             There is an issue with sentry
-
-provider:
-- id: sentry-prod
-  description: sentry prod
-  authentication:
-    api_token:  "{{ env.SENTRY_API_TOKEN}}"
-    org_slug: "{{ env.SENTRY_ORG_SLUG}}"
-- id: paladin-slack
-  description: Paladin's slack
-  authentication:
-    webhook-url: https://hooks.slack.com/services/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
