@@ -46,7 +46,8 @@ class PagerdutyProvider(BaseProvider):
             and not self.authentication_config.api_key
         ):
             raise ProviderConfigException(
-                "PagerdutyProvider requires either routing_key or api_key"
+                "PagerdutyProvider requires either routing_key or api_key",
+                provider_id=self.provider_id,
             )
 
     def _build_alert(

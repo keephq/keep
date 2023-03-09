@@ -22,6 +22,6 @@ FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 COPY --from=builder /venv /venv
-COPY examples /app/examples
+COPY examples/alerts/db_disk_space.yml /app/examples/alerts/db_disk_space.yml
 COPY providers.yaml /app/providers.yaml
 ENTRYPOINT ["keep", "--json", "api", "--alerts-file", "/app/examples/alerts", "--providers-file", "/app/providers.yaml"]
