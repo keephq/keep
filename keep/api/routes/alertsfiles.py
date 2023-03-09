@@ -181,7 +181,7 @@ async def run_action(
 
 @router.post(
     "/{alerts_file_id}/alert/{alert_id}",
-    description="Run action",
+    description="Run alert",
 )
 async def run_alert(
     alerts_file_id: str,
