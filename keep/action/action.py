@@ -89,12 +89,19 @@ class Action:
 
     def _run_single(self):
         rendered_value = self.io_handler.render_context(self.provider_context)
+        # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
             result = self._run_single_async()
+        # else, just run the provider
         else:
             self.provider.notify(**rendered_value)
 
     def _run_single_async(self):
+        """For async providers, run them in a new event loop
+
+        Raises:
+            ActionError: _description_
+        """
         rendered_value = self.io_handler.render_context(self.provider_context)
         # if Keep ran in API mode, than FastAPI handles the event loop
         loop = asyncio.new_event_loop()
@@ -103,4 +110,3 @@ class Action:
             loop.run_until_complete(task)
         except Exception as e:
             raise ActionError(e)
-        print(task)

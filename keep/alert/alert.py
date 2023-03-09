@@ -32,8 +32,6 @@ class Alert:
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.state_manager = StateManager.get_instance()
-        # keep the state of the steps
-        self.steps_ran = {step.step_id: False for step in self.alert_steps}
 
     def _get_alert_context(self):
         return {
@@ -45,7 +43,6 @@ class Alert:
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
         step_output = step.run()
-        self.steps_ran[step.step_id] = True
         self.logger.info("Step %s ran successfully", step.step_id)
         return step_output
 
@@ -143,7 +140,7 @@ class Alert:
             # if we reached the end step, stop
             if end_step and step.step_id == end_step.step_id:
                 break
-
+            # If we don't have context for the step, run it
             if step.step_id not in steps_context:
                 try:
                     self.run_step(step)
