@@ -88,7 +88,9 @@ def run_step(
         for alert in alerts
         if alert.alert_id == alert_id and alert.alert_file == alerts_file_id
     ]
-    if len(alert) != 1:
+    if len(alert) == 0:
+        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+    if len(alert) > 1:
         raise HTTPException(
             status_code=502,
             detail="Multiple alerts with the same id within the same file",
