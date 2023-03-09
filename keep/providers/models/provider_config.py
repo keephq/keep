@@ -18,7 +18,7 @@ class ProviderConfig:
         authentication (dict): The configuration for the provider.
     """
 
-    authentication: dict
+    authentication: Optional[dict]
     description: Optional[str] = None
 
     def __post_init__(self):

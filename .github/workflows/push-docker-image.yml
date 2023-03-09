@@ -28,3 +28,4 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: keephq/cli:latest
+          file: Dockerfile.cli

@@ -14,10 +14,6 @@ alert:
         - type: threshold
           value: "{{ steps.this.results }}"
           compare_to: 90% # Trigger if more than 90% full
-      failure_strategy: # What to do if the SSH connection failed?
-        - name: ssh-connection-failed
-          retry: 5 # Retry 5 times
-          alert: true # Finally, alert
   actions:
     - name: trigger-telegram
       provider:
