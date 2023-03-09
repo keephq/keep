@@ -175,3 +175,59 @@ async def run_action(
             "action_error": action_error,
         }
     )
+
+
+@router.post(
+    "/{alerts_file_id}/alert/{alert_id}",
+    description="Run action",
+)
+async def run_alert(
+    alerts_file_id: str,
+    alert_id: str,
+    click_context: click.Context = Depends(click.get_current_context),
+    steps_context: list[StepContext] = [],
+) -> list[Alert]:
+    alert_manager = AlertManager()
+    alerts_directory = click_context.params.get("alerts_directory")
+    alerts_url = click_context.params.get("alert_url")
+    providers_file = click_context.params.get("providers_file")
+    if alerts_directory:
+        alert_path = "/".join([alerts_directory, alerts_file_id])
+    else:
+        alert_path = alerts_url
+    try:
+        alerts = alert_manager.get_alerts(alert_path, providers_file)
+    except ProviderConfigException as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider {e.provider_id} is not configured: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    alert = [
+        alert
+        for alert in alerts
+        if alert.alert_id == alert_id and alert.alert_file == alerts_file_id
+    ]
+    if len(alert) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Alert {alert_id} not found in Keep, did you load the alerts file?",
+        )
+
+    elif len(alert) > 1:
+        raise HTTPException(
+            status_code=502,
+            detail="Multiple alerts with the same id within the same file",
+        )
+    alert = alert[0]
+    action_error = alert.run()
+    context_manager = ContextManager.get_instance()
+    full_context = context_manager.get_full_context()
+    # TODO: add reason why action run or not
+    return JSONResponse(
+        content={
+            "steps_context": full_context.get("steps"),
+            "action_ran": True if not any(action_error) else False,
+        }
+    )
