@@ -3,7 +3,7 @@
 ```
 <br />
 <div align="center">
-    <img src="/docs/static/img/keep.png?raw=true">
+    <img src="/docs/static/img/keep.png?raw=true" width="86">
 </div>
 
 <h1 align="center">Alerting. By developers, for developers.</h1>
