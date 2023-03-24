@@ -97,6 +97,7 @@ poetry install
 
 <h5>From now on, Keep should be installed locally and accessible from your CLI, test it by executing:</h5>
 
+
 ```
 keep version
 ```
@@ -107,7 +108,16 @@ Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messagi
 keep config provider --provider-type slack --provider-id slack-demo
 ```
 
+
 Paste the Slack Incoming Webhook URL (e.g. <https://hooks.slack.com/services/...>) and you're good to go 👌
+
+<h6>**If you don't want to create your own webhook, you can follow these easy 3 steps:**
+
+1. Go to [keep's slack](https://keephq.dev/slack).
+
+2. Enter the # alerts-playground channel.
+
+3. In the channel's topic, you can find the webhook provided by Keep.
 
 <h5>Let's now execute our example "Paper DB has insufficient disk space" alert</h5>
 
