@@ -8,7 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import context, plugins
 from starlette_context.middleware import RawContextMiddleware
 
-from keep.api.routes import alertsfiles, healthcheck, providers
+from keep.api.routes import alertsfiles, chat, healthcheck, providers
 from keep.contextmanager.contextmanager import ContextManager
 
 
@@ -21,10 +21,6 @@ async def dispose_context_manager() -> None:
 
 def get_app() -> FastAPI:
     app = FastAPI(dependencies=[Depends(dispose_context_manager)])
-    middleware = Middleware(
-        RawContextMiddleware,
-        plugins=(plugins.RequestIdPlugin(), plugins.CorrelationIdPlugin()),
-    )
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         CORSMiddleware,
@@ -37,6 +33,7 @@ def get_app() -> FastAPI:
     app.include_router(providers.router, prefix="/providers")
     app.include_router(alertsfiles.router, prefix="/alertsfiles")
     app.include_router(healthcheck.router, prefix="/healthcheck")
+    app.include_router(chat.router)
     return app
 
 
