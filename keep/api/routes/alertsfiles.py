@@ -44,7 +44,7 @@ def get_alerts_files(
 
 
 @router.get(
-    "/{alertsfile}",
+    "/{alerts_file}",
     description="Get alerts file",
 )
 def get_alert(
