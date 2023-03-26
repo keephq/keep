@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -16,6 +17,14 @@ logger = logging.getLogger(__name__)
 @router.websocket("/chat")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    if not os.environ.get("OPENAI_API_KEY"):
+        resp = ChatResponse(
+            sender="bot",
+            message="openai api key not found",
+            type="error",
+        )
+        await websocket.send_json(resp.dict())
+        return
     question_handler = QuestionGenCallbackHandler(websocket)
     stream_handler = StreamingLLMCallbackHandler(websocket)
     qa_chain = get_chain(question_handler, stream_handler)
