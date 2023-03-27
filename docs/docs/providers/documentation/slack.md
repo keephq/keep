@@ -5,23 +5,29 @@ sidebar_label: Slack Provider
 # Slack
 
 :::note Brief Description
-Template Provider is a template for newly added provider's documentation
+Slack provider is a provider that allows to send notifications to Slack
 :::
 
 ## Inputs
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+The `nofity` function take following parameters as inputs:
+- `message`: Required. Message text to send to Slack
+- `blocks`: Optional. Array of interactive components like inputs, buttons
+
 
 ## Outputs
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+
 
 ## Authentication Parameters
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+The webhook_url associated with the channel requires to trigger the message to the respective channel.
 
 ## Connecting with the Provider
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+1. Create a Slack app (if you don't have one already) 
+2. Enable Incoming Webhooks
+3. Create an Incoming Webhook
+4. Use your Incoming Webhook URL to post a message
 
 ## Notes
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+
 
 ## Useful Links
-*No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page*
+- https://api.slack.com/messaging/webhooks
