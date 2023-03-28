@@ -9,7 +9,7 @@ Slack provider is a provider that allows to send notifications to Slack
 :::
 
 ## Inputs
-The `nofity` function take following parameters as inputs:
+The `notify` function take following parameters as inputs:
 - `message`: Required. Message text to send to Slack
 - `blocks`: Optional. Array of interactive components like inputs, buttons
 
