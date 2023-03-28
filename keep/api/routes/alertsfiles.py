@@ -195,7 +195,7 @@ async def run_action(
     "/{alerts_file_id}/alert/{alert_id}",
     description="Run alert",
 )
-async def run_alert(
+async def run_alert_from_file(
     alerts_file_id: str,
     alert_id: str,
     click_context: click.Context = Depends(click.get_current_context),

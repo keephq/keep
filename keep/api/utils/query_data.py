@@ -26,7 +26,7 @@ alert:
           command_output: 91% # Mock
       condition:
         - type: threshold
-          value:  "steps.this.results"
+          value:  "{{ steps.this.results }}"
           compare_to: 90% # Trigger if more than 90% full
   actions:
     - name: trigger-slack
@@ -44,6 +44,10 @@ providers:
       username: a
       password: b
       host: x.y.z
+  slack-demo:
+    description: Slack Demo
+    authentication:
+      webhook: https://hooks.slack.com/services/XXXXX/XXXXX/XXXXX
 
 KeepAI is constantly learning and improving, and its capabilities are constantly evolving. It is able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions.
 Additionally, KeepAI is able to generate its own text based on the input it receives, allowing it to engage in discussions and provide explanations and descriptions on a wide range of topics.
