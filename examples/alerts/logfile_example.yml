@@ -10,7 +10,8 @@ alert:
             filename: examples/access.log
             time: 10w
       # use the condition on every result of the provider
-      foreach: "{{steps.this.results}}"
+      foreach:
+        - value: "{{steps.this.results}}"
       condition:
         - type: threshold
           value: "first(split({{ foreach.value }}, ' '))"
@@ -20,7 +21,7 @@ alert:
           compare_to: 70
   # This happen for each
   actions:
-    - name: paladin-slack
+    - name: keep-slack
       # Whether to action on each result separately
       foreach:
         # Run on last ran step [ only on results that the condition applies to ]
