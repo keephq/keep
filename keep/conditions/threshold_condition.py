@@ -15,6 +15,18 @@ class ThresholdCondition(BaseCondition):
         self.levels = []
 
     def _check_if_multithreshold(self, compare_to):
+        """Checks if this is a multithreshold condition.
+
+        Args:
+            compare_to (str): for single threshold could be 60 or 60%, for multithreshold
+                              will be 60, 70, 80 (comma separated values)
+
+        Raises:
+            ValueError: If the number of levels and number of thresholds do not match
+
+        Returns:
+            bool: True if multithreshold, False otherwise
+        """
         # TODO make more validations
         if "," in str(compare_to):
             levels = self.condition_config.get("level")
@@ -30,6 +42,7 @@ class ThresholdCondition(BaseCondition):
         thresholds = [t.strip() for t in compare_to.split(",")]
         for i, threshold in enumerate(thresholds):
             if self._apply_threshold(compare_value, threshold):
+                # Keep the level in the condition context
                 self.condition_context["level"] = self.levels[i]
                 return True
         return False

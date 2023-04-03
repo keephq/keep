@@ -143,6 +143,9 @@ class IOHandler:
             or (rendered.startswith("(") and rendered.endswith(")"))
         ):
             try:
+                # TODO - when Keep gonna be self hosted, this will be a security issue
+                #        because the user can run any python code
+                #        need to find a way to limit the functions that can be used
                 rendered = eval(rendered)
             except ValueError:
                 pass

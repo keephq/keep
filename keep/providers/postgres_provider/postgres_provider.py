@@ -41,7 +41,7 @@ class PostgresProvider(BaseProvider):
         Generates a Postgres connection.
 
         Returns:
-            TODO
+            psycopg2 connection object
         """
         conn = psycopg2.connect(
             dbname=self.authentication_config.database,
