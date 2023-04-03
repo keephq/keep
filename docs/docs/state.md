@@ -3,15 +3,17 @@ sidebar_label: State
 sidebar_position: 6
 ---
 
+# State
+
 ## Intro
-Keep support state to support throttling mechanism's and track alerts over time.
+Keep has a state manager so it can support throttling mechanism's as well as track alerts over time.
 
-It currently do so by holding the state using a `keepstate.json` file, which can be overrided by `KEEP_STATE_FILE` environment variable.
+It's currently doing so by simply holding the state using a `keepstate.json` file, which can be overrided by `KEEP_STATE_FILE` environment variable.
 
-## How to use
-The current usage of Keep's state mechanism is [throttling](docs/../throttles/what-is-throttle.md).
-Keep handles it for you behind the scenes so you can use it without doing any modifications.
+## Example
+One of the usages for Keep's state mechanism is throttling, see [One Until Resolved](docs/../throttles/one-until-resolved.md). Keep handles it for you behind the scenes so you can use it without doing any further modifications.
 
+## Serverless
 If you are running Keep on production, you should host the `keepstate.json` file on persistance storage and mount it to your serverless environment. Feel free to create an issue if you need solution for your preferred deployment architecture.
 
 ## Keep state structure
@@ -31,12 +33,9 @@ An example for a simple state file:
 }
 ```
 
-## Roadmap
+### Roadmap
 
-Keep's roadmap around state:
-- Saving state in DB (starts with SQLite and PostgreSQL).
-- Hosting the state in buckets (AWS, GCP and Azure).
+Keep's roadmap around state (great first issues):
+- Saving state in a database.
+- Hosting state in buckets (AWS, GCP and Azure -> read/write).
 - Enriching state with more context so throttling mechanism would be flexer.
-- More deployment options (support serverless architectures).
-
-Feel free to reach out (by creating issues or whatever you prefer) so have impact on this roadmap!

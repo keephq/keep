@@ -5,8 +5,6 @@ import abc
 import logging
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.iohandler.iohandler import IOHandler
-from keep.statemanager.statemanager import StateManager
 
 
 class BaseThrottle(metaclass=abc.ABCMeta):
@@ -21,7 +19,7 @@ class BaseThrottle(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.throttle_type = throttle_type
         self.throttle_config = throttle_config
-        self.state_manager = StateManager.get_instance()
+        self.context_manager = ContextManager.get_instance()
 
     @abc.abstractmethod
     def check_throttling(self, action_name, alert_id, **kwargs) -> bool:

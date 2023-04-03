@@ -1,0 +1,35 @@
+# Alert when there are new GitHub Stars utilizing keepstate
+alert:
+  id: new-github-stars
+  description: Get new GitHub Stars
+  steps:
+    - name: get-github-stars
+      provider:
+        type: github.stars
+        config: " {{ providers.github-pat }}"
+        with:
+          repository: "keephq/keep"
+          previous_stars_count: " {{ state.new-github-stars.-1.alert_context.alert_steps_context.get-github-stars.results.stars }} " # state.alert-id.-1 for last run
+      condition:
+        - type: assert
+          assert: "len({{ steps.get-github-stars.results.new_stargazers }}) == 0" # if there are more than 0 new stargazers, trigger the action
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-demo }} "
+        with:
+          blocks:
+            - type: section
+              text:
+                type: plain_text
+                text: There are new len({{ steps.get-github-stars.results.new_stargazers }}) stargazers for keephq/keep
+                emoji: true
+            - type: section
+              text:
+                type: plain_text
+                text: |-
+                  {{#steps.get-github-stars.results.new_stargazers}}
+                  - {{username}} at {{starred_at}}
+                  {{/steps.get-github-stars.results.new_stargazers}}
+                emoji: true
