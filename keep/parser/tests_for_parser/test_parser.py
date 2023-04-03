@@ -6,17 +6,17 @@ from keep.parser.parser import Parser
 
 
 def test_parse_with_nonexistent_file():
-    self = Parser()
+    parser = Parser()
     # Expected error when a given input does not describe an existing file
     with pytest.raises(FileNotFoundError):
-        self.parse('')
+        parser.parse('non-existing-file')
 
 
 def test_parse_with_nonexistent_url():
-    self = Parser()
+    parser = Parser()
     # Expected error when a given input does not describe an existing URL
     with pytest.raises(requests.exceptions.ConnectionError):
-        self.parse('https://ThisWebsiteDoNotExist.com')
+        parser.parse('https://ThisWebsiteDoNotExist.com')
 
 
 
