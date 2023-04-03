@@ -1,8 +1,10 @@
 import ast
 import copy
+import datetime
 import json
 import logging
 import re
+from decimal import Decimal
 
 import astunparse
 import chevron
@@ -136,10 +138,12 @@ class IOHandler:
         rendered = chevron.render(_key, context)
         # Try to convert it to python object if possible
         if (rendered.startswith("[") and rendered.endswith("]")) or (
-            rendered.startswith("{") and rendered.endswith("}")
+            rendered.startswith("{")
+            and rendered.endswith("}")
+            or (rendered.startswith("(") and rendered.endswith(")"))
         ):
             try:
-                rendered = ast.literal_eval(rendered)
+                rendered = eval(rendered)
             except ValueError:
                 pass
 

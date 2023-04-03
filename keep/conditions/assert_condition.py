@@ -10,8 +10,8 @@ class AssertCondition(BaseCondition):
         BaseCondition (_type_): _description_
     """
 
-    def __init__(self, condition_type, condition_config):
-        super().__init__(condition_type, condition_config)
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
 
     def apply(self, compare_to, compare_value) -> bool:
         """apply the condition.
