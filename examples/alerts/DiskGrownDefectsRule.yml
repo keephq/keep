@@ -1,5 +1,5 @@
 
-# Alert description: this alert will trigger if the disk defects is below 50%, 40% or 30%.
+# Alert description: this alert will trigger if the disk defects is over 50%, 40% or 30%.
 # Alert breakdown:
 # 1. Read the disk status from postgres (select * from disk)
 # 2. For each disk, check if the disk defects is over 50% (major), 40% (medium) or 30% (minor).
