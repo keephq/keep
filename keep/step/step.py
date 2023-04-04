@@ -95,7 +95,7 @@ class Step:
                 condition.get("name", None) or condition_type
             )  # if name is not supplied, its ok to use the type as the name (todo: this is a hack, we should fix this)
             condition = ConditionFactory.get_condition(
-                condition_type, condition, condition_name=condition_name
+                condition_type, condition_name, condition
             )
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
