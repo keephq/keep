@@ -1,5 +1,5 @@
 """
-PostgresProvider is a class that provides a way to read data from MySQL.
+PostgresProvider is a class that provides a way to read data from Postgres and write queries to Postgres.
 """
 
 import dataclasses

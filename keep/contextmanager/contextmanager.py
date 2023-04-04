@@ -60,11 +60,27 @@ class ContextManager:
         return self.alert_context.get("alert_id")
 
     def get_full_context(self):
+        """Gets full context on the alerts
+
+        Usage: context injection used, for example, in iohandler
+
+
+        Returns:
+            dict: dictinoary contains all context about this alert
+                  providers - all context about providers (configuration, etc)
+                  steps - all context about steps (output, conditions, etc)
+                  foreach - all context about the current 'foreach'
+                            foreach can be in two modes:
+                                1. "step foreach" - for step result
+                                2. "condition foreach" - for each condition result
+                            whereas in (2), the {{ foreach.value }} contains (1), in the (1) case, we need to explicitly put in under (value)
+                            anyway, this should be refactored to something more structured
+        """
         full_context = {
             "providers": self.providers_context,
             "steps": self._steps_context,
             # This is a hack to support both "before condition" and "after condition"
-            # TODO - fix it and make it more elegant
+            # TODO - fix it and make it more elegant - see the func docs
             "foreach": self.foreach_context
             if "value" in self.foreach_context
             else {"value": self.foreach_context},

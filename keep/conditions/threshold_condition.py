@@ -39,6 +39,15 @@ class ThresholdCondition(BaseCondition):
         return False
 
     def _apply_multithreshold(self, compare_to, compare_value):
+        """Applies threshold for more than one threshold value (aka "multithreshold")
+
+        Args:
+            compare_to (list[str]): comma seperated list (e.g. 60, 70, 80)
+            compare_value (list[str]: comma seperated list (e.g. major, medium, minor)
+
+        Returns:
+            bool: true if threshold applies, false otherwise
+        """
         thresholds = [t.strip() for t in compare_to.split(",")]
         for i, threshold in enumerate(thresholds):
             if self._apply_threshold(compare_value, threshold):
