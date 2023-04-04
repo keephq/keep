@@ -64,10 +64,14 @@ class ContextManager:
         return self.alert_context.get("alert_id")
 
     def get_full_context(self, exclude_state=False):
-        """Gets full context on the alerts
+        """
+        Gets full context on the alerts
 
         Usage: context injection used, for example, in iohandler
 
+        Args:
+            exclude_state (bool, optional): for instance when dumping the context to state file, you don't want to dump previous state
+                it's already there. Defaults to False.
 
         Returns:
             dict: dictinoary contains all context about this alert
