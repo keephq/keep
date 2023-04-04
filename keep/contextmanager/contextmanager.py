@@ -44,6 +44,8 @@ class ContextManager:
         self.providers_context = {}
         self.alert_context = {}
         self.foreach_context = {}
+        self.foreach_conditions = []
+        self.foreach_index = None
         try:
             self.click_context = click.get_current_context()
         except RuntimeError:
@@ -58,10 +60,30 @@ class ContextManager:
         return self.alert_context.get("alert_id")
 
     def get_full_context(self):
+        """Gets full context on the alerts
+
+        Usage: context injection used, for example, in iohandler
+
+
+        Returns:
+            dict: dictinoary contains all context about this alert
+                  providers - all context about providers (configuration, etc)
+                  steps - all context about steps (output, conditions, etc)
+                  foreach - all context about the current 'foreach'
+                            foreach can be in two modes:
+                                1. "step foreach" - for step result
+                                2. "condition foreach" - for each condition result
+                            whereas in (2), the {{ foreach.value }} contains (1), in the (1) case, we need to explicitly put in under (value)
+                            anyway, this should be refactored to something more structured
+        """
         full_context = {
             "providers": self.providers_context,
             "steps": self._steps_context,
-            "foreach": {"value": self.foreach_context},
+            # This is a hack to support both "before condition" and "after condition"
+            # TODO - fix it and make it more elegant - see the func docs
+            "foreach": self.foreach_context
+            if "value" in self.foreach_context
+            else {"value": self.foreach_context},
             "env": os.environ,
         }
         full_context.update(self.aliases)
@@ -73,12 +95,14 @@ class ContextManager:
     def set_condition_results(
         self,
         step_id,
+        condition_name,
         condition_type,
         compare_to,
         compare_value,
         result,
         condition_alias=None,
-        raw_value=None,
+        value=None,
+        **kwargs,
     ):
         """_summary_
 
@@ -89,21 +113,24 @@ class ContextManager:
             compare_value (_type_): _description_
             result (_type_): _description_
             condition_alias (_type_, optional): _description_. Defaults to None.
-            raw_value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
+            value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
         """
         if step_id not in self._steps_context:
-            self._steps_context[step_id] = {"conditions": [], "results": {}}
+            self._steps_context[step_id] = {"conditions": {}, "results": {}}
         if "conditions" not in self._steps_context[step_id]:
-            self._steps_context[step_id]["conditions"] = []
+            self._steps_context[step_id]["conditions"] = {condition_name: []}
+        if condition_name not in self._steps_context[step_id]["conditions"]:
+            self._steps_context[step_id]["conditions"][condition_name] = []
 
-        self._steps_context[step_id]["conditions"].append(
+        self._steps_context[step_id]["conditions"][condition_name].append(
             {
-                "raw_value": raw_value,
-                "value": compare_value,
+                "value": value,
+                "compare_value": compare_value,
                 "compare_to": compare_to,
                 "result": result,
                 "type": condition_type,
                 "alias": condition_alias,
+                **kwargs,
             }
         )
         if condition_alias:
@@ -112,15 +139,23 @@ class ContextManager:
     def get_actionable_results(self):
         actionable_results = []
         for step_id in self._steps_context:
+            # TODO: more robust way to identify the alias
+            if step_id == "this":
+                continue
             if "conditions" in self._steps_context[step_id]:
+                # TODO: more robust way to identify actionable results
+                # TODO: support multiple conditions
                 for condition in self._steps_context[step_id]["conditions"]:
-                    if condition["result"] == True:
-                        actionable_results.append(condition)
+                    for condition_result in self._steps_context[step_id]["conditions"][
+                        condition
+                    ]:
+                        if condition_result["result"] == True:
+                            actionable_results.append(condition_result)
         return actionable_results
 
     def set_step_context(self, step_id, results):
         if step_id not in self._steps_context:
-            self._steps_context[step_id] = {"conditions": [], "results": {}}
+            self._steps_context[step_id] = {"conditions": {}, "results": {}}
         self._steps_context[step_id]["results"] = results
         # this is an alias to the current step output
         self._steps_context["this"] = self._steps_context[step_id]
@@ -140,12 +175,13 @@ class ContextManager:
         for condition in step_conditions:
             self.set_condition_results(
                 step_id,
+                condition["name"],
                 condition["type"],
                 condition["compare_to"],
                 condition["value"],
                 condition["result"],
                 condition_alias=condition.get("alias"),
-                raw_value=condition.get("raw_value"),
+                value=condition.get("value"),
             )
         return True
 

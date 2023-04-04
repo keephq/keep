@@ -54,9 +54,11 @@ class Action:
                 # TODO - wrap it else
                 if step == "this":
                     continue
-                for condition in full_context.get("steps").get(step).get("conditions"):
+                for condition, condition_results in (
+                    full_context.get("steps").get(step).get("conditions").items()
+                ):
                     # One of the conditions has been met
-                    if condition.get("result"):
+                    if any([c["result"] for c in condition_results]):
                         return True
 
         # if there's a condition, evaluate it
@@ -83,7 +85,7 @@ class Action:
     def _run_foreach(self):
         foreach_iterator = self.context_manager.get_actionable_results()
         for val in foreach_iterator:
-            self.context_manager.set_for_each_context(val.get("raw_value"))
+            self.context_manager.set_for_each_context(val)
             rendered_value = self.io_handler.render_context(self.provider_context)
             self.provider.notify(**rendered_value)
 

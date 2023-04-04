@@ -9,7 +9,7 @@ from keep.iohandler.iohandler import IOHandler
 
 
 class BaseCondition(metaclass=abc.ABCMeta):
-    def __init__(self, condition_type, condition_config, **kwargs):
+    def __init__(self, condition_type, condition_name, condition_config, **kwargs):
         """
         Initialize a provider.
 
@@ -20,8 +20,10 @@ class BaseCondition(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.condition_type = condition_type
         self.condition_config = condition_config
+        self.condition_name = condition_name
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
+        self.condition_context = {}
         self.logger.debug(
             "Initializing condition", extra={"condition": self.__class__.__name__}
         )

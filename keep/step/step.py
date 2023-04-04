@@ -51,13 +51,12 @@ class Step:
         self.logger.debug("Post step validation")
         foreach = self.step_config.get("foreach")
         if foreach:
-            self._post_each_step_validations(foreach.get("value"))
+            self._post_each_step_validations(foreach)
         else:
             self._post_single_step_validations()
         self.logger.debug("Post Step validation success")
 
     def _post_each_step_validations(self, foreach_value_template):
-        context = self.context_manager.get_full_context()
         foreach_actual_value = self._get_actual_value(foreach_value_template)
         for value in foreach_actual_value:
             # will be use inside the io handler
@@ -65,7 +64,12 @@ class Step:
             for condition in self.step_conditions:
                 condition_type = condition.get("type")
                 condition_alias = condition.get("alias")
-                condition = ConditionFactory.get_condition(condition_type, condition)
+                condition_name = (
+                    condition.get("name", None) or condition_type
+                )  # if name is not supplied, its ok to use the type as the name (todo: this is a hack, we should fix this)
+                condition = ConditionFactory.get_condition(
+                    condition_type, condition_name, condition
+                )
                 condition_what_to_compare = condition.get_compare_to()
                 condition_compare_value = condition.get_compare_value()
                 condition_result = condition.apply(
@@ -73,18 +77,23 @@ class Step:
                 )
                 self.context_manager.set_condition_results(
                     self.step_id,
+                    condition_name,
                     condition_type,
                     condition_compare_value,
                     condition_what_to_compare,
                     condition_result,
                     condition_alias=condition_alias,
-                    raw_value=value,
+                    value=value,
+                    **condition.condition_context,
                 )
 
     def _post_single_step_validations(self):
         for condition in self.step_conditions:
             condition_type = condition.get("type")
             condition_alias = condition.get("alias")
+            condition_name = (
+                condition.get("name", None) or condition_type
+            )  # if name is not supplied, its ok to use the type as the name (todo: this is a hack, we should fix this)
             condition = ConditionFactory.get_condition(condition_type, condition)
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
@@ -93,6 +102,7 @@ class Step:
             )
             self.context_manager.set_condition_results(
                 self.step_id,
+                condition_name,
                 condition_type,
                 condition_compare_to,
                 condition_compare_value,
