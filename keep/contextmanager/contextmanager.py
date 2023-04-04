@@ -1,5 +1,6 @@
+import json
+import logging
 import os
-from typing import Self
 
 import click
 from starlette_context import context
@@ -15,6 +16,7 @@ def get_context_manager_id():
 
 
 class ContextManager:
+    STATE_FILE = "keepstate.json"
     __instances = {}
 
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
@@ -32,6 +34,7 @@ class ContextManager:
             del ContextManager.__instances[context_manager_id]
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         context_manager_id = get_context_manager_id()
         if context_manager_id in ContextManager.__instances:
             raise Exception(
@@ -40,7 +43,8 @@ class ContextManager:
         else:
             ContextManager.__instances[context_manager_id] = self
 
-        self._steps_context = {}
+        self.state_file = self.STATE_FILE or os.environ.get("KEEP_STATE_FILE")
+        self.steps_context = {}
         self.providers_context = {}
         self.alert_context = {}
         self.foreach_context = {}
@@ -51,6 +55,8 @@ class ContextManager:
         except RuntimeError:
             self.click_context = {}
         self.aliases = {}
+        self.state = {}
+        self.__load_state()
 
     # TODO - If we want to support multiple alerts at once we need to change this
     def set_alert_context(self, alert_context):
@@ -59,11 +65,15 @@ class ContextManager:
     def get_alert_id(self):
         return self.alert_context.get("alert_id")
 
-    def get_full_context(self):
-        """Gets full context on the alerts
+    def get_full_context(self, exclude_state=False):
+        """
+        Gets full context on the alerts
 
         Usage: context injection used, for example, in iohandler
 
+        Args:
+            exclude_state (bool, optional): for instance when dumping the context to state file, you don't want to dump previous state
+                it's already there. Defaults to False.
 
         Returns:
             dict: dictinoary contains all context about this alert
@@ -78,7 +88,7 @@ class ContextManager:
         """
         full_context = {
             "providers": self.providers_context,
-            "steps": self._steps_context,
+            "steps": self.steps_context,
             # This is a hack to support both "before condition" and "after condition"
             # TODO - fix it and make it more elegant - see the func docs
             "foreach": self.foreach_context
@@ -86,6 +96,10 @@ class ContextManager:
             else {"value": self.foreach_context},
             "env": os.environ,
         }
+
+        if not exclude_state:
+            full_context["state"] = self.state
+
         full_context.update(self.aliases)
         return full_context
 
@@ -115,14 +129,14 @@ class ContextManager:
             condition_alias (_type_, optional): _description_. Defaults to None.
             value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
         """
-        if step_id not in self._steps_context:
-            self._steps_context[step_id] = {"conditions": {}, "results": {}}
-        if "conditions" not in self._steps_context[step_id]:
-            self._steps_context[step_id]["conditions"] = {condition_name: []}
-        if condition_name not in self._steps_context[step_id]["conditions"]:
-            self._steps_context[step_id]["conditions"][condition_name] = []
+        if step_id not in self.steps_context:
+            self.steps_context[step_id] = {"conditions": {}, "results": {}}
+        if "conditions" not in self.steps_context[step_id]:
+            self.steps_context[step_id]["conditions"] = {condition_name: []}
+        if condition_name not in self.steps_context[step_id]["conditions"]:
+            self.steps_context[step_id]["conditions"][condition_name] = []
 
-        self._steps_context[step_id]["conditions"][condition_name].append(
+        self.steps_context[step_id]["conditions"][condition_name].append(
             {
                 "value": value,
                 "compare_value": compare_value,
@@ -138,15 +152,15 @@ class ContextManager:
 
     def get_actionable_results(self):
         actionable_results = []
-        for step_id in self._steps_context:
+        for step_id in self.steps_context:
             # TODO: more robust way to identify the alias
             if step_id == "this":
                 continue
-            if "conditions" in self._steps_context[step_id]:
+            if "conditions" in self.steps_context[step_id]:
                 # TODO: more robust way to identify actionable results
                 # TODO: support multiple conditions
-                for condition in self._steps_context[step_id]["conditions"]:
-                    for condition_result in self._steps_context[step_id]["conditions"][
+                for condition in self.steps_context[step_id]["conditions"]:
+                    for condition_result in self.steps_context[step_id]["conditions"][
                         condition
                     ]:
                         if condition_result["result"] == True:
@@ -154,11 +168,11 @@ class ContextManager:
         return actionable_results
 
     def set_step_context(self, step_id, results):
-        if step_id not in self._steps_context:
-            self._steps_context[step_id] = {"conditions": {}, "results": {}}
-        self._steps_context[step_id]["results"] = results
+        if step_id not in self.steps_context:
+            self.steps_context[step_id] = {"conditions": {}, "results": {}}
+        self.steps_context[step_id]["results"] = results
         # this is an alias to the current step output
-        self._steps_context["this"] = self._steps_context[step_id]
+        self.steps_context["this"] = self.steps_context[step_id]
 
     def load_step_context(self, step_id, step_results, step_conditions):
         """Load a step context
@@ -171,7 +185,7 @@ class ContextManager:
         Returns:
             _type_: _description_
         """
-        self._steps_context[step_id] = {"results": step_results}
+        self.steps_context[step_id] = {"results": step_results}
         for condition in step_conditions:
             self.set_condition_results(
                 step_id,
@@ -187,4 +201,39 @@ class ContextManager:
 
     # TODO - add step per alert?
     def get_step_context(self, step_id):
-        return {"step_id": step_id, "step_context": self._steps_context.get(step_id)}
+        return {"step_id": step_id, "step_context": self.steps_context.get(step_id)}
+
+    def __load_state(self):
+        if self.state_file:
+            # TODO - SQLite
+            try:
+                with open(self.state_file, "r") as f:
+                    self.state = json.load(f)
+            except:
+                self.logger.error("Failed to load state file, using empty state")
+                self.state = {}
+
+    def get_last_alert_run(self, alert_id):
+        if alert_id in self.state:
+            return self.state[alert_id][-1]
+        # no previous runs
+        else:
+            return {}
+
+    def set_last_alert_run(self, alert_id, alert_context, alert_status):
+        # TODO - SQLite
+        try:
+            with open(self.state_file, "r") as f:
+                state = json.load(f)
+        except:
+            state = {alert_id: []}
+        if alert_id not in state:
+            state[alert_id] = []
+        state[alert_id].append(
+            {
+                "alert_status": alert_status,
+                "alert_context": alert_context,
+            }
+        )
+        with open(self.state_file, "w") as f:
+            json.dump(state, f, default=None)
