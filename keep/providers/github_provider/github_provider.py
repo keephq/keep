@@ -75,6 +75,7 @@ class GithubStarsProvider(GithubProvider):
         return {
             "stars": stars_count,
             "new_stargazers": new_stargazers,
+            "new_stargazers_count": len(new_stargazers),
         }
 
 

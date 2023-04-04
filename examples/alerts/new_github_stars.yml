@@ -12,7 +12,7 @@ alert:
           previous_stars_count: " {{ state.new-github-stars.-1.alert_context.alert_steps_context.get-github-stars.results.stars }} " # state.alert-id.-1 for last run
       condition:
         - type: assert
-          assert: "len({{ steps.get-github-stars.results.new_stargazers }}) == 0" # if there are more than 0 new stargazers, trigger the action
+          assert: "{{ steps.get-github-stars.results.new_stargazers_count }} == 0" # if there are more than 0 new stargazers, trigger the action
   actions:
     - name: trigger-slack
       provider:
