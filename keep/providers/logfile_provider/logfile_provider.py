@@ -111,9 +111,7 @@ class LogfileProvider(BaseProvider):
             output = buffer.readlines()
         except Exception as e:
             self.logger.exception(f"Error while running logmine: {e}")
-            raise ProviderConfigException(
-                f"Error while running logmine: {e}", provider_id=self.provider_id
-            )
+            raise ProviderConfigException(f"Error while running logmine: {e}", p)
         finally:
             os.unlink(tmp_filename)
         output = [self._remove_ansi(o).replace("\n", "") for o in output]

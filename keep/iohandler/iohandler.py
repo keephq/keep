@@ -1,8 +1,12 @@
 import ast
 import copy
+
+# used by the eval statement
+import datetime
 import json
 import logging
 import re
+from decimal import Decimal
 
 import astunparse
 import chevron
@@ -136,10 +140,15 @@ class IOHandler:
         rendered = chevron.render(_key, context)
         # Try to convert it to python object if possible
         if (rendered.startswith("[") and rendered.endswith("]")) or (
-            rendered.startswith("{") and rendered.endswith("}")
+            rendered.startswith("{")
+            and rendered.endswith("}")
+            or (rendered.startswith("(") and rendered.endswith(")"))
         ):
             try:
-                rendered = ast.literal_eval(rendered)
+                # TODO - when Keep gonna be self hosted, this will be a security issue
+                #        because the user can run any python code
+                #        need to find a way to limit the functions that can be used
+                rendered = eval(rendered)
             except ValueError:
                 pass
 
