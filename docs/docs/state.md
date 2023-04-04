@@ -6,7 +6,9 @@ sidebar_position: 6
 # State
 
 ## Intro
-Keep has a state manager so it can support throttling mechanism's as well as track alerts over time.
+Keep State Manager currently used for:
+1. Throttling
+2. Track alerts over time
 
 It's currently doing so by simply holding the state using a `keepstate.json` file, which can be overrided by `KEEP_STATE_FILE` environment variable.
 
