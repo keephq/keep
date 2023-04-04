@@ -61,14 +61,3 @@ class BaseCondition(metaclass=abc.ABCMeta):
         compare_value = self.condition_config.get("value")
         compare_value = self.io_handler.render(compare_value)
         return compare_value
-
-    def get_additional_context(self):
-        """Get additional context for the condition.
-
-        For example, for threshold conditions it'll be the 'level' so the it will be accessible
-        through the context manager.
-
-        Returns:
-            _type_: dict
-        """
-        return self.condition_context

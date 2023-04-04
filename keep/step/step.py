@@ -75,7 +75,6 @@ class Step:
                 condition_result = condition.apply(
                     condition_what_to_compare, condition_compare_value
                 )
-                condition_additional_context = condition.get_additional_context()
                 self.context_manager.set_condition_results(
                     self.step_id,
                     condition_name,
@@ -85,7 +84,7 @@ class Step:
                     condition_result,
                     condition_alias=condition_alias,
                     value=value,
-                    **condition_additional_context,
+                    **condition.condition_context,
                 )
 
     def _post_single_step_validations(self):

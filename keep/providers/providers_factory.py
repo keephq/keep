@@ -51,7 +51,7 @@ class ProvidersFactory:
         try:
             return provider_class(provider_id=provider_id, config=provider_config)
         except TypeError as exc:
-            error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration. [supplied configuration: {provider_config}]]"
+            error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
             logging.getLogger(__name__).error(error_message)
             raise exc
         except Exception as exc:
