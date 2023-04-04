@@ -8,7 +8,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
-from keep.statemanager.statemanager import StateManager
 from keep.throttles.throttle_factory import ThrottleFactory
 
 
@@ -23,7 +22,6 @@ class Action:
         self.logger = logging.getLogger(__name__)
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
-        self.state_manager = StateManager.get_instance()
 
     def run(self):
         # Check if needs to run

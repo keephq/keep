@@ -101,6 +101,8 @@ class AlertManager:
     def _run_alerts(self, alerts: typing.List[Alert]):
         alerts_errors = []
         for alert in alerts:
+            # otherwise any(errors) might throw an exception
+            errors = []
             self.logger.info(f"Running alert {alert.alert_id}")
             try:
                 errors = alert.run()
