@@ -61,6 +61,10 @@ class GithubStarsProvider(GithubProvider):
         repo = self.client.get_repo(repository)
         stars_count = repo.stargazers_count
         new_stargazers = []
+
+        if not previous_stars_count:
+            previous_stars_count = 0
+
         if previous_stars_count and int(previous_stars_count) > 0:
             stargazers_with_dates = [s for s in repo.get_stargazers_with_dates()][
                 int(previous_stars_count) :
