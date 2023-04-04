@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import click
@@ -33,6 +34,7 @@ class ContextManager:
             del ContextManager.__instances[context_manager_id]
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         context_manager_id = get_context_manager_id()
         if context_manager_id in ContextManager.__instances:
             raise Exception(
@@ -208,6 +210,7 @@ class ContextManager:
                 with open(self.state_file, "r") as f:
                     self.state = json.load(f)
             except:
+                self.logger.error("Failed to load state file, using empty state")
                 self.state = {}
 
     def get_last_alert_run(self, alert_id):
