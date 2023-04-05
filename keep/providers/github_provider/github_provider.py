@@ -66,7 +66,7 @@ class GithubStarsProvider(GithubProvider):
             previous_stars_count = 0
 
         self.logger.debug(f"Previous stargazers: {previous_stars_count}")
-        self.logger.debug(f"New stargazers: {stars_count - previous_stars_count}")
+        self.logger.debug(f"New stargazers: {stars_count - int(previous_stars_count)}")
         if previous_stars_count and int(previous_stars_count) > 0:
             stargazers_with_dates = [s for s in repo.get_stargazers_with_dates()][
                 int(previous_stars_count) :
