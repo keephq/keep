@@ -222,18 +222,13 @@ class ContextManager:
 
     def set_last_alert_run(self, alert_id, alert_context, alert_status):
         # TODO - SQLite
-        try:
-            with open(self.state_file, "r") as f:
-                state = json.load(f)
-        except:
-            state = {alert_id: []}
-        if alert_id not in state:
-            state[alert_id] = []
-        state[alert_id].append(
+        if alert_id not in self.state:
+            self.state[alert_id] = []
+        self.state[alert_id].append(
             {
                 "alert_status": alert_status,
                 "alert_context": alert_context,
             }
         )
         with open(self.state_file, "w") as f:
-            json.dump(state, f, default=None)
+            json.dump(self.state, f, default=None)
