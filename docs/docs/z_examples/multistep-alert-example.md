@@ -18,11 +18,6 @@ alert:
         with:
           command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}' # Check the disk space
           command_output: 91% # Mock
-      condition:
-        - type: threshold
-          value:  "{{ steps.this.results }}"
-          compare_to: 90% # Trigger if more than 90% full
-          alias: A
     - name: db-prod2-no-space
       provider:
         type: mock
@@ -30,13 +25,17 @@ alert:
         with:
           command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}' # Check the disk space
           command_output: 94.5% # Mock
-      condition:
-        - type: threshold
-          value:  "{{ steps.this.results }}"
-          compare_to: 90% # Trigger if more than 90% full
-          alias: B
   actions:
     - name: trigger-telegram
+      condition:
+        - type: threshold
+          value:  "{{ steps.db-prod1-no-space.results }}"
+          compare_to: 90% # Trigger if more than 90% full
+          alias: A
+        - type: threshold
+          value:  "{{ steps.db-prod2-no-space.results }}"
+          compare_to: 90% # Trigger if more than 90% full
+          alias: B
       # trigger the action only if both conditions are met:
       if: "{{ A }} or {{ B }}"
       provider:

@@ -109,17 +109,28 @@ actions:
   # OPTIONAL: throttle the action according to some throttling strategy
   throttle:
         type: one_until_resolved
+  # OPTIONAL: list of conditions that states if the action should be triggered
+  condition:
+  - type: threshold
+    # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
+    #   utcnow() returns the local machine datetime in UTC
+    #   to_utc() converts a datetime to UTC
+    value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.this.results[0][0] }}"))
+    compare_to: 1 # hours
+    compare_type: gt # greater than
+  # The provider that triggers the action using the "notify" function
   provider:
     type: slack
     config: " {{ providers.slack-demo }} "
     with:
-       message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold[0].value }}) is greater than 1! 🚨"
+      message: "DB datetime value ({{ actions.trigger-slack.conditions.threshold.0.compare_value }}) is greater than 1! 🚨"
 ```
 
 #### * The last part of the alert are the actions.
 
 `Action` is built of:
 - `name` - the name of the action.
+- `condition` - a list of conditions that
 - `provider` - the provider that will trigger the action.
 - `throttle` - you can [throttle](throttles/what-is-throttle.md) the action.
 - `if` - action can be limited to when certain [conditions](conditions/what-is-a-condition.md) are met.

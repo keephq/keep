@@ -25,3 +25,9 @@ def generate_test_cases():
 def test_multiplication(caplog, alert_file_name):
     result = alert_test(alert_file_name)
     assert result.exit_code == 0
+
+
+def test_all_alerts_in_alerts_directory_are_parsed(caplog):
+    runner = CliRunner()
+    result = runner.invoke(run, ["--alerts-directory", "examples/alerts"])
+    assert result.exit_code == 0
