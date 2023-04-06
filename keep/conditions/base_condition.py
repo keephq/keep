@@ -24,6 +24,7 @@ class BaseCondition(metaclass=abc.ABCMeta):
         self.io_handler = IOHandler()
         self.context_manager = ContextManager.get_instance()
         self.condition_context = {}
+        self.condition_alias = condition_config.get("alias") or condition_name
         self.logger.debug(
             "Initializing condition", extra={"condition": self.__class__.__name__}
         )

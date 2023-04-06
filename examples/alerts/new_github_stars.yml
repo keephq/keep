@@ -6,6 +6,7 @@ alert:
     - name: get-github-stars
       provider:
         type: github.stars
+        config: "{{ providers.github }}"
         with:
           repository: "keephq/keep"
           previous_stars_count: "{{ state.new-github-stars.-1.alert_context.alert_steps_context.get-github-stars.results.stars }}" # state.alert-id.-1 for last run

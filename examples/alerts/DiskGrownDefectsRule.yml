@@ -13,24 +13,22 @@ alert:
         config: "{{ providers.postgres-server }}"
         with:
           query: "select * from disk"
-      foreach: "{{ steps.this.results }}"
+  actions:
+    - name: push-alert-to-postgres
+      foreach: "{{steps.check-disk-defects.results}}"
       condition:
         - name: threshold-condition
           type: threshold
           value:  " {{ foreach.value[13] }} " # disk defect is the 13th column
           compare_to: 50, 40, 30
           level: major, medium, minor
-  actions:
-    - name: push-alert-to-postgres
-      # Run on last ran step [ only on results that the condition applies to ]
-      foreach: "{{steps.check-disk-defects.results}}"
       provider:
         type: postgres
         config: "{{ providers.postgres-server }}"
         with:
           query: >
             INSERT INTO alert (alert_level, alert_message)
-            VALUES ('{{ foreach.level }}', 'Disk defects: {{ foreach.compare_to }} | Disk name: {{ foreach.value[1] }}')
+            VALUES ('{{ foreach.level }}', 'Disk defects: {{ foreach.value[13] }} | Disk name: {{ foreach.value[1] }}')
 providers:
   postgres-server:
     description: The postgres server (sql)

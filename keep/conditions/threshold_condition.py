@@ -84,7 +84,7 @@ class ThresholdCondition(BaseCondition):
                     compare_to, compare_value
                 )
             )
-        return True
+        return compare_to, compare_value
 
     def apply(self, compare_to, compare_value) -> bool:
         """apply the condition.
@@ -121,7 +121,7 @@ class ThresholdCondition(BaseCondition):
         Returns:
             _type_: _description_
         """
-        self._validate(step_output, threshold)
+        step_output, threshold = self._validate(step_output, threshold)
         if self.condition_config.get("compare_type", "gt") == "gt":
             return step_output > threshold
         elif self.condition_config.get("compare_type", "gt") == "lt":

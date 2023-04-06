@@ -72,10 +72,29 @@ class IOHandler:
         #           first(split({{ foreach.value }},'a', 'b'))
 
         # first render everything using chevron
+
+        # if the string is a simple render, e.g. {{ value }}
+        if (
+            string.count("{{") == 1
+            and string.strip().startswith("{{")
+            and string.strip().endswith("}}")
+        ):
+            simple_render = True
+        else:
+            simple_render = False
+
+        # inject the context
         string = self._render(string)
 
-        pattern = r"\w+\((?:[^\)]+)\)"
+        # if {{ value }} is the only thing in the string, return the value
+        if simple_render:
+            try:
+                return eval(string)
+            # e.g. '91%' is not a valid expression
+            except SyntaxError:
+                return string
 
+        pattern = r"\bkeep\.\w+\((?:[^()]|\((?:[^()]|)*\))*\)"
         parsed_string = copy.copy(string)
         matches = re.findall(pattern, parsed_string)
         tokens = [match for match in matches]
@@ -85,18 +104,14 @@ class IOHandler:
         elif len(tokens) == 1:
             token = "".join(tokens[0])
             val = self._parse_token(token)
-            # if the token is the same as the string, return the value because {{ value }} can be any type
-            if parsed_string.strip() == token:
-                return val
-            # however, if the token is part of a string, return the string with the token replaced with the value
-            else:
-                parsed_string = parsed_string.replace(token, str(val))
-                return parsed_string
-
+            parsed_string = parsed_string.replace(token, str(val))
+            return parsed_string
+        # this basically for complex expressions with functions and operators
         for token in tokens:
             token = "".join(token)
             val = self._parse_token(token)
             parsed_string = parsed_string.replace(token, str(val))
+
         return parsed_string
 
     def _parse_token(self, token):
@@ -107,6 +122,9 @@ class IOHandler:
 
             if isinstance(tree, ast.Call):
                 func = tree.func
+                # if its not a keep function, just return it as is
+                # if not func.id.startswith("keep"):
+                #     return astunparse.unparse(tree).strip()
                 args = tree.args
                 # if its another function
                 _args = []
@@ -131,10 +149,10 @@ class IOHandler:
                             except ValueError:
                                 pass
                     else:
-                        arg = arg.value
+                        _arg = arg.id
                     if _arg:
                         _args.append(_arg)
-                val = getattr(keep_functions, func.id)(*_args)
+                val = getattr(keep_functions, func.attr)(*_args)
                 return val
 
         tree = ast.parse(token)

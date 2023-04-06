@@ -45,11 +45,12 @@ class ContextManager:
 
         self.state_file = self.STATE_FILE or os.environ.get("KEEP_STATE_FILE")
         self.steps_context = {}
+        self.actions_context = {}
         self.providers_context = {}
         self.alert_context = {}
-        self.foreach_context = {}
-        self.foreach_conditions = []
-        self.foreach_index = None
+        self.foreach_context = {
+            "value": None,
+        }
         try:
             self.click_context = click.get_current_context()
         except RuntimeError:
@@ -89,11 +90,8 @@ class ContextManager:
         full_context = {
             "providers": self.providers_context,
             "steps": self.steps_context,
-            # This is a hack to support both "before condition" and "after condition"
-            # TODO - fix it and make it more elegant - see the func docs
-            "foreach": self.foreach_context
-            if "value" in self.foreach_context
-            else {"value": self.foreach_context},
+            "actions": self.actions_context,
+            "foreach": self.foreach_context,
             "env": os.environ,
         }
 
@@ -104,11 +102,11 @@ class ContextManager:
         return full_context
 
     def set_for_each_context(self, value):
-        self.foreach_context = value
+        self.foreach_context["value"] = value
 
     def set_condition_results(
         self,
-        step_id,
+        action_id,
         condition_name,
         condition_type,
         compare_to,
@@ -121,7 +119,7 @@ class ContextManager:
         """_summary_
 
         Args:
-            step_id (_type_): id of the step
+            action_id (_type_): id of the step
             condition_type (_type_): type of the condition
             compare_to (_type_): _description_
             compare_value (_type_): _description_
@@ -129,14 +127,14 @@ class ContextManager:
             condition_alias (_type_, optional): _description_. Defaults to None.
             value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
         """
-        if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"conditions": {}, "results": {}}
-        if "conditions" not in self.steps_context[step_id]:
-            self.steps_context[step_id]["conditions"] = {condition_name: []}
-        if condition_name not in self.steps_context[step_id]["conditions"]:
-            self.steps_context[step_id]["conditions"][condition_name] = []
+        if action_id not in self.actions_context:
+            self.actions_context[action_id] = {"conditions": {}, "results": {}}
+        if "conditions" not in self.actions_context[action_id]:
+            self.actions_context[action_id]["conditions"] = {condition_name: []}
+        if condition_name not in self.actions_context[action_id]["conditions"]:
+            self.actions_context[action_id]["conditions"][condition_name] = []
 
-        self.steps_context[step_id]["conditions"][condition_name].append(
+        self.actions_context[action_id]["conditions"][condition_name].append(
             {
                 "value": value,
                 "compare_value": compare_value,
@@ -146,6 +144,10 @@ class ContextManager:
                 "alias": condition_alias,
                 **kwargs,
             }
+        )
+        # update the current for each context
+        self.foreach_context.update(
+            {"compare_value": compare_value, "compare_to": compare_to, **kwargs}
         )
         if condition_alias:
             self.aliases[condition_alias] = result
@@ -174,19 +176,20 @@ class ContextManager:
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
 
-    def load_step_context(self, step_id, step_results, step_conditions):
+    def load_step_context(self, step_id, step_results):
         """Load a step context
 
         Args:
             step_id (_type_): _description_
             step_results (_type_): _description_
-            step_conditions (_type_): _description_
 
         Returns:
             _type_: _description_
         """
         self.steps_context[step_id] = {"results": step_results}
-        for condition in step_conditions:
+
+    def load_action_context(self, action_id, action_results, actions_conditions):
+        for condition in actions_conditions:
             self.set_condition_results(
                 step_id,
                 condition["name"],
@@ -231,4 +234,4 @@ class ContextManager:
             }
         )
         with open(self.state_file, "w") as f:
-            json.dump(self.state, f, default=None)
+            json.dump(self.state, f, default=str)
