@@ -10,13 +10,13 @@ alert:
           # any external libraries needed
           imports: requests
           code: requests.get("http://localhost:3000")
-      condition:
-        - type: assert
-          assert: "{{ steps.this.results.status_code }} == 200"
   actions:
     - name: trigger-slack
       throttle:
         type: one_until_resolved
+      condition:
+      - type: assert
+        assert: "{{ steps.service-is-up.results.status_code }} == 200"
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "

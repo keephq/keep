@@ -16,12 +16,12 @@ alert:
         with:
           command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}' # Check the disk space
           command_output: 91% # Mock
-      condition:
-        - type: threshold
-          value:  "{{ steps.this.results }}"
-          compare_to: 90% # Trigger if more than 90% full
   actions:
     - name: trigger-slack
+      condition:
+      - type: threshold
+        value:  "{{ steps.this.results }}"
+        compare_to: 90% # Trigger if more than 90% full
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "

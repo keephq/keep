@@ -10,22 +10,22 @@ alert:
           config: "{{ providers.sentry-prod }}"
           with:
             project: python2
-      condition:
-        - type: threshold
-          value: 10
-          compare_to: "keep.len({{ steps.this.results }})"
     - name: get-events-from-sentry-python-2-project
       provider:
           type: sentry
           config: "{{ providers.sentry-prod }}"
           with:
             project: python2
-      condition:
-        - type: threshold
-          value: 5
-          compare_to: "keep.len({{ steps.this.results }})"
+
   actions:
     - name: trigger-slack
+      condition:
+      - type: threshold
+        value: 10
+        compare_to: "keep.len({{ steps.get-events-from-sentry-python-project.results }})"
+      - type: threshold
+        value: 5
+        compare_to: "keep.len({{ steps.get-events-from-sentry-python-2-project.results }})"
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "

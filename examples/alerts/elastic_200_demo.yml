@@ -11,12 +11,12 @@ alert:
           config: "{{ providers.elastic-prod }}"
           with:
             query: "SELECT * FROM \"test-index\" where status_code>'500' and status_code is not NULL"
-      condition:
-        - type: threshold
-          value: "len({{ steps.elastic-no-errors.results }})"
-          compare_to: 0
   actions:
     - name: trigger-slack
+      condition:
+      - type: threshold
+        value: "keep.len({{ steps.elastic-no-errors.results }})"
+        compare_to: 0
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
