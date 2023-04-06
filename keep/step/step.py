@@ -1,3 +1,4 @@
+import copy
 import logging
 from dataclasses import field
 
@@ -28,12 +29,12 @@ class Step:
     def run(self):
         try:
             # Inject the context to the parameters
+            rendered_providers_parameters = {}
             for parameter in self.provider_parameters:
-                self.provider_parameters[parameter] = self.io_handler.render(
+                rendered_providers_parameters[parameter] = self.io_handler.render(
                     self.provider_parameters[parameter]
                 )
-            step_output = self.provider.query(**self.provider_parameters)
-            self.context_manager.set_step_context(self.step_id, results=step_output)
+            step_output = self.provider.query(**rendered_providers_parameters)
         except Exception as e:
             raise StepError(e)
 

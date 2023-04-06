@@ -169,10 +169,16 @@ class ContextManager:
                             actionable_results.append(condition_result)
         return actionable_results
 
-    def set_step_context(self, step_id, results):
+    def set_step_context(self, step_id, results, foreach=False):
         if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"conditions": {}, "results": {}}
-        self.steps_context[step_id]["results"] = results
+            self.steps_context[step_id] = {"conditions": {}, "results": []}
+
+        # If this is a foreach step, we need to append the results to the list
+        # so we can iterate over them
+        if foreach:
+            self.steps_context[step_id]["results"].append(results)
+        else:
+            self.steps_context[step_id]["results"] = results
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
 

@@ -23,24 +23,31 @@ alert:
         type: postgres
         config: "{{ providers.postgres-server }}"
         with:
-          query: "select * from filesystem where node_id = {{ foreach.value }}"
+          query: "select * from filesystem where node_id = '{{ foreach.value[0] }}';"
   actions:
     - name: push-alert-to-postgres
-      # Run on get-filesystems-by-node-id results. each result is a list of filesystems in node
+      # Run on get-filesystems-by-node-id results.
+      # Notice each result is a list of filesystems in node
       foreach: "{{ steps.get-filesystems-by-node-id.results }}"
       # Alert on nodes that have filesystems that away from the standard deviation
       condition:
         - name: stddev-condition
           type: stddev
           value:  "{{ foreach.value }}"
+          pivot_column: 8 # 8th column is the filesystem usage percentage
           compare_to: 1
+
       provider:
         type: postgres
         config: "{{ providers.postgres-server }}"
         with:
           query: >
             INSERT INTO alert (alert_level, alert_message)
-            VALUES ('major', 'The node {{ foreach.value[1] }} has filesystems that are not balanced')
+            VALUES ('major', 'The node {{ foreach.value[0][4] }} has filesystems that are not balanced:
+                    {{#foreach.stddev}}
+                    - Filesystem {{ value[0] }} is {{stddev}} away from the standard deviation
+                    {{/foreach.stddev}}')
+
 providers:
   postgres-server:
     description: The postgres server (sql)
