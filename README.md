@@ -1,9 +1,5 @@
-```diff
-+ Missing a specific use case? no worries, hit us up and we will implement it for you! just open an issue.
-```
-<br />
 <div align="center">
-    <img src="/docs/static/img/keep.png?raw=true">
+    <img src="/docs/static/img/keep.png?raw=true" width="86">
 </div>
 
 <h1 align="center">Alerting. By developers, for developers.</h1>
@@ -101,6 +97,7 @@ poetry install
 
 <h5>From now on, Keep should be installed locally and accessible from your CLI, test it by executing:</h5>
 
+
 ```
 keep version
 ```
@@ -111,7 +108,16 @@ Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messagi
 keep config provider --provider-type slack --provider-id slack-demo
 ```
 
+
 Paste the Slack Incoming Webhook URL (e.g. <https://hooks.slack.com/services/...>) and you're good to go 👌
+
+<h6>**If you don't want to create your own webhook, you can follow these easy 3 steps:**
+
+1. Go to [keep's slack](https://keephq.dev/slack).
+
+2. Enter the # alerts-playground channel.
+
+3. In the channel's topic, you can find the webhook provided by Keep.
 
 <h5>Let's now execute our example "Paper DB has insufficient disk space" alert</h5>
 
@@ -148,7 +154,7 @@ docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubus
 ### Render
 Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
 
 To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
 <br />

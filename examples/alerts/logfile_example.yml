@@ -8,24 +8,22 @@ alert:
           type: logfile
           with:
             filename: examples/access.log
-            time: 4d
+            time: 10w
       # use the condition on every result of the provider
-      foreach:
-        value: "{{steps.this.results}}"
+      foreach: "{{steps.this.results}}"
       condition:
         - type: threshold
-          value: 70
+          value: "first(split({{ foreach.value }}, ' '))"
           # each line looks like:
           # ' 64 2023-02-09 20:08:16,773 INFO: uvicorn.access -: 127.0.0.1:53948 - "GET /test2 HTTP/1.1" 503 Service Unavailable'
           # where the "64" is the number of the
-          compare_to: "first(split({{ foreach.value }}, ' '))"
+          compare_to: 70
   # This happen for each
   actions:
-    - name: paladin-slack
+    - name: keep-slack
       # Whether to action on each result separately
-      foreach:
-        # Run on last ran step [ only on results that the condition applies to ]
-        value: "{{steps.this.results}}"
+      # Run on last ran step [ only on results that the condition applies to ]
+      foreach: "{{steps.this.results}}"
       provider:
         type: slack
         config: "{{ providers.slack-demo }}"
@@ -38,7 +36,7 @@ alert:
               text:
                 type: mrkdwn
                 text: |-
-                  Number of errors: {{ steps.grep.conditions.threshold.compare_to }} [threshold was set to {{ steps.grep.conditions.threshold.value }}]
+                  Number of errors: {{ steps.grep.conditions[0].compare_to }} [threshold was set to {{ steps.grep.conditions[0].value }}]
             - type: section
               text:
                 type: mrkdwn

@@ -4,11 +4,17 @@ Base class for all providers.
 import abc
 import logging
 
+from pydantic.dataclasses import dataclass
+
 from keep.providers.models.provider_config import ProviderConfig
 
 
+@dataclass
 class BaseProvider(metaclass=abc.ABCMeta):
-    def __init__(self, provider_id: str, config: ProviderConfig):
+    provider_id: str
+    config: ProviderConfig
+
+    def __post_init__(self):
         """
         Initialize a provider.
 
@@ -18,22 +24,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # Initalize logger for every provider
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.id = provider_id
-        self.config = config
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}
         )
-
-    @property
-    def provider_id(self) -> str:
-        """
-        Get the provider id.
-
-        Returns:
-            str: The provider id.
-        """
-        return self.id
 
     @abc.abstractmethod
     def dispose(self):

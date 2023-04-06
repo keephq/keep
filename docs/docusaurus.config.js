@@ -65,7 +65,7 @@ const config = {
         title: 'Keep',
         logo: {
           alt: 'Keep Logo',
-          src: 'img/logo.svg',
+          src: 'img/keep.svg',
         },
         items: [
           {

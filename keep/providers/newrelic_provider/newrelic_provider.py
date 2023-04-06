@@ -54,7 +54,9 @@ class NewrelicProvider(BaseProvider):
             list[tuple] | list[dict]: results of the query
         """
         if not kwargs.get("nrql"):
-            raise ProviderConfigException("Missing NRQL query")
+            raise ProviderConfigException(
+                "Missing NRQL query", provider_id=self.provider_id
+            )
 
         new_relic_api = kwargs.get("new_relic_api", "https://api.newrelic.com/graphql")
 

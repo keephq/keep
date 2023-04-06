@@ -25,8 +25,13 @@ astunparse = "^1.6.3"
 python-json-logger = "^2.0.6"
 boto3 = "^1.26.72"
 validators = "^0.20.0"
-zenduty-api = "^0.2"
 python-telegram-bot = "^20.1"
+fastapi = "^0.92.0"
+uvicorn = "^0.20.0"
+opsgenie-sdk = "^2.1.5"
+psycopg2-binary = "^2.9.5"
+starlette-context = "^0.3.6"
+nest-asyncio = "^1.5.6"
 
 
 [tool.poetry.group.dev.dependencies]

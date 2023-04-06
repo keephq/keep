@@ -31,7 +31,7 @@ class MysqlProviderAuthConfig:
 class MysqlProvider(BaseProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.client = self.__generate_client()
+        self.client = None
 
     def __generate_client(self) -> mysql.connector.CMySQLConnection:
         """
@@ -69,7 +69,8 @@ class MysqlProvider(BaseProvider):
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        cursor = self.client.cursor()
+        client = self.__generate_client()
+        cursor = client.cursor()
 
         query = kwargs.pop("query")
         formatted_query = query.format(**kwargs)
