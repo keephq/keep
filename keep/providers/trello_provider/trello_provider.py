@@ -5,7 +5,6 @@ import dataclasses
 
 import pydantic
 import requests
-import json
 
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -48,6 +47,7 @@ class TrelloProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Fetching data from Trello")
+        
         trello_api_key = self.authentication_config.api_key
         trello_api_token = self.authentication_config.api_token
         
@@ -62,9 +62,8 @@ class TrelloProvider(BaseProvider):
             raise ProviderException(
                 f"{self.__class__.__name__} failed to fetch data from Trello: {response.text}"
             )
-
-        print(json.dumps(response.json(), indent=2))
         self.logger.debug("Fetched data from Trello")
+        
         cards = response.json()
         return {
             "cards": cards,
@@ -84,9 +83,6 @@ if __name__ == "__main__":
     trello_api_key = os.environ.get("TRELLO_API_KEY")
     trello_api_token = os.environ.get("TRELLO_API_TOKEN")
 
-    print(trello_api_key)
-    print(trello_api_token)
-
     # Initalize the provider and provider config
     config = ProviderConfig(
         description="Trello Input Provider",
@@ -94,6 +90,6 @@ if __name__ == "__main__":
     )
     provider = TrelloProvider(provider_id="trello-test", config=config)
     provider.query(
-        board_id="HuwkA0Dd",
+        board_id="trello-board-id",
         filter="createCard"
     )
