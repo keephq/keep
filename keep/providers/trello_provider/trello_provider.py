@@ -39,7 +39,7 @@ class TrelloProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def query(self, **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
@@ -64,8 +64,12 @@ class TrelloProvider(BaseProvider):
             )
 
         print(json.dumps(response.json(), indent=2))
-
         self.logger.debug("Fetched data from Trello")
+        cards = response.json()
+        return {
+            "cards": cards,
+            "number_of_cards": len(cards)
+        }
 
 
 if __name__ == "__main__":
@@ -89,7 +93,7 @@ if __name__ == "__main__":
         authentication={"api_key": trello_api_key, "api_token": trello_api_token},
     )
     provider = TrelloProvider(provider_id="trello-test", config=config)
-    provider.notify(
+    provider.query(
         board_id="HuwkA0Dd",
         filter="createCard"
     )
