@@ -43,9 +43,8 @@ class Alert:
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
         if step.foreach:
-            foreach = step.foreach
-            foreach = self.io_nandler.render(foreach)
-            for f in foreach:
+            rendered_foreach = self.io_nandler.render(step.foreach)
+            for f in rendered_foreach:
                 self.logger.debug("Step is a foreach step")
                 self.context_manager.set_for_each_context(f)
                 step_output = step.run()
@@ -123,7 +122,8 @@ class Alert:
         """Loads steps context for API usage (when the alert is run by the API)
 
         Args:
-            steps_context (list, optional): _description_. Defaults to [].
+            steps_context (list, optional): the context of the steps. Defaults to [].
+            actions_context (list, optional): the context of the actions. Defaults to [].
         """
         # if steps context supplied, load it
         # this is the case for example when the action being run by the API

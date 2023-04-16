@@ -8,9 +8,9 @@ Keep uses [Mustache](https://mustache.github.io/) syntax to inject context at ru
 
 Here are some examples:
 - {{ steps.step-id.results }} - Result of step-id
-- len({{ steps.step-id.results }}) - Number of results from step-id
+- keep.len({{ steps.step-id.results }}) - Number of results from step-id
 - {{ steps.this.results[0] }} - First result of this step
-- first({{ steps.this.results }}) - First result (equivalent to the previous example)
+- keep.first({{ steps.this.results }}) - First result (equivalent to the previous example)
 - {{ steps.step-id.results[0][0] }} - First item of the first result
 
 If you have suggestions/improvments/bugs for Keep's syntax, please [open feature request](https://github.com/keephq/keep/issues/new?assignees=&labels=&template=feature_request.md&title=) and get eternal glory.

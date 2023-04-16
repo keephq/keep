@@ -72,28 +72,10 @@ class IOHandler:
         #           first(split({{ foreach.value }},'a', 'b'))
 
         # first render everything using chevron
-
-        # if the string is a simple render, e.g. {{ value }}
-        if (
-            string.count("{{") == 1
-            and string.strip().startswith("{{")
-            and string.strip().endswith("}}")
-        ):
-            simple_render = True
-        else:
-            simple_render = False
-
         # inject the context
         string = self._render(string)
 
-        # if {{ value }} is the only thing in the string, return the value
-        if simple_render:
-            try:
-                return eval(string)
-            # e.g. '91%' is not a valid expression
-            except SyntaxError:
-                return string
-
+        # Now, extract the token if exists -
         pattern = r"\bkeep\.\w+\((?:[^()]|\((?:[^()]|)*\))*\)"
         parsed_string = copy.copy(string)
         matches = re.findall(pattern, parsed_string)
@@ -122,9 +104,6 @@ class IOHandler:
 
             if isinstance(tree, ast.Call):
                 func = tree.func
-                # if its not a keep function, just return it as is
-                # if not func.id.startswith("keep"):
-                #     return astunparse.unparse(tree).strip()
                 args = tree.args
                 # if its another function
                 _args = []

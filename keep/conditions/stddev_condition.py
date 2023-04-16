@@ -55,6 +55,6 @@ class StddevCondition(BaseCondition):
             _type_: _description_
         """
         compare_value = self.condition_config.get("value")
-        compare_value = self.io_handler.render(compare_value)
+        rendered_compare_value = self.io_handler.render(compare_value)
         self.pivot_column = self.condition_config.get("pivot_column", 0)
-        return compare_value
+        return rendered_compare_value

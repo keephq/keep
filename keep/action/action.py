@@ -51,6 +51,7 @@ class Action:
         return throttle.check_throttling(action_name, alert_id)
 
     def _run_foreach(self):
+        """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
         items = self.io_handler.render(self.config.get("foreach"))
         # apply ALL conditions (the decision whether to run or not is made in the end)
@@ -59,8 +60,6 @@ class Action:
             self._run_single()
 
     def _run_single(self):
-        # First, execute all conditions
-
         # Initialize all conditions
         conditions = [
             ConditionFactory.get_condition(
@@ -95,7 +94,7 @@ class Action:
         if self.config.get("if"):
             if_conf = self.config.get("if")
         else:
-            # create a string of all conditions, separated by "&&"
+            # create a string of all conditions, separated by "and"
             if_conf = " and ".join(
                 [f"{{{{ {condition.condition_alias} }}}} " for condition in conditions]
             )

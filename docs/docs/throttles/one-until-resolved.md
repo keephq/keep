@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # 🎯 One Until Resolved
 
-## Intro
+## Introduction
 The action will trigger once the alert is resolved.
 
 For example:
@@ -35,11 +35,11 @@ alert:
           # any external libraries needed
           imports: requests
           code: requests.get("http://localhost:3000")
-      condition:
-        - type: assert
-          assert: "{{ steps.this.results.status_code }} == 200"
   actions:
     - name: trigger-slack
       throttle:
         type: one_until_resolved
+      condition:
+        - type: assert
+          assert: "{{ steps.this.results.status_code }} == 200"
 ```

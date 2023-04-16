@@ -1,6 +1,6 @@
 ---
-sidebar_label: Syntax
-sidebar_position: 4
+sidebar_label: Basic Syntax
+sidebar_position: 1
 ---
 
 # Basic Syntax
@@ -67,7 +67,6 @@ steps:
 `Step` is built of:
   - `name` - the step name (context will be accessible through `{{ steps.name.results }}`).
   - `provider` - the data source.
-  - `conditions` - zero (or more) conditions that runs after the `provider` provided the data.
 
 ### Provider
 ```yaml
@@ -134,5 +133,6 @@ actions:
 - `provider` - the provider that will trigger the action.
 - `throttle` - you can [throttle](throttles/what-is-throttle.md) the action.
 - `if` - action can be limited to when certain [conditions](conditions/what-is-a-condition.md) are met.
+- `foreach` - when `foreach` block supplied, Keep will evaluate it as a list, and evaluates the `action` for every item in the list.
 
 The `provider` configuration is already covered in [Providers](syntax#provider)

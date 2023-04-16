@@ -5,6 +5,11 @@ sidebar_position: 3
 
 # Deployment
 
+After writing some alerts with Keep, you now want to use Keep in production.
+
+For that, you may want to deploy Keep on an environment other than your local station. Currently, Keep support [Docker](#docker) and [Render](#render).
+#### Want to deploy Keep on a specific platform? [Just open an issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&template=feature_request.md&title=feature:%20new%20deployment%20option) and we will get to it ASAP!
+
 ## Docker
 
 Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
@@ -35,5 +40,3 @@ When clicking the Deploy to Render button, you will be asked to provide the `KEE
 ```
 
 \* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
-
-#### Want to deploy Keep on a specific platform? [Just open an issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&template=feature_request.md&title=feature:%20new%20deployment%20option) and we will get to it ASAP!
