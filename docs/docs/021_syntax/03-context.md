@@ -1,9 +1,9 @@
 ---
-sidebar_label: Context
-sidebar_position: 5
+sidebar_label: Context syntax
+sidebar_position: 3
 ---
 
-# Working with Context
+# Working with context
 Keep uses [Mustache](https://mustache.github.io/) syntax to inject context at runtime, supporting functions, dictionaries, lists, and nested access.
 
 Here are some examples:
@@ -34,9 +34,9 @@ Here, `{{ providers.mysql-prod }}` is dynamically translated at runtime from the
 The output of steps can be accessed from anywhere in the YAML using `{{ steps.step-name.results }}`. This output can be used in conditions, actions, or any other place.
 
 ### Functions
-Keep's syntax allow to use functions on context blocks. For example, `len({{ steps.step-name.results }})` will return the number of results of `step-name` step.
+Keep's syntax allow to use functions on context blocks. For example, `keep.len({{ steps.step-name.results }})` will return the number of results of `step-name` step.
 
-- [See supported functions](functions/what-is-a-function.md)
-- [Create new functions](functions/what-is-a-function.md)
+- [See supported functions](../functions/what-is-a-function)
+- [Create new functions](../functions/what-is-a-function#how-to-create-a-new-function)
 
 Under the hood, Keep uses Python's `ast` module to parse these expressions and evaluate them as best as possible.

@@ -21,7 +21,7 @@ The `notify` function take following parameters as inputs:
 The webhook_url associated with the channel requires to trigger the message to the respective channel.
 
 ## Connecting with the Provider
-1. Create a Slack app (if you don't have one already) 
+1. Create a Slack app (if you don't have one already)
 2. Enable Incoming Webhooks
 3. Create an Incoming Webhook
 4. Use your Incoming Webhook URL to post a message

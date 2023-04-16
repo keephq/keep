@@ -1,5 +1,5 @@
 ---
-sidebar_label: Quick Start
+sidebar_label: Quickstart
 sidebar_position: 2
 ---
 

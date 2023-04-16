@@ -1,11 +1,11 @@
 ---
-sidebar_label: Basic Syntax
+sidebar_label: Basic syntax
 sidebar_position: 1
 ---
 
 # Basic Syntax
 
-#### At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.
+At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.
 
 ## Full Example
 ```yaml
@@ -20,17 +20,17 @@ alert:
         with:
           # Get max(datetime) from the random table
           query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
+  actions:
+    - name: trigger-slack
       condition:
       - type: threshold
         # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
         #   utcnow() returns the local machine datetime in UTC
         #   to_utc() converts a datetime to UTC
-        value: datetime_compare(utcnow(), to_utc({{ steps.this.results[0][0] }}))
+        value: datetime_compare(utcnow(), to_utc({{ steps.get-max-datetime.results[0][0] }}))
         compare_to: 1 # hours
         compare_type: gt # greater than
         alias: A
-  actions:
-    - name: trigger-slack
       # redundant for "single step" example, but for "multi step" alerts this can be useful
       if: {{ A }}
       provider:
@@ -40,7 +40,7 @@ alert:
           message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold[0].value }}) is greater than 1! 🚨"
 ```
 
-### Now, let's break it down! 🔨
+## Breakdown 🔨
 ### Alert
 ```yaml
 alert:
