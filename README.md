@@ -67,7 +67,7 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 - **Cloud**: AWS, GCP, Azure, etc.
 - **Monitoring**: Sentry, New Relic, Datadog, etc.
 - **Incident Management**: PagerDuty, OpsGenie, etc.
-- **Communication**: Email, Slack, Console, etc.
+- **Communication**: Email, Slack, Discord, Microsoft Teams, etc.
 - [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
 
 ## 🚀 Quickstart
