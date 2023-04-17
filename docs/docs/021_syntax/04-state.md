@@ -13,7 +13,7 @@ Keep State Manager currently used for:
 It's currently doing so by simply holding the state using a `keepstate.json` file, which can be overrided by `KEEP_STATE_FILE` environment variable.
 
 ## Example
-One of the usages for Keep's state mechanism is throttling, see [One Until Resolved](docs/../throttles/one-until-resolved.md). Keep handles it for you behind the scenes so you can use it without doing any further modifications.
+One of the usages for Keep's state mechanism is throttling, see [One Until Resolved](../025_throttles/02-one-until-resolved.md) Keep handles it for you behind the scenes so you can use it without doing any further modifications.
 
 ## Serverless
 If you are running Keep on production, you should host the `keepstate.json` file on persistance storage and mount it to your serverless environment. Feel free to create an issue if you need solution for your preferred deployment architecture.

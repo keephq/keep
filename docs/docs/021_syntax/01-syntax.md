@@ -78,7 +78,7 @@ provider:
         query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
 ```
 `Provider` is built of:
-- `type` - the type of the provider ([see supported providers](providers/getting-started.md))
+- `type` - the type of the provider ([see supported providers](../022_providers/01-what-is-a-provider.md))
 - `config` - the provider configuration. you can either supply it explicitly or using `"{{ providers.mysql-prod }}"`
 - `with` - all type-specific provider configuration. for example, for `mysql` we will provide the SQL query.
 
@@ -131,8 +131,8 @@ actions:
 - `name` - the name of the action.
 - `condition` - a list of conditions that
 - `provider` - the provider that will trigger the action.
-- `throttle` - you can [throttle](throttles/what-is-throttle.md) the action.
-- `if` - action can be limited to when certain [conditions](conditions/what-is-a-condition.md) are met.
+- `throttle` - you can [throttle](../025_throttles/01-what-is-throttle.md) the action.
+- `if` - action can be limited to when certain [conditions](../023_conditions/01-what-is-a-condition.md) are met.
 - `foreach` - when `foreach` block supplied, Keep will evaluate it as a list, and evaluates the `action` for every item in the list.
 
 The `provider` configuration is already covered in [Providers](syntax#provider)
