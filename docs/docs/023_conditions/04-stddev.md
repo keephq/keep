@@ -4,7 +4,7 @@ sidebar_label: stddev
 
 # 🎯 Stddev (Standard Deviation)
 
-### The stddev condition implements the "python assert" behaviour
+#### The 'stddev' condition implements standard deviation logic. It takes a list or a list of lists, along with a standard deviation threshold ('compare_to'), and returns all values that are farther away from the mean than the standard deviation.
 ```yaml
 -   type: stddev
     name: OPTIONAL (default "stddev")
