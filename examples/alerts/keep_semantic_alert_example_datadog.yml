@@ -17,13 +17,13 @@ alert:
     with:
       query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
       timeframe: "1h"
-    condition:
-      - type: threshold
-        value: "{{ steps.this.results }}"
-        compare_to: 0.01
-        operator: ">"
   actions:
     - name: notify-slack
+      condition:
+      - type: threshold
+        value: "{{ steps.check-error-rate.results }}"
+        compare_to: 0.01
+        operator: ">"
       provider:
         type: slack
         config: "{{ providers.slack-config }}"
