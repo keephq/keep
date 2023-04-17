@@ -104,9 +104,6 @@ class IOHandler:
 
             if isinstance(tree, ast.Call):
                 func = tree.func
-                # if its not a keep function, just return it as is
-                # if not func.id.startswith("keep"):
-                #     return astunparse.unparse(tree).strip()
                 args = tree.args
                 # if its another function
                 _args = []
