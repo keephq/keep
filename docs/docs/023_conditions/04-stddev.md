@@ -4,7 +4,7 @@ sidebar_label: stddev
 
 # 🎯 Stddev (Standard Deviation)
 
-### The assert condition implements the "python assert" behaviour
+### The stddev condition implements the "python assert" behaviour
 ```yaml
 -   type: stddev
     name: OPTIONAL (default "stddev")
