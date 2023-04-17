@@ -110,6 +110,7 @@ class AlertManager:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
+                raise
             if any(errors):
                 self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
             else:

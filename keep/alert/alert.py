@@ -37,11 +37,23 @@ class Alert:
             "alert_owners": self.alert_owners,
             "alert_tags": self.alert_tags,
             "alert_steps_context": self.context_manager.steps_context,
+            "alert_actions_context": self.context_manager.actions_context,
         }
 
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
-        step_output = step.run()
+        if step.foreach:
+            rendered_foreach = self.io_nandler.render(step.foreach)
+            for f in rendered_foreach:
+                self.logger.debug("Step is a foreach step")
+                self.context_manager.set_for_each_context(f)
+                step_output = step.run()
+                self.context_manager.set_step_context(
+                    step.step_id, results=step_output, foreach=True
+                )
+        else:
+            step_output = step.run()
+            self.context_manager.set_step_context(step.step_id, results=step_output)
         self.logger.info("Step %s ran successfully", step.step_id)
         return step_output
 
@@ -52,7 +64,6 @@ class Alert:
                 self.run_step(step)
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
-                self._handle_failure(step, e)
                 raise
         self.logger.debug(f"Steps for alert {self.alert_id} ran successfully")
 
@@ -101,27 +112,18 @@ class Alert:
         self.logger.debug(f"Finish to run alert {self.alert_id}")
         return actions_errors
 
-    def _handle_failure(self, step: Step, exc):
-        # if the step has failure strategy, handle it
-        if step.failure_strategy:
-            step.handle_failure_strategy(step)
-        else:
-            self.logger.exception("Failed to run step")
-            raise StepError(
-                f"Step {step.step_id} failed to execute without error handling strategy - {str(exc)}"
-            )
-
     def _handle_actions(self):
         self.logger.debug(f"Handling actions for alert {self.alert_id}")
         for action in self.alert_actions:
             action.run()
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
 
-    def load_context(self, steps_context: list = []):
+    def load_context(self, steps_context: list = [], actions_context: list = []):
         """Loads steps context for API usage (when the alert is run by the API)
 
         Args:
-            steps_context (list, optional): _description_. Defaults to [].
+            steps_context (list, optional): the context of the steps. Defaults to [].
+            actions_context (list, optional): the context of the actions. Defaults to [].
         """
         # if steps context supplied, load it
         # this is the case for example when the action being run by the API
@@ -129,7 +131,13 @@ class Alert:
             self.context_manager.load_step_context(
                 step.step_id,
                 step_results=step.step_context.get("results"),
-                step_conditions=step.step_context.get("conditions"),
+            )
+        # Load the action context
+        for action in actions_context:
+            self.context_manager.load_action_context(
+                action.action_name,
+                action_status=action.action_status,
+                action_conditions=action.action_conditions,
             )
 
     def run_missing_steps(self, end_step=None):
@@ -146,6 +154,5 @@ class Alert:
                     self.run_step(step)
                 except StepError as e:
                     self.logger.error(f"Step {step.step_id} failed: {e}")
-                    self._handle_failure(step, e)
                     raise
         self.logger.debug(f"Missing steps for alert {self.alert_id} ran successfully")
