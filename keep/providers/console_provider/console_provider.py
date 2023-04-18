@@ -46,7 +46,5 @@ if __name__ == "__main__":
         provider_id="mock", provider_type="console", provider_config=config
     )
     provider.notify(
-        alert_message="Simple alert showing context with name: {name}".format(
-            name="John Doe"
-        )
+        alert_message="Simple alert showing context with name: John Doe"
     )

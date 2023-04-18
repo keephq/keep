@@ -77,5 +77,5 @@ if __name__ == "__main__":
     )
     provider = PushoverProvider(config=config)
     provider.notify(
-        message="Simple alert showing context with name: {name}".format(name="John Doe")
+        message="Simple alert showing context with name: John Doe"
     )

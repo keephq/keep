@@ -1,6 +1,5 @@
 import ast
 import copy
-
 # TODO: fix this! It screws up the eval statement if these are not imported
 import datetime
 import json

@@ -47,14 +47,14 @@ class TrelloProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Fetching data from Trello")
-        
+
         trello_api_key = self.authentication_config.api_key
         trello_api_token = self.authentication_config.api_token
-        
+
         board_id = kwargs.pop("board_id", "")
         filter = kwargs.pop("filter", "")
 
-        request_url = 'https://api.trello.com/1/boards/{board_id}/actions?key={trello_api_key}&token={trello_api_token}&filter={filter}'.format(board_id=board_id, trello_api_key=trello_api_key, trello_api_token=trello_api_token, filter=filter)
+        request_url = f'https://api.trello.com/1/boards/{board_id}/actions?key={trello_api_key}&token={trello_api_token}&filter={filter}'
         response = requests.get(
             request_url
         )
@@ -63,7 +63,7 @@ class TrelloProvider(BaseProvider):
                 f"{self.__class__.__name__} failed to fetch data from Trello: {response.text}"
             )
         self.logger.debug("Fetched data from Trello")
-        
+
         cards = response.json()
         return {
             "cards": cards,

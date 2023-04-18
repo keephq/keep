@@ -76,7 +76,7 @@ class NewrelicProvider(BaseProvider):
                 extra={"response": response.text, "query": query},
             )
             raise ProviderException(
-                "Failed to query New Relic: {}".format(response.text)
+                f"Failed to query New Relic: {response.text}"
             )
         # results are in response.json()['data']['actor']['account']['nrql']['results'], should we return this?
         return response.json()

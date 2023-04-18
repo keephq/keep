@@ -122,9 +122,7 @@ if __name__ == "__main__":
     )
     provider = OpsgenieProvider(provider_id="opsgenie-test", config=config)
     provider.notify(
-        message="Simple alert showing context with name: {name}".format(
-            name="John Doe"
-        ),
+        message="Simple alert showing context with name: John Doe",
         note="Simple alert",
         user="John Doe",
     )
