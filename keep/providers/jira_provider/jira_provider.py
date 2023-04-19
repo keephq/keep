@@ -44,14 +44,14 @@ class JiraProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Fetching data from Jira")
-        
+
         jira_api_token = self.authentication_config.api_token
-        
+
         host = kwargs.pop("host", "")
         board_id = kwargs.pop("board_id", "")
         email = kwargs.pop("email", "")
 
-        request_url = 'https://{host}/rest/agile/1.0/board/{board_id}/issue'.format(host=host, board_id=board_id)
+        request_url = f'https://{host}/rest/agile/1.0/board/{board_id}/issue'
         response = requests.get(
             request_url,
             auth=(email, jira_api_token)
@@ -61,7 +61,7 @@ class JiraProvider(BaseProvider):
                 f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
             )
         self.logger.debug("Fetched data from Jira")
-        
+
         issues = response.json()
         return {
             "number_of_issues": issues['total']

@@ -4,9 +4,9 @@ PsqlProvider is a class that provides a way to read data from Postgres.
 
 import dataclasses
 import os
-import pydantic
-
 from typing import List
+
+import pydantic
 from psycopg2 import connect
 
 from keep.exceptions.provider_exception import ProviderException

@@ -64,7 +64,7 @@ class ThresholdCondition(BaseCondition):
             compare_value (_type_): the actual value
 
         """
-        # check if compare_to is a number (supports also float, hence the . replcae)
+        # check if compare_to is a number (supports also float, hence the . replace)
         if (
             str(compare_to).replace(".", "", 1).isdigit()
             and str(compare_to).replace(".", "", 1).isdigit()
@@ -72,7 +72,7 @@ class ThresholdCondition(BaseCondition):
             compare_to = float(compare_to)
             compare_value = float(compare_value)
         # validate they are both the same type
-        if type(compare_value) != type(compare_to):
+        if isinstance(compare_value, type(compare_to)):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
                     compare_to, compare_value
