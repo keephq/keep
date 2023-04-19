@@ -1,5 +1,6 @@
 import ast
 import copy
+
 # TODO: fix this! It screws up the eval statement if these are not imported
 import datetime
 import json
@@ -78,7 +79,7 @@ class IOHandler:
         pattern = r"\bkeep\.\w+\((?:[^()]|\((?:[^()]|)*\))*\)"
         parsed_string = copy.copy(string)
         matches = re.findall(pattern, parsed_string)
-        tokens = [match for match in matches]
+        tokens = list(matches)
 
         if len(tokens) == 0:
             return parsed_string
@@ -201,7 +202,7 @@ class IOHandler:
             rendered_template (str): The rendered template that might contain URLs
         """
         urls = re.findall(
-            "https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template
+            r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template
         )
         # didn't find any url
         if not urls:

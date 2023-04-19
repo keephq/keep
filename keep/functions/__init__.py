@@ -16,7 +16,7 @@ def all(iterable):
 
 def diff(iterable):
     # Opposite of all - returns True if any element is different
-    return not (all(iterable))
+    return not all(iterable)
 
 
 def len(iterable):

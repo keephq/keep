@@ -13,7 +13,7 @@ class NotRequiredIf(click.Option):
             kwargs.get("help", "")
             + f" NOTE: This argument is mutually exclusive with {self.not_required_if}"
         ).strip()
-        super(NotRequiredIf, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
         we_are_present = self.name in opts
@@ -28,4 +28,4 @@ class NotRequiredIf(click.Option):
             else:
                 self.prompt = None
 
-        return super(NotRequiredIf, self).handle_parse_result(ctx, opts, args)
+        return super().handle_parse_result(ctx, opts, args)

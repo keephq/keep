@@ -11,7 +11,7 @@ def get_context_manager_id():
         # If we are running as part of FastAPI, we need context_manager per request
         request_id = context.data.get("X-Request-ID")
         return request_id
-    except:
+    except Exception:
         return "main"
 
 
@@ -165,7 +165,7 @@ class ContextManager:
                     for condition_result in self.steps_context[step_id]["conditions"][
                         condition
                     ]:
-                        if condition_result["result"] == True:
+                        if condition_result["result"]:
                             actionable_results.append(condition_result)
         return actionable_results
 
@@ -218,7 +218,7 @@ class ContextManager:
             try:
                 with open(self.state_file, "r") as f:
                     self.state = json.load(f)
-            except:
+            except Exception:
                 self.logger.error("Failed to load state file, using empty state")
                 self.state = {}
 
