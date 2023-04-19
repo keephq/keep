@@ -115,9 +115,7 @@ class PagerdutyProvider(BaseProvider):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/vnd.pagerduty+json;version=2",
-            "Authorization": "Token token={token}".format(
-                token=self.authentication_config.api_key
-            ),
+            "Authorization": f"Token token={self.authentication_config.api_key}",
             "From": requester,
         }
 
@@ -133,7 +131,7 @@ class PagerdutyProvider(BaseProvider):
 
         r = requests.post(url, headers=headers, data=json.dumps(payload))
 
-        print("Status Code: {code}".format(code=r.status_code))
+        print(f"Status Code: {r.status_code}")
         print(r.json())
 
     def dispose(self):

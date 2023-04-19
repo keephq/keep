@@ -184,7 +184,7 @@ async def run_action(
     # TODO: add reason why action run or not
     return JSONResponse(
         content={
-            "action_run": True if action_status else False,
+            "action_run": bool(action_status),
             "action_id": action.name,
             "action_error": action_error,
         }
@@ -219,6 +219,6 @@ async def run_alert(
     return JSONResponse(
         content={
             "steps_context": full_context.get("steps"),
-            "action_ran": True if not any(action_error) else False,
+            "action_ran": bool(not any(action_error)),
         }
     )
