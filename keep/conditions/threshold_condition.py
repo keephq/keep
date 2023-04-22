@@ -72,7 +72,7 @@ class ThresholdCondition(BaseCondition):
             compare_to = float(compare_to)
             compare_value = float(compare_value)
         # validate they are both the same type
-        if isinstance(compare_value, type(compare_to)):
+        if not isinstance(compare_value, type(compare_to)):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
                     compare_to, compare_value
