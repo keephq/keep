@@ -27,6 +27,10 @@ def split(string, delimeter):
     return string.strip().split(delimeter)
 
 
+def strip(string):
+    return string.strip()
+
+
 def first(iterable):
     return iterable[0]
 

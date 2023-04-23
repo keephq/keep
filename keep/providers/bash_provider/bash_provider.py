@@ -29,7 +29,17 @@ class BashProvider(BaseProvider):
             output = subprocess.run(parsed_command, shell=True, stdout=subprocess.PIPE)
         except Exception as e:
             return {"status_code": "500", "output": str(e)}
-        return output.stdout
+
+        try:
+            stdout = output.stdout.decode()
+        except:
+            stdout = ""
+
+        try:
+            stderr = output.stderr.decode()
+        except:
+            stderr = ""
+        return {"stdout": stdout, "stderr": stderr, "exit_code": output.returncode}
 
     def dispose(self):
         """
