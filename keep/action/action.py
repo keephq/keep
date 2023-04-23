@@ -31,10 +31,10 @@ class Action:
     def run(self):
         try:
             if self.config.get("foreach"):
-                self._run_foreach()
+                did_action_run = self._run_foreach()
             else:
-                self._run_single()
-            return True
+                did_action_run = self._run_single()
+            return did_action_run
         except Exception as e:
             raise ActionError(e)
 
@@ -54,10 +54,16 @@ class Action:
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
         items = self.io_handler.render(self.config.get("foreach"))
+        any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
         for item in items:
             self.context_manager.set_for_each_context(item)
-            self._run_single()
+            did_action_run = self._run_single()
+            # If at least one item triggered an action, return True
+            # TODO - do it per item
+            if did_action_run:
+                any_action_run = True
+        return any_action_run
 
     def _run_single(self):
         # Initialize all conditions
