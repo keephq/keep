@@ -101,10 +101,8 @@ class Action:
 
         # Now check it
         if_met = self.io_handler.render(if_conf)
-        # if there's more than one condition, we need to evaluate the "if" string
-        # otherwise, it's already a boolean
-        if len(conditions) > 1:
-            if_met = eval(if_met)
+        # Evaluate the condition string
+        if_met = eval(if_met)
 
         if not if_met:
             self.logger.info(
