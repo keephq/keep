@@ -19,9 +19,9 @@ class BashProvider(BaseProvider):
 
     def query(self, **kwargs):
         """Bash provider eval shell command to get results
-        B
-                Returns:
-                    _type_: _description_
+
+        Returns:
+            _type_: _description_
         """
         command = kwargs.get("command", "")
         parsed_command = self.io_handler.parse(command)
