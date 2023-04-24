@@ -70,7 +70,12 @@ class ThresholdCondition(BaseCondition):
             and str(compare_to).replace(".", "", 1).isdigit()
         ):
             compare_to = float(compare_to)
-            compare_value = float(compare_value)
+            try:
+                compare_value = float(compare_value)
+            except ValueError as exc:
+                raise Exception(
+                    "Invalid values for threshold - the compare_to is a float where the compare_value is not"
+                ) from exc
         # validate they are both the same type
         if not isinstance(compare_value, type(compare_to)):
             raise Exception(

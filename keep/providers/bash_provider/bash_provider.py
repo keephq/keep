@@ -1,6 +1,7 @@
 """
 BashProvider is a class that implements the BaseOutputProvider.
 """
+import shlex
 import subprocess
 
 from keep.exceptions.provider_config_exception import ProviderConfigException
@@ -25,21 +26,46 @@ class BashProvider(BaseProvider):
         """
         command = kwargs.get("command", "")
         parsed_command = self.io_handler.parse(command)
-        try:
-            output = subprocess.run(parsed_command, shell=True, stdout=subprocess.PIPE)
-        except Exception as e:
-            return {"status_code": "500", "output": str(e)}
+        # parse by pipes
+        parsed_commands = parsed_command.split("|")
+        # Initialize the input for the first command
+        input_stream = None
 
-        try:
-            stdout = output.stdout.decode()
-        except:
-            stdout = ""
+        processes = []
 
-        try:
-            stderr = output.stderr.decode()
-        except:
-            stderr = ""
-        return {"stdout": stdout, "stderr": stderr, "exit_code": output.returncode}
+        for cmd in parsed_commands:
+            # Split the command string into a list of arguments
+            cmd_args = shlex.split(cmd.strip())
+
+            # Run the command and pipe its output to the next command, capturing stderr
+            process = subprocess.Popen(
+                cmd_args,
+                stdin=input_stream,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            if input_stream is not None:
+                # Close the input_stream (output of the previous command)
+                input_stream.close()
+
+            # Update input_stream to be the output of the current command
+            input_stream = process.stdout
+
+            # Append the current process to the list of processes
+            processes.append(process)
+
+        # Get the final output
+        stdout, stderr = processes[-1].communicate()
+        return_code = processes[-1].returncode
+        # stdout and stderr are strings or None
+        if stdout:
+            stdout = stdout.decode()
+
+        if stderr:
+            stderr = stderr.decode()
+
+        return {"stdout": stdout, "stderr": stderr, "return_code": return_code}
 
     def dispose(self):
         """
