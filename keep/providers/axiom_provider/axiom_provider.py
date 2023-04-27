@@ -46,13 +46,13 @@ class AxiomProvider(BaseProvider):
 
     def query(self, **kwargs: dict):
         """
-        Query snowflake using the given query
+        Query Axiom using the given query
 
         Args:
             query (str): command to execute
 
         Returns:
-            list: of the results for the executed command.
+            https://axiom.co/docs/restapi/query#response-example
         """
         datasets_api_url = kwargs.get("api_url", "https://api.axiom.co/v1/datasets")
         organization_id = kwargs.get(
@@ -79,7 +79,7 @@ class AxiomProvider(BaseProvider):
         )
         body = {"startTime": startTime, "endTime": endTime}
 
-        # Todo: add suppory for body parameters (https://axiom.co/docs/restapi/query#request-example)
+        # Todo: add support for body parameters (https://axiom.co/docs/restapi/query#request-example)
         response = requests.post(
             f"{datasets_api_url}/{dataset}/query?nocache={nocache}",
             headers=headers,
