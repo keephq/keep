@@ -86,7 +86,7 @@ class AxiomProvider(BaseProvider):
             json=body,
         )
 
-        # Todo: log response details fo better error handling
+        # Todo: log response details for better error handling
         return response.json()
 
 
