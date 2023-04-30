@@ -134,7 +134,11 @@ class IOHandler:
                 val = getattr(keep_functions, func.attr)(*_args)
                 return val
 
-        tree = ast.parse(token)
+        try:
+            tree = ast.parse(token)
+        except SyntaxError:
+            # for strings such as "45%\n", we need to escape
+            tree = ast.parse(token.encode("unicode_escape"))
         return _parse(tree)
 
     def _render(self, key):
