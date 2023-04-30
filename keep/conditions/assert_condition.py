@@ -17,7 +17,7 @@ class AssertCondition(BaseCondition):
         """apply the condition.
 
         Args:
-            compare_to (_type_): the thresholdev
+            compare_to (_type_): the assertion to check
             compare_value (_type_): the actual value
 
         """
