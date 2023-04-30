@@ -1,0 +1,20 @@
+alert:
+  id: test-one-until-resolved
+  steps:
+    - name: local-bash
+      provider:
+        type: bash
+        with:
+          command: stat nosuchfile
+  actions:
+    - name: trigger-mock
+      throttle:
+        type: one_until_resolved
+      condition:
+        - type: assert
+          assert: "'{{ steps.local-bash.results.stderr }}' == ''"
+      provider:
+        type: mock
+        config: " {{ providers.test-mock }} "
+        with:
+          command_output: "keep.strip('{{ steps.local-bash.results.stderr }}')"

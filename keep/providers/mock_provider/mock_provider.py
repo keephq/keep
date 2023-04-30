@@ -26,3 +26,9 @@ class MockProvider(BaseProvider):
         No need to dispose of anything, so just do nothing.
         """
         pass
+
+    def notify(self, **kwargs):
+        """
+        No need to notify anything, so just do nothing.
+        """
+        return kwargs.get("command_output")

@@ -35,7 +35,6 @@ logging_config = {
         "": {  # root logger
             "handlers": ["default"],
             "level": "INFO",
-            "propagate": False,
         }
     },
 }

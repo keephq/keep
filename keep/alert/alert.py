@@ -10,11 +10,6 @@ from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
 
-class AlertStatus(enum.Enum):
-    RESOLVED = "resolved"
-    FIRING = "firing"
-
-
 @dataclass
 class Alert:
     alert_id: str
@@ -98,16 +93,8 @@ class Alert:
         actions_firing, actions_errors = self.run_actions()
 
         # Save the state
-        #   alert is firing if one its actions is firing
-        alert_status = (
-            AlertStatus.FIRING.value
-            if any(actions_firing)
-            else AlertStatus.RESOLVED.value
-        )
         self.context_manager.set_last_alert_run(
-            alert_id=self.alert_id,
-            alert_context=self._get_alert_context(),
-            alert_status=alert_status,
+            alert_id=self.alert_id, alert_context=self._get_alert_context()
         )
         self.logger.debug(f"Finish to run alert {self.alert_id}")
         return actions_errors
@@ -117,28 +104,6 @@ class Alert:
         for action in self.alert_actions:
             action.run()
         self.logger.debug(f"Actions handled for alert {self.alert_id}")
-
-    def load_context(self, steps_context: list = [], actions_context: list = []):
-        """Loads steps context for API usage (when the alert is run by the API)
-
-        Args:
-            steps_context (list, optional): the context of the steps. Defaults to [].
-            actions_context (list, optional): the context of the actions. Defaults to [].
-        """
-        # if steps context supplied, load it
-        # this is the case for example when the action being run by the API
-        for step in steps_context:
-            self.context_manager.load_step_context(
-                step.step_id,
-                step_results=step.step_context.get("results"),
-            )
-        # Load the action context
-        for action in actions_context:
-            self.context_manager.load_action_context(
-                action.action_name,
-                action_status=action.action_status,
-                action_conditions=action.action_conditions,
-            )
 
     def run_missing_steps(self, end_step=None):
         """Runs steps without context (when the alert is run by the API)"""

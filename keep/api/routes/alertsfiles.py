@@ -146,7 +146,6 @@ def run_step(
         raise HTTPException(status_code=502, detail="Multiple steps with the same id")
 
     step = step[0]
-    alert.load_context(steps_context)
     alert.run_missing_steps(end_step=step)
     alert.run_step(step)
     context_manager = ContextManager.get_instance()
@@ -178,7 +177,6 @@ async def run_action(
         raise HTTPException(status_code=502, detail="Multiple actions with the same id")
 
     action = action[0]
-    alert.load_context(steps_context)
     alert.run_missing_steps()
     action_status, action_error = alert.run_action(action)
     # TODO: add reason why action run or not
@@ -212,7 +210,6 @@ async def run_alert(
         list[Alert]: _description_
     """
     alert = __get_alert(click_context, alerts_file_id, alert_id)
-    alert.load_context(steps_context)
     action_error = alert.run()
     context_manager = ContextManager.get_instance()
     full_context = context_manager.get_full_context()

@@ -1,4 +1,5 @@
 import asyncio
+import enum
 import inspect
 import logging
 from dataclasses import field
@@ -11,6 +12,12 @@ from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.throttles.throttle_factory import ThrottleFactory
+
+
+class ActionStatus:
+    FIRING = "firing"
+    SKIPPED = "skipped"
+    THROTTLED = "throttled"
 
 
 @dataclass(config={"arbitrary_types_allowed": True})
@@ -34,6 +41,8 @@ class Action:
                 did_action_run = self._run_foreach()
             else:
                 did_action_run = self._run_single()
+            # Keep the state of the action
+            self.context_manager.set_action_status(self.name, did_action_run)
             return did_action_run
         except Exception as e:
             raise ActionError(e)
@@ -75,6 +84,7 @@ class Action:
             )
             for condition in self.conditions
         ]
+
         for condition in conditions:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
@@ -116,7 +126,7 @@ class Action:
                 self.config.get("name"),
                 if_conf,
             )
-            return
+            return ActionStatus.SKIPPED
 
         self.logger.info("Action %s evaluated to run!", self.config.get("name"))
 
@@ -125,9 +135,12 @@ class Action:
         throttled = self._check_throttling(self.config.get("name"))
         if throttled:
             self.logger.info("Action %s is throttled", self.config.get("name"))
-            return
+            return ActionStatus.THROTTLED
 
         # Last, run the action
+        self.logger.info(
+            "Action is not throttled, running action %s", self.config.get("name")
+        )
         rendered_value = self.io_handler.render_context(self.provider_context)
         # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
@@ -135,6 +148,8 @@ class Action:
         # else, just run the provider
         else:
             self.provider.notify(**rendered_value)
+        # action ran
+        return ActionStatus.FIRING
 
     def _run_single_async(self):
         """For async providers, run them in a new event loop

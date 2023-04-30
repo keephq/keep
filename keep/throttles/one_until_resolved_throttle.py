@@ -1,5 +1,6 @@
 import chevron
 
+from keep.action.action import ActionStatus
 from keep.throttles.base_throttle import BaseThrottle
 
 
@@ -18,7 +19,14 @@ class OneUntilResolvedThrottle(BaseThrottle):
         if not last_alert_run:
             return False
         # if the last time the alert were triggered it was in resolved status, return false
-        if last_alert_run.get("alert_status").lower() == "resolved":
+        action_status = (
+            last_alert_run.get("alert_context", {})
+            .get("alert_actions_context", {})
+            .get(action_name, {})
+            .get("status")
+        )
+        # If the action was skipped (meaning no throttled/fired), return false
+        if action_status.lower() == ActionStatus.SKIPPED:
             return False
-        # else, return true because its already firing
+        # else, return true because its already firing/throttled
         return True

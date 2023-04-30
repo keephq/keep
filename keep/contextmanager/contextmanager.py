@@ -116,7 +116,9 @@ class ContextManager:
         value=None,
         **kwargs,
     ):
-        """_summary_
+        """Save the condition results in the context manager
+
+        TODO: this should be refactored to something more structured
 
         Args:
             action_id (_type_): id of the step
@@ -152,22 +154,8 @@ class ContextManager:
         if condition_alias:
             self.aliases[condition_alias] = result
 
-    def get_actionable_results(self):
-        actionable_results = []
-        for step_id in self.steps_context:
-            # TODO: more robust way to identify the alias
-            if step_id == "this":
-                continue
-            if "conditions" in self.steps_context[step_id]:
-                # TODO: more robust way to identify actionable results
-                # TODO: support multiple conditions
-                for condition in self.steps_context[step_id]["conditions"]:
-                    for condition_result in self.steps_context[step_id]["conditions"][
-                        condition
-                    ]:
-                        if condition_result["result"]:
-                            actionable_results.append(condition_result)
-        return actionable_results
+    def set_action_status(self, action_id, status):
+        self.actions_context[action_id]["status"] = status
 
     def set_step_context(self, step_id, results, foreach=False):
         if step_id not in self.steps_context:
@@ -206,6 +194,7 @@ class ContextManager:
                 condition_alias=condition.get("alias"),
                 value=condition.get("value"),
             )
+        self.set_action_status(action_id, status)
         return True
 
     # TODO - add step per alert?
@@ -229,13 +218,12 @@ class ContextManager:
         else:
             return {}
 
-    def set_last_alert_run(self, alert_id, alert_context, alert_status):
+    def set_last_alert_run(self, alert_id, alert_context):
         # TODO - SQLite
         if alert_id not in self.state:
             self.state[alert_id] = []
         self.state[alert_id].append(
             {
-                "alert_status": alert_status,
                 "alert_context": alert_context,
             }
         )
