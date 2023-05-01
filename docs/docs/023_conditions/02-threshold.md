@@ -7,7 +7,7 @@ sidebar_label: threshold
 ### The threshold condition compare between two values, and returns positive (True) if applied.
 ```yaml
 -   type: threshold
-    name: OPTIONAL (default "threshold")
+    name: REQUIRED. Must be unique among the list.
     value:  REQUIRED. Left side of the comparison.
     compare_to: REQUIRED. Right side of the comparison.
     compare_type: OPTIONAL ("lt" or "gt". default is "gt")
@@ -16,6 +16,7 @@ sidebar_label: threshold
 ```yaml
 condition:
 -   type: threshold
+    name: threshold-condition
     value:  "{{ steps.db-no-space.results }}"
     compare_to: 10
 ```
