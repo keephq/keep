@@ -81,7 +81,7 @@ class AxiomProvider(BaseProvider):
 
         # Todo: add support for body parameters (https://axiom.co/docs/restapi/query#request-example)
         response = requests.post(
-            f"{datasets_api_url}/{dataset}/query?nocache={nocache}",
+            f"{datasets_api_url}/{dataset}/query?nocache={nocache}?format=tabular",
             headers=headers,
             json=body,
         )
