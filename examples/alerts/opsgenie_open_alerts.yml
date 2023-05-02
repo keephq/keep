@@ -1,4 +1,3 @@
-# Database disk space is low (<10%)
 alert:
   id: opsgenie-get-open-alerts
   description: Get open alerts from Opsgenie
@@ -27,9 +26,3 @@ alert:
                 {{#steps.get-open-alerts.results.alerts}}
                   - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
                 {{/steps.get-open-alerts.results.alerts}}
-
-
-providers:
-  db-server-mock:
-    description: Paper DB Server
-    authentication:
