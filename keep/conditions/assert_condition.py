@@ -17,12 +17,15 @@ class AssertCondition(BaseCondition):
         """apply the condition.
 
         Args:
-            compare_to (_type_): the threshold
+            compare_to (_type_): the assertion to check
             compare_value (_type_): the actual value
 
         """
         try:
             self.logger.debug(f"Asserting {compare_value}")
+            # we need to encode/decode the string to make sure eval
+            # will be able to parse characters such as \n
+            compare_value = compare_value.encode("unicode_escape").decode("utf-8")
             assert eval(compare_value)
             self.logger.debug(f"Asserted {compare_value}")
             return False
