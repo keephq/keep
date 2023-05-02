@@ -18,6 +18,7 @@ class ActionStatus:
     FIRING = "firing"
     SKIPPED = "skipped"
     THROTTLED = "throttled"
+    FAILED = "failed"
 
 
 @dataclass(config={"arbitrary_types_allowed": True})
@@ -28,6 +29,8 @@ class Action:
     provider_context: dict
     conditions_results: dict = field(default_factory=dict)
     conditions: list = field(default_factory=list)
+    error: Exception = None
+    status = ActionStatus = None
 
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
@@ -43,8 +46,10 @@ class Action:
                 did_action_run = self._run_single()
             # Keep the state of the action
             self.context_manager.set_action_status(self.name, did_action_run)
-            return did_action_run
+            self.status = did_action_run
         except Exception as e:
+            self.error = e
+            self.status = ActionStatus.FAILED
             raise ActionError(e)
 
     def _check_throttling(self, action_name):

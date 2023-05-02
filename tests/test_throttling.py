@@ -56,6 +56,20 @@ def test_throttle_sanity():
     os.environ, {"KEEP_STATE_FILE": f"tmpstate{uuid.uuid4()}.json"}, clear=True
 )
 def test_throttle_resolve():
+    """
+    Tests that throttling and resolve works as expected
+
+    1. Trigger an alert
+    2. Check that the action is evaluated to run
+    3. Trigger the alert again
+    4. Check that the action is throttled
+    5. Resolve the alert
+    6. Trigger the alert again
+    7. Check that the action is evaluated to run
+    8. Remove the tmpstate file
+
+    """
+
     alert_manager = AlertManager()
     alerts = alert_manager.get_alerts(alert_path="tests/alerts/one_until_resolved.yaml")
     alert = alerts[0]

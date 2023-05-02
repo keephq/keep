@@ -49,3 +49,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 keep = "keep.cli.cli:cli"
+
+[tool.pytest.ini_options]
+addopts = "-v"
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s %(levelname)s %(message)s"

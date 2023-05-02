@@ -90,14 +90,14 @@ class Alert:
         # todo: check why is this needed?
         self.context_manager.set_alert_context(self._get_alert_context())
         self.run_steps()
-        actions_firing, actions_errors = self.run_actions()
+        self.run_actions()
 
         # Save the state
         self.context_manager.set_last_alert_run(
             alert_id=self.alert_id, alert_context=self._get_alert_context()
         )
         self.logger.debug(f"Finish to run alert {self.alert_id}")
-        return actions_errors
+        return self.alert_actions
 
     def _handle_actions(self):
         self.logger.debug(f"Handling actions for alert {self.alert_id}")
