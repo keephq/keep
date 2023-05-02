@@ -128,9 +128,13 @@ class Action:
             )
 
         # Now check it
-        if_met = self.io_handler.render(if_conf)
-        # Evaluate the condition string
-        if_met = eval(if_met)
+        # if not condition, just evaluate to True and run the condition
+        if if_conf:
+            if_met = self.io_handler.render(if_conf)
+            # Evaluate the condition string
+            if_met = eval(if_met)
+        else:
+            if_met = True
 
         if not if_met:
             self.logger.info(

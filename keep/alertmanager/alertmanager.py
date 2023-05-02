@@ -101,21 +101,21 @@ class AlertManager:
     def _run_alerts(self, alerts: typing.List[Alert]):
         alerts_errors = []
         for alert in alerts:
-            # otherwise any(errors) might throw an exception
-            errors = []
             self.logger.info(f"Running alert {alert.alert_id}")
             try:
-                errors = alert.run()
+                actions_results = alert.run()
             except Exception as e:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
                 raise
+            errors = [action.error for action in actions_results]
             if any(errors):
                 self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
+                alerts_errors.extend(errors)
             else:
                 self.logger.info(f"Alert {alert.alert_id} ran successfully")
-            alerts_errors.extend(errors)
+
         return alerts_errors
 
     def run_step(self, alert_id: str, step: str):

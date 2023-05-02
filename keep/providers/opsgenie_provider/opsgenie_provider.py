@@ -15,12 +15,11 @@ from keep.providers.models.provider_config import ProviderConfig
 
 @pydantic.dataclasses.dataclass
 class OpsgenieProviderAuthConfig:
-    api_key: str | None = dataclasses.field(
+    api_key: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Ops genie api key (https://support.atlassian.com/opsgenie/docs/api-key-management/)",
         },
-        default=None,
     )
 
 
@@ -102,6 +101,20 @@ class OpsgenieProvider(BaseProvider):
         """
         self._create_alert(**kwargs)
 
+    def query(self, **kwargs: dict):
+        query_type = kwargs.get("type")
+        query = kwargs.get("query")
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
+        if query_type == "alerts":
+            alerts = api_instance.list_alerts(query=query)
+        else:
+            raise NotImplementedError(f"Query type {query_type} not implemented")
+
+        return {
+            "alerts": alerts.data,
+            "number_of_alerts": len(alerts.data),
+        }
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -121,8 +134,9 @@ if __name__ == "__main__":
         authentication={"api_key": opsgenie_api_key},
     )
     provider = OpsgenieProvider(provider_id="opsgenie-test", config=config)
-    provider.notify(
-        message="Simple alert showing context with name: John Doe",
-        note="Simple alert",
-        user="John Doe",
-    )
+    # provider.notify(
+    #    message="Simple alert showing context with name: John Doe",
+    #    note="Simple alert",
+    #    user="John Doe",
+    # )
+    provider.query(type="alerts", query="status: open")

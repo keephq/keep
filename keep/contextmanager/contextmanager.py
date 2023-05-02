@@ -155,6 +155,8 @@ class ContextManager:
             self.aliases[condition_alias] = result
 
     def set_action_status(self, action_id, status):
+        if action_id not in self.actions_context:
+            self.actions_context[action_id] = {}
         self.actions_context[action_id]["status"] = status
 
     def set_step_context(self, step_id, results, foreach=False):
