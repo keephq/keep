@@ -7,13 +7,14 @@ sidebar_label: assert
 ### The assert condition implements the "python assert" behaviour
 ```yaml
 -   type: assert
-    name: OPTIONAL (default "assert")
+    name: REQUIRED. Must be unique among the list.
     assert: REQUIRED. The assert expression to evaluate.
 ```
 ### Example
 ```yaml
 condition:
 - type: assert
+  name: assert-condition
   assert: "{{ steps.service-is-up.results.status_code }} == 200"
 ```
 * If `steps.service-is-up.results.status_code` step returns 200 => `assert 200 == 200` => the conditions returns *False* (since the assert pass)
