@@ -7,7 +7,7 @@ sidebar_label: stddev
 #### The 'stddev' condition implements standard deviation logic. It takes a list or a list of lists, along with a standard deviation threshold ('compare_to'), and returns all values that are farther away from the mean than the standard deviation.
 ```yaml
 -   type: stddev
-    name: OPTIONAL (default "stddev")
+    name: REQUIRED. Must be unique among the list.
     value: REQUIRED. The input of the standard deviation algo.
     pivot_column: OPTIONAL. Integer. If supplied, any item of `value` is threatened as
                             a list, and the `pivot_column` is extracted from any item.

@@ -13,7 +13,8 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - type: assert
+      - name: assert-condition
+        type: assert
         assert: "{{ steps.get-github-stars.results.new_stargazers_count }} == 0" # if there are more than 0 new stargazers, trigger the action
       provider:
         type: slack

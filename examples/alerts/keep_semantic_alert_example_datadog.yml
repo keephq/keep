@@ -20,7 +20,8 @@ alert:
   actions:
     - name: notify-slack
       condition:
-      - type: threshold
+      - name: threshold-condition
+        type: threshold
         value: "{{ steps.check-error-rate.results }}"
         compare_to: 0.01
         operator: ">"
