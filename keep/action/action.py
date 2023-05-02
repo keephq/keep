@@ -81,14 +81,21 @@ class Action:
 
     def _run_single(self):
         # Initialize all conditions
-        conditions = [
-            ConditionFactory.get_condition(
-                condition.get("type"),
-                condition.get("name", None) or condition.get("type"),
-                condition,
+        conditions = []
+
+        for condition in self.conditions:
+            condition_name = condition.get("name", None)
+
+            if not condition_name:
+                raise Exception("Condition must have a name")
+
+            conditions.append(
+                ConditionFactory.get_condition(
+                    condition.get("type"),
+                    condition_name,
+                    condition,
+                )
             )
-            for condition in self.conditions
-        ]
 
         for condition in conditions:
             condition_compare_to = condition.get_compare_to()

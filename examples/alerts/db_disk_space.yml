@@ -19,7 +19,8 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - type: threshold
+      - name: threshold-condition
+        type: threshold
         value:  "{{ steps.db-no-space.results }}"
         compare_to: 90% # Trigger if more than 90% full
       provider:
