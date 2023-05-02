@@ -12,7 +12,8 @@ alert:
           board_id: hIjQQX9S
           filter: "createCard"
       condition:
-      - type: assert
+      - name: assert-condition
+        type: assert
         assert: "{{ state.notify-new-trello-card.-1.alert_context.alert_steps_context.trello-cards.results.number_of_cards }} >= {{steps.trello-cards.results.number_of_cards }}" # if there are more than 0 new stargazers, trigger the action
   actions:
     - name: trigger-slack
