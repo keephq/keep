@@ -1,0 +1,28 @@
+alert:
+  id: opsgenie-get-open-alerts
+  description: Get open alerts from Opsgenie
+  steps:
+    - name: get-open-alerts
+      provider:
+        type: opsgenie
+        config: "{{ providers.opsgenie }}"
+        with:
+          type: alerts
+          query: "status: open"
+  actions:
+    - name: slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-demo }} "
+        with:
+          # Message is always mandatory
+          message: >
+            Opsgenie has {{ steps.get-open-alerts.results.number_of_alerts }} open alerts
+          blocks:
+          - type: section
+            text:
+              type: mrkdwn
+              text: |-
+                {{#steps.get-open-alerts.results.alerts}}
+                  - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
+                {{/steps.get-open-alerts.results.alerts}}
