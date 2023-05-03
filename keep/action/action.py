@@ -128,7 +128,6 @@ class Action:
             )
 
         # Now check it
-        # if not condition, just evaluate to True and run the condition
         if if_conf:
             if_met = self.io_handler.render(if_conf)
             # Evaluate the condition string
