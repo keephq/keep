@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import uvicorn
 from fastapi import Depends, FastAPI
@@ -21,10 +20,6 @@ async def dispose_context_manager() -> None:
 
 def get_app() -> FastAPI:
     app = FastAPI(dependencies=[Depends(dispose_context_manager)])
-    middleware = Middleware(
-        RawContextMiddleware,
-        plugins=(plugins.RequestIdPlugin(), plugins.CorrelationIdPlugin()),
-    )
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         CORSMiddleware,
