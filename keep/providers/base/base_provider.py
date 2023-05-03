@@ -3,6 +3,7 @@ Base class for all providers.
 """
 import abc
 import logging
+from typing import Optional
 
 from pydantic.dataclasses import dataclass
 
@@ -63,3 +64,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
             NotImplementedError: _description_
         """
         raise NotImplementedError("query() method not implemented")
+
+    def get_alerts(self, alert_id: Optional[str] = None):
+        """
+        Get alerts from the provider.
+
+        Args:
+            alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.
+        """
+        raise NotImplementedError("get_alerts() method not implemented")
