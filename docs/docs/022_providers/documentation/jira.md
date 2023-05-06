@@ -10,16 +10,16 @@ Jira provider is a provider used to query data from Jira
 
 ## Inputs
 The `query` function take following parameters as inputs:
-- `host`: Required. Trello board id
-- `board_id`: Required. Comma seperated list of trello events that want to query, default value is 'createCard' 
-- `email`: Required. Comma seperated list of trello events that want to query, default value is 'createCard' 
+- `host`: Required. Jira host name of the project
+- `board_id`: Required. Jira board id
+- `email`: Required. Your accout email
 
 
 ## Outputs
 
 
 ## Authentication Parameters
-The `query` function requires an `api_token` from Jira, which can obtained by making custom power-up in Trello admin.
+The `query` function requires an `api_token` from Jira.
 
 ## Connecting with the Provider
 1. Go to https://id.atlassian.com/manage-profile/security/api-tokens to Create API token and generated token should be passed to jira authentication.
