@@ -52,7 +52,7 @@ class TrelloProvider(BaseProvider):
         trello_api_token = self.authentication_config.api_token
 
         board_id = kwargs.pop("board_id", "")
-        filter = kwargs.pop("filter", "")
+        filter = kwargs.pop("filter", "createCard")
 
         request_url = f'https://api.trello.com/1/boards/{board_id}/actions?key={trello_api_key}&token={trello_api_token}&filter={filter}'
         response = requests.get(
