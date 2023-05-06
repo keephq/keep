@@ -84,7 +84,7 @@ if __name__ == "__main__":
         description="Jira Input Provider",
         authentication={"api_token": jira_api_token},
     )
-    provider = JiraProvider(provider_id="trello-test", config=config)
+    provider = JiraProvider(provider_id="jira", config=config)
     provider.query(
         host="JIRA HOST",
         board_id="1",
