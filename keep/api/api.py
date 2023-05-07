@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import context, plugins
 from starlette_context.middleware import RawContextMiddleware
 
+from keep.api.core.dependencies import create_db_and_tables
 from keep.api.routes import alertsfiles, healthcheck, providers
 from keep.contextmanager.contextmanager import ContextManager
 
@@ -32,6 +33,11 @@ def get_app() -> FastAPI:
     app.include_router(providers.router, prefix="/providers")
     app.include_router(alertsfiles.router, prefix="/alertsfiles")
     app.include_router(healthcheck.router, prefix="/healthcheck")
+
+    @app.on_event("startup")
+    def on_startup():
+        create_db_and_tables()
+
     return app
 
 
