@@ -1,3 +1,5 @@
+import json
+
 import click
 from fastapi import APIRouter, Depends
 
@@ -46,16 +48,15 @@ def get_alerts(
     provider_type: str,
     provider_id: str,
     tenant: TenantApiKey = Depends(verify_customer),
-):
+) -> str:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
     secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.FILE)
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
-        f"{tenant.tenant_id}_{provider_id}", is_json=True
+        f"{tenant.tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
     provider = ProvidersFactory.get_provider(
         provider_id, provider_type, provider_config
     )
-    alerts = provider.get_alerts()
-    return alerts
+    return provider.get_alerts()

@@ -72,4 +72,5 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Args:
             alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.
         """
+        # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
         raise NotImplementedError("get_alerts() method not implemented")
