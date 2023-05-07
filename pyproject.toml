@@ -33,6 +33,7 @@ psycopg2-binary = "^2.9.5"
 starlette-context = "^0.3.6"
 nest-asyncio = "^1.5.6"
 datadog-api-client = "^2.12.0"
+sqlmodel = "^0.0.8"
 
 
 [tool.poetry.group.dev.dependencies]

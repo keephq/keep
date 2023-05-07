@@ -2,6 +2,8 @@ import click
 from fastapi import APIRouter, Depends
 
 from keep.alertmanager.alertmanager import AlertManager
+from keep.api.core.dependencies import verify_customer
+from keep.api.models.db.tenant import TenantApiKey
 
 router = APIRouter()
 
@@ -10,7 +12,10 @@ router = APIRouter()
     "/",
     description="Get providers",
 )
-def get_providers(context: click.Context = Depends(click.get_current_context)):
+def get_providers(
+    tenant: TenantApiKey = Depends(verify_customer),
+    context: click.Context = Depends(click.get_current_context),
+):
     providers = {}
     alert_manager = AlertManager()
     providers_file = context.params.get("providers_file")
