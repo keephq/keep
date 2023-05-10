@@ -74,3 +74,26 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
         raise NotImplementedError("get_alerts() method not implemented")
+
+    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+        """
+        Deploy an alert to the provider.
+
+        Args:
+            alert (dict): The alert to deploy.
+            alert_id (Optional[str], optional): If given, deploys a specific alert by id. Defaults to None.
+        """
+        raise NotImplementedError("deploy_alert() method not implemented")
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_alert_format_description():
+        """
+        Get the alert format description for the provider.
+
+        Returns:
+            str: The alert format description.
+        """
+        raise NotImplementedError(
+            "get_alert_format_description() method not implemented"
+        )

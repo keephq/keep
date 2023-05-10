@@ -5,10 +5,13 @@ from typing import Optional
 
 import pydantic
 from grafana_api.alerting import Alerting
-from grafana_api.alerting_provisioning import AlertingProvisioning
+from grafana_api.alerting_provisioning import AlertingProvisioning, AlertRule
 from grafana_api.model import APIModel
 
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.grafana_provider.grafana_alert_format_description import (
+    GrafanaAlertFormatDescription,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -59,6 +62,19 @@ class GrafanaProvider(BaseProvider):
             alert_uid = alert.get("labels", {}).get("__alert_rule_uid__")
             alerts_definitions.append(provisioner.get_alert_rule(alert_uid))
         return alerts_definitions
+
+    def deploy_alert(self, alert: dict, alert_id: str | None = None):
+        api_model = APIModel(
+            host=self.authentication_config.host, token=self.authentication_config.token
+        )
+        provisioner = AlertingProvisioning(api_model)
+        # todo: don't forget I patched add_alert_rule since it didn't match the model
+        resp = provisioner.add_alert_rule(alert)
+        return resp
+
+    @staticmethod
+    def get_alert_format_description():
+        return GrafanaAlertFormatDescription.schema_json()
 
 
 if __name__ == "__main__":
