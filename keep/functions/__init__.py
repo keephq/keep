@@ -14,7 +14,7 @@ def all(iterable):
     return next(g, True) and not next(g, False)
 
 
-def diff(iterable):
+def diff(iterable: iter) -> bool:
     # Opposite of all - returns True if any element is different
     return not all(iterable)
 

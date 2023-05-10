@@ -42,6 +42,7 @@ black = "^23.1.0"
 isort = "^5.12.0"
 autopep8 = "^2.0.1"
 flake8 = "^6.0.0"
+pytest = "^7.3.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -51,6 +52,14 @@ build-backend = "poetry.core.masonry.api"
 keep = "keep.cli.cli:cli"
 
 [tool.pytest.ini_options]
+minversion = "6.0"
+pythonpath = [
+  "."
+]
+testpaths = [
+    "tests",
+]
+
 addopts = "-v"
 log_cli = true
 log_cli_level = "DEBUG"
