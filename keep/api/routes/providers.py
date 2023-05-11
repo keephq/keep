@@ -42,7 +42,6 @@ def get_alerts(
 )
 def get_alerts_schema(
     provider_type: str,
-    tenant: TenantApiKey = Depends(verify_customer),
 ):
     provider = ProvidersFactory.get_provider_class(provider_type)
     return JSONResponse(provider.get_alert_format_description())
