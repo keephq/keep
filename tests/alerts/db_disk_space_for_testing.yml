@@ -1,7 +1,7 @@
 # Database disk space is low (<10%)
 alert:
   id: db-disk-space
-  tags: ['string_1','string_2']
+  tags: ['team_1','databases']
   description: Check that the DB has enough disk space
   owners:
     - github-shahargl

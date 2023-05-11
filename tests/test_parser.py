@@ -22,7 +22,7 @@ def test_parse_with_nonexistent_url():
         parser.parse('https://ThisWebsiteDoNotExist.com')
 
 
-path_to_test_resources = Path(__file__).parent / 'resources'
+path_to_test_resources = Path(__file__).parent / 'alerts'
 alert_path = str(path_to_test_resources / 'db_disk_space_for_testing.yml')
 providers_path = str(path_to_test_resources / 'providers_for_testing.yaml')
 
