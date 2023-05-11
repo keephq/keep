@@ -64,9 +64,14 @@ class GrafanaProvider(BaseProvider):
         return alerts_definitions
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
+        self.logger.info("Deploying alert")
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.post(api, json=alert, headers=headers)
+        self.logger.info(
+            "Alert deployed",
+            extra={"status": response.status_code, "data": response.json()},
+        )
         return {"status": response.status_code, "data": response.json()}
 
     @staticmethod
