@@ -14,9 +14,9 @@ def all(iterable):
     return next(g, True) and not next(g, False)
 
 
-def diff(iterable):
+def diff(iterable: iter) -> bool:
     # Opposite of all - returns True if any element is different
-    return not (all(iterable))
+    return not all(iterable)
 
 
 def len(iterable):
@@ -25,6 +25,10 @@ def len(iterable):
 
 def split(string, delimeter):
     return string.strip().split(delimeter)
+
+
+def strip(string):
+    return string.strip()
 
 
 def first(iterable):

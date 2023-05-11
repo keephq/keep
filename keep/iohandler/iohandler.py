@@ -1,8 +1,12 @@
 import ast
 import copy
+
+# TODO: fix this! It screws up the eval statement if these are not imported
+import datetime
 import json
 import logging
 import re
+from decimal import Decimal
 
 import astunparse
 import chevron
@@ -57,47 +61,42 @@ class IOHandler:
             _type_: _description_
         """
         # break the string to tokens
-        # this will break the following string to 4 tokens:
-        #
+        # this will break the following string to 3 tokens:
         # string - "Number of errors: {{ steps.grep.condition.threshold.compare_to }}
         #               [threshold was set to len({{ steps.grep.condition.threshold.value }})]
         #               Error: split({{ foreach.value }},'a', 'b')
         #               and first(split({{ foreach.value }},'a', 'b'))"
-        # tokens -
-        #           {{ steps.grep.condition.threshold.compare_to }}
+        # tokens (with {{ expressions }} already rendered) -
         #           len({{ steps.grep.condition.threshold.value }})
         #           split({{ foreach.value }},'a', 'b')
         #           first(split({{ foreach.value }},'a', 'b'))
 
-        pattern = re.compile(
-            r"(\w+\(\s*\{\{.*?\}\}\s*.*?\))|(\w+\(\s*.*?\)\))|(\{\{.*?\}\})"
-        )
+        # first render everything using chevron
+        # inject the context
+        string = self._render(string)
+
+        # Now, extract the token if exists -
+        pattern = r"\bkeep\.\w+\((?:[^()]|\((?:[^()]|)*\))*\)"
         parsed_string = copy.copy(string)
-        tokens = pattern.findall(parsed_string)
+        matches = re.findall(pattern, parsed_string)
+        tokens = list(matches)
+
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
             token = "".join(tokens[0])
             val = self._parse_token(token)
-            # if the token is the same as the string, return the value because {{ value }} can be any type
-            if parsed_string.strip() == token:
-                return val
-            # however, if the token is part of a string, return the string with the token replaced with the value
-            else:
-                parsed_string = parsed_string.replace(token, str(val))
-                return parsed_string
-
+            parsed_string = parsed_string.replace(token, str(val))
+            return parsed_string
+        # this basically for complex expressions with functions and operators
         for token in tokens:
             token = "".join(token)
             val = self._parse_token(token)
             parsed_string = parsed_string.replace(token, str(val))
+
         return parsed_string
 
     def _parse_token(self, token):
-        # if its just a {{ value }} - get the key and return the value
-        if token.startswith("{{") and token.endswith("}}"):
-            return self._get(key=token)
-
         # else, it contains a function e.g. len({{ value }}) or split({{ value }}, 'a', 'b')
         def _parse(tree):
             if isinstance(tree, ast.Module):
@@ -115,33 +114,39 @@ class IOHandler:
                     elif isinstance(arg, ast.Str):
                         _arg = arg.s
                     # set is basically {{ value }}
-                    elif isinstance(arg, ast.Set):
+                    elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):
                         _arg = astunparse.unparse(arg).strip()
-                        _arg = self._get(_arg)
+                        if (
+                            (_arg.startswith("[") and _arg.endswith("]"))
+                            or (_arg.startswith("{") and _arg.endswith("}"))
+                            or (_arg.startswith("(") and _arg.endswith(")"))
+                        ):
+                            try:
+                                # TODO(shahargl): when Keep gonna be self hosted, this will be a security issue!!!
+                                # because the user can run any python code need to find a way to limit the functions that can be used
+                                _arg = eval(_arg)
+                            except ValueError:
+                                pass
                     else:
-                        arg = arg.value
+                        _arg = arg.id
                     if _arg:
                         _args.append(_arg)
-                val = getattr(keep_functions, func.id)(*_args)
+                val = getattr(keep_functions, func.attr)(*_args)
                 return val
 
-        tree = ast.parse(token)
+        try:
+            tree = ast.parse(token)
+        except SyntaxError:
+            # for strings such as "45%\n", we need to escape
+            tree = ast.parse(token.encode("unicode_escape"))
         return _parse(tree)
 
-    def _get(self, key):
+    def _render(self, key):
         # change [] to . for the key because thats what chevron uses
         _key = key.replace("[", ".").replace("]", "")
 
         context = self.context_manager.get_full_context()
         rendered = chevron.render(_key, context)
-        # Try to convert it to python object if possible
-        if (rendered.startswith("[") and rendered.endswith("]")) or (
-            rendered.startswith("{") and rendered.endswith("}")
-        ):
-            try:
-                rendered = ast.literal_eval(rendered)
-            except ValueError:
-                pass
 
         return rendered
 
@@ -201,7 +206,7 @@ class IOHandler:
             rendered_template (str): The rendered template that might contain URLs
         """
         urls = re.findall(
-            "https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template
+            r"https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/?.*", rendered_template
         )
         # didn't find any url
         if not urls:

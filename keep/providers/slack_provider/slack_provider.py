@@ -48,6 +48,8 @@ class SlackProvider(BaseProvider):
         message = kwargs.pop("message", "")
         blocks = kwargs.pop("blocks", [])
 
+        if not message:
+            message = blocks[0].get("text")
         response = requests.post(
             webhook_url,
             json={"text": message, "blocks": blocks},
@@ -78,6 +80,4 @@ if __name__ == "__main__":
         authentication={"webhook_url": slack_webhook_url},
     )
     provider = SlackProvider(config=config)
-    provider.notify(
-        message="Simple alert showing context with name: {name}".format(name="John Doe")
-    )
+    provider.notify(message="Simple alert showing context with name: John Doe")

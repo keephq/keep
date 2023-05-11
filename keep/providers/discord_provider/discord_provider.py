@@ -2,6 +2,7 @@
 DiscordProvider is a class that implements the BaseOutputProvider interface for Discord messages.
 """
 import dataclasses
+
 import pydantic
 import requests
 
@@ -83,5 +84,5 @@ if __name__ == "__main__":
     provider = DiscordProvider(provider_id="discord-test", config=config)
 
     provider.notify(
-        content="Hey Discord By: {name}".format(name="Sakthi Ratnam"),
+        content="Hey Discord By: Sakthi Ratnam",
     )

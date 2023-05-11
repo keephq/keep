@@ -90,9 +90,7 @@ if __name__ == "__main__":
     )
     provider = ZendutyProvider(provider_id="zenduty-test", config=config)
     provider.notify(
-        message="Simple incident showing context with name: {name}".format(
-            name="John Doe"
-        ),
+        message="Simple incident showing context with name: John Doe",
         title="Simple incident",
         summary="Simple incident showing context with name: John Doe",
         service="9c6ddc88-16a0-4ce8-85ab-181760d8cb87",
