@@ -25,7 +25,7 @@ def get_alerts(
 ) -> list:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
-    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.FILE)
+    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant.tenant_id}_{provider_type}_{provider_id}", is_json=True
@@ -61,7 +61,7 @@ def add_alert(
 ) -> list:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
-    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.FILE)
+    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant.tenant_id}_{provider_type}_{provider_id}", is_json=True
