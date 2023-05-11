@@ -1,18 +1,37 @@
 import hashlib
+import os
 
+import pymysql
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader
+from google.cloud.sql.connector import Connector
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
+from keep.api.core.config import config
 from keep.api.models.db.tenant import *
 
-# Todo: this should be from the configuration
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+running_in_cloud_run = os.environ.get("K_SERVICE") is not None
+
+
+def get_conn() -> pymysql.connections.Connection:
+    with Connector() as connector:
+        conn = connector.connect(
+            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            "pymysql",
+            user="keep-api",
+            db="keepdb",
+            enable_iam_auth=True,
+        )
+    return conn
+
 
 connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+engine = (
+    create_engine("mysql+pymysql://", creator=get_conn, connect_args=connect_args)
+    if running_in_cloud_run
+    else create_engine(config("DATABASE_CONNECTION_STRING"), connect_args=connect_args)
+)
 
 
 def create_db_and_tables():
