@@ -31,7 +31,6 @@ def get_app() -> FastAPI:
     )
 
     app.include_router(providers.router, prefix="/providers")
-    app.include_router(alertsfiles.router, prefix="/alertsfiles")
     app.include_router(healthcheck.router, prefix="/healthcheck")
 
     @app.on_event("startup")

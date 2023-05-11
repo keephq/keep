@@ -34,6 +34,8 @@ starlette-context = "^0.3.6"
 nest-asyncio = "^1.5.6"
 sqlmodel = "^0.0.8"
 grafana-api-sdk = "^0.1.0"
+cloud-sql-python-connector = "^1.2.3"
+pymysql = "^1.0.3"
 
 
 [tool.poetry.group.dev.dependencies]
