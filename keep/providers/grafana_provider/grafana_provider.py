@@ -70,6 +70,9 @@ class GrafanaProvider(BaseProvider):
         response = requests.post(api, json=alert, headers=headers)
 
         if not response.ok:
+            self.logger.warn(
+                "Could not deploy alert", extra={"response": response.json()}
+            )
             raise Exception(response.json())
 
         self.logger.info(
