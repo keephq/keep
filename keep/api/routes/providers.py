@@ -70,8 +70,6 @@ def add_alert(
     )
     try:
         provider.deploy_alert(alert, alert_id)
-        return JSONResponse(
-            status_code=200, content={"message": "Alert deployed successfully"}
-        )
+        return JSONResponse(status_code=200, content={"message": "deployed"})
     except Exception as e:
-        return JSONResponse(status_code=500, content=e.args[0]["data"])
+        return JSONResponse(status_code=500, content=e.args[0])
