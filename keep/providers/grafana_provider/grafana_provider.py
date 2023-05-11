@@ -68,11 +68,17 @@ class GrafanaProvider(BaseProvider):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.post(api, json=alert, headers=headers)
+
+        if not response.ok:
+            raise Exception(response.json())
+
         self.logger.info(
             "Alert deployed",
-            extra={"status": response.status_code, "data": response.json()},
+            extra={
+                "response": response.json(),
+                "status": response.status_code,
+            },
         )
-        return {"status": response.status_code, "data": response.json()}
 
     @staticmethod
     def get_alert_format_description():
