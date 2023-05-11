@@ -1,12 +1,12 @@
 """
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
-from typing import Optional
 
 import pydantic
+import requests
 from grafana_api.alerting import Alerting
-from grafana_api.alerting_provisioning import AlertingProvisioning, AlertRule
-from grafana_api.model import APIModel
+from grafana_api.alerting_provisioning import AlertingProvisioning
+from grafana_api.model import APIEndpoints, APIModel
 
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.grafana_provider.grafana_alert_format_description import (
@@ -64,13 +64,10 @@ class GrafanaProvider(BaseProvider):
         return alerts_definitions
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
-        api_model = APIModel(
-            host=self.authentication_config.host, token=self.authentication_config.token
-        )
-        provisioner = AlertingProvisioning(api_model)
-        # todo: don't forget I patched add_alert_rule since it didn't match the model
-        resp = provisioner.add_alert_rule(alert)
-        return resp
+        api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+        response = requests.post(api, json=alert, headers=headers)
+        return {"status": response.status_code, "data": response.json()}
 
     @staticmethod
     def get_alert_format_description():
