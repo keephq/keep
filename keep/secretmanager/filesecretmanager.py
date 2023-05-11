@@ -7,7 +7,7 @@ class FileSecretManager(BaseSecretManager):
     def __init__(self, **kwargs):
         super().__init__()
 
-    def read_secret(self, path: str, is_json: bool = False) -> str:
+    def read_secret(self, path: str, is_json: bool = False) -> str | dict:
         with open(path, "r") as f:
             file_data = f.read()
         if is_json:

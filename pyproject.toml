@@ -36,6 +36,7 @@ sqlmodel = "^0.0.8"
 grafana-api-sdk = "^0.1.0"
 cloud-sql-python-connector = "^1.2.3"
 pymysql = "^1.0.3"
+google-cloud-secret-manager = "^2.16.1"
 
 
 [tool.poetry.group.dev.dependencies]

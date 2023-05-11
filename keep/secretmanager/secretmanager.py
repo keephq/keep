@@ -7,7 +7,7 @@ class BaseSecretManager(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(__name__)
 
     @abc.abstractmethod
-    def read_secret(self, secret_name: str, is_json: bool = False) -> str:
+    def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
         """
         Read a secret from the secret manager.
 
