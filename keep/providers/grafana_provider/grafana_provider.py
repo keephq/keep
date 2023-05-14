@@ -85,7 +85,7 @@ class GrafanaProvider(BaseProvider):
 
     @staticmethod
     def get_alert_format_description():
-        return GrafanaAlertFormatDescription.schema_json()
+        return GrafanaAlertFormatDescription.schema()
 
 
 if __name__ == "__main__":
@@ -106,5 +106,5 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="grafana-keephq", provider_type="grafana", provider_config=config
     )
-    alerts = provider.deploy_alert({})
+    alerts = provider.get_alert_format_description()
     print(alerts)

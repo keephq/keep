@@ -42,7 +42,7 @@ def get_alerts(
 )
 def get_alerts_schema(
     provider_type: str,
-):
+) -> dict:
     provider = ProvidersFactory.get_provider_class(provider_type)
     return JSONResponse(provider.get_alert_format_description())
 
@@ -57,7 +57,7 @@ def add_alert(
     alert: dict,
     alert_id: Optional[str] = None,
     tenant: TenantApiKey = Depends(verify_customer),
-) -> list:
+) -> JSONResponse:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
     secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
