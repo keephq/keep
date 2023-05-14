@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -63,12 +63,27 @@ class Datum(BaseModel):
 class GrafanaAlertFormatDescription(BaseModel):
     condition: str
     data: List[Datum]
-    execErrState: str
-    folderUID: str
+    execErrState: Literal["OK", "Alerting", "Error"]
+    folderUID: str = Field(
+        ...,
+    )
     for_: str = Field(..., alias="for", description="For example: 5m/1h/1d")
     isPaused: bool
-    labels: list[str]
-    noDataState: str
+    labels: dict = Field(..., description="Key-value pairs, cannot be empty")
+    noDataState: Literal["NoData", "OK", "Alerting"]
     orgID: int
-    ruleGroup: str
-    title: str
+    ruleGroup: str = Field(
+        ..., max_length=190, min_length=1, description="Rule group name"
+    )
+    title: str = Field(
+        ..., max_length=190, min_length=1, description="Alert title", required=True
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "folderUID": "keep_alerts",
+                "labels": {"team": "sre-team-1"},
+                "ruleGroup": "keep_group_1",
+            },
+        }

@@ -106,5 +106,5 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="grafana-keephq", provider_type="grafana", provider_config=config
     )
-    alerts = provider.get_alerts()
+    alerts = provider.deploy_alert({})
     print(alerts)
