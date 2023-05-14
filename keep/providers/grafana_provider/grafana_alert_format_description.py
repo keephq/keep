@@ -66,6 +66,10 @@ class GrafanaAlertFormatDescription(BaseModel):
     execErrState: Literal["OK", "Alerting", "Error"]
     folderUID: str = Field(
         ...,
+        min_length=1,
+        max_length=30,
+        description="Folder UID, cannot be empty",
+        required=True,
     )
     for_: str = Field(..., alias="for", description="For example: 5m/1h/1d")
     isPaused: bool
