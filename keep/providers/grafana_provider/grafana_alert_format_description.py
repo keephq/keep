@@ -86,6 +86,7 @@ class GrafanaAlertFormatDescription(BaseModel):
     class Config:
         schema_extra = {
             "example": {
+                "condition": "A",
                 "folderUID": "keep_alerts",
                 "labels": {"team": "sre-team-1"},
                 "ruleGroup": "keep_group_1",
