@@ -61,8 +61,8 @@ class Datum(BaseModel):
 
 
 class GrafanaAlertFormatDescription(BaseModel):
-    condition: str = (
-        Field(..., max_length=1, description="Must be one of the refId in data"),
+    condition: str = Field(
+        ..., max_length=1, description="Must be one of the refId in data"
     )
     data: List[Datum]
     execErrState: Literal["OK", "Alerting", "Error"]
