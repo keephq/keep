@@ -3,7 +3,10 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 """
 
 import pydantic
-from datadog import api, initialize
+from datadog_api_client import ApiClient, Configuration
+from datadog_api_client.v1.api.monitors_api import MonitorsApi
+from datadog_api_client.v1.model.monitor import Monitor
+from datadog_api_client.v1.model.monitor_type import MonitorType
 
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.datadog_provider.datadog_alert_format_description import (
@@ -30,10 +33,9 @@ class DatadogProvider(BaseProvider):
 
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        initialize(
-            api_key=self.authentication_config.api_key,
-            app_key=self.authentication_config.app_key,
-        )
+        self.configuration = Configuration()
+        self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
+        self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key
 
     def dispose(self):
         """
@@ -52,17 +54,25 @@ class DatadogProvider(BaseProvider):
         pass
 
     def get_alerts(self, alert_id: str | None = None):
-        monitors = api.Monitor.get_all()
+        with ApiClient(self.configuration) as api_client:
+            api = MonitorsApi(api_client)
+            monitors = api.list_monitors()
+            monitors = [monitor.to_dict() for monitor in monitors]
+            if alert_id:
+                monitors = list(
+                    filter(lambda monitor: monitor["id"] == alert_id, monitors)
+                )
         return monitors
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
-        created_alert = api.Monitor.create(**alert)
-
-        errors = created_alert.get("errors", [])
-        if errors:
-            raise Exception({"message": errors[0]})
-
-        return created_alert
+        body = Monitor(**alert)
+        with ApiClient(self.configuration) as api_client:
+            api_instance = MonitorsApi(api_client)
+            try:
+                response = api_instance.create_monitor(body=body)
+            except Exception as e:
+                raise Exception({"message": e.body["errors"][0]})
+        return response
 
     @staticmethod
     def get_alert_format_description():
@@ -91,7 +101,7 @@ if __name__ == "__main__":
         {
             "name": "Error Rate Alert",
             "type": "metric alert",
-            "query": "sum:myapp.server.errors{service:talboren/simple-crud-service}.as_count().rollup(sum, 600)",
+            "query": "sum:myapp.server.errors{service:talboren/simple-crud-service}.as_count().rollup(sum, 600) > 5",
             "message": "The error rate for talboren/simple-crud-service has exceeded 5% in the last 10 minutes. Please investigate immediately",
             "tags": ["service:talboren/simple-crud-service", "severity:critical"],
             "options": {
