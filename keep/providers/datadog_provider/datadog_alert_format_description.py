@@ -57,7 +57,7 @@ class DatadogOptions(BaseModel):
     cheduling_options: SchedulingOptions
     silenced: dict
     threshold_windows: ThresholdWindows
-    thresholds: Thresholds
+    # thresholds: Thresholds
     timeout_h: int
 
 
@@ -69,7 +69,6 @@ class DatadogAlertFormatDescription(BaseModel):
     options: DatadogOptions
     priority: int = Field(..., description="The priority of the monitor.", min=1, max=5)
     query: str = Field(..., description="The query to monitor.", required=True)
-    restricted_roles: list[str]
     tags: list[str]
     type: Literal[
         "composite",
