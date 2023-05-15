@@ -89,3 +89,36 @@ class DatadogAlertFormatDescription(BaseModel):
         "ci-tests alert",
         "error-tracking alert",
     ]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Example-Monitor",
+                "type": "rum alert",
+                "query": 'formula("query2 / query1 * 100").last("15m") >= 0.8',
+                "message": "some message Notify: @hipchat-channel",
+                "tags": ["test:examplemonitor", "env:ci"],
+                "priority": 3,
+                "options": {
+                    "thresholds": {"critical": 0.8},
+                    "variables": [
+                        {
+                            "data_source": "rum",
+                            "name": "query2",
+                            "search": {"query": ""},
+                            "indexes": ["*"],
+                            "compute": {"aggregation": "count"},
+                            "group_by": [],
+                        },
+                        {
+                            "data_source": "rum",
+                            "name": "query1",
+                            "search": {"query": "status:error"},
+                            "indexes": ["*"],
+                            "compute": {"aggregation": "count"},
+                            "group_by": [],
+                        },
+                    ],
+                },
+            }
+        }

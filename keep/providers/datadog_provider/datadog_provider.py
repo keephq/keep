@@ -57,6 +57,11 @@ class DatadogProvider(BaseProvider):
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
         created_alert = api.Monitor.create(**alert)
+
+        errors = created_alert.get("errors")
+        if errors:
+            raise Exception(errors)
+
         return created_alert
 
     @staticmethod
