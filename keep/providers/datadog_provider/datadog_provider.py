@@ -30,6 +30,10 @@ class DatadogProvider(BaseProvider):
 
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
+        initialize(
+            api_key=self.authentication_config.api_key,
+            app_key=self.authentication_config.app_key,
+        )
 
     def dispose(self):
         """
@@ -48,15 +52,12 @@ class DatadogProvider(BaseProvider):
         pass
 
     def get_alerts(self, alert_id: str | None = None):
-        initialize(
-            api_key=self.authentication_config.api_key,
-            app_key=self.authentication_config.app_key,
-        )
         monitors = api.Monitor.get_all()
         return monitors
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
-        return api.Monitor.create(alert)
+        created_alert = api.Monitor.create(**alert)
+        return created_alert
 
     @staticmethod
     def get_alert_format_description():
@@ -81,5 +82,23 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="datadog-keephq", provider_type="datadog", provider_config=config
     )
-    alerts = provider.get_alerts()
+    alerts = provider.deploy_alert(
+        {
+            "name": "Error Rate Alert",
+            "type": "metric alert",
+            "query": "sum:myapp.server.errors{service:talboren/simple-crud-service}.as_count().rollup(sum, 600)",
+            "message": "The error rate for talboren/simple-crud-service has exceeded 5% in the last 10 minutes. Please investigate immediately",
+            "tags": ["service:talboren/simple-crud-service", "severity:critical"],
+            "options": {
+                "thresholds": {"critical": 5},
+                "notify_audit": False,
+                "notify_no_data": False,
+                "require_full_window": True,
+                "timeout_h": 1,
+                "silenced": {},
+            },
+            "restricted_roles": [],
+            "priority": 2,
+        }
+    )
     print(alerts)
