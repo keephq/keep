@@ -61,11 +61,17 @@ class Datum(BaseModel):
 
 
 class GrafanaAlertFormatDescription(BaseModel):
-    condition: str
+    condition: str = Field(
+        ..., max_length=1, description="Must be one of the refId in data"
+    )
     data: List[Datum]
     execErrState: Literal["OK", "Alerting", "Error"]
     folderUID: str = Field(
         ...,
+        min_length=1,
+        max_length=30,
+        description="Folder UID, cannot be empty",
+        required=True,
     )
     for_: str = Field(..., alias="for", description="For example: 5m/1h/1d")
     isPaused: bool
@@ -82,6 +88,7 @@ class GrafanaAlertFormatDescription(BaseModel):
     class Config:
         schema_extra = {
             "example": {
+                "condition": "A",
                 "folderUID": "keep_alerts",
                 "labels": {"team": "sre-team-1"},
                 "ruleGroup": "keep_group_1",
