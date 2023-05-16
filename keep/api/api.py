@@ -1,6 +1,7 @@
 import os
 
 import uvicorn
+from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
@@ -8,8 +9,10 @@ from starlette_context import context, plugins
 from starlette_context.middleware import RawContextMiddleware
 
 from keep.api.core.dependencies import create_db_and_tables
-from keep.api.routes import healthcheck, providers
+from keep.api.routes import healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
+
+load_dotenv(find_dotenv())
 
 
 async def dispose_context_manager() -> None:
@@ -32,6 +35,7 @@ def get_app() -> FastAPI:
 
     app.include_router(providers.router, prefix="/providers")
     app.include_router(healthcheck.router, prefix="/healthcheck")
+    app.include_router(tenant.router, prefix="/tenant")
 
     @app.on_event("startup")
     def on_startup():

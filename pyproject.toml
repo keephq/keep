@@ -38,6 +38,8 @@ grafana-api-sdk = "^0.1.0"
 cloud-sql-python-connector = "^1.2.3"
 pymysql = "^1.0.3"
 google-cloud-secret-manager = "^2.16.1"
+python-jose = "^3.3.0"
+jwcrypto = "^1.4.2"
 
 
 [tool.poetry.group.dev.dependencies]
