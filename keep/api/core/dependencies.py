@@ -19,7 +19,7 @@ def get_conn() -> pymysql.connections.Connection:
         conn = connector.connect(
             "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
             "pymysql",
-            user="keep-auth",
+            user="keep-api",
             db="keepdb",
             enable_iam_auth=True,
         )
@@ -36,7 +36,7 @@ def get_conn_impersonate() -> pymysql.connections.Connection:
     target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     creds = impersonated_credentials.Credentials(
         source_credentials=creds,
-        target_principal="keep-auth@keephq-sandbox.iam.gserviceaccount.com",
+        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
         target_scopes=target_scopes,
     )
     # Refresh the credentials to obtain an impersonated access token
@@ -48,7 +48,7 @@ def get_conn_impersonate() -> pymysql.connections.Connection:
         conn = connector.connect(
             "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
             "pymysql",
-            user="keep-auth",
+            user="keep-api",
             password=access_token,
             host="127.0.0.1",
             port=3306,
