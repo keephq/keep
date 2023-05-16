@@ -73,3 +73,24 @@ def add_alert(
         return JSONResponse(status_code=200, content={"message": "deployed"})
     except Exception as e:
         return JSONResponse(status_code=500, content=e.args[0])
+
+
+@router.get("")
+def get_providers():
+    """List of static providers that can be installed
+
+    Returns:
+        _type_: _description_
+    """
+    return JSONResponse(
+        content=[
+            {
+                "id": "aws",
+                "name": "AWS",
+            },
+            {
+                "id": "gcp",
+                "name": "GCP",
+            },
+        ]
+    )
