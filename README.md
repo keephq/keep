@@ -11,6 +11,9 @@
     <a href="https://keephq.dev/slack">
         <img src="https://img.shields.io/badge/Chat-on%20Slack-blueviolet" alt="Slack community channel" />
     </a>
+    <a href="https://codecov.io/gh/keephq/keep" > 
+        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/> 
+    </a>
 </div>
 
 <h4 align="center">
