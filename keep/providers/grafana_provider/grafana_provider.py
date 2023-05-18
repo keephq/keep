@@ -9,6 +9,7 @@ from grafana_api.alerting_provisioning import AlertingProvisioning
 from grafana_api.model import APIEndpoints, APIModel
 
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
     GrafanaAlertFormatDescription,
 )
@@ -54,6 +55,16 @@ class GrafanaProvider(BaseProvider):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, headers=headers)
+        if not response.ok:
+            self.logger.warn(
+                "Could not get alerts", extra={"response": response.json()}
+            )
+            error = response.json()
+            if response.status_code == 403:
+                error[
+                    "message"
+                ] += f"\nYou can test your permissions with \n\tcurl -H 'Authorization: Bearer {{token}}' -X GET '{self.authentication_config.host}/api/access-control/user/permissions' | jq \nDocs: https://grafana.com/docs/grafana/latest/administration/service-accounts/#debug-the-permissions-of-a-service-account-token"
+            raise GetAlertException(message=error)
         return response.json()
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
@@ -66,7 +77,7 @@ class GrafanaProvider(BaseProvider):
             self.logger.warn(
                 "Could not deploy alert", extra={"response": response.json()}
             )
-            raise Exception(response.json())
+            raise Exception(error)
 
         self.logger.info(
             "Alert deployed",
