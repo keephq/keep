@@ -2,15 +2,13 @@ import os
 from typing import Optional
 from uuid import uuid4
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordBearer
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.core.config import config
-from keep.api.core.dependencies import get_session, verify_customer
+from keep.api.core.dependencies import decode_auth0_token, get_session, verify_customer
 from keep.api.models.db.tenant import Tenant, TenantInstallation
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import (
@@ -19,31 +17,6 @@ from keep.secretmanager.secretmanagerfactory import (
 )
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-def decode_auth0_token(token: str = Depends(oauth2_scheme)):
-    # Took the implementation from here:
-    #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
-    auth_domain = os.environ.get("AUTH0_DOMAIN")
-    auth_audience = os.environ.get("AUTH0_AUDIENCE")
-    jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
-    issuer = f"https://{auth_domain}/"
-    try:
-        jwks_client = jwt.PyJWKClient(jwks_uri)
-        jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
-        payload = jwt.decode(
-            token,
-            jwt_signing_key,
-            algorithms="RS256",
-            audience=auth_audience,
-            issuer=issuer,
-        )
-    except jwt.exceptions.PyJWKClientError:
-        raise UnableCredentialsException
-    except jwt.exceptions.InvalidTokenError:
-        raise BadCredentialsException
-    return payload
 
 
 @router.get(
