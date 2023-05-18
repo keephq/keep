@@ -10,10 +10,15 @@ jobs:
         python-version: 3.11
     - name: Install Poetry
       uses: snok/install-poetry@v1
-    - run: poetry install
-    - run: poetry run coverage run -m pytest
-    - name: Archive code coverage results
-      uses: actions/upload-artifact@v3
+    - name: Install dependencies using poetry
+      run: poetry install
+    - name: Run unit tests and report coverage
+      run: poetry run coverage run --branch -m pytest
+    - name: Convert coverage results to JSON (for CodeCov support)
+      run: poetry run coverage json
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3  
       with:
-        name: code-coverage-report
-        path: .coverage
+        fail_ci_if_error: true
+        files: coverage.json
+        verbose: true
