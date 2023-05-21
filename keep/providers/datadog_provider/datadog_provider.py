@@ -44,6 +44,9 @@ class DatadogProvider(BaseProvider):
         self.configuration = Configuration()
         self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
         self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key
+        # to be exposed
+        self.to = None
+        self._from = None
 
     def dispose(self):
         """
@@ -58,11 +61,21 @@ class DatadogProvider(BaseProvider):
         """
         self.authentication_config = DatadogAuthConfig(**self.config.authentication)
 
+    def expose(self):
+        return {
+            "to": self.to.timestamp(),
+            "from": self._from.timestamp(),
+        }
+
     def query(self, **kwargs: dict):
         query = kwargs.get("query")
         timeframe = kwargs.get("timeframe")
         timeframe_in_seconds = DatadogProvider.convert_to_seconds(timeframe)
         query_type = kwargs.get("query_type")
+        self.to = datetime.datetime.fromtimestamp(time.time())
+        self._from = datetime.datetime.fromtimestamp(
+            time.time() - (timeframe_in_seconds)
+        )
         if query_type == "logs":
             with ApiClient(self.configuration) as api_client:
                 api = LogsApi(api_client)
@@ -70,10 +83,8 @@ class DatadogProvider(BaseProvider):
                     body={
                         "query": query,
                         "time": {
-                            "_from": datetime.datetime.fromtimestamp(
-                                time.time() - (timeframe_in_seconds)
-                            ),
-                            "to": datetime.datetime.fromtimestamp(time.time()),
+                            "_from": self._from,
+                            "to": self.to,
                         },
                     }
                 )

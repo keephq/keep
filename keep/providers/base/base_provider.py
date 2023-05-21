@@ -63,3 +63,14 @@ class BaseProvider(metaclass=abc.ABCMeta):
             NotImplementedError: _description_
         """
         raise NotImplementedError("query() method not implemented")
+
+    def expose(self):
+        """Expose parameters that were calculated during query time.
+
+        Each provider can expose parameters that were calculated during query time.
+        E.g. parameters that were supplied by the user and were rendered by the provider.
+
+        A concrete example is the "_from" and "to" of the Datadog Provider which are calculated during execution.
+        """
+        # TODO - implement dynamically using decorators and
+        return {}
