@@ -63,8 +63,8 @@ class DatadogProvider(BaseProvider):
 
     def expose(self):
         return {
-            "to": self.to.timestamp(),
-            "from": self._from.timestamp(),
+            "to": int(self.to.timestamp()),
+            "from": int(self._from.timestamp()),
         }
 
     def query(self, **kwargs: dict):
