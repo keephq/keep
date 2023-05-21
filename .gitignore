@@ -168,4 +168,4 @@ providers.yaml
 .vercel
 keepstate.json
 # sqlite db
-database.db
+*.sqlite3
