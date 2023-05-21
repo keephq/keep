@@ -169,3 +169,4 @@ providers.yaml
 keepstate.json
 # sqlite db
 *.sqlite3
+state/*
