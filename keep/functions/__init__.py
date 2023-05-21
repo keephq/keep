@@ -19,7 +19,7 @@ def diff(iterable: iter) -> bool:
     return not all(iterable)
 
 
-def len(iterable):
+def len(iterable=[]):
     return _len(iterable)
 
 
