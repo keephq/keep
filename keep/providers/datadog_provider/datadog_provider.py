@@ -4,6 +4,8 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 import datetime
 import time
 
+import json
+
 import pydantic
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.v1.api.logs_api import LogsApi
@@ -91,7 +93,7 @@ class DatadogProvider(BaseProvider):
         with ApiClient(self.configuration) as api_client:
             api = MonitorsApi(api_client)
             monitors = api.list_monitors()
-            monitors = [monitor.to_dict() for monitor in monitors]
+            monitors = [json.dumps(monitor, default=str) for monitor in monitors]
             if alert_id:
                 monitors = list(
                     filter(lambda monitor: monitor["id"] == alert_id, monitors)
