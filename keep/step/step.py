@@ -33,6 +33,9 @@ class Step:
                 rendered_providers_parameters[parameter] = self.io_handler.render(
                     self.provider_parameters[parameter]
                 )
+            self.context_manager.set_step_provider_paremeters(
+                self.step_id, rendered_providers_parameters
+            )
             step_output = self.provider.query(**rendered_providers_parameters)
         except Exception as e:
             raise StepError(e)
