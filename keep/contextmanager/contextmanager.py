@@ -152,26 +152,14 @@ class ContextManager:
         if condition_alias:
             self.aliases[condition_alias] = result
 
-    def get_actionable_results(self):
-        actionable_results = []
-        for step_id in self.steps_context:
-            # TODO: more robust way to identify the alias
-            if step_id == "this":
-                continue
-            if "conditions" in self.steps_context[step_id]:
-                # TODO: more robust way to identify actionable results
-                # TODO: support multiple conditions
-                for condition in self.steps_context[step_id]["conditions"]:
-                    for condition_result in self.steps_context[step_id]["conditions"][
-                        condition
-                    ]:
-                        if condition_result["result"]:
-                            actionable_results.append(condition_result)
-        return actionable_results
+    def set_step_provider_paremeters(self, step_id, provider_parameters):
+        if step_id not in self.steps_context:
+            self.steps_context[step_id] = {"provider_parameters": {}, "results": []}
+        self.steps_context[step_id]["provider_parameters"] = provider_parameters
 
     def set_step_context(self, step_id, results, foreach=False):
         if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"conditions": {}, "results": []}
+            self.steps_context[step_id] = {"provider_parameters": {}, "results": []}
 
         # If this is a foreach step, we need to append the results to the list
         # so we can iterate over them
