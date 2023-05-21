@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { TableRow, TableCell } from '@tremor/react';
 import './providers.css';

@@ -1,7 +1,6 @@
 import './globals.css';
 
 import Nav from './nav';
-import AnalyticsWrapper from './analytics';
 import Toast from './toast';
 import { Suspense } from 'react';
 

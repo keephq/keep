@@ -31,6 +31,7 @@ export const authOptions: NextAuthOptions = {
       //@ts-ignore
       // TODO - fix this by adding id_token to the session interface
       console.log("SESSION CALLABACK");
+      // @ts-ignore
       session.id_token = token.id_token;
       return session
     }

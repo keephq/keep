@@ -1,7 +1,7 @@
+// @ts-nocheck
 import { signIn, getCsrfToken, getProviders, SessionProvider } from 'next-auth/react'
 import Image from 'next/image'
-import Header from './headers'
-import styles from './Signin.module.css'
+import styles from './signin.module.css'
 
 const Signin = ({ csrfToken, providers }) => {
   const auth0Provider = providers?.auth0;

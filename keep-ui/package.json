@@ -379,6 +379,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@types/js-cookie": "^3.0.3",
     "@types/node": "20.2.1"
   },
   "author": "",
