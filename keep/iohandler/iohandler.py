@@ -76,7 +76,7 @@ class IOHandler:
         string = self._render(string)
 
         # Now, extract the token if exists -
-        pattern = r"\bkeep\.\w+\((?:[^()]|\((?:[^()]|)*\))*\)"
+        pattern = r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\)"
         parsed_string = copy.copy(string)
         matches = re.findall(pattern, parsed_string)
         tokens = list(matches)
@@ -124,6 +124,10 @@ class IOHandler:
                             try:
                                 # TODO(shahargl): when Keep gonna be self hosted, this will be a security issue!!!
                                 # because the user can run any python code need to find a way to limit the functions that can be used
+
+                                # https://github.com/keephq/keep/issues/138
+                                from dateutil.tz import tzutc
+
                                 _arg = eval(_arg)
                             except ValueError:
                                 pass
@@ -136,9 +140,18 @@ class IOHandler:
 
         try:
             tree = ast.parse(token)
-        except SyntaxError:
-            # for strings such as "45%\n", we need to escape
-            tree = ast.parse(token.encode("unicode_escape"))
+        except SyntaxError as e:
+            if "unterminated string literal" in str(e):
+                # try to HTML escape the string
+                # this is happens when libraries such as datadog api client
+                # HTML escapes the string and then ast.parse fails ()
+                # https://github.com/keephq/keep/issues/137
+                import html
+
+                tree = ast.parse(html.unescape(token))
+            else:
+                # for strings such as "45%\n", we need to escape
+                tree = ast.parse(token.encode("unicode_escape"))
         return _parse(tree)
 
     def _render(self, key):
