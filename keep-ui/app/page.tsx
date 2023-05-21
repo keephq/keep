@@ -16,8 +16,8 @@ export default async function IndexPage() {
   }
   let isGitHubPluginInstalled=false;
   try{
-    const url = process.env.GITHUB_PLUGIN_INSTALLED_URL;
-    isGitHubPluginInstalled = await fetch(url!, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+    isGitHubPluginInstalled = await fetch(`${apiUrl}/tenant/onboarded`, {
       headers: {
         'Authorization': `Bearer ${id_token?.id_token}`
       }

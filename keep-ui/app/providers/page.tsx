@@ -16,8 +16,8 @@ export default async function ProvidersPage() {
   let installed_providers = [];
   // Now let's fetch the providers status from the backend
   try{
-    const url = process.env.NEXT_PUBLIC_GET_PROVIDERS_URL!;
-    installed_providers = await fetch(url, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+    installed_providers = await fetch(`${apiUrl}/providers`, {
       headers: {
         'Authorization': `Bearer ${id_token?.id_token}`
       }

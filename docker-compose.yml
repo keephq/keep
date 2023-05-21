@@ -1,0 +1,21 @@
+services:
+  frontend:
+    build:
+      dockerfile: docker/Dockerfile.ui
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./state/frontend.env
+    volumes:
+      - ./state:/state
+    depends_on:
+      - backend
+  backend:
+    build:
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - '8080:8080'
+    env_file:
+      - ./state/backend.env
+    volumes:
+      - ./state:/state

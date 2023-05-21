@@ -17,8 +17,8 @@ export default async function GithubPostInstallationPage({
   }
   let installedSuccessfully = false;
   try {
-    const url = process.env.GITHUB_POST_INSTALLATION_URL;
-    installedSuccessfully = await fetch(url!, {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+    installedSuccessfully = await fetch(`${apiUrl}/tenant/github`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -114,7 +114,7 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
 
   const handleTestClick = async () => {
     try {
-      const data = await validateAndSubmit(process.env.NEXT_PUBLIC_TEST_PROVIDER_URL!);
+      const data = await validateAndSubmit(`${process.env.NEXT_PUBLIC_API_URL!}/providers/test`);
       if (data && data.alerts) {
         console.log("Test succeessful")
         setTestResult('success');
@@ -129,7 +129,7 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
 
 
   const handleConnectClick = () => {
-    validateAndSubmit(process.env.NEXT_PUBLIC_INSTALL_PROVIDER_URL!)
+    validateAndSubmit(`${process.env.NEXT_PUBLIC_API_URL!}/providers/install`)
       .then((data) => {
         console.log('Connect Result:', data);
         setConnectResult(data.result);
