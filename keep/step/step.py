@@ -33,10 +33,14 @@ class Step:
                 rendered_providers_parameters[parameter] = self.io_handler.render(
                     self.provider_parameters[parameter]
                 )
+            step_output = self.provider.query(**rendered_providers_parameters)
+            # after the provider ran, let's update the context with the context of the provider
+            #                         so it'll be available for the alert.
+            extra_context = self.provider.expose()
+            rendered_providers_parameters.update(extra_context)
             self.context_manager.set_step_provider_paremeters(
                 self.step_id, rendered_providers_parameters
             )
-            step_output = self.provider.query(**rendered_providers_parameters)
         except Exception as e:
             raise StepError(e)
 
