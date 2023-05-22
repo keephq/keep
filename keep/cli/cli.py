@@ -135,7 +135,7 @@ def api(
     from keep.api import api
 
     ctx = click.get_current_context()
-    app = api.get_app()
+    app = api.get_app(multi_tenant=multi_tenant)
     app.dependency_overrides[click.get_current_context] = lambda: ctx
     api.run(app)
 

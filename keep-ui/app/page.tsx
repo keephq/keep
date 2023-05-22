@@ -7,19 +7,22 @@ import ErrorComponent from './error';
 export default async function IndexPage() {
   // https://github.com/nextauthjs/next-auth/pull/5792
   console.log("Loading the main page");
-  const id_token = await getServerSession({
-    callbacks: { session: ({ token }) => token },
-  })
+  const accessToken = (
+    await getServerSession({
+      callbacks: { session: ({ token }) => token },
+    })
+  )?.accessToken as string;
 
-  if(!id_token){
-    return <div>Not authorized</div>
+  if (!accessToken) {
+    return <div>Not authorized</div>;
   }
-  let isGitHubPluginInstalled=false;
-  try{
+
+  let isGitHubPluginInstalled = false;
+  try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
     isGitHubPluginInstalled = await fetch(`${apiUrl}/tenant/onboarded`, {
       headers: {
-        'Authorization': `Bearer ${id_token?.id_token}`
+        'Authorization': `Bearer ${accessToken}`
       }
     }).then(res => res.json()).then(data => data.onboarded);
   }
@@ -37,13 +40,12 @@ export default async function IndexPage() {
 
   console.log("Main page loaded");
 
-
   return (
     <div>
       <Suspense fallback={<div>Loading...</div>}>
-      {/* @ts-expect-error Async Server Component */}
-        {isGitHubPluginInstalled ? <ProvidersPage/>: <GitHubPage />}
+        {/* @ts-expect-error Async Server Component */}
+        {isGitHubPluginInstalled ? <ProvidersPage /> : <GitHubPage />}
       </Suspense>
     </div>
-  )
-};
+  );
+}

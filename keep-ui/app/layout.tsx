@@ -1,14 +1,13 @@
 import './globals.css';
 
 import Nav from './nav';
-import Toast from './toast';
 import { Suspense } from 'react';
 
 
 export const metadata = {
-  title: 'Keep UI',
+  title: 'Keep Console',
   description:
-    'Keep Platform'
+    'Alerting and on-call management for modern engineering teams.'
 };
 
 export default async function RootLayout({
@@ -25,7 +24,6 @@ export default async function RootLayout({
             <Nav />
           </Suspense>
         {children}
-        <Toast />
       </body>
     </html>
   );

@@ -4,8 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
 
-from keep.api.core.dependencies import decode_auth0_token, verify_customer
-from keep.api.models.db.tenant import TenantApiKey
+from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import (
@@ -20,11 +19,10 @@ router = APIRouter()
     "",
 )
 def get_installed_providers(
-    token: Optional[dict] = Depends(decode_auth0_token),
+    tenant_id: str = Depends(verify_bearer_token),
 ) -> list:
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
-    tenant_id = token.get("keep_tenant_id")
     secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
     installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
     # TODO: mask the sensitive data
@@ -50,14 +48,14 @@ def get_installed_providers(
 def get_alerts(
     provider_type: str,
     provider_id: str,
-    tenant: TenantApiKey = Depends(verify_customer),
+    tenant_id: str = Depends(verify_api_key),
 ) -> list:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
     secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
-        f"{tenant.tenant_id}_{provider_type}_{provider_id}", is_json=True
+        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
     provider = ProvidersFactory.get_provider(
         provider_id, provider_type, provider_config
@@ -85,14 +83,14 @@ def add_alert(
     provider_id: str,
     alert: dict,
     alert_id: Optional[str] = None,
-    tenant: TenantApiKey = Depends(verify_customer),
+    tenant_id: str = Depends(verify_api_key),
 ) -> JSONResponse:
     # todo: validate provider exists, error handling in general
     # todo: secret manager type from config
     secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
-        f"{tenant.tenant_id}_{provider_type}_{provider_id}", is_json=True
+        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
     provider = ProvidersFactory.get_provider(
         provider_id, provider_type, provider_config
@@ -110,7 +108,7 @@ def add_alert(
 )
 def test_provider(
     provider_info: dict = Body(...),
-    token: Optional[dict] = Depends(decode_auth0_token),
+    tenant_id: str = Depends(verify_bearer_token),
 ) -> JSONResponse:
     # Extract parameters from the provider_info dictionary
     # For now, we support only 1:1 provider_type:provider_id
@@ -138,10 +136,10 @@ def test_provider(
 @router.post("/install")
 async def install_provider(
     provider_info: dict = Body(...),
-    token: Optional[dict] = Depends(decode_auth0_token),
+    tenant_id: str = Depends(verify_bearer_token),
 ):
     # Extract parameters from the provider_info dictionary
-    tenant_id = token.get("keep_tenant_id")
+    tenant_id = tenant_id.get("keep_tenant_id")
     provider_id = provider_info.pop("provider_id")
     provider_type = provider_info.pop("provider_type", None) or provider_id
     provider_config = {

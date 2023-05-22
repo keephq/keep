@@ -2,102 +2,24 @@ import hashlib
 import os
 
 import jwt
-import pymysql
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
-from google.cloud.sql.connector import Connector
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, select
 
-# This import is required to create the tables
-from keep.api.core.config import config
-from keep.api.models.db.tenant import *
-
-running_in_cloud_run = os.environ.get("K_SERVICE") is not None
-
-
-def get_conn() -> pymysql.connections.Connection:
-    with Connector() as connector:
-        conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
-            "pymysql",
-            user="keep-api",
-            db="keepdb",
-            enable_iam_auth=True,
-        )
-    return conn
-
-
-def get_conn_impersonate() -> pymysql.connections.Connection:
-    from google.auth import default, impersonated_credentials
-    from google.auth.transport.requests import Request
-
-    # Get application default credentials
-    creds, project = default()
-    # Create impersonated credentials
-    target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    creds = impersonated_credentials.Credentials(
-        source_credentials=creds,
-        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
-        target_scopes=target_scopes,
-    )
-    # Refresh the credentials to obtain an impersonated access token
-    creds.refresh(Request())
-    # Get the access token
-    access_token = creds.token
-    # Create a new MySQL connection with the obtained access token
-    with Connector() as connector:
-        conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
-            "pymysql",
-            user="keep-api",
-            password=access_token,
-            host="127.0.0.1",
-            port=3306,
-            database="keepdb",
-        )
-    return conn
-
-
-connect_args = {"check_same_thread": False}
-
-if running_in_cloud_run:
-    engine = create_engine(
-        "mysql+pymysql://", creator=get_conn, connect_args=connect_args
-    )
-elif config("DATABASE_CONNECTION_STRING", default=None):
-    engine = create_engine(
-        config("DATABASE_CONNECTION_STRING"), connect_args=connect_args
-    )
-else:
-    engine = create_engine(
-        "mysql+pymysql://", creator=get_conn_impersonate, connect_args=connect_args
-    )
-
-
-def create_db_and_tables():
-    """
-    Creates the database and tables.
-    """
-    SQLModel.metadata.create_all(engine)
-
-
-def get_session() -> Session:
-    """
-    Creates a database session.
-
-    Yields:
-        Session: A database session
-    """
-    with Session(engine) as session:
-        yield session
-
+from keep.api.core.db import get_session
+from keep.api.models.db.tenant import TenantApiKey
 
 auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def verify_customer(
+def verify_single_tenant() -> str:
+    return "SINGLE-TENANT-ID"
+
+
+def verify_api_key(
     api_key: str = Security(auth_header), session: Session = Depends(get_session)
-) -> TenantApiKey:
+) -> str:
     """
     Verifies that a customer is allowed to access the API.
 
@@ -109,7 +31,7 @@ def verify_customer(
         HTTPException: 401 if the user is unauthorized.
 
     Returns:
-        TenantApiKey: The tenant API key resource including the Tenant resource.
+        str: The tenant id.
     """
     if not api_key:
         raise HTTPException(status_code=401, detail="Missing API Key")
@@ -120,31 +42,23 @@ def verify_customer(
     tenant_api_key = session.exec(statement).first()
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
-    return tenant_api_key
+    return tenant_api_key.tenant_id
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-def decode_auth0_token(token: str = Depends(oauth2_scheme)):
+def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
     # Took the implementation from here:
     #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
     auth_domain = os.environ.get("AUTH0_DOMAIN")
     auth_audience = os.environ.get("AUTH0_AUDIENCE")
     jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
     issuer = f"https://{auth_domain}/"
-    try:
-        jwks_client = jwt.PyJWKClient(jwks_uri)
-        jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
-        payload = jwt.decode(
-            token,
-            jwt_signing_key,
-            algorithms="RS256",
-            audience=auth_audience,
-            issuer=issuer,
-        )
-    except jwt.exceptions.PyJWKClientError:
-        raise UnableCredentialsException
-    except jwt.exceptions.InvalidTokenError:
-        raise BadCredentialsException
-    return payload
+    jwks_client = jwt.PyJWKClient(jwks_uri)
+    jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
+    payload = jwt.decode(
+        token,
+        jwt_signing_key,
+        algorithms="RS256",
+        audience=auth_audience,
+        issuer=issuer,
+    )
+    return payload["keep_tenant_id"]

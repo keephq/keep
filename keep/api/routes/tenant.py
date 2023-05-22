@@ -1,20 +1,12 @@
-import os
-from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Security
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, select
 
 # This import is required to create the tables
-from keep.api.core.config import config
-from keep.api.core.dependencies import decode_auth0_token, get_session, verify_customer
-from keep.api.models.db.tenant import Tenant, TenantInstallation
-from keep.providers.providers_factory import ProvidersFactory
-from keep.secretmanager.secretmanagerfactory import (
-    SecretManagerFactory,
-    SecretManagerTypes,
-)
+from keep.api.core.dependencies import get_session, verify_bearer_token
+from keep.api.models.db.tenant import TenantInstallation
 
 router = APIRouter()
 
@@ -24,21 +16,9 @@ router = APIRouter()
     description="Check if a tenant is onboarded (meaning - installed github bot)",
 )
 def is_onboarded(
-    payload: Optional[dict] = Depends(decode_auth0_token),
+    tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ) -> JSONResponse:
-    if not payload:
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials",
-        )
-
-    tenant_id = payload.get("keep_tenant_id")
-    if not tenant_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials",
-        )
     statement = select(TenantInstallation).where(
         TenantInstallation.tenant_id == tenant_id
     )
@@ -55,13 +35,10 @@ def is_onboarded(
 @router.post("/github", status_code=204)
 async def save_github_installation_id(
     request: Request,
-    payload: Optional[dict] = Depends(decode_auth0_token),
+    tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ) -> None:
     try:
-        # Get the authenticated tenant from the dependencies
-        tenant_id = payload.get("keep_tenant_id")
-
         # Get the installation_id and action from the request body
         data = await request.json()
         installation_id = data.get("installation_id")

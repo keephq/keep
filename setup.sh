@@ -7,13 +7,15 @@ STATE_DIRECTORY="state"
 frontend_secrets=(
   "NEXTAUTH_URL:http://localhost:3000"
   "NEXTAUTH_SECRET:{openssl rand -hex 32}"
-  "API_URL:http://:8080"
+  "API_URL:http://backend:8080"
   "AUTH0_CLIENT_ID:"
   "AUTH0_CLIENT_SECRET:"
   "AUTH0_ISSUER:"
 )
 backend_secrets=(
   "DATABASE_CONNECTION_STRING:sqlite:////state/db.sqlite3"
+  "SECRET_MANAGER_DIRECTORY:state"
+  "SECRET_MANAGER_TYPE:FILE"
   "AUTH0_DOMAIN:dev-gsx2mvfi4wfvqjay.us.auth0.com"
   "AUTH0_AUDIENCE:vx2pdcpVnDPaIeFLdzwn3J9M7RZp2KEv"
 )
@@ -24,6 +26,7 @@ prompt_for_secrets() {
   local secrets=("${!2}")
 
   echo "Setting up secrets for $service..."
+  echo "If you do not have a value for a secret, leave it blank and press enter."
 
   # Loop through the secrets and prompt the user for input
   for secret in "${secrets[@]}"; do

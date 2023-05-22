@@ -43,7 +43,7 @@ class ContextManager:
         else:
             ContextManager.__instances[context_manager_id] = self
 
-        self.state_file = self.STATE_FILE or os.environ.get("KEEP_STATE_FILE")
+        self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
         self.steps_context = {}
         self.actions_context = {}
         self.providers_context = {}
