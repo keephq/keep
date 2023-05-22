@@ -170,3 +170,5 @@ keepstate.json
 # sqlite db
 *.sqlite3
 state/*
+
+examples/alerts/dd.yml

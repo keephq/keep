@@ -2,7 +2,7 @@ import GitHubPage from './github/page';
 import ProvidersPage from './providers/page';
 import { Suspense } from 'react';
 import { getServerSession } from "next-auth/next"
-
+import ErrorComponent from './error';
 
 export default async function IndexPage() {
   // https://github.com/nextauthjs/next-auth/pull/5792
@@ -23,13 +23,18 @@ export default async function IndexPage() {
       }
     }).then(res => res.json()).then(data => data.onboarded);
   }
-  catch(err){
-    console.log("Error fetching GitHub plugin installed status:", err);
-    if (err instanceof Error) {
-        return <div>Error: {err.message}</div>
+  // Inside the catch block
+  catch (err) {
+      console.log("Error fetching GitHub plugin installed status:", err);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+      const url = `${apiUrl}/tenant/onboarded`;
+
+      if (err instanceof Error) {
+        return <ErrorComponent errorMessage={`Error: ${err.message}`} url={url} />;
+      }
+      return <ErrorComponent errorMessage="502 backend error" url={url} />;
     }
-    return <div>502 backend error</div>
-  }
+
   console.log("Main page loaded");
 
 

@@ -29,7 +29,7 @@ export default function Navbar({ user }: { user: any }) {
               <div className="flex">
                 <div className="flex flex-shrink-0 items-center">
                     <a href="/">
-                        <Image src="/keep.svg" alt="Keep" className="h-16 w-auto inline-block ml-2" />
+                        <Image src="/keep.svg" width={24} height={24} alt="Keep" className="h-16 w-auto inline-block ml-2" />
                     </a>
                 </div>
                 <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
