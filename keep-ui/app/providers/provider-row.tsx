@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { TableRow, TableCell } from '@tremor/react';
+import Image from 'next/image';
 import './providers.css';
 import ProviderForm from './provider-form';
 
@@ -46,14 +47,14 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
       }, {});
       setFormData(authenticationData);
     }
-  }, [provider.connected]);
+  }, [provider.connected, provider.authentication]);
 
   return (
     <>
       <TableRow className={`table-row ${provider.connected ? 'connected' : ''}`}>
         <TableCell className="icon-cell">
           <div className="icon-wrapper">
-            <img src={provider.icon} alt={provider.name} />
+            <Image src={provider.icon} alt={provider.name} />
           </div>
           <div className="provider-info">
             <div className="provider-name">{provider.name}</div>

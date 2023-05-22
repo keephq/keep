@@ -1,32 +1,33 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/9113740/201498864-2a900c64-d88f-4ed4-b5cf-770bcb57e1f5.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/9113740/201498152-b171abb8-9225-487a-821c-6ff49ee48579.png">
-  <img alt="Shows all of the tools in the stack for this template, also listed in the README file." src="https://user-images.githubusercontent.com/9113740/201498152-b171abb8-9225-487a-821c-6ff49ee48579.png">
-</picture>
+# Keep UI
 
-<div align="center"><strong>Next.js 13 Admin Dashboard Template</strong></div>
-<div align="center">Built with the new `app` directory (beta).</div>
-<br />
-<div align="center">
-<a href="http://admin-dash-template.vercel.sh/">Demo</a>
-<span> · </span>
-<a href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-planetscale-react-nextjs">Clone & Deploy</a>
-<span>
-</div>
+## Background
 
-## Overview
+Keep UI is a user interface platform designed to manage and configure providers for an application. It allows users to connect and disconnect various providers, such as Grafana and Datadog, and configure their authentication settings. The platform provides a user-friendly interface to facilitate the management of provider connections.
 
-This is a starter template using the following stack:
+## How to Start
 
-- Framework - [Next.js 13](https://nextjs.org/13)
-- Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [NextAuth.js](https://next-auth.js.org)
-- Database - [PlanetScale](https://planetscale.com)
-- Deployment - [Vercel](https://vercel.com/docs/concepts/next.js/overview)
-- Styling - [Tailwind CSS](https://tailwindcss.com)
-- Components - [Tremor](https://www.tremor.so)
-- Analytics - [Vercel Analytics](https://vercel.com/analytics)
-- Linting - [ESLint](https://eslint.org)
-- Formatting - [Prettier](https://prettier.io)
+To start using Keep UI, follow the steps below:
 
-This template uses the new `app` directory in Next.js 13 (beta). This includes support for enhanced layouts, colocation of components, tests, and styles, component-level data fetching, and more.
+1. Clone the repository from GitHub.
+2. Install the necessary dependencies by running `npm install` or `yarn install`.
+3. Configure the environment variables required for the application. Refer to the documentation for the specific environment variables needed.
+4. Start the development server using `npm run dev` or `yarn dev`.
+5. Access the Keep UI application in your browser at `http://localhost:3000` (or the specified port).
+
+## How to Contribute
+
+Contributions to Keep UI are welcome and encouraged. To contribute to the project, please follow these guidelines:
+
+1. Fork the repository on GitHub.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes in the branch, ensuring to adhere to the coding style and guidelines.
+4. Write unit tests for new features or modifications, if applicable.
+5. Commit your changes and push them to your forked repository.
+6. Submit a pull request to the main repository, describing the changes and providing any additional relevant information.
+7. Participate in the code review process and address any feedback or comments received.
+8. Once approved, your changes will be merged into the main codebase.
+
+Please ensure that your contributions align with the project's coding standards, documentation guidelines, and overall goals. For major changes or new features, it is advisable to discuss them with the project maintainers or open an issue to gather feedback and ensure they align with the project roadmap.
+
+## License
+Keep UI is released under the MIT License.

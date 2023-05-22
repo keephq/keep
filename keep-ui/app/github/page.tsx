@@ -1,5 +1,6 @@
 'use client';
 import { Title, Text } from '@tremor/react';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ function InstallButton() {
   return (
     <button onClick={handleInstallation} className="py-2 px-4 bg-blue-500 text-white rounded mt-4">
       Start Installation
-      <img src="/keep.svg" alt="Keep" className="h-6 inline-block ml-2" />
+      <Image src="/keep.svg" alt="Keep" width={24} height={24} className="inline-block ml-2" />
     </button>
   );
 }
