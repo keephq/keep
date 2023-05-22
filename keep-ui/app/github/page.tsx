@@ -13,7 +13,6 @@ function InstallButton() {
         <a
           className="text-white text-[13px] font-mono bg-blue-500 hover:bg-blue-700 transition-all rounded-md w-[220px] h-10 flex items-center justify-center whitespace-nowrap"
           href="https://github.com/apps/keephq/installations/new"
-          target="_blank"
           rel="noreferrer"
         >
           Start Installation
