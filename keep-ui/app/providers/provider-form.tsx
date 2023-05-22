@@ -25,14 +25,14 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
 
   const { data: session, status, update } = useSession()
   // @ts-ignore
-  if(!session?.id_token){
+  if(!session?.accessToken){
     console.log("No session id_token, refreshing session from the server");
     update();
   }
   // update();
   // TODO - fix the typing here
   // @ts-ignore
-  const id_token = session?.id_token;
+  const id_token = session?.accessToken;
 
   // @ts-ignore
   const validateForm = (updatedFormValues) => {
