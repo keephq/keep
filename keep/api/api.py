@@ -54,7 +54,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     def on_startup():
         create_db_and_tables()
 
-    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
+    logger.info("App initialized, multi tenancy: {multi_tenant}")
     return app
 
 
@@ -65,3 +65,6 @@ def run(app: FastAPI):
 
     nest_asyncio.apply()
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+
+app = get_app()

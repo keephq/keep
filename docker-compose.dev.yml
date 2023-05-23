@@ -1,21 +1,21 @@
 services:
-  keep-frontend:
+  keep-frontend-dev:
     build:
-      dockerfile: docker/Dockerfile.ui
+      dockerfile: docker/Dockerfile.dev.ui
     ports:
       - '3000:3000'
     environment:
       - AUTH_ENABLED=false
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_PUBLIC_API_URL=http://keep-backend:8080
+      - NEXT_PUBLIC_API_URL=http://keep-backend-dev:8080
     volumes:
-      - ./state:/state
-    depends_on:
-      - backend
-  keep-backend:
+      - ./keep-ui:/app
+      - /app/node_modules
+      - /app/.next
+  keep-backend-dev:
     build:
-      dockerfile: docker/Dockerfile.api
+      dockerfile: docker/Dockerfile.dev.api
     ports:
       - '8080:8080'
     environment:
@@ -24,5 +24,5 @@ services:
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
     volumes:
+      - ./keep:/code/keep
       - ./state:/state
-    # command: --multi-tenant
