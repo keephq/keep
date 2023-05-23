@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Auth0Provider from "next-auth/providers/auth0";
+import { cookies } from 'next/headers';
 
 const isSingleTenant = process.env.AUTH_ENABLED == "false";
 

@@ -6,6 +6,8 @@ import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { signIn, signOut } from "next-auth/react";
 import Image from "next/image";
+import PHProvider from './posthog-client';
+import { SessionProvider } from "next-auth/react";
 
 const navigation = [
   { name: "Providers", href: "/" },
@@ -20,6 +22,8 @@ function classNames(...classes: string[]) {
 export default function Navbar({ user }: { user: any }) {
   const pathname = usePathname();
   return (
+    <SessionProvider>
+    <PHProvider>
     <Disclosure as="nav" className="bg-white shadow-sm">
       {({ open }) => (
         <>
@@ -168,5 +172,7 @@ export default function Navbar({ user }: { user: any }) {
         </>
       )}
     </Disclosure>
+    </PHProvider>
+    </SessionProvider>
   );
 }

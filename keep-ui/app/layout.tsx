@@ -4,12 +4,6 @@ import Nav from './nav';
 import { Suspense } from 'react';
 
 
-export const metadata = {
-  title: 'Keep Console',
-  description:
-    'Alerting and on-call management for modern engineering teams.'
-};
-
 export default async function RootLayout({
   children
 }: {
@@ -18,13 +12,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="h-full bg-gray-50">
-      <body className="h-full">
-          <Suspense fallback="...">
-            {/* @ts-expect-error Server Component */}
-            <Nav />
-          </Suspense>
-        {children}
-      </body>
+        <body className="h-full">
+            <Suspense fallback="...">
+              {/* @ts-expect-error Server Component */}
+              <Nav />
+            </Suspense>
+          {children}
+        </body>
     </html>
   );
 }

@@ -3,6 +3,14 @@ import ProvidersPage from "./providers/page";
 import { Suspense } from "react";
 import { getServerSession } from "../utils/customAuth";
 import ErrorComponent from "./error";
+import PostHogClient from './posthog-server'
+
+export const metadata = {
+  title: 'Keep Console',
+  description:
+    'Alerting and on-call management for modern engineering teams.'
+};
+
 
 export default async function IndexPage() {
   // https://github.com/nextauthjs/next-auth/pull/5792
@@ -10,7 +18,7 @@ export default async function IndexPage() {
     await getServerSession({
       callbacks: { session: ({ token }) => token },
     })
-  )?.accessToken as string;
+  )
 
   let isGitHubPluginInstalled = false;
   try {
@@ -27,7 +35,8 @@ export default async function IndexPage() {
     console.log("Error fetching GitHub plugin installed status:", err);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
     const url = `${apiUrl}/tenant/onboarded`;
-
+    // capture the event
+    PostHogClient().safeCapture('User started without keep api', accessToken);
     if (err instanceof Error) {
       return (
         <ErrorComponent errorMessage={`Error: ${err.message}`} url={url} />
