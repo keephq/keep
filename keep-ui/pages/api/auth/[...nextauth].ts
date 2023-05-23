@@ -1,6 +1,8 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import Auth0Provider from "next-auth/providers/auth0";
 
+const isSingleTenant = process.env.AUTH_ENABLED == "false";
+
 export const authOptions: NextAuthOptions = {
   providers: [
     Auth0Provider({
@@ -30,4 +32,4 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export default NextAuth(authOptions);
+export default isSingleTenant ? null : NextAuth(authOptions);

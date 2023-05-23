@@ -1,9 +1,9 @@
 // @ts-nocheck
-'use client';
-import React, { useState } from 'react';
-import {  useSession } from 'next-auth/react';
-import { Provider } from './provider-row';
-import './provider-form.css';
+"use client";
+import React, { useState } from "react";
+import { useSession } from "../../utils/customAuth";
+import { Provider } from "./provider-row";
+import "./provider-form.css";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -11,28 +11,32 @@ type ProviderFormProps = {
   onFormChange: (formValues: Record<string, string>) => void;
 };
 
-const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) => {
+const ProviderForm = ({
+  provider,
+  formData,
+  onFormChange,
+}: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
   });
   const [formErrors, setFormErrors] = useState({});
-  const [testResult, setTestResult] = useState('');
-  const [connectResult, setConnectResult] = useState('');
+  const [testResult, setTestResult] = useState("");
+  const [connectResult, setConnectResult] = useState("");
   const [alertData, setAlertData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
-  const { data: session, status, update } = useSession()
+  const { data: session, status, update } = useSession();
   // @ts-ignore
-  if(!session?.accessToken){
-    console.log("No session id_token, refreshing session from the server");
+  if (!session?.accessToken) {
+    console.log("No session access token, refreshing session from the server");
     update();
   }
   // update();
   // TODO - fix the typing here
   // @ts-ignore
-  const id_token = session?.accessToken;
+  const accessToken = session?.accessToken;
 
   // @ts-ignore
   const validateForm = (updatedFormValues) => {
@@ -43,7 +47,11 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
         errors[method.name] = true;
       }
       // @ts-ignore
-      if ('validation' in method && formValues[method.name] && !method.validation(updatedFormValues[method.name])) {
+      if (
+        "validation" in method &&
+        formValues[method.name] &&
+        !method.validation(updatedFormValues[method.name])
+      ) {
         // @ts-ignore
         errors[method.name] = true;
       }
@@ -51,7 +59,6 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
     markErrors(errors);
     return errors;
   };
-
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -63,14 +70,14 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
   };
 
   const markErrors = (errors: Record<string, boolean>) => {
-    const inputElements = document.querySelectorAll('.form-group input');
+    const inputElements = document.querySelectorAll(".form-group input");
     inputElements.forEach((input) => {
-      const name = input.getAttribute('name');
+      const name = input.getAttribute("name");
       // @ts-ignore
       if (errors[name]) {
-        input.classList.add('error');
+        input.classList.add("error");
       } else {
-        input.classList.remove('error');
+        input.classList.remove("error");
       }
     });
   };
@@ -80,19 +87,17 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
       if (Object.keys(errors).length === 0) {
         markErrors(errors);
         fetch(requestUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${id_token}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify(formValues),
         })
           .then((response) => {
             if (response.ok) {
-              console.log("response ok")
               return response.json();
             } else {
-              console.log("response not ok")
               throw new Error(response.statusText);
             }
           })
@@ -102,48 +107,49 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
           })
           .catch((error) => {
             reject(error);
-            console.error('Error:', error);
+            console.error("Error:", error);
           });
       } else {
         setFormErrors(errors);
         markErrors(errors);
-        reject(new Error('Form validation failed'));
+        reject(new Error("Form validation failed"));
       }
     });
   };
 
   const handleTestClick = async () => {
     try {
-      const data = await validateAndSubmit(`${process.env.NEXT_PUBLIC_API_URL!}/providers/test`);
+      const data = await validateAndSubmit(
+        `${process.env.NEXT_PUBLIC_API_URL!}/providers/test`
+      );
       if (data && data.alerts) {
-        console.log("Test succeessful")
-        setTestResult('success');
+        console.log("Test succeessful");
+        setTestResult("success");
         setAlertData(data.alerts);
       } else {
-        setTestResult('error');
+        setTestResult("error");
       }
     } catch (error) {
-      console.error('Test failed:', error);
+      console.error("Test failed:", error);
     }
   };
-
 
   const handleConnectClick = () => {
     validateAndSubmit(`${process.env.NEXT_PUBLIC_API_URL!}/providers/install`)
       .then((data) => {
-        console.log('Connect Result:', data);
+        console.log("Connect Result:", data);
         setConnectResult(data.result);
         setIsConnected(true);
       })
       .catch((error) => {
-        console.error('Connect failed:', error);
+        console.error("Connect failed:", error);
       });
   };
   console.log("ProviderForm component loaded");
 
   return (
     <div>
-      <form className={isConnected ? 'connected-form' : ''}>
+      <form className={isConnected ? "connected-form" : ""}>
         {provider.authentication.map((method) => (
           <div className="form-group" key={method.name}>
             <label htmlFor={method.name}>{method.desc}:</label>
@@ -151,7 +157,7 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
               type={method.type}
               id={method.name}
               name={method.name}
-              value={formValues[method.name] || ''}
+              value={formValues[method.name] || ""}
               onChange={handleInputChange}
               placeholder={method.placeholder}
               disabled={isConnected} // Disable the field when isConnected is true
@@ -161,20 +167,26 @@ const ProviderForm = ({ provider, formData, onFormChange }: ProviderFormProps) =
         {/* Hidden input for provider ID */}
         <input type="hidden" name="providerId" value={provider.id} />
         <div className="button-group">
-          <button type="button" className="test-button" onClick={handleTestClick}>
+          <button
+            type="button"
+            className="test-button"
+            onClick={handleTestClick}
+          >
             Test
           </button>
-          <button type="button" className="connect-button" onClick={handleConnectClick}>
+          <button
+            type="button"
+            className="connect-button"
+            onClick={handleConnectClick}
+          >
             Connect
           </button>
         </div>
       </form>
       {formErrors.error && (
-        <div className="error-message">
-          Error: {formErrors.error}
-        </div>
+        <div className="error-message">Error: {formErrors.error}</div>
       )}
-      {testResult === 'success' && (
+      {testResult === "success" && (
         <div>
           <div className="test-result">Test Result: {testResult}</div>
           <table className="alerts-table">

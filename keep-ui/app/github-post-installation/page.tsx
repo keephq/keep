@@ -7,13 +7,10 @@ export default async function GithubPostInstallationPage({
     searchParams: { installation_id: string, setup_action: string },
 }) {
   // https://github.com/nextauthjs/next-auth/pull/5792
-  const id_token = await getServerSession({
+  const accessToken = (await getServerSession({
     callbacks: { session: ({ token }) => token },
-  })
+  }))?.accessToken;
 
-  if(!id_token){
-    return <div>Not authorized</div>
-  }
   let installedSuccessfully = false;
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
@@ -21,7 +18,7 @@ export default async function GithubPostInstallationPage({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${id_token?.id_token}`
+        'Authorization': `Bearer ${accessToken?.accessToken}`
       },
       body: JSON.stringify(searchParams)
     })

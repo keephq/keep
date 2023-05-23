@@ -128,7 +128,9 @@ def test_provider(
         alerts = provider.get_alerts()
         return JSONResponse(status_code=200, content={"alerts": alerts})
     except GetAlertException as e:
-        return JSONResponse(status_code=403, content=e.message)
+        return JSONResponse(
+            status_code=e.message.get("statusCode", 400), content=e.message
+        )
     except Exception as e:
         return JSONResponse(status_code=400, content=e.args[0])
 

@@ -6,16 +6,11 @@ import ErrorComponent from './error';
 
 export default async function IndexPage() {
   // https://github.com/nextauthjs/next-auth/pull/5792
-  console.log("Loading the main page");
   const accessToken = (
     await getServerSession({
       callbacks: { session: ({ token }) => token },
     })
   )?.accessToken as string;
-
-  if (!accessToken) {
-    return <div>Not authorized</div>;
-  }
 
   let isGitHubPluginInstalled = false;
   try {
@@ -37,8 +32,6 @@ export default async function IndexPage() {
       }
       return <ErrorComponent errorMessage="502 backend error" url={url} />;
     }
-
-  console.log("Main page loaded");
 
   return (
     <div>

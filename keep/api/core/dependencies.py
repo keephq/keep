@@ -14,7 +14,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def verify_single_tenant() -> str:
-    return "SINGLE-TENANT-ID"
+    return "e1faa321-35df-486b-8fa8-3601ee714011"
 
 
 def verify_api_key(

@@ -54,7 +54,7 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
       <TableRow className={`table-row ${provider.connected ? 'connected' : ''}`}>
         <TableCell className="icon-cell">
           <div className="icon-wrapper">
-            <Image src={provider.icon} alt={provider.name} />
+            <Image src={provider.icon} alt={provider.name} width={150} height={150} />
           </div>
           <div className="provider-info">
             <div className="provider-name">{provider.name}</div>
