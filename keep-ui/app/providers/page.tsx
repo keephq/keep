@@ -1,6 +1,6 @@
 import { Card, Title, Text } from "@tremor/react";
 import ProvidersTable from "./table";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "../../utils/customAuth";
 
 export const dynamic = "force-dynamic";
 

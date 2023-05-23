@@ -4,8 +4,11 @@ services:
       dockerfile: docker/Dockerfile.ui
     ports:
       - '3000:3000'
-    env:
-      AUTH_ENABLED=false
+    environment:
+      - AUTH_ENABLED=false
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://backend:8080
     volumes:
       - ./state:/state
     depends_on:
@@ -15,10 +18,11 @@ services:
       dockerfile: docker/Dockerfile.api
     ports:
       - '8080:8080'
-    env:
+    environment:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
     volumes:
       - ./state:/state
+    # command: --multi-tenant

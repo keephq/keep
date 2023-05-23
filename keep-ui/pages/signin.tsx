@@ -1,9 +1,11 @@
-// @ts-nocheck
 import { signIn } from "next-auth/react";
+import { useEffect } from "react";
 
-const Signin = () => {
-  // Since we currently only use auth0
-  void signIn("auth0", { callbackUrl: "/" });
-};
+export default function Signin() {
 
-export default Signin;
+  useEffect(() => {
+    void signIn("auth0");
+  });
+
+  return <div></div>;
+}

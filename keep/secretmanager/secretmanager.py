@@ -34,7 +34,7 @@ class BaseSecretManager(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def list_secrets(self) -> list[str]:
+    def list_secrets(self, prefix: str) -> list[str]:
         """
         List all secrets in the secret manager.
 

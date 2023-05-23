@@ -1,4 +1,4 @@
-import { getServerSession } from "next-auth/next"
+import { getServerSession } from "../../utils/customAuth";
 import { redirect } from 'next/navigation';
 
 export default async function GithubPostInstallationPage({
@@ -18,7 +18,7 @@ export default async function GithubPostInstallationPage({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken?.accessToken}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify(searchParams)
     })

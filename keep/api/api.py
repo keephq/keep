@@ -1,3 +1,4 @@
+import logging
 import os
 
 import uvicorn
@@ -18,6 +19,8 @@ from keep.api.routes import healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
+
+logger = logging.getLogger(__name__)
 
 
 async def dispose_context_manager() -> None:
@@ -51,6 +54,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     def on_startup():
         create_db_and_tables()
 
+    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     return app
 
 

@@ -1,8 +1,7 @@
 import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 const isSingleTenant = process.env.AUTH_ENABLED == "false";
+console.log(isSingleTenant ? "Single tenant mode" : "Multi tenant mode");
 
 export default isSingleTenant
   ? () => {}
