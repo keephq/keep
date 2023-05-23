@@ -23,7 +23,7 @@ def get_installed_providers(
 ) -> list:
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
-    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
+    secret_manager = SecretManagerFactory.get_secret_manager()
     installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
     # TODO: mask the sensitive data
     installed_providers = [
@@ -51,8 +51,7 @@ def get_alerts(
     tenant_id: str = Depends(verify_api_key),
 ) -> list:
     # todo: validate provider exists, error handling in general
-    # todo: secret manager type from config
-    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
+    secret_manager = SecretManagerFactory.get_secret_manager()
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
@@ -86,8 +85,7 @@ def add_alert(
     tenant_id: str = Depends(verify_api_key),
 ) -> JSONResponse:
     # todo: validate provider exists, error handling in general
-    # todo: secret manager type from config
-    secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
+    secret_manager = SecretManagerFactory.get_secret_manager()
     # todo: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
@@ -152,8 +150,7 @@ async def install_provider(
         provider = ProvidersFactory.get_provider(
             provider_id, provider_type, provider_config
         )
-        secret_manager = SecretManagerFactory.get_secret_manager(SecretManagerTypes.GCP)
-        # todo: how to manage secrets in OSS
+        secret_manager = SecretManagerFactory.get_secret_manager()
         provider_config = secret_manager.write_secret(
             secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
             secret_value=json.dumps(provider_config),

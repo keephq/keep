@@ -23,3 +23,6 @@ class FileSecretManager(BaseSecretManager):
         path = os.path.join(self.directory, path)
         with open(path, "w") as f:
             f.write(secret_value)
+
+    def list_secrets(self) -> list[str]:
+        return os.listdir(self.directory)

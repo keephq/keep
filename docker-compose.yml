@@ -4,8 +4,8 @@ services:
       dockerfile: docker/Dockerfile.ui
     ports:
       - '3000:3000'
-    env_file:
-      - ./state/frontend.env
+    env:
+      AUTH_ENABLED=false
     volumes:
       - ./state:/state
     depends_on:
@@ -15,7 +15,10 @@ services:
       dockerfile: docker/Dockerfile.api
     ports:
       - '8080:8080'
-    env_file:
-      - ./state/backend.env
+    env:
+      - PORT=8080
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
     volumes:
       - ./state:/state

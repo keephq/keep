@@ -32,3 +32,16 @@ class BaseSecretManager(metaclass=abc.ABCMeta):
             secret_name (str): The name of the secret to write.
             secret_value (str): The value of the secret to write.
         """
+
+    @abc.abstractmethod
+    def list_secrets(self) -> list[str]:
+        """
+        List all secrets in the secret manager.
+
+        Raises:
+            NotImplementedError
+
+        Returns:
+            list[str]: A list of secret names.
+        """
+        raise NotImplementedError("list_secrets() method not implemented")
