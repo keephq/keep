@@ -11,7 +11,7 @@ import { useSession } from '../utils/customAuth';
 
 
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   });
@@ -32,7 +32,7 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
     useEffect(() => {
       const fetchData = () => {
 
-          if (pathname) {
+          if (pathname && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
               let url = window.origin + pathname;
               if (searchParams.toString()) {
                   url = url + `?${searchParams.toString()}`;

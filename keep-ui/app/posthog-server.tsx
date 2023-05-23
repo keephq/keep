@@ -8,9 +8,14 @@ interface ExtendedPostHog extends PostHog {
   safeCapture: (event: string, accessToken: any) => void;
 }
 
-export default function PostHogClient(): ExtendedPostHog {
+
+// todo export default function PostHogClient(): ExtendedPostHog
+export default function PostHogClient() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    throw new Error('NEXT_PUBLIC_POSTHOG_KEY is not set')
+   console.log('NEXT_PUBLIC_POSTHOG_KEY is not set, skipping server telemety');
+   return {
+    safeCapture: () => {}
+  }
   }
   const posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
