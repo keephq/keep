@@ -1,8 +1,7 @@
 import NextAuth from "next-auth";
 import Auth0Provider from "next-auth/providers/auth0";
-import { cookies } from 'next/headers';
 
-const isSingleTenant = process.env.AUTH_ENABLED == "false";
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
 console.log(isSingleTenant ? "Single tenant mode" : "Multi tenant mode");
 

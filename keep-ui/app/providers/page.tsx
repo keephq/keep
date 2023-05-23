@@ -2,8 +2,6 @@ import { Card, Title, Text } from "@tremor/react";
 import ProvidersTable from "./table";
 import { getServerSession } from "../../utils/customAuth";
 
-export const dynamic = "force-dynamic";
-
 export default async function ProvidersPage() {
   console.log("Rendering dashboard page");
   // get the session so we will be able to pass it to the SessionProvider
@@ -38,10 +36,7 @@ export default async function ProvidersPage() {
       <Title>Providers</Title>
       <Text>Connect providers to Keep to make your alerts better.</Text>
       <Card className="mt-6">
-        <ProvidersTable
-          session={session}
-          installed_providers={installed_providers}
-        />
+        <ProvidersTable installed_providers={installed_providers} />
       </Card>
     </main>
   );

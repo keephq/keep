@@ -54,7 +54,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     def on_startup():
         create_db_and_tables()
 
-    logger.info("App initialized, multi tenancy: {multi_tenant}")
+    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     return app
 
 

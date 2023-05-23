@@ -5,10 +5,13 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - AUTH_ENABLED=false
-      - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_PUBLIC_API_URL=http://keep-backend-dev:8080
+      - NEXTAUTH_SECRET=07306988fd1b164354256f9886cfd29881501ee7802108dcadf33267b0273169
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - AUTH0_CLIENT_ID=vx2pdcpVnDPaIeFLdzwn3J9M7RZp2KEv
+      - AUTH0_CLIENT_SECRET=qmoOPhIHBKPTtIjpdhIoPXkg4liLI-VeRcXjfk7tvpXXSblzMlStD3fccj8C6iB8
+      - AUTH0_ISSUER=https://dev-gsx2mvfi4wfvqjay.us.auth0.com
+      - NEXT_PUBLIC_AUTH_ENABLED=true
     volumes:
       - ./keep-ui:/app
       - /app/node_modules
@@ -23,6 +26,8 @@ services:
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
+      - AUTH0_DOMAIN=dev-gsx2mvfi4wfvqjay.us.auth0.com
+      - AUTH0_AUDIENCE=vx2pdcpVnDPaIeFLdzwn3J9M7RZp2KEv
     volumes:
       - ./keep:/code/keep
       - ./state:/state

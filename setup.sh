@@ -8,7 +8,7 @@ frontend_secrets=(
   "NEXTAUTH_URL:http://localhost:3000"
   "NEXTAUTH_SECRET:{openssl rand -hex 32}"
   "API_URL:http://backend:8080"
-  "AUTH_ENABLED:false"
+  "NEXT_PUBLIC_AUTH_ENABLED:false"
   "AUTH0_CLIENT_ID:"
   "AUTH0_CLIENT_SECRET:"
   "AUTH0_ISSUER:"

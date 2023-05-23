@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 
-const isSingleTenant = process.env.AUTH_ENABLED == "false";
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 console.log(isSingleTenant ? "Single tenant mode" : "Multi tenant mode");
 
 export default isSingleTenant

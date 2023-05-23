@@ -10,7 +10,7 @@ import {
   NextApiResponse,
 } from "next";
 
-const isSingleTenant = process.env.AUTH_ENABLED == "false";
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
 type UpdateSession = (data?: any) => Promise<Session | null>;
 
@@ -66,7 +66,6 @@ export function useSession(): SessionContextValue {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return useCustomSession();
   }
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const session = useNextAuthSession();
 
