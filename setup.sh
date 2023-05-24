@@ -8,7 +8,7 @@ frontend_secrets=(
   "NEXTAUTH_URL:http://localhost:3000"
   "NEXTAUTH_SECRET:{openssl rand -hex 32}"
   "API_URL:http://backend:8080"
-  "NEXT_PUBLIC_AUTH_ENABLED:false"
+  "AUTH_ENABLED:false"
   "AUTH0_CLIENT_ID:"
   "AUTH0_CLIENT_SECRET:"
   "AUTH0_ISSUER:"
@@ -17,7 +17,7 @@ backend_secrets=(
   "DATABASE_CONNECTION_STRING:sqlite:////state/db.sqlite3"
   "SECRET_MANAGER_DIRECTORY:state"
   "SECRET_MANAGER_TYPE:FILE"
-  "AUTH0_DOMAIN:dev-gsx2mvfi4wfvqjay.us.auth0.com"
+  "AUTH0_DOMAIN:your-domain.us.auth0.com"
   "AUTH0_AUDIENCE:vx2pdcpVnDPaIeFLdzwn3J9M7RZp2KEv"
 )
 
