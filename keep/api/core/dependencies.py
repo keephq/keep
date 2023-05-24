@@ -12,9 +12,12 @@ from keep.api.models.db.tenant import TenantApiKey
 auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# Just a fake random tenant id
+SINGLE_TENANT_UUID = "e1faa321-35df-486b-8fa8-3601ee714011"
+
 
 def verify_single_tenant() -> str:
-    return "e1faa321-35df-486b-8fa8-3601ee714011"
+    return SINGLE_TENANT_UUID
 
 
 def verify_api_key(

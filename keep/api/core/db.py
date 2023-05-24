@@ -2,6 +2,7 @@ import os
 
 import pymysql
 from google.cloud.sql.connector import Connector
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine
 
 # This import is required to create the tables
@@ -98,3 +99,14 @@ def get_session() -> Session:
     """
     with Session(engine) as session:
         yield session
+
+
+def create_single_tenant(tenant_id: str) -> None:
+    with Session(engine) as session:
+        try:
+            # Do everything related with single tenant creation in here
+            session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            session.commit()
+        except IntegrityError:
+            # Tenant already exists
+            pass

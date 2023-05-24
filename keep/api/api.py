@@ -9,8 +9,9 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import context, plugins
 from starlette_context.middleware import RawContextMiddleware
 
-from keep.api.core.db import create_db_and_tables
+from keep.api.core.db import create_db_and_tables, create_single_tenant
 from keep.api.core.dependencies import (
+    SINGLE_TENANT_UUID,
     verify_api_key,
     verify_bearer_token,
     verify_single_tenant,
@@ -41,11 +42,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
 
-    if not multi_tenant:
-        # When running in single tenant mode, we want to override the secured endpoints
-        app.dependency_overrides[verify_api_key] = verify_single_tenant
-        app.dependency_overrides[verify_bearer_token] = verify_single_tenant
-
     app.include_router(providers.router, prefix="/providers")
     app.include_router(healthcheck.router, prefix="/healthcheck")
     app.include_router(tenant.router, prefix="/tenant")
@@ -53,6 +49,11 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     @app.on_event("startup")
     def on_startup():
         create_db_and_tables()
+        if not multi_tenant:
+            # When running in single tenant mode, we want to override the secured endpoints
+            app.dependency_overrides[verify_api_key] = verify_single_tenant
+            app.dependency_overrides[verify_bearer_token] = verify_single_tenant
+            create_single_tenant(SINGLE_TENANT_UUID)
 
     logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     return app
