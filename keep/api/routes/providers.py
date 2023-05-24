@@ -28,10 +28,8 @@ def get_installed_providers(
     # TODO: mask the sensitive data
     installed_providers = [
         {
-            "name": secret.name.split("_")[1],
-            "details": secret_manager.read_secret(
-                secret.name.split("/")[-1], is_json=True
-            ),
+            "name": secret.split("_")[1],
+            "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
         }
         for secret in installed_providers
     ]
@@ -139,7 +137,6 @@ async def install_provider(
     tenant_id: str = Depends(verify_bearer_token),
 ):
     # Extract parameters from the provider_info dictionary
-    tenant_id = tenant_id.get("keep_tenant_id")
     provider_id = provider_info.pop("provider_id")
     provider_type = provider_info.pop("provider_type", None) or provider_id
     provider_config = {

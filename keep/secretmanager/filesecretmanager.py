@@ -19,8 +19,8 @@ class FileSecretManager(BaseSecretManager):
         self.logger.debug(f"Read {path}", extra={"is_json": is_json})
         return file_data
 
-    def write_secret(self, path: str, secret_value: str) -> None:
-        path = os.path.join(self.directory, path)
+    def write_secret(self, secret_name: str, secret_value: str) -> None:
+        path = os.path.join(self.directory, secret_name)
         with open(path, "w") as f:
             f.write(secret_value)
 

@@ -16,7 +16,7 @@ from keep.api.core.dependencies import (
     verify_bearer_token,
     verify_single_tenant,
 )
-from keep.api.routes import healthcheck, providers, tenant
+from keep.api.routes import ai, healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
@@ -42,9 +42,10 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(providers.router, prefix="/providers")
-    app.include_router(healthcheck.router, prefix="/healthcheck")
-    app.include_router(tenant.router, prefix="/tenant")
+    app.include_router(providers.router, prefix="/providers", tags=["providers"])
+    app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
+    app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
+    app.include_router(ai.router, prefix="/ai", tags=["ai"])
 
     @app.on_event("startup")
     def on_startup():

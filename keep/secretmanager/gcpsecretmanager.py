@@ -94,6 +94,6 @@ class GcpSecretManager(BaseSecretManager):
         for secret in self.client.list_secrets(request={"parent": parent}):
             name = secret.name.split("/")[-1]
             if name.startswith(prefix):
-                secrets.append(secret)
+                secrets.append(name)
         self.logger.info("Listed secrets successfully", extra={"prefix": prefix})
         return secrets
