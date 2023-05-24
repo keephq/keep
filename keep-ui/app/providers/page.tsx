@@ -1,6 +1,7 @@
 import { Card, Title, Text } from "@tremor/react";
 import ProvidersTable from "./table";
 import { getServerSession } from "../../utils/customAuth";
+import { getApiURL } from "../../utils/apiUrl";
 
 export default async function ProvidersPage() {
   console.log("Rendering dashboard page");
@@ -16,7 +17,7 @@ export default async function ProvidersPage() {
   let installed_providers = [];
   // Now let's fetch the providers status from the backend
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+    const apiUrl = getApiURL();
     installed_providers = await fetch(`${apiUrl}/providers`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./provider-row";
+import { getApiURL } from "../../utils/apiUrl";
 import "./provider-form.css";
 
 type ProviderFormProps = {
@@ -120,7 +121,7 @@ const ProviderForm = ({
   const handleTestClick = async () => {
     try {
       const data = await validateAndSubmit(
-        `${process.env.NEXT_PUBLIC_API_URL!}/providers/test`
+        `${getApiURL()}/providers/test`
       );
       if (data && data.alerts) {
         console.log("Test succeessful");
@@ -135,7 +136,7 @@ const ProviderForm = ({
   };
 
   const handleConnectClick = () => {
-    validateAndSubmit(`${process.env.NEXT_PUBLIC_API_URL!}/providers/install`)
+    validateAndSubmit(`${getApiURL()}/providers/install`)
       .then((data) => {
         console.log("Connect Result:", data);
         setConnectResult(data.result);

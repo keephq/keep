@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request
@@ -19,6 +20,7 @@ def is_onboarded(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ) -> JSONResponse:
+    logging.getLogger().info(f"Serving request for onboarded [tenant_id: {tenant_id}]")
     statement = select(TenantInstallation).where(
         TenantInstallation.tenant_id == tenant_id
     )

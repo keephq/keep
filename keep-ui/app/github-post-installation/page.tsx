@@ -1,6 +1,6 @@
 import { getServerSession } from "../../utils/customAuth";
 import { redirect } from 'next/navigation';
-
+import { getApiURL } from "../../utils/apiUrl";
 export default async function GithubPostInstallationPage({
     searchParams,
 }: {
@@ -13,7 +13,7 @@ export default async function GithubPostInstallationPage({
 
   let installedSuccessfully = false;
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+    const apiUrl = getApiURL();
     installedSuccessfully = await fetch(`${apiUrl}/tenant/github`, {
       method: 'POST',
       headers: {

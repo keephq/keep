@@ -8,7 +8,8 @@ services:
       - NEXT_PUBLIC_AUTH_ENABLED=false
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXT_PUBLIC_API_URL=http://keep-backend-dev:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - API_URL=http://keep-backend-dev:8080
     volumes:
       - ./keep-ui:/app
       - /app/node_modules
