@@ -34,7 +34,7 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
 
           if (pathname && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
               let url = window.origin + pathname;
-              if (searchParams.toString()) {
+              if (searchParams?.toString()) {
                   url = url + `?${searchParams.toString()}`;
               }
               const posthog_id = user?.name;

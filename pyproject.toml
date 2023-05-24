@@ -41,6 +41,7 @@ google-cloud-secret-manager = "^2.16.1"
 python-jose = "^3.3.0"
 jwcrypto = "^1.4.2"
 langchain = "^0.0.178"
+sqlalchemy = "1.4.41"
 
 
 [tool.poetry.group.dev.dependencies]

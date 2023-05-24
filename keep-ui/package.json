@@ -382,7 +382,8 @@
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.3",
-    "@types/node": "20.2.1"
+    "@types/node": "20.2.1",
+    "@types/uuid": "^9.0.1"
   },
   "author": "",
   "license": "ISC"
