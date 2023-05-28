@@ -43,6 +43,7 @@ langchain = "^0.0.178"
 sqlalchemy = "1.4.41"
 # 3.0.4 missing wheels - https://github.com/snowflakedb/snowflake-connector-python/issues/1584
 snowflake-connector-python = "3.0.3"
+openai = "^0.27.7"
 
 
 
