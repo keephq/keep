@@ -136,6 +136,7 @@ def api(
 
     ctx = click.get_current_context()
     app = api.get_app(multi_tenant=multi_tenant)
+    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     app.dependency_overrides[click.get_current_context] = lambda: ctx
     api.run(app)
 

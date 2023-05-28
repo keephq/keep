@@ -56,7 +56,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
-    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     return app
 
 
