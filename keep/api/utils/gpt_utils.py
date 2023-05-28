@@ -38,7 +38,7 @@ class GptUtils:
         alerts_context: list,
         schema: dict,
         provider_type: str,
-    ) -> str:
+    ) -> dict:
         """Generates an alert based on the prompt and context
 
         Args:
@@ -73,7 +73,7 @@ class GptUtils:
         completion = self.chain.predict(human_input=human_prompt)
         end_time = time.time()
         self.logger.info(f"Time to create alert: {end_time - start_time} seconds")
-        return completion
+        return json.loads(completion)
 
     def repair_alert(
         self, previous_alert: dict, error: str, provider_type: str, schema: dict

@@ -26,7 +26,7 @@ class RepairAlert(BaseModel):
 
 
 @router.post("/create-alert")
-def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) -> str:
+def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) -> dict:
     provider_id = body.provider_id or body.provider_type
     provider_schema = get_alerts_schema(body.provider_type)
     provider_alerts = get_alerts(body.provider_type, provider_id, tenant_id)
@@ -41,7 +41,7 @@ def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) ->
 
 
 @router.post("/repair-alert")
-def repair_alert(body: RepairAlert, tenant_id: str = Depends(verify_api_key)):
+def repair_alert(body: RepairAlert, tenant_id: str = Depends(verify_api_key)) -> dict:
     gpt = GptUtils(tenant_id)
     return gpt.repair_alert(
         previous_alert=body.bad_alert,
