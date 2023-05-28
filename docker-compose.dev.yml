@@ -1,7 +1,7 @@
 services:
   keep-frontend-dev:
     build:
-      dockerfile: keep-ui/Dockerfile.dev.ui
+      dockerfile: docker/Dockerfile.dev.ui
     ports:
       - '3000:3000'
     environment:
