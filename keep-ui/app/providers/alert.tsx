@@ -1,5 +1,6 @@
 import React from 'react';
 import GrafanaAlert from './grafana-alert';
+import DatadogAlert from './datadog-alert';
 // Import other alert components for different providers
 
 type AlertProps = {
@@ -17,6 +18,9 @@ const Alert = ({ alert, provider }: AlertProps) => {
     //   return <DatadogAlert alert={alert} />;
     // case 'other-provider':
     //   return <OtherProviderAlert alert={alert} />;
+    case 'datadog':
+      const parsedAlert = JSON.parse(alert);
+      return <DatadogAlert alert={parsedAlert} />;
     default:
       return <div>Unknown provider: {provider}</div>;
   }

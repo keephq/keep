@@ -12,6 +12,7 @@ export const metadata = {
     'Alerting and on-call management for modern engineering teams.'
 };
 
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
 export default async function IndexPage() {
   // https://github.com/nextauthjs/next-auth/pull/5792

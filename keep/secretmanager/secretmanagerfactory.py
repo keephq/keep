@@ -16,7 +16,7 @@ class SecretManagerFactory:
     ) -> BaseSecretManager:
         if not secret_manager_type:
             secret_manager_type = SecretManagerTypes[
-                config("SECRET_MANAGER_TYPE", default="FILE")
+                config("SECRET_MANAGER_TYPE", default="FILE").upper()
             ]
         if secret_manager_type == SecretManagerTypes.FILE:
             from keep.secretmanager.filesecretmanager import FileSecretManager

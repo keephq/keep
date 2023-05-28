@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./provider-row";
 import { getApiURL } from "../../utils/apiUrl";
+import Alert from './alert';
 import "./provider-form.css";
 
 type ProviderFormProps = {
@@ -131,6 +132,7 @@ const ProviderForm = ({
         setTestResult("error");
       }
     } catch (error) {
+      setFormErrors({"error": error.toString()})
       console.error("Test failed:", error);
     }
   };
@@ -187,7 +189,7 @@ const ProviderForm = ({
         </div>
       </form>
       {formErrors.error && (
-        <div className="error-message">Error: {formErrors.error}</div>
+        <div className="error-message">Error while testing the provider: "{formErrors.error}"</div>
       )}
       {testResult === "success" && (
         <div>
@@ -204,10 +206,7 @@ const ProviderForm = ({
             <tbody>
               {alertData.map((alert) => (
                 <tr key={alert.id}>
-                  <td>{alert.id}</td>
-                  <td>{alert.title}</td>
-                  <td>{alert.condition}</td>
-                  <td>{alert.updated}</td>
+                  <Alert alert={alert} provider={formValues.provider_id} />
                 </tr>
               ))}
             </tbody>

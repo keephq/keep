@@ -64,7 +64,7 @@ class GrafanaProvider(BaseProvider):
                 error[
                     "message"
                 ] += f"\nYou can test your permissions with \n\tcurl -H 'Authorization: Bearer {{token}}' -X GET '{self.authentication_config.host}/api/access-control/user/permissions' | jq \nDocs: https://grafana.com/docs/grafana/latest/administration/service-accounts/#debug-the-permissions-of-a-service-account-token"
-            raise GetAlertException(message=error)
+            raise GetAlertException(message=error, status_code=response.status_code)
         return response.json()
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):

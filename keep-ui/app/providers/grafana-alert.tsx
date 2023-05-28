@@ -60,25 +60,12 @@ const GrafanaAlert = ({ alert }: GrafanaAlertProps) => {
   } = alert;
 
   return (
-    <div className="grafana-alert">
-      <h2>{title}</h2>
-      <p>Rule Group: {ruleGroup}</p>
-      <p>Condition: {condition}</p>
-      <p>No Data State: {noDataState}</p>
-      <p>Execution Error State: {execErrState}</p>
-      <p>Alert Duration: {alertDuration}</p>
-      <p>Updated: {updated}</p>
-      <p>Annotations: {annotations.summary}</p>
-      <p>Labels:</p>
-      <ul>
-        {Object.entries(labels).map(([key, value]) => (
-          <li key={key}>
-            {key}: {value}
-          </li>
-        ))}
-      </ul>
-      <p>Is Paused: {isPaused ? 'Yes' : 'No'}</p>
-    </div>
+    <>
+      <td>{alert.id}</td>
+      <td>{alert.title}</td>
+      <td>{alert.condition}</td>
+      <td>{alert.updated}</td>
+    </>
   );
 };
 

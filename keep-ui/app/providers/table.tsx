@@ -5,6 +5,9 @@ import { Table } from "@tremor/react";
 import ProviderRow from "./provider-row";
 import { Provider } from "./provider-row";
 import Providers from "./providers";
+import { SessionProvider } from "next-auth/react";
+
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
 type ProvidersTableProps = {
   providers: Provider[];
@@ -51,17 +54,31 @@ const ProvidersTable = ({ installed_providers }) => {
   return (
     <Table>
       <tbody>
-        {updatedProviders.map((provider) => (
-          <ProviderRow
-            key={provider.id}
-            provider={provider}
-            expanded={expandedProviderId === provider.id}
-            onExpand={handleExpand}
-          />
-        ))}
+        {isSingleTenant ? (
+          updatedProviders.map((provider) => (
+            <ProviderRow
+              key={provider.id}
+              provider={provider}
+              expanded={expandedProviderId === provider.id}
+              onExpand={handleExpand}
+            />
+          ))
+        ) : (
+          <SessionProvider>
+            {updatedProviders.map((provider) => (
+              <ProviderRow
+                key={provider.id}
+                provider={provider}
+                expanded={expandedProviderId === provider.id}
+                onExpand={handleExpand}
+              />
+            ))}
+          </SessionProvider>
+        )}
       </tbody>
     </Table>
   );
+
 };
 
 export default ProvidersTable;
