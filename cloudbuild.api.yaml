@@ -2,7 +2,7 @@ steps:
   # Docker Build
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-f', 'docker/Dockerfile.api', '-t',
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/keep/keep-ui:latest', 'keep-ui']
+           'us-central1-docker.pkg.dev/${PROJECT_ID}/keep/keep-api:latest', '.']
   # Docker push to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push',  'us-central1-docker.pkg.dev/${PROJECT_ID}/keep/keep-ui:latest']
+    args: ['push',  'us-central1-docker.pkg.dev/${PROJECT_ID}/keep/keep-api:latest']
