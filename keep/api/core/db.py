@@ -101,7 +101,7 @@ def get_session() -> Session:
         yield session
 
 
-def create_single_tenant(tenant_id: str) -> None:
+def try_create_single_tenant(tenant_id: str) -> None:
     with Session(engine) as session:
         try:
             # Do everything related with single tenant creation in here
