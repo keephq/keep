@@ -19,16 +19,33 @@ class CreateAlert(BaseModel):
     repository_context: Optional[dict] = {}
 
 
+class RepairAlert(BaseModel):
+    bad_alert: dict
+    error: str
+    provider_type: str
+
+
 @router.post("/create-alert")
 def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) -> str:
     provider_id = body.provider_id or body.provider_type
     provider_schema = get_alerts_schema(body.provider_type)
     provider_alerts = get_alerts(body.provider_type, provider_id, tenant_id)
-    gpt_utils = GptUtils()
-    return gpt_utils.generate_alert(
+    gpt = GptUtils(tenant_id)
+    return gpt.generate_alert(
         alert_prompt=body.alert,
         repository_context=body.repository_context,
         alerts_context=provider_alerts,
         schema=provider_schema,
         provider_type=body.provider_type,
+    )
+
+
+@router.post("/repair-alert")
+def repair_alert(body: RepairAlert, tenant_id: str = Depends(verify_api_key)):
+    gpt = GptUtils(tenant_id)
+    return gpt.repair_alert(
+        previous_alert=body.bad_alert,
+        error=body.error,
+        provider_type=body.provider_type,
+        schema=get_alerts_schema(body.provider_type),
     )

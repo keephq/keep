@@ -11,7 +11,10 @@ from langchain.memory import ConversationBufferWindowMemory
 class GptUtils:
     TEMPLATE = "You are KeepAI, a GitHub GitOps bot installed in repositories, that generates alerts specifications based on user input.\n {human_input}"
 
-    def __init__(self):
+    def __init__(self, tenant_id: str):
+        # TODO: in the future, load openai key according to tenant_id
+        self.tenant_id = tenant_id
+
         prompt = PromptTemplate(
             input_variables=["human_input"],
             template=self.TEMPLATE,
