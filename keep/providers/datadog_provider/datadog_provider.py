@@ -1,6 +1,7 @@
 """
 Datadog Provider is a class that allows to ingest/digest data from Datadog.
 """
+import dataclasses
 import datetime
 import time
 
@@ -26,8 +27,18 @@ class DatadogProviderAuthConfig:
     Datadog authentication configuration.
     """
 
-    api_key: str
-    app_key: str
+    api_key: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Datadog Api Key (https://docs.datadoghq.com/account_management/api-app-keys/#api-keys)",
+        }
+    )
+    app_key: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Datadog App Key (https://docs.datadoghq.com/account_management/api-app-keys/#application-keys)",
+        }
+    )
 
 
 class DatadogProvider(BaseProvider):
