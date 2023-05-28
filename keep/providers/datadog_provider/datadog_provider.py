@@ -21,7 +21,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
-class DatadogAuthConfig:
+class DatadogProviderAuthConfig:
     """
     Datadog authentication configuration.
     """
