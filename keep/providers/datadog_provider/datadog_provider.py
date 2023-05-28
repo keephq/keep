@@ -70,7 +70,9 @@ class DatadogProvider(BaseProvider):
         Validates required configuration for Datadog provider.
 
         """
-        self.authentication_config = DatadogAuthConfig(**self.config.authentication)
+        self.authentication_config = DatadogProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def expose(self):
         return {
