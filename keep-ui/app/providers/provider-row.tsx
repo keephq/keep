@@ -11,6 +11,7 @@ type AuthenticationMethod = {
   type: string;
   placeholder?: string;
   validation?: (value: string) => boolean;
+  required?: boolean;
 };
 
 export type Provider = {

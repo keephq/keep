@@ -10,6 +10,8 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_API_URL=http://localhost:8080
       - API_URL=http://keep-backend-dev:8080
+      - NEXT_PUBLIC_POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
+      - NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
     volumes:
       - ./keep-ui:/app
       - /app/node_modules

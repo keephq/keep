@@ -20,8 +20,9 @@ const Providers: Provider[] = [
       id: 'datadog',
       name: 'Datadog',
       authentication: [
-        { name: 'api key', desc: 'Datadog API key', type: 'string', placeholder: '1234567890abcdef1234567890abcdef' },
-        { name: 'hostname', desc: 'Datadog hostname', type: 'string', placeholder: 'https://keephq.datadog.com' },
+        { name: 'Api key', desc: 'Datadog API key', type: 'string', placeholder: '1234567890abcdef1234567890abcdef' },
+        { name: 'App key', desc: 'Datadog App key', type: 'string', placeholder: '1234567890abcdef1234567890abcdef' },
+        { name: 'hostname', desc: 'Datadog hostname', type: 'string', placeholder: 'https://us1.datadog.com', required: false },
       ],
       icon: '/datadog.svg',
       connected: false,

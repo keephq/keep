@@ -43,7 +43,7 @@ const ProviderForm = ({
   const validateForm = (updatedFormValues) => {
     const errors = {};
     for (const method of provider.authentication) {
-      if (method.placeholder && !formValues[method.name]) {
+      if (method.placeholder && !formValues[method.name] && method.required) {
         // @ts-ignore
         errors[method.name] = true;
       }
@@ -153,7 +153,9 @@ const ProviderForm = ({
       <form className={isConnected ? "connected-form" : ""}>
         {provider.authentication.map((method) => (
           <div className="form-group" key={method.name}>
-            <label htmlFor={method.name}>{method.desc}:</label>
+            <label htmlFor={method.name}>
+              {method.desc}{method.required !== false ? "" : " (optional)"}:
+            </label>
             <input
               type={method.type}
               id={method.name}
