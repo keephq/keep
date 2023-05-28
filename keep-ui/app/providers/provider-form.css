@@ -1,87 +1,91 @@
 .form-group {
-    margin-bottom: 16px;
-  }
+  margin-bottom: 16px;
+}
 
-  .form-group label {
-    display: block;
-    font-weight: bold;
-  }
+.form-group label {
+  display: block;
+  font-weight: bold;
+}
 
-  .form-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
 
-  .form-group input.error {
-    border-color: red;
-  }
+.form-group input.error {
+  border-color: red;
+}
 
-  .button-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-  }
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
 
-  .test-button,
-  .connect-button {
-    padding: 8px 16px;
-    background-color: #f27e12;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
+.test-button,
+.connect-button {
+  padding: 8px 16px;
+  background-color: #f27e12;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-  .test-button:hover,
-  .connect-button:hover {
-    background-color: #f27e12;
-  }
+.test-button:hover,
+.connect-button:hover {
+  background-color: #f27e12;
+}
 
-  .test-result {
-    margin-top: 16px;
-  }
+.test-result {
+  margin-top: 16px;
+}
 
-  .error {
-    border-color: red;
-  }
-  .error-message {
-    color: red;
-    margin-top: 8px;
-  }
+.error {
+  border-color: red;
+}
 
-  .error-message button {
-    margin-top: 16px;
-  }
+.error-message {
+  color: red;
+  margin-top: 8px;
+}
 
-  .error-message {
-    white-space: pre-wrap;
-  }
+.error-message button {
+  margin-top: 16px;
+}
 
+.error-message {
+  white-space: pre-wrap;
+}
 
+.connected-form {
+  background-color: #e8f5e9; /* Green color */
+}
 
-  .alerts-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+.alerts-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
 
-  .alerts-table th,
-  .alerts-table td {
-    padding: 8px;
-    border: 1px solid #ccc;
-  }
+.alerts-table th,
+.alerts-table td {
+  padding: 8px;
+  border: 1px solid #ccc;
+  width: 25%;
+  min-height: 40px; /* Adjust the minimum height as needed */
+  white-space: pre-wrap;
+  word-break: break-word; /* Added property */
+}
 
-  .alerts-table th {
-    background-color: #f0f0f0;
-    text-align: left;
-  }
+.alerts-table th {
+  background-color: #f0f0f0;
+  text-align: left;
+}
 
-  .alerts-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-
-  .connected-form {
-    background-color: #e8f5e9; /* Green color */
-  }
+.alerts-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
