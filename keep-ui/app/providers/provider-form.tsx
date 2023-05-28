@@ -189,7 +189,7 @@ const ProviderForm = ({
         </div>
       </form>
       {formErrors.error && (
-        <div className="error-message">Error while testing the provider: "{formErrors.error}"</div>
+        <div className="error-message">Error while testing the provider: &quot;{formErrors.error}&quot;</div>
       )}
       {testResult === "success" && (
         <div>
