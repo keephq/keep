@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
@@ -67,8 +67,11 @@ def get_alerts(
 def get_alerts_schema(
     provider_type: str,
 ) -> dict:
-    provider = ProvidersFactory.get_provider_class(provider_type)
-    return provider.get_alert_format_description()
+    try:
+        provider = ProvidersFactory.get_provider_class(provider_type)
+        return provider.get_alert_format_description()
+    except ModuleNotFoundError:
+        raise HTTPException(404, detail=f"Provider {provider_type} not found")
 
 
 @router.post(
