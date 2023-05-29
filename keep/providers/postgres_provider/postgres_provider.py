@@ -18,7 +18,11 @@ class PostgresProviderAuthConfig:
         metadata={"required": True, "description": "Postgres username"}
     )
     password: str = dataclasses.field(
-        metadata={"required": True, "description": "Postgres password"}
+        metadata={
+            "required": True,
+            "description": "Postgres password",
+            "sensitive": True,
+        }
     )
     host: str = dataclasses.field(
         metadata={"required": True, "description": "Postgres hostname"}

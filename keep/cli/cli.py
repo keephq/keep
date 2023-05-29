@@ -261,14 +261,19 @@ def provider(info: Info, provider_type, provider_id, provider_config_file):
     while not config:
         # iterate necessary config and prompt for values
         for field in fields(config_class):
+            is_sensitive = field.metadata.get("sensitive", False)
             optional = not field.metadata.get("required")
             if optional:
                 default = field.default or ""
                 config_value = click.prompt(
-                    f"{field.metadata.get('description')}", default=default
+                    f"{field.metadata.get('description')}",
+                    default=default,
+                    hide_input=is_sensitive,
                 )
             else:
-                config_value = click.prompt(f"{field.metadata.get('description')}")
+                config_value = click.prompt(
+                    f"{field.metadata.get('description')}", hide_input=is_sensitive
+                )
             provider_config["authentication"][field.name] = config_value
 
         try:

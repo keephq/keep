@@ -28,6 +28,7 @@ class PagerdutyProviderAuthConfig:
         metadata={
             "required": False,
             "description": "api_key is a user or team API key",
+            "sensitive": True,
         },
         default=None,
     )

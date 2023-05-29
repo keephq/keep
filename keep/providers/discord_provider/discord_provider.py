@@ -16,7 +16,11 @@ class DiscordProviderAuthConfig:
     """Discord authentication configuration."""
 
     webhook_url: str = dataclasses.field(
-        metadata={"required": True, "description": "Discord Webhook Url"}
+        metadata={
+            "required": True,
+            "description": "Discord Webhook Url",
+            "sensitive": True,
+        }
     )
 
 

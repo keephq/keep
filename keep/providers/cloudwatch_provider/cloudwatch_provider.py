@@ -17,10 +17,14 @@ from keep.providers.models.provider_config import ProviderConfig
 @pydantic.dataclasses.dataclass
 class CloudwatchProviderAuthConfig:
     access_key: str = dataclasses.field(
-        metadata={"required": True, "description": "AWS access key"}
+        metadata={"required": True, "description": "AWS access key", "sensitive": True}
     )
     access_key_secret: str = dataclasses.field(
-        metadata={"required": True, "description": "AWS access key secret"}
+        metadata={
+            "required": True,
+            "description": "AWS access key secret",
+            "sensitive": True,
+        }
     )
     region: str = dataclasses.field(
         metadata={
