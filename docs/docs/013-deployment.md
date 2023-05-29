@@ -5,10 +5,12 @@ sidebar_position: 3
 
 # Deployment
 
-After writing some alerts with Keep, you now want to use Keep in production. For that, you may want to deploy Keep on an environment other than your local station.
+After writing some alerts with Keep, you may now want to use Keep in production! For that, you can easily deploy Keep on an environment other than your local station.
 
-Currently, Keep support [Docker](#docker) and [Render](#render).
-#### Want to deploy Keep on a specific platform? [Just open an issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&template=feature_request.md&title=feature:%20new%20deployment%20option) and we will get to it ASAP!
+Keep currently supports [Docker](#docker) and [Render](#render).
+:::warning Missing something?
+ Want to deploy Keep on a specific platform that is not yet supported? [Just open an issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&template=feature_request.md&title=feature:%20new%20deployment%20option) and we will get to it ASAP!
+:::
 
 ## Docker
 
