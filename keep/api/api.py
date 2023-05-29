@@ -4,11 +4,11 @@ import os
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI
-from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette_context import context, plugins
+from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
+import keep.api.logging
 import keep.api.observability
 from keep.api.core.db import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import (
@@ -17,11 +17,12 @@ from keep.api.core.dependencies import (
     verify_bearer_token,
     verify_single_tenant,
 )
+from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import ai, healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
-
+keep.api.logging.setup()
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +68,12 @@ def run(app: FastAPI):
     import nest_asyncio
 
     nest_asyncio.apply()
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
+        log_config=logging_config,
+    )
 
 
 app = get_app()
