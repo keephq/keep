@@ -25,6 +25,8 @@ load_dotenv(find_dotenv())
 keep.api.logging.setup()
 logger = logging.getLogger(__name__)
 
+PORT = int(os.environ.get("PORT", 8080))
+
 
 async def dispose_context_manager() -> None:
     """Dump context manager after every request."""
@@ -59,6 +61,13 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
     keep.api.observability.setup(app)
+
+    if os.environ.get("USE_NGROK"):
+        from pyngrok import ngrok
+
+        public_url = ngrok.connect(PORT).public_url
+        logger.info(f"ngrok tunnel: {public_url}")
+
     return app
 
 
@@ -71,9 +80,6 @@ def run(app: FastAPI):
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8080)),
+        port=PORT,
         log_config=logging_config,
     )
-
-
-app = get_app()

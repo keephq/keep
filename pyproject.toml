@@ -48,6 +48,7 @@ opentelemetry-sdk = "^1.18.0"
 opentelemetry-instrumentation-fastapi = "^0.39b0"
 opentelemetry-instrumentation-logging = "^0.39b0"
 opentelemetry-propagator-gcp = "^1.5.0"
+pyngrok = "^6.0.0"
 
 
 
