@@ -25,6 +25,7 @@ services:
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
       - USE_NGROK=true
+      - OPENAI_API_KEY=$OPENAI_API_KEY
     volumes:
       - ./state:/state
     # command: --multi-tenant
