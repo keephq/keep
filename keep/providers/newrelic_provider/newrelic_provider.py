@@ -16,7 +16,11 @@ from keep.providers.models.provider_config import ProviderConfig
 @pydantic.dataclasses.dataclass
 class NewrelicProviderAuthConfig:
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "New Relic API key"}
+        metadata={
+            "required": True,
+            "description": "New Relic API key",
+            "sensitive": True,
+        }
     )
     account_id: str = dataclasses.field(
         metadata={"required": True, "description": "New Relic account ID"}
@@ -75,8 +79,6 @@ class NewrelicProvider(BaseProvider):
                 "Failed to query New Relic",
                 extra={"response": response.text, "query": query},
             )
-            raise ProviderException(
-                f"Failed to query New Relic: {response.text}"
-            )
+            raise ProviderException(f"Failed to query New Relic: {response.text}")
         # results are in response.json()['data']['actor']['account']['nrql']['results'], should we return this?
         return response.json()

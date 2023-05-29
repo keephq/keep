@@ -33,10 +33,16 @@ class SshProviderAuthConfig:
         default=22, metadata={"required": False, "description": "SSH port"}
     )
     pkey: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "SSH private key"}
+        default="",
+        metadata={
+            "required": False,
+            "description": "SSH private key",
+            "sensitive": True,
+        },
     )
     password: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "SSH password"}
+        default="",
+        metadata={"required": False, "description": "SSH password", "sensitive": True},
     )
 
     @pydantic.root_validator

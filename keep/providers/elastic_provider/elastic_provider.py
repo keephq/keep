@@ -20,7 +20,11 @@ class ElasticProviderAuthConfig:
     """Elasticsearch authentication configuration."""
 
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Elasticsearch Api Key"}
+        metadata={
+            "required": True,
+            "description": "Elasticsearch Api Key",
+            "sensitive": True,
+        }
     )
     host: str = dataclasses.field(
         default="", metadata={"required": False, "description": "Elasticsearch host"}

@@ -13,7 +13,7 @@ class ZendutyProviderAuthConfig:
     """Zenduty authentication configuration."""
 
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Zenduty api key"}
+        metadata={"required": True, "description": "Zenduty api key", "sensitive": True}
     )
 
 

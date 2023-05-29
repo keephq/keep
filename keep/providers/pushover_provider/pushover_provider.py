@@ -13,7 +13,11 @@ class PushoverProviderAuthConfig:
     """Pushover authentication configuration."""
 
     token: str = dataclasses.field(
-        metadata={"required": True, "description": "Pushover app token"}
+        metadata={
+            "required": True,
+            "description": "Pushover app token",
+            "sensitive": True,
+        }
     )
     user_key: str = dataclasses.field(
         metadata={"required": True, "description": "Pushover user key"}
@@ -76,6 +80,4 @@ if __name__ == "__main__":
         authentication={"token": pushover_token, "user_key": pushover_user_key},
     )
     provider = PushoverProvider(config=config)
-    provider.notify(
-        message="Simple alert showing context with name: John Doe"
-    )
+    provider.notify(message="Simple alert showing context with name: John Doe")

@@ -19,6 +19,7 @@ class OpsgenieProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Ops genie api key (https://support.atlassian.com/opsgenie/docs/api-key-management/)",
+            "sensitive": True,
         },
     )
 
