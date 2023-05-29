@@ -18,7 +18,7 @@ class MysqlProviderAuthConfig:
         metadata={"required": True, "description": "MySQL username"}
     )
     password: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL password"}
+        metadata={"required": True, "description": "MySQL password", "sensitive": True}
     )
     host: str = dataclasses.field(
         metadata={"required": True, "description": "MySQL hostname"}

@@ -16,7 +16,11 @@ class TeamsProviderAuthConfig:
     """Teams authentication configuration."""
 
     webhook_url: str = dataclasses.field(
-        metadata={"required": True, "description": "Teams Webhook Url"}
+        metadata={
+            "required": True,
+            "description": "Teams Webhook Url",
+            "sensitive": True,
+        }
     )
 
 
@@ -53,7 +57,12 @@ class TeamsProvider(BaseProvider):
 
         response = requests.post(
             webhook_url,
-            json={"@type": typeCard, "themeColor": themeColor, "text": message, "sections": sections},
+            json={
+                "@type": typeCard,
+                "themeColor": themeColor,
+                "text": message,
+                "sections": sections,
+            },
         )
         if not response.ok:
             raise ProviderException(
@@ -85,18 +94,9 @@ if __name__ == "__main__":
         typeCard="MessageCard",
         themeColor="0076D7",
         message="Microsoft Teams alert",
-        sections = [
-            {
-                "name": "Assigned to",
-                "value": "Danilo Vaz"
-            },
-            {
-                "name": "Sum",
-                "value": 10
-            },
-            {
-                "name": "Count",
-                "value": 100
-            }
+        sections=[
+            {"name": "Assigned to", "value": "Danilo Vaz"},
+            {"name": "Sum", "value": 10},
+            {"name": "Count", "value": 100},
         ],
     )

@@ -16,7 +16,11 @@ class TelegramProviderAuthConfig:
     """Telegram authentication configuration."""
 
     bot_token: str = dataclasses.field(
-        metadata={"required": True, "description": "Telegram Bot Token"}
+        metadata={
+            "required": True,
+            "description": "Telegram Bot Token",
+            "sensitive": True,
+        }
     )
 
 
