@@ -86,7 +86,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("deploy_alert() method not implemented")
 
     @staticmethod
-    @abc.abstractmethod
     def get_alert_format_description():
         """
         Get the alert format description for the provider.
