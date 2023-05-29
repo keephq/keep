@@ -44,6 +44,10 @@ sqlalchemy = "1.4.41"
 # 3.0.4 missing wheels - https://github.com/snowflakedb/snowflake-connector-python/issues/1584
 snowflake-connector-python = "3.0.3"
 openai = "^0.27.7"
+opentelemetry-sdk = "^1.18.0"
+opentelemetry-instrumentation-fastapi = "^0.39b0"
+opentelemetry-instrumentation-logging = "^0.39b0"
+opentelemetry-propagator-gcp = "^1.5.0"
 
 
 

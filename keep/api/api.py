@@ -9,6 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import context, plugins
 from starlette_context.middleware import RawContextMiddleware
 
+import keep.api.observability
 from keep.api.core.db import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
@@ -56,6 +57,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
+    keep.api.observability.setup(app)
     return app
 
 
