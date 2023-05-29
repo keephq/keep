@@ -2,6 +2,8 @@
 GithubProvider is a provider that interacts with GitHub.
 """
 
+import dataclasses
+
 import pydantic
 from github import Github
 
@@ -15,7 +17,13 @@ class GithubProviderAuthConfig:
     GithubProviderAuthConfig is a class that represents the authentication configuration for the GithubProvider.
     """
 
-    access_token: str | None = None
+    access_token: str | None = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "GitHub Access Token",
+            "sensitive": True,
+        }
+    )
 
 
 class GithubProvider(BaseProvider):

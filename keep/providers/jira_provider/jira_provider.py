@@ -16,7 +16,11 @@ class JiraProviderAuthConfig:
     """Jira authentication configuration."""
 
     api_token: str = dataclasses.field(
-        metadata={"required": True, "description": "Atlassian Jira API Token"}
+        metadata={
+            "required": True,
+            "description": "Atlassian Jira API Token",
+            "sensitive": True,
+        }
     )
 
 
@@ -51,11 +55,8 @@ class JiraProvider(BaseProvider):
         board_id = kwargs.pop("board_id", "")
         email = kwargs.pop("email", "")
 
-        request_url = f'https://{host}/rest/agile/1.0/board/{board_id}/issue'
-        response = requests.get(
-            request_url,
-            auth=(email, jira_api_token)
-        )
+        request_url = f"https://{host}/rest/agile/1.0/board/{board_id}/issue"
+        response = requests.get(request_url, auth=(email, jira_api_token))
         if not response.ok:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
@@ -63,9 +64,7 @@ class JiraProvider(BaseProvider):
         self.logger.debug("Fetched data from Jira")
 
         issues = response.json()
-        return {
-            "number_of_issues": issues['total']
-        }
+        return {"number_of_issues": issues["total"]}
 
 
 if __name__ == "__main__":
@@ -85,8 +84,4 @@ if __name__ == "__main__":
         authentication={"api_token": jira_api_token},
     )
     provider = JiraProvider(provider_id="jira", config=config)
-    provider.query(
-        host="JIRA HOST",
-        board_id="1",
-        email="YOUR EMAIL"
-    )
+    provider.query(host="JIRA HOST", board_id="1", email="YOUR EMAIL")

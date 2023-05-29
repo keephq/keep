@@ -17,7 +17,7 @@ class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
 
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Sentry Api Key"}
+        metadata={"required": True, "description": "Sentry Api Key", "sensitive": True}
     )
     org_slug: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry organization slug"}

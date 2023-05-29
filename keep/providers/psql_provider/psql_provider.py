@@ -20,7 +20,11 @@ class PsqlProviderAuthConfig:
         metadata={"required": True, "description": "Postgres username"}
     )
     password: str = dataclasses.field(
-        metadata={"required": True, "description": "Postgres password"}
+        metadata={
+            "required": True,
+            "description": "Postgres password",
+            "sensitive": True,
+        }
     )
     host: str = dataclasses.field(
         metadata={"required": True, "description": "Postgres hostname"}
@@ -29,8 +33,9 @@ class PsqlProviderAuthConfig:
         metadata={"required": False, "description": "Postgres database name"}
     )
     port: int | None = dataclasses.field(
-        metadata={"required": False,
-                  "description": "Postgres database name"}, default=5432)
+        metadata={"required": False, "description": "Postgres database name"},
+        default=5432,
+    )
 
 
 class PsqlProvider(BaseProvider):
@@ -68,7 +73,7 @@ class PsqlProvider(BaseProvider):
         """
 
         query = kwargs.pop("query")
-        fetch_all = kwargs.get('single_row', False)
+        fetch_all = kwargs.get("single_row", False)
 
         if not query:
             raise ProviderException(

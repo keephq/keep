@@ -16,7 +16,11 @@ class SlackProviderAuthConfig:
     """Slack authentication configuration."""
 
     webhook_url: str = dataclasses.field(
-        metadata={"required": True, "description": "Slack Webhook Url"}
+        metadata={
+            "required": True,
+            "description": "Slack Webhook Url",
+            "sensitive": True,
+        }
     )
 
 

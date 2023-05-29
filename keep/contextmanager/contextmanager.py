@@ -207,7 +207,7 @@ class ContextManager:
                 with open(self.state_file, "r") as f:
                     self.state = json.load(f)
             except Exception:
-                self.logger.error("Failed to load state file, using empty state")
+                self.logger.warning("Failed to load state file, using empty state")
                 self.state = {}
 
     def get_last_alert_run(self, alert_id):
