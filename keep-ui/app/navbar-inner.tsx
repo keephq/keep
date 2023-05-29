@@ -27,12 +27,12 @@ export default function NavbarInner({ user }: { user: any }) {
                 <div className="flex flex-shrink-0 items-center">
                   <a href="/">
                     <Image
-                      src="/keep.svg"
+                      src="/keep.png"
                       alt="Keep"
-                      width={42}
-                      height={42}
-                      className="inline-block ml-2"
+                      width={36}
+                      height={36}
                       priority={true}
+
                     />
                   </a>
                 </div>
