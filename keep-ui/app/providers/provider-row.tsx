@@ -20,6 +20,7 @@ export type Provider = {
   authentication: AuthenticationMethod[];
   icon: string;
   connected: boolean;
+  coming_soon?: boolean;
 };
 
 type ProviderRowProps = {
@@ -50,6 +51,8 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
     }
   }, [provider.connected, provider.authentication]);
 
+  const isComingSoonProvider = provider.coming_soon || false;
+
   return (
     <>
       <TableRow className={`table-row ${provider.connected ? 'connected' : ''}`}>
@@ -62,11 +65,15 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
           </div>
         </TableCell>
         <TableCell className="expand-cell">
-          <div className="expand-button-container">
-            <button type="button" className="expand-button" onClick={handleExpand}>
-              {expanded ? 'Collapse' : provider.connected ? 'Disconnect' : 'Connect'}
-            </button>
-          </div>
+          {isComingSoonProvider ? (
+            <div className="coming-soon-label">🚧 Coming Soon 🚧</div>
+          ) : (
+            <div className="expand-button-container">
+              <button type="button" className="expand-button" onClick={handleExpand}>
+                {expanded ? 'Collapse' : provider.connected ? 'Disconnect' : 'Connect'}
+              </button>
+            </div>
+          )}
         </TableCell>
       </TableRow>
       {expanded && (

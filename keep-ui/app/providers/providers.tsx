@@ -27,6 +27,24 @@ const Providers: Provider[] = [
       icon: '/datadog.svg',
       connected: false,
     },
+    {
+      id: 'elasticsearch',
+      name: 'Elasticsearch',
+      authentication: [
+      ],
+      icon: '/elasticsearch.svg',
+      connected: false,
+      coming_soon: true,
+    },
+    {
+      id: 'newrelic',
+      name: 'New Relic',
+      authentication: [
+      ],
+      icon: '/newrelic.svg',
+      connected: false,
+      coming_soon: true,
+    }
   ];
 
   export default Providers;

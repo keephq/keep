@@ -64,3 +64,18 @@
   .table-row.connected {
     background-color: lightgreen;
   }
+
+  .coming-soon-label {
+    display: inline-block;
+    background-color: #f27e12;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
