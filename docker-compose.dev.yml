@@ -16,6 +16,8 @@ services:
       - ./keep-ui:/app
       - /app/node_modules
       - /app/.next
+    depends_on:
+      - keep-backend-dev
   keep-backend-dev:
     build:
       dockerfile: docker/Dockerfile.dev.api
@@ -26,6 +28,7 @@ services:
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
+      - USE_NGROK=true
     volumes:
       - ./keep:/code/keep
       - ./state:/state

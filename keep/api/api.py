@@ -4,11 +4,12 @@ import os
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI
-from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette_context import context, plugins
+from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
+import keep.api.logging
+import keep.api.observability
 from keep.api.core.db import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
@@ -16,12 +17,15 @@ from keep.api.core.dependencies import (
     verify_bearer_token,
     verify_single_tenant,
 )
+from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import ai, healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
-
+keep.api.logging.setup()
 logger = logging.getLogger(__name__)
+
+PORT = int(os.environ.get("PORT", 8080))
 
 
 async def dispose_context_manager() -> None:
@@ -56,7 +60,14 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
-    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
+    keep.api.observability.setup(app)
+
+    if os.environ.get("USE_NGROK"):
+        from pyngrok import ngrok
+
+        public_url = ngrok.connect(PORT).public_url
+        logger.info(f"ngrok tunnel: {public_url}")
+
     return app
 
 
@@ -66,7 +77,9 @@ def run(app: FastAPI):
     import nest_asyncio
 
     nest_asyncio.apply()
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
-
-app = get_app()
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=PORT,
+        log_config=logging_config,
+    )
