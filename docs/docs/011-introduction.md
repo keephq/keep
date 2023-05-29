@@ -21,7 +21,7 @@ Brought to you by developers, **EASY** to use and managed by code.
 
 ## 📟 Console
 - Manage and maintain alerts
-- Connect and configure [Providers]((https://github.com/keephq/keep/tree/main/keep/providers))
+- Connect and configure [Providers](https://github.com/keephq/keep/tree/main/keep/providers)
 - Connect 3rd party applications (e.g. GitHub)
 - Single pane of glass to all of your different monitoring tools
 

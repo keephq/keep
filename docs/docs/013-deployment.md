@@ -41,4 +41,4 @@ When clicking the Deploy to Render button, you will be asked to provide the `KEE
 {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
 ```
 
-\* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
+\* Refer to [Run locally](https://github.com/keephq/keep/tree/feature/api-multi-tenant#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain the webhook URL

@@ -64,7 +64,7 @@ Brought to you by developers, **EASY** to use and managed by code.
 
 ## 📟 Console
 - Manage and maintain alerts
-- Connect and configure [Providers]((https://github.com/keephq/keep/tree/main/keep/providers))
+- Connect and configure [Providers](https://github.com/keephq/keep/tree/main/keep/providers)
 - Connect 3rd party application integrations (e.g. GitHub/GitLab)
 - Single pane of glass to all of your different monitoring tools
 
@@ -173,7 +173,7 @@ When clicking the Deploy to Render button, you will be asked to provide the `KEE
 {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
 ```
 
-\* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
+\* Refer to [Run locally](https://github.com/keephq/keep/tree/feature/api-multi-tenant#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain the webhook URL
 
 ##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
