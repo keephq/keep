@@ -1,11 +1,15 @@
 ---
-sidebar_label: Multistep Alert Example
-sidebar_position: 7
+sidebar_label: Multi-step alert
+sidebar_position: 1
 ---
 
-#  Multistep Alert Example
+# Multiple steps alert example
 
-```bash
+:::info
+<a href="#breakdown" >Breakdown</a> of the alert and further explanations can be found in the bottom of this page.
+:::
+
+```yaml
 # Check both databases prod1 and prod2 and alert if any of them has less than 10% disk space left.
 alert:
   id: db-disk-space
@@ -36,7 +40,7 @@ alert:
           value:  "{{ steps.db-prod2-no-space.results }}"
           compare_to: 90% # Trigger if more than 90% full
           alias: B
-      # trigger the action only if both conditions are met:
+      # trigger the action if any of the conditions are met:
       if: "{{ A }} or {{ B }}"
       provider:
         type: telegram
@@ -54,15 +58,15 @@ providers:
 
 ```
 
-# Breakdown
+## Breakdown
 
-## Steps
+### Steps
 In this example we can see two steps:
 - db-prod1-no-space - checks db space of db prod1
 - db-prod2-no-space - checkd db space of db prod2
 
 ### Conditions
-Each of the steps has the same threshold condition:
+The action has two threshold conditions:
 ```
 condition:
     - type: threshold
@@ -71,9 +75,9 @@ condition:
 ```
 But now we've added an `alias` to each condition, so it'll be easier to check it in the `action` itself.
 
-The condition result can also be accessed through `{{ step.step-id.conditions[i].result }}`.
 
-## Action (if statement)
-Now, the action now use the `if` statement to alert if one of the databases has less than 10% disk space left.
+### Action (if statement)
+The action now uses the `if` statement to alert if **one** of the databases has less than 10% disk space left.
 
-We could use `if: "{{ A }} and {{ B }}"` to alert only if both databases has less than 10% disk space left. Note that its the default behavior so you may achieve the same without specifying `if` statement.
+We can use `if: "{{ A }} and {{ B }}"` to alert only if both databases has less than 10% disk space left.
+*Note that its the default behavior so you may achieve the same without specifying `if` statement.*

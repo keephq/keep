@@ -11,7 +11,7 @@ Trello provider is a provider used to query data from Trello
 ## Inputs
 The `query` function take following parameters as inputs:
 - `board_id`: Required. Trello board id
-- `filter`: Optional. Comma seperated list of trello events that want to query, default value is 'createCard' 
+- `filter`: Optional. Comma seperated list of trello events that want to query, default value is 'createCard'
 
 
 ## Outputs
