@@ -3,7 +3,7 @@ sidebar_label: Deployment
 sidebar_position: 3
 ---
 
-# Deployment
+# 🫸 Deployment
 
 After writing some alerts with Keep, you may now want to use Keep in production! For that, you can easily deploy Keep on an environment other than your local station.
 
@@ -13,26 +13,6 @@ Keep currently supports [Docker](#docker) and [Render](#render).
 :::
 
 ## E2E
-
-Run *Keep* full stack (Console & API)
-```bash
-docker-compose up
-```
-Or
-```bash
-docker-compose -f docker-compose.dev.yml up --build
-```
-If you want to run Keep in [development mode](https://development-mode-url)
-
-:::note OpenAI Integration
-Please note that some features used by Keep requires OpenAI API key to work.
-Export `OPENAI_API_KEY=sk-YOUR_API_KEY` before running docker-compose to make them available.
-
-For example:
-```bash
-OPENAI_API_KEY=sk-YOUR_API_KEY docker-compose up
-```
-:::
 
 ### Docker
 
@@ -62,11 +42,11 @@ Click the Deploy to Render button to deploy Keep as a background worker running 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
 
 To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
-<br />
 When clicking the Deploy to Render button, you will be asked to provide the `KEEP_PROVIDER_SLACK_DEMO` environment variable, this is the expected format:
 
 ```json
 {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
 ```
 
-\* Refer to [Run locally](https://github.com/keephq/keep#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain the webhook URL
+\** `KEEP_PROVIDER_PROVIDER_ID` is the way you can configure providers using environment variables <br/>
+\** Refer to [Run locally](https://github.com/keephq/keep#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain a Slack webhook URL or on how to obtain Keep's webhook.

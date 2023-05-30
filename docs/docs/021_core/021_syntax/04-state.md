@@ -6,11 +6,12 @@ sidebar_position: 4
 # State
 
 ## Intro
-Keep State Manager currently used for:
+Keep State Manager is currently used for:
 1. Throttling
 2. Track alerts over time
+3. Previous runs context
 
-It's currently doing so by simply holding the state using a `keepstate.json` file, which can be overrided by `KEEP_STATE_FILE` environment variable.
+State is currently being saved as a JSON file under `./state/keepstate.json`, a path that can be overriden by setting the `KEEP_STATE_FILE` environment variable.
 
 ## Example
 One of the usages for Keep's state mechanism is throttling, see [One Until Resolved](../025_throttles/02-one-until-resolved.md) Keep handles it for you behind the scenes so you can use it without doing any further modifications.
@@ -28,7 +29,13 @@ An example for a simple state file:
             "alert_context": {
                 "alert_id": "service-is-up",
                 "alert_owners": [],
-                "alert_tags": []
+                "alert_tags": [],
+                "alert_steps_context": {
+                    "step1": {
+                        "conditions": {},
+                        "results": {}
+                    }
+                }
             }
         }
     ]

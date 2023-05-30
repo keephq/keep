@@ -68,21 +68,22 @@ const config = {
         },
         items: [
           {
-            type: "doc",
-            docId: "introduction",
-            position: "left",
-            label: "Documentation",
-          },
-          {
             href: "https://keephq.dev/slack",
-            label: "Slack",
+            'aria-label': 'Slack community',
             position: "right",
+            className: 'header-slack-link',
           },
           {
-            href: "https://github.com/keephq/keep",
-            label: "GitHub",
-            position: "right",
+            href: 'https://github.com/keephq/keep',
+            position: 'right',
+            className: 'header-github-link',
+            'aria-label': 'GitHub repository',
           },
+          // {
+          //   type: 'custom-github-navbar-item',
+          //   repository: 'keephq/keep',
+          //   position: 'right'
+          // }
         ],
       },
       footer: {
@@ -103,7 +104,7 @@ Built with Docusaurus.`,
       },
       colorMode: {
         defaultMode: "light",
-        disableSwitch: false,
+        disableSwitch: true,
         respectPrefersColorScheme: false,
       },
       prism: {

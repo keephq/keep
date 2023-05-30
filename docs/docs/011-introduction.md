@@ -4,7 +4,7 @@ sidebar_position: 1
 slug: /
 ---
 
-# Introduction
+# 👋 Introduction
 
 
 ## 🗼 A glance of Keep

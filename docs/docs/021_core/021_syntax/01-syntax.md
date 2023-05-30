@@ -8,7 +8,8 @@ sidebar_position: 1
 At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.
 
 ## Full Example
-```yaml
+```yaml title=examples/raw_sql_query_datetime.yml
+# Alert if a result queried from the DB is above a certain thershold.
 alert:
   id: raw-sql-query
   description: Monitor that time difference is no more than 1 hour
@@ -23,21 +24,19 @@ alert:
   actions:
     - name: trigger-slack
       condition:
-      - type: threshold
+      - name: threshold-condition
+        type: threshold
         # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
         #   utcnow() returns the local machine datetime in UTC
         #   to_utc() converts a datetime to UTC
-        value: datetime_compare(utcnow(), to_utc({{ steps.get-max-datetime.results[0][0] }}))
+        value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.this.results[0][0] }}"))
         compare_to: 1 # hours
         compare_type: gt # greater than
-        alias: A
-      # redundant for "single step" example, but for "multi step" alerts this can be useful
-      if: {{ A }}
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
         with:
-          message: "DB datetime value ({{ steps.get-max-datetime.conditions.threshold[0].value }}) is greater than 1! 🚨"
+          message: "DB datetime value ({{ actions.trigger-slack.conditions.threshold.0.compare_value }}) is greater than 1! 🚨"
 ```
 
 ## Breakdown 🔨
@@ -74,7 +73,6 @@ provider:
     type: mysql
     config: "{{ providers.mysql-prod }}"
     with:
-        # Get max(datetime) from the random table
         query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
 ```
 `Provider` is built of:
@@ -84,16 +82,14 @@ provider:
 
 ### Condition
 ```yaml
-condition:
-- type: threshold
-    # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
-    #   utcnow() returns the local machine datetime in UTC
-    #   to_utc() converts a datetime to UTC
-    value: datetime_compare(utcnow(), to_utc({{ steps.this.results[0][0] }}))
-    compare_to: 1 # hours
-    compare_type: gt # greater than
+- name: threshold-condition
+  type: threshold
+  value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.this.results[0][0] }}"))
+  compare_to: 1
+  compare_type: gt
 ```
 `Condition` is built of:
+- `name` - a unique identifier to the condition
 - `type` - the type of the condition
 - `value` - the value that will be supplied to the condition during the alert execution
 - `compare_to` - whats `value` will be compared against
@@ -102,30 +98,19 @@ condition:
 ### Actions
 ```yaml
 actions:
-- name: trigger-slack
-  # OPTIONAL: trigger the action only if both conditions are met:
-  if: "{{ A }} or {{ B }}"
-  # OPTIONAL: throttle the action according to some throttling strategy
-  throttle:
-        type: one_until_resolved
-  # OPTIONAL: list of conditions that states if the action should be triggered
-  condition:
-  - type: threshold
-    # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
-    #   utcnow() returns the local machine datetime in UTC
-    #   to_utc() converts a datetime to UTC
-    value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.this.results[0][0] }}"))
-    compare_to: 1 # hours
-    compare_type: gt # greater than
-  # The provider that triggers the action using the "notify" function
-  provider:
-    type: slack
-    config: " {{ providers.slack-demo }} "
-    with:
-      message: "DB datetime value ({{ actions.trigger-slack.conditions.threshold.0.compare_value }}) is greater than 1! 🚨"
+  - name: trigger-slack
+    condition:
+    - name: threshold-condition
+      type: threshold
+      value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.this.results[0][0] }}"))
+      compare_to: 1
+      compare_type: gt
+    provider:
+      type: slack
+      config: " {{ providers.slack-demo }} "
+      with:
+        message: "DB datetime value ({{ actions.trigger-slack.conditions.threshold.0.compare_value }}) is greater than 1! 🚨"
 ```
-
-#### * The last part of the alert are the actions.
 
 `Action` is built of:
 - `name` - the name of the action.
@@ -136,3 +121,5 @@ actions:
 - `foreach` - when `foreach` block supplied, Keep will evaluate it as a list, and evaluates the `action` for every item in the list.
 
 The `provider` configuration is already covered in [Providers](syntax#provider)
+
+\*** *Actions are the last section of an alert*
