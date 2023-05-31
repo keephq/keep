@@ -22,6 +22,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ["@tremor/react"],
   },
   output: "standalone",
+  productionBrowserSourceMaps: process.env.ENV === "development",
 };
 
 module.exports = nextConfig;
