@@ -110,14 +110,14 @@ def version():
     "-ad",
     type=click.Path(exists=True, dir_okay=True, file_okay=True),
     help="The path to the alert yaml/alerts directory",
+    required=False,
 )
 @click.option(
     "--alert-url",
     "-au",
     help="A url that can be used to download an alert yaml",
-    cls=NotRequiredIf,
     multiple=True,
-    not_required_if="alerts_directory",
+    required=False,
 )
 @click.option(
     "--providers-file",
@@ -127,14 +127,18 @@ def version():
     required=False,
     default="providers.yaml",
 )
-def api(alerts_directory: str, alert_url: list[str], providers_file: str):
+@click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
+def api(
+    alerts_directory: str, alert_url: list[str], providers_file: str, multi_tenant: bool
+):
     """Start the API."""
-    from keep.api.api import get_app, run
+    from keep.api import api
 
     ctx = click.get_current_context()
-    app = get_app()
+    app = api.get_app(multi_tenant=multi_tenant)
+    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     app.dependency_overrides[click.get_current_context] = lambda: ctx
-    run(app)
+    api.run(app)
 
 
 @cli.command()

@@ -3,6 +3,7 @@ Base class for all providers.
 """
 import abc
 import logging
+from typing import Optional
 
 from pydantic.dataclasses import dataclass
 
@@ -63,6 +64,38 @@ class BaseProvider(metaclass=abc.ABCMeta):
             NotImplementedError: _description_
         """
         raise NotImplementedError("query() method not implemented")
+
+    def get_alerts(self, alert_id: Optional[str] = None):
+        """
+        Get alerts from the provider.
+
+        Args:
+            alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.
+        """
+        # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
+        raise NotImplementedError("get_alerts() method not implemented")
+
+    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+        """
+        Deploy an alert to the provider.
+
+        Args:
+            alert (dict): The alert to deploy.
+            alert_id (Optional[str], optional): If given, deploys a specific alert by id. Defaults to None.
+        """
+        raise NotImplementedError("deploy_alert() method not implemented")
+
+    @staticmethod
+    def get_alert_format_description():
+        """
+        Get the alert format description for the provider.
+
+        Returns:
+            str: The alert format description.
+        """
+        raise NotImplementedError(
+            "get_alert_format_description() method not implemented"
+        )
 
     def expose(self):
         """Expose parameters that were calculated during query time.

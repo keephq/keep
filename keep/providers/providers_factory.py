@@ -10,20 +10,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 class ProvidersFactory:
     @staticmethod
-    def get_provider(
-        provider_id: str, provider_type: str, provider_config: dict, **kwargs
-    ) -> BaseProvider:
-        """
-        Get the instantiated provider class according to the provider type.
-
-        Args:
-            provider (dict): The provider configuration.
-
-        Returns:
-            BaseProvider: The provider class.
-        """
-        provider_config = ProviderConfig(**provider_config)
-
+    def get_provider_class(provider_type: str) -> BaseProvider:
         provider_type_split = provider_type.split(
             "."
         )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
@@ -48,6 +35,24 @@ class ProvidersFactory:
                 + provider_type_split[1].title().replace("_", "")
                 + "Provider",
             )
+        return provider_class
+
+    @staticmethod
+    def get_provider(
+        provider_id: str, provider_type: str, provider_config: dict, **kwargs
+    ) -> BaseProvider:
+        """
+        Get the instantiated provider class according to the provider type.
+
+        Args:
+            provider (dict): The provider configuration.
+
+        Returns:
+            BaseProvider: The provider class.
+        """
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+        provider_config = ProviderConfig(**provider_config)
+
         try:
             return provider_class(provider_id=provider_id, config=provider_config)
         except TypeError as exc:

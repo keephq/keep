@@ -32,8 +32,24 @@ psycopg2-binary = "^2.9.5"
 starlette-context = "^0.3.6"
 nest-asyncio = "^1.5.6"
 datadog-api-client = "^2.12.0"
+sqlmodel = "^0.0.8"
+grafana-api-sdk = "^0.1.0"
+cloud-sql-python-connector = "^1.2.3"
+pymysql = "^1.0.3"
+google-cloud-secret-manager = "^2.16.1"
+python-jose = "^3.3.0"
+jwcrypto = "^1.4.2"
+langchain = "^0.0.178"
+sqlalchemy = "1.4.41"
 # 3.0.4 missing wheels - https://github.com/snowflakedb/snowflake-connector-python/issues/1584
 snowflake-connector-python = "3.0.3"
+openai = "^0.27.7"
+opentelemetry-sdk = "^1.18.0"
+opentelemetry-instrumentation-fastapi = "^0.39b0"
+opentelemetry-instrumentation-logging = "^0.39b0"
+opentelemetry-propagator-gcp = "^1.5.0"
+pyngrok = "^6.0.0"
+
 
 
 [tool.poetry.group.dev.dependencies]

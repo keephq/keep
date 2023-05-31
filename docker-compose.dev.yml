@@ -1,0 +1,35 @@
+services:
+  keep-frontend-dev:
+    build:
+      dockerfile: docker/Dockerfile.dev.ui
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_AUTH_ENABLED=false
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - API_URL=http://keep-backend-dev:8080
+      - NEXT_PUBLIC_POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
+      - NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+    volumes:
+      - ./keep-ui:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - keep-backend-dev
+  keep-backend-dev:
+    build:
+      dockerfile: docker/Dockerfile.dev.api
+    ports:
+      - '8080:8080'
+    environment:
+      - PORT=8080
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3
+      - USE_NGROK=true
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+    volumes:
+      - ./keep:/code/keep
+      - ./state:/state
