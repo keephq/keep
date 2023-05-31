@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function Signin() {
 
   useEffect(() => {
-    void signIn("auth0");
+    void signIn("auth0", { callbackUrl: "/" });
   });
 
   return <div></div>;
