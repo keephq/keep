@@ -23,7 +23,7 @@ class GptUtils:
 
         # TODO: understand how does memory work, this should probably be generated for every tenant?
         self.chain = LLMChain(
-            llm=ChatOpenAI(request_timeout=120),  # model_name="gpt-4"),
+            llm=ChatOpenAI(request_timeout=300, model_name="gpt-4"),
             prompt=prompt,
             verbose=False,
             memory=ConversationBufferWindowMemory(k=2),
@@ -38,6 +38,7 @@ class GptUtils:
         alerts_context: list,
         schema: dict,
         provider_type: str,
+        provider_logs: list = [],
     ) -> dict:
         """Generates an alert based on the prompt and context
 
@@ -51,6 +52,7 @@ class GptUtils:
         Returns:
             str: The generated alert in the provider's API schema
         """
+        self.logger.info("Creating alert from specification")
         start_time = time.time()
         human_prompt = (
             'Create the following: "{prompt}" alert specification. Only output the generated alert in a format that is importable by the API of {provider_type}.\n'
@@ -67,8 +69,14 @@ class GptUtils:
 
         if schema:
             human_prompt += (
-                "This is {provider_type}'s OpenAPI schema for alert creation: \n```{schema}```\n The generated alert MUST adhere this OpenAPI schema."
+                "This is {provider_type}'s OpenAPI schema for alert creation: \n```{schema}```\n The generated alert MUST adhere this OpenAPI schema.\n"
             ).format(schema=json.dumps(schema), provider_type=provider_type)
+        if provider_logs:
+            human_prompt += (
+                "Here is a list of logs from {provider_type} to help with the alert generation: \n```{logs}```\n"
+            ).format(
+                logs=json.dumps(provider_logs, default=str), provider_type=provider_type
+            )
 
         completion = self.chain.predict(human_input=human_prompt)
         end_time = time.time()
@@ -89,6 +97,7 @@ class GptUtils:
         Returns:
             dict: The fixed alert in the provider's API schema
         """
+        self.logger.info("Repairing alert")
         start_time = time.time()
         human_prompt = (
             "This alert: ```{bad_alert}``` that you generated does not conform the {provider_type} API schema, Please provide the alert specification in the valid API schema.\n"
