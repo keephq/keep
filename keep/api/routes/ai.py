@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from keep.api.core.dependencies import verify_api_key
-from keep.api.routes.providers import get_alerts, get_alerts_schema
+from keep.api.routes.providers import get_alerts, get_alerts_schema, get_logs
 from keep.api.utils.gpt_utils import GptUtils
 
 router = APIRouter()
@@ -30,6 +30,10 @@ def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) ->
     provider_id = body.provider_id or body.provider_type
     provider_schema = get_alerts_schema(body.provider_type)
     provider_alerts = get_alerts(body.provider_type, provider_id, tenant_id)
+    try:
+        provider_logs = get_logs(body.provider_type, provider_id, tenant_id=tenant_id)
+    except NotImplementedError:
+        provider_logs = []
     gpt = GptUtils(tenant_id)
     return gpt.generate_alert(
         alert_prompt=body.alert,
@@ -37,6 +41,7 @@ def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) ->
         alerts_context=provider_alerts,
         schema=provider_schema,
         provider_type=body.provider_type,
+        provider_logs=provider_logs,
     )
 
 

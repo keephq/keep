@@ -88,7 +88,7 @@ class GrafanaProvider(BaseProvider):
         )
 
     @staticmethod
-    def get_alert_format_description():
+    def get_alert_schema():
         return GrafanaAlertFormatDescription.schema()
 
 
