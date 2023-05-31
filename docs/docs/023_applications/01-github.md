@@ -58,7 +58,7 @@ The alert file consists of the following components:
 
 2. **Provider**: Specify the provider to which you want the alert to be generated. This ensures that the alert seamlessly integrates with your existing monitoring and notification infrastructure. In the example above, the alert is configured to be generated for Datadog.
 
-3. **API Override**: Optionally, you can include the api_url field to override Keep's managed API. This allows you to use your locally hosted API for advanced customization and integration purposes.
+3. **API Override**: Optionally, you can include the api_url field to override Keep's managed API. This allows you to use your locally hosted API for advanced customization and integration purposes. (refer to [ngrok](/quick-start/ngrok) to obtain your self locally hosted API url)
 
 ## Deploying Alerts with Emojis
 To deploy an alert to the specified provider, you can simply leave a comment on the respective file using the :rocket: or :ok: emojis. The Keep GitHub Application recognizes these emojis as commands and will initiate the deployment process accordingly. This streamlined approach ensures a smooth and intuitive experience when deploying alerts.
