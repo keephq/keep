@@ -64,7 +64,7 @@ The alert file consists of the following components:
   <summary>ngrok</summary>
   <div>
 
-## ngrok?
+<b>ngrok?</b>
 
 Imagine you have a secret hideout in your backyard, but you don't want anyone to know where it is. So, you build a tunnel from your hideout to a tree in your friend's backyard. This way, you can go into the tunnel in your yard and magically come out at the tree in your friend's yard.
 
@@ -76,7 +76,7 @@ When you start ngrok, it opens up a tunnel between your computer and the interne
 
 So, ngrok is like a magical tunnel that helps you share your website or game with others over the internet, just like the secret tunnel you built to reach your friend's backyard!
 
-## How to start Keep with ngrok
+<b>How to start Keep with ngrok?</b>
 
 ngrok is Controlled with the `USE_NGROK` environment variable.<br />
 Simply run Keep's API using the following command to start with ngrok: `USE_NGROK=true keep api`
@@ -85,7 +85,7 @@ Simply run Keep's API using the following command to start with ngrok: `USE_NGRO
 `USE_NGROK` is enabled by default when running with `docker-compose`
 :::
 
-## How to obtain ngrok URL
+<b>How to obtain ngrok URL?</b>
 
 When `USE_NGROK` is set, Keep will start with ngrok in the background. <br />
 You can find your private ngrok URL looking for this log line "`ngrok tunnel`":
