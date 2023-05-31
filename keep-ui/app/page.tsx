@@ -23,7 +23,7 @@ export default async function IndexPage() {
     const apiUrl = getApiURL();
     isGitHubPluginInstalled = await fetch(`${apiUrl}/tenant/onboarded`, {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken?.accessToken}`,
       },
       cache: "no-store",
     })
