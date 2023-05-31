@@ -3,6 +3,7 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 """
 import dataclasses
 import datetime
+import json
 import time
 
 import pydantic
@@ -14,6 +15,7 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_type import MonitorType
 
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
@@ -116,8 +118,13 @@ class DatadogProvider(BaseProvider):
     def get_alerts(self, alert_id: str | None = None):
         with ApiClient(self.configuration) as api_client:
             api = MonitorsApi(api_client)
-            monitors = api.list_monitors()
-            monitors = [monitor.to_dict() for monitor in monitors]
+            try:
+                monitors = api.list_monitors()
+            except Exception as e:
+                raise GetAlertException(message=str(e), status_code=e.status)
+            monitors = [
+                json.dumps(monitor.to_dict(), default=str) for monitor in monitors
+            ]
             if alert_id:
                 monitors = list(
                     filter(lambda monitor: monitor["id"] == alert_id, monitors)

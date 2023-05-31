@@ -3,12 +3,34 @@ sidebar_label: Quickstart
 sidebar_position: 2
 ---
 
-# 🚀 Quickstart
+# 🏃‍♀️ Quickstart
 
-## Run locally
+## Run Locally
+
+### Docker-compose (Option 1)
+
+Run *Keep* full stack (Console & API)
+```bash
+docker-compose up
+```
+Or
+```bash
+docker-compose -f docker-compose.dev.yml up --build
+```
+If you want to run *Keep* in [development mode](https://development-mode-url) (code compiles on changes)
+
+:::note OpenAI Integration
+Please note that some features used by Keep requires OpenAI API key to work.
+Export `OPENAI_API_KEY=sk-YOUR_API_KEY` before running docker-compose to make them available.
+
+For example:
+```bash
+OPENAI_API_KEY=sk-YOUR_API_KEY docker-compose up
+```
+:::
+
+### Clone and install (Option 2)
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
-
-### Clone and install
 
 <h5>First, clone Keep repository:</h5>
 
@@ -49,18 +71,18 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 
 Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment).
 
-## Auto Completion
+## Enable Auto Completion
 
-<h4>Keep's CLI supports shell auto-completion, which can make your life a lot more easier 😌</h4>
+<h4>Keep's CLI supports shell auto-completion, which can make your life a whole lot easier 😌</h4>
 
-If you're using zsh, add this to `~/.zshrc`
-```shell
+If you're using zsh
+```shell title=~/.zshrc
 eval "$(_KEEP_COMPLETE=zsh_source keep)"
 ```
 
 
-If you're using bash, add this to `~/.bashrc`
-```bash
+If you're using bash
+```bash title=~/.bashrc
 eval "$(_KEEP_COMPLETE=bash_source keep)"
 ```
 

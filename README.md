@@ -11,13 +11,13 @@
     <a href="https://keephq.dev/slack">
         <img src="https://img.shields.io/badge/Chat-on%20Slack-blueviolet" alt="Slack community channel" />
     </a>
-    <a href="https://codecov.io/gh/keephq/keep" > 
-        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/> 
+    <a href="https://codecov.io/gh/keephq/keep" >
+        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
 
 <h4 align="center">
-Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty), 100% open sourced, free forever.
+Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty) and 100% open sourced!
 </h4>
 <div align="center">
 
@@ -52,14 +52,21 @@ Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty)
 
 ## 🗼 A glance of Keep
 
-Keep is a simple CLI tool that contains everything you need to start creating Alerts.
+Keep is an open-source alert management tool that contains everything you need to create and manage Alerts.
 
 - 10s of providers ready to use with your own data
-- Simple CLI tool to configure, trigger and test your alerts
+- A simple and intuitive UI that covers all your needs
+- Simple CLI to configure, trigger and test your alerts
 - Easily deployable via docker, vercel, github actions, etc.
 - Alerts are managed by simple yaml files that are human-readable
 
-Brought to you by developers, EASY to use and managable by code.
+Brought to you by developers, **EASY** to use and managed by code.
+
+## 📟 Console
+- Manage and maintain alerts
+- Connect and configure [Providers](https://github.com/keephq/keep/tree/main/keep/providers)
+- Connect 3rd party application integrations (e.g. GitHub/GitLab)
+- Single pane of glass to all of your different monitoring tools
 
 ## 🚨 Providers
 
@@ -79,13 +86,13 @@ We tried our best to cover all common providers, [missing any?](https://github.c
 
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
-<h5>First, clone Keep repository:</h5>
+First, clone Keep repository:
 
 ```shell
 git clone https://github.com/keephq/keep.git && cd keep
 ```
 
-<h5>Install Keep CLI</h5>
+Install Keep CLI
 
 ```shell
 pip install .
@@ -98,27 +105,26 @@ poetry shell
 poetry install
 ```
 
-<h5>From now on, Keep should be installed locally and accessible from your CLI, test it by executing:</h5>
+From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
 
 
 ```
 keep version
 ```
 
-Get a Slack incoming webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use Keep to configure it:
+<h5>Get a Slack incoming webhook using <a href="https://api.slack.com/messaging/webhooks">this tutorial</a> and use Keep to configure it:</h5>
 
 ```
 keep config provider --provider-type slack --provider-id slack-demo
 ```
 
-
 Paste the Slack Incoming Webhook URL (e.g. <https://hooks.slack.com/services/...>) and you're good to go 👌
 
-<h6>**If you don't want to create your own webhook, you can follow these easy 3 steps:**
+<h6>** If you don't want to create your own webhook, you can follow these easy 3 steps: **
 
 1. Go to [keep's slack](https://keephq.dev/slack).
 
-2. Enter the # alerts-playground channel.
+2. Enter the #alerts-playground channel.
 
 3. In the channel's topic, you can find the webhook provided by Keep.
 
@@ -167,7 +173,7 @@ When clicking the Deploy to Render button, you will be asked to provide the `KEE
 {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
 ```
 
-\* Refer to [Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing) on how to obtain the webhook URL
+\* Refer to [Run locally](https://github.com/keephq/keep/tree/feature/api-multi-tenant#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain the webhook URL
 
 ##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
