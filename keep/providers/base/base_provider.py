@@ -103,7 +103,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Get logs from the provider.
 
         Args:
-            num_of_logs (int): The number of logs to get.
+            limit (int): The number of logs to get.
         """
         raise NotImplementedError("get_logs() method not implemented")
 
