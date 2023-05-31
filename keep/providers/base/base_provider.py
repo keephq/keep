@@ -86,9 +86,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("deploy_alert() method not implemented")
 
     @staticmethod
-    def get_alert_format_description():
+    def get_alert_schema() -> dict:
         """
-        Get the alert format description for the provider.
+        Get the alert schema description for the provider.
+            e.g. How to define an alert for the provider that can be pushed via the API.
 
         Returns:
             str: The alert format description.
@@ -96,6 +97,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError(
             "get_alert_format_description() method not implemented"
         )
+
+    def get_logs(self, limit: int = 5) -> list:
+        """
+        Get logs from the provider.
+
+        Args:
+            num_of_logs (int): The number of logs to get.
+        """
+        raise NotImplementedError("get_logs() method not implemented")
 
     def expose(self):
         """Expose parameters that were calculated during query time.
