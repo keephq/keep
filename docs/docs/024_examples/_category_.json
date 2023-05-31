@@ -3,5 +3,6 @@
   "link": {
     "type": "generated-index",
     "title": "Examples"
-  }
+  },
+  "rootItem": "multistep-alert-example"
 }
