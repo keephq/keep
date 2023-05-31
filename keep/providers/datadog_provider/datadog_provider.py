@@ -141,8 +141,20 @@ class DatadogProvider(BaseProvider):
                 raise Exception({"message": e.body["errors"][0]})
         return response
 
+    def get_logs(self, limit: int = 5) -> list:
+        # Logs from the last 7 days
+        timeframe_in_seconds = DatadogProvider.convert_to_seconds("7d")
+        _from = datetime.datetime.fromtimestamp(time.time() - (timeframe_in_seconds))
+        to = datetime.datetime.fromtimestamp(time.time())
+        with ApiClient(self.configuration) as api_client:
+            api = LogsApi(api_client)
+            results = api.list_logs(
+                body={"limit": limit, "time": {"_from": _from, "to": to}}
+            )
+        return [log.to_dict() for log in results["logs"]]
+
     @staticmethod
-    def get_alert_format_description():
+    def get_alert_schema():
         return DatadogAlertFormatDescription.schema()
 
 
@@ -164,28 +176,5 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="datadog-keephq", provider_type="datadog", provider_config=config
     )
-    results = provider.query(
-        query="service:keep-github-app status:error", timeframe="4w", query_type="logs"
-    )
-    """
-    alerts = provider.deploy_alert(
-        {
-            "name": "Error Rate Alert",
-            "type": "metric alert",
-            "query": "sum:myapp.server.errors{service:talboren/simple-crud-service}.as_count().rollup(sum, 600) > 5",
-            "message": "The error rate for talboren/simple-crud-service has exceeded 5% in the last 10 minutes. Please investigate immediately",
-            "tags": ["service:talboren/simple-crud-service", "severity:critical"],
-            "options": {
-                "thresholds": {"critical": 5},
-                "notify_audit": False,
-                "notify_no_data": False,
-                "require_full_window": True,
-                "timeout_h": 1,
-                "silenced": {},
-            },
-            "restricted_roles": [],
-            "priority": 2,
-        }
-    )
-    """
-    print(alerts)
+    results = provider.get_logs(10)
+    print(results)

@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -13,6 +14,7 @@ from keep.secretmanager.secretmanagerfactory import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -21,6 +23,7 @@ router = APIRouter()
 def get_installed_providers(
     tenant_id: str = Depends(verify_bearer_token),
 ) -> list:
+    logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
     secret_manager = SecretManagerFactory.get_secret_manager()
@@ -48,9 +51,17 @@ def get_alerts(
     provider_id: str,
     tenant_id: str = Depends(verify_api_key),
 ) -> list:
-    # todo: validate provider exists, error handling in general
+    logger.info(
+        "Getting provider alerts",
+        extra={
+            "tenant_id": tenant_id,
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+        },
+    )
+    # TODO: validate provider exists, error handling in general
     secret_manager = SecretManagerFactory.get_secret_manager()
-    # todo: secrets convention from config?
+    # TODO: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
@@ -61,6 +72,47 @@ def get_alerts(
 
 
 @router.get(
+    "/{provider_type}/{provider_id}/logs",
+    description="Get logs from a provider",
+)
+def get_logs(
+    provider_type: str,
+    provider_id: str,
+    limit: int = 5,
+    tenant_id: str = Depends(verify_api_key),
+) -> list:
+    try:
+        logger.info(
+            "Getting provider logs",
+            extra={
+                "tenant_id": tenant_id,
+                "provider_type": provider_type,
+                "provider_id": provider_id,
+            },
+        )
+        secret_manager = SecretManagerFactory.get_secret_manager()
+        provider_config = secret_manager.read_secret(
+            f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
+        )
+        provider = ProvidersFactory.get_provider(
+            provider_id, provider_type, provider_config
+        )
+        return provider.get_logs(limit=limit)
+    except ModuleNotFoundError:
+        raise HTTPException(404, detail=f"Provider {provider_type} not found")
+    except Exception:
+        logger.exception(
+            "Failed to get provider logs",
+            extra={
+                "tenant_id": tenant_id,
+                "provider_type": provider_type,
+                "provider_id": provider_id,
+            },
+        )
+        return []
+
+
+@router.get(
     "/{provider_type}/schema",
     description="Get alerts from a provider",
 )
@@ -68,8 +120,11 @@ def get_alerts_schema(
     provider_type: str,
 ) -> dict:
     try:
+        logger.info(
+            "Getting provider alerts schema", extra={"provider_type": provider_type}
+        )
         provider = ProvidersFactory.get_provider_class(provider_type)
-        return provider.get_alert_format_description()
+        return provider.get_alert_schema()
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
 
@@ -85,9 +140,17 @@ def add_alert(
     alert_id: Optional[str] = None,
     tenant_id: str = Depends(verify_api_key),
 ) -> JSONResponse:
-    # todo: validate provider exists, error handling in general
+    logger.info(
+        "Adding alert to provider",
+        extra={
+            "tenant_id": tenant_id,
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+        },
+    )
+    # TODO: validate provider exists, error handling in general
     secret_manager = SecretManagerFactory.get_secret_manager()
-    # todo: secrets convention from config?
+    # TODO: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
@@ -114,6 +177,14 @@ def test_provider(
     # In the future, we might want to support multiple providers of the same type
     provider_id = provider_info.pop("provider_id")
     provider_type = provider_info.pop("provider_type", None) or provider_id
+    logger.info(
+        "Testing provider",
+        extra={
+            "provider_id": provider_id,
+            "provider_type": provider_type,
+            "tenant_id": tenant_id,
+        },
+    )
     provider_config = {
         "authentication": provider_info,
     }
@@ -140,6 +211,14 @@ async def install_provider(
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
     provider_type = provider_info.pop("provider_type", None) or provider_id
+    logger.info(
+        "Installing provider",
+        extra={
+            "provider_id": provider_id,
+            "provider_type": provider_type,
+            "tenant_id": tenant_id,
+        },
+    )
     provider_config = {
         "authentication": provider_info,
     }
