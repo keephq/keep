@@ -13,6 +13,7 @@ sidebar_position: 3
   - `notify(self, **kwargs: dict)` which is used to notify via the provider in actions
   - `dispose(self)` which is used to dispose the provider after usage (e.g. close the connection to the DB)
   - `validate_config(self)` which is used to validate the configuration passed to the Provider
+- And 4 functions that are not required:
   - `get_alerts(self)` which is used to fetch configured alerts (**not the currently active alerts**)
   - `deploy_alert(self, alert: dict, alert_id: Optional[str]` which is used to deploy an alert to the provider
   - `get_alert_schema(self)` which is used to describe the provider's API schema of how to deploy alert
