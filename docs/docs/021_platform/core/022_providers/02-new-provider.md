@@ -7,12 +7,16 @@ sidebar_position: 3
 
 ### Basics
 
-- BaseProvider is the base class every provider should inherit from
+- BaseProvider is the base class every provider needs to inherit from
 - BaseProvider exposes 4 important functions:
   - `query(self, **kwargs: dict)` which is used to query the provider in steps
   - `notify(self, **kwargs: dict)` which is used to notify via the provider in actions
   - `dispose(self)` which is used to dispose the provider after usage (e.g. close the connection to the DB)
   - `validate_config(self)` which is used to validate the configuration passed to the Provider
+  - `get_alerts(self)` which is used to fetch configured alerts (**not the currently active alerts**)
+  - `deploy_alert(self, alert: dict, alert_id: Optional[str]` which is used to deploy an alert to the provider
+  - `get_alert_schema(self)` which is used to describe the provider's API schema of how to deploy alert
+  - `get_logs(self, limit)` which is used to fetch logs from the provider (currently used by the AI layer to generate more accurate results)
 - Providers must be located in the providers directory
 - Provider directory must start with the provider's unique identifier followed by underscore+provider (e.g. `slack_provider`)
 - Provider file name must start with the provider's unique identifier followed by underscore+provider+.py (e.g. `slack_provider.py`)
@@ -109,4 +113,57 @@ class BaseProvider(metaclass=abc.ABCMeta):
             NotImplementedError: _description_
         """
         raise NotImplementedError("query() method not implemented")
+
+    def get_alerts(self, alert_id: Optional[str] = None):
+        """
+        Get alerts from the provider.
+
+        Args:
+            alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.
+        """
+        # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
+        raise NotImplementedError("get_alerts() method not implemented")
+
+    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+        """
+        Deploy an alert to the provider.
+
+        Args:
+            alert (dict): The alert to deploy.
+            alert_id (Optional[str], optional): If given, deploys a specific alert by id. Defaults to None.
+        """
+        raise NotImplementedError("deploy_alert() method not implemented")
+
+    @staticmethod
+    def get_alert_schema() -> dict:
+        """
+        Get the alert schema description for the provider.
+            e.g. How to define an alert for the provider that can be pushed via the API.
+
+        Returns:
+            str: The alert format description.
+        """
+        raise NotImplementedError(
+            "get_alert_format_description() method not implemented"
+        )
+
+    def get_logs(self, limit: int = 5) -> list:
+        """
+        Get logs from the provider.
+
+        Args:
+            limit (int): The number of logs to get.
+        """
+        raise NotImplementedError("get_logs() method not implemented")
+
+    def expose(self):
+        """Expose parameters that were calculated during query time.
+
+        Each provider can expose parameters that were calculated during query time.
+        E.g. parameters that were supplied by the user and were rendered by the provider.
+
+        A concrete example is the "_from" and "to" of the Datadog Provider which are calculated during execution.
+        """
+        # TODO - implement dynamically using decorators and
+        return {}
 ```
