@@ -5,13 +5,37 @@ sidebar_position: 2
 
 # 🏃‍♀️ Quickstart
 
-## Run Locally
+# Run Locally
 
-### Docker-compose (Option 1)
+## Docker-compose (Option 1)
 
 Run *Keep* full stack (Console & API)
+
+### Install Docker compose
+
 ```bash
-docker-compose up
+# Example on ubuntu
+apt-get update
+apt-get upgrade
+apt install docker-compose
+```
+
+### Download the required files
+```bash
+# Download docker compose template
+wget -O docker-compose.yml https://github.com/keephq/keep/blob/main/docker-compose.yml
+
+# Or clone the repository (which includes the docker-compose.dev.yml file) to run Keep in development mode
+# git clone https://github.com/keephq/keep.git && cd keep
+
+# Create state directory
+mkdir state
+```
+
+### Get the services up and running
+
+```bash
+docker-compose -f docker-compose.yml up
 ```
 Or
 ```bash
@@ -29,7 +53,7 @@ OPENAI_API_KEY=sk-YOUR_API_KEY docker-compose up
 ```
 :::
 
-### Clone and install (Option 2)
+## Clone and install (Option 2)
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 <h5>First, clone Keep repository:</h5>
