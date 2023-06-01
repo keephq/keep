@@ -68,7 +68,7 @@ export function useSession(): SessionContextValue {
   }
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const session = useNextAuthSession();
-
+  console.log("Fetched session from the server: ", session);
   // Return the original session object as is
   return session;
 }
