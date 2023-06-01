@@ -1,8 +1,8 @@
 import Image from "next/image";
-import styles from "./not-found.module.css";
+import styles from "./under-construction.module.css";
 import Frill from "./frill";
 
-export default function NotFound() {
+export default function UnderConstruction() {
   return (
     <>
       <Frill />
