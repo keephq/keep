@@ -3,18 +3,19 @@
 import PHProvider from "./posthog-client";
 import { SessionProvider } from "next-auth/react";
 import NavbarInner from "./navbar-inner";
+import { Session } from "next-auth";
 
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
-export default function Navbar({ user }: { user: any }) {
+export default function Navbar({ session }: { session: Session | null }) {
   return isSingleTenant ? (
     <PHProvider>
-      <NavbarInner user={user} />
+      <NavbarInner user={session?.user} />
     </PHProvider>
   ) : (
-    <SessionProvider>
+    <SessionProvider session={session}>
       <PHProvider>
-        <NavbarInner user={user} />
+        <NavbarInner user={session?.user} />
       </PHProvider>
     </SessionProvider>
   );

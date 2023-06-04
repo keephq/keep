@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./provider-row";
 import { getApiURL } from "../../utils/apiUrl";
-import Alert from './alert';
+import Alert from "./alert";
 import "./provider-form.css";
 
 type ProviderFormProps = {
@@ -25,16 +25,11 @@ const ProviderForm = ({
   });
   const [formErrors, setFormErrors] = useState({});
   const [testResult, setTestResult] = useState("");
-  const [connectResult, setConnectResult] = useState("");
   const [alertData, setAlertData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
   const { data: session, status, update } = useSession();
-  // @ts-ignore
-  if (!session?.accessToken) {
-    console.log("No session access token, refreshing session from the server");
-    update();
-  }
+
   // update();
   // TODO - fix the typing here
   // @ts-ignore
@@ -121,9 +116,7 @@ const ProviderForm = ({
 
   const handleTestClick = async () => {
     try {
-      const data = await validateAndSubmit(
-        `${getApiURL()}/providers/test`
-      );
+      const data = await validateAndSubmit(`${getApiURL()}/providers/test`);
       if (data && data.alerts) {
         console.log("Test succeessful");
         setTestResult("success");
@@ -132,7 +125,7 @@ const ProviderForm = ({
         setTestResult("error");
       }
     } catch (error) {
-      setFormErrors({"error": error.toString()})
+      setFormErrors({ error: error.toString() });
       console.error("Test failed:", error);
     }
   };
@@ -141,13 +134,13 @@ const ProviderForm = ({
     validateAndSubmit(`${getApiURL()}/providers/install`)
       .then((data) => {
         console.log("Connect Result:", data);
-        setConnectResult(data.result);
         setIsConnected(true);
       })
       .catch((error) => {
         console.error("Connect failed:", error);
       });
   };
+
   console.log("ProviderForm component loaded");
 
   return (
@@ -156,7 +149,8 @@ const ProviderForm = ({
         {provider.authentication.map((method) => (
           <div className="form-group" key={method.name}>
             <label htmlFor={method.name}>
-              {method.desc}{method.required !== false ? "" : " (optional)"}:
+              {method.desc}
+              {method.required !== false ? "" : " (optional)"}:
             </label>
             <input
               type={method.type}
@@ -189,7 +183,9 @@ const ProviderForm = ({
         </div>
       </form>
       {formErrors.error && (
-        <div className="error-message">Error while testing the provider: &quot;{formErrors.error}&quot;</div>
+        <div className="error-message">
+          Error while testing the provider: &quot;{formErrors.error}&quot;
+        </div>
       )}
       {testResult === "success" && (
         <div>
@@ -205,7 +201,7 @@ const ProviderForm = ({
             </thead>
             <tbody>
               {alertData.map((alert) => (
-                <tr key={alert.id}>
+                <tr key={alert.id || Math.random()}>
                   <Alert alert={alert} provider={formValues.provider_id} />
                 </tr>
               ))}
