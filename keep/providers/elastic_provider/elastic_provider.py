@@ -106,7 +106,7 @@ class ElasticProvider(BaseProvider):
         except Exception:
             self.logger.exception("Failed to close ElasticSearch client")
 
-    def query(self, query: str | dict, index: str = None) -> list[str]:
+    def _query(self, query: str | dict, index: str = None) -> list[str]:
         """
         Query Elasticsearch index.
 

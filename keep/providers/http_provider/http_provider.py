@@ -31,7 +31,7 @@ class HttpProvider(BaseProvider):
         """
         self.query(**kwargs)
 
-    def query(
+    def _query(
         self,
         url: str,
         method: typing.Literal["GET", "POST", "PUT", "DELETE"],

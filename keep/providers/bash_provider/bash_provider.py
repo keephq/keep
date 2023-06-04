@@ -18,7 +18,7 @@ class BashProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def query(self, **kwargs):
+    def _query(self, **kwargs):
         """Bash provider eval shell command to get results
 
         Returns:

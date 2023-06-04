@@ -57,6 +57,10 @@ class ContextManager:
             self.click_context = {}
         self.aliases = {}
         self.state = {}
+        # dependencies are used so iohandler will be able to use the output class of the providers
+        # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row
+        #     and we want to use it in iohandler, we need to import it before the eval
+        self.dependencies = set()
         self.__load_state()
 
     # TODO - If we want to support multiple alerts at once we need to change this

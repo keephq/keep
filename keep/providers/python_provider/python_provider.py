@@ -17,7 +17,7 @@ class PythonProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def query(self, **kwargs):
+    def _query(self, **kwargs):
         """Python provider eval python code to get results
 
         Returns:

@@ -42,7 +42,7 @@ class SentryProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def query(self, query: str, **kwargs: dict):
+    def _query(self, query: str, **kwargs: dict):
         """
         Query Sentry using the given query
 
