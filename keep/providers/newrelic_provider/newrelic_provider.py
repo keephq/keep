@@ -47,7 +47,7 @@ class NewrelicProvider(BaseProvider):
         """
         self.newrelic_config = NewrelicProviderAuthConfig(**self.config.authentication)
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         Query New Relic account using the given NRQL
 

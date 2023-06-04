@@ -64,7 +64,7 @@ class PsqlProvider(BaseProvider):
                 res = cur.fetchone() if fetch_one else cur.fetchall()
                 return res
 
-    def query(self, **kwargs: dict) -> List[tuple] | tuple:
+    def _query(self, **kwargs: dict) -> List[tuple] | tuple:
         """
         Executes a query against the Postgres database.
 

@@ -62,7 +62,7 @@ class MysqlProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def query(self, **kwargs: dict) -> list | tuple:
+    def _query(self, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the MySQL database.
 

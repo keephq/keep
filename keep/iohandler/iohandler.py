@@ -76,7 +76,9 @@ class IOHandler:
         string = self._render(string)
 
         # Now, extract the token if exists -
-        pattern = r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\)"
+        pattern = (
+            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
+        )
         parsed_string = copy.copy(string)
         matches = re.findall(pattern, parsed_string)
         tokens = list(matches)
@@ -98,9 +100,9 @@ class IOHandler:
 
     def _parse_token(self, token):
         # else, it contains a function e.g. len({{ value }}) or split({{ value }}, 'a', 'b')
-        def _parse(tree):
+        def _parse(self, tree):
             if isinstance(tree, ast.Module):
-                return _parse(tree.body[0].value)
+                return _parse(self, tree.body[0].value)
 
             if isinstance(tree, ast.Call):
                 func = tree.func
@@ -110,7 +112,7 @@ class IOHandler:
                 for arg in args:
                     _arg = None
                     if isinstance(arg, ast.Call):
-                        _arg = _parse(arg)
+                        _arg = _parse(self, arg)
                     elif isinstance(arg, ast.Str):
                         _arg = arg.s
                     # set is basically {{ value }}
@@ -128,7 +130,12 @@ class IOHandler:
                                 # https://github.com/keephq/keep/issues/138
                                 from dateutil.tz import tzutc
 
-                                _arg = eval(_arg)
+                                g = globals()
+                                # we need to pass the classes of the dependencies to the eval
+                                for dependency in self.context_manager.dependencies:
+                                    g[dependency.__name__] = dependency
+                                # finally, eval the expression
+                                _arg = eval(_arg, g)
                             except ValueError:
                                 pass
                     else:
@@ -152,7 +159,7 @@ class IOHandler:
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
-        return _parse(tree)
+        return _parse(self, tree)
 
     def _render(self, key):
         # change [] to . for the key because thats what chevron uses

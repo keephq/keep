@@ -80,7 +80,6 @@ class OpsgenieProvider(BaseProvider):
         )
         try:
             api_response = api_instance.create_alert(create_alert_payload)
-            pprint(api_response)
         except ApiException as e:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
@@ -102,7 +101,7 @@ class OpsgenieProvider(BaseProvider):
         """
         self._create_alert(**kwargs)
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         query_type = kwargs.get("type")
         query = kwargs.get("query")
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))

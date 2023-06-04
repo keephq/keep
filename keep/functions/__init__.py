@@ -1,10 +1,9 @@
 import datetime
+import urllib.parse
 from itertools import groupby
 
 import pytz
 from dateutil import parser
-
-import urllib.parse
 
 _len = len
 _all = all
@@ -52,5 +51,6 @@ def to_utc(dt: datetime.datetime | str):
 def datetime_compare(t1, t2):
     return (t1 - t2).total_seconds() / 3600
 
+
 def encode(string):
-  return urllib.parse.quote(string)
+    return urllib.parse.quote(string)
