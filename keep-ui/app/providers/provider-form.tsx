@@ -18,6 +18,7 @@ const ProviderForm = ({
   formData,
   onFormChange,
 }: ProviderFormProps) => {
+  console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
@@ -117,6 +118,7 @@ const ProviderForm = ({
     try {
       const data = await validateAndSubmit(`${getApiURL()}/providers/test`);
       if (data && data.alerts) {
+        console.log("Test succeessful");
         setTestResult("success");
         setAlertData(data.alerts);
       } else {
@@ -131,12 +133,15 @@ const ProviderForm = ({
   const handleConnectClick = () => {
     validateAndSubmit(`${getApiURL()}/providers/install`)
       .then((data) => {
+        console.log("Connect Result:", data);
         setIsConnected(true);
       })
       .catch((error) => {
         console.error("Connect failed:", error);
       });
   };
+
+  console.log("ProviderForm component loaded");
 
   return (
     <div>

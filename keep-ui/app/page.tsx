@@ -29,6 +29,7 @@ export default async function IndexPage() {
       .then((data) => data.onboarded);
   } catch (err) {
     // Inside the catch block
+    console.log("Error fetching GitHub plugin installed status:", err);
     const apiUrl = getApiURL();
     const url = `${apiUrl}/tenant/onboarded`;
     // capture the event

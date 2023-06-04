@@ -18,6 +18,7 @@ export default async function ProvidersPage() {
       },
     }).then((res) => res.json());
   } catch (err) {
+    console.log("Error fetching providers status", err);
     if (err instanceof Error) {
       return <div>Error: {err.message}</div>;
     }

@@ -38,17 +38,20 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
                   url = url + `?${searchParams.toString()}`;
               }
               const posthog_id = user?.name;
+              console.log("PostHog ID: " + posthog_id);
               if(!posthog_id) {
                 // TODO: when to reset?
                 posthog.reset();
                 posthog.identify(posthog_id);
               }
+              console.log("Sending pageview event to PostHog");
               posthog.capture(
                   '$pageview',
                   {
                       '$current_url': url,
                   }
               );
+              console.log("Event sent to PostHog");
           }
       }
       fetchData();
