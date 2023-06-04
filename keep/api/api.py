@@ -46,6 +46,10 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
 
+    multi_tenant = (
+        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
+    )
+
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
