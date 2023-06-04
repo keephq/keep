@@ -57,10 +57,7 @@ export default function ProvidersTable({
         ) : (
           <SessionProvider session={session}>
             {updatedProviders.map((provider) => (
-              <ProviderRow
-                key={provider.id || Math.random()}
-                provider={provider}
-              />
+              <ProviderRow key={provider.id} provider={provider} />
             ))}
           </SessionProvider>
         )}
