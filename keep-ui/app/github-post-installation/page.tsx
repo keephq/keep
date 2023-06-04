@@ -32,13 +32,10 @@ export default async function GithubPostInstallationPage({
 
     // Handle successful installation
     if (installedSuccessfully) {
-      console.log("Installation successful, redirecting");
     } else {
       // TODO handle unsuccessful installation
-      console.log("Installation unsuccessful, redirecting");
     }
   } catch (err) {
-    console.log("Error installing the GitHub app", err);
     if (err instanceof Error) {
       return <div>Error: {err.message}</div>;
     }

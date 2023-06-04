@@ -1,20 +1,26 @@
-// @ts-nocheck
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Table } from "@tremor/react";
 import ProviderRow from "./provider-row";
-import { Provider } from "./provider-row";
 import Providers from "./providers";
 import { SessionProvider } from "next-auth/react";
+import { Session } from "next-auth";
 
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
-type ProvidersTableProps = {
-  providers: Provider[];
-};
+interface InstalledProviders {
+  name: string;
+  details: { authentication: { [key: string]: string } };
+}
 
 // This runs on the client
-const ProvidersTable = ({ installed_providers }) => {
+export default function ProvidersTable({
+  session,
+  installed_providers,
+}: {
+  session: Session | null;
+  installed_providers: InstalledProviders[];
+}) {
   const [expandedProviderId, setExpandedProviderId] = useState<string | null>(
     null
   );
@@ -56,21 +62,14 @@ const ProvidersTable = ({ installed_providers }) => {
       <tbody>
         {isSingleTenant ? (
           updatedProviders.map((provider) => (
-            <ProviderRow
-              key={provider.id}
-              provider={provider}
-              expanded={expandedProviderId === provider.id}
-              onExpand={handleExpand}
-            />
+            <ProviderRow key={provider.id} provider={provider} />
           ))
         ) : (
-          <SessionProvider>
+          <SessionProvider session={session}>
             {updatedProviders.map((provider) => (
               <ProviderRow
-                key={provider.id}
+                key={provider.id || Math.random()}
                 provider={provider}
-                expanded={expandedProviderId === provider.id}
-                onExpand={handleExpand}
               />
             ))}
           </SessionProvider>
@@ -78,7 +77,4 @@ const ProvidersTable = ({ installed_providers }) => {
       </tbody>
     </Table>
   );
-
-};
-
-export default ProvidersTable;
+}

@@ -18,23 +18,17 @@ const ProviderForm = ({
   formData,
   onFormChange,
 }: ProviderFormProps) => {
-  console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
   });
   const [formErrors, setFormErrors] = useState({});
   const [testResult, setTestResult] = useState("");
-  const [connectResult, setConnectResult] = useState("");
   const [alertData, setAlertData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
   const { data: session, status, update } = useSession();
-  // @ts-ignore
-  if (!session?.accessToken) {
-    console.log("No session access token, refreshing session from the server");
-    update();
-  }
+
   // update();
   // TODO - fix the typing here
   // @ts-ignore
@@ -125,7 +119,6 @@ const ProviderForm = ({
         `${getApiURL()}/providers/test`
       );
       if (data && data.alerts) {
-        console.log("Test succeessful");
         setTestResult("success");
         setAlertData(data.alerts);
       } else {
@@ -140,15 +133,12 @@ const ProviderForm = ({
   const handleConnectClick = () => {
     validateAndSubmit(`${getApiURL()}/providers/install`)
       .then((data) => {
-        console.log("Connect Result:", data);
-        setConnectResult(data.result);
         setIsConnected(true);
       })
       .catch((error) => {
         console.error("Connect failed:", error);
       });
   };
-  console.log("ProviderForm component loaded");
 
   return (
     <div>

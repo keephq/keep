@@ -12,7 +12,6 @@ interface ExtendedPostHog extends PostHog {
 // todo export default function PostHogClient(): ExtendedPostHog
 export default function PostHogClient() {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-   console.log('NEXT_PUBLIC_POSTHOG_KEY is not set, skipping server telemety');
    return {
     safeCapture: () => {}
   }
@@ -30,7 +29,6 @@ export default function PostHogClient() {
     let distinctId = accessToken && accessToken.name ? accessToken.name : anonymousId?.value;
     // If no distinctId is found, generate a new one
     if (!distinctId) {
-      console.log("No distinctId found for PostHog event. Generating a new ID.");
       distinctId = uuidv4();
     }
     // Finally, capture the event
