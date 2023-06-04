@@ -1,32 +1,28 @@
-// @ts-nocheck
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Table } from "@tremor/react";
 import ProviderRow from "./provider-row";
-import { Provider } from "./provider-row";
 import Providers from "./providers";
 import { SessionProvider } from "next-auth/react";
+import { Session } from "next-auth";
 
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
-type ProvidersTableProps = {
-  providers: Provider[];
-};
+interface InstalledProviders {
+  name: string;
+  details: { authentication: { [key: string]: string } };
+}
 
 // This runs on the client
-const ProvidersTable = ({ installed_providers }) => {
-  const [expandedProviderId, setExpandedProviderId] = useState<string | null>(
-    null
-  );
-
-  const handleExpand = (providerId: string) => {
-    setExpandedProviderId((prevState) =>
-      prevState === providerId ? null : providerId
-    );
-  };
-
+export default function ProvidersTable({
+  session,
+  installedProviders,
+}: {
+  session: Session | null;
+  installedProviders: InstalledProviders[];
+}) {
   const updatedProviders = Providers.map((provider) => {
-    const installedProvider = installed_providers.find(
+    const installedProvider = installedProviders.find(
       (installedProvider) => installedProvider.name === provider.id
     );
     const connected = !!installedProvider;
@@ -56,29 +52,16 @@ const ProvidersTable = ({ installed_providers }) => {
       <tbody>
         {isSingleTenant ? (
           updatedProviders.map((provider) => (
-            <ProviderRow
-              key={provider.id}
-              provider={provider}
-              expanded={expandedProviderId === provider.id}
-              onExpand={handleExpand}
-            />
+            <ProviderRow key={provider.id} provider={provider} />
           ))
         ) : (
-          <SessionProvider>
+          <SessionProvider session={session}>
             {updatedProviders.map((provider) => (
-              <ProviderRow
-                key={provider.id}
-                provider={provider}
-                expanded={expandedProviderId === provider.id}
-                onExpand={handleExpand}
-              />
+              <ProviderRow key={provider.id} provider={provider} />
             ))}
           </SessionProvider>
         )}
       </tbody>
     </Table>
   );
-
-};
-
-export default ProvidersTable;
+}

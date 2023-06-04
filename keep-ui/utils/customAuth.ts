@@ -1,6 +1,7 @@
 import { AuthOptions, CallbacksOptions, Session } from "next-auth";
 import {
   SessionContextValue,
+  UseSessionOptions,
   useSession as useNextAuthSession,
 } from "next-auth/react";
 import { getServerSession as useNextGetServerSession } from "next-auth/next";
@@ -59,16 +60,19 @@ export async function getServerSession<
   return useNextGetServerSession(...args);
 }
 
-export function useSession(): SessionContextValue {
+export function useSession<R extends boolean>(
+  options?: UseSessionOptions<R>
+): SessionContextValue {
   if (isSingleTenant) {
     // Return a modified session object or perform any additional logic
     // specific to "single tenant" mode
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return useCustomSession();
   }
+  
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const session = useNextAuthSession();
-  console.log("Fetched session from the server: ", session);
+  const session = useNextAuthSession(options);
+  
   // Return the original session object as is
   return session;
 }

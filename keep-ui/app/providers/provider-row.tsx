@@ -1,9 +1,8 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { TableRow, TableCell } from '@tremor/react';
-import Image from 'next/image';
-import './providers.css';
-import ProviderForm from './provider-form';
+import React, { useState, useEffect } from "react";
+import { TableRow, TableCell } from "@tremor/react";
+import Image from "next/image";
+import "./providers.css";
+import ProviderForm from "./provider-form";
 
 type AuthenticationMethod = {
   name: string;
@@ -12,6 +11,7 @@ type AuthenticationMethod = {
   placeholder?: string;
   validation?: (value: string) => boolean;
   required?: boolean;
+  value?: string;
 };
 
 export type Provider = {
@@ -35,18 +35,21 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
     setExpanded(!expanded);
   };
 
-  const onFormChange = (formValues) => {
+  const onFormChange = (formValues: any) => {
     setFormData(formValues);
   };
 
   // Update formData with authentication data
   useEffect(() => {
     if (provider.connected) {
-      const authenticationData = provider.authentication.reduce((data, method) => {
-        const { name } = method;
-        const value = method.value || '';
-        return { ...data, [name]: value };
-      }, {});
+      const authenticationData = provider.authentication.reduce(
+        (data, method) => {
+          const { name } = method;
+          const value = method.value || "";
+          return { ...data, [name]: value };
+        },
+        {}
+      );
       setFormData(authenticationData);
     }
   }, [provider.connected, provider.authentication]);
@@ -55,10 +58,19 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
 
   return (
     <>
-      <TableRow className={`table-row ${provider.connected ? 'connected' : ''}`}>
+      <TableRow
+        className={`table-row ${provider.connected ? "connected" : ""} ${
+          isComingSoonProvider ? "coming-soon" : ""
+        }`}
+      >
         <TableCell className="icon-cell">
           <div className="icon-wrapper">
-            <Image src={provider.icon} alt={provider.name} width={150} height={150} />
+            <Image
+              src={provider.icon}
+              alt={provider.name}
+              width={150}
+              height={150}
+            />
           </div>
           <div className="provider-info">
             <div className="provider-name">{provider.name}</div>
@@ -66,11 +78,19 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
         </TableCell>
         <TableCell className="expand-cell">
           {isComingSoonProvider ? (
-            <div className="coming-soon-label">🚧 Coming Soon 🚧</div>
+            <div className="coming-soon-label">Coming Soon 🚧</div>
           ) : (
             <div className="expand-button-container">
-              <button type="button" className="expand-button" onClick={handleExpand}>
-                {expanded ? 'Collapse' : provider.connected ? 'Disconnect' : 'Connect'}
+              <button
+                type="button"
+                className="expand-button"
+                onClick={handleExpand}
+              >
+                {expanded
+                  ? "Collapse"
+                  : provider.connected
+                  ? "Expand"
+                  : "Connect"}
               </button>
             </div>
           )}
@@ -80,7 +100,11 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
         <TableRow>
           <TableCell colSpan={2}>
             <div className="expanded-content">
-              <ProviderForm provider={provider} formData={formData} onFormChange={onFormChange} />
+              <ProviderForm
+                provider={provider}
+                formData={formData}
+                onFormChange={onFormChange}
+              />
             </div>
           </TableCell>
         </TableRow>
