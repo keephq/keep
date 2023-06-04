@@ -21,6 +21,11 @@ const nextConfig = {
     appDir: true,
     serverComponentsExternalPackages: ["@tremor/react"],
   },
+  compiler: {
+    removeConsole: {
+      exclude: ["error"],
+    },
+  },
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",
 };

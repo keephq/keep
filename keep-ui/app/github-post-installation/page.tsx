@@ -1,34 +1,36 @@
 import { getServerSession } from "../../utils/customAuth";
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 import { getApiURL } from "../../utils/apiUrl";
 export default async function GithubPostInstallationPage({
-    searchParams,
+  searchParams,
 }: {
-    searchParams: { installation_id: string, setup_action: string },
+  searchParams: { installation_id: string; setup_action: string };
 }) {
   // https://github.com/nextauthjs/next-auth/pull/5792
-  const accessToken = (await getServerSession({
-    callbacks: { session: ({ token }) => token },
-  }))?.accessToken;
+  const accessToken = (
+    await getServerSession({
+      callbacks: { session: ({ token }) => token },
+    })
+  )?.accessToken;
 
   let installedSuccessfully = false;
   try {
     const apiUrl = getApiURL();
     installedSuccessfully = await fetch(`${apiUrl}/tenant/github`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify(searchParams)
+      body: JSON.stringify(searchParams),
     })
-      .then(res => {
+      .then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP error ${res.status}`);
         }
         return res.json();
       })
-      .then(data => data.success);
+      .then((data) => data.success);
 
     // Handle successful installation
     if (installedSuccessfully) {
@@ -44,5 +46,5 @@ export default async function GithubPostInstallationPage({
     }
     return <div>502 backend error</div>;
   }
-  redirect('/');
-};
+  redirect("/");
+}
