@@ -146,6 +146,7 @@ class Action:
         # else, just run the provider
         else:
             self.provider.notify(**rendered_value)
+            return True
 
     def _run_single_async(self):
         """For async providers, run them in a new event loop

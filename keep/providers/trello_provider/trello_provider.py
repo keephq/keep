@@ -42,7 +42,7 @@ class TrelloProvider(BaseProvider):
         """
         pass
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks

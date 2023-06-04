@@ -73,7 +73,7 @@ class CloudwatchLogsProvider(CloudwatchProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__("logs", provider_id, config)
 
-    def query(self, **kwargs: dict) -> dict:
+    def _query(self, **kwargs: dict) -> dict:
         log_group = kwargs.get("log_group")
         query = kwargs.get("query")
         hours = kwargs.get("hours", 24)

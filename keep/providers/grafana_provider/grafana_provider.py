@@ -48,7 +48,7 @@ class GrafanaProvider(BaseProvider):
         """
         self.authentication_config = GrafanaAuthConfig(**self.config.authentication)
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         pass
 
     def get_alerts(self, alert_id: str | None = None):
