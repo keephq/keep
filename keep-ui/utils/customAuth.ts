@@ -69,9 +69,10 @@ export function useSession<R extends boolean>(
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return useCustomSession();
   }
+  
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const session = useNextAuthSession(options);
-
+  
   // Return the original session object as is
   return session;
 }
