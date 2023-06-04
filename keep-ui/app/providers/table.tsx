@@ -16,23 +16,13 @@ interface InstalledProviders {
 // This runs on the client
 export default function ProvidersTable({
   session,
-  installed_providers,
+  installedProviders,
 }: {
   session: Session | null;
-  installed_providers: InstalledProviders[];
+  installedProviders: InstalledProviders[];
 }) {
-  const [expandedProviderId, setExpandedProviderId] = useState<string | null>(
-    null
-  );
-
-  const handleExpand = (providerId: string) => {
-    setExpandedProviderId((prevState) =>
-      prevState === providerId ? null : providerId
-    );
-  };
-
   const updatedProviders = Providers.map((provider) => {
-    const installedProvider = installed_providers.find(
+    const installedProvider = installedProviders.find(
       (installedProvider) => installedProvider.name === provider.id
     );
     const connected = !!installedProvider;

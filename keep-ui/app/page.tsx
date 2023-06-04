@@ -6,6 +6,7 @@ import ErrorComponent from "./error";
 import PostHogClient from "./posthog-server";
 import { getApiURL } from "../utils/apiUrl";
 import Frill from "./frill";
+import { authOptions } from "../pages/api/auth/[...nextauth]";
 
 export const metadata = {
   title: "Keep Console",
@@ -13,10 +14,7 @@ export const metadata = {
 };
 
 export default async function IndexPage() {
-  // https://github.com/nextauthjs/next-auth/pull/5792
-  const accessToken = await getServerSession({
-    callbacks: { session: ({ token }) => token },
-  });
+  const accessToken = await getServerSession(authOptions);
 
   let isGitHubPluginInstalled = false;
   try {

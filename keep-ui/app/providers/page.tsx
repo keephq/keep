@@ -6,14 +6,13 @@ import { authOptions } from "../../pages/api/auth/[...nextauth]";
 
 export default async function ProvidersPage() {
   const session = await getServerSession(authOptions);
-  console.log(session);
   // force get session to get a token
   const accessToken = session?.accessToken;
-  let installed_providers = [];
+  let installedProviders = [];
   // Now let's fetch the providers status from the backend
   try {
     const apiUrl = getApiURL();
-    installed_providers = await fetch(`${apiUrl}/providers`, {
+    installedProviders = await fetch(`${apiUrl}/providers`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -30,7 +29,7 @@ export default async function ProvidersPage() {
       <Title>Providers</Title>
       <Text>Connect providers to Keep to make your alerts better.</Text>
       <Card className="mt-6">
-        <ProvidersTable session={session} installed_providers={installed_providers} />
+        <ProvidersTable session={session} installedProviders={installedProviders} />
       </Card>
     </main>
   );
