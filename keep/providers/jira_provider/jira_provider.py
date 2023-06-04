@@ -39,7 +39,7 @@ class JiraProvider(BaseProvider):
         """
         pass
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get

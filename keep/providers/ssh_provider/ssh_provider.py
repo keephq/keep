@@ -108,7 +108,7 @@ class SshProvider(BaseProvider):
         """
         self.authentication_config = SshProviderAuthConfig(**self.config.authentication)
 
-    def query(self, **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         Query snowflake using the given query
 

@@ -63,7 +63,7 @@ class GithubStarsProvider(GithubProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
 
-    def query(
+    def _query(
         self, repository: str, previous_stars_count: int = 0, **kwargs: dict
     ) -> dict:
         repo = self.client.get_repo(repository)
