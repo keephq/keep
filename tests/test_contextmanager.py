@@ -75,7 +75,7 @@ STATE_FILE_MOCK_DATA = {
 
 
 @pytest.fixture
-def ctx_store():
+def ctx_store() -> dict:
     """
     Create a context store
     """
@@ -217,3 +217,40 @@ def test_context_manager_set_step_context(context_manager: ContextManager):
     context_manager.set_step_context(step_id=step_id, results=results, foreach=False)
     assert context_manager.steps_context["this"]["results"] == results
     assert context_manager.steps_context[step_id]["results"] == results
+
+
+def test_context_manager_delete_instance(context_manager: ContextManager):
+    context_manager_id = get_context_manager_id()
+    context_manager.delete_instance()
+    instances = context_manager.__getattribute__("_ContextManager__instances")
+    assert context_manager_id not in instances
+
+
+def test_context_manager_set_last_alert_run(context_manager: ContextManager):
+    """
+    Test the set_last_alert_run function
+    """
+    alert_id = "mock_alert"
+    alert_context = {"mock": "mock"}
+    alert_status = "firing"
+    context_manager.set_last_alert_run(alert_id, alert_context, alert_status)
+    assert alert_id in context_manager.state
+    with open(context_manager.STATE_FILE, "r") as f:
+        state = json.load(f)
+    assert alert_id in state
+
+
+def test_context_manager_get_last_alert_run(context_manager: ContextManager):
+    alert_id = "mock_alert"
+    alert_context = {"mock": "mock"}
+    alert_status = "firing"
+    last_run = context_manager.get_last_alert_run(alert_id)
+    assert last_run == {}
+    context_manager.set_last_alert_run(alert_id, alert_context, alert_status)
+    last_run = context_manager.get_last_alert_run(alert_id)
+    assert last_run["alert_status"] == alert_status
+
+
+def test_context_manager_singleton(context_manager: ContextManager):
+    with pytest.raises(Exception):
+        ContextManager()

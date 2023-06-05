@@ -174,22 +174,6 @@ class ContextManager:
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
 
-    def load_step_context(self, step_id, step_results):
-        """Load a step context
-
-        Args:
-            step_id (_type_): _description_
-            step_results (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        self.steps_context[step_id] = {"results": step_results}
-
-    # TODO - add step per alert?
-    def get_step_context(self, step_id):
-        return {"step_id": step_id, "step_context": self.steps_context.get(step_id)}
-
     def __load_state(self):
         if self.state_file:
             # TODO - SQLite
