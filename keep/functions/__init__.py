@@ -9,7 +9,7 @@ _len = len
 _all = all
 
 
-def all(iterable):
+def all(iterable) -> bool:
     # https://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
     g = groupby(iterable)
     return next(g, True) and not next(g, False)
@@ -20,15 +20,15 @@ def diff(iterable: iter) -> bool:
     return not all(iterable)
 
 
-def len(iterable=[]):
+def len(iterable=[]) -> int:
     return _len(iterable)
 
 
-def split(string, delimeter):
+def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
 
 
-def strip(string):
+def strip(string) -> str:
     return string.strip()
 
 
@@ -36,21 +36,22 @@ def first(iterable):
     return iterable[0]
 
 
-def utcnow():
+def utcnow() -> datetime.datetime:
     dt = datetime.datetime.now(datetime.timezone.utc)
     return dt
 
 
-def to_utc(dt: datetime.datetime | str):
+def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
     if isinstance(dt, str):
         dt = parser.parse(dt)
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
 
 
-def datetime_compare(t1, t2):
-    return (t1 - t2).total_seconds() / 3600
+def datetime_compare(t1, t2) -> float:
+    diff = (t1 - t2).total_seconds() / 3600
+    return diff
 
 
-def encode(string):
+def encode(string) -> str:
     return urllib.parse.quote(string)
