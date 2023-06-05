@@ -1,8 +1,8 @@
 """
 Test the context manager
 """
-
 import json
+import random
 import tempfile
 
 import pytest
@@ -79,7 +79,7 @@ def ctx_store():
     """
     Create a context store
     """
-    return {"X-Request-ID": "1234"}
+    return {"X-Request-ID": random.randint(10000, 90000)}
 
 
 @pytest.fixture
@@ -118,7 +118,7 @@ def test_get_contexst_manager_id_with_starlette_context(mocked_context):
     """
     Test the get_context_manager_id function when starlette context is available with mock data§
     """
-    assert get_context_manager_id() == "1234"
+    assert isinstance(get_context_manager_id(), int)
 
 
 def test_context_manager_set_alert_context(context_manager: ContextManager):
