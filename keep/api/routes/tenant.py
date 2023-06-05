@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from uuid import uuid4
 
@@ -7,7 +8,11 @@ from sqlmodel import Session, select
 
 # This import is required to create the tables
 from keep.api.core.dependencies import get_session, verify_bearer_token
-from keep.api.models.db.tenant import TenantInstallation
+from keep.api.models.db.tenant import TenantApiKey, TenantInstallation
+from keep.secretmanager.secretmanagerfactory import (
+    SecretManagerFactory,
+    SecretManagerTypes,
+)
 
 router = APIRouter()
 
@@ -61,7 +66,20 @@ async def save_github_installation_id(
         new_installation = TenantInstallation(
             id=uuid4(), tenant_id=tenant_id, bot_id=str(installation_id), installed=True
         )
+        api_key = str(uuid4())
+        hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        # Save the api key in the secret manager
+        secret_manager = SecretManagerFactory.get_secret_manager()
+        secret_manager.write_secret(
+            secret_name=f"{tenant_id}_{installation_id}",
+            secret_value=api_key,
+        )
+        # Save the api key in the database
+        new_installation_api_key = TenantApiKey(
+            tenant_id=tenant_id, reference_id=installation_id, key_hash=hashed_api_key
+        )
         session.add(new_installation)
+        session.add(new_installation_api_key)
         session.commit()
     except Exception as e:
         return JSONResponse({"success": False})
