@@ -5,10 +5,6 @@
 <h1 align="center">The open-source alerts management platform</h1>
 <br />
 
-
-<h4 align="left">
-Keep allows you to create, manage, test and maintain your alerts within a single place.
-</h4>
 <div align="center">
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/keephq/keep" />
@@ -20,6 +16,10 @@ Keep allows you to create, manage, test and maintain your alerts within a single
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
+
+<h4 align="left">
+Keep allows you to create, manage, test and maintain your alerts within a single place.
+</h4>
 <div align="left">
 
 - *Integrations*: Integrates with your existing tools (e.g. grafana/sentry/datadog/slack/pagerduty)
