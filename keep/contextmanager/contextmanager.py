@@ -186,20 +186,6 @@ class ContextManager:
         """
         self.steps_context[step_id] = {"results": step_results}
 
-    def load_action_context(self, action_id, action_results, actions_conditions):
-        for condition in actions_conditions:
-            self.set_condition_results(
-                step_id,
-                condition["name"],
-                condition["type"],
-                condition["compare_to"],
-                condition["value"],
-                condition["result"],
-                condition_alias=condition.get("alias"),
-                value=condition.get("value"),
-            )
-        return True
-
     # TODO - add step per alert?
     def get_step_context(self, step_id):
         return {"step_id": step_id, "step_context": self.steps_context.get(step_id)}
