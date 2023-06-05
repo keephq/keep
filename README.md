@@ -40,7 +40,7 @@ Keep allows you to create, manage, test and maintain your alerts within a single
     ·
     <a href="https://keephq.dev">Website</a>
     ·
-    <a href="https://keephq.wiki/providers/new-provider">Add Providers</a>
+    <a href="https://www.keephq.wiki/platform/core/providers/new-provider">Add Providers</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
