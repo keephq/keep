@@ -2,7 +2,7 @@
     <img src="/docs/static/img/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">Alerting. By developers, for developers.</h1>
+<h1 align="center">Alert management platform</h1>
 <br />
 <div align="center">
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
@@ -17,11 +17,13 @@
 </div>
 
 <h4 align="center">
-Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty) and 100% open sourced!
+Create, manage, test and maintain your alerts within a single place.
 </h4>
-<div align="center">
+<div align="left">
 
-- Simple and intuitive (GitHub actions-like) syntax.
+- Integrates with your existing tools (e.g. grafana/sentry/datadog or slack/pagerduty)
+-
+- Create alerts via a simple and intuitive (GitHub actions-like) syntax.
 - Declarative alerting that can be easily managed and versioned in your version control and service repository.
 - Alerts from multiple data sources for added context and insights.
 - Freedom from vendor lock-in, making it easier to switch to a different observability tool if and when needed.
@@ -68,6 +70,10 @@ Brought to you by developers, **EASY** to use and managed by code.
 - Connect 3rd party application integrations (e.g. GitHub/GitLab)
 - Single pane of glass to all of your different monitoring tools
 
+## 💻 CLI
+
+
+##
 ## 🚨 Providers
 
 [Providers](https://keephq.wiki/providers/what-is-a-provider) are Keep's way of interacting with 3rd party products; Keep uses them either to query data or to send notifications.

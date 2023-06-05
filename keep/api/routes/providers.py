@@ -35,6 +35,7 @@ def get_installed_providers(
             "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
         }
         for secret in installed_providers
+        if len(secret.split("_")) == 3  # avoid the installation api key
     ]
     # return list of installed providers
     # TODO: model this
