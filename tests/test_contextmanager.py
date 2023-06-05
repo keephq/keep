@@ -2,11 +2,10 @@
 Test the context manager
 """
 import json
-import random
 import tempfile
 
 import pytest
-from starlette_context import context, request_cycle_context
+from starlette_context import context
 
 from keep.contextmanager.contextmanager import ContextManager, get_context_manager_id
 
@@ -75,20 +74,6 @@ STATE_FILE_MOCK_DATA = {
 
 
 @pytest.fixture
-def ctx_store() -> dict:
-    """
-    Create a context store
-    """
-    return {"X-Request-ID": random.randint(10000, 90000)}
-
-
-@pytest.fixture
-def mocked_context(ctx_store) -> None:
-    with request_cycle_context(ctx_store):
-        yield context
-
-
-@pytest.fixture
 def context_manager(mocked_context) -> ContextManager:
     """
     Create a context manager
@@ -111,6 +96,7 @@ def test_get_context_manager_id_no_starlette_context():
     """
     Test the get_context_manager_id function when starlette context is not available
     """
+    del context.data["X-Request-ID"]
     assert get_context_manager_id() == "main"
 
 

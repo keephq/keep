@@ -9,7 +9,7 @@ from starlette_context import context
 def get_context_manager_id():
     try:
         # If we are running as part of FastAPI, we need context_manager per request
-        request_id = context.data.get("X-Request-ID")
+        request_id = context.data["X-Request-ID"]
         return request_id
     except Exception:
         return "main"
