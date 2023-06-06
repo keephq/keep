@@ -49,7 +49,7 @@ Keep allows you to create, manage, test and maintain your alerts within a single
 
 #### 🚀 Quickstart
 Keep has two main component that play with each other:
-1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps
+1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps.
 2. [Keep Core](https://www.keephq.wiki/platform/getting-started) - The engine behind Keep.
 #### Keep UI
 The easiest way to start with Keep is to run it via docker-compose:
@@ -59,7 +59,7 @@ docker-compose -f docker-compose.yml up
 ```
 Keep UI is now available at http://localhost:3000
 
-#### Keep CLI
+#### Keep Core
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 First, clone Keep repository:
