@@ -47,9 +47,18 @@ Keep allows you to create, manage, test and maintain your alerts within a single
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 
-## 🚀 Quickstart
+### 🚀 Quickstart
 
-### Run locally
+#### Keep UI - manage your alerts within a single pange of glass
+
+##### docker-compose
+```shell
+wget -O docker-compose.yml https://github.com/keephq/keep/blob/main/docker-compose.yml
+docker-compose -f docker-compose.yml up
+```
+Keep UI is now available at http://localhost:3000
+
+#### Keep CLI - create and run alerts from the CLI
 
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
@@ -111,7 +120,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 </div>
 
 
-### Docker
+##### Docker
 
 Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
 
@@ -127,7 +136,7 @@ Run Keep and execute our example "Paper DB has insufficient disk space" alert
 docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
 ```
 
-### Render
+##### Render
 Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
