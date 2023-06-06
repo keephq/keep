@@ -17,10 +17,10 @@
     </a>
 </div>
 
-<h4 align="left">
+<h4 align="center">
 Keep allows you to create, manage, test and maintain your alerts within a single place.
 </h4>
-<div align="left">
+<div align="center">
 
 - *Integrations*: Integrates with your existing tools (e.g. grafana/sentry/datadog/slack/pagerduty)
 - *Intutive*: Create alerts via a simple and intuitive (GitHub actions-like) syntax.
