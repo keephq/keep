@@ -2,8 +2,9 @@
     <img src="/docs/static/img/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">Alerting. By developers, for developers.</h1>
+<h1 align="center">The open-source alerts management platform</h1>
 <br />
+
 <div align="center">
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/keephq/keep" />
@@ -17,22 +18,18 @@
 </div>
 
 <h4 align="center">
-Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty) and 100% open sourced!
+Keep enables you to create, manage, test, and maintain your alerts all in one place.
 </h4>
 <div align="center">
 
-- Simple and intuitive (GitHub actions-like) syntax.
-- Declarative alerting that can be easily managed and versioned in your version control and service repository.
-- Alerts from multiple data sources for added context and insights.
-- Freedom from vendor lock-in, making it easier to switch to a different observability tool if and when needed.
+- *Integrations*: Integrates with your existing tools (e.g. grafana/sentry/datadog/slack/pagerduty)
+- *Intutive*: Create alerts via a simple and intuitive (GitHub actions-like) syntax.
+- *Alerts as code*: Declarative alerting that can be easily managed and versioned in your version control and service repository.
+- *Alerts as workflows*: Create alerts from multiple data sources for added context and insights.
 
 </div>
 
 <p align="center">
-    <br />
-    <a href="https://keephq.wiki/" rel="dofollow"><strong>Get started »</strong></a>
-    <br />
-    <br />
     <a href="https://github.com/orgs/keephq/projects/1">Roadmap</a>
     ·
     <a href="https://github.com/keephq/keep/tree/main/examples">Examples</a>
@@ -43,47 +40,26 @@ Simple alerting tool, builtin providers (e.g. sentry/datadog or slack/pagerduty)
     ·
     <a href="https://keephq.dev">Website</a>
     ·
-    <a href="https://keephq.wiki/providers/new-provider">Add Providers</a>
+    <a href="https://www.keephq.wiki/platform/core/providers/new-provider">Add Providers</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 
-## 🗼 A glance of Keep
+#### 🚀 Quickstart
+Keep has two main component that play with each other:
+1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps.
+2. [Keep Core](https://www.keephq.wiki/platform/getting-started) - The engine behind Keep.
+#### Keep UI
+The easiest way to start with Keep is to run it via docker-compose:
+```shell
+wget -O docker-compose.yml https://github.com/keephq/keep/blob/main/docker-compose.yml
+docker-compose -f docker-compose.yml up
+```
+Keep UI is now available at http://localhost:3000
 
-Keep is an open-source alert management tool that contains everything you need to create and manage Alerts.
-
-- 10s of providers ready to use with your own data
-- A simple and intuitive UI that covers all your needs
-- Simple CLI to configure, trigger and test your alerts
-- Easily deployable via docker, vercel, github actions, etc.
-- Alerts are managed by simple yaml files that are human-readable
-
-Brought to you by developers, **EASY** to use and managed by code.
-
-## 📟 Console
-- Manage and maintain alerts
-- Connect and configure [Providers](https://github.com/keephq/keep/tree/main/keep/providers)
-- Connect 3rd party application integrations (e.g. GitHub/GitLab)
-- Single pane of glass to all of your different monitoring tools
-
-## 🚨 Providers
-
-[Providers](https://keephq.wiki/providers/what-is-a-provider) are Keep's way of interacting with 3rd party products; Keep uses them either to query data or to send notifications.
-
-We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
-
-- **Cloud**: AWS, GCP, Azure, etc.
-- **Monitoring**: Sentry, New Relic, Datadog, etc.
-- **Incident Management**: PagerDuty, OpsGenie, etc.
-- **Communication**: Email, Slack, Discord, Microsoft Teams, etc.
-- [and more...](https://github.com/keephq/keep/tree/main/keep/providers)
-
-## 🚀 Quickstart
-
-### Run locally
-
+#### Keep Core
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 First, clone Keep repository:
@@ -144,7 +120,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 </div>
 
 
-### Docker
+##### Docker
 
 Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
 
@@ -160,7 +136,7 @@ Run Keep and execute our example "Paper DB has insufficient disk space" alert
 docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
 ```
 
-### Render
+##### Render
 Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
