@@ -47,19 +47,19 @@ Keep allows you to create, manage, test and maintain your alerts within a single
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 
-### 🚀 Quickstart
-
-#### Keep UI - manage your alerts within a single pange of glass
-
-##### docker-compose
+#### 🚀 Quickstart
+Keep has two main component that play with each other:
+1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps
+2. [Keep Core](https://www.keephq.wiki/platform/getting-started) - The engine behind Keep.
+#### Keep UI
+The easiest way to start with Keep is to run it via docker-compose:
 ```shell
 wget -O docker-compose.yml https://github.com/keephq/keep/blob/main/docker-compose.yml
 docker-compose -f docker-compose.yml up
 ```
 Keep UI is now available at http://localhost:3000
 
-#### Keep CLI - create and run alerts from the CLI
-
+#### Keep CLI
 Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
 
 First, clone Keep repository:
