@@ -71,7 +71,7 @@ async def save_github_installation_id(
         # Save the api key in the secret manager
         secret_manager = SecretManagerFactory.get_secret_manager()
         secret_manager.write_secret(
-            secret_name=f"{tenant_id}_{installation_id}",
+            secret_name=f"{tenant_id}-{installation_id}",
             secret_value=api_key,
         )
         # Save the api key in the database
