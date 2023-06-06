@@ -18,7 +18,7 @@
 </div>
 
 <h4 align="center">
-Keep allows you to create, manage, test and maintain your alerts within a single place.
+Keep enables you to create, manage, test, and maintain your alerts all in one place.
 </h4>
 <div align="center">
 
