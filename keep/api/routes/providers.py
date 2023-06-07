@@ -20,10 +20,11 @@ logger = logging.getLogger(__name__)
 @router.get(
     "",
 )
-def get_installed_providers(
+def get_providers(
     tenant_id: str = Depends(verify_bearer_token),
 ) -> list:
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
+    providers = ProvidersFactory.get_all_providers()
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
     secret_manager = SecretManagerFactory.get_secret_manager()
@@ -40,7 +41,12 @@ def get_installed_providers(
     # return list of installed providers
     # TODO: model this
     # TODO: return also metadata (host, etc)
-    return JSONResponse(content=installed_providers)
+    for p in installed_providers:
+        provider_name = p["name"]
+        providers[f"{provider_name}_provider"]["installed"] = True
+        providers[f"{provider_name}_provider"]["details"] = p["details"]
+
+    return JSONResponse(content=providers)
 
 
 @router.get(
