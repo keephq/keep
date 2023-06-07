@@ -9,7 +9,7 @@ from starlette_context import context
 def get_context_manager_id():
     try:
         # If we are running as part of FastAPI, we need context_manager per request
-        request_id = context.data.get("X-Request-ID")
+        request_id = context.data["X-Request-ID"]
         return request_id
     except Exception:
         return "main"
@@ -173,36 +173,6 @@ class ContextManager:
             self.steps_context[step_id]["results"] = results
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
-
-    def load_step_context(self, step_id, step_results):
-        """Load a step context
-
-        Args:
-            step_id (_type_): _description_
-            step_results (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        self.steps_context[step_id] = {"results": step_results}
-
-    def load_action_context(self, action_id, action_results, actions_conditions):
-        for condition in actions_conditions:
-            self.set_condition_results(
-                step_id,
-                condition["name"],
-                condition["type"],
-                condition["compare_to"],
-                condition["value"],
-                condition["result"],
-                condition_alias=condition.get("alias"),
-                value=condition.get("value"),
-            )
-        return True
-
-    # TODO - add step per alert?
-    def get_step_context(self, step_id):
-        return {"step_id": step_id, "step_context": self.steps_context.get(step_id)}
 
     def __load_state(self):
         if self.state_file:
