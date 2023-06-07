@@ -3,6 +3,8 @@ The providers factory module.
 """
 import importlib
 import logging
+import os
+from dataclasses import fields
 
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -86,3 +88,39 @@ class ProvidersFactory:
                 f"Provider {provider_type} does not have a provider auth config class"
             )
             return {}
+
+    @staticmethod
+    def get_all_providers() -> list:
+        """
+        Get all the providers.
+
+        Returns:
+            list: All the providers.
+        """
+        providers = {}
+        blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
+        for provider in os.listdir("keep/providers"):
+            # skip files that aren't providers
+            if not provider.endswith("_provider"):
+                continue
+            elif provider in blacklisted_providers:
+                continue
+            # import it
+            module = importlib.import_module(f"keep.providers.{provider}.{provider}")
+            try:
+                provider_auth_config_class = getattr(
+                    module, provider.title().replace("_", "") + "AuthConfig"
+                )
+                providers[provider] = {
+                    "config": {
+                        field.name: dict(field.metadata)
+                        for field in fields(provider_auth_config_class)
+                    },
+                }
+            except (ImportError, AttributeError):
+                logging.getLogger(__name__).warning(
+                    f"Provider {provider} does not have a provider auth config class"
+                )
+                # continue to the next provider
+                providers[provider] = {"config": None}
+        return providers

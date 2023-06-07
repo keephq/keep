@@ -18,7 +18,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
-class GrafanaAuthConfig:
+class GrafanaProviderAuthConfig:
     """
     Grafana authentication configuration.
     """
@@ -46,7 +46,9 @@ class GrafanaProvider(BaseProvider):
         Validates required configuration for Grafana provider.
 
         """
-        self.authentication_config = GrafanaAuthConfig(**self.config.authentication)
+        self.authentication_config = GrafanaProviderfromAuthConfig(
+            **self.config.authentication
+        )
 
     def _query(self, **kwargs: dict):
         pass
