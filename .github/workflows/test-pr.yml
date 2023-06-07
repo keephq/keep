@@ -15,7 +15,7 @@ jobs:
     - name: Run unit tests and report coverage
       run: poetry run coverage run --branch -m pytest
     - name: Convert coverage results to JSON (for CodeCov support)
-      run: poetry run coverage json --omit=keep/providers/*
+      run: poetry run coverage json --omit="keep/providers/*"
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       with:
