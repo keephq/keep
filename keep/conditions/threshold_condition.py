@@ -30,7 +30,7 @@ class ThresholdCondition(BaseCondition):
         # TODO make more validations
         if "," in str(compare_to):
             levels = self.condition_config.get("level")
-            if len(levels.split(", ")) != len(compare_to.split(",")):
+            if len(levels.split(",")) != len(compare_to.split(",")):
                 raise ValueError(
                     "Number of levels and number of thresholds do not match"
                 )
