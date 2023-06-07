@@ -2,6 +2,7 @@ import pytest
 
 from keep.conditions.assert_condition import AssertCondition
 from keep.conditions.condition_factory import ConditionFactory
+from keep.conditions.stddev_condition import StddevCondition
 from keep.conditions.threshold_condition import ThresholdCondition
 
 
@@ -117,3 +118,13 @@ def test_threshold_condition_multithreshold_not_equals():
         Exception, match="Number of levels and number of thresholds do not match"
     ):
         threshold_condition.apply("1,2,3,4", "4,5,6")
+
+
+def test_stddev_condition():
+    stddev_condition = StddevCondition(
+        condition_type="stddev",
+        condition_name="mock",
+        condition_config={},
+    )
+    result = stddev_condition.apply(1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    assert result is True
