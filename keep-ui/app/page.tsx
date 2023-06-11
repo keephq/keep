@@ -1,6 +1,5 @@
 import GitHubPage from "./github/page";
 import ProvidersPage from "./providers/page";
-import { Suspense } from "react";
 import { getServerSession } from "../utils/customAuth";
 import ErrorComponent from "./error";
 import PostHogClient from "./posthog-server";
@@ -46,10 +45,8 @@ export default async function IndexPage() {
     <>
       <Frill />
       <div>
-        <Suspense fallback={<div>Loading...</div>}>
-          {/* @ts-expect-error Async Server Component */}
-          {isGitHubPluginInstalled ? <ProvidersPage /> : <GitHubPage />}
-        </Suspense>
+        {/* @ts-expect-error Async Server Component */}
+        {isGitHubPluginInstalled ? <ProvidersPage /> : <GitHubPage />}
       </div>
     </>
   );

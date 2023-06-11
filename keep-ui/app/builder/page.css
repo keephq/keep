@@ -1,0 +1,8 @@
+.sqd-designer-react {
+  height: 100%;
+}
+
+.sqd-root-start-stop-circle,
+.sqd-label-rect {
+  fill: rgb(255, 132, 16) !important;
+}

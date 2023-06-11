@@ -319,6 +319,8 @@
     "safe-regex-test": "^1.0.0",
     "scheduler": "^0.23.0",
     "semver": "^7.5.0",
+    "sequential-workflow-designer": "^0.13.2",
+    "sequential-workflow-designer-react": "^0.13.2",
     "server-only": "^0.0.1",
     "shebang-command": "^2.0.0",
     "shebang-regex": "^3.0.0",
