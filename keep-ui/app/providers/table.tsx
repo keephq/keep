@@ -1,67 +1,53 @@
-"use client";
-import React, { useState } from "react";
+'use client';
+import React from "react";
 import { Table } from "@tremor/react";
 import ProviderRow from "./provider-row";
-import Providers from "./providers";
 import { SessionProvider } from "next-auth/react";
 import { Session } from "next-auth";
+import { Providers } from "./providers";
 
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED === "false";
 
-interface InstalledProviders {
-  name: string;
-  details: { authentication: { [key: string]: string } };
-}
-
-// This runs on the client
 export default function ProvidersTable({
   session,
-  installedProviders,
+  providers,
 }: {
   session: Session | null;
-  installedProviders: InstalledProviders[];
+  providers: Providers;
 }) {
-  const updatedProviders = Providers.map((provider) => {
-    const installedProvider = installedProviders.find(
-      (installedProvider) => installedProvider.name === provider.id
-    );
-    const connected = !!installedProvider;
-
-    // Update authentication values based on the name
-    const authentication = provider.authentication.map((method) => {
-      const { name } = method;
-
-      if (connected && installedProvider.details.authentication[name]) {
-        return {
-          ...method,
-          value: installedProvider.details.authentication[name],
-        };
+    // update the providers
+    Object.keys(providers).map((providerName) => {
+      const provider = providers[providerName];
+      // Update authentication values based on the name
+      if (provider.details) {
+        Object.keys(provider.details.authentication).map((authKey) => {
+          provider.config[authKey].value = provider.details.authentication[authKey];
+        });
       }
-
-      return method;
-    });
-
-    return {
-      ...provider,
-      connected,
-      authentication,
-    };
   });
   return (
     <Table>
       <tbody>
         {isSingleTenant ? (
-          updatedProviders.map((provider) => (
-            <ProviderRow key={provider.id} provider={provider} />
-          ))
+          Object.entries(providers)
+            .filter(([providerKey, provider]) => Object.keys(provider.config).length > 0)
+            .map(([providerKey, provider]) => (
+              <ProviderRow key={providerKey} provider={provider} />
+            ))
         ) : (
           <SessionProvider session={session}>
-            {updatedProviders.map((provider) => (
-              <ProviderRow key={provider.id} provider={provider} />
-            ))}
+            {Object.entries(providers)
+              .filter(([providerKey, provider]) => Object.keys(provider.config).length > 0)
+              .map(([providerKey, provider]) => (
+                <ProviderRow key={providerKey} provider={provider} />
+              ))}
           </SessionProvider>
         )}
       </tbody>
     </Table>
   );
+
+
+
+
 }
