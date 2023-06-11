@@ -1,50 +1,41 @@
-import {Provider} from './provider-row';
 
+export interface ProviderAuthConfig {
+  name: string;
+  description: string;
+  placeholder?: string;
+  validation: string; // regex
+  required?: boolean;
+  value?: string;
+  sensitive?: boolean;
+}
 
-// TODO - this should be fetched from the backend
-const Providers: Provider[] = [
-    {
-      id: 'grafana',
-      name: 'Grafana',
-      // TODO: 'host' and 'token' should match the names of the fields in the backend
-      //        so it should be generic
-      authentication: [
-        { name: 'token', desc: 'Grafana Service Account', type: 'string' , placeholder: 'glsa_1234567890', validation: (value: string) => value.startsWith('glsa')},
-        { name: 'host', desc: 'Grafana hostname', type: 'string', placeholder: 'https://keephq.grafana.net', validation: (value: string) => value.startsWith('https') && value.endsWith('grafana.net'),
-      },
-      ],
-      icon: '/grafana.svg',
-      connected: false,
-    },
-    {
-      id: 'datadog',
-      name: 'Datadog',
-      authentication: [
-        { name: 'api_key', desc: 'Datadog API key', type: 'string', placeholder: '1234567890abcdef1234567890abcdef' },
-        { name: 'app_key', desc: 'Datadog App key', type: 'string', placeholder: '1234567890abcdef1234567890abcdef' },
-        { name: 'hostname', desc: 'Datadog hostname', type: 'string', placeholder: 'https://us1.datadog.com', required: false },
-      ],
-      icon: '/datadog.svg',
-      connected: false,
-    },
-    {
-      id: 'elasticsearch',
-      name: 'Elasticsearch',
-      authentication: [
-      ],
-      icon: '/elasticsearch.svg',
-      connected: false,
-      coming_soon: true,
-    },
-    {
-      id: 'newrelic',
-      name: 'New Relic',
-      authentication: [
-      ],
-      icon: '/newrelic.svg',
-      connected: false,
-      coming_soon: true,
-    }
-  ];
+export interface Provider {
+  // key value pair of auth method name and auth method config
+  config: {
+    [configKey: string]: ProviderAuthConfig;
+  };
+  // whether the provider is installed or not
+  installed: boolean;
+  // if the provider is installed, this will be the auth details
+  //  otherwise, this will be null
+  details: {
+    authentication: {
+      [authKey: string]: string;
+    };
+  };
+  // the name of the provider
+  id: string;
+  // the name of the provider
+  comingSoon?: boolean;
+}
 
-  export default Providers;
+export interface Providers {
+  [providerName: string]: Provider;
+}
+
+export const defaultProvider: Provider = {
+  config: {}, // Set default config as an empty object
+  installed: false, // Set default installed value
+  details: { authentication: {} }, // Set default authentication details as an empty object
+  id: "", // Placeholder for the provider ID
+};

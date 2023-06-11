@@ -2,7 +2,7 @@
 "use client";
 import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
-import { Provider } from "./provider-row";
+import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Alert from "./alert";
 import "./provider-form.css";
@@ -142,27 +142,29 @@ const ProviderForm = ({
   };
 
   console.log("ProviderForm component loaded");
-
   return (
     <div>
       <form className={isConnected ? "connected-form" : ""}>
-        {provider.authentication.map((method) => (
-          <div className="form-group" key={method.name}>
-            <label htmlFor={method.name}>
-              {method.desc}
-              {method.required !== false ? "" : " (optional)"}:
-            </label>
-            <input
-              type={method.type}
-              id={method.name}
-              name={method.name}
-              value={formValues[method.name] || ""}
-              onChange={handleInputChange}
-              placeholder={method.placeholder}
-              disabled={isConnected} // Disable the field when isConnected is true
-            />
-          </div>
-        ))}
+        {Object.keys(provider.config).map((configKey) => {
+          const method = provider.config[configKey];
+          return (
+            <div className="form-group" key={configKey}>
+              <label htmlFor={configKey}>
+                {method.description}
+                {method.required !== false ? "" : " (optional)"}:
+              </label>
+              <input
+                type={method.type}
+                id={configKey}
+                name={configKey}
+                value={formValues[configKey] || ""}
+                onChange={handleInputChange}
+                placeholder={method.placeholder}
+                disabled={isConnected} // Disable the field when isConnected is true
+              />
+            </div>
+          );
+        })}
         {/* Hidden input for provider ID */}
         <input type="hidden" name="providerId" value={provider.id} />
         <div className="button-group">

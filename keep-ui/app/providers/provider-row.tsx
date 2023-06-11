@@ -3,31 +3,9 @@ import { TableRow, TableCell } from "@tremor/react";
 import Image from "next/image";
 import "./providers.css";
 import ProviderForm from "./provider-form";
+import { Provider } from "./providers";
 
-type AuthenticationMethod = {
-  name: string;
-  desc: string;
-  type: string;
-  placeholder?: string;
-  validation?: (value: string) => boolean;
-  required?: boolean;
-  value?: string;
-};
-
-export type Provider = {
-  id: string;
-  name: string;
-  authentication: AuthenticationMethod[];
-  icon: string;
-  connected: boolean;
-  coming_soon?: boolean;
-};
-
-type ProviderRowProps = {
-  provider: Provider;
-};
-
-const ProviderRow = ({ provider }: ProviderRowProps) => {
+const ProviderRow = ({ provider }: { provider: Provider }) => {
   const [expanded, setExpanded] = useState(false);
   const [formData, setFormData] = useState({});
 
@@ -41,39 +19,40 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
 
   // Update formData with authentication data
   useEffect(() => {
-    if (provider.connected) {
-      const authenticationData = provider.authentication.reduce(
-        (data, method) => {
-          const { name } = method;
-          const value = method.value || "";
-          return { ...data, [name]: value };
-        },
-        {}
-      );
+    if (provider.installed) {
+      const authenticationData = Object.keys(
+        provider.details.authentication
+      ).reduce((data, name) => {
+        const value = provider.details.authentication[name] || "";
+        return { ...data, [name]: value };
+      }, {});
       setFormData(authenticationData);
     }
-  }, [provider.connected, provider.authentication]);
+  }, [provider.installed, provider.details]);
 
-  const isComingSoonProvider = provider.coming_soon || false;
-
+  const isComingSoonProvider = provider.comingSoon || false;
   return (
     <>
       <TableRow
-        className={`table-row ${provider.connected ? "connected" : ""} ${
+        className={`table-row ${provider.installed ? "connected" : ""} ${
           isComingSoonProvider ? "coming-soon" : ""
         }`}
       >
         <TableCell className="icon-cell">
           <div className="icon-wrapper">
             <Image
-              src={provider.icon}
-              alt={provider.name}
+              src={`${provider.id}.svg`}
+              alt={provider.id}
               width={150}
               height={150}
+              onError={(event) => {
+                const target = event.target as HTMLImageElement;
+                target.src = "keep.svg"; // Set fallback icon
+              }}
             />
           </div>
           <div className="provider-info">
-            <div className="provider-name">{provider.name}</div>
+            <div className="provider-name">{provider.id.charAt(0).toUpperCase() + provider.id.slice(1)}</div>
           </div>
         </TableCell>
         <TableCell className="expand-cell">
@@ -88,7 +67,7 @@ const ProviderRow = ({ provider }: ProviderRowProps) => {
               >
                 {expanded
                   ? "Collapse"
-                  : provider.connected
+                  : provider.installed
                   ? "Expand"
                   : "Connect"}
               </button>
