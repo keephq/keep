@@ -1,22 +1,14 @@
 "use client";
 
 import PHProvider from "./posthog-client";
-import { SessionProvider } from "next-auth/react";
 import NavbarInner from "./navbar-inner";
-import { Session } from "next-auth";
+import { useSession } from "../utils/customAuth";
 
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
-
-export default function Navbar({ session }: { session: Session | null }) {
-  return isSingleTenant ? (
+export default function Navbar() {
+  const { data: session } = useSession();
+  return (
     <PHProvider>
       <NavbarInner user={session?.user} />
     </PHProvider>
-  ) : (
-    <SessionProvider session={session}>
-      <PHProvider>
-        <NavbarInner user={session?.user} />
-      </PHProvider>
-    </SessionProvider>
   );
 }

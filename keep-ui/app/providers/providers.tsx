@@ -28,6 +28,9 @@ export interface Provider {
   id: string;
   // the name of the provider
   comingSoon?: boolean;
+  can_query: boolean;
+  can_notify: boolean;
+  type: string;
 }
 
 export interface Providers {
@@ -39,4 +42,7 @@ export const defaultProvider: Provider = {
   installed: false, // Set default installed value
   details: { authentication: {} }, // Set default authentication details as an empty object
   id: "", // Placeholder for the provider ID
+  can_notify: false,
+  can_query: false,
+  type: "",
 };

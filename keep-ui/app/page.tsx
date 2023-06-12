@@ -19,6 +19,8 @@ export default async function IndexPage() {
           {/* @ts-expect-error Async Server Component */}
           <ProvidersPage />
         </Suspense>
+        {/* @ts-expect-error Async Server Component */}
+        {isGitHubPluginInstalled ? <ProvidersPage /> : <GitHubPage />}
       </div>
     </>
   );

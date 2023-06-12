@@ -4,7 +4,6 @@ Elasticsearch provider.
 import dataclasses
 import json
 
-import pandas as pd
 import pydantic
 from elasticsearch import Elasticsearch
 
@@ -125,6 +124,7 @@ class ElasticProvider(BaseProvider):
 
     def _run_sql_query(self, query: str) -> list[str]:
         response = self.client.sql.query(body={"query": query})
+        import pandas as pd
 
         results = pd.DataFrame(response["rows"])
         columns = [col["name"] for col in response["columns"]]

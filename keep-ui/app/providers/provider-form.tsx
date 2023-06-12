@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
+import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Alert from "./alert";
 import Modal from "react-modal";

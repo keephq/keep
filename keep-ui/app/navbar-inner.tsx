@@ -4,12 +4,14 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Fragment } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
 
 const navigation = [
   { name: "Providers", href: "/" },
   { name: "Alerts", href: "/alerts" },
   { name: "CI", href: "/ci" },
   { name: "Settings", href: "/settings" },
+  { name: "Builder", href: "/builder" },
 ];
 
 function classNames(...classes: string[]) {
@@ -33,13 +35,12 @@ export default function NavbarInner({ user }: { user: any }) {
                       width={36}
                       height={36}
                       priority={true}
-
                     />
                   </a>
                 </div>
                 <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                   {navigation.map((item) => (
-                    <a
+                    <Link
                       key={item.name}
                       href={item.href}
                       className={classNames(
@@ -51,7 +52,7 @@ export default function NavbarInner({ user }: { user: any }) {
                       aria-current={pathname === item.href ? "page" : undefined}
                     >
                       {item.name}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -82,15 +83,24 @@ export default function NavbarInner({ user }: { user: any }) {
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                         <Menu.Item>
                           {({ active }) => (
-                            <button
-                              className={classNames(
-                                active ? "bg-gray-100" : "",
-                                "flex w-full px-4 py-2 text-sm text-gray-700"
-                              )}
-                              onClick={() => signOut()}
-                            >
-                              Sign out
-                            </button>
+                            <>
+                              <a
+                                className={classNames(
+                                  "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                )}
+                                href="/settings"
+                              >
+                                Settings
+                              </a>
+                              <button
+                                className={classNames(
+                                  "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                )}
+                                onClick={() => signOut()}
+                              >
+                                Sign out
+                              </button>
+                            </>
                           )}
                         </Menu.Item>
                       </Menu.Items>
@@ -153,6 +163,14 @@ export default function NavbarInner({ user }: { user: any }) {
                     </div>
                   </div>
                   <div className="mt-3 space-y-1">
+                    <a
+                      className={classNames(
+                        "block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                      )}
+                      href="/settings"
+                    >
+                      Settings
+                    </a>
                     <button
                       onClick={() => signOut()}
                       className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"

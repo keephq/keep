@@ -1,0 +1,17 @@
+.sqd-designer-react {
+  height: 100%;
+  border-radius: 10px;
+}
+
+.sqd-root-start-stop-circle,
+.sqd-label-rect {
+  fill: rgb(255, 132, 16) !important;
+}
+
+.sqd-smart-editor {
+  overflow: hidden;
+}
+
+.sqd-toolbox-item-text {
+  text-transform: capitalize;
+}

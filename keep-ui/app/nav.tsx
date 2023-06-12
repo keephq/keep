@@ -1,8 +1,5 @@
-import Navbar from './navbar';
-import { getServerSession } from '../utils/customAuth';
-import { authOptions } from '../pages/api/auth/[...nextauth]';
+import Navbar from "./navbar";
 
 export default async function Nav() {
-  const session = await getServerSession(authOptions);
-  return <Navbar session={session} />;
+  return <Navbar />;
 }
