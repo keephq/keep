@@ -15,26 +15,18 @@ export default function ProvidersTable({
   session: Session | null;
   providers: Providers;
 }) {
-    // update the providers
-    providers.map((provider) => {
-      // Update authentication values based on the name
-      if (provider.details) {
-        Object.keys(provider.details.authentication).map((authKey) => {
-          provider.config[authKey].value = provider.details.authentication[authKey];
-        });
-      }
-  });
+
   return (
     <Table>
       <tbody>
         {isSingleTenant ? (
-          providers.filter((provider) => Object.keys(provider.config).length > 0)
+          providers.filter((provider) => Object.keys(provider.details).length > 0)
             .map((provider) => (
               <ProviderRow provider={provider} />
             ))
         ) : (
           <SessionProvider session={session}>
-            {providers.filter((provider) => Object.keys(provider.config).length > 0)
+            {providers.filter((provider) => Object.keys(provider.details).length > 0)
             .map((provider) => (
               <ProviderRow provider={provider} />
             ))}

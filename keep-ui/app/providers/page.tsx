@@ -1,15 +1,27 @@
+'use client';
 import { Card, Title, Text } from "@tremor/react";
 import ProvidersTable from "./table";
 import ProvidersConnect from "./providers-connect";
 import { Providers, defaultProvider, Provider } from "./providers";
-import { getServerSession } from "../../utils/customAuth";
+import { getServerSession, useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
-import { authOptions } from "../../pages/api/auth/[...nextauth]";
+
 
 export default async function ProvidersPage() {
-  const session = await getServerSession(authOptions);
+  console.log("Rendering providers page");
+  //const session = await getServerSession(authOptions);
+  const { data: session, status, update } = useSession();
+  if (status === "loading"){
+    console.log("Loading session");
+    return <div>Loading...</div>;
+  }
+  if (status === "unauthenticated") {
+    console.log("Unauthenticated");
+    return <div>Unauthenticated...</div>;
+  }
   // force get session to get a token
   const accessToken = session?.accessToken;
+
   let providers= [];
   let installedProviders = [];
   // Now let's fetch the providers status from the backend
@@ -62,6 +74,9 @@ export default async function ProvidersPage() {
         <ProvidersConnect session={session} providers={providers} />
       </Card>
       <Title>Installed Providers</Title>
+      <Card className="mt-6">
+        <ProvidersTable session={session} providers={installedProviders} />
+      </Card>
     </main>
   );
 }

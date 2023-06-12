@@ -31,7 +31,7 @@ def get_providers(
     # TODO: mask the sensitive data
     installed_providers = [
         {
-            "name": secret.split("_")[1],
+            "type": secret.split("_")[1],
             "id": secret.split("_")[2],
             "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
         }
@@ -231,6 +231,7 @@ async def install_provider(
     )
     provider_config = {
         "authentication": provider_info,
+        "name": provider_name,
     }
     try:
         # Instantiate the provider object and perform installation process

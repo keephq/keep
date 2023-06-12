@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   images: {
     domains: [
       "avatars.githubusercontent.com",
@@ -22,9 +23,9 @@ const nextConfig = {
     serverComponentsExternalPackages: ["@tremor/react"],
   },
   compiler: {
-    removeConsole: {
+    removeConsole: process.env.NODE_ENV === "production" ? {
       exclude: ["error"],
-    },
+    } : false,
   },
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",

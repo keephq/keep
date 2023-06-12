@@ -1,3 +1,4 @@
+import { string } from "prop-types";
 
 export interface ProviderAuthConfig {
   name: string;
@@ -23,6 +24,7 @@ export interface Provider {
     authentication: {
       [authKey: string]: string;
     };
+    name?: string;
   };
   // the name of the provider
   id: string;
@@ -38,7 +40,7 @@ export type Providers = Provider[];
 export const defaultProvider: Provider = {
   config: {}, // Set default config as an empty object
   installed: false, // Set default installed value
-  details: { authentication: {} }, // Set default authentication details as an empty object
+  details: { authentication: {}, name: "" }, // Set default authentication details as an empty object
   id: "", // Placeholder for the provider ID
   can_notify: false,
   can_query: false,
