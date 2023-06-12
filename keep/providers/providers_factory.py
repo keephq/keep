@@ -2,6 +2,7 @@
 The providers factory module.
 """
 import importlib
+import inspect
 import logging
 import os
 from dataclasses import fields
@@ -124,9 +125,31 @@ class ProvidersFactory:
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("notify") is not None
                 )
+                notify_params = (
+                    None
+                    if not can_notify
+                    else list(
+                        dict(
+                            inspect.signature(
+                                provider_class.__dict__.get("notify")
+                            ).parameters
+                        ).keys()
+                    )[1:]
+                )
                 can_query = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("_query") is not None
+                )
+                query_params = (
+                    None
+                    if not can_query
+                    else list(
+                        dict(
+                            inspect.signature(
+                                provider_class.__dict__.get("_query")
+                            ).parameters
+                        ).keys()
+                    )[1:]
                 )
                 config = (
                     {
@@ -142,6 +165,8 @@ class ProvidersFactory:
                         config=config,
                         can_notify=can_notify,
                         can_query=can_query,
+                        notify_params=notify_params,
+                        query_params=query_params,
                     )
                 )
             except ModuleNotFoundError:

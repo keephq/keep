@@ -1,6 +1,10 @@
 .sqd-designer-react {
-  height: 100%;
+  height: inherit;
   border-radius: 10px;
+}
+
+.sqd-designer {
+  height: inherit;
 }
 
 .sqd-root-start-stop-circle,
