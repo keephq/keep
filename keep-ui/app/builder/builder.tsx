@@ -9,7 +9,6 @@ import {
   ValidatorConfiguration,
   Uid,
   Step,
-  BranchedStep,
   Sequence,
 } from "sequential-workflow-designer";
 import {
@@ -17,7 +16,7 @@ import {
   wrapDefinition,
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
-import StepEditor from "./editors";
+import StepEditor, { GlobalEditor } from "./editors";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Title } from "@tremor/react";
 import { KeepStep } from "./types";
@@ -249,7 +248,7 @@ function Builder({
         toolboxConfiguration={toolboxConfiguration}
         undoStackSize={10}
         controlBar={true}
-        globalEditor={<></>}
+        globalEditor={<GlobalEditor />}
         stepEditor={<StepEditor />}
       />
     </>

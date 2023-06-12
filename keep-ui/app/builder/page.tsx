@@ -4,6 +4,11 @@ import { Card, Title, Text, Button } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import Loader from "./loader";
+import {
+  PlusIcon,
+  ArrowDownOnSquareIcon,
+  BoltIcon,
+} from "@heroicons/react/20/solid";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -42,10 +47,24 @@ export default function Page() {
           <Text>Alert building kit</Text>
         </div>
         <div>
-          <Button color="orange" size="md" className="mr-2" onClick={newAlert}>
-            +
+          <Button
+            color="orange"
+            size="md"
+            className="mr-2"
+            onClick={newAlert}
+            icon={PlusIcon}
+            variant="secondary"
+          >
+            New
           </Button>
-          <Button color="orange" size="md" className="mr-2" onClick={loadAlert}>
+          <Button
+            color="orange"
+            size="md"
+            className="mr-2"
+            onClick={loadAlert}
+            variant="secondary"
+            icon={ArrowDownOnSquareIcon}
+          >
             Load
           </Button>
           <input
@@ -54,8 +73,8 @@ export default function Page() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
-          <Button disabled={true} color="orange" size="md">
-            Generate 🚧
+          <Button disabled={true} color="orange" size="md" icon={BoltIcon}>
+            Generate
           </Button>
         </div>
       </div>

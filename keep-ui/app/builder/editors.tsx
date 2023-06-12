@@ -1,15 +1,19 @@
-import { useStepEditor } from "sequential-workflow-designer-react";
+import {
+  useStepEditor,
+  useGlobalEditor,
+} from "sequential-workflow-designer-react";
 
-function StepEditor() {
+export function GlobalEditor() {
+  const { properties, setProperty } = useGlobalEditor();
+  return <h3>Welcome!</h3>;
+}
+
+export default function StepEditor() {
   const { type, componentType, name, setName, properties, setProperty } =
     useStepEditor();
 
   function onNameChanged(e: any) {
     setName(e.target.value);
-  }
-
-  function onProviderChange(e: any) {
-    setProperty("providerType", e.target.value);
   }
 
   return (
@@ -23,5 +27,3 @@ function StepEditor() {
     </>
   );
 }
-
-export default StepEditor;
