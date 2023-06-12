@@ -25,7 +25,7 @@ import { Provider } from "../providers/providers";
 
 function IconUrlProvider(componentType: string, type: string): string | null {
   if (componentType === "task" && type) {
-    return `${type.replace("step-", "").replace("action-", "")}-icon.png`;
+    return `${type.replace("step-", "").replace("action-", "")}.svg`;
   }
   return null;
 }
