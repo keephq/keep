@@ -47,7 +47,9 @@ Keep enables you to create, manage, test, and maintain your alerts all in one pl
 </p>
 
 #### 🚨 What is an alert?
-An alert is a human-readable notification that informs about the status of a service or a component. Alerts are sent to ticketing platforms, queues or directly to the owners of the components being affected based on their urgency. Having a structured alerting policy in your enviroment is pivotal to gain better visibility of the monitored components and reduce MTTD (Mean Time To Detect) of issues that could undermine the functionality of your system.
+An alert is a human-readable notification that informs about the status of a service or a component. Alerts are sent, based on their urgency, to ticketing platforms, queues or directly to the owners of the components being affected.
+
+Having a structured alerting policy in your enviroment is pivotal to gain better visibility of the monitored components and reduce MTTD (Mean Time To Detect) of issues that could undermine the functionality of your system.
 
 #### 🚀 Quickstart
 Keep has two main component that play with each other:
