@@ -53,11 +53,11 @@ function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
   }
 
   return (
-    <Card className="p-4 md:p-10 h-[90%] mx-auto max-w-7xl mt-6">
+    <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${error || (data && !data.ok) ? null : 'h-5/6'}`}>
       {error || (data && !data.ok) ? (
         <Callout
           className="mt-4"
-          title="API Error"
+          title="Error"
           icon={ExclamationCircleIcon}
           color="rose"
         >
