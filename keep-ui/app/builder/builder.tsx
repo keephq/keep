@@ -10,6 +10,7 @@ import {
   Uid,
   Step,
   Sequence,
+  StepDefinition,
 } from "sequential-workflow-designer";
 import {
   SequentialWorkflowDesigner,
@@ -20,10 +21,11 @@ import StepEditor, { GlobalEditor } from "./editors";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Title } from "@tremor/react";
 import { KeepStep } from "./types";
+import { Provider } from "../providers/providers";
 
 function IconUrlProvider(componentType: string, type: string): string | null {
   if (componentType === "task" && type) {
-    return `${type}-icon.png`;
+    return `${type.replace("step-", "").replace("action-", "")}-icon.png`;
   }
   return null;
 }
@@ -69,43 +71,74 @@ const validatorConfiguration: ValidatorConfiguration = {
   root: globalValidator,
 };
 
-// TODO: load dynamically
-const toolboxConfiguration = {
-  groups: [
-    {
-      name: "Misc",
-      steps: [
-        {
-          type: "for",
-          componentType: "container",
-          name: "Foreach",
-          properties: {},
-          sequence: [],
-        },
-      ],
+function toolboxConfiguration(providers: { [providerType: string]: Provider }) {
+  /**
+   * Generate the toolbox configuration
+   */
+  const [steps, actions] = Object.values(providers).reduce(
+    ([steps, actions], provider) => {
+      const step = {
+        name: provider.type,
+        componentType: "task",
+        type: provider.type,
+        properties: { ...provider.config },
+      };
+      if (provider.can_notify)
+        steps.push({ ...step, type: `step-${provider.type}` });
+      if (provider.can_query)
+        actions.push({ ...step, type: `action-${provider.type}` });
+      return [steps, actions];
     },
-    {
-      name: "Conditions",
-      steps: [
-        {
-          type: "condition",
-          componentType: "switch",
-          name: "Threshold",
-          properties: {
-            value: "",
-            compare_to: "",
+    [[] as StepDefinition[], [] as StepDefinition[]]
+  );
+  return {
+    groups: [
+      {
+        name: "Steps",
+        steps: steps,
+      },
+      {
+        name: "Actions",
+        steps: actions,
+      },
+      {
+        name: "Misc",
+        steps: [
+          {
+            type: "for",
+            componentType: "container",
+            name: "Foreach",
+            properties: {},
+            sequence: [],
           },
-          branches: {
-            true: [],
-            false: [],
+        ],
+      },
+      {
+        name: "Conditions",
+        steps: [
+          {
+            type: "condition",
+            componentType: "switch",
+            name: "Threshold",
+            properties: {
+              value: "",
+              compare_to: "",
+            },
+            branches: {
+              true: [],
+              false: [],
+            },
           },
-        },
-      ],
-    },
-  ],
-};
+        ],
+      },
+    ],
+  };
+}
 
-function getActionOrStepObj(actionOrStep: any): KeepStep {
+function getActionOrStepObj(
+  actionOrStep: any,
+  type: "action" | "step"
+): KeepStep {
   /**
    * Generate a step or action definition (both are kinda the same)
    */
@@ -113,7 +146,7 @@ function getActionOrStepObj(actionOrStep: any): KeepStep {
     id: Uid.next(),
     name: actionOrStep.name,
     componentType: "task",
-    type: actionOrStep.provider.type,
+    type: `${type}-${actionOrStep.provider.type}`,
     properties: {
       config: actionOrStep.provider.config,
       with: actionOrStep.provider.with,
@@ -133,7 +166,7 @@ function generateCondition(condition: any, action: any): any {
       compare_to: condition.compare_to,
     },
     branches: {
-      true: [getActionOrStepObj(action)],
+      true: [getActionOrStepObj(action, "action")],
       false: [],
     },
   };
@@ -184,13 +217,13 @@ function parseAlert(alertToParse: string): Definition {
    */
   const parsedAlertFile = load(alertToParse, { schema: JSON_SCHEMA }) as any;
   const steps = parsedAlertFile.alert.steps.map((step: any) => {
-    return getActionOrStepObj(step);
+    return getActionOrStepObj(step, "step");
   });
   const conditions = [] as any;
   parsedAlertFile.alert.actions.forEach((action: any) => {
     // This means this action always runs, there's no condition and no alias
     if (!action.condition && !action.if) {
-      steps.push(getActionOrStepObj(action));
+      steps.push(getActionOrStepObj(action, "action"));
     }
     // If this is an alias, we need to find the existing condition and add this action to it
     else if (action.if) {
@@ -198,7 +231,9 @@ function parseAlert(alertToParse: string): Definition {
       const existingCondition = conditions.find(
         (a: any) => a.alias === cleanIf
       );
-      existingCondition?.branches.true.push(getActionOrStepObj(action));
+      existingCondition?.branches.true.push(
+        getActionOrStepObj(action, "action")
+      );
     } else {
       action.condition.forEach((condition: any) => {
         conditions.push(generateCondition(condition, action));
@@ -214,13 +249,13 @@ function parseAlert(alertToParse: string): Definition {
   );
 }
 
-function Builder({
-  loadedAlertFile,
-  fileName,
-}: {
+interface Props {
   loadedAlertFile: string | null;
   fileName: string;
-}) {
+  providers: { [providerType: string]: Provider };
+}
+
+function Builder({ loadedAlertFile, fileName, providers }: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
@@ -245,7 +280,7 @@ function Builder({
         onDefinitionChange={setDefinition}
         stepsConfiguration={stepsConfiguration}
         validatorConfiguration={validatorConfiguration}
-        toolboxConfiguration={toolboxConfiguration}
+        toolboxConfiguration={toolboxConfiguration(providers)}
         undoStackSize={10}
         controlBar={true}
         globalEditor={<GlobalEditor />}

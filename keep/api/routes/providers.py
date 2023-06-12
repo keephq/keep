@@ -6,12 +6,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.models.provider import Provider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
-from keep.secretmanager.secretmanagerfactory import (
-    SecretManagerFactory,
-    SecretManagerTypes,
-)
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 )
 def get_providers(
     tenant_id: str = Depends(verify_bearer_token),
-) -> list:
+) -> dict[str, Provider]:
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
     # TODO: installed providers should be kept in the DB
@@ -43,10 +41,10 @@ def get_providers(
     # TODO: return also metadata (host, etc)
     for p in installed_providers:
         provider_name = p["name"]
-        providers[f"{provider_name}_provider"]["installed"] = True
-        providers[f"{provider_name}_provider"]["details"] = p["details"]
+        providers[f"{provider_name}_provider"].installed = True
+        providers[f"{provider_name}_provider"].details = p["details"]
 
-    return JSONResponse(content=providers)
+    return providers
 
 
 @router.get(

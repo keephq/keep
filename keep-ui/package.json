@@ -344,6 +344,7 @@
     "sucrase": "^3.32.0",
     "supports-color": "^7.2.0",
     "supports-preserve-symlinks-flag": "^1.0.0",
+    "swr": "^2.1.5",
     "synckit": "^0.8.5",
     "tabbable": "^6.1.2",
     "tailwind-merge": "^1.12.0",

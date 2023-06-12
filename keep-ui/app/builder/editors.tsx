@@ -1,3 +1,4 @@
+import { Title } from "@tremor/react";
 import {
   useStepEditor,
   useGlobalEditor,
@@ -5,7 +6,7 @@ import {
 
 export function GlobalEditor() {
   const { properties, setProperty } = useGlobalEditor();
-  return <h3>Welcome!</h3>;
+  return <Title>Global Editor!</Title>;
 }
 
 export default function StepEditor() {
@@ -18,6 +19,7 @@ export default function StepEditor() {
 
   return (
     <>
+      <Title>Step Editor</Title>
       <h3>Name</h3>
       <input value={name} onChange={onNameChanged} />
       <h3>Type</h3>

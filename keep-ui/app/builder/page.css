@@ -11,3 +11,7 @@
 .sqd-smart-editor {
   overflow: hidden;
 }
+
+.sqd-toolbox-item-text {
+  text-transform: capitalize;
+}

@@ -1,23 +1,82 @@
 "use client";
 
-import { Card, Title, Text, Button } from "@tremor/react";
+import { Card, Title, Text, Button, Callout } from "@tremor/react";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import Loader from "./loader";
+import useSWR from "swr";
 import {
   PlusIcon,
   ArrowDownOnSquareIcon,
   BoltIcon,
 } from "@heroicons/react/20/solid";
+import { useSession } from "../../utils/customAuth";
+import { getApiURL } from "../../utils/apiUrl";
+import { Provider } from "../providers/providers";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
 });
 
+interface Props {
+  accessToken: string;
+  fileContents: string | null;
+  fileName: string;
+  enableButtons: () => void;
+}
+
+function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
+  const [providers, setProviders] = useState<{
+    [providerType: string]: Provider;
+  } | null>(null);
+  const apiUrl = getApiURL();
+
+  const fetcher = (url: string, headers: HeadersInit) =>
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+  const { data, error, isLoading } = useSWR(`${apiUrl}/providers`, fetcher);
+
+  if (data?.ok && !providers) {
+    data.json().then((providers) => {
+      setProviders(providers);
+      enableButtons();
+    });
+  }
+
+  return (
+    <Card className="p-4 md:p-10 h-5/6 mx-auto max-w-7xl mt-6">
+      {error || (data && !data.ok) ? (
+        <Callout
+          className="mt-4"
+          title="API Error"
+          icon={ExclamationCircleIcon}
+          color="rose"
+        >
+          Failed to load providers
+        </Callout>
+      ) : fileContents == "" || isLoading || !providers ? (
+        <Loader />
+      ) : (
+        <Builder
+          providers={providers}
+          loadedAlertFile={fileContents}
+          fileName={fileName}
+        />
+      )}
+    </Card>
+  );
+}
+
 export default function Page() {
+  const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
-
+  const { data: session, status, update } = useSession();
   function loadAlert() {
     document.getElementById("alertFile")?.click();
   }
@@ -26,6 +85,8 @@ export default function Page() {
     setFileContents(null);
     setFileName("");
   }
+
+  const enableButtons = () => setButtonsEnabled(true);
 
   function handleFileChange(event: any) {
     const file = event.target.files[0];
@@ -38,6 +99,8 @@ export default function Page() {
     };
     reader.readAsText(file);
   }
+  if (status === "loading") return <div>Loading...</div>;
+  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl h-full">
@@ -54,6 +117,7 @@ export default function Page() {
             onClick={newAlert}
             icon={PlusIcon}
             variant="secondary"
+            disabled={!buttonsEnabled}
           >
             New
           </Button>
@@ -64,6 +128,7 @@ export default function Page() {
             onClick={loadAlert}
             variant="secondary"
             icon={ArrowDownOnSquareIcon}
+            disabled={!buttonsEnabled}
           >
             Load
           </Button>
@@ -78,13 +143,12 @@ export default function Page() {
           </Button>
         </div>
       </div>
-      <Card className="p-4 md:p-10 h-5/6 mx-auto max-w-7xl mt-6">
-        {fileContents == "" ? (
-          <Loader />
-        ) : (
-          <Builder loadedAlertFile={fileContents} fileName={fileName} />
-        )}
-      </Card>
+      <Main
+        accessToken={session?.accessToken!}
+        fileContents={fileContents}
+        fileName={fileName}
+        enableButtons={enableButtons}
+      />
     </main>
   );
 }
