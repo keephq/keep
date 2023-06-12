@@ -21,9 +21,8 @@ logger = logging.getLogger(__name__)
 )
 def get_providers(
     tenant_id: str = Depends(verify_bearer_token),
-) -> dict[str, Provider]:
+):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
-    providers = ProvidersFactory.get_all_providers()
     providers = ProvidersFactory.get_all_providers()
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
@@ -33,20 +32,21 @@ def get_providers(
     installed_providers = [
         {
             "name": secret.split("_")[1],
+            "id": secret.split("_")[2],
             "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
         }
         for secret in installed_providers
         if len(secret.split("_")) == 3  # avoid the installation api key
     ]
-    # return list of installed providers
-    # TODO: model this
-    # TODO: return also metadata (host, etc)
-    for p in installed_providers:
-        provider_name = p["name"]
-        providers[f"{provider_name}_provider"]["installed"] = True
-        providers[f"{provider_name}_provider"]["details"] = p["details"]
 
-    return JSONResponse(content=providers)
+    try:
+        return {
+            "providers": providers,
+            "installed_providers": installed_providers,
+        }
+    except Exception:
+        logger.exception("Failed to get providers")
+        return {"providers": providers, "installed_providers": []}
 
 
 @router.get(

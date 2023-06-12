@@ -100,7 +100,7 @@ class ProvidersFactory:
         Returns:
             list: All the providers.
         """
-        providers = {}
+        providers = []
         blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
         for provider_directory in os.listdir("keep/providers"):
             # skip files that aren't providers
@@ -136,11 +136,13 @@ class ProvidersFactory:
                     if provider_auth_config_class
                     else {}
                 )
-                providers[provider_directory] = Provider(
-                    type=provider_type,
-                    config=config,
-                    can_notify=can_notify,
-                    can_query=can_query,
+                providers.append(
+                    Provider(
+                        type=provider_type,
+                        config=config,
+                        can_notify=can_notify,
+                        can_query=can_query,
+                    )
                 )
             except ModuleNotFoundError:
                 logger.exception(f"Cannot import provider {provider_directory}")

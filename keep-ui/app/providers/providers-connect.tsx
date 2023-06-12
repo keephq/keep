@@ -24,10 +24,6 @@ const ProvidersConnect = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
-  const connectedProviders = Object.values(providers).filter(
-    (provider) => provider.installed
-  );
-
   const handleConnectProvider = (provider: Provider) => {
     setSelectedProvider(provider);
     setShowProviderModal(true);
@@ -45,12 +41,10 @@ const ProvidersConnect = ({
     setIsConnected(isConnected);
   }
 
-  const providersWithConfig = Object.fromEntries(
-    Object.entries(providers).filter(([_, provider]) => {
+  const providersWithConfig = providers.filter((provider) => {
       const config = (provider as Provider).config;
       return config && Object.keys(config).length > 0; // Filter out providers with empty config
-    })
-  ) as Providers;
+    }) as Providers;
 
 
   return (

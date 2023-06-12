@@ -10,7 +10,8 @@ export default async function ProvidersPage() {
   const session = await getServerSession(authOptions);
   // force get session to get a token
   const accessToken = session?.accessToken;
-  let providers = {};
+  let providers= [];
+  let installedProviders = [];
   // Now let's fetch the providers status from the backend
   try {
     const apiUrl = getApiURL();
@@ -21,8 +22,8 @@ export default async function ProvidersPage() {
     })
     if (response.ok) {
       const responseJson = await response.json();
-      providers = Object.fromEntries(
-        Object.entries(responseJson).map(([providerName, provider]) => {
+      installedProviders=responseJson["installed_providers"];
+      providers = responseJson.providers.map((provider: Provider) => {
           const updatedProvider: Provider = {
             config: { ...defaultProvider.config, ...(provider as Provider).config },
             installed: (provider as Provider).installed ?? defaultProvider.installed,
@@ -32,12 +33,16 @@ export default async function ProvidersPage() {
                 ...((provider as Provider).details?.authentication || {}),
               },
             },
-            id: providerName.split('_')[0],
+            id: provider.type,
             comingSoon: (provider as Provider).comingSoon || defaultProvider.comingSoon,
+            can_query: false,
+            can_notify: false,
+            type: provider.type,
           };
-          return [providerName, updatedProvider];
-        })
-      ) as Providers;
+          return updatedProvider;
+        }) as Providers;
+
+
     } else {
       throw new Error("Failed to fetch providers status");
     }
@@ -49,11 +54,6 @@ export default async function ProvidersPage() {
     return <div>502 backend error</div>;
   }
 
-  const connectedProviders = Object.fromEntries(
-    Object.entries(providers).filter(([_, provider]) => (provider as Provider).installed)
-  ) as Providers;
-
-
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
       <Title>Providers</Title>
@@ -61,10 +61,7 @@ export default async function ProvidersPage() {
       <Card className="mt-6">
         <ProvidersConnect session={session} providers={providers} />
       </Card>
-      <Text>Connected Providers</Text>
-      <Card className="mt-6">
-        <ProvidersTable session={session} providers={connectedProviders} />
-      </Card>
+      <Title>Installed Providers</Title>
     </main>
   );
 }

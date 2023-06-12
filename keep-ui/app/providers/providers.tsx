@@ -33,9 +33,7 @@ export interface Provider {
   type: string;
 }
 
-export interface Providers {
-  [providerName: string]: Provider;
-}
+export type Providers = Provider[];
 
 export const defaultProvider: Provider = {
   config: {}, // Set default config as an empty object

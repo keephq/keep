@@ -16,8 +16,7 @@ export default function ProvidersTable({
   providers: Providers;
 }) {
     // update the providers
-    Object.keys(providers).map((providerName) => {
-      const provider = providers[providerName];
+    providers.map((provider) => {
       // Update authentication values based on the name
       if (provider.details) {
         Object.keys(provider.details.authentication).map((authKey) => {
@@ -29,18 +28,16 @@ export default function ProvidersTable({
     <Table>
       <tbody>
         {isSingleTenant ? (
-          Object.entries(providers)
-            .filter(([providerKey, provider]) => Object.keys(provider.config).length > 0)
-            .map(([providerKey, provider]) => (
-              <ProviderRow key={providerKey} provider={provider} />
+          providers.filter((provider) => Object.keys(provider.config).length > 0)
+            .map((provider) => (
+              <ProviderRow provider={provider} />
             ))
         ) : (
           <SessionProvider session={session}>
-            {Object.entries(providers)
-              .filter(([providerKey, provider]) => Object.keys(provider.config).length > 0)
-              .map(([providerKey, provider]) => (
-                <ProviderRow key={providerKey} provider={provider} />
-              ))}
+            {providers.filter((provider) => Object.keys(provider.config).length > 0)
+            .map((provider) => (
+              <ProviderRow provider={provider} />
+            ))}
           </SessionProvider>
         )}
       </tbody>
