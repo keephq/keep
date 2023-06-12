@@ -2,6 +2,7 @@
 export interface ProviderAuthConfig {
   name: string;
   description: string;
+  hint?: string;
   placeholder?: string;
   validation: string; // regex
   required?: boolean;

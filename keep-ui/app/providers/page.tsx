@@ -1,5 +1,6 @@
 import { Card, Title, Text } from "@tremor/react";
 import ProvidersTable from "./table";
+import ProvidersConnect from "./providers-connect";
 import { Providers, defaultProvider, Provider } from "./providers";
 import { getServerSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
@@ -47,12 +48,22 @@ export default async function ProvidersPage() {
     }
     return <div>502 backend error</div>;
   }
+
+  const connectedProviders = Object.fromEntries(
+    Object.entries(providers).filter(([_, provider]) => (provider as Provider).installed)
+  ) as Providers;
+
+
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
       <Title>Providers</Title>
       <Text>Connect providers to Keep to make your alerts better.</Text>
       <Card className="mt-6">
-        <ProvidersTable session={session} providers={providers} />
+        <ProvidersConnect session={session} providers={providers} />
+      </Card>
+      <Text>Connected Providers</Text>
+      <Card className="mt-6">
+        <ProvidersTable session={session} providers={connectedProviders} />
       </Card>
     </main>
   );

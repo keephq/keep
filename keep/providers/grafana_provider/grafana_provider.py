@@ -25,17 +25,15 @@ class GrafanaProviderAuthConfig:
     Grafana authentication configuration.
     """
 
+    token: str = dataclasses.field(
+        metadata={"required": True, "description": "Token", "hint": "Grafana Token"},
+        default=None,
+    )
     host: str = dataclasses.field(
         metadata={
             "required": False,
-            "description": "Grafana host (e.g. https://keephq.grafana.net)",
-        },
-        default=None,
-    )
-    token: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Token (Grafana Token)",
+            "description": "Grafana host",
+            "hint": "e.g. https://keephq.grafana.net",
         },
         default=None,
     )
@@ -60,7 +58,7 @@ class GrafanaProvider(BaseProvider):
         Validates required configuration for Grafana provider.
 
         """
-        self.authentication_config = GrafanaProviderfromAuthConfig(
+        self.authentication_config = GrafanaProviderAuthConfig(
             **self.config.authentication
         )
 

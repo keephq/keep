@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -217,7 +218,10 @@ async def install_provider(
 ):
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
+    provider_name = provider_info.pop("provider_name")
     provider_type = provider_info.pop("provider_type", None) or provider_id
+    provider_unique_id = uuid.uuid4().hex
+
     logger.info(
         "Installing provider",
         extra={
@@ -236,7 +240,7 @@ async def install_provider(
         )
         secret_manager = SecretManagerFactory.get_secret_manager()
         provider_config = secret_manager.write_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            secret_name=f"{tenant_id}_{provider_type}_{provider_unique_id}",
             secret_value=json.dumps(provider_config),
         )
         return JSONResponse(

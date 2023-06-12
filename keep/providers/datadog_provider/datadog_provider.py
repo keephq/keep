@@ -32,14 +32,16 @@ class DatadogProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Datadog Api Key (https://docs.datadoghq.com/account_management/api-app-keys/#api-keys)",
+            "description": "Datadog Api Key",
+            "hint": "https://docs.datadoghq.com/account_management/api-app-keys/#api-keys",
             "sensitive": True,
         }
     )
     app_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Datadog App Key (https://docs.datadoghq.com/account_management/api-app-keys/#application-keys)",
+            "description": "Datadog App Key",
+            "hint": "https://docs.datadoghq.com/account_management/api-app-keys/#application-keys",
             "sensitive": True,
         }
     )
