@@ -8,8 +8,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  console.log("RootLayout");
   return (
-    <html lang="en" className="h-full bg-gray-50">
+    <html lang="en" className="h-full bg-gray-50" suppressHydrationWarning={true}>
       <body className="h-full">
         <NextAuthProvider>
           {/* @ts-expect-error Server Component */}

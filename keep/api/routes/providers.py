@@ -239,12 +239,17 @@ async def install_provider(
             provider_id, provider_type, provider_config
         )
         secret_manager = SecretManagerFactory.get_secret_manager()
-        provider_config = secret_manager.write_secret(
+        secret_manager.write_secret(
             secret_name=f"{tenant_id}_{provider_type}_{provider_unique_id}",
             secret_value=json.dumps(provider_config),
         )
         return JSONResponse(
-            status_code=200, content={"message": "Provider installed successfully"}
+            status_code=200,
+            content={
+                "type": provider_type,
+                "id": provider_unique_id,
+                "details": provider_config,
+            },
         )
 
     except GetAlertException as e:

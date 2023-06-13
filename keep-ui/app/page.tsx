@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function IndexPage() {
-
+  console.log("Loading Index Page")
 
   return (
     <>

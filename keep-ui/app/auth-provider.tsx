@@ -9,6 +9,7 @@ type Props = {
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 
 export const NextAuthProvider = ({ children }: Props) => {
+  console.log("Initializing NextAuthProvider")
   return isSingleTenant ? (
     <>{children}</>
   ) : (

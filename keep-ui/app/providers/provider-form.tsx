@@ -5,31 +5,34 @@ import { Provider } from "./providers";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Alert from "./alert";
-import Modal from "react-modal";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./provider-form.css";
 
 type ProviderFormProps = {
   provider: Provider;
   formData: Record<string, string>; // New prop for form data
-  onFormChange: (formValues: Record<string, string>) => void;
-  onCloseModal: () => void;
+  formErrorsData: Record<string, string>; // New prop for form data
+  onFormChange: (formValues: Record<string, string>, formErrors: Record<string, string>) => void;
   onConnectChange: (isConnecting: boolean, isConnected: boolean) => void;
+  onAddProvider: (provider: Provider) => void;
 };
 
 const ProviderForm = ({
   provider,
   formData,
+  formErrorsData,
   onFormChange,
-  onCloseModal,
   onConnectChange,
+  onAddProvider
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
   });
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({
+    ...formErrorsData,
+  });
   const [testResult, setTestResult] = useState("");
   const [alertData, setAlertData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -76,8 +79,8 @@ const ProviderForm = ({
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     setFormErrors((prevErrors) => ({ ...prevErrors, [name]: false }));
     const updatedFormValues = { ...formValues, [name]: value };
-    onFormChange(updatedFormValues);
     validateForm(updatedFormValues);
+    onFormChange(updatedFormValues, formErrors);
   };
 
   const markErrors = (errors: Record<string, boolean>) => {
@@ -115,11 +118,13 @@ const ProviderForm = ({
       body: JSON.stringify(formValues),
     })
       .then((response) => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error(response.statusText);
+        if (!response.ok) {
+          // If the response is not okay, throw the error message
+          return response.json().then((errorData) => {
+            throw new Error(`Error: ${response.status}, ${JSON.stringify(errorData)}`);
+          });
         }
+        return response.json();
       })
       .then((data) => {
         setFormErrors({});
@@ -130,6 +135,7 @@ const ProviderForm = ({
         throw error;
       });
   };
+
 
   const handleTestClick = async () => {
     try {
@@ -159,11 +165,16 @@ const ProviderForm = ({
       .then((data) => {
         console.log("Connect Result:", data);
         onConnectChange(false, true);
+        onAddProvider(data as Provider);
       })
       .catch((error) => {
         console.error("Connect failed:", error);
+        const updatedFormErrors = { error: error.toString() };
+        setFormErrors(updatedFormErrors);
+        onFormChange(formValues, updatedFormErrors);
         onConnectChange(false, false);
-      });
+    });
+
   };
 
 

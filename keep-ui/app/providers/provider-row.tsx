@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from "react";
 import { TableRow, TableCell } from "@tremor/react";
 import Image from "next/image";
@@ -26,13 +27,12 @@ const ProviderRow = ({ provider }: { provider: Provider }) => {
             <div className="provider-info">
               <div className="provider-name">{provider.details.name!}</div>
               <div className="provider-details">
-                {Object.entries(provider.details.authentication).map(([key, value], index) => (
-                  <div key={index}>
+                {Object.entries(provider.details.authentication).map(([key, value]) => (
+                  <div key={key}>
                     <strong>{key}:</strong> {value}
                   </div>
                 ))}
               </div>
-
             </div>
           </div>
         </TableCell>

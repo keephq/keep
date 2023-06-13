@@ -2,20 +2,18 @@
 import { Card } from "@tremor/react";
 import ReactLoading from 'react-loading';
 import { Providers, Provider } from "./providers";
-import { Session } from "next-auth";
 import { useState } from "react";
 import Modal from "react-modal";
 import Image from "next/image";
 import ProviderForm from "./provider-form"; // Import the ProviderForm component
-import { SessionProvider } from "next-auth/react";
 import "./providers-connect.css"
 
 const ProvidersConnect = ({
-  session,
   providers,
+  addProvider,
 }: {
-  session: Session | null;
   providers: Providers;
+  addProvider: (provider: Provider) => void;
 }) => {
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
@@ -23,6 +21,13 @@ const ProvidersConnect = ({
   );
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  const handleFormChange = (updatedFormValues: Record<string, string>, updatedFormErrors: Record<string, string>) => {
+    setFormValues(updatedFormValues);
+    setFormErrors(updatedFormErrors);
+  };
 
   const handleConnectProvider = (provider: Provider) => {
     setSelectedProvider(provider);
@@ -34,6 +39,8 @@ const ProvidersConnect = ({
     setSelectedProvider(null);
     setIsConnecting(false);
     setIsConnected(false);
+    setFormValues({});
+    setFormErrors({});
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
@@ -89,16 +96,16 @@ const ProvidersConnect = ({
         ) : (
     <>
       {selectedProvider && (
-        <SessionProvider session={session}>
-          <ProviderForm
-            provider={selectedProvider}
-            formData={{}}
-            onFormChange={() => {}}
-            onCloseModal={handleCloseModal}
-            onConnectChange={handleConnecting}
-          />
-        </SessionProvider>
-      )}
+      <ProviderForm
+        provider={selectedProvider}
+        formData={formValues}
+        formErrorsData={formErrors}
+        onFormChange={handleFormChange}
+        onConnectChange={handleConnecting}
+        onAddProvider={addProvider}
+      />
+    )}
+
     </>
   )}
 </Modal>
