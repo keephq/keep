@@ -31,7 +31,9 @@ export interface Provider {
   // the name of the provider
   comingSoon?: boolean;
   can_query: boolean;
+  query_params?: string[];
   can_notify: boolean;
+  notify_params?: string[];
   type: string;
 }
 

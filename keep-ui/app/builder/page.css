@@ -1,6 +1,10 @@
 .sqd-designer-react {
-  height: 100%;
+  height: inherit;
   border-radius: 10px;
+}
+
+.sqd-designer {
+  height: 100%;
 }
 
 .sqd-root-start-stop-circle,
@@ -9,7 +13,7 @@
 }
 
 .sqd-smart-editor {
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .sqd-toolbox-item-text {
