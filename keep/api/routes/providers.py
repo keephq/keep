@@ -220,7 +220,6 @@ async def install_provider(
     provider_name = provider_info.pop("provider_name")
     provider_type = provider_info.pop("provider_type", None) or provider_id
     provider_unique_id = uuid.uuid4().hex
-
     logger.info(
         "Installing provider",
         extra={
