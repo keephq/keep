@@ -32,7 +32,7 @@ import { globalValidator, stepValidator } from "./builder-validators";
 interface Props {
   loadedAlertFile: string | null;
   fileName: string;
-  providers: { [providerType: string]: Provider };
+  providers: Provider[];
   enableGenerate: (status: boolean) => void;
   triggerGenerate: number;
 }

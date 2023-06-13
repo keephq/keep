@@ -7,15 +7,12 @@ import {
   Uid,
 } from "sequential-workflow-designer";
 import { KeepStep } from "./types";
-import { WrappedDefinition } from "sequential-workflow-designer-react";
 
-export function getToolboxConfiguration(providers: {
-  [providerType: string]: Provider;
-}) {
+export function getToolboxConfiguration(providers: Provider[]) {
   /**
    * Generates the toolbox items
    */
-  const [steps, actions] = Object.values(providers).reduce(
+  const [steps, actions] = providers.reduce(
     ([steps, actions], provider) => {
       const step = {
         componentType: "task",

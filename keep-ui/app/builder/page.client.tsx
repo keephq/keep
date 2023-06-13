@@ -41,11 +41,9 @@ function Main({
   fileName,
   enableButtons,
   enableGenerate,
-  triggerGenerate
+  triggerGenerate,
 }: Props) {
-  const [providers, setProviders] = useState<{
-    [providerType: string]: Provider;
-  } | null>(null);
+  const [providers, setProviders] = useState<Provider[] | null>(null);
   const apiUrl = getApiURL();
 
   const { data, error, isLoading } = useSWR(`${apiUrl}/providers`, (url) =>
@@ -54,8 +52,8 @@ function Main({
 
   if (data?.ok && !providers) {
     if (!data.bodyUsed) {
-      data.json().then((providers) => {
-        setProviders(providers);
+      data.json().then((dataJson) => {
+        setProviders(dataJson.providers);
         enableButtons();
       });
     }
