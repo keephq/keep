@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="/docs/static/img/keep.png?raw=true" width="86">
+    <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
 <h1 align="center">The open-source alerts management platform</h1>
@@ -113,7 +113,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 <div align="center">
     Voilà 🥳
     <br />
-    <img src="/docs/static/img/alert-example.png">
+    <img src="/assets/alert-example.png">
     <br />
     You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
     <br />
