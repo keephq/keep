@@ -11,19 +11,11 @@ import React, { useState, useEffect } from 'react';
 
 export default function ProvidersPage() {
   console.log("Rendering providers page");
-  const { data: session, status, update } = useSession();
-  if (status === "loading") {
-    console.log("Loading...")
-    return <div>Loading...</div>;
-  }
-  if (status === "unauthenticated"){
-    console.log("Unauthenticated...")
-    return <div>Unauthenticated...</div>;
-  }
-  // force get session to get a token
-  const accessToken = session?.accessToken;
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const { data: session, status, update } = useSession();
+  // force get session to get a token
+  const accessToken = session?.accessToken;
 
   const fetchProviders = async () => {
     try {
@@ -83,6 +75,14 @@ export default function ProvidersPage() {
       setInstalledProviders(prevProviders => [...prevProviders, provider]);
   };
 
+  if (status === "loading") {
+    console.log("Loading...")
+    return <div>Loading...</div>;
+  }
+  if (status === "unauthenticated"){
+    console.log("Unauthenticated...")
+    return <div>Unauthenticated...</div>;
+  }
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">

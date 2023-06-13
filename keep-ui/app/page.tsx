@@ -16,7 +16,6 @@ export default async function IndexPage() {
       <Frill />
       <div>
         <Suspense fallback={<div>Loading...</div>}>
-          {/* @ts-expect-error Async Server Component */}
           <ProvidersPage />
         </Suspense>
       </div>
