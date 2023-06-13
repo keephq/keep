@@ -76,6 +76,19 @@ export function getToolboxConfiguration(providers: Provider[]) {
               false: [],
             },
           },
+          {
+            type: "condition-assert",
+            componentType: "switch",
+            name: "Assert",
+            properties: {
+              value: "",
+              compare_to: "",
+            },
+            branches: {
+              true: [],
+              false: [],
+            },
+          },
         ],
       },
     ],
@@ -108,9 +121,11 @@ export function generateCondition(condition: any, action: any): any {
     type: `condition-${condition.type}`,
     componentType: "switch",
     alias: condition.alias,
+    // TODO: this needs to be handled better
     properties: {
       value: condition.value,
       compare_to: condition.compare_to,
+      assert: condition.assert,
     },
     branches: {
       true: [getActionOrStepObj(action, "action")],
@@ -118,6 +133,7 @@ export function generateCondition(condition: any, action: any): any {
     },
   };
 
+  // If this is a foreach, we need to add the foreach to the condition
   if (action.foreach) {
     return {
       id: Uid.next(),
@@ -197,5 +213,6 @@ export function parseAlert(alertToParse: string): Definition {
 }
 
 export function buildAlert(definition: Definition): string {
+  console.log(definition);
   return "";
 }

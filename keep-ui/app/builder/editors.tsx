@@ -47,24 +47,97 @@ function KeepStepEditor({ properties, updateProperty }: keepEditorProps) {
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
+  const providerConfig = (properties.config as string) ?? "";
+
   return (
-    <div>
+    <>
+      <Text>Provider Config</Text>
+      <TextInput
+        placeholder="E.g. {{ providers.provider-id }}"
+        onChange={(e: any) => updateProperty("config", e.target.value)}
+        className="mb-2.5"
+        value={providerConfig}
+      />
       {uniqueParams?.map((key) => {
+        let currentPropertyValue = ((properties.with as any) ?? {})[key];
+        if (typeof currentPropertyValue === "object") {
+          currentPropertyValue = JSON.stringify(currentPropertyValue);
+        }
         return (
           <>
-            <Text id={`text-${key}`}>{key}</Text>
+            <Text key={`text-${key}`}>{key}</Text>
             <TextInput
               id={`input-${key}`}
               key={key}
               placeholder={key}
               onChange={propertyChanged}
               className="mb-2.5"
-              value={((properties.with as any) ?? {})[key] ?? ""}
+              value={currentPropertyValue ?? ""}
             />
           </>
         );
       })}
-    </div>
+    </>
+  );
+}
+
+function KeepThresholdConditionEditor({
+  properties,
+  updateProperty,
+}: keepEditorProps) {
+  const currentValueValue = (properties.value as string) ?? "";
+  const currentCompareToValue = (properties.compare_to as string) ?? "";
+  return (
+    <>
+      <Text>Value</Text>
+      <TextInput
+        placeholder="Value"
+        onChange={(e: any) => updateProperty("value", e.target.value)}
+        className="mb-2.5"
+        value={currentValueValue}
+      />
+      <Text>Compare to</Text>
+      <TextInput
+        placeholder="Compare with"
+        onChange={(e: any) => updateProperty("compare_to", e.target.value)}
+        className="mb-2.5"
+        value={currentCompareToValue}
+      />
+    </>
+  );
+}
+
+function KeepAssertConditionEditor({
+  properties,
+  updateProperty,
+}: keepEditorProps) {
+  const currentAssertValue = (properties.assert as string) ?? "";
+  return (
+    <>
+      <Text>Assert</Text>
+      <TextInput
+        placeholder="E.g. 200 == 200"
+        onChange={(e: any) => updateProperty("value", e.target.value)}
+        className="mb-2.5"
+        value={currentAssertValue}
+      />
+    </>
+  );
+}
+
+function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
+  const currentValueValue = (properties.value as string) ?? "";
+
+  return (
+    <>
+      <Text>Foreach Value</Text>
+      <TextInput
+        placeholder="Value"
+        onChange={(e: any) => updateProperty("value", e.target.value)}
+        className="mb-2.5"
+        value={currentValueValue}
+      />
+    </>
   );
 }
 
@@ -76,11 +149,11 @@ export default function StepEditor() {
     setName(e.target.value);
   }
 
-  const keepType = type.split("-")[1];
+  const keepType = type.split("-")[1] as "action" | "step" | "condition";
 
-  return keepType ? (
+  return (
     <EditorLayout>
-      <Title>Step Editor ({keepType})</Title>
+      <Title>{keepType} Editor</Title>
       <Text>Name</Text>
       <TextInput
         className="mb-2.5"
@@ -90,7 +163,22 @@ export default function StepEditor() {
       />
       {type.includes("step-") || type.includes("action-") ? (
         <KeepStepEditor properties={properties} updateProperty={setProperty} />
+      ) : type === "condition-threshold" ? (
+        <KeepThresholdConditionEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
+      ) : type.includes("foreach") ? (
+        <KeepForeachEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
+      ) : type === "condition-assert" ? (
+        <KeepAssertConditionEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
       ) : null}
     </EditorLayout>
-  ) : null;
+  );
 }

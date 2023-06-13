@@ -73,6 +73,15 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGenerate]);
 
+  useEffect(() => {
+    enableGenerate(definition.isValid || false);
+  }, [
+    stepValidationError,
+    globalValidationError,
+    enableGenerate,
+    definition.isValid,
+  ]);
+
   function IconUrlProvider(componentType: string, type: string): string | null {
     if (type === "alert") return "keep.png";
     return `icons/${type
@@ -110,8 +119,6 @@ function Builder({
     canMoveStep: CanMoveStep,
     isDraggable: IsStepDraggable,
   };
-
-  enableGenerate(definition.isValid || false);
 
   return (
     <>
