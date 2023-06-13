@@ -7,28 +7,35 @@ import {
   Uid,
 } from "sequential-workflow-designer";
 import { KeepStep } from "./types";
+import { WrappedDefinition } from "sequential-workflow-designer-react";
 
 export function getToolboxConfiguration(providers: {
   [providerType: string]: Provider;
 }) {
   /**
-   * Generate the toolbox configuration
+   * Generates the toolbox items
    */
   const [steps, actions] = Object.values(providers).reduce(
     ([steps, actions], provider) => {
       const step = {
-        name: provider.type,
         componentType: "task",
-        type: provider.type,
         properties: {
           stepParams: provider.query_params!,
           actionParams: provider.notify_params!,
         },
       };
-      if (provider.can_notify)
-        steps.push({ ...step, type: `step-${provider.type}` });
       if (provider.can_query)
-        actions.push({ ...step, type: `action-${provider.type}` });
+        steps.push({
+          ...step,
+          type: `step-${provider.type}`,
+          name: `${provider.type}-step`,
+        });
+      if (provider.can_notify)
+        actions.push({
+          ...step,
+          type: `action-${provider.type}`,
+          name: `${provider.type}-action`,
+        });
       return [steps, actions];
     },
     [[] as StepDefinition[], [] as StepDefinition[]]
@@ -101,7 +108,7 @@ export function generateCondition(condition: any, action: any): any {
   const generatedCondition = {
     id: Uid.next(),
     name: condition.name,
-    type: condition.type,
+    type: `condition-${condition.type}`,
     componentType: "switch",
     alias: condition.alias,
     properties: {
@@ -190,4 +197,8 @@ export function parseAlert(alertToParse: string): Definition {
     steps,
     conditions
   );
+}
+
+export function buildAlert(definition: Definition): string {
+  return "";
 }

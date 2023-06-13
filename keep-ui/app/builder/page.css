@@ -13,7 +13,7 @@
 }
 
 .sqd-smart-editor {
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .sqd-toolbox-item-text {

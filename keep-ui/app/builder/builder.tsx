@@ -8,8 +8,6 @@ import {
   ValidatorConfiguration,
   Step,
   Sequence,
-  BranchedStep,
-  SequentialStep,
 } from "sequential-workflow-designer";
 import {
   SequentialWorkflowDesigner,
@@ -17,25 +15,44 @@ import {
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
-import { Callout, Title } from "@tremor/react";
+import { Callout } from "@tremor/react";
 import { Provider } from "../providers/providers";
-import { parseAlert, generateAlert, getToolboxConfiguration } from "./utils";
+import {
+  parseAlert,
+  generateAlert,
+  getToolboxConfiguration,
+  buildAlert,
+} from "./utils";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
+import { globalValidator, stepValidator } from "./builder-validators";
 
 interface Props {
   loadedAlertFile: string | null;
   fileName: string;
   providers: { [providerType: string]: Provider };
+  enableGenerate: (status: boolean) => void;
+  triggerGenerate: number;
 }
 
-function Builder({ loadedAlertFile, fileName, providers }: Props) {
+function Builder({
+  loadedAlertFile,
+  fileName,
+  providers,
+  enableGenerate,
+  triggerGenerate,
+}: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [stepValidationError, setStepValidationError] = useState<string | null>(
+    null
+  );
+  const [globalValidationError, setGlobalValidationError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (loadedAlertFile == null) {
@@ -49,45 +66,12 @@ function Builder({ loadedAlertFile, fileName, providers }: Props) {
     }
   }, [loadedAlertFile]);
 
-  function globalValidator(definition: Definition): boolean {
-    const onlyOneAlert = definition.sequence.length === 1;
-    if (!onlyOneAlert) setValidationError("Only one alert is allowed.");
-    const atleastOneStep =
-      (definition.sequence[0] as SequentialStep)?.sequence.length >= 1;
-    if (!atleastOneStep)
-      setValidationError("Alert must contain at least one step.");
-    const valid = onlyOneAlert && atleastOneStep;
-    if (valid) setValidationError(null);
-    return valid;
-  }
-
-  function stepValidator(
-    step: Step | BranchedStep,
-    parentSequence: Sequence,
-    definition: Definition
-  ): boolean {
-    if (step.type.includes("condition-")) {
-      const onlyActions = (step as BranchedStep).branches.true.every((step) =>
-        step.type.includes("action-")
-      );
-      if (!onlyActions)
-        setValidationError("Conditions can only contain actions.");
-      const conditionHasActions =
-        (step as BranchedStep).branches.true.length > 0;
-      if (!conditionHasActions)
-        setValidationError("Conditions must contain at least one action.");
-      const valid = conditionHasActions && onlyActions;
-      if (valid) setValidationError(null);
-      return valid;
+  useEffect(() => {
+    if (triggerGenerate) {
+      buildAlert(definition.value);
     }
-    if (step.type === "task") {
-      const valid = step.name !== "";
-      if (!valid) setValidationError("Step name cannot be empty.");
-      if (valid) setValidationError(null);
-      return valid;
-    }
-    return true;
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerGenerate]);
 
   function IconUrlProvider(componentType: string, type: string): string | null {
     if (type === "alert") return "keep.png";
@@ -115,8 +99,9 @@ function Builder({ loadedAlertFile, fileName, providers }: Props) {
   }
 
   const validatorConfiguration: ValidatorConfiguration = {
-    step: stepValidator,
-    root: globalValidator,
+    step: (step, parent, definition) =>
+      stepValidator(step, parent, definition, setStepValidationError),
+    root: (def) => globalValidator(def, setGlobalValidationError),
   };
 
   const stepsConfiguration: StepsConfiguration = {
@@ -126,21 +111,23 @@ function Builder({ loadedAlertFile, fileName, providers }: Props) {
     isDraggable: IsStepDraggable,
   };
 
+  enableGenerate(definition.isValid || false);
+
   return (
     <>
       {/* {fileName ? <Title>Current loaded file: {fileName}</Title> : null} */}
-      {validationError ? (
+      {stepValidationError || globalValidationError ? (
         <Callout
-          className="mt-4 mb-5"
+          className="mt-2.5 mb-2.5"
           title="Validation Error"
           icon={ExclamationCircleIcon}
           color="rose"
         >
-          {validationError}
+          {stepValidationError || globalValidationError}
         </Callout>
       ) : (
         <Callout
-          className="mt-4 mb-5"
+          className="mt-2.5 mb-2.5"
           title="Schema Valid"
           icon={CheckCircleIcon}
           color="teal"

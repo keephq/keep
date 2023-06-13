@@ -31,9 +31,18 @@ interface Props {
   fileContents: string | null;
   fileName: string;
   enableButtons: () => void;
+  enableGenerate: (state: boolean) => void;
+  triggerGenerate: number;
 }
 
-function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
+function Main({
+  accessToken,
+  fileContents,
+  fileName,
+  enableButtons,
+  enableGenerate,
+  triggerGenerate
+}: Props) {
   const [providers, setProviders] = useState<{
     [providerType: string]: Provider;
   } | null>(null);
@@ -53,7 +62,11 @@ function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
   }
 
   return (
-    <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${error || (data && !data.ok) ? null : 'h-5/6'}`}>
+    <Card
+      className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${
+        error || (data && !data.ok) ? null : "h-5/6"
+      }`}
+    >
       {error || (data && !data.ok) ? (
         <Callout
           className="mt-4"
@@ -70,6 +83,8 @@ function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
           providers={providers}
           loadedAlertFile={fileContents}
           fileName={fileName}
+          enableGenerate={enableGenerate}
+          triggerGenerate={triggerGenerate}
         />
       )}
     </Card>
@@ -78,6 +93,8 @@ function Main({ accessToken, fileContents, fileName, enableButtons }: Props) {
 
 export default function PageClient() {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
+  const [generateEnabled, setGenerateEnabled] = useState(false);
+  const [triggerGenerate, setTriggerGenerate] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
@@ -91,6 +108,7 @@ export default function PageClient() {
   }
 
   const enableButtons = () => setButtonsEnabled(true);
+  const enableGenerate = (state: boolean) => setGenerateEnabled(state);
 
   function handleFileChange(event: any) {
     const file = event.target.files[0];
@@ -142,7 +160,13 @@ export default function PageClient() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
-          <Button disabled={true} color="orange" size="md" icon={BoltIcon}>
+          <Button
+            disabled={!generateEnabled}
+            color="orange"
+            size="md"
+            icon={BoltIcon}
+            onClick={() => setTriggerGenerate(triggerGenerate + 1)}
+          >
             Generate
           </Button>
         </div>
@@ -152,6 +176,8 @@ export default function PageClient() {
         fileContents={fileContents}
         fileName={fileName}
         enableButtons={enableButtons}
+        enableGenerate={enableGenerate}
+        triggerGenerate={triggerGenerate}
       />
     </main>
   );
