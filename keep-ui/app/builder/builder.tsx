@@ -15,7 +15,7 @@ import {
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
-import { Callout } from "@tremor/react";
+import { Button, Callout } from "@tremor/react";
 import { Provider } from "../providers/providers";
 import {
   parseAlert,
@@ -26,8 +26,14 @@ import {
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/20/solid";
 import { globalValidator, stepValidator } from "./builder-validators";
+import Modal from "react-modal";
+import { Alert } from "./alert";
+import { CodeBlock, a11yLight } from "react-code-blocks";
+import { stringify } from "yaml";
+import BuilderModalContent from "./builder-modal";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -53,6 +59,8 @@ function Builder({
   const [globalValidationError, setGlobalValidationError] = useState<
     string | null
   >(null);
+  const [modalIsOpen, setIsOpen] = useState(false);
+  const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
     if (loadedAlertFile == null) {
@@ -68,7 +76,8 @@ function Builder({
 
   useEffect(() => {
     if (triggerGenerate) {
-      buildAlert(definition.value);
+      setCompiledAlert(buildAlert(definition.value));
+      if (!modalIsOpen) setIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGenerate]);
@@ -120,39 +129,49 @@ function Builder({
     isDraggable: IsStepDraggable,
   };
 
+  function closeModal() {
+    setIsOpen(false);
+  }
+
   return (
     <>
-      {/* {fileName ? <Title>Current loaded file: {fileName}</Title> : null} */}
-      {stepValidationError || globalValidationError ? (
-        <Callout
-          className="mt-2.5 mb-2.5"
-          title="Validation Error"
-          icon={ExclamationCircleIcon}
-          color="rose"
-        >
-          {stepValidationError || globalValidationError}
-        </Callout>
-      ) : (
-        <Callout
-          className="mt-2.5 mb-2.5"
-          title="Schema Valid"
-          icon={CheckCircleIcon}
-          color="teal"
-        >
-          Alert can be generated successfully
-        </Callout>
+      <Modal onRequestClose={closeModal} isOpen={modalIsOpen} className='bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md'>
+        <BuilderModalContent closeModal={closeModal} compiledAlert={compiledAlert}/>
+      </Modal>
+      {modalIsOpen ? null : (
+        <>
+          {stepValidationError || globalValidationError ? (
+            <Callout
+              className="mt-2.5 mb-2.5"
+              title="Validation Error"
+              icon={ExclamationCircleIcon}
+              color="rose"
+            >
+              {stepValidationError || globalValidationError}
+            </Callout>
+          ) : (
+            <Callout
+              className="mt-2.5 mb-2.5"
+              title="Schema Valid"
+              icon={CheckCircleIcon}
+              color="teal"
+            >
+              Alert can be generated successfully
+            </Callout>
+          )}
+          <SequentialWorkflowDesigner
+            definition={definition}
+            onDefinitionChange={setDefinition}
+            stepsConfiguration={stepsConfiguration}
+            validatorConfiguration={validatorConfiguration}
+            toolboxConfiguration={getToolboxConfiguration(providers)}
+            undoStackSize={10}
+            controlBar={true}
+            globalEditor={<GlobalEditor />}
+            stepEditor={<StepEditor />}
+          />
+        </>
       )}
-      <SequentialWorkflowDesigner
-        definition={definition}
-        onDefinitionChange={setDefinition}
-        stepsConfiguration={stepsConfiguration}
-        validatorConfiguration={validatorConfiguration}
-        toolboxConfiguration={getToolboxConfiguration(providers)}
-        undoStackSize={10}
-        controlBar={true}
-        globalEditor={<GlobalEditor />}
-        stepEditor={<StepEditor />}
-      />
     </>
   );
 }
