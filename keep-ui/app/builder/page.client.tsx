@@ -14,6 +14,7 @@ import {
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { Provider } from "../providers/providers";
+import Loading from "../loading";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -119,7 +120,7 @@ export default function PageClient() {
     };
     reader.readAsText(file);
   }
-  if (status === "loading") return <div>Loading...</div>;
+  if (status === "loading") return <div><Loading/></div>;
   if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
   return (
