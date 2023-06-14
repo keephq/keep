@@ -67,7 +67,7 @@ function KeepStepEditor({ properties, updateProperty }: keepEditorProps) {
           <>
             <Text key={`text-${key}`}>{key}</Text>
             <TextInput
-              id={`input-${key}`}
+              id={`${key}`}
               key={key}
               placeholder={key}
               onChange={propertyChanged}
@@ -117,7 +117,7 @@ function KeepAssertConditionEditor({
       <Text>Assert</Text>
       <TextInput
         placeholder="E.g. 200 == 200"
-        onChange={(e: any) => updateProperty("value", e.target.value)}
+        onChange={(e: any) => updateProperty("assert", e.target.value)}
         className="mb-2.5"
         value={currentAssertValue}
       />
