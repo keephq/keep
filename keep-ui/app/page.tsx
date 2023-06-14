@@ -1,6 +1,7 @@
 
 import ProvidersPage from "./providers/page";
 import { Suspense } from "react";
+import Loading from "./loading";
 import Frill from "./frill";
 
 export const metadata = {
@@ -15,7 +16,7 @@ export default async function IndexPage() {
     <>
       <Frill />
       <div>
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<Loading/>}>
           <ProvidersPage />
         </Suspense>
       </div>
