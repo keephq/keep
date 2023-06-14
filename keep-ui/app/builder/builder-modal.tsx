@@ -6,6 +6,7 @@ import { Alert } from "./alert";
 import { useState } from "react";
 import ReactLoading from "react-loading";
 import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
+import { downloadFileFromString } from "./utils";
 
 interface Props {
   closeModal: () => void;
@@ -23,7 +24,11 @@ export default function BuilderModalContent({
     setIsLoading(false);
   }, Math.floor(Math.random() * 2500 + 1000));
 
-  function download() {}
+  const alertYaml = stringify(compiledAlert);
+
+  function download() {
+    downloadFileFromString(alertYaml, `${compiledAlert!.id}.yaml`);
+  }
 
   return (
     <>
@@ -50,7 +55,7 @@ export default function BuilderModalContent({
             <>
               <CopyBlock
                 language="yaml"
-                text={stringify(compiledAlert, { indent: 2 })}
+                text={alertYaml}
                 theme={a11yLight}
                 customStyle={{
                   height: "450px",
@@ -66,8 +71,7 @@ export default function BuilderModalContent({
                   onClick={download}
                   size="xs"
                   variant="secondary"
-                  //   disabled={isLoading}
-                  disabled={true}
+                  disabled={isLoading}
                 >
                   Download
                 </Button>

@@ -215,7 +215,10 @@ export function parseAlert(alertToParse: string): Definition {
   );
 }
 
-function getActionsFromCondition(condition: BranchedStep, foreach?: string): Action[] {
+function getActionsFromCondition(
+  condition: BranchedStep,
+  foreach?: string
+): Action[] {
   const compiledCondition = {
     name: condition.name,
     type: condition.type.replace("condition-", ""),
@@ -235,6 +238,22 @@ function getActionsFromCondition(condition: BranchedStep, foreach?: string): Act
     return compiledAction;
   });
   return compiledActions;
+}
+
+export function downloadFileFromString(data: string, filename: string) {
+  /**
+   * Generated with ChatGPT
+   */
+  var blob = new Blob([data], { type: "text/plain" });
+  var url = URL.createObjectURL(blob);
+
+  var link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+
+  link.click();
+
+  URL.revokeObjectURL(url);
 }
 
 export function buildAlert(definition: Definition): Alert {
@@ -261,7 +280,22 @@ export function buildAlert(definition: Definition): Alert {
       };
     });
   // Actions
-  let actions: Action[] = [];
+  let actions = alert.sequence
+    .filter((s) => s.type.startsWith("action-"))
+    .map((s) => {
+      const provider = {
+        type: s.type.replace("step-", ""),
+        config: s.properties.config as string,
+        with:
+          (s.properties.with as {
+            [key: string]: string | number | boolean | object;
+          }) ?? {},
+      };
+      return {
+        name: s.name,
+        provider: provider,
+      };
+    });
   // Actions > Foreach
   alert.sequence
     .filter((step) => step.type === "foreach")
@@ -288,7 +322,7 @@ export function buildAlert(definition: Definition): Alert {
     owners: owners,
     services: services,
     steps: steps,
-    actions: actions
+    actions: actions,
   };
   console.log(compiledAlert);
   return compiledAlert;
