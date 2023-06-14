@@ -36,6 +36,6 @@ export default async function CicdPage() {
   }
 
   return (
-    <GitHubPage/>
+    <GitHubPage isInstalled={isGitHubPluginInstalled}/>
   )
 }
