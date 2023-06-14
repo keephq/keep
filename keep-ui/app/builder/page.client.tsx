@@ -6,6 +6,7 @@ import {
   PlusIcon,
   ArrowDownOnSquareIcon,
   BoltIcon,
+  ArrowUpOnSquareIcon,
 } from "@heroicons/react/20/solid";
 import { useSession } from "../../utils/customAuth";
 import { BuilderCard } from "./builder-card";
@@ -41,7 +42,12 @@ export default function PageClient() {
     };
     reader.readAsText(file);
   }
-  if (status === "loading") return <div><Loading/></div>;
+  if (status === "loading")
+    return (
+      <div>
+        <Loading />
+      </div>
+    );
   if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
   return (
@@ -62,6 +68,16 @@ export default function PageClient() {
             disabled={!buttonsEnabled}
           >
             New
+          </Button>
+          <Button
+            color="orange"
+            size="md"
+            className="mr-2"
+            variant="secondary"
+            icon={ArrowUpOnSquareIcon}
+            disabled={true}
+          >
+            Save 👷‍♀️
           </Button>
           <Button
             color="orange"
