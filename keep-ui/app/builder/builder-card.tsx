@@ -36,7 +36,7 @@ export function BuilderCard({
     fetcher(url, accessToken)
   );
 
-  if (data?.ok && !providers) {
+  if (data && !providers) {
     setProviders(data.providers);
     enableButtons();
   }
