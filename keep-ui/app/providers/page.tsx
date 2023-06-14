@@ -26,7 +26,7 @@ export default function ProvidersPage() {
   const { data: session, status, update } = useSession();
   const accessToken = session?.accessToken;
 
-  const { data, error } = useSWR(() => accessToken ? `${getApiURL()}/providers` : null, (url) => fetcher(url, accessToken));
+  const { data, error } = useSWR(() => accessToken ? `${getApiURL()}/providers` : null, (url) => fetcher(url, accessToken!));
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
