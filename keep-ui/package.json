@@ -5,7 +5,7 @@
   "main": "next.config.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "bash next_build.sh",
     "start": "next start",
     "lint": "next lint"
   },
