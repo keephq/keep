@@ -1,17 +1,16 @@
 import json
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.models.provider import Provider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
-from keep.secretmanager.secretmanagerfactory import (
-    SecretManagerFactory,
-    SecretManagerTypes,
-)
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -20,10 +19,11 @@ logger = logging.getLogger(__name__)
 @router.get(
     "",
 )
-def get_installed_providers(
+def get_providers(
     tenant_id: str = Depends(verify_bearer_token),
-) -> list:
+):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
+    providers = ProvidersFactory.get_all_providers()
     # TODO: installed providers should be kept in the DB
     #       but for now we just fetch it from the secret manager
     secret_manager = SecretManagerFactory.get_secret_manager()
@@ -31,16 +31,22 @@ def get_installed_providers(
     # TODO: mask the sensitive data
     installed_providers = [
         {
-            "name": secret.split("_")[1],
+            "type": secret.split("_")[1],
+            "id": secret.split("_")[2],
             "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
         }
         for secret in installed_providers
         if len(secret.split("_")) == 3  # avoid the installation api key
     ]
-    # return list of installed providers
-    # TODO: model this
-    # TODO: return also metadata (host, etc)
-    return JSONResponse(content=installed_providers)
+
+    try:
+        return {
+            "providers": providers,
+            "installed_providers": installed_providers,
+        }
+    except Exception:
+        logger.exception("Failed to get providers")
+        return {"providers": providers, "installed_providers": []}
 
 
 @router.get(
@@ -211,7 +217,10 @@ async def install_provider(
 ):
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
+    provider_name = provider_info.pop("provider_name")
     provider_type = provider_info.pop("provider_type", None) or provider_id
+
+    provider_unique_id = uuid.uuid4().hex
     logger.info(
         "Installing provider",
         extra={
@@ -222,6 +231,7 @@ async def install_provider(
     )
     provider_config = {
         "authentication": provider_info,
+        "name": provider_name,
     }
     try:
         # Instantiate the provider object and perform installation process
@@ -229,12 +239,17 @@ async def install_provider(
             provider_id, provider_type, provider_config
         )
         secret_manager = SecretManagerFactory.get_secret_manager()
-        provider_config = secret_manager.write_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+        secret_manager.write_secret(
+            secret_name=f"{tenant_id}_{provider_type}_{provider_unique_id}",
             secret_value=json.dumps(provider_config),
         )
         return JSONResponse(
-            status_code=200, content={"message": "Provider installed successfully"}
+            status_code=200,
+            content={
+                "type": provider_type,
+                "id": provider_unique_id,
+                "details": provider_config,
+            },
         )
 
     except GetAlertException as e:

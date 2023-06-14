@@ -34,7 +34,7 @@ alert:
         config: " {{ providers.opsgenie-prod }} "
         with:
           message: "DB datetime value ({{ actions.opsgenie-alert.conditions.threshold-condition.0.compare_value }}) is greater than 1! 🚨"
-  - name: trigger-slack
+    - name: trigger-slack
       if: "{{ A }}"
       provider:
         type: slack

@@ -20,14 +20,14 @@ class PagerdutyProviderAuthConfig:
     routing_key: str | None = dataclasses.field(
         metadata={
             "required": False,
-            "description": "routing_key is an integration or ruleset key",
+            "description": "Routing Key (an integration or ruleset key)",
         },
         default=None,
     )
     api_key: str | None = dataclasses.field(
         metadata={
             "required": False,
-            "description": "api_key is a user or team API key",
+            "description": "Api Key (a user or team API key)",
             "sensitive": True,
         },
         default=None,

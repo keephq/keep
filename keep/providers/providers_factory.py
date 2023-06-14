@@ -2,10 +2,16 @@
 The providers factory module.
 """
 import importlib
+import inspect
 import logging
+import os
+from dataclasses import fields
 
+from keep.api.models.provider import Provider
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
+logger = logging.getLogger(__name__)
 
 
 class ProvidersFactory:
@@ -86,3 +92,87 @@ class ProvidersFactory:
                 f"Provider {provider_type} does not have a provider auth config class"
             )
             return {}
+
+    @staticmethod
+    def get_all_providers() -> dict[str, Provider]:
+        """
+        Get all the providers.
+
+        Returns:
+            list: All the providers.
+        """
+        providers = []
+        blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
+
+        for provider_directory in os.listdir(
+            os.path.dirname(os.path.abspath(__file__))
+        ):
+            # skip files that aren't providers
+            if not provider_directory.endswith("_provider"):
+                continue
+            elif provider_directory in blacklisted_providers:
+                continue
+            # import it
+            try:
+                module = importlib.import_module(
+                    f"keep.providers.{provider_directory}.{provider_directory}"
+                )
+                provider_auth_config_class = getattr(
+                    module,
+                    provider_directory.title().replace("_", "") + "AuthConfig",
+                    None,
+                )
+                provider_type = provider_directory.replace("_provider", "")
+                provider_class = ProvidersFactory.get_provider_class(provider_type)
+                can_notify = (
+                    issubclass(provider_class, BaseProvider)
+                    and provider_class.__dict__.get("notify") is not None
+                )
+                notify_params = (
+                    None
+                    if not can_notify
+                    else list(
+                        dict(
+                            inspect.signature(
+                                provider_class.__dict__.get("notify")
+                            ).parameters
+                        ).keys()
+                    )[1:]
+                )
+                can_query = (
+                    issubclass(provider_class, BaseProvider)
+                    and provider_class.__dict__.get("_query") is not None
+                )
+                query_params = (
+                    None
+                    if not can_query
+                    else list(
+                        dict(
+                            inspect.signature(
+                                provider_class.__dict__.get("_query")
+                            ).parameters
+                        ).keys()
+                    )[1:]
+                )
+                config = (
+                    {
+                        field.name: dict(field.metadata)
+                        for field in fields(provider_auth_config_class)
+                    }
+                    if provider_auth_config_class
+                    else {}
+                )
+                providers.append(
+                    Provider(
+                        type=provider_type,
+                        config=config,
+                        can_notify=can_notify,
+                        can_query=can_query,
+                        notify_params=notify_params,
+                        query_params=query_params,
+                    )
+                )
+            except ModuleNotFoundError:
+                logger.exception(f"Cannot import provider {provider_directory}")
+                continue
+        return providers

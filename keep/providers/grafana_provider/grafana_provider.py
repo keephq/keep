@@ -2,6 +2,8 @@
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
 
+import dataclasses
+
 import pydantic
 import requests
 from grafana_api.alerting import Alerting
@@ -18,13 +20,23 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
-class GrafanaAuthConfig:
+class GrafanaProviderAuthConfig:
     """
     Grafana authentication configuration.
     """
 
-    host: str
-    token: str
+    token: str = dataclasses.field(
+        metadata={"required": True, "description": "Token", "hint": "Grafana Token"},
+        default=None,
+    )
+    host: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Grafana host",
+            "hint": "e.g. https://keephq.grafana.net",
+        },
+        default=None,
+    )
 
 
 class GrafanaProvider(BaseProvider):
@@ -46,7 +58,9 @@ class GrafanaProvider(BaseProvider):
         Validates required configuration for Grafana provider.
 
         """
-        self.authentication_config = GrafanaAuthConfig(**self.config.authentication)
+        self.authentication_config = GrafanaProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def _query(self, **kwargs: dict):
         pass
