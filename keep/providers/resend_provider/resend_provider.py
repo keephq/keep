@@ -15,7 +15,8 @@ class ResendProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Resend API key (https://resend.com/api-keys)",
+            "description": "Resend API key",
+            "hint": "https://resend.com/api-keys",
             "sensitive": True,
         }
     )
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     response = provider.notify(
         "onboarding@resend.dev",
         "youremail@gmail.com",
-        "Hello World!",
+        "Hello World from Keep!",
         "<strong>Test</strong> with HTML",
     )
     print(response)
