@@ -1,12 +1,15 @@
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../providers/providers";
 import {
+  BranchedStep,
   Definition,
+  SequentialStep,
   Step,
   StepDefinition,
   Uid,
 } from "sequential-workflow-designer";
 import { KeepStep } from "./types";
+import { Action, Alert } from "./alert";
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**
@@ -212,7 +215,81 @@ export function parseAlert(alertToParse: string): Definition {
   );
 }
 
-export function buildAlert(definition: Definition): string {
-  console.log(definition);
-  return "";
+function getActionsFromCondition(condition: BranchedStep, foreach?: string): Action[] {
+  const compiledCondition = {
+    name: condition.name,
+    type: condition.type.replace("condition-", ""),
+    ...condition.properties,
+  };
+  const compiledActions = condition.branches.true.map((a) => {
+    const compiledAction = {
+      name: a.name,
+      provider: {
+        type: a.type.replace("action-", ""),
+        config: a.properties.config,
+        with: a.properties.with,
+      },
+      condition: compiledCondition,
+    } as Action;
+    if (foreach) compiledAction["foreach"] = foreach;
+    return compiledAction;
+  });
+  return compiledActions;
+}
+
+export function buildAlert(definition: Definition): Alert {
+  const alert = definition.sequence[0] as SequentialStep;
+  const alertId = (alert.properties.id as string) ?? alert.name;
+  const description = (alert.properties.description as string) ?? "";
+  const owners = (alert.properties.owners as string[]) ?? [];
+  const services = (alert.properties.services as string[]) ?? [];
+  // Steps (move to func?)
+  const steps = alert.sequence
+    .filter((s) => s.type.startsWith("step-"))
+    .map((s) => {
+      const provider = {
+        type: s.type.replace("step-", ""),
+        config: s.properties.config as string,
+        with:
+          (s.properties.with as {
+            [key: string]: string | number | boolean | object;
+          }) ?? {},
+      };
+      return {
+        name: s.name,
+        provider: provider,
+      };
+    });
+  // Actions
+  let actions: Action[] = [];
+  // Actions > Foreach
+  alert.sequence
+    .filter((step) => step.type === "foreach")
+    ?.forEach((forEach) => {
+      const forEachValue = forEach.properties.value as string;
+      const condition = (forEach as SequentialStep).sequence.find((c) =>
+        c.type.startsWith("condition-")
+      ) as BranchedStep;
+      const foreachActions = getActionsFromCondition(condition, forEachValue);
+      actions = [...actions, ...foreachActions];
+    });
+  // Actions > Condition
+  alert.sequence
+    .filter((step) => step.type.startsWith("condition-"))
+    ?.forEach((condition) => {
+      const conditionActions = getActionsFromCondition(
+        condition as BranchedStep
+      );
+      actions = [...actions, ...conditionActions];
+    });
+  const compiledAlert = {
+    id: alertId,
+    description: description,
+    owners: owners,
+    services: services,
+    steps: steps,
+    actions: actions
+  };
+  console.log(compiledAlert);
+  return compiledAlert;
 }

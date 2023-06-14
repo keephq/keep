@@ -63,12 +63,13 @@ function KeepStepEditor({ properties, updateProperty }: keepEditorProps) {
         if (typeof currentPropertyValue === "object") {
           currentPropertyValue = JSON.stringify(currentPropertyValue);
         }
+        const randomKey = `${key}-${Math.floor(Math.random() * 1000)}`;
         return (
           <>
-            <Text key={`text-${key}`}>{key}</Text>
+            <Text key={`text-${randomKey}`}>{key}</Text>
             <TextInput
               id={`${key}`}
-              key={key}
+              key={`${randomKey}`}
               placeholder={key}
               onChange={propertyChanged}
               className="mb-2.5"
