@@ -1,9 +1,9 @@
-import { Title, Text } from '@tremor/react';
+import Image from 'next/image';
 
-export default async function Loading() {
+export default function Loading() {
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-7xl">
-      <Title>Loading...</Title>
+    <main className="flex items-center justify-center min-h-screen">
+      <Image src='/keep_loading_new.gif' alt="loading" width={200} height={200}/>
     </main>
   );
 }
