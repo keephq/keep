@@ -103,7 +103,9 @@ class ProvidersFactory:
         """
         providers = []
         blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
-        for provider_directory in os.listdir("keep/providers"):
+        for provider_directory in os.listdir(
+            os.path.dirname(os.path.abspath(__file__))
+        ):
             # skip files that aren't providers
             if not provider_directory.endswith("_provider"):
                 continue
