@@ -15,17 +15,11 @@ import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { Provider } from "../providers/providers";
 import Loading from "../loading";
+import { fetcher } from "../../utils/fetcher";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
 });
-
-const fetcher = (url: string, accessToken: string) =>
-  fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
 
 interface Props {
   accessToken: string;
@@ -51,22 +45,19 @@ function Main({
     fetcher(url, accessToken)
   );
 
-  if (data?.ok && !providers) {
-    if (!data.bodyUsed) {
-      data.json().then((dataJson) => {
-        setProviders(dataJson.providers);
-        enableButtons();
-      });
-    }
+  if (data && !providers) {
+    setProviders(data.providers);
+    enableButtons();
   }
+
 
   return (
     <Card
       className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${
-        error || (data && !data.ok) ? null : "h-5/6"
+        error || !data ? null : "h-5/6"
       }`}
     >
-      {error || (data && !data.ok) ? (
+      {error ? (
         <Callout
           className="mt-4"
           title="Error"
