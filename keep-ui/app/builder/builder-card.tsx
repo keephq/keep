@@ -1,7 +1,7 @@
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { getApiURL } from "../../utils/apiUrl";
 import Loader from "./loader";
@@ -36,10 +36,12 @@ export function BuilderCard({
     fetcher(url, accessToken)
   );
 
-  if (data && !providers) {
-    setProviders(data.providers);
-    enableButtons();
-  }
+  useEffect(() => {
+    if (data && !providers) {
+      setProviders(data.providers);
+      enableButtons();
+    }
+  }, [data, providers, enableButtons]);
 
   return (
     <Card
