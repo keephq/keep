@@ -1,0 +1,28 @@
+{
+  "unversionedId": "providers/new-provider",
+  "id": "providers/new-provider",
+  "title": "➕ New Provider",
+  "description": "Basics",
+  "source": "@site/docs/providers/new-provider.md",
+  "sourceDirName": "providers",
+  "slug": "/providers/new-provider",
+  "permalink": "/providers/new-provider",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/new-provider.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "Adding a New Provider",
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a Provider?",
+    "permalink": "/providers/what-is-a-provider"
+  },
+  "next": {
+    "title": "Documentation",
+    "permalink": "/category/documentation"
+  }
+}

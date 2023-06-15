@@ -1,0 +1,28 @@
+{
+  "unversionedId": "a_syntax/context",
+  "id": "a_syntax/context",
+  "title": "Working with Context",
+  "description": "Keep uses Mustache syntax to inject context at runtime, supporting functions, dictionaries, lists, and nested access.",
+  "source": "@site/docs/a_syntax/03-context.md",
+  "sourceDirName": "a_syntax",
+  "slug": "/a_syntax/context",
+  "permalink": "/a_syntax/context",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/a_syntax/03-context.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_label": "Context",
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Foreach syntax",
+    "permalink": "/a_syntax/foreach"
+  },
+  "next": {
+    "title": "State",
+    "permalink": "/a_syntax/state"
+  }
+}

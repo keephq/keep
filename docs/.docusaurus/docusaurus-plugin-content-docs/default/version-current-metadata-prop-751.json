@@ -1,0 +1,643 @@
+{
+  "pluginId": "default",
+  "version": "current",
+  "label": "Next",
+  "banner": null,
+  "badge": false,
+  "noIndex": false,
+  "className": "docs-version-current",
+  "isLast": true,
+  "docsSidebars": {
+    "tutorialSidebar": [
+      {
+        "type": "link",
+        "label": "Introduction",
+        "href": "/",
+        "docId": "introduction"
+      },
+      {
+        "type": "link",
+        "label": "Quickstart",
+        "href": "/quick-start",
+        "docId": "quick-start"
+      },
+      {
+        "type": "link",
+        "label": "Deployment",
+        "href": "/deployment",
+        "docId": "deployment"
+      },
+      {
+        "type": "category",
+        "label": "Syntax",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "Basic syntax",
+            "href": "/syntax/syntax",
+            "docId": "syntax/syntax"
+          },
+          {
+            "type": "link",
+            "label": "Foreach syntax",
+            "href": "/syntax/foreach",
+            "docId": "syntax/foreach"
+          },
+          {
+            "type": "link",
+            "label": "Context syntax",
+            "href": "/syntax/context",
+            "docId": "syntax/context"
+          },
+          {
+            "type": "link",
+            "label": "State",
+            "href": "/syntax/state",
+            "docId": "syntax/state"
+          }
+        ],
+        "href": "/category/syntax"
+      },
+      {
+        "type": "category",
+        "label": "Providers",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "Getting Started",
+            "href": "/providers/getting-started",
+            "docId": "providers/getting-started"
+          },
+          {
+            "type": "link",
+            "label": "What is a Provider?",
+            "href": "/providers/what-is-a-provider",
+            "docId": "providers/what-is-a-provider"
+          },
+          {
+            "type": "link",
+            "label": "Adding a New Provider",
+            "href": "/providers/new-provider",
+            "docId": "providers/new-provider"
+          },
+          {
+            "type": "category",
+            "label": "Documentation",
+            "collapsible": true,
+            "collapsed": true,
+            "items": [
+              {
+                "type": "link",
+                "label": "Template",
+                "href": "/providers/documentation/template",
+                "docId": "providers/documentation/template"
+              },
+              {
+                "type": "link",
+                "label": "CloudWatch Logs",
+                "href": "/providers/documentation/cloudwatch-logs",
+                "docId": "providers/documentation/cloudwatch-logs"
+              },
+              {
+                "type": "link",
+                "label": "CloudWatch Metrics",
+                "href": "/providers/documentation/cloudwatch-metrics",
+                "docId": "providers/documentation/cloudwatch-metrics"
+              },
+              {
+                "type": "link",
+                "label": "Console Provider",
+                "href": "/providers/documentation/console",
+                "docId": "providers/documentation/console"
+              },
+              {
+                "type": "link",
+                "label": "Discord Provider",
+                "href": "/providers/documentation/discord",
+                "docId": "providers/documentation/discord"
+              },
+              {
+                "type": "link",
+                "label": "Elastic Provider",
+                "href": "/providers/documentation/elastic",
+                "docId": "providers/documentation/elastic"
+              },
+              {
+                "type": "link",
+                "label": "HTTP Provider",
+                "href": "/providers/documentation/http",
+                "docId": "providers/documentation/http"
+              },
+              {
+                "type": "link",
+                "label": "Mock Provider",
+                "href": "/providers/documentation/mock",
+                "docId": "providers/documentation/mock"
+              },
+              {
+                "type": "link",
+                "label": "MySQL Provider",
+                "href": "/providers/documentation/mysql",
+                "docId": "providers/documentation/mysql"
+              },
+              {
+                "type": "link",
+                "label": "New Relic Provider",
+                "href": "/providers/documentation/new-relic",
+                "docId": "providers/documentation/new-relic"
+              },
+              {
+                "type": "link",
+                "label": "Opsgenie Provider",
+                "href": "/providers/documentation/opsgenie",
+                "docId": "providers/documentation/opsgenie"
+              },
+              {
+                "type": "link",
+                "label": "Pagerduty Provider",
+                "href": "/providers/documentation/pagerduty",
+                "docId": "providers/documentation/pagerduty"
+              },
+              {
+                "type": "link",
+                "label": "POSTGRESQL Provider",
+                "href": "/providers/documentation/postgresql",
+                "docId": "providers/documentation/postgresql"
+              },
+              {
+                "type": "link",
+                "label": "Pushover Provider",
+                "href": "/providers/documentation/pushover",
+                "docId": "providers/documentation/pushover"
+              },
+              {
+                "type": "link",
+                "label": "Sentry Provider",
+                "href": "/providers/documentation/sentry",
+                "docId": "providers/documentation/sentry"
+              },
+              {
+                "type": "link",
+                "label": "Slack Provider",
+                "href": "/providers/documentation/slack",
+                "docId": "providers/documentation/slack"
+              },
+              {
+                "type": "link",
+                "label": "Snowflake Provider",
+                "href": "/providers/documentation/snowflake",
+                "docId": "providers/documentation/snowflake"
+              },
+              {
+                "type": "link",
+                "label": "SSH Provider",
+                "href": "/providers/documentation/ssh",
+                "docId": "providers/documentation/ssh"
+              },
+              {
+                "type": "link",
+                "label": "Teams Provider",
+                "href": "/providers/documentation/teams",
+                "docId": "providers/documentation/teams"
+              },
+              {
+                "type": "link",
+                "label": "Telegram Provider",
+                "href": "/providers/documentation/telegram",
+                "docId": "providers/documentation/telegram"
+              },
+              {
+                "type": "link",
+                "label": "Zenduty Provider",
+                "href": "/providers/documentation/zenduty",
+                "docId": "providers/documentation/zenduty"
+              }
+            ],
+            "href": "/category/documentation"
+          }
+        ],
+        "href": "/category/providers"
+      },
+      {
+        "type": "category",
+        "label": "Conditions",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "What is a condition?",
+            "href": "/conditions/what-is-a-condition",
+            "docId": "conditions/what-is-a-condition"
+          },
+          {
+            "type": "link",
+            "label": "threshold",
+            "href": "/conditions/threshold",
+            "docId": "conditions/threshold"
+          },
+          {
+            "type": "link",
+            "label": "assert",
+            "href": "/conditions/assert",
+            "docId": "conditions/assert"
+          },
+          {
+            "type": "link",
+            "label": "stddev",
+            "href": "/conditions/stddev",
+            "docId": "conditions/stddev"
+          }
+        ],
+        "href": "/category/conditions"
+      },
+      {
+        "type": "category",
+        "label": "Functions",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "What is a function?",
+            "href": "/functions/what-is-a-function",
+            "docId": "functions/what-is-a-function"
+          },
+          {
+            "type": "link",
+            "label": "all",
+            "href": "/functions/all",
+            "docId": "functions/all"
+          },
+          {
+            "type": "link",
+            "label": "diff",
+            "href": "/functions/diff",
+            "docId": "functions/diff"
+          },
+          {
+            "type": "link",
+            "label": "len",
+            "href": "/functions/len",
+            "docId": "functions/len"
+          },
+          {
+            "type": "link",
+            "label": "split",
+            "href": "/functions/split",
+            "docId": "functions/split"
+          },
+          {
+            "type": "link",
+            "label": "first",
+            "href": "/functions/first",
+            "docId": "functions/first"
+          },
+          {
+            "type": "link",
+            "label": "utcnow",
+            "href": "/functions/utcnow",
+            "docId": "functions/utcnow"
+          },
+          {
+            "type": "link",
+            "label": "to_utc",
+            "href": "/functions/to_utc",
+            "docId": "functions/to_utc"
+          },
+          {
+            "type": "link",
+            "label": "datetime_compare",
+            "href": "/functions/datetime_compare",
+            "docId": "functions/datetime_compare"
+          }
+        ],
+        "href": "/category/functions"
+      },
+      {
+        "type": "category",
+        "label": "Throttles",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "What is a throttle?",
+            "href": "/throttles/what-is-throttle",
+            "docId": "throttles/what-is-throttle"
+          },
+          {
+            "type": "link",
+            "label": "One Until Resolved",
+            "href": "/throttles/one-until-resolved",
+            "docId": "throttles/one-until-resolved"
+          }
+        ],
+        "href": "/category/throttles"
+      },
+      {
+        "type": "category",
+        "label": "Examples",
+        "collapsible": true,
+        "collapsed": true,
+        "items": [
+          {
+            "type": "link",
+            "label": "Multistep Alert Example",
+            "href": "/examples/multistep-alert-example",
+            "docId": "examples/multistep-alert-example"
+          }
+        ],
+        "href": "/category/examples"
+      }
+    ]
+  },
+  "docs": {
+    "conditions/assert": {
+      "id": "conditions/assert",
+      "title": "🎯 Assert",
+      "description": "The assert condition implements the \"python assert\" behaviour",
+      "sidebar": "tutorialSidebar"
+    },
+    "conditions/stddev": {
+      "id": "conditions/stddev",
+      "title": "🎯 Stddev (Standard Deviation)",
+      "description": "The assert condition implements the \"python assert\" behaviour",
+      "sidebar": "tutorialSidebar"
+    },
+    "conditions/threshold": {
+      "id": "conditions/threshold",
+      "title": "🎯 Threshold",
+      "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+      "sidebar": "tutorialSidebar"
+    },
+    "conditions/what-is-a-condition": {
+      "id": "conditions/what-is-a-condition",
+      "title": "❓ What is a Condition",
+      "description": "Generally speaking, a condition is:",
+      "sidebar": "tutorialSidebar"
+    },
+    "deployment": {
+      "id": "deployment",
+      "title": "Deployment",
+      "description": "After writing some alerts with Keep, you now want to use Keep in production. For that, you may want to deploy Keep on an environment other than your local station.",
+      "sidebar": "tutorialSidebar"
+    },
+    "examples/multistep-alert-example": {
+      "id": "examples/multistep-alert-example",
+      "title": "Multistep Alert Example",
+      "description": "Steps",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/all": {
+      "id": "functions/all",
+      "title": "all(iterable)",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/datetime_compare": {
+      "id": "functions/datetime_compare",
+      "title": "datetime_compare",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/diff": {
+      "id": "functions/diff",
+      "title": "diff(iterable)",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/first": {
+      "id": "functions/first",
+      "title": "first(iterable)",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/len": {
+      "id": "functions/len",
+      "title": "len(iterable)",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/split": {
+      "id": "functions/split",
+      "title": "string(string, delimeter)",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/to_utc": {
+      "id": "functions/to_utc",
+      "title": "to_utc",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/utcnow": {
+      "id": "functions/utcnow",
+      "title": "utcnow",
+      "description": "Input",
+      "sidebar": "tutorialSidebar"
+    },
+    "functions/what-is-a-function": {
+      "id": "functions/what-is-a-function",
+      "title": "What is a Function?",
+      "description": "|  To use a keep function, prefix it with keep., for example, use keep.len and not len  |",
+      "sidebar": "tutorialSidebar"
+    },
+    "introduction": {
+      "id": "introduction",
+      "title": "Introduction",
+      "description": "🗼 A glance of Keep",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/cloudwatch-logs": {
+      "id": "providers/documentation/cloudwatch-logs",
+      "title": "AWS CloudWatch Logs",
+      "description": "CloudWatch Logs Provider is a provider used to query AWS CloudWatch Logs",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/cloudwatch-metrics": {
+      "id": "providers/documentation/cloudwatch-metrics",
+      "title": "AWS CloudWatch Metrics",
+      "description": "WIP 👨🏻‍💻",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/console": {
+      "id": "providers/documentation/console",
+      "title": "Console",
+      "description": "Console provider is sort of a mock provider that projects given alert message to the console.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/discord": {
+      "id": "providers/documentation/discord",
+      "title": "Discord",
+      "description": "Discord provider is a provider that allows to send notifications to Discord",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/elastic": {
+      "id": "providers/documentation/elastic",
+      "title": "Elastic",
+      "description": "Elastic provider is a provider used to query Elastic Search (tested with elastic.co)",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/http": {
+      "id": "providers/documentation/http",
+      "title": "HTTP Provider",
+      "description": "HTTP Provider is a provider used to query/notify using HTTP requests",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/mock": {
+      "id": "providers/documentation/mock",
+      "title": "Mock",
+      "description": "Template Provider is a template for newly added provider's documentation",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/mysql": {
+      "id": "providers/documentation/mysql",
+      "title": "MySQL",
+      "description": "MySQL Provider is a provider used to query MySQL databases",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/new-relic": {
+      "id": "providers/documentation/new-relic",
+      "title": "New Relic",
+      "description": "Template Provider is a template for newly added provider's documentation",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/opsgenie": {
+      "id": "providers/documentation/opsgenie",
+      "title": "OpsGenie Provider",
+      "description": "OpsGenie Provider is a provider that allows to create alerts in OpsGenie.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/pagerduty": {
+      "id": "providers/documentation/pagerduty",
+      "title": "Pagerduty Provider",
+      "description": "Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/postgresql": {
+      "id": "providers/documentation/postgresql",
+      "title": "POSTGRESQL",
+      "description": "POSTGRESQL Provider is a provider used to query POSTGRES databases",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/pushover": {
+      "id": "providers/documentation/pushover",
+      "title": "Pushover",
+      "description": "Pushover docs",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/sentry": {
+      "id": "providers/documentation/sentry",
+      "title": "Sentry",
+      "description": "Template Provider is a template for newly added provider's documentation",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/slack": {
+      "id": "providers/documentation/slack",
+      "title": "Slack",
+      "description": "Slack provider is a provider that allows to send notifications to Slack",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/snowflake": {
+      "id": "providers/documentation/snowflake",
+      "title": "Snowflake",
+      "description": "Template Provider is a template for newly added provider's documentation",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/ssh": {
+      "id": "providers/documentation/ssh",
+      "title": "SSH",
+      "description": "The SSH Provider is a provider that provides a way to execute SSH commands and get their output.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/teams": {
+      "id": "providers/documentation/teams",
+      "title": "Teams Provider",
+      "description": "Teams Provider is a provider that allows to notify alerts to Microsoft Teams chats.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/telegram": {
+      "id": "providers/documentation/telegram",
+      "title": "Telegram Provider",
+      "description": "Telegram Provider is a provider that allows to notify alerts to telegram chats.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/template": {
+      "id": "providers/documentation/template",
+      "title": "Template",
+      "description": "Template Provider is a template for newly added provider's documentation",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/documentation/zenduty": {
+      "id": "providers/documentation/zenduty",
+      "title": "Zenduty",
+      "description": "Zenduty docs",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/getting-started": {
+      "id": "providers/getting-started",
+      "title": "👾 Providers",
+      "description": "We tried our best to cover all common providers.",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/new-provider": {
+      "id": "providers/new-provider",
+      "title": "➕ New Provider",
+      "description": "Basics",
+      "sidebar": "tutorialSidebar"
+    },
+    "providers/what-is-a-provider": {
+      "id": "providers/what-is-a-provider",
+      "title": "❓ What is a Provider",
+      "description": "TL;DR",
+      "sidebar": "tutorialSidebar"
+    },
+    "quick-start": {
+      "id": "quick-start",
+      "title": "🚀 Quickstart",
+      "description": "Run locally",
+      "sidebar": "tutorialSidebar"
+    },
+    "syntax/context": {
+      "id": "syntax/context",
+      "title": "Working with context",
+      "description": "Keep uses Mustache syntax to inject context at runtime, supporting functions, dictionaries, lists, and nested access.",
+      "sidebar": "tutorialSidebar"
+    },
+    "syntax/foreach": {
+      "id": "syntax/foreach",
+      "title": "Foreach",
+      "description": "Foreach syntax add the flexability of running action per result instead of only once on all results.",
+      "sidebar": "tutorialSidebar"
+    },
+    "syntax/state": {
+      "id": "syntax/state",
+      "title": "State",
+      "description": "Intro",
+      "sidebar": "tutorialSidebar"
+    },
+    "syntax/syntax": {
+      "id": "syntax/syntax",
+      "title": "Basic Syntax",
+      "description": "At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.",
+      "sidebar": "tutorialSidebar"
+    },
+    "throttles/one-until-resolved": {
+      "id": "throttles/one-until-resolved",
+      "title": "🎯 One Until Resolved",
+      "description": "Introduction",
+      "sidebar": "tutorialSidebar"
+    },
+    "throttles/what-is-throttle": {
+      "id": "throttles/what-is-throttle",
+      "title": "❓ What is a Throttle",
+      "description": "The purpose of throttling is to prevent any action from being triggered too many times, thus generating too many alerts.",
+      "sidebar": "tutorialSidebar"
+    }
+  }
+}

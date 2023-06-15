@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/to_utc",
+  "id": "functions/to_utc",
+  "title": "to_utc",
+  "description": "Input",
+  "source": "@site/docs/functions/to_utc.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/to_utc",
+  "permalink": "/functions/to_utc",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/to_utc.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "to_utc"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "split",
+    "permalink": "/functions/split"
+  },
+  "next": {
+    "title": "utcnow",
+    "permalink": "/functions/utcnow"
+  }
+}

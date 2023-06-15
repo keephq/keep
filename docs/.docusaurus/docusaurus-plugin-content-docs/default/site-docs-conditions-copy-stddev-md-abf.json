@@ -1,0 +1,26 @@
+{
+  "unversionedId": "conditions copy/stddev",
+  "id": "conditions copy/stddev",
+  "title": "🎯 Stddev (Standard Deviation)",
+  "description": "The assert condition implements the \"python assert\" behaviour",
+  "source": "@site/docs/conditions copy/stddev.md",
+  "sourceDirName": "conditions copy",
+  "slug": "/conditions copy/stddev",
+  "permalink": "/conditions copy/stddev",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/conditions copy/stddev.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "stddev"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "assert",
+    "permalink": "/conditions copy/assert"
+  },
+  "next": {
+    "title": "threshold",
+    "permalink": "/conditions copy/threshold"
+  }
+}

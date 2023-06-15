@@ -1,0 +1,27 @@
+{
+  "unversionedId": "functions/len",
+  "id": "functions/len",
+  "title": "len(iterable)",
+  "description": "Input",
+  "source": "@site/docs/024_functions/04-len.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/len",
+  "permalink": "/functions/len",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/04-len.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_label": "len"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "diff",
+    "permalink": "/functions/diff"
+  },
+  "next": {
+    "title": "split",
+    "permalink": "/functions/split"
+  }
+}

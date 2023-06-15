@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/new-relic",
+  "id": "providers/documentation/new-relic",
+  "title": "New Relic",
+  "description": "Template Provider is a template for newly added provider's documentation",
+  "source": "@site/docs/providers/documentation/new-relic.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/new-relic",
+  "permalink": "/providers/documentation/new-relic",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/new-relic.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "New Relic Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "MySQL Provider",
+    "permalink": "/providers/documentation/mysql"
+  },
+  "next": {
+    "title": "Opsgenie Provider",
+    "permalink": "/providers/documentation/opsgenie"
+  }
+}

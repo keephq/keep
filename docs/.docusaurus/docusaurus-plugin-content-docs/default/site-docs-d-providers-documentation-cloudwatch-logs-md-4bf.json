@@ -1,0 +1,26 @@
+{
+  "unversionedId": "d-providers/documentation/cloudwatch-logs",
+  "id": "d-providers/documentation/cloudwatch-logs",
+  "title": "AWS CloudWatch Logs",
+  "description": "CloudWatch Logs Provider is a provider used to query AWS CloudWatch Logs",
+  "source": "@site/docs/d-providers/documentation/cloudwatch-logs.md",
+  "sourceDirName": "d-providers/documentation",
+  "slug": "/d-providers/documentation/cloudwatch-logs",
+  "permalink": "/d-providers/documentation/cloudwatch-logs",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/d-providers/documentation/cloudwatch-logs.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "CloudWatch Logs"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Template",
+    "permalink": "/d-providers/documentation/template"
+  },
+  "next": {
+    "title": "CloudWatch Metrics",
+    "permalink": "/d-providers/documentation/cloudwatch-metrics"
+  }
+}

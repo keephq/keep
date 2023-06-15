@@ -1,0 +1,26 @@
+{
+  "unversionedId": "c-functions/diff",
+  "id": "c-functions/diff",
+  "title": "diff(iterable)",
+  "description": "Input",
+  "source": "@site/docs/c-functions/diff.md",
+  "sourceDirName": "c-functions",
+  "slug": "/c-functions/diff",
+  "permalink": "/c-functions/diff",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/c-functions/diff.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "diff"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "datetime_compare",
+    "permalink": "/c-functions/datetime_compare"
+  },
+  "next": {
+    "title": "first",
+    "permalink": "/c-functions/first"
+  }
+}

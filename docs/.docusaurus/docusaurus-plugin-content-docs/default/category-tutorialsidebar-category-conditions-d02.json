@@ -1,0 +1,15 @@
+{
+  "title": "Conditions",
+  "slug": "/category/conditions",
+  "permalink": "/category/conditions",
+  "navigation": {
+    "previous": {
+      "title": "Zenduty Provider",
+      "permalink": "/providers/documentation/zenduty"
+    },
+    "next": {
+      "title": "What is a condition?",
+      "permalink": "/conditions/what-is-a-condition"
+    }
+  }
+}

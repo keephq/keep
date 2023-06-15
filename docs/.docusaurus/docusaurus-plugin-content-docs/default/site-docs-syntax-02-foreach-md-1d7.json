@@ -1,0 +1,28 @@
+{
+  "unversionedId": "syntax/foreach",
+  "id": "syntax/foreach",
+  "title": "Foreach",
+  "description": "Foreach syntax add the flexability of running action per result instead of only once on all results.",
+  "source": "@site/docs/syntax/02-foreach.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/foreach",
+  "permalink": "/syntax/foreach",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/02-foreach.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_label": "Foreach syntax",
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Basic Syntax",
+    "permalink": "/syntax/syntax"
+  },
+  "next": {
+    "title": "Context",
+    "permalink": "/syntax/context"
+  }
+}

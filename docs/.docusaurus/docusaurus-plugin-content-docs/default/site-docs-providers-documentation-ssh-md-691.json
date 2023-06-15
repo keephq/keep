@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/ssh",
+  "id": "providers/documentation/ssh",
+  "title": "SSH",
+  "description": "The SSH Provider is a provider that provides a way to execute SSH commands and get their output.",
+  "source": "@site/docs/providers/documentation/ssh.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/ssh",
+  "permalink": "/providers/documentation/ssh",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/ssh.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "SSH Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Snowflake Provider",
+    "permalink": "/providers/documentation/snowflake"
+  },
+  "next": {
+    "title": "Teams Provider",
+    "permalink": "/providers/documentation/teams"
+  }
+}

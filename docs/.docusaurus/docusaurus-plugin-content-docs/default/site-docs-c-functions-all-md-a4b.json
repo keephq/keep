@@ -1,0 +1,26 @@
+{
+  "unversionedId": "c-functions/all",
+  "id": "c-functions/all",
+  "title": "all(iterable)",
+  "description": "Input",
+  "source": "@site/docs/c-functions/all.md",
+  "sourceDirName": "c-functions",
+  "slug": "/c-functions/all",
+  "permalink": "/c-functions/all",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/c-functions/all.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "all"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a function?",
+    "permalink": "/c-functions/what-is-a-function"
+  },
+  "next": {
+    "title": "datetime_compare",
+    "permalink": "/c-functions/datetime_compare"
+  }
+}

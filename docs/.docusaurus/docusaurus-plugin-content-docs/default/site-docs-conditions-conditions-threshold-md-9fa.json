@@ -1,0 +1,26 @@
+{
+  "unversionedId": "conditions/conditions/threshold",
+  "id": "conditions/conditions/threshold",
+  "title": "🎯 Threshold",
+  "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+  "source": "@site/docs/conditions/conditions/threshold.md",
+  "sourceDirName": "conditions/conditions",
+  "slug": "/conditions/conditions/threshold",
+  "permalink": "/conditions/conditions/threshold",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/conditions/conditions/threshold.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Threshold"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Assert",
+    "permalink": "/conditions/conditions/assert"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/category/functions"
+  }
+}

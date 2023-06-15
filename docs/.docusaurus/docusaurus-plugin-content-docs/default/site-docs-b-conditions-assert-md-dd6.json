@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b-conditions/assert",
+  "id": "b-conditions/assert",
+  "title": "🎯 Assert",
+  "description": "The assert condition implements the \"python assert\" behaviour",
+  "source": "@site/docs/b-conditions/assert.md",
+  "sourceDirName": "b-conditions",
+  "slug": "/b-conditions/assert",
+  "permalink": "/b-conditions/assert",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b-conditions/assert.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "assert"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a condition?",
+    "permalink": "/b-conditions/what-is-a-condition"
+  },
+  "next": {
+    "title": "stddev",
+    "permalink": "/b-conditions/stddev"
+  }
+}

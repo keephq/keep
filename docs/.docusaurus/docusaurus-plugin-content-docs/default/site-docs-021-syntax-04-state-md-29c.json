@@ -1,0 +1,28 @@
+{
+  "unversionedId": "syntax/state",
+  "id": "syntax/state",
+  "title": "State",
+  "description": "Intro",
+  "source": "@site/docs/021_syntax/04-state.md",
+  "sourceDirName": "021_syntax",
+  "slug": "/syntax/state",
+  "permalink": "/syntax/state",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/021_syntax/04-state.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_label": "State",
+    "sidebar_position": 4
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Context syntax",
+    "permalink": "/syntax/context"
+  },
+  "next": {
+    "title": "Providers",
+    "permalink": "/category/providers"
+  }
+}

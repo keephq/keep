@@ -1,0 +1,15 @@
+{
+  "title": "Throttles",
+  "slug": "/category/throttles",
+  "permalink": "/category/throttles",
+  "navigation": {
+    "previous": {
+      "title": "datetime_compare",
+      "permalink": "/functions/datetime_compare"
+    },
+    "next": {
+      "title": "What is a throttle?",
+      "permalink": "/throttles/what-is-throttle"
+    }
+  }
+}

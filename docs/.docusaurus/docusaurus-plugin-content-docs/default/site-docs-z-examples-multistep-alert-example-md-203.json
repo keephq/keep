@@ -1,0 +1,24 @@
+{
+  "unversionedId": "z_examples/multistep-alert-example",
+  "id": "z_examples/multistep-alert-example",
+  "title": "Multistep Alert Example",
+  "description": "Steps",
+  "source": "@site/docs/z_examples/multistep-alert-example.md",
+  "sourceDirName": "z_examples",
+  "slug": "/z_examples/multistep-alert-example",
+  "permalink": "/z_examples/multistep-alert-example",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/z_examples/multistep-alert-example.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_label": "Multistep Alert Example",
+    "sidebar_position": 7
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Examples",
+    "permalink": "/category/examples"
+  }
+}

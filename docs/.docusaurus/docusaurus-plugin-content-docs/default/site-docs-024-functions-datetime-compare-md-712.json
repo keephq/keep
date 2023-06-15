@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/datetime_compare",
+  "id": "functions/datetime_compare",
+  "title": "datetime_compare",
+  "description": "Input",
+  "source": "@site/docs/024_functions/datetime_compare.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/datetime_compare",
+  "permalink": "/functions/datetime_compare",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/datetime_compare.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "datetime_compare"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "to_utc",
+    "permalink": "/functions/to_utc"
+  },
+  "next": {
+    "title": "Throttles",
+    "permalink": "/category/throttles"
+  }
+}

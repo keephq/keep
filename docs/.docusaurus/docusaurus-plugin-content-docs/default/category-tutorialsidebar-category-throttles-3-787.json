@@ -1,0 +1,15 @@
+{
+  "title": "Throttles",
+  "slug": "/category/throttles",
+  "permalink": "/category/throttles",
+  "navigation": {
+    "previous": {
+      "title": "Zenduty Provider",
+      "permalink": "/providers/documentation/zenduty"
+    },
+    "next": {
+      "title": "What is a Throttle?",
+      "permalink": "/throttles/what-is-throttle"
+    }
+  }
+}

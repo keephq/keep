@@ -1,0 +1,26 @@
+{
+  "unversionedId": "conditions copy/threshold",
+  "id": "conditions copy/threshold",
+  "title": "🎯 Threshold",
+  "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+  "source": "@site/docs/conditions copy/threshold.md",
+  "sourceDirName": "conditions copy",
+  "slug": "/conditions copy/threshold",
+  "permalink": "/conditions copy/threshold",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/conditions copy/threshold.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "threshold"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "stddev",
+    "permalink": "/conditions copy/stddev"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/category/functions"
+  }
+}

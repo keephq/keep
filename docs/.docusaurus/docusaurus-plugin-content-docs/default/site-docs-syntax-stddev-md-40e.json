@@ -1,0 +1,26 @@
+{
+  "unversionedId": "syntax/stddev",
+  "id": "syntax/stddev",
+  "title": "🎯 Stddev (Standard Deviation)",
+  "description": "The assert condition implements the \"python assert\" behaviour",
+  "source": "@site/docs/syntax/stddev.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/stddev",
+  "permalink": "/syntax/stddev",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/stddev.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "stddev"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "assert",
+    "permalink": "/syntax/assert"
+  },
+  "next": {
+    "title": "threshold",
+    "permalink": "/syntax/threshold"
+  }
+}

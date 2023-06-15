@@ -1,0 +1,15 @@
+{
+  "title": "Conditions",
+  "slug": "/category/syntax",
+  "permalink": "/category/syntax",
+  "navigation": {
+    "previous": {
+      "title": "Zenduty Provider",
+      "permalink": "/providers/documentation/zenduty"
+    },
+    "next": {
+      "title": "What is a condition?",
+      "permalink": "/syntax/what-is-a-condition"
+    }
+  }
+}

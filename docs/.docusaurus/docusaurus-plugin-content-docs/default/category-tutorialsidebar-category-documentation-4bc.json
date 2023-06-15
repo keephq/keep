@@ -1,0 +1,15 @@
+{
+  "title": "Documentation",
+  "slug": "/category/documentation",
+  "permalink": "/category/documentation",
+  "navigation": {
+    "previous": {
+      "title": "Adding a New Provider",
+      "permalink": "/providers/new-provider"
+    },
+    "next": {
+      "title": "Template",
+      "permalink": "/providers/documentation/template"
+    }
+  }
+}

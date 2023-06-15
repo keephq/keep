@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/cloudwatch-metrics",
+  "id": "providers/documentation/cloudwatch-metrics",
+  "title": "AWS CloudWatch Metrics",
+  "description": "WIP 👨🏻‍💻",
+  "source": "@site/docs/022_providers/documentation/cloudwatch-metrics.md",
+  "sourceDirName": "022_providers/documentation",
+  "slug": "/providers/documentation/cloudwatch-metrics",
+  "permalink": "/providers/documentation/cloudwatch-metrics",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/cloudwatch-metrics.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "CloudWatch Metrics"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CloudWatch Logs",
+    "permalink": "/providers/documentation/cloudwatch-logs"
+  },
+  "next": {
+    "title": "Console Provider",
+    "permalink": "/providers/documentation/console"
+  }
+}

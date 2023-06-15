@@ -1,0 +1,27 @@
+{
+  "unversionedId": "functions/split",
+  "id": "functions/split",
+  "title": "string(string, delimeter)",
+  "description": "Input",
+  "source": "@site/docs/024_functions/05-split.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/split",
+  "permalink": "/functions/split",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/05-split.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_label": "split"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "len",
+    "permalink": "/functions/len"
+  },
+  "next": {
+    "title": "first",
+    "permalink": "/functions/first"
+  }
+}

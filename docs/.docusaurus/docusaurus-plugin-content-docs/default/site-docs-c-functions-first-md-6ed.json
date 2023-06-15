@@ -1,0 +1,26 @@
+{
+  "unversionedId": "c-functions/first",
+  "id": "c-functions/first",
+  "title": "first(iterable)",
+  "description": "Input",
+  "source": "@site/docs/c-functions/first.md",
+  "sourceDirName": "c-functions",
+  "slug": "/c-functions/first",
+  "permalink": "/c-functions/first",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/c-functions/first.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "first"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "diff",
+    "permalink": "/c-functions/diff"
+  },
+  "next": {
+    "title": "len",
+    "permalink": "/c-functions/len"
+  }
+}

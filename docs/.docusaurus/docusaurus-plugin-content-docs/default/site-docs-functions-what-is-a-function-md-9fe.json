@@ -1,0 +1,28 @@
+{
+  "unversionedId": "functions/what-is-a-function",
+  "id": "functions/what-is-a-function",
+  "title": "What is a Function?",
+  "description": "|  To use a keep function, prefix it with keep., for example, use keep.len and not len  |",
+  "source": "@site/docs/functions/what-is-a-function.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/what-is-a-function",
+  "permalink": "/functions/what-is-a-function",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/what-is-a-function.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "What is a function?",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Functions",
+    "permalink": "/category/functions"
+  },
+  "next": {
+    "title": "all",
+    "permalink": "/functions/all"
+  }
+}

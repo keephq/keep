@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/pushover copy",
+  "id": "providers/documentation/pushover copy",
+  "title": "Pushover",
+  "description": "Pushover docs",
+  "source": "@site/docs/providers/documentation/pushover copy.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/pushover copy",
+  "permalink": "/providers/documentation/pushover copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/pushover copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Pushover Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "New Relic Provider",
+    "permalink": "/providers/documentation/new-relic"
+  },
+  "next": {
+    "title": "Pushover Provider",
+    "permalink": "/providers/documentation/pushover"
+  }
+}

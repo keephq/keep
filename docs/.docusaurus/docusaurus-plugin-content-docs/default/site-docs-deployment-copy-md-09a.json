@@ -1,0 +1,28 @@
+{
+  "unversionedId": "deployment copy",
+  "id": "deployment copy",
+  "title": "Getting Started",
+  "description": "Working on it right now... 👨🏻‍💻",
+  "source": "@site/docs/deployment copy.md",
+  "sourceDirName": ".",
+  "slug": "/deployment copy",
+  "permalink": "/deployment copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/deployment copy.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "Deployment",
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Quick Start",
+    "permalink": "/quick-start"
+  },
+  "next": {
+    "title": "Deployment",
+    "permalink": "/deployment"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "functions/utcnow",
+  "id": "functions/utcnow",
+  "title": "utcnow",
+  "description": "Input",
+  "source": "@site/docs/024_functions/07-utcnow.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/utcnow",
+  "permalink": "/functions/utcnow",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/07-utcnow.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_label": "utcnow"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "first",
+    "permalink": "/functions/first"
+  },
+  "next": {
+    "title": "to_utc",
+    "permalink": "/functions/to_utc"
+  }
+}

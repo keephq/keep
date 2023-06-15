@@ -1,0 +1,26 @@
+{
+  "unversionedId": "syntax/assert",
+  "id": "syntax/assert",
+  "title": "🎯 Assert",
+  "description": "The assert condition implements the \"python assert\" behaviour",
+  "source": "@site/docs/syntax/assert.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/assert",
+  "permalink": "/syntax/assert",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/assert.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "assert"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a condition?",
+    "permalink": "/syntax/what-is-a-condition"
+  },
+  "next": {
+    "title": "stddev",
+    "permalink": "/syntax/stddev"
+  }
+}

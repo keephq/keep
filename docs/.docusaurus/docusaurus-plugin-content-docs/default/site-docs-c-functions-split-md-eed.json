@@ -1,0 +1,26 @@
+{
+  "unversionedId": "c-functions/split",
+  "id": "c-functions/split",
+  "title": "string(string, delimeter)",
+  "description": "Input",
+  "source": "@site/docs/c-functions/split.md",
+  "sourceDirName": "c-functions",
+  "slug": "/c-functions/split",
+  "permalink": "/c-functions/split",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/c-functions/split.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "split"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "len",
+    "permalink": "/c-functions/len"
+  },
+  "next": {
+    "title": "to_utc",
+    "permalink": "/c-functions/to_utc"
+  }
+}

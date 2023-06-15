@@ -17,7 +17,11 @@
     "@headlessui/react": "^1.7.14",
     "@heroicons/react": "^2.0.18",
     "@svgr/webpack": "^8.0.1",
+<<<<<<< HEAD
     "@tremor/react": "^2.7.0",
+=======
+    "@tremor/react": "^2.11.0",
+>>>>>>> main
     "acorn": "^8.8.2",
     "acorn-jsx": "^5.3.2",
     "add": "^2.0.6",

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/postgresql",
+  "id": "b_providers/documentation/postgresql",
+  "title": "POSTGRESQL",
+  "description": "POSTGRESQL Provider is a provider used to query POSTGRES databases",
+  "source": "@site/docs/b_providers/documentation/postgresql.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/postgresql",
+  "permalink": "/b_providers/documentation/postgresql",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/postgresql.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "POSTGRESQL Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Pagerduty Provider",
+    "permalink": "/b_providers/documentation/pagerduty"
+  },
+  "next": {
+    "title": "Pushover Provider",
+    "permalink": "/b_providers/documentation/pushover"
+  }
+}

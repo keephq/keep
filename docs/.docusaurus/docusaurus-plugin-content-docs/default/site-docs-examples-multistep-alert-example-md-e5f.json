@@ -1,0 +1,28 @@
+{
+  "unversionedId": "examples/multistep-alert-example",
+  "id": "examples/multistep-alert-example",
+  "title": "Basic Syntax",
+  "description": "At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.",
+  "source": "@site/docs/examples/multistep-alert-example.md",
+  "sourceDirName": "examples",
+  "slug": "/examples/multistep-alert-example",
+  "permalink": "/examples/multistep-alert-example",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/examples/multistep-alert-example.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_label": "Multistep Alert Example",
+    "sidebar_position": 7
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Examples",
+    "permalink": "/category/examples"
+  },
+  "next": {
+    "title": "Introduction",
+    "permalink": "/"
+  }
+}

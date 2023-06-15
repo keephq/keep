@@ -1,0 +1,15 @@
+{
+  "title": "Examples",
+  "slug": "/category/examples",
+  "permalink": "/category/examples",
+  "navigation": {
+    "previous": {
+      "title": "One Until Resolved",
+      "permalink": "/throttles/one-until-resolved"
+    },
+    "next": {
+      "title": "Multistep Alert Example",
+      "permalink": "/examples/multistep-alert-example"
+    }
+  }
+}

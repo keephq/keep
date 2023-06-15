@@ -1,0 +1,1641 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "loadedVersions": [
+        {
+          "versionName": "current",
+          "label": "Next",
+          "banner": null,
+          "badge": false,
+          "noIndex": false,
+          "className": "docs-version-current",
+          "path": "/",
+          "tagsPath": "/tags",
+          "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs",
+          "editUrlLocalized": "https://github.com/keephq/keep/tree/main/docs/i18n/en/docusaurus-plugin-content-docs/current",
+          "isLast": true,
+          "routePriority": -1,
+          "sidebarFilePath": "/Users/shaharglazner/git/keep/docs/sidebars.js",
+          "contentPath": "/Users/shaharglazner/git/keep/docs/docs",
+          "contentPathLocalized": "/Users/shaharglazner/git/keep/docs/i18n/en/docusaurus-plugin-content-docs/current",
+          "docs": [
+            {
+              "unversionedId": "conditions/assert",
+              "id": "conditions/assert",
+              "title": "🎯 Assert",
+              "description": "The assert condition implements the \"python assert\" behaviour",
+              "source": "@site/docs/023_conditions/03-assert.md",
+              "sourceDirName": "023_conditions",
+              "slug": "/conditions/assert",
+              "permalink": "/conditions/assert",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/023_conditions/03-assert.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 3,
+              "frontMatter": {
+                "sidebar_label": "assert"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "threshold",
+                "permalink": "/conditions/threshold"
+              },
+              "next": {
+                "title": "stddev",
+                "permalink": "/conditions/stddev"
+              }
+            },
+            {
+              "unversionedId": "conditions/stddev",
+              "id": "conditions/stddev",
+              "title": "🎯 Stddev (Standard Deviation)",
+              "description": "The assert condition implements the \"python assert\" behaviour",
+              "source": "@site/docs/023_conditions/04-stddev.md",
+              "sourceDirName": "023_conditions",
+              "slug": "/conditions/stddev",
+              "permalink": "/conditions/stddev",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/023_conditions/04-stddev.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 4,
+              "frontMatter": {
+                "sidebar_label": "stddev"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "assert",
+                "permalink": "/conditions/assert"
+              },
+              "next": {
+                "title": "Functions",
+                "permalink": "/category/functions"
+              }
+            },
+            {
+              "unversionedId": "conditions/threshold",
+              "id": "conditions/threshold",
+              "title": "🎯 Threshold",
+              "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+              "source": "@site/docs/023_conditions/02-threshold.md",
+              "sourceDirName": "023_conditions",
+              "slug": "/conditions/threshold",
+              "permalink": "/conditions/threshold",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/023_conditions/02-threshold.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "threshold"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "What is a condition?",
+                "permalink": "/conditions/what-is-a-condition"
+              },
+              "next": {
+                "title": "assert",
+                "permalink": "/conditions/assert"
+              }
+            },
+            {
+              "unversionedId": "conditions/what-is-a-condition",
+              "id": "conditions/what-is-a-condition",
+              "title": "❓ What is a Condition",
+              "description": "Generally speaking, a condition is:",
+              "source": "@site/docs/023_conditions/01-what-is-a-condition.md",
+              "sourceDirName": "023_conditions",
+              "slug": "/conditions/what-is-a-condition",
+              "permalink": "/conditions/what-is-a-condition",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/023_conditions/01-what-is-a-condition.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "What is a condition?",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Conditions",
+                "permalink": "/category/conditions"
+              },
+              "next": {
+                "title": "threshold",
+                "permalink": "/conditions/threshold"
+              }
+            },
+            {
+              "unversionedId": "deployment",
+              "id": "deployment",
+              "title": "Deployment",
+              "description": "After writing some alerts with Keep, you now want to use Keep in production. For that, you may want to deploy Keep on an environment other than your local station.",
+              "source": "@site/docs/013-deployment.md",
+              "sourceDirName": ".",
+              "slug": "/deployment",
+              "permalink": "/deployment",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/013-deployment.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 3,
+              "frontMatter": {
+                "sidebar_label": "Deployment",
+                "sidebar_position": 3
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Quickstart",
+                "permalink": "/quick-start"
+              },
+              "next": {
+                "title": "Syntax",
+                "permalink": "/category/syntax"
+              }
+            },
+            {
+              "unversionedId": "examples/multistep-alert-example",
+              "id": "examples/multistep-alert-example",
+              "title": "Multistep Alert Example",
+              "description": "Steps",
+              "source": "@site/docs/026_examples/multistep-alert-example.md",
+              "sourceDirName": "026_examples",
+              "slug": "/examples/multistep-alert-example",
+              "permalink": "/examples/multistep-alert-example",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/026_examples/multistep-alert-example.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 7,
+              "frontMatter": {
+                "sidebar_label": "Multistep Alert Example",
+                "sidebar_position": 7
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Examples",
+                "permalink": "/category/examples"
+              }
+            },
+            {
+              "unversionedId": "functions/all",
+              "id": "functions/all",
+              "title": "all(iterable)",
+              "description": "Input",
+              "source": "@site/docs/024_functions/02-all.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/all",
+              "permalink": "/functions/all",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/02-all.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "all"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "What is a function?",
+                "permalink": "/functions/what-is-a-function"
+              },
+              "next": {
+                "title": "diff",
+                "permalink": "/functions/diff"
+              }
+            },
+            {
+              "unversionedId": "functions/datetime_compare",
+              "id": "functions/datetime_compare",
+              "title": "datetime_compare",
+              "description": "Input",
+              "source": "@site/docs/024_functions/09-datetime_compare.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/datetime_compare",
+              "permalink": "/functions/datetime_compare",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/09-datetime_compare.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 9,
+              "frontMatter": {
+                "sidebar_label": "datetime_compare"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "to_utc",
+                "permalink": "/functions/to_utc"
+              },
+              "next": {
+                "title": "Throttles",
+                "permalink": "/category/throttles"
+              }
+            },
+            {
+              "unversionedId": "functions/diff",
+              "id": "functions/diff",
+              "title": "diff(iterable)",
+              "description": "Input",
+              "source": "@site/docs/024_functions/03-diff.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/diff",
+              "permalink": "/functions/diff",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/03-diff.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 3,
+              "frontMatter": {
+                "sidebar_label": "diff"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "all",
+                "permalink": "/functions/all"
+              },
+              "next": {
+                "title": "len",
+                "permalink": "/functions/len"
+              }
+            },
+            {
+              "unversionedId": "functions/first",
+              "id": "functions/first",
+              "title": "first(iterable)",
+              "description": "Input",
+              "source": "@site/docs/024_functions/06-first.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/first",
+              "permalink": "/functions/first",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/06-first.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 6,
+              "frontMatter": {
+                "sidebar_label": "first"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "split",
+                "permalink": "/functions/split"
+              },
+              "next": {
+                "title": "utcnow",
+                "permalink": "/functions/utcnow"
+              }
+            },
+            {
+              "unversionedId": "functions/len",
+              "id": "functions/len",
+              "title": "len(iterable)",
+              "description": "Input",
+              "source": "@site/docs/024_functions/04-len.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/len",
+              "permalink": "/functions/len",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/04-len.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 4,
+              "frontMatter": {
+                "sidebar_label": "len"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "diff",
+                "permalink": "/functions/diff"
+              },
+              "next": {
+                "title": "split",
+                "permalink": "/functions/split"
+              }
+            },
+            {
+              "unversionedId": "functions/split",
+              "id": "functions/split",
+              "title": "string(string, delimeter)",
+              "description": "Input",
+              "source": "@site/docs/024_functions/05-split.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/split",
+              "permalink": "/functions/split",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/05-split.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 5,
+              "frontMatter": {
+                "sidebar_label": "split"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "len",
+                "permalink": "/functions/len"
+              },
+              "next": {
+                "title": "first",
+                "permalink": "/functions/first"
+              }
+            },
+            {
+              "unversionedId": "functions/to_utc",
+              "id": "functions/to_utc",
+              "title": "to_utc",
+              "description": "Input",
+              "source": "@site/docs/024_functions/08-to_utc.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/to_utc",
+              "permalink": "/functions/to_utc",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/08-to_utc.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 8,
+              "frontMatter": {
+                "sidebar_label": "to_utc"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "utcnow",
+                "permalink": "/functions/utcnow"
+              },
+              "next": {
+                "title": "datetime_compare",
+                "permalink": "/functions/datetime_compare"
+              }
+            },
+            {
+              "unversionedId": "functions/utcnow",
+              "id": "functions/utcnow",
+              "title": "utcnow",
+              "description": "Input",
+              "source": "@site/docs/024_functions/07-utcnow.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/utcnow",
+              "permalink": "/functions/utcnow",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/07-utcnow.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 7,
+              "frontMatter": {
+                "sidebar_label": "utcnow"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "first",
+                "permalink": "/functions/first"
+              },
+              "next": {
+                "title": "to_utc",
+                "permalink": "/functions/to_utc"
+              }
+            },
+            {
+              "unversionedId": "functions/what-is-a-function",
+              "id": "functions/what-is-a-function",
+              "title": "What is a Function?",
+              "description": "|  To use a keep function, prefix it with keep., for example, use keep.len and not len  |",
+              "source": "@site/docs/024_functions/01-what-is-a-function.md",
+              "sourceDirName": "024_functions",
+              "slug": "/functions/what-is-a-function",
+              "permalink": "/functions/what-is-a-function",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/01-what-is-a-function.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "What is a function?",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Functions",
+                "permalink": "/category/functions"
+              },
+              "next": {
+                "title": "all",
+                "permalink": "/functions/all"
+              }
+            },
+            {
+              "unversionedId": "introduction",
+              "id": "introduction",
+              "title": "Introduction",
+              "description": "🗼 A glance of Keep",
+              "source": "@site/docs/011-introduction.md",
+              "sourceDirName": ".",
+              "slug": "/",
+              "permalink": "/",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/011-introduction.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "Introduction",
+                "sidebar_position": 1,
+                "slug": "/"
+              },
+              "sidebar": "tutorialSidebar",
+              "next": {
+                "title": "Quickstart",
+                "permalink": "/quick-start"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/cloudwatch-logs",
+              "id": "providers/documentation/cloudwatch-logs",
+              "title": "AWS CloudWatch Logs",
+              "description": "CloudWatch Logs Provider is a provider used to query AWS CloudWatch Logs",
+              "source": "@site/docs/022_providers/documentation/cloudwatch-logs.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/cloudwatch-logs",
+              "permalink": "/providers/documentation/cloudwatch-logs",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/cloudwatch-logs.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "CloudWatch Logs"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Template",
+                "permalink": "/providers/documentation/template"
+              },
+              "next": {
+                "title": "CloudWatch Metrics",
+                "permalink": "/providers/documentation/cloudwatch-metrics"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/cloudwatch-metrics",
+              "id": "providers/documentation/cloudwatch-metrics",
+              "title": "AWS CloudWatch Metrics",
+              "description": "WIP 👨🏻‍💻",
+              "source": "@site/docs/022_providers/documentation/cloudwatch-metrics.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/cloudwatch-metrics",
+              "permalink": "/providers/documentation/cloudwatch-metrics",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/cloudwatch-metrics.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "CloudWatch Metrics"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "CloudWatch Logs",
+                "permalink": "/providers/documentation/cloudwatch-logs"
+              },
+              "next": {
+                "title": "Console Provider",
+                "permalink": "/providers/documentation/console"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/console",
+              "id": "providers/documentation/console",
+              "title": "Console",
+              "description": "Console provider is sort of a mock provider that projects given alert message to the console.",
+              "source": "@site/docs/022_providers/documentation/console.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/console",
+              "permalink": "/providers/documentation/console",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/console.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Console Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "CloudWatch Metrics",
+                "permalink": "/providers/documentation/cloudwatch-metrics"
+              },
+              "next": {
+                "title": "Discord Provider",
+                "permalink": "/providers/documentation/discord"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/discord",
+              "id": "providers/documentation/discord",
+              "title": "Discord",
+              "description": "Discord provider is a provider that allows to send notifications to Discord",
+              "source": "@site/docs/022_providers/documentation/discord.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/discord",
+              "permalink": "/providers/documentation/discord",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/discord.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Discord Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Console Provider",
+                "permalink": "/providers/documentation/console"
+              },
+              "next": {
+                "title": "Elastic Provider",
+                "permalink": "/providers/documentation/elastic"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/elastic",
+              "id": "providers/documentation/elastic",
+              "title": "Elastic",
+              "description": "Elastic provider is a provider used to query Elastic Search (tested with elastic.co)",
+              "source": "@site/docs/022_providers/documentation/elastic.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/elastic",
+              "permalink": "/providers/documentation/elastic",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/elastic.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Elastic Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Discord Provider",
+                "permalink": "/providers/documentation/discord"
+              },
+              "next": {
+                "title": "HTTP Provider",
+                "permalink": "/providers/documentation/http"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/http",
+              "id": "providers/documentation/http",
+              "title": "HTTP Provider",
+              "description": "HTTP Provider is a provider used to query/notify using HTTP requests",
+              "source": "@site/docs/022_providers/documentation/http.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/http",
+              "permalink": "/providers/documentation/http",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/http.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "HTTP Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Elastic Provider",
+                "permalink": "/providers/documentation/elastic"
+              },
+              "next": {
+                "title": "Mock Provider",
+                "permalink": "/providers/documentation/mock"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/mock",
+              "id": "providers/documentation/mock",
+              "title": "Mock",
+              "description": "Template Provider is a template for newly added provider's documentation",
+              "source": "@site/docs/022_providers/documentation/mock.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/mock",
+              "permalink": "/providers/documentation/mock",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/mock.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Mock Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "HTTP Provider",
+                "permalink": "/providers/documentation/http"
+              },
+              "next": {
+                "title": "MySQL Provider",
+                "permalink": "/providers/documentation/mysql"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/mysql",
+              "id": "providers/documentation/mysql",
+              "title": "MySQL",
+              "description": "MySQL Provider is a provider used to query MySQL databases",
+              "source": "@site/docs/022_providers/documentation/mysql.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/mysql",
+              "permalink": "/providers/documentation/mysql",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/mysql.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "MySQL Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Mock Provider",
+                "permalink": "/providers/documentation/mock"
+              },
+              "next": {
+                "title": "New Relic Provider",
+                "permalink": "/providers/documentation/new-relic"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/new-relic",
+              "id": "providers/documentation/new-relic",
+              "title": "New Relic",
+              "description": "Template Provider is a template for newly added provider's documentation",
+              "source": "@site/docs/022_providers/documentation/new-relic.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/new-relic",
+              "permalink": "/providers/documentation/new-relic",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/new-relic.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "New Relic Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "MySQL Provider",
+                "permalink": "/providers/documentation/mysql"
+              },
+              "next": {
+                "title": "Opsgenie Provider",
+                "permalink": "/providers/documentation/opsgenie"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/opsgenie",
+              "id": "providers/documentation/opsgenie",
+              "title": "OpsGenie Provider",
+              "description": "OpsGenie Provider is a provider that allows to create alerts in OpsGenie.",
+              "source": "@site/docs/022_providers/documentation/opsgenie.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/opsgenie",
+              "permalink": "/providers/documentation/opsgenie",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/opsgenie.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Opsgenie Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "New Relic Provider",
+                "permalink": "/providers/documentation/new-relic"
+              },
+              "next": {
+                "title": "Pagerduty Provider",
+                "permalink": "/providers/documentation/pagerduty"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/pagerduty",
+              "id": "providers/documentation/pagerduty",
+              "title": "Pagerduty Provider",
+              "description": "Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty.",
+              "source": "@site/docs/022_providers/documentation/pagerduty.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/pagerduty",
+              "permalink": "/providers/documentation/pagerduty",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/pagerduty.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Pagerduty Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Opsgenie Provider",
+                "permalink": "/providers/documentation/opsgenie"
+              },
+              "next": {
+                "title": "POSTGRESQL Provider",
+                "permalink": "/providers/documentation/postgresql"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/postgresql",
+              "id": "providers/documentation/postgresql",
+              "title": "POSTGRESQL",
+              "description": "POSTGRESQL Provider is a provider used to query POSTGRES databases",
+              "source": "@site/docs/022_providers/documentation/postgresql.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/postgresql",
+              "permalink": "/providers/documentation/postgresql",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/postgresql.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "POSTGRESQL Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Pagerduty Provider",
+                "permalink": "/providers/documentation/pagerduty"
+              },
+              "next": {
+                "title": "Pushover Provider",
+                "permalink": "/providers/documentation/pushover"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/pushover",
+              "id": "providers/documentation/pushover",
+              "title": "Pushover",
+              "description": "Pushover docs",
+              "source": "@site/docs/022_providers/documentation/pushover.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/pushover",
+              "permalink": "/providers/documentation/pushover",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/pushover.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Pushover Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "POSTGRESQL Provider",
+                "permalink": "/providers/documentation/postgresql"
+              },
+              "next": {
+                "title": "Sentry Provider",
+                "permalink": "/providers/documentation/sentry"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/sentry",
+              "id": "providers/documentation/sentry",
+              "title": "Sentry",
+              "description": "Template Provider is a template for newly added provider's documentation",
+              "source": "@site/docs/022_providers/documentation/sentry.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/sentry",
+              "permalink": "/providers/documentation/sentry",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/sentry.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Sentry Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Pushover Provider",
+                "permalink": "/providers/documentation/pushover"
+              },
+              "next": {
+                "title": "Slack Provider",
+                "permalink": "/providers/documentation/slack"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/slack",
+              "id": "providers/documentation/slack",
+              "title": "Slack",
+              "description": "Slack provider is a provider that allows to send notifications to Slack",
+              "source": "@site/docs/022_providers/documentation/slack.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/slack",
+              "permalink": "/providers/documentation/slack",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/slack.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Slack Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Sentry Provider",
+                "permalink": "/providers/documentation/sentry"
+              },
+              "next": {
+                "title": "Snowflake Provider",
+                "permalink": "/providers/documentation/snowflake"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/snowflake",
+              "id": "providers/documentation/snowflake",
+              "title": "Snowflake",
+              "description": "Template Provider is a template for newly added provider's documentation",
+              "source": "@site/docs/022_providers/documentation/snowflake.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/snowflake",
+              "permalink": "/providers/documentation/snowflake",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/snowflake.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Snowflake Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Slack Provider",
+                "permalink": "/providers/documentation/slack"
+              },
+              "next": {
+                "title": "SSH Provider",
+                "permalink": "/providers/documentation/ssh"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/ssh",
+              "id": "providers/documentation/ssh",
+              "title": "SSH",
+              "description": "The SSH Provider is a provider that provides a way to execute SSH commands and get their output.",
+              "source": "@site/docs/022_providers/documentation/ssh.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/ssh",
+              "permalink": "/providers/documentation/ssh",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/ssh.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "SSH Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Snowflake Provider",
+                "permalink": "/providers/documentation/snowflake"
+              },
+              "next": {
+                "title": "Teams Provider",
+                "permalink": "/providers/documentation/teams"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/teams",
+              "id": "providers/documentation/teams",
+              "title": "Teams Provider",
+              "description": "Teams Provider is a provider that allows to notify alerts to Microsoft Teams chats.",
+              "source": "@site/docs/022_providers/documentation/teams.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/teams",
+              "permalink": "/providers/documentation/teams",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/teams.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Teams Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "SSH Provider",
+                "permalink": "/providers/documentation/ssh"
+              },
+              "next": {
+                "title": "Telegram Provider",
+                "permalink": "/providers/documentation/telegram"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/telegram",
+              "id": "providers/documentation/telegram",
+              "title": "Telegram Provider",
+              "description": "Telegram Provider is a provider that allows to notify alerts to telegram chats.",
+              "source": "@site/docs/022_providers/documentation/telegram.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/telegram",
+              "permalink": "/providers/documentation/telegram",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/telegram.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Telegram Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Teams Provider",
+                "permalink": "/providers/documentation/teams"
+              },
+              "next": {
+                "title": "Zenduty Provider",
+                "permalink": "/providers/documentation/zenduty"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/template",
+              "id": "providers/documentation/template",
+              "title": "Template",
+              "description": "Template Provider is a template for newly added provider's documentation",
+              "source": "@site/docs/022_providers/documentation/template.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/template",
+              "permalink": "/providers/documentation/template",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/template.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "Template",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Documentation",
+                "permalink": "/category/documentation"
+              },
+              "next": {
+                "title": "CloudWatch Logs",
+                "permalink": "/providers/documentation/cloudwatch-logs"
+              }
+            },
+            {
+              "unversionedId": "providers/documentation/zenduty",
+              "id": "providers/documentation/zenduty",
+              "title": "Zenduty",
+              "description": "Zenduty docs",
+              "source": "@site/docs/022_providers/documentation/zenduty.md",
+              "sourceDirName": "022_providers/documentation",
+              "slug": "/providers/documentation/zenduty",
+              "permalink": "/providers/documentation/zenduty",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/zenduty.md",
+              "tags": [],
+              "version": "current",
+              "frontMatter": {
+                "sidebar_label": "Zenduty Provider"
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Telegram Provider",
+                "permalink": "/providers/documentation/telegram"
+              },
+              "next": {
+                "title": "Conditions",
+                "permalink": "/category/conditions"
+              }
+            },
+            {
+              "unversionedId": "providers/getting-started",
+              "id": "providers/getting-started",
+              "title": "👾 Providers",
+              "description": "We tried our best to cover all common providers.",
+              "source": "@site/docs/022_providers/03-getting-started.md",
+              "sourceDirName": "022_providers",
+              "slug": "/providers/getting-started",
+              "permalink": "/providers/getting-started",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/03-getting-started.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "Getting Started",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Providers",
+                "permalink": "/category/providers"
+              },
+              "next": {
+                "title": "What is a Provider?",
+                "permalink": "/providers/what-is-a-provider"
+              }
+            },
+            {
+              "unversionedId": "providers/new-provider",
+              "id": "providers/new-provider",
+              "title": "➕ New Provider",
+              "description": "Basics",
+              "source": "@site/docs/022_providers/02-new-provider.md",
+              "sourceDirName": "022_providers",
+              "slug": "/providers/new-provider",
+              "permalink": "/providers/new-provider",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/02-new-provider.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 3,
+              "frontMatter": {
+                "sidebar_label": "Adding a New Provider",
+                "sidebar_position": 3
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "What is a Provider?",
+                "permalink": "/providers/what-is-a-provider"
+              },
+              "next": {
+                "title": "Documentation",
+                "permalink": "/category/documentation"
+              }
+            },
+            {
+              "unversionedId": "providers/what-is-a-provider",
+              "id": "providers/what-is-a-provider",
+              "title": "❓ What is a Provider",
+              "description": "TL;DR",
+              "source": "@site/docs/022_providers/01-what-is-a-provider.md",
+              "sourceDirName": "022_providers",
+              "slug": "/providers/what-is-a-provider",
+              "permalink": "/providers/what-is-a-provider",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/01-what-is-a-provider.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "What is a Provider?",
+                "sidebar_position": 2
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Getting Started",
+                "permalink": "/providers/getting-started"
+              },
+              "next": {
+                "title": "Adding a New Provider",
+                "permalink": "/providers/new-provider"
+              }
+            },
+            {
+              "unversionedId": "quick-start",
+              "id": "quick-start",
+              "title": "🚀 Quickstart",
+              "description": "Run locally",
+              "source": "@site/docs/012-quick-start.md",
+              "sourceDirName": ".",
+              "slug": "/quick-start",
+              "permalink": "/quick-start",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/012-quick-start.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "Quickstart",
+                "sidebar_position": 2
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Introduction",
+                "permalink": "/"
+              },
+              "next": {
+                "title": "Deployment",
+                "permalink": "/deployment"
+              }
+            },
+            {
+              "unversionedId": "syntax/context",
+              "id": "syntax/context",
+              "title": "Working with context",
+              "description": "Keep uses Mustache syntax to inject context at runtime, supporting functions, dictionaries, lists, and nested access.",
+              "source": "@site/docs/021_syntax/03-context.md",
+              "sourceDirName": "021_syntax",
+              "slug": "/syntax/context",
+              "permalink": "/syntax/context",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/021_syntax/03-context.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 3,
+              "frontMatter": {
+                "sidebar_label": "Context syntax",
+                "sidebar_position": 3
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Foreach syntax",
+                "permalink": "/syntax/foreach"
+              },
+              "next": {
+                "title": "State",
+                "permalink": "/syntax/state"
+              }
+            },
+            {
+              "unversionedId": "syntax/foreach",
+              "id": "syntax/foreach",
+              "title": "Foreach",
+              "description": "Foreach syntax add the flexability of running action per result instead of only once on all results.",
+              "source": "@site/docs/021_syntax/02-foreach.md",
+              "sourceDirName": "021_syntax",
+              "slug": "/syntax/foreach",
+              "permalink": "/syntax/foreach",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/021_syntax/02-foreach.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "Foreach syntax",
+                "sidebar_position": 2
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Basic syntax",
+                "permalink": "/syntax/syntax"
+              },
+              "next": {
+                "title": "Context syntax",
+                "permalink": "/syntax/context"
+              }
+            },
+            {
+              "unversionedId": "syntax/state",
+              "id": "syntax/state",
+              "title": "State",
+              "description": "Intro",
+              "source": "@site/docs/021_syntax/04-state.md",
+              "sourceDirName": "021_syntax",
+              "slug": "/syntax/state",
+              "permalink": "/syntax/state",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/021_syntax/04-state.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 4,
+              "frontMatter": {
+                "sidebar_label": "State",
+                "sidebar_position": 4
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Context syntax",
+                "permalink": "/syntax/context"
+              },
+              "next": {
+                "title": "Providers",
+                "permalink": "/category/providers"
+              }
+            },
+            {
+              "unversionedId": "syntax/syntax",
+              "id": "syntax/syntax",
+              "title": "Basic Syntax",
+              "description": "At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.",
+              "source": "@site/docs/021_syntax/01-syntax.md",
+              "sourceDirName": "021_syntax",
+              "slug": "/syntax/syntax",
+              "permalink": "/syntax/syntax",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/021_syntax/01-syntax.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "Basic syntax",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Syntax",
+                "permalink": "/category/syntax"
+              },
+              "next": {
+                "title": "Foreach syntax",
+                "permalink": "/syntax/foreach"
+              }
+            },
+            {
+              "unversionedId": "throttles/one-until-resolved",
+              "id": "throttles/one-until-resolved",
+              "title": "🎯 One Until Resolved",
+              "description": "Introduction",
+              "source": "@site/docs/025_throttles/02-one-until-resolved.md",
+              "sourceDirName": "025_throttles",
+              "slug": "/throttles/one-until-resolved",
+              "permalink": "/throttles/one-until-resolved",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/025_throttles/02-one-until-resolved.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 2,
+              "frontMatter": {
+                "sidebar_label": "One Until Resolved",
+                "sidebar_position": 2
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "What is a throttle?",
+                "permalink": "/throttles/what-is-throttle"
+              },
+              "next": {
+                "title": "Examples",
+                "permalink": "/category/examples"
+              }
+            },
+            {
+              "unversionedId": "throttles/what-is-throttle",
+              "id": "throttles/what-is-throttle",
+              "title": "❓ What is a Throttle",
+              "description": "The purpose of throttling is to prevent any action from being triggered too many times, thus generating too many alerts.",
+              "source": "@site/docs/025_throttles/01-what-is-throttle.md",
+              "sourceDirName": "025_throttles",
+              "slug": "/throttles/what-is-throttle",
+              "permalink": "/throttles/what-is-throttle",
+              "draft": false,
+              "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/025_throttles/01-what-is-throttle.md",
+              "tags": [],
+              "version": "current",
+              "sidebarPosition": 1,
+              "frontMatter": {
+                "sidebar_label": "What is a throttle?",
+                "sidebar_position": 1
+              },
+              "sidebar": "tutorialSidebar",
+              "previous": {
+                "title": "Throttles",
+                "permalink": "/category/throttles"
+              },
+              "next": {
+                "title": "One Until Resolved",
+                "permalink": "/throttles/one-until-resolved"
+              }
+            }
+          ],
+          "drafts": [],
+          "sidebars": {
+            "tutorialSidebar": [
+              {
+                "type": "doc",
+                "id": "introduction",
+                "label": "Introduction"
+              },
+              {
+                "type": "doc",
+                "id": "quick-start",
+                "label": "Quickstart"
+              },
+              {
+                "type": "doc",
+                "id": "deployment",
+                "label": "Deployment"
+              },
+              {
+                "type": "category",
+                "label": "Syntax",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "syntax/syntax",
+                    "label": "Basic syntax"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "syntax/foreach",
+                    "label": "Foreach syntax"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "syntax/context",
+                    "label": "Context syntax"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "syntax/state",
+                    "label": "State"
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Syntax",
+                  "slug": "/category/syntax",
+                  "permalink": "/category/syntax"
+                }
+              },
+              {
+                "type": "category",
+                "label": "Providers",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "providers/getting-started",
+                    "label": "Getting Started"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "providers/what-is-a-provider",
+                    "label": "What is a Provider?"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "providers/new-provider",
+                    "label": "Adding a New Provider"
+                  },
+                  {
+                    "type": "category",
+                    "label": "Documentation",
+                    "collapsible": true,
+                    "collapsed": true,
+                    "items": [
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/template",
+                        "label": "Template"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/cloudwatch-logs",
+                        "label": "CloudWatch Logs"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/cloudwatch-metrics",
+                        "label": "CloudWatch Metrics"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/console",
+                        "label": "Console Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/discord",
+                        "label": "Discord Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/elastic",
+                        "label": "Elastic Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/http",
+                        "label": "HTTP Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/mock",
+                        "label": "Mock Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/mysql",
+                        "label": "MySQL Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/new-relic",
+                        "label": "New Relic Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/opsgenie",
+                        "label": "Opsgenie Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/pagerduty",
+                        "label": "Pagerduty Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/postgresql",
+                        "label": "POSTGRESQL Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/pushover",
+                        "label": "Pushover Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/sentry",
+                        "label": "Sentry Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/slack",
+                        "label": "Slack Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/snowflake",
+                        "label": "Snowflake Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/ssh",
+                        "label": "SSH Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/teams",
+                        "label": "Teams Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/telegram",
+                        "label": "Telegram Provider"
+                      },
+                      {
+                        "type": "doc",
+                        "id": "providers/documentation/zenduty",
+                        "label": "Zenduty Provider"
+                      }
+                    ],
+                    "link": {
+                      "type": "generated-index",
+                      "title": "Documentation",
+                      "slug": "/category/documentation",
+                      "permalink": "/category/documentation"
+                    }
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Providers",
+                  "slug": "/category/providers",
+                  "permalink": "/category/providers"
+                }
+              },
+              {
+                "type": "category",
+                "label": "Conditions",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "conditions/what-is-a-condition",
+                    "label": "What is a condition?"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "conditions/threshold",
+                    "label": "threshold"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "conditions/assert",
+                    "label": "assert"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "conditions/stddev",
+                    "label": "stddev"
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Conditions",
+                  "slug": "/category/conditions",
+                  "permalink": "/category/conditions"
+                }
+              },
+              {
+                "type": "category",
+                "label": "Functions",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "functions/what-is-a-function",
+                    "label": "What is a function?"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/all",
+                    "label": "all"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/diff",
+                    "label": "diff"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/len",
+                    "label": "len"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/split",
+                    "label": "split"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/first",
+                    "label": "first"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/utcnow",
+                    "label": "utcnow"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/to_utc",
+                    "label": "to_utc"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "functions/datetime_compare",
+                    "label": "datetime_compare"
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Functions",
+                  "slug": "/category/functions",
+                  "permalink": "/category/functions"
+                }
+              },
+              {
+                "type": "category",
+                "label": "Throttles",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "throttles/what-is-throttle",
+                    "label": "What is a throttle?"
+                  },
+                  {
+                    "type": "doc",
+                    "id": "throttles/one-until-resolved",
+                    "label": "One Until Resolved"
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Throttles",
+                  "slug": "/category/throttles",
+                  "permalink": "/category/throttles"
+                }
+              },
+              {
+                "type": "category",
+                "label": "Examples",
+                "collapsible": true,
+                "collapsed": true,
+                "items": [
+                  {
+                    "type": "doc",
+                    "id": "examples/multistep-alert-example",
+                    "label": "Multistep Alert Example"
+                  }
+                ],
+                "link": {
+                  "type": "generated-index",
+                  "title": "Examples",
+                  "slug": "/category/examples",
+                  "permalink": "/category/examples"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "docusaurus-plugin-content-pages": {
+    "default": [
+      {
+        "type": "mdx",
+        "permalink": "/markdown-page",
+        "source": "@site/src/pages/markdown-page.md",
+        "title": "Markdown page example",
+        "description": "You don't need React to write simple standalone pages.",
+        "frontMatter": {
+          "title": "Markdown page example"
+        }
+      }
+    ]
+  },
+  "docusaurus-plugin-debug": {},
+  "docusaurus-theme-classic": {},
+  "docusaurus-bootstrap-plugin": {},
+  "docusaurus-mdx-fallback-plugin": {}
+}

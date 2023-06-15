@@ -1,0 +1,28 @@
+{
+  "unversionedId": "context",
+  "id": "context",
+  "title": "Working with Context",
+  "description": "Keep uses Mustache syntax to inject context at runtime, supporting functions, dictionaries, lists, and nested access.",
+  "source": "@site/docs/04-context.md",
+  "sourceDirName": ".",
+  "slug": "/context",
+  "permalink": "/context",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/04-context.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_label": "Context",
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Deployment",
+    "permalink": "/deployment"
+  },
+  "next": {
+    "title": "State",
+    "permalink": "/state"
+  }
+}

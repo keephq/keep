@@ -1,0 +1,15 @@
+{
+  "title": "Providers",
+  "slug": "/category/providers",
+  "permalink": "/category/providers",
+  "navigation": {
+    "previous": {
+      "title": "State",
+      "permalink": "/syntax/state"
+    },
+    "next": {
+      "title": "Getting Started",
+      "permalink": "/providers/getting-started"
+    }
+  }
+}

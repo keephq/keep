@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/zenduty",
+  "id": "b_providers/documentation/zenduty",
+  "title": "Zenduty",
+  "description": "Zenduty docs",
+  "source": "@site/docs/b_providers/documentation/zenduty.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/zenduty",
+  "permalink": "/b_providers/documentation/zenduty",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/zenduty.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Zenduty Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Telegram Provider",
+    "permalink": "/b_providers/documentation/telegram"
+  },
+  "next": {
+    "title": "Conditions",
+    "permalink": "/category/conditions"
+  }
+}

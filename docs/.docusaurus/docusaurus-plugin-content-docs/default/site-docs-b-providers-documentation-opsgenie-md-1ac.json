@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/opsgenie",
+  "id": "b_providers/documentation/opsgenie",
+  "title": "OpsGenie Provider",
+  "description": "OpsGenie Provider is a provider that allows to create alerts in OpsGenie.",
+  "source": "@site/docs/b_providers/documentation/opsgenie.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/opsgenie",
+  "permalink": "/b_providers/documentation/opsgenie",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/opsgenie.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Opsgenie Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "New Relic Provider",
+    "permalink": "/b_providers/documentation/new-relic"
+  },
+  "next": {
+    "title": "Pagerduty Provider",
+    "permalink": "/b_providers/documentation/pagerduty"
+  }
+}

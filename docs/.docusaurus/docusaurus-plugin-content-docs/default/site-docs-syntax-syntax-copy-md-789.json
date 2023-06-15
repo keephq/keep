@@ -1,0 +1,28 @@
+{
+  "unversionedId": "syntax/syntax copy",
+  "id": "syntax/syntax copy",
+  "title": "Basic Syntax",
+  "description": "At Keep, we view alerts as workflows, which consist of a series of steps executed in sequence, each with its own specific input and output. To keep our approach simple, Keep's syntax is designed to closely resemble the syntax used in GitHub Actions. We believe that GitHub Actions has a well-established syntax, and there is no need to reinvent the wheel.",
+  "source": "@site/docs/syntax/syntax copy.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/syntax copy",
+  "permalink": "/syntax/syntax copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/syntax copy.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "Basic Syntax",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Syntax",
+    "permalink": "/category/syntax"
+  },
+  "next": {
+    "title": "Basic Syntax",
+    "permalink": "/syntax/"
+  }
+}

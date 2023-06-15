@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/documentation/first",
+  "id": "functions/documentation/first",
+  "title": "🚦 first()",
+  "description": "Working on it right now... 👨🏻‍💻",
+  "source": "@site/docs/functions/documentation/first.md",
+  "sourceDirName": "functions/documentation",
+  "slug": "/functions/documentation/first",
+  "permalink": "/functions/documentation/first",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/documentation/first.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "first"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Documentation",
+    "permalink": "/category/documentation"
+  },
+  "next": {
+    "title": "Providers",
+    "permalink": "/category/providers"
+  }
+}

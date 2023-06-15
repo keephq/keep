@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/snowflake",
+  "id": "providers/documentation/snowflake",
+  "title": "Snowflake",
+  "description": "Template Provider is a template for newly added provider's documentation",
+  "source": "@site/docs/022_providers/documentation/snowflake.md",
+  "sourceDirName": "022_providers/documentation",
+  "slug": "/providers/documentation/snowflake",
+  "permalink": "/providers/documentation/snowflake",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/snowflake.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Snowflake Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Slack Provider",
+    "permalink": "/providers/documentation/slack"
+  },
+  "next": {
+    "title": "SSH Provider",
+    "permalink": "/providers/documentation/ssh"
+  }
+}

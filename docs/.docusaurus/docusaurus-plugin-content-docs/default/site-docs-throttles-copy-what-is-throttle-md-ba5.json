@@ -1,0 +1,28 @@
+{
+  "unversionedId": "throttles copy/what-is-throttle",
+  "id": "throttles copy/what-is-throttle",
+  "title": "❓ What is a Throttle",
+  "description": "The purpose of throttling is to prevent any action from being triggered too many times, thus generating too many alerts.",
+  "source": "@site/docs/throttles copy/what-is-throttle.md",
+  "sourceDirName": "throttles copy",
+  "slug": "/throttles copy/what-is-throttle",
+  "permalink": "/throttles copy/what-is-throttle",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/throttles copy/what-is-throttle.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "What is a Throttle?",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Throttles",
+    "permalink": "/category/throttles-1"
+  },
+  "next": {
+    "title": "One Until Resolved",
+    "permalink": "/throttles copy/one-until-resolved"
+  }
+}

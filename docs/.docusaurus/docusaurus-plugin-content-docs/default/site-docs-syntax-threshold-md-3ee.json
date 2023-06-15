@@ -1,0 +1,26 @@
+{
+  "unversionedId": "syntax/threshold",
+  "id": "syntax/threshold",
+  "title": "🎯 Threshold",
+  "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+  "source": "@site/docs/syntax/threshold.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/threshold",
+  "permalink": "/syntax/threshold",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/threshold.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "threshold"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "stddev",
+    "permalink": "/syntax/stddev"
+  },
+  "next": {
+    "title": "Throttles",
+    "permalink": "/category/throttles"
+  }
+}

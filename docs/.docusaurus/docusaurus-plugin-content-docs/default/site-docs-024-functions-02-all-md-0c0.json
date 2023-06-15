@@ -1,0 +1,27 @@
+{
+  "unversionedId": "functions/all",
+  "id": "functions/all",
+  "title": "all(iterable)",
+  "description": "Input",
+  "source": "@site/docs/024_functions/02-all.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/all",
+  "permalink": "/functions/all",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/02-all.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_label": "all"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a function?",
+    "permalink": "/functions/what-is-a-function"
+  },
+  "next": {
+    "title": "diff",
+    "permalink": "/functions/diff"
+  }
+}

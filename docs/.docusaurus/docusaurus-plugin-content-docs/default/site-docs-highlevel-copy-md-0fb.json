@@ -1,0 +1,28 @@
+{
+  "unversionedId": "highlevel copy",
+  "id": "highlevel copy",
+  "title": "High Level Architecture 👨🏻‍💻",
+  "description": "Alert",
+  "source": "@site/docs/highlevel copy.md",
+  "sourceDirName": ".",
+  "slug": "/highlevel copy",
+  "permalink": "/highlevel copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/highlevel copy.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "High Level Architecture",
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Deployment",
+    "permalink": "/deployment"
+  },
+  "next": {
+    "title": "High Level Architecture",
+    "permalink": "/highlevel"
+  }
+}

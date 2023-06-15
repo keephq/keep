@@ -1,0 +1,15 @@
+{
+  "title": "Throttles",
+  "slug": "/category/documentation-3",
+  "permalink": "/category/documentation-3",
+  "navigation": {
+    "previous": {
+      "title": "What is a Throttle?",
+      "permalink": "/throttles/what-is-throttle"
+    },
+    "next": {
+      "title": "One Until Resolved",
+      "permalink": "/throttles/documentation/one-until-resolved"
+    }
+  }
+}

@@ -20,8 +20,8 @@ function InstallButton({ isInstalled }: { isInstalled: boolean }) {
           </p>
         }
         <a
-          className={`text-white text-[13px] font-mono rounded-md w-[220px] h-10 flex items-center justify-center whitespace-nowrap ${isInstalled ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 transition-all'}`}
-          href={isInstalled ? '#' : githubAppLink}
+          className="text-white text-[13px] font-mono bg-orange-500 hover:bg-orange-700 transition-all rounded-md w-[220px] h-10 flex items-center justify-center whitespace-nowrap"
+          href={githubAppLink}
           rel="noreferrer"
           aria-disabled={isInstalled}
           tabIndex={isInstalled ? -1 : 0}

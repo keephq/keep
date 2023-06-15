@@ -1,0 +1,15 @@
+{
+  "title": "Syntax",
+  "slug": "/category/syntax",
+  "permalink": "/category/syntax",
+  "navigation": {
+    "previous": {
+      "title": "Deployment",
+      "permalink": "/deployment"
+    },
+    "next": {
+      "title": "Basic syntax",
+      "permalink": "/syntax/syntax"
+    }
+  }
+}

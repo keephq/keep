@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/datetime_compare",
+  "id": "functions/datetime_compare",
+  "title": "datetime_compare",
+  "description": "Input",
+  "source": "@site/docs/functions/datetime_compare.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/datetime_compare",
+  "permalink": "/functions/datetime_compare",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/datetime_compare.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "datetime_compare"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "all",
+    "permalink": "/functions/all"
+  },
+  "next": {
+    "title": "diff",
+    "permalink": "/functions/diff"
+  }
+}

@@ -1,0 +1,298 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "introduction",
+          "docs": [
+            {
+              "id": "conditions/assert",
+              "path": "/conditions/assert",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "conditions/stddev",
+              "path": "/conditions/stddev",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "conditions/threshold",
+              "path": "/conditions/threshold",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "conditions/what-is-a-condition",
+              "path": "/conditions/what-is-a-condition",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "deployment",
+              "path": "/deployment",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "examples/multistep-alert-example",
+              "path": "/examples/multistep-alert-example",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/all",
+              "path": "/functions/all",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/datetime_compare",
+              "path": "/functions/datetime_compare",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/diff",
+              "path": "/functions/diff",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/first",
+              "path": "/functions/first",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/len",
+              "path": "/functions/len",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/split",
+              "path": "/functions/split",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/to_utc",
+              "path": "/functions/to_utc",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/utcnow",
+              "path": "/functions/utcnow",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "functions/what-is-a-function",
+              "path": "/functions/what-is-a-function",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "introduction",
+              "path": "/",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/cloudwatch-logs",
+              "path": "/providers/documentation/cloudwatch-logs",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/cloudwatch-metrics",
+              "path": "/providers/documentation/cloudwatch-metrics",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/console",
+              "path": "/providers/documentation/console",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/discord",
+              "path": "/providers/documentation/discord",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/elastic",
+              "path": "/providers/documentation/elastic",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/http",
+              "path": "/providers/documentation/http",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/mock",
+              "path": "/providers/documentation/mock",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/mysql",
+              "path": "/providers/documentation/mysql",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/new-relic",
+              "path": "/providers/documentation/new-relic",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/opsgenie",
+              "path": "/providers/documentation/opsgenie",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/pagerduty",
+              "path": "/providers/documentation/pagerduty",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/postgresql",
+              "path": "/providers/documentation/postgresql",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/pushover",
+              "path": "/providers/documentation/pushover",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/sentry",
+              "path": "/providers/documentation/sentry",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/slack",
+              "path": "/providers/documentation/slack",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/snowflake",
+              "path": "/providers/documentation/snowflake",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/ssh",
+              "path": "/providers/documentation/ssh",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/teams",
+              "path": "/providers/documentation/teams",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/telegram",
+              "path": "/providers/documentation/telegram",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/template",
+              "path": "/providers/documentation/template",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/documentation/zenduty",
+              "path": "/providers/documentation/zenduty",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/getting-started",
+              "path": "/providers/getting-started",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/new-provider",
+              "path": "/providers/new-provider",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "providers/what-is-a-provider",
+              "path": "/providers/what-is-a-provider",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "quick-start",
+              "path": "/quick-start",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "syntax/context",
+              "path": "/syntax/context",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "syntax/foreach",
+              "path": "/syntax/foreach",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "syntax/state",
+              "path": "/syntax/state",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "syntax/syntax",
+              "path": "/syntax/syntax",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "throttles/one-until-resolved",
+              "path": "/throttles/one-until-resolved",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "throttles/what-is-throttle",
+              "path": "/throttles/what-is-throttle",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/syntax",
+              "path": "/category/syntax",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/providers",
+              "path": "/category/providers",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/documentation",
+              "path": "/category/documentation",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/conditions",
+              "path": "/category/conditions",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/functions",
+              "path": "/category/functions",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/throttles",
+              "path": "/category/throttles",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/examples",
+              "path": "/category/examples",
+              "sidebar": "tutorialSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "tutorialSidebar": {
+              "link": {
+                "path": "/",
+                "label": "Introduction"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

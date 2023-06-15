@@ -1,0 +1,28 @@
+{
+  "unversionedId": "auto-completion",
+  "id": "auto-completion",
+  "title": "auto-completion",
+  "description": "",
+  "source": "@site/docs/auto-completion.md",
+  "sourceDirName": ".",
+  "slug": "/auto-completion",
+  "permalink": "/auto-completion",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/auto-completion.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_label": "Auto Completion",
+    "sidebar_position": 4
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "High Level Architecture",
+    "permalink": "/highlevel"
+  },
+  "next": {
+    "title": "Syntax",
+    "permalink": "/syntax"
+  }
+}

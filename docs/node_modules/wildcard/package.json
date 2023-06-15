@@ -1,0 +1,53 @@
+{
+  "name": "wildcard",
+  "description": "Wildcard matching tools",
+  "author": "Damon Oehlman <damon.oehlman@gmail.com>",
+  "keywords": [
+    "string",
+    "wildcard"
+  ],
+  "version": "2.0.0",
+  "dependencies": {},
+  "devDependencies": {
+    "tape": "^4.6.3"
+  },
+  "testling": {
+    "files": "test/all.js",
+    "browsers": {
+      "ie": [
+        "latest"
+      ],
+      "ff": [
+        "latest",
+        "nightly"
+      ],
+      "chrome": [
+        "latest",
+        "canary"
+      ],
+      "opera": [
+        "latest",
+        "next"
+      ],
+      "safari": [
+        "latest"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/DamonOehlman/wildcard.git"
+  },
+  "bugs": {
+    "url": "http://github.com/DamonOehlman/wildcard/issues"
+  },
+  "scripts": {
+    "test": "node test/all.js",
+    "gendocs": "gendocs > README.md"
+  },
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "license": "MIT"
+}

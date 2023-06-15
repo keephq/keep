@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/pagerduty",
+  "id": "providers/documentation/pagerduty",
+  "title": "Pagerduty Provider",
+  "description": "Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty.",
+  "source": "@site/docs/022_providers/documentation/pagerduty.md",
+  "sourceDirName": "022_providers/documentation",
+  "slug": "/providers/documentation/pagerduty",
+  "permalink": "/providers/documentation/pagerduty",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/pagerduty.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Pagerduty Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Opsgenie Provider",
+    "permalink": "/providers/documentation/opsgenie"
+  },
+  "next": {
+    "title": "POSTGRESQL Provider",
+    "permalink": "/providers/documentation/postgresql"
+  }
+}

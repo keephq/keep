@@ -1,0 +1,28 @@
+{
+  "unversionedId": "providers/getting-started",
+  "id": "providers/getting-started",
+  "title": "👾 Providers",
+  "description": "We tried our best to cover all common providers.",
+  "source": "@site/docs/022_providers/03-getting-started.md",
+  "sourceDirName": "022_providers",
+  "slug": "/providers/getting-started",
+  "permalink": "/providers/getting-started",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/03-getting-started.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "Getting Started",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Providers",
+    "permalink": "/category/providers"
+  },
+  "next": {
+    "title": "What is a Provider?",
+    "permalink": "/providers/what-is-a-provider"
+  }
+}

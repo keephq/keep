@@ -1,0 +1,27 @@
+{
+  "unversionedId": "conditions/assert",
+  "id": "conditions/assert",
+  "title": "🎯 Assert",
+  "description": "The assert condition implements the \"python assert\" behaviour",
+  "source": "@site/docs/023_conditions/03-assert.md",
+  "sourceDirName": "023_conditions",
+  "slug": "/conditions/assert",
+  "permalink": "/conditions/assert",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/023_conditions/03-assert.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "assert"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "threshold",
+    "permalink": "/conditions/threshold"
+  },
+  "next": {
+    "title": "stddev",
+    "permalink": "/conditions/stddev"
+  }
+}

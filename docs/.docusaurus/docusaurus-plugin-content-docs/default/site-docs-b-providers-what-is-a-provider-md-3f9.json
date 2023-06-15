@@ -1,0 +1,28 @@
+{
+  "unversionedId": "b_providers/what-is-a-provider",
+  "id": "b_providers/what-is-a-provider",
+  "title": "❓ What is a Provider",
+  "description": "TL;DR",
+  "source": "@site/docs/b_providers/what-is-a-provider.md",
+  "sourceDirName": "b_providers",
+  "slug": "/b_providers/what-is-a-provider",
+  "permalink": "/b_providers/what-is-a-provider",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/what-is-a-provider.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_label": "What is a Provider?",
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Getting Started",
+    "permalink": "/b_providers/getting-started"
+  },
+  "next": {
+    "title": "Adding a New Provider",
+    "permalink": "/b_providers/new-provider"
+  }
+}

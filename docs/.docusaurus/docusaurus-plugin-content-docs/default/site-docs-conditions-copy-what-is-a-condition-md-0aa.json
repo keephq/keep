@@ -1,0 +1,28 @@
+{
+  "unversionedId": "conditions copy/what-is-a-condition",
+  "id": "conditions copy/what-is-a-condition",
+  "title": "❓ What is a Condition",
+  "description": "Generally speaking, a condition is:",
+  "source": "@site/docs/conditions copy/what-is-a-condition.md",
+  "sourceDirName": "conditions copy",
+  "slug": "/conditions copy/what-is-a-condition",
+  "permalink": "/conditions copy/what-is-a-condition",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/conditions copy/what-is-a-condition.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "What is a condition?",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Conditions",
+    "permalink": "/category/conditions-1"
+  },
+  "next": {
+    "title": "assert",
+    "permalink": "/conditions copy/assert"
+  }
+}

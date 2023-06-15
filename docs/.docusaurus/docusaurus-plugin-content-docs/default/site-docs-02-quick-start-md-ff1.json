@@ -1,0 +1,28 @@
+{
+  "unversionedId": "quick-start",
+  "id": "quick-start",
+  "title": "🚀 Quickstart",
+  "description": "Run locally",
+  "source": "@site/docs/02-quick-start.md",
+  "sourceDirName": ".",
+  "slug": "/quick-start",
+  "permalink": "/quick-start",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/02-quick-start.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_label": "Quick Start",
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "State",
+    "permalink": "/syntax/state"
+  },
+  "next": {
+    "title": "Deployment",
+    "permalink": "/deployment"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "d-providers/documentation/discord",
+  "id": "d-providers/documentation/discord",
+  "title": "Discord",
+  "description": "Discord provider is a provider that allows to send notifications to Discord",
+  "source": "@site/docs/d-providers/documentation/discord.md",
+  "sourceDirName": "d-providers/documentation",
+  "slug": "/d-providers/documentation/discord",
+  "permalink": "/d-providers/documentation/discord",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/d-providers/documentation/discord.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Discord Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Console Provider",
+    "permalink": "/d-providers/documentation/console"
+  },
+  "next": {
+    "title": "Elastic Provider",
+    "permalink": "/d-providers/documentation/elastic"
+  }
+}

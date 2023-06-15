@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/to_utc",
+  "id": "functions/to_utc",
+  "title": "to_utc",
+  "description": "Input",
+  "source": "@site/docs/024_functions/to_utc.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/to_utc",
+  "permalink": "/functions/to_utc",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/to_utc.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "to_utc"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "datetime_compare",
+    "permalink": "/functions/datetime_compare"
+  },
+  "next": {
+    "title": "Throttles",
+    "permalink": "/category/throttles"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/zenduty",
+  "id": "providers/documentation/zenduty",
+  "title": "Zenduty",
+  "description": "Zenduty docs",
+  "source": "@site/docs/providers/documentation/zenduty.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/zenduty",
+  "permalink": "/providers/documentation/zenduty",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/zenduty.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Zenduty Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Telegram Provider",
+    "permalink": "/providers/documentation/telegram"
+  },
+  "next": {
+    "title": "Throttles",
+    "permalink": "/category/throttles"
+  }
+}

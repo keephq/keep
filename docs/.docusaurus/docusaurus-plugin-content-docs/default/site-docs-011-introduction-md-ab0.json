@@ -1,0 +1,25 @@
+{
+  "unversionedId": "introduction",
+  "id": "introduction",
+  "title": "Introduction",
+  "description": "🗼 A glance of Keep",
+  "source": "@site/docs/011-introduction.md",
+  "sourceDirName": ".",
+  "slug": "/",
+  "permalink": "/",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/011-introduction.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "Introduction",
+    "sidebar_position": 1,
+    "slug": "/"
+  },
+  "sidebar": "tutorialSidebar",
+  "next": {
+    "title": "Quickstart",
+    "permalink": "/quick-start"
+  }
+}

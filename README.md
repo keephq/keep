@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="/docs/static/img/keep.png?raw=true" width="86">
+    <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
 <h1 align="center">The open-source alerts management platform</h1>
@@ -16,7 +16,6 @@
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
-
 <h4 align="center">
 Keep enables you to create, manage, test, and maintain your alerts all in one place.
 </h4>
@@ -46,6 +45,11 @@ Keep enables you to create, manage, test, and maintain your alerts all in one pl
     ·
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
+
+#### 🚨 What is an alert?
+An alert is a human-readable notification that informs about the status of a service or a component. Alerts are sent, based on their urgency, to ticketing platforms, queues or directly to the owners of the components being affected.
+
+Having a structured alerting policy in your enviroment is pivotal to gain better visibility of the monitored components and reduce MTTD (Mean Time To Detect) of issues that could undermine the functionality of your system.
 
 #### 🚀 Quickstart
 Keep has two main component that play with each other:
@@ -113,7 +117,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 <div align="center">
     Voilà 🥳
     <br />
-    <img src="/docs/static/img/alert-example.png">
+    <img src="/assets/alert-example.png">
     <br />
     You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
     <br />

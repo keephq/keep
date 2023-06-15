@@ -1,0 +1,26 @@
+{
+  "unversionedId": "d-providers/documentation/mock",
+  "id": "d-providers/documentation/mock",
+  "title": "Mock",
+  "description": "Template Provider is a template for newly added provider's documentation",
+  "source": "@site/docs/d-providers/documentation/mock.md",
+  "sourceDirName": "d-providers/documentation",
+  "slug": "/d-providers/documentation/mock",
+  "permalink": "/d-providers/documentation/mock",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/d-providers/documentation/mock.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Mock Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "HTTP Provider",
+    "permalink": "/d-providers/documentation/http"
+  },
+  "next": {
+    "title": "MySQL Provider",
+    "permalink": "/d-providers/documentation/mysql"
+  }
+}

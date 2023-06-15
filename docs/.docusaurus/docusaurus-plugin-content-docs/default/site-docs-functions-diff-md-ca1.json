@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/diff",
+  "id": "functions/diff",
+  "title": "diff(iterable)",
+  "description": "Input",
+  "source": "@site/docs/functions/diff.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/diff",
+  "permalink": "/functions/diff",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/diff.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "diff"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "datetime_compare",
+    "permalink": "/functions/datetime_compare"
+  },
+  "next": {
+    "title": "first",
+    "permalink": "/functions/first"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/utcnow copy",
+  "id": "functions/utcnow copy",
+  "title": "utcnow",
+  "description": "Input",
+  "source": "@site/docs/functions/utcnow copy.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/utcnow copy",
+  "permalink": "/functions/utcnow copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/utcnow copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "utcnow"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "to_utc",
+    "permalink": "/functions/to_utc"
+  },
+  "next": {
+    "title": "utcnow",
+    "permalink": "/functions/utcnow"
+  }
+}

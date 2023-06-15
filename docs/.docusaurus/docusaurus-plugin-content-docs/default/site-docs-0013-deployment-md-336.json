@@ -1,0 +1,28 @@
+{
+  "unversionedId": "deployment",
+  "id": "deployment",
+  "title": "Deployment",
+  "description": "After writing some alerts with Keep, you now want to use Keep in production. For that, you may want to deploy Keep on an environment other than your local station.",
+  "source": "@site/docs/0013-deployment.md",
+  "sourceDirName": ".",
+  "slug": "/deployment",
+  "permalink": "/deployment",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/0013-deployment.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "Deployment",
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Quick Start",
+    "permalink": "/quick-start"
+  },
+  "next": {
+    "title": "Syntax",
+    "permalink": "/category/syntax"
+  }
+}

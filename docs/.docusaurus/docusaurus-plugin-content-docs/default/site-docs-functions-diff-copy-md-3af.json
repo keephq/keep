@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/diff copy",
+  "id": "functions/diff copy",
+  "title": "diff(iterable)",
+  "description": "Input",
+  "source": "@site/docs/functions/diff copy.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/diff copy",
+  "permalink": "/functions/diff copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/diff copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "diff"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "all",
+    "permalink": "/functions/all"
+  },
+  "next": {
+    "title": "diff",
+    "permalink": "/functions/diff"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/elastic",
+  "id": "b_providers/documentation/elastic",
+  "title": "Elastic",
+  "description": "Elastic provider is a provider used to query Elastic Search (tested with elastic.co)",
+  "source": "@site/docs/b_providers/documentation/elastic.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/elastic",
+  "permalink": "/b_providers/documentation/elastic",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/elastic.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Elastic Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Discord Provider",
+    "permalink": "/b_providers/documentation/discord"
+  },
+  "next": {
+    "title": "HTTP Provider",
+    "permalink": "/b_providers/documentation/http"
+  }
+}

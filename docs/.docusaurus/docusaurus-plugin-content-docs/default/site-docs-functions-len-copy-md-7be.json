@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/len copy",
+  "id": "functions/len copy",
+  "title": "len(iterable)",
+  "description": "Input",
+  "source": "@site/docs/functions/len copy.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/len copy",
+  "permalink": "/functions/len copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/len copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "len"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "first",
+    "permalink": "/functions/first"
+  },
+  "next": {
+    "title": "len",
+    "permalink": "/functions/len"
+  }
+}

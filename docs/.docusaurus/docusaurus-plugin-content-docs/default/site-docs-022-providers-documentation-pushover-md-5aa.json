@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/pushover",
+  "id": "providers/documentation/pushover",
+  "title": "Pushover",
+  "description": "Pushover docs",
+  "source": "@site/docs/022_providers/documentation/pushover.md",
+  "sourceDirName": "022_providers/documentation",
+  "slug": "/providers/documentation/pushover",
+  "permalink": "/providers/documentation/pushover",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/pushover.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Pushover Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "POSTGRESQL Provider",
+    "permalink": "/providers/documentation/postgresql"
+  },
+  "next": {
+    "title": "Sentry Provider",
+    "permalink": "/providers/documentation/sentry"
+  }
+}

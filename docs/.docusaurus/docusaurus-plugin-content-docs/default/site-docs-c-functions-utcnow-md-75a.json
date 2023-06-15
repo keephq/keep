@@ -1,0 +1,26 @@
+{
+  "unversionedId": "c-functions/utcnow",
+  "id": "c-functions/utcnow",
+  "title": "utcnow",
+  "description": "Input",
+  "source": "@site/docs/c-functions/utcnow.md",
+  "sourceDirName": "c-functions",
+  "slug": "/c-functions/utcnow",
+  "permalink": "/c-functions/utcnow",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/c-functions/utcnow.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "utcnow"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "to_utc",
+    "permalink": "/c-functions/to_utc"
+  },
+  "next": {
+    "title": "Providers",
+    "permalink": "/category/providers"
+  }
+}

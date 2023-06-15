@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/all copy",
+  "id": "functions/all copy",
+  "title": "all(iterable)",
+  "description": "Input",
+  "source": "@site/docs/functions/all copy.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/all copy",
+  "permalink": "/functions/all copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/all copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "first"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a Function?",
+    "permalink": "/functions/what-is-a-function"
+  },
+  "next": {
+    "title": "first",
+    "permalink": "/functions/all"
+  }
+}

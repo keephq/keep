@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/teams",
+  "id": "providers/documentation/teams",
+  "title": "Teams Provider",
+  "description": "Teams Provider is a provider that allows to notify alerts to Microsoft Teams chats.",
+  "source": "@site/docs/providers/documentation/teams.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/teams",
+  "permalink": "/providers/documentation/teams",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/teams.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Teams Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "SSH Provider",
+    "permalink": "/providers/documentation/ssh"
+  },
+  "next": {
+    "title": "Telegram Provider",
+    "permalink": "/providers/documentation/telegram"
+  }
+}

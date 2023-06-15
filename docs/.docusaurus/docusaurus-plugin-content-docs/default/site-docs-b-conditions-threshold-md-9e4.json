@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b-conditions/threshold",
+  "id": "b-conditions/threshold",
+  "title": "🎯 Threshold",
+  "description": "The threshold condition compare between two values, and returns positive (True) if applied.",
+  "source": "@site/docs/b-conditions/threshold.md",
+  "sourceDirName": "b-conditions",
+  "slug": "/b-conditions/threshold",
+  "permalink": "/b-conditions/threshold",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b-conditions/threshold.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "threshold"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "stddev",
+    "permalink": "/b-conditions/stddev"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/category/functions"
+  }
+}

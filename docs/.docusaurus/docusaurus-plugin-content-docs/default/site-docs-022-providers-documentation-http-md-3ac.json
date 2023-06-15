@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/http",
+  "id": "providers/documentation/http",
+  "title": "HTTP Provider",
+  "description": "HTTP Provider is a provider used to query/notify using HTTP requests",
+  "source": "@site/docs/022_providers/documentation/http.md",
+  "sourceDirName": "022_providers/documentation",
+  "slug": "/providers/documentation/http",
+  "permalink": "/providers/documentation/http",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/022_providers/documentation/http.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "HTTP Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Elastic Provider",
+    "permalink": "/providers/documentation/elastic"
+  },
+  "next": {
+    "title": "Mock Provider",
+    "permalink": "/providers/documentation/mock"
+  }
+}

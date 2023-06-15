@@ -1,0 +1,28 @@
+{
+  "unversionedId": "b_providers/documentation/template",
+  "id": "b_providers/documentation/template",
+  "title": "Template",
+  "description": "Template Provider is a template for newly added provider's documentation",
+  "source": "@site/docs/b_providers/documentation/template.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/template",
+  "permalink": "/b_providers/documentation/template",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/template.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "Template",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Documentation",
+    "permalink": "/category/documentation"
+  },
+  "next": {
+    "title": "CloudWatch Logs",
+    "permalink": "/b_providers/documentation/cloudwatch-logs"
+  }
+}

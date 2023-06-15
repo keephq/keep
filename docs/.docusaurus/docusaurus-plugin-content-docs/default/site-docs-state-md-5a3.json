@@ -1,0 +1,28 @@
+{
+  "unversionedId": "state",
+  "id": "state",
+  "title": "State",
+  "description": "Intro",
+  "source": "@site/docs/state.md",
+  "sourceDirName": ".",
+  "slug": "/state",
+  "permalink": "/state",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/state.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_label": "State",
+    "sidebar_position": 6
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Context",
+    "permalink": "/context"
+  },
+  "next": {
+    "title": "Conditions",
+    "permalink": "/category/conditions"
+  }
+}

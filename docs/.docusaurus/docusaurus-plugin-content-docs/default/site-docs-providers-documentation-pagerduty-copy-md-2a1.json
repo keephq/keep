@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/pagerduty copy",
+  "id": "providers/documentation/pagerduty copy",
+  "title": "Pagerduty Provider",
+  "description": "Pagerduty Provider is a provider that allows to create incidents or post events to Pagerduty.",
+  "source": "@site/docs/providers/documentation/pagerduty copy.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/pagerduty copy",
+  "permalink": "/providers/documentation/pagerduty copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/pagerduty copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Pagerduty Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "New Relic Provider",
+    "permalink": "/providers/documentation/new-relic"
+  },
+  "next": {
+    "title": "Pagerduty Provider",
+    "permalink": "/providers/documentation/pagerduty"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/mysql",
+  "id": "b_providers/documentation/mysql",
+  "title": "MySQL",
+  "description": "MySQL Provider is a provider used to query MySQL databases",
+  "source": "@site/docs/b_providers/documentation/mysql.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/mysql",
+  "permalink": "/b_providers/documentation/mysql",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/mysql.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "MySQL Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Mock Provider",
+    "permalink": "/b_providers/documentation/mock"
+  },
+  "next": {
+    "title": "New Relic Provider",
+    "permalink": "/b_providers/documentation/new-relic"
+  }
+}

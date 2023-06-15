@@ -1,0 +1,26 @@
+{
+  "unversionedId": "providers/documentation/slack",
+  "id": "providers/documentation/slack",
+  "title": "Slack",
+  "description": "Slack provider is a provider that allows to send notifications to Slack",
+  "source": "@site/docs/providers/documentation/slack.md",
+  "sourceDirName": "providers/documentation",
+  "slug": "/providers/documentation/slack",
+  "permalink": "/providers/documentation/slack",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/providers/documentation/slack.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Slack Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Sentry Provider",
+    "permalink": "/providers/documentation/sentry"
+  },
+  "next": {
+    "title": "Snowflake Provider",
+    "permalink": "/providers/documentation/snowflake"
+  }
+}

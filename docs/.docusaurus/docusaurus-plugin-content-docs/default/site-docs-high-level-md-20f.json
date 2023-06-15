@@ -1,0 +1,28 @@
+{
+  "unversionedId": "high-level",
+  "id": "high-level",
+  "title": "🧙‍♀️ High Level Architecture",
+  "description": "HLA",
+  "source": "@site/docs/high-level.md",
+  "sourceDirName": ".",
+  "slug": "/high-level",
+  "permalink": "/high-level",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/high-level.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_label": "High Level Architecture",
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Deployment",
+    "permalink": "/deployment"
+  },
+  "next": {
+    "title": "Syntax",
+    "permalink": "/syntax"
+  }
+}

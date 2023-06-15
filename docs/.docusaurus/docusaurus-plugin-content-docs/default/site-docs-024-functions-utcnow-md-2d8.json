@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/utcnow",
+  "id": "functions/utcnow",
+  "title": "utcnow",
+  "description": "Input",
+  "source": "@site/docs/024_functions/utcnow.md",
+  "sourceDirName": "024_functions",
+  "slug": "/functions/utcnow",
+  "permalink": "/functions/utcnow",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/024_functions/utcnow.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "utcnow"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "to_utc",
+    "permalink": "/functions/to_utc"
+  },
+  "next": {
+    "title": "Throttles",
+    "permalink": "/category/throttles"
+  }
+}

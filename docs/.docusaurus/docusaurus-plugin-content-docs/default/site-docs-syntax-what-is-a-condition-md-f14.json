@@ -1,0 +1,28 @@
+{
+  "unversionedId": "syntax/what-is-a-condition",
+  "id": "syntax/what-is-a-condition",
+  "title": "❓ What is a Condition",
+  "description": "Generally speaking, a condition is:",
+  "source": "@site/docs/syntax/what-is-a-condition.md",
+  "sourceDirName": "syntax",
+  "slug": "/syntax/what-is-a-condition",
+  "permalink": "/syntax/what-is-a-condition",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/syntax/what-is-a-condition.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "What is a condition?",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Syntax",
+    "permalink": "/category/syntax"
+  },
+  "next": {
+    "title": "assert",
+    "permalink": "/syntax/assert"
+  }
+}

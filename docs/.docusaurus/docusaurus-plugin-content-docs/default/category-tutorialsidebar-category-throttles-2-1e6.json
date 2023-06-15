@@ -1,0 +1,15 @@
+{
+  "title": "Throttles",
+  "slug": "/category/documentation-2",
+  "permalink": "/category/documentation-2",
+  "navigation": {
+    "previous": {
+      "title": "Adding a New Provider",
+      "permalink": "/providers/new-provider"
+    },
+    "next": {
+      "title": "Template",
+      "permalink": "/providers/documentation/template"
+    }
+  }
+}

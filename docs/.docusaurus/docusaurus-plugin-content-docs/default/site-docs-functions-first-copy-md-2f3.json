@@ -1,0 +1,26 @@
+{
+  "unversionedId": "functions/first copy",
+  "id": "functions/first copy",
+  "title": "first(iterable)",
+  "description": "Input",
+  "source": "@site/docs/functions/first copy.md",
+  "sourceDirName": "functions",
+  "slug": "/functions/first copy",
+  "permalink": "/functions/first copy",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/functions/first copy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "first"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a Function?",
+    "permalink": "/functions/what-is-a-function"
+  },
+  "next": {
+    "title": "first",
+    "permalink": "/functions/first"
+  }
+}

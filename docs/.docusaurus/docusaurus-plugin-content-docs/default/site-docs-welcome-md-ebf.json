@@ -1,0 +1,25 @@
+{
+  "unversionedId": "welcome",
+  "id": "welcome",
+  "title": "Keep Documentation",
+  "description": "🗼 A glance of Keep",
+  "source": "@site/docs/welcome.md",
+  "sourceDirName": ".",
+  "slug": "/",
+  "permalink": "/",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/welcome.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "What's Keep?",
+    "sidebar_position": 1,
+    "slug": "/"
+  },
+  "sidebar": "tutorialSidebar",
+  "next": {
+    "title": "Quick Start",
+    "permalink": "/quick-start"
+  }
+}

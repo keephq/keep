@@ -1,0 +1,28 @@
+{
+  "unversionedId": "d-providers/getting-started",
+  "id": "d-providers/getting-started",
+  "title": "👾 Providers",
+  "description": "We tried our best to cover all common providers.",
+  "source": "@site/docs/d-providers/getting-started.md",
+  "sourceDirName": "d-providers",
+  "slug": "/d-providers/getting-started",
+  "permalink": "/d-providers/getting-started",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/d-providers/getting-started.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_label": "Getting Started",
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Providers",
+    "permalink": "/category/providers"
+  },
+  "next": {
+    "title": "What is a Provider?",
+    "permalink": "/d-providers/what-is-a-provider"
+  }
+}

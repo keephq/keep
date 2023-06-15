@@ -1,0 +1,26 @@
+{
+  "unversionedId": "throttles/documentation/one-until-resolved",
+  "id": "throttles/documentation/one-until-resolved",
+  "title": "🎯 One Until Resolved",
+  "description": "The action will happen once until alert is resolved.",
+  "source": "@site/docs/throttles/documentation/one-until-resolved.md",
+  "sourceDirName": "throttles/documentation",
+  "slug": "/throttles/documentation/one-until-resolved",
+  "permalink": "/throttles/documentation/one-until-resolved",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/throttles/documentation/one-until-resolved.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "One Until Resolved"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Documentation",
+    "permalink": "/category/documentation-3"
+  },
+  "next": {
+    "title": "One Until Resolved",
+    "permalink": "/throttles/one-until-resolved"
+  }
+}

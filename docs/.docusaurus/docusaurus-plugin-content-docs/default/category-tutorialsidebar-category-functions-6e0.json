@@ -1,0 +1,15 @@
+{
+  "title": "Functions",
+  "slug": "/category/functions",
+  "permalink": "/category/functions",
+  "navigation": {
+    "previous": {
+      "title": "stddev",
+      "permalink": "/conditions/stddev"
+    },
+    "next": {
+      "title": "What is a function?",
+      "permalink": "/functions/what-is-a-function"
+    }
+  }
+}

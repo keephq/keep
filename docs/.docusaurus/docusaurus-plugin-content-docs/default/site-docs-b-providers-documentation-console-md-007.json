@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/console",
+  "id": "b_providers/documentation/console",
+  "title": "Console",
+  "description": "Console provider is sort of a mock provider that projects given alert message to the console.",
+  "source": "@site/docs/b_providers/documentation/console.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/console",
+  "permalink": "/b_providers/documentation/console",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/console.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Console Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "CloudWatch Metrics",
+    "permalink": "/b_providers/documentation/cloudwatch-metrics"
+  },
+  "next": {
+    "title": "Discord Provider",
+    "permalink": "/b_providers/documentation/discord"
+  }
+}

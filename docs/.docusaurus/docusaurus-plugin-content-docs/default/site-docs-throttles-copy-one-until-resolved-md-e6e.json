@@ -1,0 +1,24 @@
+{
+  "unversionedId": "throttles copy/one-until-resolved",
+  "id": "throttles copy/one-until-resolved",
+  "title": "🎯 One Until Resolved",
+  "description": "Intro",
+  "source": "@site/docs/throttles copy/one-until-resolved.md",
+  "sourceDirName": "throttles copy",
+  "slug": "/throttles copy/one-until-resolved",
+  "permalink": "/throttles copy/one-until-resolved",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/throttles copy/one-until-resolved.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_label": "One Until Resolved",
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "What is a Throttle?",
+    "permalink": "/throttles copy/what-is-throttle"
+  }
+}

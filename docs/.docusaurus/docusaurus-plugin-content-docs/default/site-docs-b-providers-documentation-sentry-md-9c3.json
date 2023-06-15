@@ -1,0 +1,26 @@
+{
+  "unversionedId": "b_providers/documentation/sentry",
+  "id": "b_providers/documentation/sentry",
+  "title": "Sentry",
+  "description": "Template Provider is a template for newly added provider's documentation",
+  "source": "@site/docs/b_providers/documentation/sentry.md",
+  "sourceDirName": "b_providers/documentation",
+  "slug": "/b_providers/documentation/sentry",
+  "permalink": "/b_providers/documentation/sentry",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/b_providers/documentation/sentry.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Sentry Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Pushover Provider",
+    "permalink": "/b_providers/documentation/pushover"
+  },
+  "next": {
+    "title": "Slack Provider",
+    "permalink": "/b_providers/documentation/slack"
+  }
+}

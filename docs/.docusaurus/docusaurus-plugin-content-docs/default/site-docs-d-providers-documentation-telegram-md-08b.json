@@ -1,0 +1,26 @@
+{
+  "unversionedId": "d-providers/documentation/telegram",
+  "id": "d-providers/documentation/telegram",
+  "title": "Telegram Provider",
+  "description": "Telegram Provider is a provider that allows to notify alerts to telegram chats.",
+  "source": "@site/docs/d-providers/documentation/telegram.md",
+  "sourceDirName": "d-providers/documentation",
+  "slug": "/d-providers/documentation/telegram",
+  "permalink": "/d-providers/documentation/telegram",
+  "draft": false,
+  "editUrl": "https://github.com/keephq/keep/tree/main/docs/docs/d-providers/documentation/telegram.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "sidebar_label": "Telegram Provider"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Teams Provider",
+    "permalink": "/d-providers/documentation/teams"
+  },
+  "next": {
+    "title": "Zenduty Provider",
+    "permalink": "/d-providers/documentation/zenduty"
+  }
+}
