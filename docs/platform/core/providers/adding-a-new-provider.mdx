@@ -1,0 +1,169 @@
+---
+title: "➕ New Provider"
+sidebarTitle: "Adding a New Provider"
+---
+
+### Basics
+
+- BaseProvider is the base class every provider needs to inherit from
+- BaseProvider exposes 4 important functions:
+  - `query(self, **kwargs: dict)` which is used to query the provider in steps
+  - `notify(self, **kwargs: dict)` which is used to notify via the provider in actions
+  - `dispose(self)` which is used to dispose the provider after usage (e.g. close the connection to the DB)
+  - `validate_config(self)` which is used to validate the configuration passed to the Provider
+- And 4 functions that are not required:
+  - `get_alerts(self)` which is used to fetch configured alerts (**not the currently active alerts**)
+  - `deploy_alert(self, alert: dict, alert_id: Optional[str]` which is used to deploy an alert to the provider
+  - `get_alert_schema(self)` which is used to describe the provider's API schema of how to deploy alert
+  - `get_logs(self, limit)` which is used to fetch logs from the provider (currently used by the AI layer to generate more accurate results)
+- Providers must be located in the providers directory
+- Provider directory must start with the provider's unique identifier followed by underscore+provider (e.g. `slack_provider`)
+- Provider file name must start with the provider's unique identifier followed by underscore+provider+.py (e.g. `slack_provider.py`)
+
+### ProviderConfig
+
+```python
+@dataclass
+class ProviderConfig:
+    """
+    Provider configuration model.
+
+    Args:
+        description (Optional[str]): The description of the provider.
+        authentication (dict): The configuration for the provider.
+    """
+
+    authentication: dict
+    description: Optional[str] = None
+
+    def __post_init__(self):
+        if not self.authentication:
+            return
+        for key, value in self.authentication.items():
+            if (
+                isinstance(value, str)
+                and value.startswith("{{")
+                and value.endswith("}}")
+            ):
+                self.authentication[key] = chevron.render(value, {"env": os.environ})
+```
+
+### BaseProvider
+
+```python
+class BaseProvider(metaclass=abc.ABCMeta):
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        """
+        Initialize a provider.
+
+        Args:
+            provider_id (str): The provider id.
+            **kwargs: Provider configuration loaded from the provider yaml file.
+        """
+        # Initalize logger for every provider
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.id = provider_id
+        self.config = config
+        self.validate_config()
+        self.logger.debug(
+            "Base provider initalized", extra={"provider": self.__class__.__name__}
+        )
+
+    @property
+    def provider_id(self) -> str:
+        """
+        Get the provider id.
+
+        Returns:
+            str: The provider id.
+        """
+        return self.id
+
+    @abc.abstractmethod
+    def dispose(self):
+        """
+        Dispose of the provider.
+        """
+        raise NotImplementedError("dispose() method not implemented")
+
+    @abc.abstractmethod
+    def validate_config():
+        """
+        Validate provider configuration.
+        """
+        raise NotImplementedError("validate_config() method not implemented")
+
+    def notify(self, **kwargs):
+        """
+        Output alert message.
+
+        Args:
+            **kwargs (dict): The provider context (with statement)
+        """
+        raise NotImplementedError("notify() method not implemented")
+
+    def query(self, **kwargs: dict):
+        """
+        Query the provider using the given query
+
+        Args:
+            kwargs (dict): The provider context (with statement)
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError("query() method not implemented")
+
+    def get_alerts(self, alert_id: Optional[str] = None):
+        """
+        Get alerts from the provider.
+
+        Args:
+            alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.
+        """
+        # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
+        raise NotImplementedError("get_alerts() method not implemented")
+
+    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+        """
+        Deploy an alert to the provider.
+
+        Args:
+            alert (dict): The alert to deploy.
+            alert_id (Optional[str], optional): If given, deploys a specific alert by id. Defaults to None.
+        """
+        raise NotImplementedError("deploy_alert() method not implemented")
+
+    @staticmethod
+    def get_alert_schema() -> dict:
+        """
+        Get the alert schema description for the provider.
+            e.g. How to define an alert for the provider that can be pushed via the API.
+
+        Returns:
+            str: The alert format description.
+        """
+        raise NotImplementedError(
+            "get_alert_format_description() method not implemented"
+        )
+
+    def get_logs(self, limit: int = 5) -> list:
+        """
+        Get logs from the provider.
+
+        Args:
+            limit (int): The number of logs to get.
+        """
+        raise NotImplementedError("get_logs() method not implemented")
+
+    def expose(self):
+        """Expose parameters that were calculated during query time.
+
+        Each provider can expose parameters that were calculated during query time.
+        E.g. parameters that were supplied by the user and were rendered by the provider.
+
+        A concrete example is the "_from" and "to" of the Datadog Provider which are calculated during execution.
+        """
+        # TODO - implement dynamically using decorators and
+        return {}
+```

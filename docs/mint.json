@@ -1,0 +1,149 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Keep",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#FA9E34",
+    "light": "#FA9E34",
+    "dark": "#FF9F36"
+  },
+  "topbarCtaButton": {
+    "name": "Login",
+    "url": "https://app.keephq.dev/"
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/keephq/keep"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Slack",
+      "icon": "slack",
+      "url": "https://keephq.dev/slack"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://medium.com/keepalerting"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": ["overview/introduction", "overview/quickstart"]
+    },
+    {
+      "group": "Platform",
+      "pages": [
+        "platform/getting-started",
+        {
+          "group": "Core",
+          "pages": [
+            {
+              "group": "Syntax",
+              "pages": [
+                "platform/core/syntax/basic-syntax",
+                "platform/core/syntax/foreach-syntax",
+                "platform/core/syntax/context-syntax",
+                "platform/core/syntax/slate"
+              ]
+            },
+            {
+              "group": "Providers",
+              "pages": [
+                "platform/core/providers/getting-started",
+                "platform/core/providers/what-is-a-provider",
+                "platform/core/providers/adding-a-new-provider",
+                {
+                  "group": "Documentation",
+                  "pages": [
+                    "platform/core/providers/documentation/template",
+                    "platform/core/providers/documentation/axiom-provider",
+                    "platform/core/providers/documentation/cloudwatch-logs",
+                    "platform/core/providers/documentation/cloudwatch-metrics",
+                    "platform/core/providers/documentation/console-provider",
+                    "platform/core/providers/documentation/discord-provider",
+                    "platform/core/providers/documentation/elastic-provider",
+                    "platform/core/providers/documentation/http-provider",
+                    "platform/core/providers/documentation/jira-provider",
+                    "platform/core/providers/documentation/mock-provider",
+                    "platform/core/providers/documentation/mysql-provider",
+                    "platform/core/providers/documentation/new-relic-provider",
+                    "platform/core/providers/documentation/opsgenie-provider",
+                    "platform/core/providers/documentation/pagerduty-provider",
+                    "platform/core/providers/documentation/postgresql-provider",
+                    "platform/core/providers/documentation/pushover-provider",
+                    "platform/core/providers/documentation/sentry-provider",
+                    "platform/core/providers/documentation/slack-provider",
+                    "platform/core/providers/documentation/snowflake-provider",
+                    "platform/core/providers/documentation/ssh-provider",
+                    "platform/core/providers/documentation/teams-provider",
+                    "platform/core/providers/documentation/telegram-provider",
+                    "platform/core/providers/documentation/trello-provider",
+                    "platform/core/providers/documentation/zenduty-provider"
+                  ]
+                }
+              ]
+            },
+            {
+              "group": "Conditions",
+              "pages": [
+                "platform/core/conditions/what-is-a-condition",
+                "platform/core/conditions/threshold",
+                "platform/core/conditions/assert",
+                "platform/core/conditions/stddev"
+              ]
+            },
+            {
+              "group": "Functions",
+              "pages": [
+                "platform/core/functions/what-is-a-function",
+                "platform/core/functions/all",
+                "platform/core/functions/diff",
+                "platform/core/functions/len",
+                "platform/core/functions/split",
+                "platform/core/functions/first",
+                "platform/core/functions/utcnow",
+                "platform/core/functions/to-utc",
+                "platform/core/functions/datetime-compare",
+                "platform/core/functions/encode",
+                {
+                  "group": "Throttles",
+                  "pages": [
+                    "platform/core/throttles/what-is-a-throttle",
+                    "platform/core/throttles/one-until-resolved"
+                  ]
+                },
+                {
+                  "group": "Examples",
+                  "pages": ["platform/core/examples/multi-step-alert"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "group": "UI",
+          "pages": ["platform/ui/getting-started"]
+        }
+      ]
+    },
+    {
+      "group": "Applications",
+      "pages": ["applications/github"]
+    },
+    {
+      "group": "Deployment",
+      "pages": ["deployment"]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/keephq/keep"
+  }
+}
