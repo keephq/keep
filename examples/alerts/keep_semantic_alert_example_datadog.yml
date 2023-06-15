@@ -12,11 +12,11 @@ alert:
   steps:
   - name: check-error-rate
     provider:
-    type: datadog
-    config: "{{ providers.datadog-config }}"
-    with:
-      query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
-      timeframe: "1h"
+      type: datadog
+      config: "{{ providers.datadog-config }}"
+      with:
+        query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
+        timeframe: "1h"
   actions:
     - name: notify-slack
       condition:

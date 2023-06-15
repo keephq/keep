@@ -69,10 +69,22 @@ export function useSession<R extends boolean>(
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return useCustomSession();
   }
-  
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const session = useNextAuthSession(options);
-  
+  let session;
+  try{
+    session = useNextAuthSession(options);
+  }
+  catch(e){
+    console.log(e);
+    return {
+      status: "unauthenticated",
+      update:  null as unknown as UpdateSession,
+      data: null,
+    }
+  }
+
+
   // Return the original session object as is
   return session;
 }
