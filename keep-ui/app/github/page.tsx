@@ -33,7 +33,7 @@ function InstallButton() {
   );
 }
 
-export default function GitHubPage() {
+export default function GitHubPage(isInstalled: boolean) {
   return (
     <main className="flex flex-col items-center justify-center h-screen pb-20">
       <InstallButton />
