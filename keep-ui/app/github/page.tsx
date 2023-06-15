@@ -15,7 +15,7 @@ function InstallButton() {
           To start with Keep, first install GitHub Bot.
         </p>
         <a
-          className="text-white text-[13px] font-mono bg-blue-500 hover:bg-blue-700 transition-all rounded-md w-[220px] h-10 flex items-center justify-center whitespace-nowrap"
+          className="text-white text-[13px] font-mono bg-orange-500 hover:bg-orange-700 transition-all rounded-md w-[220px] h-10 flex items-center justify-center whitespace-nowrap"
           href={githubAppLink}
           rel="noreferrer"
         >
