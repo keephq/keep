@@ -129,7 +129,7 @@ keep run --alerts-file examples/alerts/db_disk_space.yml
 Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
 
 ```bash
-docker run -v ${PWD}:/app -it keephq/cli config provider --provider-type slack --provider-id slack-demo
+docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli config provider --provider-type slack --provider-id slack-demo
 ```
 
 You should now have a providers.yaml file created locally
@@ -137,7 +137,7 @@ You should now have a providers.yaml file created locally
 Run Keep and execute our example "Paper DB has insufficient disk space" alert
 
 ```bash
-docker run -v ${PWD}:/app -it keephq/cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
+docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
 ```
 
 ##### Render

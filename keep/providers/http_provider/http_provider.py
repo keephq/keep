@@ -25,11 +25,28 @@ class HttpProvider(BaseProvider):
         No configuration to validate here
         """
 
-    def notify(self, **kwargs):
+    def notify(
+        self,
+        url: str,
+        method: typing.Literal["GET", "POST", "PUT", "DELETE"],
+        headers: dict = None,
+        body: dict = None,
+        params: dict = None,
+        proxies: dict = None,
+        **kwargs,
+    ):
         """
         Send a HTTP request to the given url.
         """
-        self.query(**kwargs)
+        self.query(
+            url=url,
+            method=method,
+            headers=headers,
+            body=body,
+            params=params,
+            proxies=proxies,
+            **kwargs,
+        )
 
     def _query(
         self,
@@ -38,8 +55,9 @@ class HttpProvider(BaseProvider):
         headers: dict = None,
         body: dict = None,
         params: dict = None,
+        proxies: dict = None,
         **kwargs: dict,
-    ) -> dict | str:
+    ) -> dict:
         """
         Send a HTTP request to the given url.
         """
@@ -61,13 +79,21 @@ class HttpProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(
+                url, headers=headers, params=params, proxies=proxies, **kwargs
+            )
         elif method == "POST":
-            response = requests.post(url, headers=headers, json=body)
+            response = requests.post(
+                url, headers=headers, json=body, proxies=proxies, **kwargs
+            )
         elif method == "PUT":
-            response = requests.put(url, headers=headers, json=body)
+            response = requests.put(
+                url, headers=headers, json=body, proxies=proxies, **kwargs
+            )
         elif method == "DELETE":
-            response = requests.delete(url, headers=headers, json=body)
+            response = requests.delete(
+                url, headers=headers, json=body, proxies=proxies, **kwargs
+            )
         else:
             raise Exception(f"Unsupported HTTP method: {method}")
 
@@ -81,7 +107,12 @@ class HttpProvider(BaseProvider):
             },
         )
 
+        result = {"status": response.ok, "status_code": response.status_code}
+
         try:
-            return response.json()
+            body = response.json()
         except JSONDecodeError:
-            return response.text
+            body = response.text
+
+        result["body"] = body
+        return result

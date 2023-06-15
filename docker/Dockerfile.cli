@@ -16,7 +16,7 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
 COPY . .
-RUN poetry build && /venv/bin/pip install dist/*.whl
+RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
 FROM base as final
 
