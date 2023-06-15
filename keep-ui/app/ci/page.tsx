@@ -39,3 +39,8 @@ export default async function CicdPage() {
     <GitHubPage/>
   )
 }
+
+export const metadata = {
+  title: "Keep - CI",
+  description: "Integrate Keep Bot with your SDLC.",
+};
