@@ -58,7 +58,7 @@ Keep has two main component that play with each other:
 #### Keep UI
 The easiest way to start with Keep is to run it via docker-compose:
 ```shell
-wget -O docker-compose.yml https://github.com/keephq/keep/blob/main/docker-compose.yml
+wget -O docker-compose.yml https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml
 docker-compose -f docker-compose.yml up
 ```
 Keep UI is now available at http://localhost:3000
