@@ -1,5 +1,3 @@
-#!/bin/bash
-
 if [ -n "$VERCEL_GIT_COMMIT_REF" ]; then
     branch_name_sanitized=$(echo $VERCEL_GIT_COMMIT_REF | sed 's/\//-/g' | cut -c 1-63)
     # Here we replace 'keep-api' in the URL with 'keep-api-{sanitizedBranchName}' if the branch is not main
