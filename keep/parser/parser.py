@@ -100,6 +100,7 @@ class Parser:
         alert_tags = self._parse_tags(alert)
         alert_steps = self._parse_steps(alert)
         alert_actions = self._parse_actions(alert)
+        on_failure_action = self._get_on_failure_action(alert)
         alert = Alert(
             alert_id=alert_id,
             alert_source=alert_source,
@@ -107,6 +108,7 @@ class Parser:
             alert_tags=alert_tags,
             alert_steps=alert_steps,
             alert_actions=alert_actions,
+            on_failure=on_failure_action,
         )
         self.logger.debug("Alert parsed successfully")
         return alert
@@ -229,30 +231,52 @@ class Parser:
         )
         return provider
 
+    def _get_action(self, action: dict, action_name: str | None = None) -> Action:
+        name = action_name or action.get("name")
+        provider_config = action.get("provider").get("config")
+        provider_context = action.get("provider").get("with", {})
+        provider_type = action.get("provider").get("type")
+        provider_id, provider_config = self._parse_provider_config(
+            provider_type, provider_config
+        )
+        provider = ProvidersFactory.get_provider(
+            provider_id, provider_type, provider_config, **provider_context
+        )
+        action = Action(
+            name=name,
+            provider=provider,
+            config=action,
+            provider_context=provider_context,
+        )
+        return action
+
     def _parse_actions(self, alert) -> typing.List[Action]:
         self.logger.debug("Parsing actions")
         alert_actions = alert.get("actions", [])
         alert_actions_parsed = []
         for _action in alert_actions:
-            name = _action.get("name")
-            provider_config = _action.get("provider").get("config")
-            provider_context = _action.get("provider").get("with")
-            provider_type = _action.get("provider").get("type")
-            provider_id, provider_config = self._parse_provider_config(
-                provider_type, provider_config
-            )
-            provider = ProvidersFactory.get_provider(
-                provider_id, provider_type, provider_config, **provider_context
-            )
-            action = Action(
-                name=name,
-                provider=provider,
-                config=_action,
-                provider_context=provider_context,
-            )
-            alert_actions_parsed.append(action)
+            parsed_action = self._get_action(_action)
+            alert_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
+
+    def _get_on_failure_action(self, alert) -> Action | None:
+        """
+        Parse the on-failure action
+
+        Args:
+            alert (_type_): _description_
+
+        Returns:
+            Action | None: _description_
+        """
+        self.logger.debug("Parsing on-faliure")
+        alert_on_failure = alert.get("on-failure", {})
+        if alert_on_failure:
+            parsed_action = self._get_action(alert_on_failure, "on-faliure")
+            self.logger.debug("Parsed on-failure successfully")
+            return parsed_action
+        self.logger.debug("No on-failure action")
 
     def _extract_provider_id(self, provider_type: str):
         """
