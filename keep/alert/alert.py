@@ -24,6 +24,7 @@ class Alert:
     alert_steps: typing.List[Step]
     alert_actions: typing.List[Action]
     alert_file: str = None
+    on_failure: Action = None
 
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
