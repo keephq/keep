@@ -34,7 +34,10 @@ class AlertManager:
                 "Running in interval mode. Press Ctrl+C to stop the process."
             )
             while True:
-                self._run(alerts_path, providers_file)
+                try:
+                    self._run(alerts_path, providers_file)
+                except Exception:
+                    self.logger.exception("Error running alert in interval mode")
                 self.logger.info(f"Sleeping for {interval} seconds...")
                 time.sleep(interval)
         # If interval is not set, run the alert once
