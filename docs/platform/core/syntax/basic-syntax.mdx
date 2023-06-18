@@ -51,6 +51,7 @@ alert:
 - Metadata (id, description. owners and tags will be added soon)
 - `steps` - list of steps
 - `actions` - list of actions
+- `on-failure` - a conditionless action used in case of an alert failure
 
 ### Steps
 ```yaml
@@ -118,4 +119,14 @@ actions:
 
 The `provider` configuration is already covered in [Providers](syntax#provider)
 
-_*** Actions are the last section of an alert_
+### On-failure
+```yaml
+on-failure:
+    # Just need a provider we can use to send the failure reason
+    provider:
+      type: slack
+      config: " {{ providers.slack-demo }} "
+```
+
+On-failure is actually a condtionless `Action` used to notify in case the alert failed with an exception.
+The provider is passed a `message` (string) to it's `notify` function.

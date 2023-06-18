@@ -110,6 +110,16 @@ class AlertManager:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
+                if alert.on_failure:
+                    self.logger.info(
+                        f"Running on_failure action for alert {alert.alert_id}"
+                    )
+                    # Adding the exception message to the provider context so it'll be available for the action
+                    message = (
+                        f"Alert `{alert.alert_id}` failed with exception: `{str(e)}`"
+                    )
+                    alert.on_failure.provider_context = {"message": message}
+                    alert.on_failure.run()
                 raise
             if any(errors):
                 self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
