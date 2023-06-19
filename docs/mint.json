@@ -86,7 +86,8 @@
                     "platform/core/providers/documentation/teams-provider",
                     "platform/core/providers/documentation/telegram-provider",
                     "platform/core/providers/documentation/trello-provider",
-                    "platform/core/providers/documentation/zenduty-provider"
+                    "platform/core/providers/documentation/zenduty-provider",
+                    "platform/core/providers/documentation/resend-provider"
                   ]
                 }
               ]
