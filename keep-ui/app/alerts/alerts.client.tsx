@@ -9,11 +9,14 @@ import {
   BadgeDelta,
   DeltaType,
   Icon,
+  MultiSelectBox,
+  MultiSelectBoxItem,
 } from "@tremor/react";
 import Image from "next/image";
 import { Alert, AlertTableKeys, Severity } from "./models";
 import { ShieldCheckIcon } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
+import { useState } from "react";
 
 const mockAlerts: Alert[] = [
   {
@@ -154,61 +157,91 @@ function getSeverity(severity: Severity | undefined) {
   );
 }
 
+function onlyUnique(value: string, index: number, array: string[]) {
+  return array.indexOf(value) === index;
+}
+
 export default function AlertsPage() {
+  const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
+    []
+  );
+
+  const environments = mockAlerts
+    .map((alert) => alert.environment)
+    .filter(onlyUnique);
+  const environmentIsSeleected = (alert: Alert) =>
+    selectedEnvironments.length === 0 ||
+    selectedEnvironments.includes(alert.environment);
+
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
-          {AlertTableKeys.map((key) => (
-            <TableHeaderCell key={key}>{key}</TableHeaderCell>
-          ))}
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {mockAlerts.map((alert) => {
-          return (
-            <TableRow key={alert.id}>
-              <TableCell>
-                <div className="menu"></div>
-              </TableCell>
-              <TableCell>{getSeverity(alert.severity)}</TableCell>
-              <TableCell>{alert.status}</TableCell>
-              <TableCell>{alert.lastReceived.toDateString()}</TableCell>
-              <TableCell className="flex justify-center" align="center">
-                {alert.isDuplicate ? (
-                  <Icon
-                    icon={ShieldCheckIcon}
-                    variant="light"
-                    color="orange"
-                    tooltip="This alert is a duplicate"
-                    size="xs"
-                  />
-                ) : null}
-              </TableCell>
-              <TableCell>{alert.environment}</TableCell>
-              <TableCell>{alert.service}</TableCell>
-              <TableCell>
-                {alert.source?.map((source) => {
-                  return (
-                    <Image
-                      className="inline-block rounded-full"
-                      key={source}
-                      alt={source}
-                      height={24}
-                      width={24}
-                      title={source}
-                      src={`/icons/${source}-icon.png`}
-                    />
-                  );
-                })}
-              </TableCell>
-              <TableCell>{alert.message}</TableCell>
-              <TableCell>{alert.description}</TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <>
+      <MultiSelectBox
+        onValueChange={setSelectedEnvironments}
+        placeholder="Select Environment..."
+        className="max-w-xs mb-5"
+      >
+        {environments.map((item) => (
+          <MultiSelectBoxItem key={item} value={item}>
+            {item}
+          </MultiSelectBoxItem>
+        ))}
+      </MultiSelectBox>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
+            {AlertTableKeys.map((key) => (
+              <TableHeaderCell key={key}>{key}</TableHeaderCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {mockAlerts
+            .filter((alert) => environmentIsSeleected(alert))
+            .map((alert) => {
+              return (
+                <TableRow key={alert.id}>
+                  <TableCell>
+                    <div className="menu"></div>
+                  </TableCell>
+                  <TableCell>{getSeverity(alert.severity)}</TableCell>
+                  <TableCell>{alert.status}</TableCell>
+                  <TableCell>{alert.lastReceived.toDateString()}</TableCell>
+                  <TableCell className="flex justify-center" align="center">
+                    {alert.isDuplicate ? (
+                      <Icon
+                        icon={ShieldCheckIcon}
+                        variant="light"
+                        color="orange"
+                        tooltip="This alert is a duplicate"
+                        size="xs"
+                      />
+                    ) : null}
+                  </TableCell>
+                  <TableCell>{alert.environment}</TableCell>
+                  <TableCell>{alert.service}</TableCell>
+                  <TableCell>
+                    {alert.source?.map((source) => {
+                      return (
+                        <Image
+                          className="inline-block rounded-full"
+                          key={source}
+                          alt={source}
+                          height={24}
+                          width={24}
+                          title={source}
+                          src={`/icons/${source}-icon.png`}
+                        />
+                      );
+                    })}
+                  </TableCell>
+                  <TableCell>{alert.message}</TableCell>
+                  <TableCell>{alert.description}</TableCell>
+                </TableRow>
+              );
+            })}
+        </TableBody>
+      </Table>
+    </>
   );
 }
