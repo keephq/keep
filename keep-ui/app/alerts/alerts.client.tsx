@@ -127,7 +127,7 @@ const mockAlerts: Alert[] = [
   },
 ];
 
-function getSeverity(severity: Severity) {
+function getSeverity(severity: Severity | undefined) {
   let deltaType: string;
   switch (severity) {
     case "critical":
@@ -192,6 +192,7 @@ export default function AlertsPage() {
                       alt={source}
                       height={24}
                       width={24}
+                      title={source}
                       src={`/icons/${source}-icon.png`}
                     />
                   );
