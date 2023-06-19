@@ -146,7 +146,12 @@ function getSeverity(severity: Severity | undefined) {
       deltaType = "decrease";
       break;
   }
-  return <BadgeDelta deltaType={deltaType as DeltaType} />;
+  return (
+    <BadgeDelta
+      title={severity?.toString() ?? "lowest"}
+      deltaType={deltaType as DeltaType}
+    />
+  );
 }
 
 export default function AlertsPage() {
