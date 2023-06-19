@@ -19,6 +19,7 @@ export interface Alert {
     message?: string;
     description?: string;
     severity?: Severity;
+    fatigueMeter?: number;
 }
 
-export const AlertTableKeys: string[] = ['Severity', 'Status', 'Last Received', 'Duplicate', 'Environment', 'Service', 'Source', 'Message', 'Description']
+export const AlertTableKeys: string[] = ['Severity', 'Status', 'Fatigue Meter', 'Last Received', 'Duplicate', 'Environment', 'Service', 'Source', 'Message', 'Description']

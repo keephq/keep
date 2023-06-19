@@ -11,10 +11,17 @@ import {
   Icon,
   MultiSelectBox,
   MultiSelectBoxItem,
+  CategoryBar,
+  Flex,
+  Button,
 } from "@tremor/react";
 import Image from "next/image";
 import { Alert, AlertTableKeys, Severity } from "./models";
-import { ServerIcon, ShieldCheckIcon } from "@heroicons/react/20/solid";
+import {
+  ArchiveBoxIcon,
+  ServerIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
 
@@ -32,6 +39,7 @@ const mockAlerts: Alert[] = [
     message: "CPU usage is above 90%",
     description:
       "The CPU usage on server-1 is above 90% and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "2",
@@ -46,6 +54,7 @@ const mockAlerts: Alert[] = [
     message: "Memory usage is above 80%",
     description:
       "The memory usage on client-1 is above 80% and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "3",
@@ -59,6 +68,7 @@ const mockAlerts: Alert[] = [
     source: ["grafana", "snowflake"],
     message: "Disk space is running low",
     description: "The disk space on db-1 is running low and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "4",
@@ -73,6 +83,7 @@ const mockAlerts: Alert[] = [
     message: "Network latency is above threshold",
     description:
       "The network latency on server-2 is above the threshold and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "5",
@@ -88,6 +99,7 @@ const mockAlerts: Alert[] = [
     message: "Disk I/O is above average",
     description:
       "The disk I/O on client-2 is above average and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "6",
@@ -101,6 +113,7 @@ const mockAlerts: Alert[] = [
     source: ["sentry", "snowflake"],
     message: "Lost connection to the database",
     description: "The connection to db-2 was lost and has been restored",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "7",
@@ -116,6 +129,7 @@ const mockAlerts: Alert[] = [
     message: "Server response time is too slow",
     description:
       "The response time on server-3 is too slow and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
   {
     id: "8",
@@ -129,6 +143,7 @@ const mockAlerts: Alert[] = [
     message: "Cache utilization is below threshold",
     description:
       "The cache utilization on client-3 is below the threshold and requires attention",
+    fatigueMeter: Math.floor(Math.random() * 100),
   },
 ];
 
@@ -177,18 +192,23 @@ export default function AlertsPage() {
 
   return (
     <>
-      <MultiSelectBox
-        onValueChange={setSelectedEnvironments}
-        placeholder="Select Environment..."
-        className="max-w-xs mb-5"
-        icon={ServerIcon}
-      >
-        {environments.map((item) => (
-          <MultiSelectBoxItem key={item} value={item}>
-            {item}
-          </MultiSelectBoxItem>
-        ))}
-      </MultiSelectBox>
+      <Flex justifyContent="between">
+        <MultiSelectBox
+          onValueChange={setSelectedEnvironments}
+          placeholder="Select Environment..."
+          className="max-w-xs mb-5"
+          icon={ServerIcon}
+        >
+          {environments.map((item) => (
+            <MultiSelectBoxItem key={item} value={item}>
+              {item}
+            </MultiSelectBoxItem>
+          ))}
+        </MultiSelectBox>
+        <Button icon={ArchiveBoxIcon} color="orange" size="xs" disabled={true}>
+          Export 🚧
+        </Button>
+      </Flex>
       <Table>
         <TableHead>
           <TableRow>
@@ -207,10 +227,21 @@ export default function AlertsPage() {
                   <TableCell>
                     <div className="menu"></div>
                   </TableCell>
-                  <TableCell>{getSeverity(alert.severity)}</TableCell>
+                  <TableCell className="text-center">
+                    {getSeverity(alert.severity)}
+                  </TableCell>
                   <TableCell>{alert.status}</TableCell>
+                  <TableCell>
+                    <CategoryBar
+                      categoryPercentageValues={[40, 30, 20, 10]}
+                      colors={["emerald", "yellow", "orange", "rose"]}
+                      percentageValue={alert.fatigueMeter}
+                      tooltip={alert.fatigueMeter?.toString()}
+                      className="w-48"
+                    />
+                  </TableCell>
                   <TableCell>{alert.lastReceived.toDateString()}</TableCell>
-                  <TableCell className="flex justify-center" align="center">
+                  <TableCell className="text-center" align="center">
                     {alert.isDuplicate ? (
                       <Icon
                         icon={ShieldCheckIcon}
