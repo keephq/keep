@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: any }) {
           A single pane of glass for all your different alert providers
         </Subtitle>
       </main>
-      <Card className="p-4 md:p-10 max-w-screen-2xl mx-auto mt-6">{children}</Card>
+      <Card className="p-4 md:p-10 max-w-screen-2xl mx-auto">{children}</Card>
     </>
   );
 }
