@@ -14,7 +14,7 @@ import {
 } from "@tremor/react";
 import Image from "next/image";
 import { Alert, AlertTableKeys, Severity } from "./models";
-import { ShieldCheckIcon } from "@heroicons/react/20/solid";
+import { ServerIcon, ShieldCheckIcon } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
 
@@ -56,7 +56,7 @@ const mockAlerts: Alert[] = [
     environment: "development",
     isDuplicate: true,
     service: "database",
-    source: ["grafana"],
+    source: ["grafana", "snowflake"],
     message: "Disk space is running low",
     description: "The disk space on db-1 is running low and requires attention",
   },
@@ -82,6 +82,7 @@ const mockAlerts: Alert[] = [
     lastReceived: new Date(),
     environment: "staging",
     isDuplicate: true,
+    duplicateReason: "Alert triggered multiple times",
     service: "frontend",
     source: ["pagerduty"],
     message: "Disk I/O is above average",
@@ -109,8 +110,9 @@ const mockAlerts: Alert[] = [
     lastReceived: new Date(),
     environment: "production",
     isDuplicate: true,
+    duplicateReason: "Triggered in both Datadog and Snowflake",
     service: "backend",
-    source: ["snowflake"],
+    source: ["snowflake", "datadog"],
     message: "Server response time is too slow",
     description:
       "The response time on server-3 is too slow and requires attention",
@@ -123,7 +125,7 @@ const mockAlerts: Alert[] = [
     environment: "staging",
     isDuplicate: false,
     service: "frontend",
-    source: ["elastic", "datadog"],
+    source: ["elastic", "datadog", "sentry"],
     message: "Cache utilization is below threshold",
     description:
       "The cache utilization on client-3 is below the threshold and requires attention",
@@ -179,6 +181,7 @@ export default function AlertsPage() {
         onValueChange={setSelectedEnvironments}
         placeholder="Select Environment..."
         className="max-w-xs mb-5"
+        icon={ServerIcon}
       >
         {environments.map((item) => (
           <MultiSelectBoxItem key={item} value={item}>
@@ -213,7 +216,9 @@ export default function AlertsPage() {
                         icon={ShieldCheckIcon}
                         variant="light"
                         color="orange"
-                        tooltip="This alert is a duplicate"
+                        tooltip={
+                          alert.duplicateReason ?? "This alert is a duplicate"
+                        }
                         size="xs"
                       />
                     ) : null}
@@ -221,10 +226,12 @@ export default function AlertsPage() {
                   <TableCell>{alert.environment}</TableCell>
                   <TableCell>{alert.service}</TableCell>
                   <TableCell>
-                    {alert.source?.map((source) => {
+                    {alert.source?.map((source, index) => {
                       return (
                         <Image
-                          className="inline-block rounded-full"
+                          className={`inline-block rounded-full ${
+                            index == 0 ? "" : "-ml-2"
+                          }`}
                           key={source}
                           alt={source}
                           height={24}

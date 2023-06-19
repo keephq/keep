@@ -13,6 +13,7 @@ export interface Alert {
     lastReceived: Date;
     environment: string;
     isDuplicate?: boolean;
+    duplicateReason?: string;
     service?: string;
     source?: string[];
     message?: string;
