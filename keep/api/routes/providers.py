@@ -51,9 +51,19 @@ def get_providers(
 
 @router.get(
     "/{provider_type}/{provider_id}/alerts",
-    description="Get alerts from a provider",
+    description="Get active alerts from a provider",
 )
 def get_alerts(
+    provider_type: str, provider_id: str, tenant_id: str = Depends(verify_api_key)
+):
+    pass
+
+
+@router.get(
+    "/{provider_type}/{provider_id}/configured-alerts",
+    description="Get alerts configuration from a provider",
+)
+def get_alerts_configuration(
     provider_type: str,
     provider_id: str,
     tenant_id: str = Depends(verify_api_key),
@@ -66,9 +76,7 @@ def get_alerts(
             "provider_id": provider_id,
         },
     )
-    # TODO: validate provider exists, error handling in general
     secret_manager = SecretManagerFactory.get_secret_manager()
-    # TODO: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
@@ -121,7 +129,7 @@ def get_logs(
 
 @router.get(
     "/{provider_type}/schema",
-    description="Get alerts from a provider",
+    description="Get the provider's API schema used to push alerts configuration",
 )
 def get_alerts_schema(
     provider_type: str,
@@ -138,7 +146,7 @@ def get_alerts_schema(
 
 @router.post(
     "/{provider_type}/{provider_id}/alerts",
-    description="Get alerts from a provider",
+    description="Push new alerts to the provider",
 )
 def add_alert(
     provider_type: str,

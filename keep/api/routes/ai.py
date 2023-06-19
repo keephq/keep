@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from keep.api.core.dependencies import verify_api_key
-from keep.api.routes.providers import get_alerts, get_alerts_schema, get_logs
+from keep.api.routes.providers import (
+    get_alerts_configuration,
+    get_alerts_schema,
+    get_logs,
+)
 from keep.api.utils.gpt_utils import GptUtils
 
 router = APIRouter()
@@ -29,7 +33,9 @@ class RepairAlert(BaseModel):
 def create_alert(body: CreateAlert, tenant_id: str = Depends(verify_api_key)) -> dict:
     provider_id = body.provider_id or body.provider_type
     provider_schema = get_alerts_schema(body.provider_type)
-    provider_alerts = get_alerts(body.provider_type, provider_id, tenant_id)
+    provider_alerts = get_alerts_configuration(
+        body.provider_type, provider_id, tenant_id
+    )
     try:
         provider_logs = get_logs(body.provider_type, provider_id, tenant_id=tenant_id)
     except NotImplementedError:
