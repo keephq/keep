@@ -15,7 +15,7 @@ import {
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
-import { Button, Callout } from "@tremor/react";
+import { Callout } from "@tremor/react";
 import { Provider } from "../providers/providers";
 import {
   parseAlert,
@@ -26,13 +26,10 @@ import {
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
-  XMarkIcon,
 } from "@heroicons/react/20/solid";
 import { globalValidator, stepValidator } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
-import { CodeBlock, a11yLight } from "react-code-blocks";
-import { stringify } from "yaml";
 import BuilderModalContent from "./builder-modal";
 
 interface Props {

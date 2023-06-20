@@ -3,6 +3,8 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
 
 import dataclasses
+import datetime
+import random
 
 import pydantic
 import requests
@@ -10,6 +12,7 @@ from grafana_api.alerting import Alerting
 from grafana_api.alerting_provisioning import AlertingProvisioning
 from grafana_api.model import APIEndpoints, APIModel
 
+from keep.api.models.alert import AlertDto
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
@@ -65,7 +68,7 @@ class GrafanaProvider(BaseProvider):
     def _query(self, **kwargs: dict):
         pass
 
-    def get_alerts(self, alert_id: str | None = None):
+    def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, headers=headers)
@@ -88,10 +91,11 @@ class GrafanaProvider(BaseProvider):
         response = requests.post(api, json=alert, headers=headers)
 
         if not response.ok:
+            response_json = response.json()
             self.logger.warn(
-                "Could not deploy alert", extra={"response": response.json()}
+                "Could not deploy alert", extra={"response": response_json}
             )
-            raise Exception(error)
+            raise Exception(response_json)
 
         self.logger.info(
             "Alert deployed",
@@ -104,6 +108,21 @@ class GrafanaProvider(BaseProvider):
     @staticmethod
     def get_alert_schema():
         return GrafanaAlertFormatDescription.schema()
+
+    @staticmethod
+    def format_alert(event: dict) -> AlertDto:
+        alert = event.get("alerts", [{}])[0]
+        return AlertDto(
+            id=alert.get("fingerprint"),
+            name=event.get("title"),
+            status=event.get("status"),
+            severity=alert.get("severity", None),
+            lastReceived=str(datetime.datetime.fromisoformat(alert.get("startsAt"))),
+            fatigueMeter=random.randint(0, 100),
+            description=alert.get("annotations", {}).get("summary", ""),
+            source=["grafana"],
+            **alert.get("labels", {}),
+        )
 
 
 if __name__ == "__main__":
@@ -124,5 +143,5 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="grafana-keephq", provider_type="grafana", provider_config=config
     )
-    alerts = provider.get_alerts()
+    alerts = provider.get_alerts_configuration()
     print(alerts)

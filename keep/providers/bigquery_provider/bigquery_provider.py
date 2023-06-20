@@ -100,7 +100,7 @@ class BigqueryProvider(BaseProvider):
         results = list(query_job.result())
         return results
 
-    def get_alerts(self, alert_id: Optional[str] = None):
+    def get_alerts_configuration(self, alert_id: Optional[str] = None):
         pass  # Define how to get alerts from BigQuery if applicable
 
     def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):

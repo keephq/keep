@@ -14,138 +14,23 @@ import {
   CategoryBar,
   Flex,
   Button,
+  Callout,
 } from "@tremor/react";
 import Image from "next/image";
 import { Alert, AlertTableKeys, Severity } from "./models";
 import {
   ArchiveBoxIcon,
+  ExclamationCircleIcon,
   ServerIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
-
-const mockAlerts: Alert[] = [
-  {
-    id: "1",
-    name: "CPU usage",
-    severity: "critical" as Severity,
-    status: "active",
-    lastReceived: new Date(),
-    environment: "production",
-    isDuplicate: true,
-    service: "backend",
-    source: ["datadog"],
-    message: "CPU usage is above 90%",
-    description:
-      "The CPU usage on server-1 is above 90% and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "2",
-    name: "Memory usage",
-    severity: "high" as Severity,
-    status: "active",
-    lastReceived: new Date(),
-    environment: "staging",
-    isDuplicate: false,
-    service: "frontend",
-    source: ["elastic", "datadog"],
-    message: "Memory usage is above 80%",
-    description:
-      "The memory usage on client-1 is above 80% and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "3",
-    name: "Disk space",
-    severity: "medium" as Severity,
-    status: "resolved",
-    lastReceived: new Date(),
-    environment: "development",
-    isDuplicate: true,
-    service: "database",
-    source: ["grafana", "snowflake"],
-    message: "Disk space is running low",
-    description: "The disk space on db-1 is running low and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "4",
-    name: "Network latency",
-    severity: "medium" as Severity,
-    status: "active",
-    lastReceived: new Date(),
-    environment: "production",
-    isDuplicate: false,
-    service: "backend",
-    source: ["datadog"],
-    message: "Network latency is above threshold",
-    description:
-      "The network latency on server-2 is above the threshold and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "5",
-    name: "Disk I/O",
-    severity: "low" as Severity,
-    status: "active",
-    lastReceived: new Date(),
-    environment: "staging",
-    isDuplicate: true,
-    duplicateReason: "Alert triggered multiple times",
-    service: "frontend",
-    source: ["pagerduty"],
-    message: "Disk I/O is above average",
-    description:
-      "The disk I/O on client-2 is above average and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "6",
-    name: "Database connection",
-    severity: "low" as Severity,
-    status: "resolved",
-    lastReceived: new Date(),
-    environment: "development",
-    isDuplicate: false,
-    service: "database",
-    source: ["sentry", "snowflake"],
-    message: "Lost connection to the database",
-    description: "The connection to db-2 was lost and has been restored",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "7",
-    name: "Server response time",
-    severity: "low" as Severity,
-    status: "active",
-    lastReceived: new Date(),
-    environment: "production",
-    isDuplicate: true,
-    duplicateReason: "Triggered in both Datadog and Snowflake",
-    service: "backend",
-    source: ["snowflake", "datadog"],
-    message: "Server response time is too slow",
-    description:
-      "The response time on server-3 is too slow and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-  {
-    id: "8",
-    name: "Cache utilization",
-    status: "active",
-    lastReceived: new Date(),
-    environment: "staging",
-    isDuplicate: false,
-    service: "frontend",
-    source: ["elastic", "datadog", "sentry"],
-    message: "Cache utilization is below threshold",
-    description:
-      "The cache utilization on client-3 is below the threshold and requires attention",
-    fatigueMeter: Math.floor(Math.random() * 100),
-  },
-];
+import { useSession } from "../../utils/customAuth";
+import Loading from "../loading";
+import useSWR from "swr";
+import { getApiURL } from "../../utils/apiUrl";
+import { fetcher } from "../../utils/fetcher";
 
 function getSeverity(severity: Severity | undefined) {
   let deltaType: string;
@@ -179,11 +64,34 @@ function onlyUnique(value: string, index: number, array: string[]) {
 }
 
 export default function AlertsPage() {
+  const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const { data: session, status, update } = useSession();
+  const { data, error, isLoading } = useSWR<Alert[]>(
+    `${apiUrl}/alerts`,
+    (url) => fetcher(url, session?.accessToken!)
+  );
 
-  const environments = mockAlerts
+  if (error) {
+    return (
+      <Callout
+        className="mt-4"
+        title="Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        Failed to load alerts
+      </Callout>
+    );
+  }
+  if (status === "loading" || isLoading || !data) return <Loading />;
+  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
+
+  console.log(data);
+
+  const environments = data
     .map((alert) => alert.environment)
     .filter(onlyUnique);
   const environmentIsSeleected = (alert: Alert) =>
@@ -199,14 +107,20 @@ export default function AlertsPage() {
           className="max-w-xs mb-5"
           icon={ServerIcon}
         >
-          {environments.map((item) => (
+          {environments!.map((item) => (
             <MultiSelectBoxItem key={item} value={item}>
               {item}
             </MultiSelectBoxItem>
           ))}
         </MultiSelectBox>
-        <Button icon={ArchiveBoxIcon} color="orange" size="xs" disabled={true}>
-          Export 🚧
+        <Button
+          icon={ArchiveBoxIcon}
+          color="orange"
+          size="xs"
+          disabled={true}
+          title="Coming Soon"
+        >
+          Export
         </Button>
       </Flex>
       <Table>
@@ -219,7 +133,7 @@ export default function AlertsPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {mockAlerts
+          {data!
             .filter((alert) => environmentIsSeleected(alert))
             .map((alert) => {
               return (
@@ -235,12 +149,12 @@ export default function AlertsPage() {
                     <CategoryBar
                       categoryPercentageValues={[40, 30, 20, 10]}
                       colors={["emerald", "yellow", "orange", "rose"]}
-                      percentageValue={alert.fatigueMeter}
-                      tooltip={alert.fatigueMeter?.toString()}
+                      percentageValue={alert.fatigueMeter ?? 0}
+                      tooltip={alert.fatigueMeter?.toString() ?? "0"}
                       className="w-48"
                     />
                   </TableCell>
-                  <TableCell>{alert.lastReceived.toDateString()}</TableCell>
+                  <TableCell>{alert.lastReceived.toString()}</TableCell>
                   <TableCell className="text-center" align="center">
                     {alert.isDuplicate ? (
                       <Icon

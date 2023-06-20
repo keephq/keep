@@ -50,16 +50,6 @@ def get_providers(
 
 
 @router.get(
-    "/{provider_type}/{provider_id}/alerts",
-    description="Get active alerts from a provider",
-)
-def get_alerts(
-    provider_type: str, provider_id: str, tenant_id: str = Depends(verify_api_key)
-):
-    pass
-
-
-@router.get(
     "/{provider_type}/{provider_id}/configured-alerts",
     description="Get alerts configuration from a provider",
 )
@@ -83,7 +73,7 @@ def get_alerts_configuration(
     provider = ProvidersFactory.get_provider(
         provider_id, provider_type, provider_config
     )
-    return provider.get_alerts()
+    return provider.get_alerts_configuration()
 
 
 @router.get(
@@ -210,7 +200,7 @@ def test_provider(
         provider_id, provider_type, provider_config
     )
     try:
-        alerts = provider.get_alerts()
+        alerts = provider.get_alerts_configuration()
         return JSONResponse(status_code=200, content={"alerts": alerts})
     except GetAlertException as e:
         return JSONResponse(status_code=e.status_code, content=e.message)
