@@ -8,13 +8,12 @@ import requests
 import validators
 import yaml
 
-from keep.action.action import Action
 from keep.alert.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
-from keep.step.step import Step
+from keep.step.step import Step, StepType
 
 
 class Parser:
@@ -211,6 +210,7 @@ class Parser:
                 step_config=_step,
                 provider=provider,
                 provider_parameters=provider_parameters,
+                step_type=StepType.STEP,
             )
             alerts_steps_parsed.append(step)
         self.logger.debug("Steps parsed successfully")
@@ -231,7 +231,7 @@ class Parser:
         )
         return provider
 
-    def _get_action(self, action: dict, action_name: str | None = None) -> Action:
+    def _get_action(self, action: dict, action_name: str | None = None) -> Step:
         name = action_name or action.get("name")
         provider_config = action.get("provider").get("config")
         provider_context = action.get("provider").get("with", {})
@@ -242,25 +242,27 @@ class Parser:
         provider = ProvidersFactory.get_provider(
             provider_id, provider_type, provider_config, **provider_context
         )
-        action = Action(
+        action = Step(
             name=name,
             provider=provider,
             config=action,
             provider_context=provider_context,
+            step_type=StepType.ACTION,
         )
         return action
 
-    def _parse_actions(self, alert) -> typing.List[Action]:
+    def _parse_actions(self, alert) -> typing.List[Step]:
         self.logger.debug("Parsing actions")
         alert_actions = alert.get("actions", [])
         alert_actions_parsed = []
         for _action in alert_actions:
             parsed_action = self._get_action(_action)
+            parsed_action.step_type = StepType.ACTION
             alert_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed
 
-    def _get_on_failure_action(self, alert) -> Action | None:
+    def _get_on_failure_action(self, alert) -> Step | None:
         """
         Parse the on-failure action
 
