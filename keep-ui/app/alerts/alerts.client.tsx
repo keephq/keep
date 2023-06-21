@@ -31,6 +31,7 @@ import Loading from "../loading";
 import useSWR from "swr";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
+import { mockAlerts } from "./mock-data";
 
 function getSeverity(severity: Severity | undefined) {
   let deltaType: string;
@@ -68,30 +69,28 @@ export default function AlertsPage() {
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  const { data: session, status, update } = useSession();
-  const { data, error, isLoading } = useSWR<Alert[]>(
-    `${apiUrl}/alerts`,
-    (url) => fetcher(url, session?.accessToken!)
-  );
+  // const { data: session, status, update } = useSession();
+  // const { data, error, isLoading } = useSWR<Alert[]>(
+  //   `${apiUrl}/alerts`,
+  //   (url) => fetcher(url, session?.accessToken!)
+  // );
 
-  if (error) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load alerts
-      </Callout>
-    );
-  }
-  if (status === "loading" || isLoading || !data) return <Loading />;
-  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
+  // if (error) {
+  //   return (
+  //     <Callout
+  //       className="mt-4"
+  //       title="Error"
+  //       icon={ExclamationCircleIcon}
+  //       color="rose"
+  //     >
+  //       Failed to load alerts
+  //     </Callout>
+  //   );
+  // }
+  // if (status === "loading" || isLoading || !data) return <Loading />;
+  // if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
-  console.log(data);
-
-  const environments = data
+  const environments = mockAlerts
     .map((alert) => alert.environment)
     .filter(onlyUnique);
   const environmentIsSeleected = (alert: Alert) =>
@@ -133,7 +132,7 @@ export default function AlertsPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data!
+          {mockAlerts!
             .filter((alert) => environmentIsSeleected(alert))
             .map((alert) => {
               return (
