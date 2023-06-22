@@ -1,4 +1,4 @@
-# Alert when there are new GitHub Stars utilizing keepstate
+# Alert when there are new Auth0 users
 alert:
   id: new-auth0-users
   description: Get new users logged in to the platform

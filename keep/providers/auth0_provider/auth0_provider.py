@@ -130,7 +130,6 @@ if __name__ == "__main__":
 
     # If you want to use application default credentials, you can omit the authentication config
     config = {
-        # "authentication": {"credentials_path": "/path/to/your/service_account.json"},
         "authentication": {
             "token": os.environ.get("AUTH0_TOKEN"),
             "domain": os.environ.get("AUTH0_PROVIDER_DOMAIN"),
