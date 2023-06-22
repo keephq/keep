@@ -32,6 +32,7 @@ export function CMDK() {
           {items.map(({ icon, label, shortcut, navigate }) => {
             return (
                 <Command.Item key={label} value={label} onSelect={() => {
+                    setOpen((open) => !open);
                     router.push(navigate!);
                 }}>
                 {icon}
