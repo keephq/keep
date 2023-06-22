@@ -1,8 +1,7 @@
-import UnderConstruction from '../under-construction'
+import AlertsPage from "./alerts.client";
 
-export default function AlertsPage() {
-    // Not Implemented
-  return UnderConstruction()
+export default function Page() {
+  return <AlertsPage />;
 }
 
 export const metadata = {
