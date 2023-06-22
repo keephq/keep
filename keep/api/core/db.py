@@ -7,6 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 # This import is required to create the tables
 from keep.api.core.config import config
+from keep.api.models.db.alert import *
 from keep.api.models.db.tenant import *
 
 running_in_cloud_run = os.environ.get("K_SERVICE") is not None

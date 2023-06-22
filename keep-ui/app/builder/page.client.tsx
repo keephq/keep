@@ -1,6 +1,6 @@
 "use client";
 
-import { Title, Text, Button } from "@tremor/react";
+import { Title, Button, Subtitle } from "@tremor/react";
 import { useState } from "react";
 import {
   PlusIcon,
@@ -55,7 +55,7 @@ export default function PageClient() {
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>Builder</Title>
-          <Text>Alert building kit</Text>
+          <Subtitle>Alert building kit</Subtitle>
         </div>
         <div>
           <Button
