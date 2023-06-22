@@ -34,7 +34,10 @@ class AlertManager:
                 "Running in interval mode. Press Ctrl+C to stop the process."
             )
             while True:
-                self._run(alerts_path, providers_file)
+                try:
+                    self._run(alerts_path, providers_file)
+                except Exception:
+                    self.logger.exception("Error running alert in interval mode")
                 self.logger.info(f"Sleeping for {interval} seconds...")
                 time.sleep(interval)
         # If interval is not set, run the alert once
@@ -110,6 +113,16 @@ class AlertManager:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
+                if alert.on_failure:
+                    self.logger.info(
+                        f"Running on_failure action for alert {alert.alert_id}"
+                    )
+                    # Adding the exception message to the provider context so it'll be available for the action
+                    message = (
+                        f"Alert `{alert.alert_id}` failed with exception: `{str(e)}`"
+                    )
+                    alert.on_failure.provider_context = {"message": message}
+                    alert.on_failure.run()
                 raise
             if any(errors):
                 self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")

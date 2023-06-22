@@ -4,6 +4,7 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 import dataclasses
 import datetime
 import json
+import random
 import time
 
 import pydantic
@@ -14,6 +15,8 @@ from datadog_api_client.v1.api.monitors_api import MonitorsApi
 from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_type import MonitorType
 
+from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import Alert
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
@@ -117,7 +120,7 @@ class DatadogProvider(BaseProvider):
                 )
         return results
 
-    def get_alerts(self, alert_id: str | None = None):
+    def get_alerts_configuration(self, alert_id: str | None = None):
         with ApiClient(self.configuration) as api_client:
             api = MonitorsApi(api_client)
             try:
@@ -132,6 +135,37 @@ class DatadogProvider(BaseProvider):
                     filter(lambda monitor: monitor["id"] == alert_id, monitors)
                 )
         return monitors
+
+    @staticmethod
+    def __get_priorty(priority):
+        if priority == "P1":
+            return "critical"
+        elif priority == "P2":
+            return "high"
+        elif priority == "P3":
+            return "medium"
+        elif priority == "P4":
+            return "low"
+
+    def format_alert(event: dict) -> AlertDto:
+        tags_list = event.get("tags", "").split(",")
+        tags_list.remove("monitor")
+        tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
+        event_time = datetime.datetime.fromtimestamp(
+            int(event.get("last_updated")) / 1000
+        )
+        return AlertDto(
+            id=event.get("id"),
+            name=event.get("title"),
+            status=event.get("alert_transition"),
+            lastReceived=str(event_time),
+            source=["datadog"],
+            message=event.get("title"),
+            description=event.get("body"),
+            severity=DatadogProvider.__get_priorty(event.get("severity")),
+            fatigueMeter=random.randint(0, 100),
+            **tags
+        )
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
         body = Monitor(**alert)
