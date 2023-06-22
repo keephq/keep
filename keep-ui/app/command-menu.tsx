@@ -3,6 +3,8 @@
 import { Command } from 'cmdk'
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { GitHubLogoIcon, FileTextIcon, TwitterLogoIcon } from '@radix-ui/react-icons'
+
 import '../styles/linear.scss';
 
 
@@ -27,38 +29,53 @@ export function CMDK() {
       <Command.Dialog open={open} onOpenChange={setOpen}>
         <div cmdk-linear-badge="">Keep Command Palette</div>
         <Command.Input autoFocus placeholder="Type a command or search..." />
-        <Command.List>
-          <Command.Empty>No results found.</Command.Empty>
-          {items.map(({ icon, label, shortcut, navigate }) => {
-            return (
-                <Command.Item key={label} value={label} onSelect={() => {
-                    setOpen((open) => !open);
-                    router.push(navigate!);
-                }}>
-                {icon}
-                {label}
-                <div cmdk-linear-shortcuts="">
-                  {shortcut.map((key) => {
-                    return <kbd key={key}>{key}</kbd>
-                  })}
-                </div>
-              </Command.Item>
-            )
-          })}
-        </Command.List>
+        <Command.Group heading="Navigate">
+            <Command.List>
+            <Command.Empty>No results found.</Command.Empty>
+            {navigationItems.map(({ icon, label, shortcut, navigate }) => {
+                return (
+                    <Command.Item key={label} value={label} onSelect={() => {
+                        setOpen((open) => !open);
+                        router.push(navigate!);
+                    }}>
+                    {icon}
+                    {label}
+                    <div cmdk-linear-shortcuts="">
+                    {shortcut.map((key) => {
+                        return <kbd key={key}>{key}</kbd>
+                    })}
+                    </div>
+                </Command.Item>
+                )
+            })}
+            </Command.List>
+        </Command.Group>
+        <Command.Group heading="External sources">
+            <Command.List>
+            {externalItems.map(({ icon, label, shortcut, navigate }) => {
+                return (
+                    <Command.Item key={label} value={label} onSelect={() => {
+                        setOpen((open) => !open);
+                        window.open(navigate, "_blank");
+                    }}>
+                    {icon}
+                    {label}
+                    <div cmdk-linear-shortcuts="">
+                    {shortcut.map((key) => {
+                        return <kbd key={key}>{key}</kbd>
+                    })}
+                    </div>
+                </Command.Item>
+                )
+            })}
+            </Command.List>
+        </Command.Group>
       </Command.Dialog>
     </div>
   )
 }
 
-const items = [
-  {
-    icon: <CreateAlertIcon />,
-    label: 'Create new alert',
-    shortcut: ['C'],
-    // TODO: /alerts/new
-    navigate: '/alerts'
-  },
+const navigationItems = [
   {
     icon: <GoToConsoleIcon />,
     label: 'Go to alert console',
@@ -67,7 +84,7 @@ const items = [
   },
   {
     icon: <ConnectIntegrationIcon />,
-    label: 'Connect a new provider',
+    label: 'Go to the providers page',
     shortcut: ['P'],
     navigate: '/providers'
   },
@@ -77,6 +94,27 @@ const items = [
     shortcut: ['D'],
     navigate: '/dashboard'
   }
+]
+
+const externalItems = [
+        {
+        icon: <FileTextIcon />,
+        label: 'Keep Docs',
+        shortcut: ['⇧', 'D'],
+        navigate: 'https://docs.keephq.dev'
+      },
+      {
+        icon: <GitHubLogoIcon />,
+        label: 'Keep Source code',
+        shortcut: ['⇧', 'C'],
+        navigate: 'https://github.com/keephq/keep'
+      },
+      {
+        icon: <TwitterLogoIcon />,
+        label: 'Keep Twitter',
+        shortcut: ['⇧', 'T'],
+        navigate: 'https://twitter.com/keepalerting'
+      }
 ]
 
 function ConnectIntegrationIcon() {
