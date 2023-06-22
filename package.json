@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "google-auth-library": "^8.8.0",
+    "kbar": "^0.1.0-beta.40",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
