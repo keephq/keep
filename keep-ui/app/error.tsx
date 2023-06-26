@@ -24,3 +24,13 @@ export default function ErrorComponent({
     </div>
   );
 }
+
+export class KeepApiError extends Error {
+  url: string;
+
+  constructor(message: string, url: string) {
+    super(message);
+    this.name = "KeepApiError";
+    this.url = url;
+  }
+}
