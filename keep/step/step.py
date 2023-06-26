@@ -1,8 +1,8 @@
 import asyncio
-from enum import Enum
 import inspect
 import logging
 from dataclasses import field
+from enum import Enum
 
 import chevron
 from pydantic.dataclasses import dataclass
@@ -13,6 +13,7 @@ from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.throttles.throttle_factory import ThrottleFactory
+
 
 class StepType(Enum):
     STEP = "step"
@@ -26,7 +27,6 @@ class Step:
     step_id: str = field(default_factory=str)
     step_config: dict = field(default_factory=dict)
     provider: BaseProvider = field(default_factory=BaseProvider)
-    provider_context: dict = field(default_factory=dict)
     provider_parameters: dict = field(default_factory=dict)
     conditions_results: dict = field(default_factory=dict)
     conditions: list = field(default_factory=list)
@@ -51,7 +51,7 @@ class Step:
             return did_action_run
         except Exception as e:
             raise ActionError(e)
-    
+
     def _check_throttling(self, action_name):
         throttling = self.config.get("throttle")
         # if there is no throttling, return
@@ -63,7 +63,7 @@ class Step:
         throttle = ThrottleFactory.get_instance(throttling_type, throttling_config)
         alert_id = self.context_manager.get_alert_id()
         return throttle.check_throttling(action_name, alert_id)
-    
+
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
@@ -78,7 +78,7 @@ class Step:
             if did_action_run:
                 any_action_run = True
         return any_action_run
-    
+
     def _run_single(self):
         # Initialize all conditions
         conditions = []
@@ -153,7 +153,7 @@ class Step:
             return
 
         # Last, run the action
-        rendered_value = self.io_handler.render_context(self.provider_context)
+        rendered_value = self.io_handler.render_context(self.provider_parameters)
         # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
             result = self._run_single_async()
@@ -167,7 +167,10 @@ class Step:
                     )
 
                 if self.step_type == StepType.STEP:
-                    self.provider.query(**rendered_value)
+                    step_output = self.provider.query(**rendered_value)
+                    self.context_manager.set_step_context(
+                        self.step_id, results=step_output, foreach=self.foreach
+                    )
                 else:
                     self.provider.notify(**rendered_value)
 
@@ -178,16 +181,16 @@ class Step:
                 )
             except Exception as e:
                 raise StepError(e)
-            
+
             return True
-        
+
     def _run_single_async(self):
         """For async providers, run them in a new event loop
 
         Raises:
             ActionError: _description_
         """
-        rendered_value = self.io_handler.render_context(self.provider_context)
+        rendered_value = self.io_handler.render_context(self.provider_parameters)
         # This is "magically solved" because of nest_asyncio but probably isn't best practice
         loop = asyncio.new_event_loop()
         if self.step_type == StepType.STEP:
@@ -198,6 +201,7 @@ class Step:
             loop.run_until_complete(task)
         except Exception as e:
             raise ActionError(e)
-        
+
+
 class StepError(Exception):
     pass

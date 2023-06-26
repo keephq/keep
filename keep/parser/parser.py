@@ -240,19 +240,19 @@ class Parser:
     def _get_action(self, action: dict, action_name: str | None = None) -> Step:
         name = action_name or action.get("name")
         provider_config = action.get("provider").get("config")
-        provider_context = action.get("provider").get("with", {})
+        provider_parameters = action.get("provider").get("with", {})
         provider_type = action.get("provider").get("type")
         provider_id, provider_config = self._parse_provider_config(
             provider_type, provider_config
         )
         provider = ProvidersFactory.get_provider(
-            provider_id, provider_type, provider_config, **provider_context
+            provider_id, provider_type, provider_config, **provider_parameters
         )
         action = Step(
             name=name,
             provider=provider,
             config=action,
-            provider_context=provider_context,
+            provider_parameters=provider_parameters,
             step_type=StepType.ACTION,
         )
         return action

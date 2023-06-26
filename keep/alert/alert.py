@@ -48,15 +48,10 @@ class Alert:
             for f in rendered_foreach:
                 self.logger.debug("Step is a foreach step")
                 self.context_manager.set_for_each_context(f)
-                step_output = step.run()
-                self.context_manager.set_step_context(
-                    step.step_id, results=step_output, foreach=True
-                )
+                step.run()
         else:
-            step_output = step.run()
-            self.context_manager.set_step_context(step.step_id, results=step_output)
+            step.run()
         self.logger.info("Step %s ran successfully", step.step_id)
-        return step_output
 
     def run_steps(self):
         self.logger.debug(f"Running steps for alert {self.alert_id}")
