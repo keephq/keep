@@ -32,7 +32,6 @@ class AlertManager:
         Args:
             alert (str): Either an alert yaml or a directory containing alert yamls or a list of URLs to get the alerts from.
             providers_file (str, optional): The path to the providers yaml. Defaults to None.
-            interval (int, optional): The interval in seconds between consecutive runs. Defaults to 0 (run once).
         """
         self.logger.info(f"Running alert(s) from {alerts_path}")
         alerts = self.get_alerts(alerts_path, providers_file)
