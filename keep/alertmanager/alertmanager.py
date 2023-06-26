@@ -117,7 +117,7 @@ class AlertManager:
                 )
                 # Adding the exception message to the provider context so it'll be available for the action
                 message = f"Alert `{alert.alert_id}` failed with exception: `{str(e)}`"
-                alert.on_failure.provider_context = {"message": message}
+                alert.on_failure.provider_parameters = {"message": message}
                 alert.on_failure.run()
             raise
         if any(errors):
