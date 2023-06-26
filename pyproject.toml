@@ -51,6 +51,7 @@ opentelemetry-propagator-gcp = "^1.5.0"
 pyngrok = "^6.0.0"
 google-cloud-bigquery = "^3.11.0"
 websocket-client = "^1.6.0"
+posthog = "^3.0.1"
 
 
 

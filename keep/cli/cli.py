@@ -1,18 +1,31 @@
 import logging
 import logging.config
+import os
 import sys
+import uuid
 from dataclasses import fields
 from importlib import metadata
 
 import click
 import yaml
 from dotenv import find_dotenv, load_dotenv
+from posthog import Posthog
 
 from keep.alertmanager.alertmanager import AlertManager
 from keep.cli.click_extensions import NotRequiredIf
 from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
+if not os.getenv("DISABLE_POSTHOG"):
+    posthog_api_key = (
+        os.getenv("POSTHOG_API_KEY")
+        or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+    )
+    posthog_client = Posthog(api_key=posthog_api_key, host="https://app.posthog.com")
+else:
+    posthog_client = None
+
+
 logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -83,8 +96,19 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
     default="keep.yaml",
 )
 @pass_info
-def cli(info: Info, verbose: int, json: bool, keep_config: str):
+@click.pass_context
+def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     """Run Keep CLI."""
+    # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
+    # random user id
+    if posthog_client:
+        posthog_client.capture(
+            str(uuid.uuid4()),
+            "keep-cli-started",
+            properties={
+                "args": sys.argv,
+            },
+        )
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         # set the verbosity level to debug
@@ -95,6 +119,11 @@ def cli(info: Info, verbose: int, json: bool, keep_config: str):
     logging.config.dictConfig(logging_config)
     info.verbose = verbose
     info.set_config(keep_config)
+
+    @ctx.call_on_close
+    def cleanup():
+        if posthog_client:
+            posthog_client.flush()
 
 
 @cli.command()
