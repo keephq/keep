@@ -27,7 +27,6 @@ class Step:
     step_id: str = field(default_factory=str)
     step_config: dict = field(default_factory=dict)
     provider: BaseProvider = field(default_factory=BaseProvider)
-    provider_context: dict = field(default_factory=dict)
     provider_parameters: dict = field(default_factory=dict)
     conditions_results: dict = field(default_factory=dict)
     conditions: list = field(default_factory=list)
@@ -154,7 +153,7 @@ class Step:
             return
 
         # Last, run the action
-        rendered_value = self.io_handler.render_context(self.provider_context)
+        rendered_value = self.io_handler.render_context(self.provider_parameters)
         # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
             result = self._run_single_async()
@@ -191,7 +190,7 @@ class Step:
         Raises:
             ActionError: _description_
         """
-        rendered_value = self.io_handler.render_context(self.provider_context)
+        rendered_value = self.io_handler.render_context(self.provider_parameters)
         # This is "magically solved" because of nest_asyncio but probably isn't best practice
         loop = asyncio.new_event_loop()
         if self.step_type == StepType.STEP:
