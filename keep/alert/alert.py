@@ -4,7 +4,6 @@ import typing
 
 from pydantic.dataclasses import dataclass
 
-from keep.action.action import Action
 from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
@@ -23,9 +22,9 @@ class Alert:
     alert_tags: typing.List[str]
     alert_interval: int
     alert_steps: typing.List[Step]
-    alert_actions: typing.List[Action]
+    alert_actions: typing.List[Step]
     alert_file: str = None
-    on_failure: Action = None
+    on_failure: Step = None
 
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
@@ -49,15 +48,10 @@ class Alert:
             for f in rendered_foreach:
                 self.logger.debug("Step is a foreach step")
                 self.context_manager.set_for_each_context(f)
-                step_output = step.run()
-                self.context_manager.set_step_context(
-                    step.step_id, results=step_output, foreach=True
-                )
+                step.run()
         else:
-            step_output = step.run()
-            self.context_manager.set_step_context(step.step_id, results=step_output)
+            step.run()
         self.logger.info("Step %s ran successfully", step.step_id)
-        return step_output
 
     def run_steps(self):
         self.logger.debug(f"Running steps for alert {self.alert_id}")
@@ -69,7 +63,7 @@ class Alert:
                 raise
         self.logger.debug(f"Steps for alert {self.alert_id} ran successfully")
 
-    def run_action(self, action: Action):
+    def run_action(self, action: Step):
         self.logger.info("Running action %s", action.name)
         try:
             action_status = action.run()
