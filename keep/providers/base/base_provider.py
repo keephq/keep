@@ -7,6 +7,8 @@ from typing import Optional
 
 from pydantic.dataclasses import dataclass
 
+from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -78,9 +80,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # and return the results
         return results
 
-    def get_alerts(self, alert_id: Optional[str] = None):
+    @staticmethod
+    def format_alert(event: dict) -> AlertDto:
+        raise NotImplementedError("format_alerts() method not implemented")
+
+    def get_alerts_configuration(self, alert_id: Optional[str] = None):
         """
-        Get alerts from the provider.
+        Get configuration of alerts from the provider.
 
         Args:
             alert_id (Optional[str], optional): If given, gets a specific alert by id. Defaults to None.

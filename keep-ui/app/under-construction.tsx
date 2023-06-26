@@ -1,12 +1,10 @@
 import Image from "next/image";
 import styles from "./under-construction.module.css";
-import Frill from "./frill";
 import { Card } from "@tremor/react";
 
 export default function UnderConstruction() {
   return (
     <>
-      <Frill />
       <main className="p-4 md:p-10 mx-auto max-w-7xl">
         <Card className="p-4 md:p-10 h-5/6 mx-auto max-w-7xl mt-6">
           <div className={styles.container}>
