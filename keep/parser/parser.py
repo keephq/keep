@@ -257,7 +257,6 @@ class Parser:
         alert_actions_parsed = []
         for _action in alert_actions:
             parsed_action = self._get_action(_action)
-            parsed_action.step_type = StepType.ACTION
             alert_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
         return alert_actions_parsed

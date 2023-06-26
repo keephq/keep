@@ -159,24 +159,26 @@ class Step:
             result = self._run_single_async()
         # else, just run the provider
         else:
-            if self.step_type == StepType.STEP:
-                try:
-                    rendered_providers_parameters = {}
-                    for parameter in self.provider_parameters:
-                        rendered_providers_parameters[parameter] = self.io_handler.render(
-                            self.provider_parameters[parameter]
-                        )
-                    step_output =  self.provider.query(**rendered_value)
-                    extra_context = self.provider.expose()
-                    rendered_providers_parameters.update(extra_context)
-                    self.context_manager.set_step_provider_paremeters(
-                        self.step_id, rendered_providers_parameters
+            try:
+                rendered_providers_parameters = {}
+                for parameter in self.provider_parameters:
+                    rendered_providers_parameters[parameter] = self.io_handler.render(
+                        self.provider_parameters[parameter]
                     )
-                except Exception as e:
-                    raise StepError(e)
-                
-                return step_output
-            self.provider.notify(**rendered_value)
+
+                if self.step_type == StepType.STEP:
+                    self.provider.query(**rendered_value)
+                else:
+                    self.provider.notify(**rendered_value)
+
+                extra_context = self.provider.expose()
+                rendered_providers_parameters.update(extra_context)
+                self.context_manager.set_step_provider_paremeters(
+                    self.step_id, rendered_providers_parameters
+                )
+            except Exception as e:
+                raise StepError(e)
+            
             return True
         
     def _run_single_async(self):
@@ -188,7 +190,10 @@ class Step:
         rendered_value = self.io_handler.render_context(self.provider_context)
         # This is "magically solved" because of nest_asyncio but probably isn't best practice
         loop = asyncio.new_event_loop()
-        task = loop.create_task(self.provider.notify(**rendered_value))
+        if self.step_type == StepType.STEP:
+            task = loop.create_task(self.provider.query(**rendered_value))
+        else:
+            task = loop.create_task(self.provider.notify(**rendered_value))
         try:
             loop.run_until_complete(task)
         except Exception as e:
