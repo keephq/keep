@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* https://github.com/vercel/next.js/discussions/13387 */
+nextjs-portal {
+    display: none;
+}

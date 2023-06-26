@@ -1,9 +1,11 @@
 import logging
 import os
 
+import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -20,6 +22,7 @@ from keep.api.core.dependencies import (
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import ai, alerts, healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
+from keep.posthog.posthog import get_posthog_client
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -35,6 +38,61 @@ async def dispose_context_manager() -> None:
     ContextManager.delete_instance()
 
 
+class EventCaptureMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI):
+        super().__init__(app)
+        self.posthog_client = get_posthog_client()
+
+    def _extract_identity(self, request: Request) -> str:
+        if request.headers.get("Authorization"):
+            token = request.headers.get("Authorization").split(" ")[1]
+            decoded_token = jwt.decode(token, options={"verify_signature": False})
+            return decoded_token.get("email")
+        else:
+            return "anonymous"
+
+    def capture_request(self, request: Request) -> None:
+        identity = self._extract_identity(request)
+        self.posthog_client.capture(
+            identity,
+            "request-started",
+            {"path": request.url.path, "method": request.method},
+        )
+
+    def capture_response(self, request: Request, response: Response) -> None:
+        identity = self._extract_identity(request)
+        self.posthog_client.capture(
+            identity,
+            "request-finished",
+            {
+                "path": request.url.path,
+                "method": request.method,
+                "status_code": response.status_code,
+            },
+        )
+
+    def flush(self):
+        logger.info("Flushing Posthog events")
+        self.posthog_client.flush()
+        logger.info("Posthog events flushed")
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip OPTIONS requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        # Capture event before request
+        self.capture_request(request)
+
+        response = await call_next(request)
+
+        # Capture event after request
+        self.capture_response(request, response)
+
+        # Perform async tasks or flush events after the request is handled
+        self.flush()
+        return response
+
+
 def get_app(multi_tenant: bool = False) -> FastAPI:
     app = FastAPI(dependencies=[Depends(dispose_context_manager)])
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
@@ -45,7 +103,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
+    app.add_middleware(EventCaptureMiddleware)
     multi_tenant = (
         multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
     )
