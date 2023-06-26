@@ -192,11 +192,13 @@ def run(
 ):
     """Run the alert."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
-    alert_manager = AlertManager()
+    alert_manager = AlertManager(interval)
     try:
-        alert_manager.run(
-            alerts_directory or alert_url, providers_file, interval=interval
-        )
+        alert_manager.run(alerts_directory or alert_url, providers_file)
+    except KeyboardInterrupt:
+        logger.info("Keep stopped by user, stopping the scheduler")
+        alert_manager.stop()
+        logger.info("Scheduler stopped")
     except Exception as e:
         logger.error(f"Error running alert {alerts_directory or alert_url}: {e}")
         if info.verbose:
