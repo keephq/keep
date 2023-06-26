@@ -1,60 +1,58 @@
 import logging
 import os
+import threading
 import time
 import typing
 
 from keep.alert.alert import Alert
+from keep.alertmanager.alertcheduler import AlertScheduler
 from keep.parser.parser import Parser
 
 
 class AlertManager:
-    def __init__(self):
+    def __init__(self, interval: int = 0):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
+        self.scheduler = AlertScheduler(self)
+        self.default_interval = interval
+        self.scheduler_mode = False
 
-    def run(
-        self,
-        alerts_path: str | list[str],
-        providers_file: str = None,
-        interval: int = 0,
-    ):
+    def stop(self):
+        if self.scheduler_mode:
+            self.logger.info("Stopping alert manager")
+            self.scheduler.stop()
+            self.logger.info("Alert manager stopped")
+        else:
+            pass
+
+    def run(self, alerts_path: str | list[str], providers_file: str = None):
         """
         Run alerts from a file or directory.
 
         Args:
-            alert (str): Either a an alert yaml or a directory containing alert yamls or a list of urls to get the alerts from.
+            alert (str): Either an alert yaml or a directory containing alert yamls or a list of URLs to get the alerts from.
             providers_file (str, optional): The path to the providers yaml. Defaults to None.
+            interval (int, optional): The interval in seconds between consecutive runs. Defaults to 0 (run once).
         """
-        self.logger.info(
-            f"Running alert(s) from {alerts_path}", extra={"interval": interval}
-        )
-        # If interval is set, run the alert every INTERVAL seconds until the user stops the process
-        if interval > 0:
+        self.logger.info(f"Running alert(s) from {alerts_path}")
+        alerts = self.get_alerts(alerts_path, providers_file)
+        alerts_errors = []
+        # If at least one alert has an interval, run alerts using the scheduler,
+        #   otherwise, just run it
+        if self.default_interval or any([alert.alert_interval for alert in alerts]):
+            # running alerts in scheduler mode
             self.logger.info(
-                "Running in interval mode. Press Ctrl+C to stop the process."
+                "Found at least one alert with an interval, running in scheduler mode"
             )
-            while True:
-                try:
-                    self._run(alerts_path, providers_file)
-                except Exception:
-                    self.logger.exception("Error running alert in interval mode")
-                self.logger.info(f"Sleeping for {interval} seconds...")
-                time.sleep(interval)
-        # If interval is not set, run the alert once
+            self.scheduler_mode = True
+            # This will halt until KeyboardInterrupt
+            self.scheduler.run_alerts(alerts)
+            self.logger.info("Alert(s) scheduled")
         else:
-            errors = self._run(alerts_path, providers_file)
-        # TODO: errors should be part of the Alert/Action/Step class so it'll be distinguishable
-        if any(errors):
-            self.logger.error(
-                f"Alert(s) from {alerts_path} ran with errors",
-                extra={"interval": interval},
-            )
-            raise Exception("Alert(s) ran with errors")
-        else:
-            self.logger.info(
-                f"Alert(s) from {alerts_path} ran successfully",
-                extra={"interval": interval},
-            )
+            # running alerts in the regular mode
+            alerts_errors = self._run_alerts(alerts)
+
+        return alerts_errors
 
     def get_alerts(
         self, alert_path: str | tuple[str], providers_file: str = None
@@ -67,6 +65,10 @@ class AlertManager:
             alerts.extend(self._get_alerts_from_directory(alert_path, providers_file))
         else:
             alerts = self.parser.parse(alert_path, providers_file)
+
+        # override the default interval if it is not set
+        for alert in alerts:
+            alert.alert_interval = alert.alert_interval or self.default_interval
         return alerts
 
     def _run(self, alert_path: str | tuple[str], providers_file: str = None):
@@ -101,44 +103,40 @@ class AlertManager:
                     )
         return alerts
 
+    def _run_alert(self, alert: Alert):
+        self.logger.info(f"Running alert {alert.alert_id}")
+        errors = []
+        try:
+            errors = alert.run()
+        except Exception as e:
+            self.logger.error(
+                f"Error running alert {alert.alert_id}", extra={"exception": e}
+            )
+            if alert.on_failure:
+                self.logger.info(
+                    f"Running on_failure action for alert {alert.alert_id}"
+                )
+                # Adding the exception message to the provider context so it'll be available for the action
+                message = f"Alert `{alert.alert_id}` failed with exception: `{str(e)}`"
+                alert.on_failure.provider_context = {"message": message}
+                alert.on_failure.run()
+            raise
+        if any(errors):
+            self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
+        else:
+            self.logger.info(f"Alert {alert.alert_id} ran successfully")
+        return errors
+
     def _run_alerts(self, alerts: typing.List[Alert]):
         alerts_errors = []
         for alert in alerts:
-            # otherwise any(errors) might throw an exception
-            errors = []
-            self.logger.info(f"Running alert {alert.alert_id}")
             try:
-                errors = alert.run()
+                errors = self._run_alert(alert)
+                alerts_errors.append(errors)
             except Exception as e:
                 self.logger.error(
                     f"Error running alert {alert.alert_id}", extra={"exception": e}
                 )
-                if alert.on_failure:
-                    self.logger.info(
-                        f"Running on_failure action for alert {alert.alert_id}"
-                    )
-                    # Adding the exception message to the provider context so it'll be available for the action
-                    message = (
-                        f"Alert `{alert.alert_id}` failed with exception: `{str(e)}`"
-                    )
-                    alert.on_failure.provider_context = {"message": message}
-                    alert.on_failure.run()
                 raise
-            if any(errors):
-                self.logger.info(msg=f"Alert {alert.alert_id} ran with errors")
-            else:
-                self.logger.info(f"Alert {alert.alert_id} ran successfully")
-            alerts_errors.extend(errors)
-        return alerts_errors
 
-    def run_step(self, alert_id: str, step: str):
-        self.logger.info(f"Running step {step} of alert {alert.alert_id}")
-        try:
-            alert = self.get_alerts(alert_id)
-            alert.run_step(step)
-        except Exception as e:
-            self.logger.error(
-                f"Error running step {step} of alert {alert.alert_id}",
-                extra={"exception": e},
-            )
-        self.logger.info(f"Step {step} of alert {alert.alert_id} ran successfully")
+        return alerts_errors

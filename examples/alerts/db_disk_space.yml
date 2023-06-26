@@ -8,6 +8,8 @@ alert:
   services:
     - db
     - api
+  # Run every 60 seconds
+  interval: 60
   steps:
     - name: db-no-space
       provider:
