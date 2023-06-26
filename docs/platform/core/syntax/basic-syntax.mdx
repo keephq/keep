@@ -53,17 +53,6 @@ alert:
 - `actions` - list of actions
 - `on-failure` - a conditionless action used in case of an alert failure
 
-### Steps
-```yaml
-steps:
-    - name: get-max-datetime
-      provider:
-      condition:
-```
-`Step` is built of:
-  - `name` - the step name (context will be accessible through `{{ steps.name.results }}`).
-  - `provider` - the data source.
-
 ### Provider
 ```yaml
 provider:
@@ -92,9 +81,9 @@ provider:
 - `compare_to` - whats `value` will be compared against
 - `compare_type` - all type-specific condition configuration
 
-### Actions
+### Steps/Actions
 ```yaml
-actions:
+steps/actions:
   - name: trigger-slack
     condition:
     - name: threshold-condition
@@ -109,7 +98,7 @@ actions:
         message: "DB datetime value ({{ actions.trigger-slack.conditions.threshold.0.compare_value }}) is greater than 1! 🚨"
 ```
 
-`Action` is built of:
+`Step/Action` is built of:
 - `name` - the name of the action.
 - `condition` - a list of conditions that
 - `provider` - the provider that will trigger the action.
