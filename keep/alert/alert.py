@@ -20,6 +20,7 @@ class Alert:
     alert_source: str
     alert_owners: typing.List[str]
     alert_tags: typing.List[str]
+    alert_interval: int
     alert_steps: typing.List[Step]
     alert_actions: typing.List[Step]
     alert_file: str = None

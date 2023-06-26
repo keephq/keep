@@ -99,12 +99,14 @@ class Parser:
         alert_tags = self._parse_tags(alert)
         alert_steps = self._parse_steps(alert)
         alert_actions = self._parse_actions(alert)
+        alert_interval = self._parse_interval(alert)
         on_failure_action = self._get_on_failure_action(alert)
         alert = Alert(
             alert_id=alert_id,
             alert_source=alert_source,
             alert_owners=alert_owners,
             alert_tags=alert_tags,
+            alert_interval=alert_interval,
             alert_steps=alert_steps,
             alert_actions=alert_actions,
             on_failure=on_failure_action,
@@ -196,6 +198,10 @@ class Parser:
     def _parse_tags(self, alert) -> typing.List[str]:
         alert_tags = alert.get("tags", [])
         return alert_tags
+
+    def _parse_interval(self, alert) -> int:
+        alert_interval = alert.get("interval", 0)
+        return alert_interval
 
     def _parse_steps(self, alert) -> typing.List[Step]:
         self.logger.debug("Parsing steps")

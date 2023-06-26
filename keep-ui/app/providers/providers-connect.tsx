@@ -70,6 +70,7 @@ const ProvidersConnect = ({
                 alt={provider.id}
                 width={150}
                 height={150}
+                title={provider.id}
                 onError={(event) => {
                   const target = event.target as HTMLImageElement;
                   target.src = "keep.svg"; // Set fallback icon
