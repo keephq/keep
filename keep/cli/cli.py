@@ -13,17 +13,11 @@ from posthog import Posthog
 
 from keep.alertmanager.alertmanager import AlertManager
 from keep.cli.click_extensions import NotRequiredIf
+from keep.posthog.posthog import get_posthog_client
 from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
-if not os.getenv("DISABLE_POSTHOG"):
-    posthog_api_key = (
-        os.getenv("POSTHOG_API_KEY")
-        or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
-    )
-    posthog_client = Posthog(api_key=posthog_api_key, host="https://app.posthog.com")
-else:
-    posthog_client = None
+posthog_client = get_posthog_client()
 
 
 logging_config = {

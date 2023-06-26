@@ -5,7 +5,6 @@ import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI, Request, Response
-from posthog import Posthog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
@@ -23,6 +22,7 @@ from keep.api.core.dependencies import (
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import ai, alerts, healthcheck, providers, tenant
 from keep.contextmanager.contextmanager import ContextManager
+from keep.posthog.posthog import get_posthog_client
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -41,13 +41,7 @@ async def dispose_context_manager() -> None:
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
-        self.posthog_api_key = (
-            os.getenv("POSTHOG_API_KEY")
-            or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
-        )
-        self.posthog_client = Posthog(
-            api_key=self.posthog_api_key, host="https://app.posthog.com"
-        )
+        self.posthog_client = get_posthog_client()
 
     def _extract_identity(self, request: Request) -> str:
         if request.headers.get("Authorization"):
@@ -109,8 +103,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    if not os.getenv("DISABLE_POSTHOG"):
-        app.add_middleware(EventCaptureMiddleware)
+    app.add_middleware(EventCaptureMiddleware)
     multi_tenant = (
         multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
     )
