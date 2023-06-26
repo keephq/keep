@@ -95,14 +95,13 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     """Run Keep CLI."""
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
-    if posthog_client:
-        posthog_client.capture(
-            str(uuid.uuid4()),
-            "keep-cli-started",
-            properties={
-                "args": sys.argv,
-            },
-        )
+    posthog_client.capture(
+        str(uuid.uuid4()),
+        "keep-cli-started",
+        properties={
+            "args": sys.argv,
+        },
+    )
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         # set the verbosity level to debug
