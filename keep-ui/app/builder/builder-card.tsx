@@ -7,6 +7,7 @@ import { getApiURL } from "../../utils/apiUrl";
 import Loader from "./loader";
 import { Provider } from "../providers/providers";
 import { fetcher } from "../../utils/fetcher";
+import {KeepApiError} from "../error";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -35,6 +36,10 @@ export function BuilderCard({
   const { data, error, isLoading } = useSWR(`${apiUrl}/providers`, (url) =>
     fetcher(url, accessToken)
   );
+
+  if(error){
+    throw new KeepApiError("The builder has failed to load providers", `${apiUrl}/providers`);
+  }
 
   useEffect(() => {
     if (data && !providers) {

@@ -53,6 +53,12 @@ export default function NavbarInner({ user }: { user: any }) {
                       {item.name}
                     </Link>
                   ))}
+                  <Link key="ctrlk" href="#" passHref className={classNames(
+                        "border-transparent text-gray-300",
+                        "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium cursor-default"
+                      )}>
+                        (or start with ⌘K)
+                  </Link>
                 </div>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">

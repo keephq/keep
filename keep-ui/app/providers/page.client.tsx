@@ -9,6 +9,7 @@ import React, { useState, Suspense } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
 import { fetcher } from "../../utils/fetcher";
+import { KeepApiError } from "../error";
 
 export default function ProvidersPage() {
   console.log("Rendering providers page");
@@ -27,13 +28,16 @@ export default function ProvidersPage() {
     setInstalledProviders((prevProviders) => [...prevProviders, provider]);
   };
 
+  if (error){
+    console.log("Error fetching providers");
+    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
+  }
   if (!data)
     return (
       <div>
         <Loading />
       </div>
     ); // Loading state
-  if (error) return <div>Error: {error.message}</div>; // Error state
 
   // process data here if it's available
   if (data && providers.length === 0 && installedProviders.length === 0) {
