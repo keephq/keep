@@ -8,7 +8,7 @@ export default function Page() {
   return (
     <>
       <div>
-        <ErrorBoundary fallback={<p>l</p>}>
+        <ErrorBoundary>
           <Suspense fallback={<Loading/>}>
             <PageClient />
           </Suspense>

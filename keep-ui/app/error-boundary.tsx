@@ -4,7 +4,6 @@ import {KeepApiError} from "./error";
 
 
 interface ErrorBoundaryProps {
-  fallback: ReactNode;
   children: ReactNode;
 }
 
