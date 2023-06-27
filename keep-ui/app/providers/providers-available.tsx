@@ -1,12 +1,12 @@
-'use client';
-import { Card } from "@tremor/react";
-import ReactLoading from 'react-loading';
+"use client";
+import { Text } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useState } from "react";
+import ReactLoading from "react-loading";
 import Modal from "react-modal";
-import Image from "next/image";
-import ProviderForm from "./provider-form"; // Import the ProviderForm component
-import "./providers-connect.css"
+import ProviderForm from "./provider-form";
+import ProviderTile from "./provider-tile";
+import "./providers-available.css";
 
 const ProvidersConnect = ({
   providers,
@@ -24,7 +24,10 @@ const ProvidersConnect = ({
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  const handleFormChange = (updatedFormValues: Record<string, string>, updatedFormErrors: Record<string, string>) => {
+  const handleFormChange = (
+    updatedFormValues: Record<string, string>,
+    updatedFormErrors: Record<string, string>
+  ) => {
     setFormValues(updatedFormValues);
     setFormErrors(updatedFormErrors);
   };
@@ -46,38 +49,23 @@ const ProvidersConnect = ({
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
     setIsConnecting(isConnecting);
     setIsConnected(isConnected);
-  }
+  };
 
   const providersWithConfig = providers.filter((provider) => {
-      const config = (provider as Provider).config;
-      return config && Object.keys(config).length > 0; // Filter out providers with empty config
-    }) as Providers;
-
+    const config = (provider as Provider).config;
+    return config && Object.keys(config).length > 0; // Filter out providers with empty config
+  }) as Providers;
 
   return (
     <div>
+      <Text className="ml-5">Available Providers</Text>
       <div className="provider-tiles">
         {Object.values(providersWithConfig).map((provider, index) => (
-          <Card
+          <ProviderTile
             key={provider.id}
+            provider={provider}
             onClick={() => handleConnectProvider(provider)}
-            className="card"
-            style={{ gridColumn: "span 1" }}
-          >
-            <div className="image-wrapper">
-              <Image
-                src={`${provider.id}.svg`}
-                alt={provider.id}
-                width={150}
-                height={150}
-                title={provider.id}
-                onError={(event) => {
-                  const target = event.target as HTMLImageElement;
-                  target.src = "keep.svg"; // Set fallback icon
-                }}
-              />
-            </div>
-          </Card>
+          ></ProviderTile>
         ))}
       </div>
       <Modal
@@ -86,31 +74,34 @@ const ProvidersConnect = ({
         contentLabel="Connect Provider Modal"
         className="provider-modal"
       >
-      {isConnecting || isConnected ? (
-            <div className="loading-container">
-              {isConnecting ? (
-                <ReactLoading type="spin" color="rgb(234 160 112)" height={50} width={50} />
-              ) : (
-                <div className="complete-animation">Complete</div>
-              )}
+        {isConnecting || isConnected ? (
+          <div className="loading-container">
+            {isConnecting ? (
+              <ReactLoading
+                type="spin"
+                color="rgb(234 160 112)"
+                height={50}
+                width={50}
+              />
+            ) : (
+              <div className="complete-animation">Complete</div>
+            )}
           </div>
         ) : (
-    <>
-      {selectedProvider && (
-      <ProviderForm
-        provider={selectedProvider}
-        formData={formValues}
-        formErrorsData={formErrors}
-        onFormChange={handleFormChange}
-        onConnectChange={handleConnecting}
-        onAddProvider={addProvider}
-      />
-    )}
-
-    </>
-  )}
-</Modal>
-
+          <>
+            {selectedProvider && (
+              <ProviderForm
+                provider={selectedProvider}
+                formData={formValues}
+                formErrorsData={formErrors}
+                onFormChange={handleFormChange}
+                onConnectChange={handleConnecting}
+                onAddProvider={addProvider}
+              />
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 };
