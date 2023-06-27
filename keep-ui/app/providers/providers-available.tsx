@@ -43,7 +43,7 @@ const ProvidersConnect = ({
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
-    handleCloseModal();
+    if (isConnected) handleCloseModal();
   };
 
   const providersWithConfig = providers.filter((provider) => {

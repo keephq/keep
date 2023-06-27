@@ -5,10 +5,9 @@ import { Provider } from "./providers";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import Alert from "./alert";
-import { FaQuestionCircle } from "react-icons/fa";
 import "./provider-form.css";
-import { Title, Text, Button } from "@tremor/react";
+import { Title, Text, Button, Callout } from "@tremor/react";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -37,12 +36,10 @@ const ProviderForm = ({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
   });
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({
-    ...formErrorsData,
-  });
-  const [testResult, setTestResult] = useState("");
-  const [alertData, setAlertData] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    [key: string]: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
 
   const [hoveredLabel, setHoveredLabel] = useState(null);
@@ -82,7 +79,6 @@ const ProviderForm = ({
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
-    setFormErrors((prevErrors) => ({ ...prevErrors, [name]: false }));
     const updatedFormValues = { ...formValues, [name]: value };
     validateForm(updatedFormValues);
     onFormChange(updatedFormValues, formErrors);
@@ -143,33 +139,35 @@ const ProviderForm = ({
       });
   };
 
-  const handleTestClick = async () => {
-    try {
-      if (!validate()) {
-        return;
-      }
-      const data = await submit(`${getApiURL()}/providers/test`);
-      if (data && data.alerts) {
-        console.log("Test successful");
-        setTestResult("success");
-        setAlertData(data.alerts);
-      } else {
-        setTestResult("error");
-      }
-    } catch (error) {
-      setFormErrors({ error: error.toString() });
-      console.error("Test failed:", error);
-    }
-  };
+  // const handleTestClick = async () => {
+  //   try {
+  //     if (!validate()) {
+  //       return;
+  //     }
+  //     const data = await submit(`${getApiURL()}/providers/test`);
+  //     if (data && data.alerts) {
+  //       console.log("Test successful");
+  //       setTestResult("success");
+  //       setAlertData(data.alerts);
+  //     } else {
+  //       setTestResult("error");
+  //     }
+  //   } catch (error) {
+  //     setFormErrors({ error: error.toString() });
+  //     console.error("Test failed:", error);
+  //   }
+  // };
 
   const handleConnectClick = () => {
     if (!validate()) {
       return;
     }
+    setIsLoading(true);
     onConnectChange(true, false);
     submit(`${getApiURL()}/providers/install`)
       .then((data) => {
         console.log("Connect Result:", data);
+        setIsLoading(false);
         onConnectChange(false, true);
         onAddProvider(data as Provider);
       })
@@ -178,6 +176,7 @@ const ProviderForm = ({
         const updatedFormErrors = { error: error.toString() };
         setFormErrors(updatedFormErrors);
         onFormChange(formValues, updatedFormErrors);
+        setIsLoading(false);
         onConnectChange(false, false);
       });
   };
@@ -209,7 +208,6 @@ const ProviderForm = ({
               value={formValues.provider_name || ""}
               onChange={handleInputChange}
               placeholder="Enter provider name"
-              disabled={isConnected}
             />
           </div>
           {Object.keys(provider.config).map((configKey) => {
@@ -253,16 +251,28 @@ const ProviderForm = ({
           <input type="hidden" name="providerId" value={provider.id} />
         </form>
       </div>
+      <div>
+        {formErrors && (
+          <Callout
+            title="Connection Problem"
+            icon={ExclamationCircleIcon}
+            color="rose"
+          >
+            {JSON.stringify(formErrors, null, 2)}
+          </Callout>
+        )}
+      </div>
       <div className="flex justify-end">
         <Button
           variant="secondary"
           color="orange"
           onClick={closeModal}
           className="mr-2.5"
+          disabled={isLoading}
         >
           Cancel
         </Button>
-        <Button onClick={handleConnectClick} color="orange">
+        <Button loading={isLoading} onClick={handleConnectClick} color="orange">
           Connect
         </Button>
       </div>
