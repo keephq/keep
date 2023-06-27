@@ -1,19 +1,16 @@
-'use client';
 import PageClient from "./page.client";
 import { Suspense } from "react";
 import Loading from "../loading";
-import ErrorBoundary from "../error-boundary";
 
 export default function Page() {
   return (
-    <>
-      <div>
-        <ErrorBoundary>
-          <Suspense fallback={<Loading/>}>
-            <PageClient />
-          </Suspense>
-        </ErrorBoundary>
-      </div>
-    </>
+    <Suspense fallback={<Loading />}>
+      <PageClient />
+    </Suspense>
   );
 }
+
+export const metadata = {
+  title: "Keep - Builder",
+  description: "Build alerts with a visual workflow designer.",
+};
