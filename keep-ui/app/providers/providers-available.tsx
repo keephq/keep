@@ -43,8 +43,7 @@ const ProvidersConnect = ({
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
-    // setIsConnecting(isConnecting);
-    // setIsConnected(isConnected);
+    handleCloseModal();
   };
 
   const providersWithConfig = providers.filter((provider) => {
@@ -79,6 +78,7 @@ const ProvidersConnect = ({
             onFormChange={handleFormChange}
             onConnectChange={handleConnecting}
             onAddProvider={addProvider}
+            closeModal={handleCloseModal}
           />
         )}
       </SlidingPanel>

@@ -21,7 +21,10 @@ export default function ProvidersPage() {
   );
 
   const addProvider = (provider: Provider) => {
-    setInstalledProviders((prevProviders) => [...prevProviders, provider]);
+    setInstalledProviders((prevProviders) => [
+      ...prevProviders,
+      { ...provider, installed: true } as Provider,
+    ]);
   };
 
   if (status === "loading") return <Loading />;
@@ -33,8 +36,10 @@ export default function ProvidersPage() {
   // process data here if it's available
   if (data && providers.length === 0 && installedProviders.length === 0) {
     // TODO: need to refactor the backend response
-    const fetchedInstalledProviders = (data["installed_providers"] as Providers).map(provider => {
-      return {...provider, installed: true} as Provider;
+    const fetchedInstalledProviders = (
+      data["installed_providers"] as Providers
+    ).map((provider) => {
+      return { ...provider, installed: true } as Provider;
     });
     // TODO: refactor this to be more readable and move to backend(?)
     const fetchedProviders = data.providers.map((provider: Provider) => {

@@ -39,17 +39,23 @@ export default function ProviderTile({ provider, onClick }: Props) {
         height={60}
         alt={provider.type}
       />
-      <Text className="capitalize group-hover:hidden">
+      <Text
+        className={`capitalize ${
+          provider.installed ? "" : "group-hover:hidden"
+        }`}
+      >
         {provider.type}
       </Text>
-      <Button
-        variant="secondary"
-        size="xs"
-        color="green"
-        className="hidden group-hover:block"
-      >
-        Connect
-      </Button>
+      {!provider.installed && (
+        <Button
+          variant="secondary"
+          size="xs"
+          color="green"
+          className="hidden group-hover:block"
+        >
+          Connect
+        </Button>
+      )}
     </div>
   );
 }
