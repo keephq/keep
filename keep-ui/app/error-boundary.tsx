@@ -1,7 +1,7 @@
+"use client";
 import React, { ReactNode } from "react";
 import ErrorComponent from "./error";
-import {KeepApiError} from "./error";
-
+import { KeepApiError } from "./error";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -13,7 +13,10 @@ interface ErrorBoundaryState {
   errorUrl?: string;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
 
@@ -38,13 +41,15 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     });
   }
 
-
   render() {
     // Check if an error has occurred
     if (this.state.hasError) {
       // Render custom fallback UI
       return (
-        <ErrorComponent errorMessage={this.state.errorMessage!} url={this.state.errorUrl!} />
+        <ErrorComponent
+          errorMessage={this.state.errorMessage!}
+          url={this.state.errorUrl!}
+        />
       );
     }
 
