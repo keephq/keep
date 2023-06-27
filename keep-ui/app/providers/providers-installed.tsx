@@ -10,7 +10,7 @@ interface Props {
 export default function ProvidersInstalled({ providers }: Props) {
   return (
     <div>
-      <Text className="ml-5">Installed Providers</Text>
+      <Text className="ml-2.5 mt-5">Installed Providers</Text>
       {providers.map((provider) => (
         <ProviderTile
           key={provider.id}

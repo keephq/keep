@@ -2,11 +2,11 @@
 import { Text } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useState } from "react";
-import ReactLoading from "react-loading";
-import Modal from "react-modal";
+import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
 import "./providers-available.css";
+import "react-sliding-side-panel/lib/index.css";
 
 const ProvidersConnect = ({
   providers,
@@ -15,12 +15,10 @@ const ProvidersConnect = ({
   providers: Providers;
   addProvider: (provider: Provider) => void;
 }) => {
-  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
@@ -34,21 +32,19 @@ const ProvidersConnect = ({
 
   const handleConnectProvider = (provider: Provider) => {
     setSelectedProvider(provider);
-    setShowProviderModal(true);
+    setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
-    setShowProviderModal(false);
+    setOpenPanel(false);
     setSelectedProvider(null);
-    setIsConnecting(false);
-    setIsConnected(false);
     setFormValues({});
     setFormErrors({});
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
-    setIsConnecting(isConnecting);
-    setIsConnected(isConnected);
+    // setIsConnecting(isConnecting);
+    // setIsConnected(isConnected);
   };
 
   const providersWithConfig = providers.filter((provider) => {
@@ -58,7 +54,7 @@ const ProvidersConnect = ({
 
   return (
     <div>
-      <Text className="ml-5">Available Providers</Text>
+      <Text className="ml-2.5 mt-5">Available Providers</Text>
       <div className="provider-tiles">
         {Object.values(providersWithConfig).map((provider, index) => (
           <ProviderTile
@@ -68,40 +64,24 @@ const ProvidersConnect = ({
           ></ProviderTile>
         ))}
       </div>
-      <Modal
-        isOpen={showProviderModal}
-        onRequestClose={handleCloseModal}
-        contentLabel="Connect Provider Modal"
-        className="provider-modal"
+      <SlidingPanel
+        type={"right"}
+        isOpen={openPanel}
+        size={30}
+        backdropClicked={handleCloseModal}
+        panelContainerClassName="bg-white z-[2000]"
       >
-        {isConnecting || isConnected ? (
-          <div className="loading-container">
-            {isConnecting ? (
-              <ReactLoading
-                type="spin"
-                color="rgb(234 160 112)"
-                height={50}
-                width={50}
-              />
-            ) : (
-              <div className="complete-animation">Complete</div>
-            )}
-          </div>
-        ) : (
-          <>
-            {selectedProvider && (
-              <ProviderForm
-                provider={selectedProvider}
-                formData={formValues}
-                formErrorsData={formErrors}
-                onFormChange={handleFormChange}
-                onConnectChange={handleConnecting}
-                onAddProvider={addProvider}
-              />
-            )}
-          </>
+        {selectedProvider && (
+          <ProviderForm
+            provider={selectedProvider}
+            formData={formValues}
+            formErrorsData={formErrors}
+            onFormChange={handleFormChange}
+            onConnectChange={handleConnecting}
+            onAddProvider={addProvider}
+          />
         )}
-      </Modal>
+      </SlidingPanel>
     </div>
   );
 };
