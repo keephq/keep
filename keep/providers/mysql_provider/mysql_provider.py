@@ -33,7 +33,7 @@ class MysqlProvider(BaseProvider):
         super().__init__(provider_id, config)
         self.client = None
 
-    def __generate_client(self) -> mysql.connector.CMySQLConnection:
+    def __generate_client(self):
         """
         Generates a MySQL client.
 
