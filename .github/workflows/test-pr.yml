@@ -19,6 +19,6 @@ jobs:
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       with:
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # don't fail if we didn't manage to upload the coverage report
         files: coverage.json
         verbose: true
