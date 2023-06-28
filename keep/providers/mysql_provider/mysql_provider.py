@@ -24,7 +24,7 @@ class MysqlProviderAuthConfig:
         metadata={"required": True, "description": "MySQL hostname"}
     )
     database: str | None = dataclasses.field(
-        metadata={"required": False, "description": "MySQL database name"}
+        metadata={"required": False, "description": "MySQL database name"}, default=None
     )
 
 

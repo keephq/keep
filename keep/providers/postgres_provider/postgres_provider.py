@@ -28,7 +28,8 @@ class PostgresProviderAuthConfig:
         metadata={"required": True, "description": "Postgres hostname"}
     )
     database: str | None = dataclasses.field(
-        metadata={"required": False, "description": "Postgres database name"}
+        metadata={"required": False, "description": "Postgres database name"},
+        default=None,
     )
     port: str | None = dataclasses.field(
         default="5432", metadata={"required": False, "description": "Postgres port"}
