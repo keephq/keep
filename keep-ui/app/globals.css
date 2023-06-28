@@ -7,3 +7,7 @@
     display: none;
 }
 */
+
+.Frill_Trigger_Tab {
+    z-index: 1000 !important;
+}
