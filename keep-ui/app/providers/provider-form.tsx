@@ -4,16 +4,21 @@ import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
-import Alert from "./alert";
-import { FaQuestionCircle } from "react-icons/fa";
+import Image from "next/image";
 import "./provider-form.css";
+import { Title, Text, Button, Callout } from "@tremor/react";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
 type ProviderFormProps = {
   provider: Provider;
   formData: Record<string, string>; // New prop for form data
   formErrorsData: Record<string, string>; // New prop for form data
-  onFormChange: (formValues: Record<string, string>, formErrors: Record<string, string>) => void;
+  onFormChange: (
+    formValues: Record<string, string>,
+    formErrors: Record<string, string>
+  ) => void;
   onConnectChange: (isConnecting: boolean, isConnected: boolean) => void;
+  closeModal: () => void;
   onAddProvider: (provider: Provider) => void;
 };
 
@@ -23,21 +28,19 @@ const ProviderForm = ({
   formErrorsData,
   onFormChange,
   onConnectChange,
-  onAddProvider
+  onAddProvider,
+  closeModal,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
   });
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({
-    ...formErrorsData,
-  });
-  const [testResult, setTestResult] = useState("");
-  const [alertData, setAlertData] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    [key: string]: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
-
 
   const [hoveredLabel, setHoveredLabel] = useState(null);
 
@@ -65,7 +68,7 @@ const ProviderForm = ({
       ) {
         errors[configKey] = true;
       }
-      if(!formValues.provider_name){
+      if (!formValues.provider_name) {
         errors["provider_name"] = true;
       }
     }
@@ -73,11 +76,9 @@ const ProviderForm = ({
     return errors;
   };
 
-
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
-    setFormErrors((prevErrors) => ({ ...prevErrors, [name]: false }));
     const updatedFormValues = { ...formValues, [name]: value };
     validateForm(updatedFormValues);
     onFormChange(updatedFormValues, formErrors);
@@ -121,7 +122,9 @@ const ProviderForm = ({
         if (!response.ok) {
           // If the response is not okay, throw the error message
           return response.json().then((errorData) => {
-            throw new Error(`Error: ${response.status}, ${JSON.stringify(errorData)}`);
+            throw new Error(
+              `Error: ${response.status}, ${JSON.stringify(errorData)}`
+            );
           });
         }
         return response.json();
@@ -136,34 +139,35 @@ const ProviderForm = ({
       });
   };
 
-
-  const handleTestClick = async () => {
-    try {
-      if(!validate()){
-        return;
-      }
-      const data = await submit(`${getApiURL()}/providers/test`);
-      if (data && data.alerts) {
-        console.log("Test successful");
-        setTestResult("success");
-        setAlertData(data.alerts);
-      } else {
-        setTestResult("error");
-      }
-    } catch (error) {
-      setFormErrors({ error: error.toString() });
-      console.error("Test failed:", error);
-    }
-  };
+  // const handleTestClick = async () => {
+  //   try {
+  //     if (!validate()) {
+  //       return;
+  //     }
+  //     const data = await submit(`${getApiURL()}/providers/test`);
+  //     if (data && data.alerts) {
+  //       console.log("Test successful");
+  //       setTestResult("success");
+  //       setAlertData(data.alerts);
+  //     } else {
+  //       setTestResult("error");
+  //     }
+  //   } catch (error) {
+  //     setFormErrors({ error: error.toString() });
+  //     console.error("Test failed:", error);
+  //   }
+  // };
 
   const handleConnectClick = () => {
-    if(!validate()){
+    if (!validate()) {
       return;
     }
+    setIsLoading(true);
     onConnectChange(true, false);
     submit(`${getApiURL()}/providers/install`)
       .then((data) => {
         console.log("Connect Result:", data);
+        setIsLoading(false);
         onConnectChange(false, true);
         onAddProvider(data as Provider);
       })
@@ -172,116 +176,106 @@ const ProviderForm = ({
         const updatedFormErrors = { error: error.toString() };
         setFormErrors(updatedFormErrors);
         onFormChange(formValues, updatedFormErrors);
+        setIsLoading(false);
         onConnectChange(false, false);
-    });
-
+      });
   };
-
 
   console.log("ProviderForm component loaded");
   return (
-    <div>
-      <form className={isConnected ? "connected-form" : ""}>
-      <div className="form-group">
-        <label htmlFor="provider_name" className="label-container">
-          <span className="method-name">Provider Name:</span>
-          <span className="question-icon">
-            <FaQuestionCircle />
-          </span>
-        </label>
-        <input
-          type="text"
-          id="provider_name"
-          name="provider_name"
-          value={formValues.provider_name || ""}
-          onChange={handleInputChange}
-          placeholder="Enter provider name"
-          disabled={isConnected}
+    <div className="flex flex-col h-screen justify-between p-7">
+      <div>
+        <Title>
+          Connect to{" "}
+          {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
+        </Title>
+        <Image
+          src={`/icons/${provider.type}-icon.png`}
+          width={64}
+          height={64}
+          alt={provider.type}
+          className="mt-5 mb-9"
         />
-      </div>
-        {Object.keys(provider.config).map((configKey) => {
-          const method = provider.config[configKey];
-          const isHovered = hoveredLabel === configKey;
-          return (
-            <div className="form-group" key={configKey}>
-              <label
-                htmlFor={configKey}
-                className="label-container"
-                onMouseEnter={() => handleLabelMouseEnter(configKey)}
-                onMouseLeave={() => handleLabelMouseLeave(configKey)}
-              >
-                <span className="method-name">
-                  {method.description}
-                  {method.required !== false ? "" : " (optional)"}:
-                </span>
-                <span className="question-icon">
-                  { method.hint && <FaQuestionCircle /> }
-                </span>
-                {isHovered && method.hint && (
-                  <div className="help-bubble-container">
-                    <div className="help-bubble">
-                      <span className="hint">{method.hint}</span>
+        <form>
+          <div className="form-group">
+            <label htmlFor="provider_name" className="label-container mb-1">
+              <Text>Provider Name</Text>
+            </label>
+            <input
+              type="text"
+              id="provider_name"
+              name="provider_name"
+              value={formValues.provider_name || ""}
+              onChange={handleInputChange}
+              placeholder="Enter provider name"
+            />
+          </div>
+          {Object.keys(provider.config).map((configKey) => {
+            const method = provider.config[configKey];
+            const isHovered = hoveredLabel === configKey;
+            return (
+              <div className="form-group" key={configKey}>
+                <label
+                  htmlFor={configKey}
+                  className="label-container mb-1"
+                  onMouseEnter={() => handleLabelMouseEnter(configKey)}
+                  onMouseLeave={() => handleLabelMouseLeave(configKey)}
+                >
+                  <Text className="capitalize">
+                    {method.description}
+                    {method.required !== false ? "" : " (optional)"}
+                  </Text>
+                  {/* <span className="question-icon">
+                  {method.hint && <FaQuestionCircle />}
+                </span> */}
+                  {/* {isHovered && method.hint && (
+                    <div className="help-bubble-container">
+                      <div className="help-bubble">
+                        <span className="hint">{method.hint}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </label>
-              <input
-                type={method.type}
-                id={configKey}
-                name={configKey}
-                value={formValues[configKey] || ""}
-                onChange={handleInputChange}
-                placeholder={method.placeholder || "Enter " + configKey}
-              />
-            </div>
-          );
-        })}
-        {/* Hidden input for provider ID */}
-        <input type="hidden" name="providerId" value={provider.id} />
-        <div className="button-group">
-          <button
-            type="button"
-            className="test-button"
-            onClick={handleTestClick}
+                  )} */}
+                </label>
+                <input
+                  type={method.type}
+                  id={configKey}
+                  name={configKey}
+                  value={formValues[configKey] || ""}
+                  onChange={handleInputChange}
+                  placeholder={method.placeholder || "Enter " + configKey}
+                />
+              </div>
+            );
+          })}
+          {/* Hidden input for provider ID */}
+          <input type="hidden" name="providerId" value={provider.id} />
+        </form>
+      </div>
+      <div>
+        {formErrors && (
+          <Callout
+            title="Connection Problem"
+            icon={ExclamationCircleIcon}
+            color="rose"
           >
-            Test
-          </button>
-          <button
-            type="button"
-            className="connect-button"
-            onClick={handleConnectClick}
-          >
-            Connect
-          </button>
-        </div>
-      </form>
-      {formErrors.error && (
-        <div className="error-message">
-          Error while testing the provider: &quot;{formErrors.error}&quot;
-        </div>
-      )}
-      {testResult === "success" && (
-        <div>
-          <div className="test-result">Test Result: {testResult}</div>
-          <table className="alerts-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Condition</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alertData.map((alert) => (
-                <tr key={alert.id || Math.random()}>
-                  <Alert alert={alert} provider={formValues.provider_id} />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            {JSON.stringify(formErrors, null, 2)}
+          </Callout>
+        )}
+      </div>
+      <div className="flex justify-end">
+        <Button
+          variant="secondary"
+          color="orange"
+          onClick={closeModal}
+          className="mr-2.5"
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button loading={isLoading} onClick={handleConnectClick} color="orange">
+          Connect
+        </Button>
+      </div>
     </div>
   );
 };

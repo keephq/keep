@@ -1,52 +1,51 @@
 "use client";
-import { Card, Title } from "@tremor/react";
-import ProvidersTable from "./table";
-import ProvidersConnect from "./providers-connect";
 import { Providers, defaultProvider, Provider } from "./providers";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
+import { fetcher } from "../../utils/fetcher";
+import { KeepApiError } from "../error";
+import ProvidersAvailable from "./providers-available";
 import React, { useState, Suspense } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
-import { fetcher } from "../../utils/fetcher";
-import { KeepApiError } from "../error";
+import Image from "next/image";
+import ProvidersInstalled from "./providers-installed";
 
 export default function ProvidersPage() {
-  console.log("Rendering providers page");
-  const { data: session, status, update } = useSession();
-  const accessToken = session?.accessToken;
-
-  const { data, error } = useSWR(
-    () => (accessToken ? `${getApiURL()}/providers` : null),
-    (url) => fetcher(url, accessToken!)
-  );
-
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
+  const { data: session, status, update } = useSession();
+
+  const { data, error } = useSWR(`${getApiURL()}/providers`, (url) =>
+    fetcher(url, session?.accessToken!)
+  );
 
   const addProvider = (provider: Provider) => {
-    setInstalledProviders((prevProviders) => [...prevProviders, provider]);
+    setInstalledProviders((prevProviders) => [
+      ...prevProviders,
+      { ...provider, installed: true } as Provider,
+    ]);
   };
 
-  if (error){
-    console.log("Error fetching providers");
-    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
-  }
-  if (!data)
-    return (
-      <div>
-        <Loading />
-      </div>
-    ); // Loading state
+  if (status === "loading") return <Loading />;
+  if (status === "unauthenticated") return <div>Unauthenticated</div>;
+
+  if (!data) return <Loading />;
+  if (error) throw new KeepApiError(error.message, `${getApiURL()}/providers`);
 
   // process data here if it's available
   if (data && providers.length === 0 && installedProviders.length === 0) {
-    const fetchedInstalledProviders = data["installed_providers"] as Providers;
+    // TODO: need to refactor the backend response
+    const fetchedInstalledProviders = (
+      data["installed_providers"] as Providers
+    ).map((provider) => {
+      return { ...provider, installed: true } as Provider;
+    });
+    // TODO: refactor this to be more readable and move to backend(?)
     const fetchedProviders = data.providers.map((provider: Provider) => {
       const updatedProvider: Provider = {
         config: { ...defaultProvider.config, ...(provider as Provider).config },
-        installed:
-          (provider as Provider).installed ?? defaultProvider.installed,
+        installed: (provider as Provider).installed ?? false,
         details: {
           authentication: {
             ...defaultProvider.details.authentication,
@@ -68,16 +67,13 @@ export default function ProvidersPage() {
   }
 
   return (
-    <>
-      <Card className="mt-6">
-        <Suspense fallback={<img src="/keep.gif" />}>
-          <ProvidersConnect providers={providers} addProvider={addProvider} />
-        </Suspense>
-      </Card>
-      <Title>Installed Providers</Title>
-      <Card className="mt-6">
-        <ProvidersTable providers={installedProviders} />
-      </Card>
-    </>
+    <Suspense
+      fallback={
+        <Image src="/keep.gif" width={200} height={200} alt="Loading" />
+      }
+    >
+      <ProvidersInstalled providers={installedProviders} />
+      <ProvidersAvailable providers={providers} addProvider={addProvider} />
+    </Suspense>
   );
 }
