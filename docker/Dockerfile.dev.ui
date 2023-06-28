@@ -12,11 +12,11 @@ WORKDIR /app
 # to the /app working directory
 COPY ../keep-ui/package*.json /app
 
-# Install dependencies in /app
-RUN npm install
-
 # Copy the rest of our Next.js folder into /app
 COPY ../keep-ui /app
+
+# Install dependencies in /app
+RUN npm install
 
 # Ensure port 3000 is accessible to our system
 EXPOSE 3000
