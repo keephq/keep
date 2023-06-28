@@ -12,12 +12,12 @@ export default function ProvidersLayout({
       <div className="flex w-full justify-between mb-4 ml-2.5">
         <div className="flex justify-center items-center">
           <Title>Providers</Title>
-          <Select className="h-8 w-44 ml-2.5" placeholder="Filter 1">
+          {/* <Select className="h-8 w-44 ml-2.5" placeholder="Filter 1">
             <SelectItem value="filter-1">Filter 1</SelectItem>
           </Select>
           <Select className="h-8 w-44 ml-2.5" placeholder="Filter 2">
             <SelectItem value="filter-2">Filter 2</SelectItem>
-          </Select>
+          </Select> */}
         </div>
         <Icon
           icon={MagnifyingGlassIcon}
