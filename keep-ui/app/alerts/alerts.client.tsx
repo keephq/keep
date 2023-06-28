@@ -9,8 +9,8 @@ import {
   BadgeDelta,
   DeltaType,
   Icon,
-  MultiSelectBox,
-  MultiSelectBoxItem,
+  MultiSelect,
+  MultiSelectItem,
   CategoryBar,
   Flex,
   Button,
@@ -100,18 +100,18 @@ export default function AlertsPage() {
   return (
     <>
       <Flex justifyContent="between">
-        <MultiSelectBox
+        <MultiSelect
           onValueChange={setSelectedEnvironments}
           placeholder="Select Environment..."
           className="max-w-xs mb-5"
           icon={ServerIcon}
         >
           {environments!.map((item) => (
-            <MultiSelectBoxItem key={item} value={item}>
+            <MultiSelectItem key={item} value={item}>
               {item}
-            </MultiSelectBoxItem>
+            </MultiSelectItem>
           ))}
-        </MultiSelectBox>
+        </MultiSelect>
         <Button
           icon={ArchiveBoxIcon}
           color="orange"
@@ -146,9 +146,9 @@ export default function AlertsPage() {
                   <TableCell>{alert.status}</TableCell>
                   <TableCell>
                     <CategoryBar
-                      categoryPercentageValues={[40, 30, 20, 10]}
+                      values={[40, 30, 20, 10]}
                       colors={["emerald", "yellow", "orange", "rose"]}
-                      percentageValue={alert.fatigueMeter ?? 0}
+                      markerValue={alert.fatigueMeter ?? 0}
                       tooltip={alert.fatigueMeter?.toString() ?? "0"}
                       className="w-48"
                     />
