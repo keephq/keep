@@ -332,7 +332,7 @@
     "safe-regex-test": "^1.0.0",
     "sass": "^1.63.6",
     "scheduler": "^0.23.0",
-    "semver": "^7.5.0",
+    "semver": "^7.5.2",
     "sequential-workflow-designer": "^0.13.2",
     "sequential-workflow-designer-react": "^0.13.2",
     "server-only": "^0.0.1",
