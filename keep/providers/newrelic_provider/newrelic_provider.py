@@ -28,8 +28,8 @@ class NewrelicProviderAuthConfig:
 
 
 class NewrelicProvider(BaseProvider):
-    def __init__(self, config: ProviderConfig):
-        super().__init__(config)
+    def __init__(self, provider_id: str, config: ProviderConfig):
+        super().__init__(provider_id, config)
 
     def dispose(self):
         """

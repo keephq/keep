@@ -1,21 +1,25 @@
-FROM python:3.11 as requirements-stage
+FROM python:slim as base
 
-WORKDIR /tmp
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PYTHONUNBUFFERED=1
 
-RUN pip install poetry
+WORKDIR /app
 
-COPY ../pyproject.toml ./poetry.lock* /tmp/
+FROM base as builder
 
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+ENV PIP_DEFAULT_TIMEOUT=100 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VERSION=1.3.2
 
-FROM python:3.11 as production-stage
+RUN pip install "poetry==$POETRY_VERSION"
+RUN python -m venv /venv
+COPY . .
+RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
-WORKDIR /code
-
-COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
-
-RUN pip install --no-cache-dir --upgrade --use-deprecated=legacy-resolver -r /code/requirements.txt
-
-COPY ../keep /code/keep
-
+FROM base as final
+ENV PATH="/venv/bin:${PATH}"
+ENV VIRTUAL_ENV="/venv"
+COPY --from=builder /venv /venv
 CMD ["uvicorn", "keep.api.api:get_app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

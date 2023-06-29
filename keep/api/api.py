@@ -44,11 +44,11 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         self.posthog_client = get_posthog_client()
 
     def _extract_identity(self, request: Request) -> str:
-        if request.headers.get("Authorization"):
+        try:
             token = request.headers.get("Authorization").split(" ")[1]
             decoded_token = jwt.decode(token, options={"verify_signature": False})
             return decoded_token.get("email")
-        else:
+        except:
             return "anonymous"
 
     def capture_request(self, request: Request) -> None:

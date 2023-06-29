@@ -37,14 +37,21 @@ class SnowflakeProviderAuthConfig:
             "required": False,
             "description": "Snowflake password",
             "sensitive": True,
-        }
+        },
+        default=None,
     )
 
 
 class SnowflakeProvider(BaseProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.client = self.__generate_client()
+        self._client = None
+
+    @property
+    def client(self) -> SnowflakeConnection:
+        if self._client is None:
+            self._client = self.__generate_client()
+        return self._client
 
     def __generate_client(self) -> SnowflakeConnection:
         """
@@ -55,9 +62,14 @@ class SnowflakeProvider(BaseProvider):
         """
         # Todo: support username/password authentication
         encoded_private_key = self.authentication_config.pkey.encode()
+        encoded_password = (
+            self.authentication_config.pkey_passphrase.encode()
+            if self.authentication_config.pkey_passphrase
+            else None
+        )
         private_key = serialization.load_pem_private_key(
             encoded_private_key,
-            password=self.authentication_config.pkey_passphrase,
+            password=encoded_password,
             backend=default_backend(),
         )
 

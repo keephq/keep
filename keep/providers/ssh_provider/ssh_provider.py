@@ -56,7 +56,13 @@ class SshProviderAuthConfig:
 class SshProvider(BaseProvider):
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.client = self.__generate_client()
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = self.__generate_client()
+        return self._client
 
     def __generate_client(self) -> SSHClient:
         """

@@ -40,9 +40,16 @@ class CloudwatchProvider(BaseProvider):
     CloudwatchProvider is a class that provides a way to read data from AWS Cloudwatch.
     """
 
-    def __init__(self, aws_client_type: str, provider_id: str, config: ProviderConfig):
+    def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.client = self.__generate_client(aws_client_type)
+        self.aws_client_type = None
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self.client = self.__generate_client(self.aws_client_type)
+        return self._client
 
     def __generate_client(self, aws_client_type: str):
         client = boto3.client(
@@ -71,7 +78,8 @@ class CloudwatchLogsProvider(CloudwatchProvider):
     """
 
     def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__("logs", provider_id, config)
+        super().__init__(provider_id, config)
+        self.aws_client_type = "logs"
 
     def _query(self, **kwargs: dict) -> dict:
         log_group = kwargs.get("log_group")
@@ -106,7 +114,8 @@ class CloudwatchMetricsProvider(CloudwatchProvider):
     """
 
     def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__("cloudwatch", provider_id, config)
+        super().__init__(provider_id, config)
+        self.aws_client_type = "cloudwatch"
 
     def query(self, **kwargs: dict) -> None:
         raise NotImplementedError(
