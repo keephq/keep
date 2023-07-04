@@ -15,10 +15,13 @@ export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const { data: session, status, update } = useSession();
+  let shouldFetch = session?.accessToken ? true : false;
 
-  const { data, error } = useSWR(`${getApiURL()}/providers`, (url) =>
-    fetcher(url, session?.accessToken!)
-  );
+  const { data, error } = useSWR(shouldFetch? `${getApiURL()}/providers`: null, url => {
+    return fetcher(url, session?.accessToken!);
+  });
+
+
 
   const addProvider = (provider: Provider) => {
     setInstalledProviders((prevProviders) => [
