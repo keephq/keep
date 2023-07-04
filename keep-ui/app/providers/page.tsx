@@ -1,13 +1,7 @@
-import { Suspense } from "react";
-import Loading from "../loading";
 import ProvidersPage from "./page.client";
 
 export default function Page() {
-  return (
-    <Suspense fallback={<Loading />}>
-      <ProvidersPage />
-    </Suspense>
-  );
+  return <ProvidersPage />
 }
 
 export const metadata = {
