@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keep-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keep-frontend
+  template:
+    metadata:
+      labels:
+        app: keep-frontend
+    spec:
+      # securityContext:
+      #   runAsNonRoot: true
+      #   runAsUser: 1000
+      containers:
+        - name: keep-frontend
+          image: "{{ .Values.frontend.image }}"
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_AUTH_ENABLED
+              value: "false"
+            - name: NEXTAUTH_SECRET
+              value: secret
+            - name: NEXTAUTH_URL
+              value: http://localhost:3000
+            - name: API_URL
+              value: http://localhost:8080
+            - name: NEXT_PUBLIC_API_URL
+              value: http://localhost:8080
+            - name: NEXT_PUBLIC_POSTHOG_KEY
+              value: "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+            - name: NEXT_PUBLIC_POSTHOG_HOST
+              value: https://app.posthog.com
+          volumeMounts:
+            - name: state-volume
+              mountPath: /state
+              readOnly: true
+      volumes:
+        - name: state-volume
+          emptyDir: {}

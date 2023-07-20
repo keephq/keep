@@ -7,7 +7,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json ./
+COPY ../keep-ui/package.json ../keep-ui/package-lock.json ./
 RUN npm ci
 
 
@@ -15,7 +15,7 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY ../keep-ui .
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -23,7 +23,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-ENV NEXT_PUBLIC_API_URL http://localhost:8080
+ENV NEXT_PUBLIC_API_URL http://174.138.104.131:8080
 ENV NEXT_PUBLIC_POSTHOG_KEY phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
 ENV NEXT_PUBLIC_POSTHOG_HOST https://app.posthog.com
 ENV NEXT_PUBLIC_AUTH_ENABLED false

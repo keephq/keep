@@ -161,6 +161,7 @@ cython_debug/
 
 # vscode
 .vscode/
+.DS_Store
 
 # keep configuration file
 keep.yaml
@@ -176,3 +177,4 @@ keep-ui/node_modules
 keep-ui/node_modules/*
 
 cov.xml
+node_modules

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keep-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keep-backend
+  template:
+    metadata:
+      labels:
+        app: keep-backend
+    spec:
+    #   securityContext:
+    #     runAsNonRoot: true
+    #     runAsUser: 1000
+      containers:
+        - name: keep-backend
+          image: "{{ .Values.backend.image }}"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: SECRET_MANAGER_TYPE
+              value: FILE
+            - name: SECRET_MANAGER_DIRECTORY
+              value: /state
+            - name: DATABASE_CONNECTION_STRING
+              value: sqlite:////state/db.sqlite3
+            - name: USE_NGROK
+              value: "true"
+            - name: OPENAI_API_KEY
+              value: "{{ .Values.backend.apiKey }}"
+          volumeMounts:
+            - name: state-volume
+              mountPath: /state
+              readOnly: false
+      volumes:
+        - name: state-volume
+          emptyDir: {}
