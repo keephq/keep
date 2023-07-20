@@ -6,6 +6,7 @@ import typing
 
 from keep.alert.alert import Alert
 from keep.alertmanager.alertcheduler import AlertScheduler
+from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 
 
@@ -14,12 +15,14 @@ class AlertManager:
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.scheduler = AlertScheduler(self)
+        self.context_manager = ContextManager.get_instance()
         self.default_interval = interval
         self.scheduler_mode = False
 
     def stop(self):
         if self.scheduler_mode:
             self.logger.info("Stopping alert manager")
+            self.context_manager.dump()
             self.scheduler.stop()
             self.logger.info("Alert manager stopped")
         else:
