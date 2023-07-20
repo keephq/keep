@@ -220,6 +220,7 @@ def test_context_manager_set_last_alert_run(context_manager: ContextManager):
     alert_context = {"mock": "mock"}
     alert_status = "firing"
     context_manager.set_last_alert_run(alert_id, alert_context, alert_status)
+    context_manager.dump()
     assert alert_id in context_manager.state
     with open(context_manager.STATE_FILE, "r") as f:
         state = json.load(f)
