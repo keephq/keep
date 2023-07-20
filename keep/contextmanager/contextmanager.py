@@ -191,8 +191,20 @@ class ContextManager:
         else:
             return {}
 
+    def dump(self):
+        self.logger.info("Dumping state file")
+        with open(self.state_file, "w") as f:
+            json.dump(self.state, f, default=str)
+        self.logger.info("State file dumped")
+
     def set_last_alert_run(self, alert_id, alert_context, alert_status):
         # TODO - SQLite
+        self.logger.debug(
+            "Adding alert to state",
+            extra={
+                "alert_id": alert_id,
+            },
+        )
         if alert_id not in self.state:
             self.state[alert_id] = []
         self.state[alert_id].append(
@@ -201,5 +213,9 @@ class ContextManager:
                 "alert_context": alert_context,
             }
         )
-        with open(self.state_file, "w") as f:
-            json.dump(self.state, f, default=str)
+        self.logger.debug(
+            "Added alert to state",
+            extra={
+                "alert_id": alert_id,
+            },
+        )
