@@ -47,7 +47,10 @@ class AlertScheduler:
         """
         while True and not self._stop:
             self.logger.info(f"Running alert {alert.alert_id}...")
-            self.alert_manager._run_alert(alert)
+            try:
+                self.alert_manager._run_alert(alert)
+            except Exception as e:
+                self.logger.exception(f"Failed to run alert {alert.alert_id}...")
             self.logger.info(f"Alert {alert.alert_id} ran")
             if alert.alert_interval > 0:
                 self.logger.info(f"Sleeping for {alert.alert_interval} seconds...")
