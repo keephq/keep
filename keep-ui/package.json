@@ -391,7 +391,7 @@
     "which-boxed-primitive": "^1.0.2",
     "which-collection": "^1.0.1",
     "which-typed-array": "^1.1.9",
-    "word-wrap": "^1.2.3",
+    "word-wrap": "^1.2.4",
     "wrappy": "^1.0.2",
     "yallist": "^4.0.0",
     "yaml": "^2.2.2",
