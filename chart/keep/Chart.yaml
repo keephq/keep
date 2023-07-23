@@ -1,7 +1,7 @@
 apiVersion: v2
 name: keep
 version: 0.0.1
-kubeVersion: 1.25.9
+kubeVersion: ">=1.25.9"
 description: Keep Helm Chart
 type: application
 icon: https://platform.keephq.dev/_next/image?url=%2Fkeep.png&w=48&q=75

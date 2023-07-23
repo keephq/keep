@@ -26,13 +26,17 @@ spec:
             - name: NEXTAUTH_URL
               value: http://localhost:3000
             - name: API_URL
-              value: http://localhost:8080
+              value: "{{ .Values.frontend.internalApiUrl }}"
             - name: NEXT_PUBLIC_API_URL
-              value: " {{ .Values.frontend.publicApiUrl }} "
+              value: "{{ .Values.frontend.publicApiUrl }}"
             - name: NEXT_PUBLIC_POSTHOG_KEY
               value: "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
             - name: NEXT_PUBLIC_POSTHOG_HOST
               value: https://app.posthog.com
+            - name: ENV
+              value: "{{ .Values.frontend.env }}"
+            - name: NODE_ENV
+              value: "{{ .Values.frontend.env }}"
           volumeMounts:
             - name: state-volume
               mountPath: /state
