@@ -302,7 +302,7 @@
     "punycode": "^2.3.0",
     "queue-microtask": "^1.2.3",
     "react": "^18.2.0",
-    "react-code-blocks": "^0.0.9-0",
+    "react-code-blocks": "^0.1.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.9.0",
     "react-is": "^16.13.1",
