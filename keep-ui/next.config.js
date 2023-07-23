@@ -29,7 +29,7 @@ const nextConfig = {
             exclude: ["error"],
           }
         : false,
-  },
+},
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
