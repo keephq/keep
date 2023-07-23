@@ -1,0 +1,6 @@
+backend:
+  image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+  apiKey: "<OPEN_AI_KEY>"
+frontend:
+  image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+  publicApiUrl: "http://localhost:8080"

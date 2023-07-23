@@ -1,0 +1,22 @@
+apiVersion: v2
+name: keep
+version: 0.0.1
+kubeVersion: 1.25.9
+description: Keep Helm Chart
+type: application
+icon: https://platform.keephq.dev/_next/image?url=%2Fkeep.png&w=48&q=75
+appVersion: 0.1.0
+deprecated: false
+annotations:
+  app: keep
+keywords:
+  - alerting
+  - monitoring
+  - monitoring-tool
+home: https://platform.keephq.dev/
+sources:
+  - https://github.com/keephq/keep
+maintainers:
+  - name: Denis Tu
+    email: dmarshaltu@gmail.com
+    url: https://github.com/DmarshalTU
