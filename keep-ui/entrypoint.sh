@@ -7,5 +7,4 @@ if [ -n "$NEXT_PUBLIC_API_URL" ]; then
 fi
 
 echo "Starting Nextjs"
-export NODE_DEBUG=http,http2
 exec node server.js

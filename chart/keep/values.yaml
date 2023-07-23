@@ -6,3 +6,4 @@ frontend:
   publicApiUrl: http://localhost:8080
   internalApiUrl: http://keep-backend:8080
   env: development
+
