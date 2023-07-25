@@ -28,7 +28,7 @@ ENV NEXT_PUBLIC_POSTHOG_KEY phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
 ENV NEXT_PUBLIC_POSTHOG_HOST https://app.posthog.com
 ENV NEXT_PUBLIC_AUTH_ENABLED false
 
-RUN NEXT_PUBLIC_API_URL=APP_NEXT_PUBLIC_API_URL-keep-api npm run build
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
