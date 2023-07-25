@@ -124,7 +124,9 @@ export default function AlertsPage() {
         </Button>
       </Flex>
       {data.length === 0 ? (
-        <Callout title="No Data" icon={CircleStackIcon} color="yellow" />
+        <Callout title="No Data" icon={CircleStackIcon} color="yellow">
+          Please connect your providers to see alerts
+        </Callout>
       ) : (
         <Table>
           <TableHead>
