@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.core.dependencies import verify_bearer_token
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
 from keep.providers.providers_factory import ProvidersFactory
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def get_alerts(
     provider_type: str = None,
     provider_id: str = None,
-    tenant_id: str = Depends(verify_api_key),
+    tenant_id: str = Depends(verify_bearer_token),
     # session: Session = Depends(get_session),
 ) -> list[AlertDto]:
     # if provider_id:
