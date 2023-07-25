@@ -30,6 +30,7 @@ ENV NEXT_PUBLIC_AUTH_ENABLED false
 
 RUN API_URL=APP_API_URL-keep-api npm run build
 
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
