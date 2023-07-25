@@ -147,6 +147,35 @@ class DatadogProvider(BaseProvider):
         elif priority == "P4":
             return "low"
 
+    def get_alerts(self) -> list[AlertDto]:
+        formatted_alerts = []
+        with ApiClient(self.configuration) as api_client:
+            api = MonitorsApi(api_client)
+            try:
+                monitors = api.list_monitors()
+
+                for monitor in monitors:
+                    tags = {
+                        k: v for k, v in map(lambda tag: tag.split(":"), monitor.tags)
+                    }
+                    severity = DatadogProvider.__get_priorty(f"P{monitor.priority}")
+                    alert = AlertDto(
+                        id=monitor.id,
+                        name=monitor.name,
+                        status=str(monitor.overall_state),
+                        lastReceived=monitor.overall_state_modified,
+                        severity=severity,
+                        message=monitor.message,
+                        description=monitor.name,
+                        source=["datadog"],
+                        **tags,
+                    )
+                    formatted_alerts.append(alert)
+
+            except Exception as e:
+                raise GetAlertException(message=str(e), status_code=e.status)
+        return formatted_alerts
+
     def format_alert(event: dict) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
@@ -164,7 +193,7 @@ class DatadogProvider(BaseProvider):
             description=event.get("body"),
             severity=DatadogProvider.__get_priorty(event.get("severity")),
             fatigueMeter=random.randint(0, 100),
-            **tags
+            **tags,
         )
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):

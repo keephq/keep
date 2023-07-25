@@ -104,6 +104,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("deploy_alert() method not implemented")
 
+    def get_alerts(self):
+        """
+        Get alerts from the provider.
+        """
+        raise NotImplementedError("get_alerts() method not implemented")
+
     @staticmethod
     def get_alert_schema() -> dict:
         """
