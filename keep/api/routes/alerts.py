@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get(
-    "/",
+    "",
     description="Get alerts",
 )
 def get_alerts(
