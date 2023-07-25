@@ -124,6 +124,52 @@ class GrafanaProvider(BaseProvider):
             **alert.get("labels", {}),
         )
 
+    def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
+        alert_dtos = []
+        for group in alerts.get("data", {}).get("groups", []):
+            for rule in group.get("rules", []):
+                for alert in rule.get("alerts", []):
+                    description = alert.get("annotations", {}).pop(
+                        "description", None
+                    ) or alert.get("annotations", {}).get("summary", rule.get("name"))
+                    alert_dto = AlertDto(
+                        id=rule.get(
+                            "id", rule.get("name", "").replace(" ", "_").lower()
+                        ),
+                        name=rule.get("name"),
+                        description=description,
+                        status=alert.get("state", rule.get("state")),
+                        lastReceived=alert.get("activeAt"),
+                        source=source,
+                        **alert.get("labels", {}),
+                        **alert.get("annotations", {}),
+                    )
+                    alert_dtos.append(alert_dto)
+        return alert_dtos
+
+    def get_alerts(self) -> list[AlertDto]:
+        source_by_api_url = {
+            f"{self.authentication_config.host}/api/prometheus/grafana/api/v1/rules": [
+                "grafana"
+            ],
+            f"{self.authentication_config.host}/api/prometheus/grafanacloud-prom/api/v1/rules": [
+                "grafana",
+                "prometheus",
+            ],
+        }
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+        alert_dtos = []
+        for url in source_by_api_url:
+            try:
+                response = requests.get(url, headers=headers)
+                if not response.ok:
+                    continue
+                rules = response.json()
+                alert_dtos.extend(self.__extract_rules(rules, source_by_api_url[url]))
+            except Exception:
+                self.logger.exception("Could not get alerts", extra={"api": url})
+        return alert_dtos
+
 
 if __name__ == "__main__":
     # Output debug messages
