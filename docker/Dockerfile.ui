@@ -23,7 +23,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-ENV NEXT_PUBLIC_API_URL http://localhost:8080
+ENV API_URL http://localhost:8080
 ENV NEXT_PUBLIC_POSTHOG_KEY phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
 ENV NEXT_PUBLIC_POSTHOG_HOST https://app.posthog.com
 ENV NEXT_PUBLIC_AUTH_ENABLED false
