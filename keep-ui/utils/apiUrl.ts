@@ -11,7 +11,15 @@ export function getApiURL(): string {
   if (componentType === "server") {
     apiUrl = process.env.API_URL!;
   } else {
-    apiUrl =  process.env.NEXT_PUBLIC_API_URL!;
+    // if the NEXT_PUBLIC_API_URL is set, use it
+    // and fetch the data from the browser
+    if(process.env.NEXT_PUBLIC_API_URL){
+      apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    }
+    // othereise, use the "/backend" which will be handled in
+    else{
+      apiUrl = "/backend";
+    }
   }
   return apiUrl;
 }
