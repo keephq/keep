@@ -10,6 +10,7 @@ from dataclasses import fields
 from keep.api.models.provider import Provider
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
 
@@ -176,3 +177,26 @@ class ProvidersFactory:
                 logger.exception(f"Cannot import provider {provider_directory}")
                 continue
         return providers
+
+    @staticmethod
+    def get_installed_providers(tenant_id: str, include_details: bool = True) -> list:
+        # TODO: installed providers should be kept in the DB
+        # but for now we just fetch it from the secret manager
+        secret_manager = SecretManagerFactory.get_secret_manager()
+        installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
+
+        # TODO: mask the sensitive data
+        installed_providers = [
+            {
+                "type": secret.split("_")[1],
+                "id": secret.split("_")[2],
+                "details": secret_manager.read_secret(
+                    secret.split("/")[-1], is_json=True
+                )
+                if include_details
+                else None,
+            }
+            for secret in installed_providers
+            if len(secret.split("_")) == 3  # avoid the installation api key
+        ]
+        return installed_providers

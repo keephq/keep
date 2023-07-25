@@ -24,20 +24,7 @@ def get_providers(
 ):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
-    # TODO: installed providers should be kept in the DB
-    #       but for now we just fetch it from the secret manager
-    secret_manager = SecretManagerFactory.get_secret_manager()
-    installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
-    # TODO: mask the sensitive data
-    installed_providers = [
-        {
-            "type": secret.split("_")[1],
-            "id": secret.split("_")[2],
-            "details": secret_manager.read_secret(secret.split("/")[-1], is_json=True),
-        }
-        for secret in installed_providers
-        if len(secret.split("_")) == 3  # avoid the installation api key
-    ]
+    installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
 
     try:
         return {

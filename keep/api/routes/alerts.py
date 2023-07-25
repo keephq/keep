@@ -22,28 +22,31 @@ def get_alerts(
     provider_type: str = None,
     provider_id: str = None,
     tenant_id: str = Depends(verify_api_key),
-    session: Session = Depends(get_session),
+    # session: Session = Depends(get_session),
 ) -> list[AlertDto]:
-    query = session.query(Alert).filter(Alert.tenant_id == tenant_id)
-    if provider_type:
-        query = query.filter(Alert.provider_type == provider_type)
-    if provider_id:
-        if not provider_type:
-            raise HTTPException(
-                400, "provider_type is required when provider_id is set"
+    # if provider_id:
+    #     if not provider_type:
+    #         raise HTTPException(
+    #             400, "provider_type is required when provider_id is set"
+    #         )
+    alerts = []
+    installed_providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
+    for provider in installed_providers:
+        provider_type, provider_id, provider_config = provider.values()
+        provider = ProvidersFactory.get_provider(
+            provider_id=provider_id,
+            provider_type=provider_type,
+            provider_config=provider_config,
+        )
+        try:
+            alerts.extend(provider.get_alerts())
+        except Exception:
+            logger.exception(
+                "Could not fetch alerts from provider",
+                extra={"provider_id": provider_id, "provider_type": provider_type},
             )
-        query = query.filter(Alert.provider_id == provider_id)
-    alerts: list[Alert] = query.order_by(Alert.timestamp.desc()).all()
-    # grouped_alerts = reduce(
-    #     lambda acc, alert: acc.setdefault(alert.provider_type, []).append(alert) or acc,
-    #     alerts,
-    #     {},
-    # )
-    # alerts_dto: list[AlertDto] = []
-    # for provider_type, alerts in grouped_alerts.items():
-    #     provider_class = ProvidersFactory.get_provider_class(provider_type)
-    #     alerts_dto.extend(provider_class.format_alert(alerts))
-    return [alert.event for alert in alerts]
+            pass
+    return alerts
 
 
 @router.post(
