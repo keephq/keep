@@ -11,7 +11,16 @@ export function getApiURL(): string {
   if (componentType === "server") {
     apiUrl = process.env.API_URL!;
   } else {
-    apiUrl =  process.env.NEXT_PUBLIC_API_URL!;
+    // if the NEXT_PUBLIC_API_URL is set, use it
+    // and fetch the data from the browser
+    if(process.env.NEXT_PUBLIC_API_URL){
+      apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    }
+    // otherwise, use the "/backend" which will be handled in next.config.ts rewrites
+    // this is for cases, such as k8s, where we will have only access to the frontend (port 3000)
+    else{
+      apiUrl = "/backend";
+    }
   }
   return apiUrl;
 }
