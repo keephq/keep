@@ -29,3 +29,6 @@ class FileSecretManager(BaseSecretManager):
         if prefix:
             lst = [x for x in lst if x.startswith(prefix)]
         return lst
+
+    def delete_secret(self, secret_name: str) -> None:
+        os.remove(os.path.join(self.directory, secret_name))

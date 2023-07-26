@@ -17,17 +17,24 @@ export default function ProvidersPage() {
   const { data: session, status, update } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
 
-  const { data, error } = useSWR(shouldFetch? `${getApiURL()}/providers`: null, url => {
-    return fetcher(url, session?.accessToken!);
-  });
-
-
+  const { data, error } = useSWR(
+    shouldFetch ? `${getApiURL()}/providers` : null,
+    (url) => {
+      return fetcher(url, session?.accessToken!);
+    }
+  );
 
   const addProvider = (provider: Provider) => {
     setInstalledProviders((prevProviders) => [
       ...prevProviders,
       { ...provider, installed: true } as Provider,
     ]);
+  };
+
+  const deleteProvider = (provider: Provider) => {
+    setInstalledProviders((prevProviders) =>
+      prevProviders.filter((p) => p.id !== provider.id)
+    );
   };
 
   if (status === "loading") return <Loading />;
@@ -75,7 +82,10 @@ export default function ProvidersPage() {
         <Image src="/keep.gif" width={200} height={200} alt="Loading" />
       }
     >
-      <ProvidersInstalled providers={installedProviders} />
+      <ProvidersInstalled
+        providers={installedProviders}
+        onDelete={deleteProvider}
+      />
       <ProvidersAvailable providers={providers} addProvider={addProvider} />
     </Suspense>
   );

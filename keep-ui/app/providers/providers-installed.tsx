@@ -6,9 +6,10 @@ import "./providers-available.css";
 
 interface Props {
   providers: Provider[];
+  onDelete: (provider: Provider) => void;
 }
 
-export default function ProvidersInstalled({ providers }: Props) {
+export default function ProvidersInstalled({ providers, onDelete }: Props) {
   return (
     <div>
       <Text className="ml-2.5 mt-5">Installed Providers</Text>
@@ -18,6 +19,7 @@ export default function ProvidersInstalled({ providers }: Props) {
             key={provider.id}
             provider={provider}
             onClick={() => {}}
+            onDelete={onDelete}
           />
         ))}
       </div>
