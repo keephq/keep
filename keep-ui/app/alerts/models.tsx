@@ -1,25 +1,53 @@
 export enum Severity {
-    Critical = "critical",
-    High = "high",
-    Medium = "medium",
-    Low = "low",
-    Info = "info",
+  Critical = "critical",
+  High = "high",
+  Medium = "medium",
+  Low = "low",
+  Info = "info",
 }
 
 export interface Alert {
-    id: string;
-    name: string;
-    status: string;
-    lastReceived: Date;
-    environment: string;
-    isDuplicate?: boolean;
-    duplicateReason?: string;
-    service?: string;
-    source?: string[];
-    message?: string;
-    description?: string;
-    severity?: Severity;
-    fatigueMeter?: number;
+  id: string;
+  name: string;
+  status: string;
+  lastReceived: Date;
+  environment: string;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
+  service?: string;
+  source?: string[];
+  message?: string;
+  description?: string;
+  severity?: Severity;
+  fatigueMeter?: number;
 }
 
-export const AlertTableKeys: string[] = ['Severity', 'Status', 'Fatigue Meter', 'Last Received', 'Duplicate', 'Environment', 'Service', 'Source', 'Message', 'Description']
+export const AlertKnownKeys = [
+  "id",
+  "name",
+  "status",
+  "lastReceived",
+  "environment",
+  "isDuplicate",
+  "duplicateReason",
+  "service",
+  "source",
+  "message",
+  "description",
+  "severity",
+  "fatigueMeter",
+];
+
+export const AlertTableKeys: string[] = [
+  "Severity",
+  "Status",
+  "Fatigue Meter",
+  "Last Received",
+  "Duplicate",
+  "Environment",
+  "Service",
+  "Source",
+  "Description",
+  "Message",
+  "Payload"
+];

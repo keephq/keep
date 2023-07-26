@@ -30,15 +30,13 @@ class GrafanaProviderAuthConfig:
 
     token: str = dataclasses.field(
         metadata={"required": True, "description": "Token", "hint": "Grafana Token"},
-        default=None,
     )
     host: str = dataclasses.field(
         metadata={
-            "required": False,
+            "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
         },
-        default=None,
     )
 
 
@@ -125,25 +123,38 @@ class GrafanaProvider(BaseProvider):
         )
 
     def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
+        alert_ids = []
         alert_dtos = []
         for group in alerts.get("data", {}).get("groups", []):
             for rule in group.get("rules", []):
                 for alert in rule.get("alerts", []):
+                    alert_id = rule.get(
+                        "id", rule.get("name", "").replace(" ", "_").lower()
+                    )
+
+                    if alert_id in alert_ids:
+                        # de duplicate alerts
+                        continue
+
                     description = alert.get("annotations", {}).pop(
                         "description", None
                     ) or alert.get("annotations", {}).get("summary", rule.get("name"))
+
+                    labels = {k.lower(): v for k, v in alert.get("labels", {}).items()}
+                    annotations = {
+                        k.lower(): v for k, v in alert.get("annotations", {}).items()
+                    }
                     alert_dto = AlertDto(
-                        id=rule.get(
-                            "id", rule.get("name", "").replace(" ", "_").lower()
-                        ),
+                        id=alert_id,
                         name=rule.get("name"),
                         description=description,
                         status=alert.get("state", rule.get("state")),
                         lastReceived=alert.get("activeAt"),
                         source=source,
-                        **alert.get("labels", {}),
-                        **alert.get("annotations", {}),
+                        **labels,
+                        **annotations,
                     )
+                    alert_ids.append(alert_id)
                     alert_dtos.append(alert_dto)
         return alert_dtos
 

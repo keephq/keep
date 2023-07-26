@@ -195,6 +195,24 @@ def test_provider(
         return JSONResponse(status_code=400, content=str(e))
 
 
+@router.delete("/{provider_type}/{provider_id}")
+def delete_provider(
+    provider_type: str, provider_id: str, tenant_id: str = Depends(verify_bearer_token)
+):
+    logger.info(
+        "Deleting provider",
+        extra={
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    secret_manager = SecretManagerFactory.get_secret_manager()
+    secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
+    secret_manager.delete_secret(secret_name)
+    logger.info("Deleted provider", extra={"secret_name": secret_name})
+    return JSONResponse(status_code=200, content={"message": "deleted"})
+
+
 @router.post("/install")
 async def install_provider(
     provider_info: dict = Body(...),
