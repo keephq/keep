@@ -5,7 +5,6 @@ import os
 import typing
 
 import requests
-import validators
 import yaml
 
 from keep.alert.alert import Alert
@@ -23,7 +22,7 @@ class Parser:
         self.io_handler = IOHandler()
 
     def parse(
-        self, alert_source: str, providers_file: str = None
+        self, parsed_alert_yaml: dict, providers_file: str = None
     ) -> typing.List[Alert]:
         """_summary_
 
@@ -34,65 +33,19 @@ class Parser:
         Returns:
             typing.List[Alert]: _description_
         """
-        # Parse the alert YAML
-        parsed_alert_yaml = self._parse_alert_to_dict(alert_source)
         # Parse the providers (from the alert yaml or from the providers directory)
         self.load_providers_config(parsed_alert_yaml, providers_file)
         # Parse the alert itself
         if parsed_alert_yaml.get("alerts"):
             alerts = [
-                self._parse_alert(alert, alert_source=alert_source)
-                for alert in parsed_alert_yaml.get("alerts")
+                self._parse_alert(alert) for alert in parsed_alert_yaml.get("alerts")
             ]
         else:
-            alert = self._parse_alert(
-                parsed_alert_yaml.get("alert"), alert_source=alert_source
-            )
+            alert = self._parse_alert(parsed_alert_yaml.get("alert"))
             alerts = [alert]
         return alerts
 
-    def _parse_alert_to_dict(self, alert_path: str) -> dict:
-        """
-        Parse an alert to a dictionary from either a file or a URL.
-
-        Args:
-            alert_path (str): a URL or a file path
-
-        Returns:
-            dict: Dictionary with the alert information
-        """
-        self.logger.debug("Parsing alert")
-        # If the alert is a URL, get the alert from the URL
-        if validators.url(alert_path) is True:
-            response = requests.get(alert_path)
-            return self._parse_alert_from_stream(io.StringIO(response.text))
-        else:
-            # else, get the alert from the file
-            with open(alert_path, "r") as file:
-                return self._parse_alert_from_stream(file)
-
-    def _parse_alert_from_stream(self, stream) -> dict:
-        """
-        Parse an alert from an IO stream.
-
-        Args:
-            stream (IOStream): The stream to read from
-
-        Raises:
-            e: If the stream is not a valid YAML
-
-        Returns:
-            dict: Dictionary with the alert information
-        """
-        self.logger.debug("Parsing alert")
-        try:
-            alert = yaml.safe_load(stream)
-        except yaml.YAMLError as e:
-            self.logger.error(f"Error parsing alert: {e}")
-            raise e
-        return alert
-
-    def _parse_alert(self, alert: dict, alert_source: str) -> Alert:
+    def _parse_alert(self, alert: dict) -> Alert:
         self.logger.debug("Parsing alert")
         alert_id = self._parse_id(alert)
         alert_owners = self._parse_owners(alert)
@@ -103,7 +56,7 @@ class Parser:
         on_failure_action = self._get_on_failure_action(alert)
         alert = Alert(
             alert_id=alert_id,
-            alert_source=alert_source,
+            alert_description=alert.get("description"),
             alert_owners=alert_owners,
             alert_tags=alert_tags,
             alert_interval=alert_interval,
@@ -116,6 +69,9 @@ class Parser:
 
     def load_providers_config(self, alert: dict, providers_file: str):
         self.logger.debug("Parsing providers")
+        providers_file = (
+            providers_file or os.environ.get("KEEP_PROVIDERS_FILE") or "providers.yaml"
+        )
         if providers_file and os.path.exists(providers_file):
             self._parse_providers_from_file(providers_file)
 
@@ -123,6 +79,8 @@ class Parser:
             self._parse_providers_from_alert(alert)
 
         self._parse_providers_from_env()
+        # for multi-tenant, load providers from the tenant's secret manager
+        self._parse_providers_from_installed_providers()
         self.logger.debug("Providers parsed and loaded successfully")
 
     def _parse_providers_from_env(self):
@@ -171,6 +129,10 @@ class Parser:
                         f"Error parsing provider config from environment variable {env}"
                     )
 
+    def _parse_providers_from_installed_providers(self):
+        # TODO
+        pass
+
     def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
         self.context_manager.providers_context.update(alert.get("providers"))
         self.logger.debug("Alert providers parsed successfully")
@@ -213,7 +175,7 @@ class Parser:
             step_id = _step.get("name")
             step = Step(
                 step_id=step_id,
-                step_config=_step,
+                config=_step,
                 provider=provider,
                 provider_parameters=provider_parameters,
                 step_type=StepType.STEP,
