@@ -9,6 +9,7 @@ import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
 
+from keep.api.models.alert import AlertDto
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -22,17 +23,14 @@ class PrometheusProviderAuthConfig:
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
         }
     )
-    username: str | None = dataclasses.field(
-        metadata={"required": False, "description": "Prometheus username"},
-        default=None,
+    username: str = dataclasses.field(
+        metadata={"description": "Prometheus username"},
     )
-    password: str | None = dataclasses.field(
+    password: str = dataclasses.field(
         metadata={
-            "required": False,
             "description": "Prometheus password",
             "sensitive": True,
         },
-        default=None,
     )
 
 
@@ -73,6 +71,40 @@ class PrometheusProvider(BaseProvider):
             raise Exception(f"Prometheus query failed: {response.content}")
 
         return response.json()
+
+    def get_alerts(self) -> list[AlertDto]:
+        response = requests.get(
+            f"{self.authentication_config.url}/api/v1/alerts",
+            auth=HTTPBasicAuth(
+                self.authentication_config.username, self.authentication_config.password
+            ),
+        )
+        if not response.ok:
+            return []
+        alerts = response.json().get("data", {}).get("alerts", [])
+        alert_dtos = []
+        for alert in alerts:
+            alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
+            description = alert.get("annotations", {}).pop(
+                "description", None
+            ) or alert.get("annotations", {}).get("summary", alert_id)
+
+            labels = {k.lower(): v for k, v in alert.get("labels", {}).items()}
+            annotations = {
+                k.lower(): v for k, v in alert.get("annotations", {}).items()
+            }
+            alert_dto = AlertDto(
+                id=alert_id,
+                name=alert_id,
+                description=description,
+                status=alert.get("state"),
+                lastReceived=alert.get("activeAt"),
+                source=["prometheus"],
+                **labels,
+                **annotations,
+            )
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def dispose(self):
         """

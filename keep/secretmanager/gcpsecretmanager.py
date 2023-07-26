@@ -97,3 +97,9 @@ class GcpSecretManager(BaseSecretManager):
                 secrets.append(name)
         self.logger.info("Listed secrets successfully", extra={"prefix": prefix})
         return secrets
+
+    def delete_secret(self, secret_name: str) -> None:
+        # Construct the resource name
+        resource_name = f"projects/{self.project_id}/secrets/{secret_name}"
+        parent = f"projects/{self.project_id}"
+        self.client.delete_secret(request={"name": resource_name, "parent": parent})
