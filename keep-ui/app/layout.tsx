@@ -1,6 +1,5 @@
 import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
-import Frill from "./frill";
 import "./globals.css";
 import { Mulish } from 'next/font/google'
 
@@ -25,7 +24,6 @@ export default async function RootLayout({
       suppressHydrationWarning={true}
     >
       <body className="h-full">
-        <Frill />
         <NextAuthProvider>
           {/* @ts-expect-error Server Component */}
           <Nav />
