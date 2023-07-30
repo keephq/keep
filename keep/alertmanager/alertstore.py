@@ -2,6 +2,7 @@ import logging
 import os
 import typing
 
+import requests
 import validators
 import yaml
 from fastapi import HTTPException

@@ -11,7 +11,6 @@ const navigation = [
   { name: "Alerts", href: "/alerts" },
   { name: "CI", href: "/ci" },
   { name: "Builder", href: "/builder" },
-  { name: "Alert Workflows", href: "/workflows" },
 ];
 
 function classNames(...classes: string[]) {
