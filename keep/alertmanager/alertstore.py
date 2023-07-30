@@ -4,18 +4,24 @@ import typing
 
 import validators
 import yaml
+from fastapi import HTTPException
 
 from keep.alert.alert import Alert
+from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 
 
 class AlertStore:
+    # TODO: alert store should be persistent using database and not only "filesystem"
+    #       e.g. we should be able to get alerts from a database
+
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.storage_manager = StorageManagerFactory.get_file_manager()
+        self.context_manager = ContextManager.get_instance()
 
     def _parse_alert_to_dict(self, alert_path: str) -> dict:
         """
@@ -37,9 +43,28 @@ class AlertStore:
             with open(alert_path, "r") as file:
                 return self._read_alert_from_stream(file)
 
+    def get_alert(self, tenant_id: str, alert_id: str) -> Alert:
+        # TODO: this should be refactored
+        #       we should get alerts from a database
+        #       its a patch to get all alerts and look for an id
+        #       this is not efficient
+
+        # get specific alert
+        alerts = self.get_all_alerts(tenant_id)
+        for alert in alerts:
+            if alert.alert_id == alert_id:
+                return alert
+
+        # If not alert
+        raise HTTPException(
+            status_code=404,
+            detail=f"Alert {alert_id} not found",
+        )
+
     def get_all_alerts(self, tenant_id: str) -> list[Alert]:
         # list all tenant's alerts workflows
         alerts_files = self.storage_manager.get_files(tenant_id)
+        self._load_providers_from_installed_providers(tenant_id)
         raw_alerts = []
         for alert in alerts_files:
             try:
@@ -126,3 +151,22 @@ class AlertStore:
             self.logger.error(f"Error parsing alert: {e}")
             raise e
         return alert
+
+    def _load_providers_from_installed_providers(self, tenant_id: str):
+        # TODO: should be refactored and moved to ProvidersManager or something
+        # Load installed providers
+        installed_providers = ProvidersFactory.get_installed_providers(
+            tenant_id=tenant_id
+        )
+        for provider in installed_providers:
+            self.logger.info(f"Loading provider {provider}")
+            provider_type, provider_id, provider_config = provider.values()
+            provider = ProvidersFactory.get_provider(
+                provider_id=provider_id,
+                provider_type=provider_type,
+                provider_config=provider_config,
+            )
+            # TODO - should somehow be in DB and map provider id (unique) to provider name (not unique)
+            provider_name = provider_config.pop("name")
+            self.context_manager.providers_context[provider_name] = provider_config
+            self.logger.info(f"Provider {provider} loaded successfully")

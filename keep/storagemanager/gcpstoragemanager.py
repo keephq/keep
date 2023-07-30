@@ -33,6 +33,7 @@ class GcpStorageManager(BaseStorageManager):
         blobs = list(bucket.list_blobs())
         # Append the filenames to the list
         for blob in blobs:
-            files.append(blob.name)
+            blob_content = blob.download_as_bytes()
+            files.append(blob_content)
 
         return files

@@ -134,6 +134,9 @@ class IOHandler:
                                 # we need to pass the classes of the dependencies to the eval
                                 for dependency in self.context_manager.dependencies:
                                     g[dependency.__name__] = dependency
+
+                                # TODO: this is a hack to tzutc in the eval, should be more robust
+                                g["tzutc"] = tzutc
                                 # finally, eval the expression
                                 _arg = eval(_arg, g)
                             except ValueError:

@@ -10,6 +10,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 
 
+# TODO - alertmanager should be sync to db
+#        things such as executions and intervals should be also in db
 class AlertManager:
     def __init__(self, interval: int = 0):
         self.logger = logging.getLogger(__name__)

@@ -79,8 +79,6 @@ class Parser:
             self._parse_providers_from_alert(alert)
 
         self._parse_providers_from_env()
-        # for multi-tenant, load providers from the tenant's secret manager
-        self._parse_providers_from_installed_providers()
         self.logger.debug("Providers parsed and loaded successfully")
 
     def _parse_providers_from_env(self):
@@ -128,10 +126,6 @@ class Parser:
                     self.logger.error(
                         f"Error parsing provider config from environment variable {env}"
                     )
-
-    def _parse_providers_from_installed_providers(self):
-        # TODO
-        pass
 
     def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
         self.context_manager.providers_context.update(alert.get("providers"))
