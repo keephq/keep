@@ -65,6 +65,7 @@ def test_parse_all_alerts():
 
     # Mock the get_files function to return the mock_files
     os.environ["STORAGE_MANAGER_TYPE"] = StorageManagerTypes.FILESYSTEM.value
+    os.environ["KEEP_PROVIDERS_FILE"] = providers_path
     with patch(
         "keep.storagemanager.filesystemstoragemanager.FilesystemStorageManager.get_files"
     ) as mock_get_files:
