@@ -25,7 +25,6 @@ class Step:
     name: str = field(default_factory=str)
     config: dict = field(default_factory=dict)
     step_id: str = field(default_factory=str)
-    step_config: dict = field(default_factory=dict)
     provider: BaseProvider = field(default_factory=BaseProvider)
     provider_parameters: dict = field(default_factory=dict)
     conditions_results: dict = field(default_factory=dict)
@@ -40,7 +39,7 @@ class Step:
 
     @property
     def foreach(self):
-        return self.step_config.get("foreach")
+        return self.config.get("foreach")
 
     def run(self):
         try:

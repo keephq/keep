@@ -105,6 +105,12 @@ class ContextManager:
         full_context.update(self.aliases)
         return full_context
 
+    def update_full_context(self, providers_context, steps_context, actions_context):
+        # If the alert workflow triggered by HTTP, we accept context from the HTTP body
+        self.providers_context.update(providers_context)
+        self.steps_context.update(steps_context)
+        self.actions_context.update(actions_context)
+
     def set_for_each_context(self, value):
         self.foreach_context["value"] = value
 

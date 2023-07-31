@@ -3,6 +3,8 @@ Base class for all providers.
 """
 import abc
 import logging
+import re
+from dataclasses import field
 from typing import Optional
 
 from pydantic.dataclasses import dataclass
@@ -16,6 +18,7 @@ from keep.providers.models.provider_config import ProviderConfig
 @dataclass
 class BaseProvider(metaclass=abc.ABCMeta):
     provider_id: str
+    provider_type: str = field(init=False)
     config: ProviderConfig
 
     def __post_init__(self):
@@ -33,6 +36,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}
         )
+        self.provider_type = self._extract_type()
+
+    def _extract_type(self):
+        """
+        Extract the provider type from the provider class name.
+
+        Returns:
+            str: The provider type.
+        """
+        name = self.__class__.__name__
+        name_without_provider = name.replace("Provider", "")
+        name_with_spaces = (
+            re.sub("([A-Z])", r" \1", name_without_provider).lower().strip()
+        )
+        return name_with_spaces.replace(" ", ".")
 
     @abc.abstractmethod
     def dispose(self):

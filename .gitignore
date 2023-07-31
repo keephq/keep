@@ -176,3 +176,4 @@ keep-ui/node_modules
 keep-ui/node_modules/*
 
 cov.xml
+keep.db

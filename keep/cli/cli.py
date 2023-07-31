@@ -12,6 +12,7 @@ from dotenv import find_dotenv, load_dotenv
 from posthog import Posthog
 
 from keep.alertmanager.alertmanager import AlertManager
+from keep.alertmanager.alertstore import AlertStore
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client
 from keep.providers.providers_factory import ProvidersFactory
@@ -126,33 +127,8 @@ def version():
 
 
 @cli.command()
-@click.option(
-    "--alerts-directory",
-    "--alerts-file",
-    "-ad",
-    type=click.Path(exists=True, dir_okay=True, file_okay=True),
-    help="The path to the alert yaml/alerts directory",
-    required=False,
-)
-@click.option(
-    "--alert-url",
-    "-au",
-    help="A url that can be used to download an alert yaml",
-    multiple=True,
-    required=False,
-)
-@click.option(
-    "--providers-file",
-    "-p",
-    type=click.Path(exists=False),
-    help="The path to the providers yaml",
-    required=False,
-    default="providers.yaml",
-)
 @click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
-def api(
-    alerts_directory: str, alert_url: list[str], providers_file: str, multi_tenant: bool
-):
+def api(multi_tenant: bool):
     """Start the API."""
     from keep.api import api
 
@@ -215,8 +191,12 @@ def run(
     """Run the alert."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
     alert_manager = AlertManager(interval)
+    alert_workflow_manager = AlertStore()
+    alerts = alert_workflow_manager.get_alerts(
+        alerts_directory or alert_url, providers_file
+    )
     try:
-        alert_manager.run(alerts_directory or alert_url, providers_file)
+        alert_manager.run(alerts)
     except KeyboardInterrupt:
         logger.info("Keep stopped by user, stopping the scheduler")
         alert_manager.stop()

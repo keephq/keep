@@ -129,12 +129,12 @@ if __name__ == "__main__":
     }
 
     # Create the provider
-    provider = BigQueryProvider(
+    provider = BigqueryProvider(
         provider_id="bigquery-provider", config=ProviderConfig(**config)
     )
     # Use the provider to execute a query
     results = provider.query(
-        """
+        query="""
         SELECT name, SUM(number) as num
         FROM `bigquery-public-data.usa_names.usa_1910_2013`
         WHERE state = 'TX'

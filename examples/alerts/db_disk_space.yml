@@ -29,7 +29,6 @@ alert:
         type: slack
         config: " {{ providers.slack-demo }} "
         with:
-          channel: db-is-down
           # Message is always mandatory
           message: >
             The disk space of {{ providers.db-server-mock.description }} is about to finish
