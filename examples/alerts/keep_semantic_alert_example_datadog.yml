@@ -13,7 +13,7 @@ alert:
   - name: check-error-rate
     provider:
       type: datadog
-      config: "{{ providers.datadog-config }}"
+      config: "{{ providers.datadog }}"
       with:
         query: "sum:my_service.errors{*}.as_count() / sum:my_service.requests{*}.as_count() * 100"
         timeframe: "1h"
@@ -27,7 +27,7 @@ alert:
         operator: ">"
       provider:
         type: slack
-        config: "{{ providers.slack-config }}"
+        config: "{{ providers.slack-demo }}"
         with:
           channel: service-alerts
           message: >

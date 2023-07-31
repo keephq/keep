@@ -10,9 +10,10 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 
 
+# TODO - alertmanager should be sync to db
+#        things such as executions and intervals should be also in db
 class AlertManager:
     def __init__(self, interval: int = 0):
-        self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.scheduler = AlertScheduler(self)
         self.context_manager = ContextManager.get_instance()
@@ -28,7 +29,7 @@ class AlertManager:
         else:
             pass
 
-    def run(self, alerts_path: str | list[str], providers_file: str = None):
+    def run(self, alerts: list[Alert]):
         """
         Run alerts from a file or directory.
 
@@ -36,8 +37,7 @@ class AlertManager:
             alert (str): Either an alert yaml or a directory containing alert yamls or a list of URLs to get the alerts from.
             providers_file (str, optional): The path to the providers yaml. Defaults to None.
         """
-        self.logger.info(f"Running alert(s) from {alerts_path}")
-        alerts = self.get_alerts(alerts_path, providers_file)
+        self.logger.info(f"Running alert(s)")
         alerts_errors = []
         # If at least one alert has an interval, run alerts using the scheduler,
         #   otherwise, just run it
@@ -47,6 +47,9 @@ class AlertManager:
                 "Found at least one alert with an interval, running in scheduler mode"
             )
             self.scheduler_mode = True
+            # if the alerts doesn't have an interval, set the default interval
+            for alert in alerts:
+                alert.alert_interval = alert.alert_interval or self.default_interval
             # This will halt until KeyboardInterrupt
             self.scheduler.run_alerts(alerts)
             self.logger.info("Alert(s) scheduled")
@@ -55,55 +58,6 @@ class AlertManager:
             alerts_errors = self._run_alerts(alerts)
 
         return alerts_errors
-
-    def get_alerts(
-        self, alert_path: str | tuple[str], providers_file: str = None
-    ) -> list[Alert]:
-        alerts = []
-        if isinstance(alert_path, tuple):
-            for alert_url in alert_path:
-                alerts.extend(self.parser.parse(alert_url, providers_file))
-        elif os.path.isdir(alert_path):
-            alerts.extend(self._get_alerts_from_directory(alert_path, providers_file))
-        else:
-            alerts = self.parser.parse(alert_path, providers_file)
-
-        # override the default interval if it is not set
-        for alert in alerts:
-            alert.alert_interval = alert.alert_interval or self.default_interval
-        return alerts
-
-    def _run(self, alert_path: str | tuple[str], providers_file: str = None):
-        alerts = self.get_alerts(alert_path, providers_file)
-        errors = self._run_alerts(alerts)
-        return errors
-
-    def _get_alerts_from_directory(
-        self, alerts_dir: str, providers_file: str = None
-    ) -> list[Alert]:
-        """
-        Run alerts from a directory.
-
-        Args:
-            alerts_dir (str): A directory containing alert yamls.
-            providers_file (str, optional): The path to the providers yaml. Defaults to None.
-        """
-        alerts = []
-        for file in os.listdir(alerts_dir):
-            if file.endswith(".yaml") or file.endswith(".yml"):
-                self.logger.info(f"Getting alerts from {file}")
-                try:
-                    alerts.extend(
-                        self.parser.parse(
-                            os.path.join(alerts_dir, file), providers_file
-                        )
-                    )
-                    self.logger.info(f"Alert from {file} fetched successfully")
-                except Exception as e:
-                    self.logger.error(
-                        f"Error parsing alert from {file}", extra={"exception": e}
-                    )
-        return alerts
 
     def _run_alert(self, alert: Alert):
         self.logger.info(f"Running alert {alert.alert_id}")

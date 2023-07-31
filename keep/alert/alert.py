@@ -17,18 +17,16 @@ class AlertStatus(enum.Enum):
 @dataclass
 class Alert:
     alert_id: str
-    alert_source: str
     alert_owners: typing.List[str]
     alert_tags: typing.List[str]
     alert_interval: int
     alert_steps: typing.List[Step]
     alert_actions: typing.List[Step]
-    alert_file: str = None
+    alert_description: str = None
     on_failure: Step = None
 
     def __post_init__(self):
         self.logger = logging.getLogger(__name__)
-        self.alert_file = self.alert_source.split("/")[-1]
         self.io_nandler = IOHandler()
         self.context_manager = ContextManager.get_instance()
 

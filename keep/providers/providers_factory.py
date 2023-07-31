@@ -184,7 +184,6 @@ class ProvidersFactory:
         # but for now we just fetch it from the secret manager
         secret_manager = SecretManagerFactory.get_secret_manager()
         installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
-
         # TODO: mask the sensitive data
         installed_providers = [
             {
@@ -199,4 +198,6 @@ class ProvidersFactory:
             for secret in installed_providers
             if len(secret.split("_")) == 3  # avoid the installation api key
         ]
+        # Merge with PROVIDERS_CONFIG env var
+
         return installed_providers
