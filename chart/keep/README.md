@@ -20,8 +20,6 @@ Keep's Helm Chart supports the following `values.yaml`:
 # Local Kubernetes
 For local kubernetes without external IP (such as NodePort or LoadBalancer), you'll need to run port forwarding:
 
-## Port forward for the frontend
+## Port forward
 `kubectl port-forward svc/keep-frontend 3000:3000`
 
-## Port forward for the backend
-`kubectl port-forward svc/keep-backend 8080:8080`
