@@ -5,6 +5,7 @@
 <h1 align="center">The open-source alerts management platform</h1>
 <br />
 
+
 <div align="center">
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/keephq/keep" />

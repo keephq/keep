@@ -1,39 +1,79 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: keep-backend
+  name: {{ include "keep.fullname" . }}-backend
+  labels:
+    {{- include "keep.labels" . | nindent 4 }}
+    keep-component: backend
 spec:
-  replicas: 1
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
-      app: keep-backend
+      {{- include "keep.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.backend.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        app: keep-backend
+        {{- include "keep.selectorLabels" . | nindent 8 }}
+        keep-component: backend
     spec:
+      {{- with .Values.backend.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "keep.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.backend.podSecurityContext | nindent 8 }}
       containers:
-        - name: keep-backend
-          image: "{{ .Values.backend.image }}"
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.backend.securityContext | nindent 12 }}
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: {{ .Values.backend.service.port }}
+              protocol: TCP
           env:
-            - name: PORT
-              value: "8080"
-            - name: SECRET_MANAGER_TYPE
-              value: FILE
-            - name: SECRET_MANAGER_DIRECTORY
-              value: /state
-            - name: DATABASE_CONNECTION_STRING
-              value: sqlite:////state/db.sqlite3
-            - name: USE_NGROK
-              value: "true"
+            {{- range .Values.backend.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- if .Values.backend.openAiApi.enabled }}
             - name: OPENAI_API_KEY
-              value: "{{ .Values.backend.apiKey }}"
+              value: {{ .Values.backend.openAiApi.openAiApiKey | default "" | quote }}
+            {{- end }}
           volumeMounts:
             - name: state-volume
               mountPath: /state
               readOnly: false
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumes:
         - name: state-volume
           emptyDir: {}

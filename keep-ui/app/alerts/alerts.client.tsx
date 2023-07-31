@@ -15,9 +15,12 @@ import {
   Flex,
   Button,
   Callout,
+  Accordion,
+  AccordionHeader,
+  AccordionBody,
 } from "@tremor/react";
 import Image from "next/image";
-import { Alert, AlertTableKeys, Severity } from "./models";
+import { Alert, AlertKnownKeys, AlertTableKeys, Severity } from "./models";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
@@ -27,7 +30,6 @@ import {
 import "./alerts.client.css";
 import { useState } from "react";
 import { getApiURL } from "../../utils/apiUrl";
-import { mockAlerts } from "./mock-data";
 import { useSession } from "../../utils/customAuth";
 import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
@@ -94,9 +96,15 @@ export default function AlertsPage() {
   const environments = data
     .map((alert) => alert.environment)
     .filter(onlyUnique);
-  const environmentIsSeleected = (alert: Alert) =>
-    selectedEnvironments.length === 0 ||
-    selectedEnvironments.includes(alert.environment);
+
+  function environmentIsSeleected(alert: Alert): boolean {
+    console.log(alert);
+    console.log(selectedEnvironments);
+    return (
+      selectedEnvironments.includes(alert.environment) ||
+      selectedEnvironments.length === 0
+    );
+  }
 
   return (
     <>
@@ -141,6 +149,15 @@ export default function AlertsPage() {
             {data
               .filter((alert) => environmentIsSeleected(alert))
               .map((alert) => {
+                const extraPayload = Object.keys(alert)
+                  .filter((key) => !AlertKnownKeys.includes(key))
+                  .reduce((obj, key) => {
+                    return {
+                      ...obj,
+                      [key]: (alert as any)[key],
+                    };
+                  }, {});
+                const extraIsEmpty = Object.keys(extraPayload).length === 0;
                 return (
                   <TableRow key={alert.id}>
                     <TableCell>
@@ -159,7 +176,9 @@ export default function AlertsPage() {
                         className="w-48"
                       />
                     </TableCell>
-                    <TableCell>{alert.lastReceived.toString()}</TableCell>
+                    <TableCell>
+                      {new Date(alert.lastReceived).toISOString()}
+                    </TableCell>
                     <TableCell className="text-center" align="center">
                       {alert.isDuplicate ? (
                         <Icon
@@ -192,8 +211,20 @@ export default function AlertsPage() {
                         );
                       })}
                     </TableCell>
-                    <TableCell>{alert.message}</TableCell>
                     <TableCell>{alert.description}</TableCell>
+                    <TableCell>{alert.message}</TableCell>
+                    <TableCell className="w-96">
+                      {extraIsEmpty ? null : (
+                        <Accordion>
+                          <AccordionHeader className="w-96">Extra Payload</AccordionHeader>
+                          <AccordionBody>
+                            <pre className="w-80 overflow-y-scroll">
+                              {JSON.stringify(extraPayload, null, 2)}
+                            </pre>
+                          </AccordionBody>
+                        </Accordion>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
