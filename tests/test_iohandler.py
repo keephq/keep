@@ -49,8 +49,10 @@ def test_with_function_2():
     context_manager = ContextManager.get_instance()
     context_manager.update_full_context(
         steps_context={"some_list": [1, 2, 3]},
-        actions_context={"name": "s2"},
+        actions_context={"some_string": "abcde"},
         providers_context={"name": "s3"},
     )
     s = iohandler.render("hello keep.first({{ steps.some_list }})")
+    s1 = iohandler.render("hello keep.len({{ actions.some_string }})")
     assert s == "hello 1"
+    assert s1 == "hello 5"

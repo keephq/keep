@@ -71,7 +71,7 @@ class AlertStore:
             try:
                 raw_alerts.append(yaml.safe_load(alert))
             except yaml.YAMLError as e:
-                self.logger.error(f"Error parsing alert: {e}")
+                self.logger.error(f"Error parsi\ng alert: {e}")
                 # TODO handle
                 pass
 
