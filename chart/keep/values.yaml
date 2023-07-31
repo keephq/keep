@@ -1,8 +1,101 @@
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+nameOverride: ""
+fullnameOverride: ""
+
 backend:
-  image: us-central1-docker.pkg.dev/keephq/keep/keep-api
-  apiKey: "<OPEN_AI_KEY>"
+  enabled: true
+  env:
+    - name: SECRET_MANAGER_TYPE
+      value: FILE
+    - name: PORT
+      value: "8080"
+    - name: SECRET_MANAGER_DIRECTORY
+      value: /state
+    - name: DATABASE_CONNECTION_STRING
+      value: sqlite:////state/db.sqlite3
+    - name: USE_NGROK
+      value: "true"
+  openAiApi:
+    enabled: false
+    openAiApiKey: ""
+  replicaCount: 1
+  image:
+    repository: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    pullPolicy: Always
+    tag: "latest"
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 8080
+  resources: {}
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
 frontend:
-  image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
-  publicApiUrl:
-  internalApiUrl: http://keep-backend:8080
-  env: development
+  enabled: true
+  env:
+    - name: NEXT_PUBLIC_AUTH_ENABLED
+      value: "false"
+    - name: NEXTAUTH_SECRET
+      value: secret
+    - name: NEXTAUTH_URL
+      value: http://localhost:3000
+    - name: API_URL
+      value: http://keep-backend:8080
+    - name: NEXT_PUBLIC_API_URL
+      value: ""
+    - name: NEXT_PUBLIC_POSTHOG_KEY
+      value: "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+    - name: NEXT_PUBLIC_POSTHOG_HOST
+      value: https://app.posthog.com
+    - name: ENV
+      value: development
+    - name: NODE_ENV
+      value: development
+  replicaCount: 1
+  image:
+    repository: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    pullPolicy: Always
+    tag: "latest"
+  imagePullSecrets: []
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+  resources: {}
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
