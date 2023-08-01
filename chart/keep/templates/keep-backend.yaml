@@ -49,10 +49,8 @@ spec:
               value: {{ .Values.backend.openAiApi.openAiApiKey | default "" | quote }}
             {{- end }}
           volumeMounts:
-          - containerPath: /var/lib/mysql
-            volume:
-              name: mysql-data
-              subPath: /mysql
+            - name: state-volume
+              mountPath: /state
               readOnly: false
           # livenessProbe:
           #   httpGet:
@@ -81,5 +79,5 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: mysql-data
-          size: "5Gi"
+        - name: state-volume
+          emptyDir: {}
