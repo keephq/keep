@@ -68,21 +68,26 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     return conn
 
 
-connect_args = {"check_same_thread": False}
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 
 if running_in_cloud_run:
     engine = create_engine(
-        "mysql+pymysql://", creator=__get_conn, connect_args=connect_args
+        "mysql+pymysql://",
+        creator=__get_conn,
     )
 elif db_connection_string == "impersonate":
     engine = create_engine(
-        "mysql+pymysql://", creator=__get_conn_impersonate, connect_args=connect_args
+        "mysql+pymysql://",
+        creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(db_connection_string, connect_args=connect_args)
+    engine = create_engine(
+        db_connection_string,
+    )
 else:
-    engine = create_engine("sqlite:///./keep.db", connect_args=connect_args)
+    engine = create_engine(
+        "sqlite:///./keep.db",
+    )
 
 
 def create_db_and_tables():
