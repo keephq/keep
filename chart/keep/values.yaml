@@ -15,7 +15,7 @@ backend:
     - name: SECRET_MANAGER_DIRECTORY
       value: /state
     - name: DATABASE_CONNECTION_STRING
-      value: sqlite:////state/db.sqlite3
+      value: mysql+pymysql://root@keep-database:3306/keep
     - name: USE_NGROK
       value: "true"
   openAiApi:
@@ -96,6 +96,34 @@ frontend:
     minReplicas: 1
     maxReplicas: 3
     targetCPUUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+database:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: mysql
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  env:
+    - name: MYSQL_ALLOW_EMPTY_PASSWORD
+      value: yes
+    - name: MYSQL_DATABASE
+      value: keep
+    - name: MYSQL_PASSWORD
+      value: null
+  imagePullSecrets: []
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 3306
+  resources: {}
+  autoscaling:
+    enabled: false
   nodeSelector: {}
   tolerations: []
   affinity: {}
