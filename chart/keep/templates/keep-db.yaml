@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keep.fullname" . }}-database
+  labels:
+    {{- include "keep.labels" . | nindent 4 }}
+    keep-component: database
+spec:
+  {{- if not .Values.database.autoscaling.enabled }}
+  replicas: {{ .Values.database.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "keep.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.database.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "keep.selectorLabels" . | nindent 8 }}
+        keep-component: database
+    spec:
+      {{- with .Values.database.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "keep.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.database.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.database.securityContext | nindent 12 }}
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          ports:
+            - name: mysql
+              containerPort: {{ .Values.database.service.port }}
+              protocol: TCP
+          env:
+            {{- range .Values.database.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          volumeMounts:
+          - mountPath: /var/lib/mysql
+            name: mysql-data
+            readOnly: false
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+      {{- with .Values.database.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: mysql-data
+          size: "5Gi"
