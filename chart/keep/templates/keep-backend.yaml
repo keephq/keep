@@ -62,6 +62,10 @@ spec:
           #     port: http
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+      initContainers:
+        - name: wait-for-database
+          image: busybox
+          command: ['sh', '-c', 'until nc -z keep-database 3306; do sleep 1; done;']
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

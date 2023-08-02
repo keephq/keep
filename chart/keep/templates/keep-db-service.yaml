@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "keep.fullname" . }}-database
+  labels:
+    {{- include "keep.labels" . | nindent 4 }}
+    keep-component: database-service
+spec:
+  type: {{ .Values.database.service.type }}
+  ports:
+    - port: {{ .Values.database.service.port }}
+      targetPort: 3306
+      protocol: TCP
+      name: mysql
+  selector:
+    {{- include "keep.selectorLabels" . | nindent 4 }}
+    keep-component: database

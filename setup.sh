@@ -14,7 +14,7 @@ frontend_secrets=(
   "AUTH0_ISSUER:"
 )
 backend_secrets=(
-  "DATABASE_CONNECTION_STRING:sqlite:////state/db.sqlite3"
+  "DATABASE_CONNECTION_STRING:sqlite:////state/db.sqlite3?check_same_thread=False"
   "SECRET_MANAGER_DIRECTORY:state"
   "SECRET_MANAGER_TYPE:FILE"
   "AUTH0_DOMAIN:your-domain.us.auth0.com"
