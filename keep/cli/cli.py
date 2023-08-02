@@ -1,24 +1,23 @@
 import logging
 import logging.config
-import os
 import sys
-import uuid
 from dataclasses import fields
 from importlib import metadata
 
 import click
 import yaml
 from dotenv import find_dotenv, load_dotenv
-from posthog import Posthog
 
 from keep.alertmanager.alertmanager import AlertManager
 from keep.alertmanager.alertstore import AlertStore
 from keep.cli.click_extensions import NotRequiredIf
-from keep.posthog.posthog import get_posthog_client
+from keep.posthog.posthog import get_posthog_client, get_random_user_id
 from keep.providers.providers_factory import ProvidersFactory
 
 load_dotenv(find_dotenv())
 posthog_client = get_posthog_client()
+
+RANDOM_USER_ID = get_random_user_id()
 
 
 logging_config = {
@@ -97,7 +96,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
     posthog_client.capture(
-        str(uuid.uuid4()),
+        RANDOM_USER_ID,
         "keep-cli-started",
         properties={
             "args": sys.argv,
@@ -190,6 +189,13 @@ def run(
 ):
     """Run the alert."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
+    posthog_client.capture(
+        RANDOM_USER_ID,
+        "keep-run-alert-started",
+        properties={
+            "args": sys.argv,
+        },
+    )
     alert_manager = AlertManager(interval)
     alert_workflow_manager = AlertStore()
     alerts = alert_workflow_manager.get_alerts(
@@ -199,13 +205,35 @@ def run(
         alert_manager.run(alerts)
     except KeyboardInterrupt:
         logger.info("Keep stopped by user, stopping the scheduler")
+        posthog_client.capture(
+            RANDOM_USER_ID,
+            "keep-run-stopped-by-user",
+            properties={
+                "args": sys.argv,
+            },
+        )
         alert_manager.stop()
         logger.info("Scheduler stopped")
     except Exception as e:
+        posthog_client.capture(
+            RANDOM_USER_ID,
+            "keep-run-unexpected-error",
+            properties={
+                "args": sys.argv,
+                "error": str(e),
+            },
+        )
         logger.error(f"Error running alert {alerts_directory or alert_url}: {e}")
         if info.verbose:
             raise e
         sys.exit(1)
+    posthog_client.capture(
+        RANDOM_USER_ID,
+        "keep-run-alert-finished",
+        properties={
+            "args": sys.argv,
+        },
+    )
     logger.debug(f"Alert in {alerts_directory or alert_url} ran successfully")
 
 
