@@ -1,17 +1,33 @@
 name: Tests
 on: [push, pull_request]
+
+env: 
+  PYTHON_VERSION: 3.11
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v4
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: ${{ env.PYTHON_VERSION }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    - name: cache deps
+      id: cache-deps
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: pydeps-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies using poetry
-      run: poetry install
+      run: poetry install --no-interaction --no-root
+      if: steps.cache-deps.outputs.cache-hit != 'true'
     - name: Run unit tests and report coverage
       run: poetry run coverage run --branch -m pytest
     - name: Convert coverage results to JSON (for CodeCov support)
