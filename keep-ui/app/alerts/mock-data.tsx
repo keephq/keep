@@ -15,6 +15,7 @@ export const mockAlerts: Alert[] = [
     description:
       "The CPU usage on server-1 is above 90% and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: false,
   },
   {
     id: "2",
@@ -30,6 +31,7 @@ export const mockAlerts: Alert[] = [
     description:
       "The memory usage on client-1 is above 80% and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: true,
   },
   {
     id: "3",
@@ -44,6 +46,7 @@ export const mockAlerts: Alert[] = [
     message: "Disk space is running low",
     description: "The disk space on db-1 is running low and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: false,
   },
   {
     id: "4",
@@ -59,6 +62,7 @@ export const mockAlerts: Alert[] = [
     description:
       "The network latency on server-2 is above the threshold and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: true,
   },
   {
     id: "5",
@@ -75,6 +79,7 @@ export const mockAlerts: Alert[] = [
     description:
       "The disk I/O on client-2 is above average and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: false,
   },
   {
     id: "6",
@@ -89,6 +94,7 @@ export const mockAlerts: Alert[] = [
     message: "Lost connection to the database",
     description: "The connection to db-2 was lost and has been restored",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: true,
   },
   {
     id: "7",
@@ -105,6 +111,7 @@ export const mockAlerts: Alert[] = [
     description:
       "The response time on server-3 is too slow and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: false,
   },
   {
     id: "8",
@@ -119,5 +126,6 @@ export const mockAlerts: Alert[] = [
     description:
       "The cache utilization on client-3 is below the threshold and requires attention",
     fatigueMeter: Math.floor(Math.random() * 100),
+    pushed: true,
   },
 ];
