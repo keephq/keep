@@ -99,8 +99,7 @@ class AlertStore:
                 alert_yaml = self._parse_alert_to_dict(alert_url)
                 alerts.extend(self.parser.parse(alert_yaml, providers_file))
         elif os.path.isdir(alert_path):
-            alert_yaml = self._parse_alert_to_dict(alert_path)
-            alerts.extend(self._get_alerts_from_directory(alert_yaml, providers_file))
+            alerts.extend(self._get_alerts_from_directory(alert_path, providers_file))
         else:
             alert_yaml = self._parse_alert_to_dict(alert_path)
             alerts = self.parser.parse(alert_yaml, providers_file)
