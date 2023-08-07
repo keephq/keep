@@ -3,34 +3,23 @@ import {
   Table,
   TableHead,
   TableHeaderCell,
-  TableBody,
   TableRow,
-  TableCell,
-  BadgeDelta,
-  DeltaType,
-  Icon,
   MultiSelect,
   MultiSelectItem,
-  CategoryBar,
   Flex,
   Button,
   Callout,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
   TabGroup,
   TabList,
   TabPanels,
   Tab,
   TabPanel,
 } from "@tremor/react";
-import Image from "next/image";
-import { Alert, AlertKnownKeys, AlertTableKeys, Severity } from "./models";
+import { Alert, AlertTableKeys } from "./models";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
   ServerIcon,
-  ShieldCheckIcon,
 } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
