@@ -1,12 +1,10 @@
 # here we are going to create all needed tests for the parser.py parse function
 import os
-from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 import requests
-import yaml
 
 from keep.alertmanager.alertstore import AlertStore
 from keep.parser.parser import Parser
@@ -21,7 +19,12 @@ def test_parse_with_nonexistent_file():
         alert = alert_store.get_alerts("non-existing-file")
 
 
-def test_parse_with_nonexistent_url():
+def test_parse_with_nonexistent_url(monkeypatch):
+    # Mocking requests.get to always raise a ConnectionError
+    def mock_get(*args, **kwargs):
+        raise requests.exceptions.ConnectionError
+
+    monkeypatch.setattr(requests, "get", mock_get)
     alert_store = AlertStore()
     # Expected error when a given input does not describe an existing URL
     with pytest.raises(requests.exceptions.ConnectionError):
