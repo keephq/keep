@@ -18,6 +18,11 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
+  TabGroup,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@tremor/react";
 import Image from "next/image";
 import { Alert, AlertKnownKeys, AlertTableKeys, Severity } from "./models";
@@ -35,33 +40,7 @@ import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
 import Loading from "../loading";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
-
-function getSeverity(severity: Severity | undefined) {
-  let deltaType: string;
-  switch (severity) {
-    case "critical":
-      deltaType = "increase";
-      break;
-    case "high":
-      deltaType = "moderateIncrease";
-      break;
-    case "medium":
-      deltaType = "unchanged";
-      break;
-    case "low":
-      deltaType = "moderateDecrease";
-      break;
-    default:
-      deltaType = "decrease";
-      break;
-  }
-  return (
-    <BadgeDelta
-      title={severity?.toString() ?? "lowest"}
-      deltaType={deltaType as DeltaType}
-    />
-  );
-}
+import { AlertsTableBody } from "./alerts-table-body";
 
 function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
@@ -136,100 +115,48 @@ export default function AlertsPage() {
           Please connect your providers to see alerts
         </Callout>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
-              {AlertTableKeys.map((key) => (
-                <TableHeaderCell key={key}>{key}</TableHeaderCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data
-              .filter((alert) => environmentIsSeleected(alert))
-              .map((alert) => {
-                const extraPayload = Object.keys(alert)
-                  .filter((key) => !AlertKnownKeys.includes(key))
-                  .reduce((obj, key) => {
-                    return {
-                      ...obj,
-                      [key]: (alert as any)[key],
-                    };
-                  }, {});
-                const extraIsEmpty = Object.keys(extraPayload).length === 0;
-                return (
-                  <TableRow key={alert.id}>
-                    <TableCell>
-                      <div className="menu"></div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getSeverity(alert.severity)}
-                    </TableCell>
-                    <TableCell>{alert.status}</TableCell>
-                    <TableCell>
-                      <CategoryBar
-                        values={[40, 30, 20, 10]}
-                        colors={["emerald", "yellow", "orange", "rose"]}
-                        markerValue={alert.fatigueMeter ?? 0}
-                        tooltip={alert.fatigueMeter?.toString() ?? "0"}
-                        className="w-48"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(alert.lastReceived).toISOString()}
-                    </TableCell>
-                    <TableCell className="text-center" align="center">
-                      {alert.isDuplicate ? (
-                        <Icon
-                          icon={ShieldCheckIcon}
-                          variant="light"
-                          color="orange"
-                          tooltip={
-                            alert.duplicateReason ?? "This alert is a duplicate"
-                          }
-                          size="xs"
-                        />
-                      ) : null}
-                    </TableCell>
-                    <TableCell>{alert.environment}</TableCell>
-                    <TableCell>{alert.service}</TableCell>
-                    <TableCell>
-                      {alert.source?.map((source, index) => {
-                        return (
-                          <Image
-                            className={`inline-block rounded-full ${
-                              index == 0 ? "" : "-ml-2"
-                            }`}
-                            key={source}
-                            alt={source}
-                            height={24}
-                            width={24}
-                            title={source}
-                            src={`/icons/${source}-icon.png`}
-                          />
-                        );
-                      })}
-                    </TableCell>
-                    <TableCell>{alert.description}</TableCell>
-                    <TableCell>{alert.message}</TableCell>
-                    <TableCell className="w-96">
-                      {extraIsEmpty ? null : (
-                        <Accordion>
-                          <AccordionHeader className="w-96">Extra Payload</AccordionHeader>
-                          <AccordionBody>
-                            <pre className="w-80 overflow-y-scroll">
-                              {JSON.stringify(extraPayload, null, 2)}
-                            </pre>
-                          </AccordionBody>
-                        </Accordion>
-                      )}
-                    </TableCell>
+        <TabGroup>
+          <TabList>
+            <Tab>Pulled</Tab>
+            <Tab>Pushed</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
+                    {AlertTableKeys.map((key) => (
+                      <TableHeaderCell key={key}>{key}</TableHeaderCell>
+                    ))}
                   </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
+                </TableHead>
+                <AlertsTableBody
+                  data={data.filter(
+                    (alert) => !alert.pushed && environmentIsSeleected(alert)
+                  )}
+                />
+              </Table>
+            </TabPanel>
+            <TabPanel>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
+                    {AlertTableKeys.map((key) => (
+                      <TableHeaderCell key={key}>{key}</TableHeaderCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <AlertsTableBody
+                  data={data.filter(
+                    (alert) => alert.pushed && environmentIsSeleected(alert)
+                  )}
+                />
+              </Table>
+            </TabPanel>
+          </TabPanels>
+        </TabGroup>
       )}
     </>
   );

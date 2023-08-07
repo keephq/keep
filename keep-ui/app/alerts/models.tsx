@@ -20,6 +20,7 @@ export interface Alert {
   description?: string;
   severity?: Severity;
   fatigueMeter?: number;
+  pushed: boolean;
 }
 
 export const AlertKnownKeys = [
@@ -36,6 +37,7 @@ export const AlertKnownKeys = [
   "description",
   "severity",
   "fatigueMeter",
+  "pushed",
 ];
 
 export const AlertTableKeys: string[] = [
@@ -49,5 +51,5 @@ export const AlertTableKeys: string[] = [
   "Source",
   "Description",
   "Message",
-  "Payload"
+  "Payload",
 ];
