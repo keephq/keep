@@ -1,9 +1,5 @@
 "use client";
 import {
-  Table,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
   MultiSelect,
   MultiSelectItem,
   Flex,
@@ -15,7 +11,7 @@ import {
   Tab,
   TabPanel,
 } from "@tremor/react";
-import { Alert, AlertTableKeys } from "./models";
+import { Alert } from "./models";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
@@ -29,7 +25,7 @@ import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
 import Loading from "../loading";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
-import { AlertsTableBody } from "./alerts-table-body";
+import { AlertTable } from "./alert-table";
 
 function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
@@ -66,8 +62,6 @@ export default function AlertsPage() {
     .filter(onlyUnique);
 
   function environmentIsSeleected(alert: Alert): boolean {
-    console.log(alert);
-    console.log(selectedEnvironments);
     return (
       selectedEnvironments.includes(alert.environment) ||
       selectedEnvironments.length === 0
@@ -111,38 +105,19 @@ export default function AlertsPage() {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
-                    {AlertTableKeys.map((key) => (
-                      <TableHeaderCell key={key}>{key}</TableHeaderCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <AlertsTableBody
-                  data={data.filter(
-                    (alert) => !alert.pushed && environmentIsSeleected(alert)
-                  )}
-                />
-              </Table>
+              <AlertTable
+                data={data.filter(
+                  (alert) => !alert.pushed && environmentIsSeleected(alert)
+                )}
+              />
             </TabPanel>
             <TabPanel>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
-                    {AlertTableKeys.map((key) => (
-                      <TableHeaderCell key={key}>{key}</TableHeaderCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <AlertsTableBody
-                  data={data.filter(
-                    (alert) => alert.pushed && environmentIsSeleected(alert)
-                  )}
-                />
-              </Table>
+              <AlertTable
+                data={data.filter(
+                  (alert) => alert.pushed && environmentIsSeleected(alert)
+                )}
+                groupBy="name"
+              />
             </TabPanel>
           </TabPanels>
         </TabGroup>

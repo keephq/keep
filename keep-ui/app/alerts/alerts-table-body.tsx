@@ -10,42 +10,51 @@ import {
   AccordionBody,
   BadgeDelta,
   DeltaType,
+  Button,
 } from "@tremor/react";
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
 
 interface Props {
   data: Alert[];
+  groupBy?: string;
+  groupedByData?: { [key: string]: Alert[] };
+  openModal?: (alert: Alert) => void;
 }
 
-export function AlertsTableBody({ data }: Props) {
-  function getSeverity(severity: Severity | undefined) {
-    let deltaType: string;
-    switch (severity) {
-      case "critical":
-        deltaType = "increase";
-        break;
-      case "high":
-        deltaType = "moderateIncrease";
-        break;
-      case "medium":
-        deltaType = "unchanged";
-        break;
-      case "low":
-        deltaType = "moderateDecrease";
-        break;
-      default:
-        deltaType = "decrease";
-        break;
-    }
-    return (
-      <BadgeDelta
-        title={severity?.toString() ?? "lowest"}
-        deltaType={deltaType as DeltaType}
-      />
-    );
+const getSeverity = (severity: Severity | undefined) => {
+  let deltaType: string;
+  switch (severity) {
+    case "critical":
+      deltaType = "increase";
+      break;
+    case "high":
+      deltaType = "moderateIncrease";
+      break;
+    case "medium":
+      deltaType = "unchanged";
+      break;
+    case "low":
+      deltaType = "moderateDecrease";
+      break;
+    default:
+      deltaType = "decrease";
+      break;
   }
+  return (
+    <BadgeDelta
+      title={severity?.toString() ?? "lowest"}
+      deltaType={deltaType as DeltaType}
+    />
+  );
+};
 
+export function AlertsTableBody({
+  data,
+  groupBy,
+  groupedByData,
+  openModal,
+}: Props) {
   return (
     <TableBody>
       {data.map((alert) => {
@@ -60,9 +69,22 @@ export function AlertsTableBody({ data }: Props) {
         const extraIsEmpty = Object.keys(extraPayload).length === 0;
         return (
           <TableRow key={alert.id}>
-            <TableCell>
+            {/* <TableCell>
               <div className="menu"></div>
-            </TableCell>
+            </TableCell> */}
+            {groupBy && groupedByData && openModal ? (
+              <TableCell>
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  color="gray"
+                  disabled={!groupedByData[(alert as any)[groupBy]]}
+                  onClick={() => openModal(alert)}
+                >
+                  Open
+                </Button>
+              </TableCell>
+            ) : null}
             <TableCell className="text-center">
               {getSeverity(alert.severity)}
             </TableCell>
@@ -108,7 +130,9 @@ export function AlertsTableBody({ data }: Props) {
               })}
             </TableCell>
             <TableCell>{alert.description}</TableCell>
-            <TableCell>{alert.message}</TableCell>
+            <TableCell className="max-w-[340px] truncate" title={alert.message}>
+              {alert.message}
+            </TableCell>
             <TableCell className="w-96">
               {extraIsEmpty ? null : (
                 <Accordion>

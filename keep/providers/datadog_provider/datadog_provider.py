@@ -5,6 +5,7 @@ import dataclasses
 import datetime
 import json
 import random
+import re
 import time
 
 import pydantic
@@ -55,13 +56,15 @@ class DatadogProvider(BaseProvider):
     Datadog provider class.
     """
 
+    EVENT_NAME_PATTERN = r".*\] (.*)"
+
     def convert_to_seconds(s):
         seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
         return int(s[:-1]) * seconds_per_unit[s[-1]]
 
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.configuration = Configuration()
+        self.configuration = Configuration(request_timeout=5)
         self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
         self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key
         # to be exposed
@@ -183,14 +186,18 @@ class DatadogProvider(BaseProvider):
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000
         )
+        event_name = event.get("title")
+        match = re.match(DatadogProvider.EVENT_NAME_PATTERN, event_name)
+        if match:
+            event_name = match.group(1)
         return AlertDto(
             id=event.get("id"),
-            name=event.get("title"),
+            name=event_name,
             status=event.get("alert_transition"),
             lastReceived=str(event_time),
             source=["datadog"],
-            message=event.get("title"),
-            description=event.get("body"),
+            message=event.get("body"),
+            description=event_name,
             severity=DatadogProvider.__get_priorty(event.get("severity")),
             fatigueMeter=random.randint(0, 100),
             **tags,

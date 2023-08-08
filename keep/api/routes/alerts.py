@@ -24,6 +24,14 @@ def get_alerts(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ) -> list[AlertDto]:
+    logger.info(
+        "Fetching all alerts",
+        extra={
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
+    )
     alerts = []
 
     # Alerts fetched from providers (by Keep)
@@ -40,19 +48,42 @@ def get_alerts(
             provider_config=provider_config,
         )
         try:
+            logger.info(
+                "Fetching alerts from installed provider",
+                extra={
+                    "provider_type": installed_provider_type,
+                    "provider_id": installed_provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
             alerts.extend(provider.get_alerts())
+            logger.info(
+                "Fetched alerts from installed provider",
+                extra={
+                    "provider_type": installed_provider_type,
+                    "provider_id": installed_provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
         except Exception:
             logger.exception(
                 "Could not fetch alerts from provider",
                 extra={
                     "provider_id": installed_provider_id,
                     "provider_type": installed_provider_type,
+                    "tenant_id": tenant_id,
                 },
             )
             pass
 
     # Alerts pushed to keep
     try:
+        logger.info(
+            "Fetching alerts DB",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
         query = session.query(Alert).filter(Alert.tenant_id == tenant_id)
         if provider_type:
             query = query.filter(Alert.provider_type == provider_type)
@@ -64,13 +95,27 @@ def get_alerts(
             query = query.filter(Alert.provider_id == provider_id)
         db_alerts: list[Alert] = query.order_by(Alert.timestamp.desc()).all()
         alerts.extend([alert.event for alert in db_alerts])
+        logger.info(
+            "Fetched alerts DB",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
     except Exception:
         logger.exception(
             "Could not fetch alerts from provider",
-            extra={"provider_id": provider_id, "provider_type": provider_type},
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+                "tenant_id": tenant_id,
+            },
         )
         pass
 
+    logger.info(
+        "All alerts fetched",
+        extra={"provider_type": provider_type, "provider_id": provider_id},
+    )
     return alerts
 
 
