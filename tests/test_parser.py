@@ -185,39 +185,48 @@ def parse_file_setup():
     parser._parse_providers_from_file("whatever")
     return parser
 
+
 class TestProvidersFromFile:
     def test_parse_providers_from_file(self, monkeypatch, mocker):
         # ARRANGE
         providers_dict = {
-            "providers-file": {"authentication": {"webhook_url": "https://not.a.real.url"}}
+            "providers-file": {
+                "authentication": {"webhook_url": "https://not.a.real.url"}
+            }
         }
 
         # Mocking yaml.safeload to return a good provider
         # This mocks the behavior of a successful file read, with a good yaml format (happy path)
         def mock_safeload(*args, **kwargs):
             return providers_dict
-        
-        monkeypatch.setattr(builtins, "open", mocker.mock_open(read_data='does not matter'))
+
+        monkeypatch.setattr(
+            builtins, "open", mocker.mock_open(read_data="does not matter")
+        )
         monkeypatch.setattr(yaml, "safe_load", mock_safeload)
 
-        #ACT
+        # ACT
         parser = parse_file_setup()
 
-        #ASSERT
+        # ASSERT
         assert parser.context_manager.providers_context == providers_dict
 
     def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
         # ARRANGE
         providers_dict = {
-            "providers-file": {"authentication": {"webhook_url": "https://not.a.real.url"}}
+            "providers-file": {
+                "authentication": {"webhook_url": "https://not.a.real.url"}
+            }
         }
 
         # Mocking yaml.safeload to return a good provider
         # This mocks the behavior of a successful file read, with a good yaml format (happy path)
         def mock_safeload(*args, **kwargs):
             raise yaml.YAMLError
-        
-        monkeypatch.setattr(builtins, "open", mocker.mock_open(read_data='does not matter'))
+
+        monkeypatch.setattr(
+            builtins, "open", mocker.mock_open(read_data="does not matter")
+        )
         monkeypatch.setattr(yaml, "safe_load", mock_safeload)
 
         # ACT/ASSERT
