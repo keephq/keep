@@ -213,7 +213,6 @@ class TestProvidersFromFile:
         # ASSERT
         assert parser.context_manager.providers_context == providers_dict
 
-
     def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
         # ARRANGE
 
@@ -233,9 +232,7 @@ class TestProvidersFromFile:
 
 class TestParseAlert:
     alert_id = "test-alert"
-    alert = {
-        "id": alert_id
-    }
+    alert = {"id": alert_id}
 
     def test_parse_alert_id(self):
         # ARRANGE
@@ -254,7 +251,7 @@ class TestParseAlert:
         # ACT / ASSERT
         with pytest.raises(ValueError):
             parser._parse_id({"invalid": "not-an-id"})
-        
+
         # ASSERT
         assert parser._parse_id({"id": ""}) == ""
 
@@ -263,10 +260,12 @@ class TestParseAlert:
         provider_id = "mock"
         description = "test description"
         authentication = ""
-        
+
         expected_provider = MockProvider(
-            provider_id = provider_id,
-            config = ProviderConfig(authentication=authentication, description=description)
+            provider_id=provider_id,
+            config=ProviderConfig(
+                authentication=authentication, description=description
+            ),
         )
 
         step = {
@@ -277,13 +276,13 @@ class TestParseAlert:
                     "description": description,
                     "authentication": "",
                 },
-            }
+            },
         }
 
         parser = Parser()
-    
+
         # ACT / ASSERT
         provider = parser._get_step_provider(step)
 
-        #ASSERT
+        # ASSERT
         assert provider == expected_provider
