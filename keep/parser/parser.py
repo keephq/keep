@@ -181,10 +181,7 @@ class Parser:
     def _get_step_provider(self, _step: dict) -> dict:
         step_provider = _step.get("provider")
         step_provider_type = step_provider.pop("type")
-        try:
-            step_provider_config = step_provider.pop("config")
-        except KeyError:
-            step_provider_config = {"authentication": {}}
+        step_provider_config = step_provider.pop("config")
         provider_id, provider_config = self._parse_provider_config(
             step_provider_type, step_provider_config
         )
