@@ -213,14 +213,8 @@ class TestProvidersFromFile:
 
     def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
         # ARRANGE
-        providers_dict = {
-            "providers-file": {
-                "authentication": {"webhook_url": "https://not.a.real.url"}
-            }
-        }
 
-        # Mocking yaml.safeload to return a good provider
-        # This mocks the behavior of a successful file read, with a good yaml format (happy path)
+        # Mocking yaml.safeload to simulate a malformed yaml file
         def mock_safeload(*args, **kwargs):
             raise yaml.YAMLError
 
