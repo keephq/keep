@@ -13,6 +13,8 @@ from keep.alertmanager.alertstore import AlertStore
 from keep.parser.parser import Parser
 from keep.step.step import Step
 from keep.storagemanager.storagemanagerfactory import StorageManagerTypes
+from keep.providers.mock_provider.mock_provider import MockProvider
+from keep.providers.models.provider_config import ProviderConfig
 
 
 def test_parse_with_nonexistent_file():
@@ -190,7 +192,7 @@ class TestProvidersFromFile:
     def test_parse_providers_from_file(self, monkeypatch, mocker):
         # ARRANGE
         providers_dict = {
-            "providers-file": {
+            "providers-file-provider": {
                 "authentication": {"webhook_url": "https://not.a.real.url"}
             }
         }
@@ -211,6 +213,7 @@ class TestProvidersFromFile:
         # ASSERT
         assert parser.context_manager.providers_context == providers_dict
 
+
     def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
         # ARRANGE
 
@@ -226,3 +229,61 @@ class TestProvidersFromFile:
         # ACT/ASSERT
         with pytest.raises(yaml.YAMLError):
             parse_file_setup()
+
+
+class TestParseAlert:
+    alert_id = "test-alert"
+    alert = {
+        "id": alert_id
+    }
+
+    def test_parse_alert_id(self):
+        # ARRANGE
+        parser = Parser()
+
+        # ACT
+        parsed_id = parser._parse_id(self.alert)
+
+        # ASSERT
+        assert parsed_id == self.alert_id
+
+    def test_parse_alert_id_invalid(self):
+        # ARRANGE
+        parser = Parser()
+
+        # ACT / ASSERT
+        with pytest.raises(ValueError):
+            parser._parse_id({"invalid": "not-an-id"})
+        
+        # ASSERT
+        assert parser._parse_id({"id": ""}) == ""
+
+    def test_parse_alert_steps(self):
+        # ARRANGE
+        provider_id = "mock"
+        description = "test description"
+        authentication = ""
+        
+        expected_provider = MockProvider(
+            provider_id = provider_id,
+            config = ProviderConfig(authentication=authentication, description=description)
+        )
+
+        step = {
+            "name": "mock-step",
+            "provider": {
+                "type": provider_id,
+                "config": {
+                    "description": description,
+                    "authentication": "",
+                },
+            }
+        }
+
+        parser = Parser()
+    
+        # ACT / ASSERT
+        provider = parser._get_step_provider(step)
+
+        #ASSERT
+        assert provider == expected_provider
