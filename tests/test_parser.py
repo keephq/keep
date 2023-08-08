@@ -1,4 +1,5 @@
 # here we are going to create all needed tests for the parser.py parse function
+import json
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -87,3 +88,91 @@ def test_parse_with_alert_source_with_no_providers_file():
     parser = Parser()
     with pytest.raises(TypeError):
         parser.parse(str(alert_path))
+
+
+def parse_env_setup():
+    parser = Parser()
+    parser._parse_providers_from_env()
+    return parser
+
+
+class TestParseProvidersFromEnv:
+    def test_parse_providers_from_env_empty(self, monkeypatch):
+        # ARRANGE
+        monkeypatch.setenv("KEEP_PROVIDERS", "")
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        assert parser.context_manager.providers_context == {}
+
+    def test_parse_providers_from_env_providers(self, monkeypatch):
+        # ARRANGE
+        providers_dict = {
+            "slack-demo": {"authentication": {"webhook_url": "https://not.a.real.url"}}
+        }
+        monkeypatch.setenv("KEEP_PROVIDERS", json.dumps(providers_dict))
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        assert parser.context_manager.providers_context == providers_dict
+
+    def test_parse_providers_from_env_providers_bad_json(self, monkeypatch):
+        # ARRANGE
+        providers_str = '{"slack-demo": {"authentication": {"webhook_url": '
+        monkeypatch.setenv("KEEP_PROVIDERS", providers_str)
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        assert parser.context_manager.providers_context == {}
+
+
+class TestProviderFromEnv:
+    def test_parse_provider_from_env_empty(self, monkeypatch):
+        # ARRANGE
+        provider_name = "TEST_NAME_STUB"
+        provider_dict = {"hi": 0}
+        monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", json.dumps(provider_dict))
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        expected = {provider_name.replace("_", "-").lower(): provider_dict}
+        assert parser.context_manager.providers_context == expected
+
+    def test_parse_providers_from_env_provider_bad_json(self, monkeypatch):
+        # ARRANGE
+        provider_name = "BAD"
+        providers_str = '{"authentication": {"webhook_url": '
+        monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", providers_str)
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        assert parser.context_manager.providers_context == {}
+
+    def test_parse_providers_from_env_provider_var_missing_name(self, monkeypatch):
+        # ARRANGE
+        provider_name = ""
+        provider_dict = {"hi": 1}
+        monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", json.dumps(provider_dict))
+
+        # ACT
+        parser = parse_env_setup()
+
+        # ASSERT
+        expected = {provider_name.replace("_", "-").lower(): provider_dict}
+
+        # This might be a bug?
+        # It will create a provider context with an empty string as a provider name: {'': {'hi': 1}}
+        assert parser.context_manager.providers_context == expected
+
+        # I would expect it to not create the provider
+        # assert parser.context_manager.providers_context == {}
