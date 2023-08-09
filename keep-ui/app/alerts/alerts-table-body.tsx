@@ -129,6 +129,9 @@ export function AlertsTableBody({
                 );
               })}
             </TableCell>
+            <TableCell className="max-w-[340px] truncate" title={alert.name}>
+              {alert.name}
+            </TableCell>
             <TableCell>{alert.description}</TableCell>
             <TableCell className="max-w-[340px] truncate" title={alert.message}>
               {alert.message}

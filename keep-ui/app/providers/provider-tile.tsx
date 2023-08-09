@@ -66,7 +66,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       <div className="h-8">
         <Text
           className={`truncate capitalize group-hover:hidden ${
-            provider.installed ? "w-[100px]" : ""
+            provider.installed && provider.details?.name ? "w-[100px]" : ""
           }`}
           title={provider.installed ? provider.details.name : ""}
         >

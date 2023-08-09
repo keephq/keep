@@ -49,6 +49,7 @@ export const AlertTableKeys: string[] = [
   "Environment",
   "Service",
   "Source",
+  "Name",
   "Description",
   "Message",
   "Payload",
