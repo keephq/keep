@@ -183,9 +183,6 @@ class DatadogProvider(BaseProvider):
         return formatted_alerts
 
     def setup_webhook(self, keep_api_url: str, api_key: str, setup_alerts: bool = True):
-        webhook_url = (
-            f"{keep_api_url}/alerts/event/datadog?provider_id={self.provider_id}"
-        )
         self.logger.info("Creating or updating webhook")
         with ApiClient(self.configuration) as api_client:
             api = WebhooksIntegrationApi(api_client)
@@ -193,16 +190,16 @@ class DatadogProvider(BaseProvider):
                 webhook = api.get_webhooks_integration(
                     webhook_name=DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME
                 )
-                if webhook.url != webhook_url:
+                if webhook.url != keep_api_url:
                     api.update_webhooks_integration(
-                        webhook.name, body={"url": webhook_url}
+                        webhook.name, body={"url": keep_api_url}
                     )
                     self.logger.info("Webhook updated")
             except NotFoundException:
                 webhook = api.create_webhooks_integration(
                     body={
                         "name": DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME,
-                        "url": webhook_url,
+                        "url": keep_api_url,
                         "custom_headers": json.dumps(
                             {
                                 "Content-Type": "application/json",

@@ -230,7 +230,8 @@ def install_provider_webhook(
     provider = ProvidersFactory.get_provider(
         provider_id, provider_type, provider_config
     )
-    keep_api_url = config("KEEP_API_URL")
+    api_url = config("KEEP_API_URL")
+    keep_api_url = f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
     webhook_api_key = get_or_create_api_key(
         session=session,
         tenant_id=tenant_id,

@@ -137,12 +137,9 @@ class GrafanaProvider(BaseProvider):
             or webhook_exists.get("uid")
             == GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
         ]
-        webhook_url = (
-            f"{keep_api_url}/alerts/event/grafana?provider_id={self.provider_id}"
-        )
         if webhook_exists:
             webhook = webhook_exists[0]
-            webhook["settings"]["url"] = webhook_url
+            webhook["settings"]["url"] = keep_api_url
             webhook["settings"]["authorization_scheme"] = "digest"
             webhook["settings"]["authorization_credentials"] = api_key
             requests.put(
@@ -156,7 +153,7 @@ class GrafanaProvider(BaseProvider):
                 "type": "webhook",
                 "settings": {
                     "httpMethod": "POST",
-                    "url": webhook_url,
+                    "url": keep_api_url,
                     "authorization_scheme": "digest",
                     "authorization_credentials": api_key,
                 },
