@@ -1,16 +1,20 @@
 # here we are going to create all needed tests for the parser.py parse function
+import builtins
 import json
 import os
 from pathlib import Path
-from unittest.mock import patch
+import unittest.mock as mock
 
 import pytest
 import requests
+import yaml
 
 from keep.alertmanager.alertstore import AlertStore
 from keep.parser.parser import Parser
 from keep.step.step import Step
 from keep.storagemanager.storagemanagerfactory import StorageManagerTypes
+from keep.providers.mock_provider.mock_provider import MockProvider
+from keep.providers.models.provider_config import ProviderConfig
 
 
 def test_parse_with_nonexistent_file():
@@ -70,7 +74,7 @@ def test_parse_all_alerts():
     # Mock the get_files function to return the mock_files
     os.environ["STORAGE_MANAGER_TYPE"] = StorageManagerTypes.FILESYSTEM.value
     os.environ["KEEP_PROVIDERS_FILE"] = providers_path
-    with patch(
+    with mock.patch(
         "keep.storagemanager.filesystemstoragemanager.FilesystemStorageManager.get_files"
     ) as mock_get_files:
         mock_get_files.return_value = mock_files
@@ -146,7 +150,7 @@ class TestProviderFromEnv:
         expected = {provider_name.replace("_", "-").lower(): provider_dict}
         assert parser.context_manager.providers_context == expected
 
-    def test_parse_providers_from_env_provider_bad_json(self, monkeypatch):
+    def test_parse_provider_from_env_provider_bad_json(self, monkeypatch):
         # ARRANGE
         provider_name = "BAD"
         providers_str = '{"authentication": {"webhook_url": '
@@ -158,7 +162,7 @@ class TestProviderFromEnv:
         # ASSERT
         assert parser.context_manager.providers_context == {}
 
-    def test_parse_providers_from_env_provider_var_missing_name(self, monkeypatch):
+    def test_parse_provider_from_env_provider_var_missing_name(self, monkeypatch):
         # ARRANGE
         provider_name = ""
         provider_dict = {"hi": 1}
@@ -176,3 +180,109 @@ class TestProviderFromEnv:
 
         # I would expect it to not create the provider
         # assert parser.context_manager.providers_context == {}
+
+
+def parse_file_setup():
+    parser = Parser()
+    parser._parse_providers_from_file("whatever")
+    return parser
+
+
+class TestProvidersFromFile:
+    def test_parse_providers_from_file(self, monkeypatch, mocker):
+        # ARRANGE
+        providers_dict = {
+            "providers-file-provider": {
+                "authentication": {"webhook_url": "https://not.a.real.url"}
+            }
+        }
+
+        # Mocking yaml.safeload to return a good provider
+        # This mocks the behavior of a successful file read, with a good yaml format (happy path)
+        def mock_safeload(*args, **kwargs):
+            return providers_dict
+
+        monkeypatch.setattr(
+            builtins, "open", mocker.mock_open(read_data="does not matter")
+        )
+        monkeypatch.setattr(yaml, "safe_load", mock_safeload)
+
+        # ACT
+        parser = parse_file_setup()
+
+        # ASSERT
+        assert parser.context_manager.providers_context == providers_dict
+
+    def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
+        # ARRANGE
+
+        # Mocking yaml.safeload to simulate a malformed yaml file
+        def mock_safeload(*args, **kwargs):
+            raise yaml.YAMLError
+
+        monkeypatch.setattr(
+            builtins, "open", mocker.mock_open(read_data="does not matter")
+        )
+        monkeypatch.setattr(yaml, "safe_load", mock_safeload)
+
+        # ACT/ASSERT
+        with pytest.raises(yaml.YAMLError):
+            parse_file_setup()
+
+
+class TestParseAlert:
+    alert_id = "test-alert"
+    alert = {"id": alert_id}
+
+    def test_parse_alert_id(self):
+        # ARRANGE
+        parser = Parser()
+
+        # ACT
+        parsed_id = parser._parse_id(self.alert)
+
+        # ASSERT
+        assert parsed_id == self.alert_id
+
+    def test_parse_alert_id_invalid(self):
+        # ARRANGE
+        parser = Parser()
+
+        # ACT / ASSERT
+        with pytest.raises(ValueError):
+            parser._parse_id({"invalid": "not-an-id"})
+
+        # ASSERT
+        assert parser._parse_id({"id": ""}) == ""
+
+    def test_parse_alert_steps(self):
+        # ARRANGE
+        provider_id = "mock"
+        description = "test description"
+        authentication = ""
+
+        expected_provider = MockProvider(
+            provider_id=provider_id,
+            config=ProviderConfig(
+                authentication=authentication, description=description
+            ),
+        )
+
+        step = {
+            "name": "mock-step",
+            "provider": {
+                "type": provider_id,
+                "config": {
+                    "description": description,
+                    "authentication": "",
+                },
+            },
+        }
+
+        parser = Parser()
+
+        # ACT / ASSERT
+        provider = parser._get_step_provider(step)
+
+        # ASSERT
+        assert provider == expected_provider
