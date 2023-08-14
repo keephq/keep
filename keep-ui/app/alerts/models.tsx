@@ -40,17 +40,17 @@ export const AlertKnownKeys = [
   "pushed",
 ];
 
-export const AlertTableKeys: string[] = [
-  "Severity",
-  "Status",
-  "Fatigue Meter",
-  "Last Received",
-  "Duplicate",
-  "Environment",
-  "Service",
-  "Source",
-  "Name",
-  "Description",
-  "Message",
-  "Payload",
-];
+export const AlertTableKeys: { [key: string]: string } = {
+  Severity: "",
+  "Last Status": "",
+  "Fatigue Meter": "Calculated based on various factors",
+  "Last Received": "",
+  Duplicate: "",
+  Environment: "",
+  Service: "",
+  Source: "",
+  Name: "",
+  Description: "",
+  Message: "",
+  Payload: "",
+};

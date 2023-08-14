@@ -6,6 +6,7 @@ import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import ProviderMenu from "./provider-menu";
 import { toast } from "react-toastify";
+import { installWebhook } from "../../utils/helpers";
 
 interface Props {
   provider: Provider;
@@ -49,30 +50,8 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
     }
   }
 
-  async function installWebhook() {
-    toast.promise(
-      fetch(
-        `${getApiURL()}/providers/install/webhook/${provider.type}/${
-          provider.id
-        }`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken!}`,
-          },
-        }
-      ),
-      {
-        pending: "Webhook installing 🤞",
-        success: `${provider.type} webhook installed 👌`,
-        error: `Webhook installation failed 😢`,
-      },
-      {
-        position: toast.POSITION.TOP_LEFT,
-      }
-    );
-  }
-
+  const callInstallWebhook = async () =>
+    installWebhook(provider, session?.accessToken!);
   return (
     <div
       className={`group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 h-44 m-2.5 hover:shadow-xl ${
@@ -81,7 +60,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       onClick={onClick}
     >
       {provider.installed ? (
-        InstalledSection(deleteProvider, installWebhook)
+        InstalledSection(deleteProvider, callInstallWebhook)
       ) : (
         <div></div>
       )}

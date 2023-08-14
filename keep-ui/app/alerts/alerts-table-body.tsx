@@ -45,6 +45,7 @@ const getSeverity = (severity: Severity | undefined) => {
     <BadgeDelta
       title={severity?.toString() ?? "lowest"}
       deltaType={deltaType as DeltaType}
+      color=""
     />
   );
 };

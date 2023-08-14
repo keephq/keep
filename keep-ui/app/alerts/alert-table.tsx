@@ -1,8 +1,15 @@
-import { Table, TableHead, TableRow, TableHeaderCell } from "@tremor/react";
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  Icon,
+} from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { Alert, AlertTableKeys } from "./models";
 import { useState } from "react";
 import { AlertTransition } from "./alert-transition";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   data: Alert[];
@@ -44,8 +51,20 @@ export function AlertTable({ data, groupBy }: Props) {
         <TableHead>
           <TableRow>
             {groupBy && <TableHeaderCell>History</TableHeaderCell>}
-            {AlertTableKeys.map((key) => (
-              <TableHeaderCell key={key}>{key}</TableHeaderCell>
+            {Object.keys(AlertTableKeys).map((key) => (
+              <TableHeaderCell key={key}>
+                <div className="flex items-center">
+                  {key}{" "}
+                  {AlertTableKeys[key] !== "" && (
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      tooltip={AlertTableKeys[key]}
+                      variant="simple"
+                      color="gray"
+                    />
+                  )}{" "}
+                </div>
+              </TableHeaderCell>
             ))}
           </TableRow>
         </TableHead>

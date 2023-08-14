@@ -11,6 +11,29 @@ interface Props {
 }
 
 export function AlertTransition({ isOpen, closeModal, data }: Props) {
+  // const rawChartData = data.reduce((prev, curr) => {
+  //   const date = Intl.DateTimeFormat("en-US").format(
+  //     new Date(curr.lastReceived)
+  //   );
+  //   if (!prev[date]) {
+  //     prev[date] = {
+  //       date,
+  //       [curr.status]: 1,
+  //     };
+  //   } else {
+  //     prev[date][curr.status]
+  //       ? (prev[date][curr.status] += 1)
+  //       : (prev[date][curr.status] = 1);
+  //   }
+  //   return prev;
+  // }, {} as { [date: string]: any });
+  // const chartData = Object.keys(rawChartData).map((key) => {
+  //   return { date: key, ...rawChartData[key] };
+  // });
+  // const categoriesByStatus = data
+  //   .map((alert) => alert.status)
+  //   .filter(onlyUnique);
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={closeModal}>
@@ -26,7 +49,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
           <div className="fixed inset-0 bg-gray-900 bg-opacity-25" />
         </Transition.Child>
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+          <div className="flex h-full items-center justify-center p-4 text-center">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -37,7 +60,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className="w-full max-w-7xl transform overflow-hidden ring-tremor bg-white
+                className="w-full max-w-7xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
               >
                 <Flex alignItems="center" justifyContent="between">
@@ -49,6 +72,13 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                     Close
                   </Button>
                 </Flex>
+                {/* <LineChart
+                  className="mt-6"
+                  data={chartData}
+                  index="date"
+                  categories={categoriesByStatus}
+                  yAxisWidth={40}
+                /> */}
                 <AlertTable data={data} />
               </Dialog.Panel>
             </Transition.Child>

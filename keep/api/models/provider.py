@@ -12,3 +12,4 @@ class Provider(BaseModel):
     can_query: bool
     query_params: list[str] | None = None
     installed: bool = False
+    can_setup_webhook: bool = False

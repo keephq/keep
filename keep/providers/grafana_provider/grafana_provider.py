@@ -172,13 +172,22 @@ class GrafanaProvider(BaseProvider):
                 ]
             )
             if not policy_exists:
+                if all_policies["receiver"]:
+                    # This is so we won't override the default receiver if customer has one.
+                    all_policies["routes"].append(
+                        {"receiver": all_policies["receiver"], "continue": True}
+                    )
                 all_policies["routes"].append(
                     {
                         "receiver": GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME,
                         "continue": True,
                     }
                 )
-                requests.put(policies_api, json=all_policies, headers=headers)
+                requests.put(
+                    policies_api,
+                    json=all_policies,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
                 self.logger.info("Updated policices to match alerts to webhook")
             else:
                 self.logger.info("Policies already match alerts to webhook")

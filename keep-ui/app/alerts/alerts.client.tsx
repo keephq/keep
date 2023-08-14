@@ -15,7 +15,6 @@ import { Alert } from "./models";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
-  ServerIcon,
 } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
@@ -24,18 +23,20 @@ import { useSession } from "../../utils/customAuth";
 import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
 import Loading from "../loading";
-import { CircleStackIcon } from "@heroicons/react/24/outline";
+import {
+  BellAlertIcon,
+  CircleStackIcon,
+  ServerStackIcon,
+} from "@heroicons/react/24/outline";
 import { AlertTable } from "./alert-table";
-
-function onlyUnique(value: string, index: number, array: string[]) {
-  return array.indexOf(value) === index;
-}
+import { onlyUnique } from "../../utils/helpers";
 
 export default function AlertsPage() {
   const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const { data: session, status, update } = useSession();
   const { data, error, isLoading } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
@@ -68,21 +69,41 @@ export default function AlertsPage() {
     );
   }
 
+  const statuses = data.map((alert) => alert.status).filter(onlyUnique);
+
+  function statusIsSeleected(alert: Alert): boolean {
+    return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
+  }
+
   return (
     <>
       <Flex justifyContent="between">
-        <MultiSelect
-          onValueChange={setSelectedEnvironments}
-          placeholder="Select Environment..."
-          className="max-w-xs mb-5"
-          icon={ServerIcon}
-        >
-          {environments!.map((item) => (
-            <MultiSelectItem key={item} value={item}>
-              {item}
-            </MultiSelectItem>
-          ))}
-        </MultiSelect>
+        <div className="flex w-full">
+          <MultiSelect
+            onValueChange={setSelectedEnvironments}
+            placeholder="Select Environment..."
+            className="max-w-xs mb-5"
+            icon={ServerStackIcon}
+          >
+            {environments!.map((item) => (
+              <MultiSelectItem key={item} value={item}>
+                {item}
+              </MultiSelectItem>
+            ))}
+          </MultiSelect>
+          <MultiSelect
+            onValueChange={setSelectedStatus}
+            placeholder="Select Status..."
+            className="max-w-xs mb-5 ml-2.5"
+            icon={BellAlertIcon}
+          >
+            {statuses!.map((item) => (
+              <MultiSelectItem key={item} value={item}>
+                {item}
+              </MultiSelectItem>
+            ))}
+          </MultiSelect>
+        </div>
         <Button
           icon={ArchiveBoxIcon}
           color="orange"
@@ -100,23 +121,29 @@ export default function AlertsPage() {
       ) : (
         <TabGroup>
           <TabList>
-            <Tab>Pulled</Tab>
-            <Tab>Pushed</Tab>
+            <Tab>Pushed to Keep</Tab>
+            <Tab>Pulled from Providers</Tab>
           </TabList>
           <TabPanels>
             <TabPanel>
               <AlertTable
                 data={data.filter(
-                  (alert) => !alert.pushed && environmentIsSeleected(alert)
+                  (alert) =>
+                    alert.pushed &&
+                    environmentIsSeleected(alert) &&
+                    statusIsSeleected(alert)
                 )}
+                groupBy="name"
               />
             </TabPanel>
             <TabPanel>
               <AlertTable
                 data={data.filter(
-                  (alert) => alert.pushed && environmentIsSeleected(alert)
+                  (alert) =>
+                    !alert.pushed &&
+                    environmentIsSeleected(alert) &&
+                    statusIsSeleected(alert)
                 )}
-                groupBy="name"
               />
             </TabPanel>
           </TabPanels>
