@@ -4,6 +4,8 @@ import Image from "next/image";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
+import ProviderMenu from "./provider-menu";
+import { toast } from "react-toastify";
 
 interface Props {
   provider: Provider;
@@ -11,18 +13,16 @@ interface Props {
   onDelete?: (provider: Provider) => void;
 }
 
-function InstalledSection() {
+function InstalledSection(
+  onDelete?: () => Promise<void>,
+  onInstallWebhook?: () => Promise<void>
+) {
   return (
     <div className="flex w-full items-center justify-between">
       <Text color="green" className="ml-2.5 text-xs">
         Connected
       </Text>
-      {/* <Icon
-        size="xs"
-        icon={Bars3Icon}
-        className="mr-2.5 hover:bg-gray-100"
-        color="gray"
-      /> */}
+      <ProviderMenu onDelete={onDelete} onInstallWebhook={onInstallWebhook} />
     </div>
   );
 }
@@ -44,9 +44,33 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       if (response.ok) {
         onDelete!(provider);
       } else {
-        alert("Failed to delete provider");
+        toast.error(`Failed to delete ${provider.type} 😢`);
       }
     }
+  }
+
+  async function installWebhook() {
+    toast.promise(
+      fetch(
+        `${getApiURL()}/providers/install/webhook/${provider.type}/${
+          provider.id
+        }`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken!}`,
+          },
+        }
+      ),
+      {
+        pending: "Webhook installing 🤞",
+        success: `${provider.type} webhook installed 👌`,
+        error: `Webhook installation failed 😢`,
+      },
+      {
+        position: toast.POSITION.TOP_LEFT,
+      }
+    );
   }
 
   return (
@@ -56,7 +80,11 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       } hover:grayscale-0`}
       onClick={onClick}
     >
-      {provider.installed ? InstalledSection() : <div></div>}
+      {provider.installed ? (
+        InstalledSection(deleteProvider, installWebhook)
+      ) : (
+        <div></div>
+      )}
       <Image
         src={`/icons/${provider.type}-icon.png`}
         width={60}
@@ -65,9 +93,9 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       />
       <div className="h-8">
         <Text
-          className={`truncate capitalize group-hover:hidden ${
-            provider.installed && provider.details?.name ? "w-[100px]" : ""
-          }`}
+          className={`truncate capitalize ${
+            provider.installed ? "" : "group-hover:hidden"
+          } ${provider.details?.name ? "w-[100px]" : ""}`}
           title={provider.installed ? provider.details.name : ""}
         >
           {provider.type}{" "}
@@ -83,7 +111,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
             Connect
           </Button>
         )}
-        {provider.installed && (
+        {/* {provider.installed && (
           <Button
             variant="secondary"
             size="xs"
@@ -93,7 +121,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
           >
             Delete
           </Button>
-        )}
+        )} */}
       </div>
     </div>
   );
