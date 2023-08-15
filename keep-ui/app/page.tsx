@@ -1,4 +1,3 @@
-
 import ProvidersPage from "./providers/page";
 
 export const metadata = {
@@ -8,10 +7,8 @@ export const metadata = {
 
 export default async function IndexPage() {
   return (
-    <>
-      <div>
-          <ProvidersPage />
-      </div>
-    </>
+    <div>
+      <ProvidersPage />
+    </div>
   );
 }

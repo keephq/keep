@@ -10,7 +10,6 @@ from typing import Optional
 from pydantic.dataclasses import dataclass
 
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -127,6 +126,23 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Get alerts from the provider.
         """
         raise NotImplementedError("get_alerts() method not implemented")
+
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        """
+        Setup a webhook for the provider.
+
+        Args:
+            tenant_id (str): _description_
+            keep_api_url (str): _description_
+            api_key (str): _description_
+            setup_alerts (bool, optional): _description_. Defaults to True.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError("setup_webhook() method not implemented")
 
     @staticmethod
     def get_alert_schema() -> dict:

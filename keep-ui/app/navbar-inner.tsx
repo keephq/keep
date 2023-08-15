@@ -9,8 +9,8 @@ import Link from "next/link";
 const navigation = [
   { name: "Providers", href: "/providers" },
   { name: "Alerts", href: "/alerts" },
-  { name: "CI", href: "/ci" },
-  { name: "Builder", href: "/builder" },
+  // { name: "CI", href: "/ci" },
+  { name: "Workflow Builder", href: "/builder" },
 ];
 
 function classNames(...classes: string[]) {

@@ -45,6 +45,8 @@ class GrafanaProvider(BaseProvider):
     Grafana provider class.
     """
 
+    KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
+
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
 
@@ -121,6 +123,88 @@ class GrafanaProvider(BaseProvider):
             source=["grafana"],
             **alert.get("labels", {}),
         )
+
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        self.logger.info("Setting up webhook")
+        webhook_name = (
+            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME + f"-{tenant_id}"
+        )
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+        contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
+        all_contact_points = requests.get(contacts_api, headers=headers).json()
+        webhook_exists = [
+            webhook_exists
+            for webhook_exists in all_contact_points
+            if webhook_exists.get("name") == webhook_name
+            or webhook_exists.get("uid") == webhook_name
+        ]
+        if webhook_exists:
+            webhook = webhook_exists[0]
+            webhook["settings"]["url"] = keep_api_url
+            webhook["settings"]["authorization_scheme"] = "digest"
+            webhook["settings"]["authorization_credentials"] = api_key
+            requests.put(
+                f'{contacts_api}/{webhook["uid"]}', json=webhook, headers=headers
+            )
+            self.logger.info(f'Updated webhook {webhook["uid"]}')
+        else:
+            webhook = {
+                "name": webhook_name,
+                "uid": webhook_name,
+                "type": "webhook",
+                "settings": {
+                    "httpMethod": "POST",
+                    "url": keep_api_url,
+                    "authorization_scheme": "digest",
+                    "authorization_credentials": api_key,
+                },
+            }
+            requests.post(contacts_api, json=webhook, headers=headers)
+        if setup_alerts:
+            self.logger.info("Setting up alerts")
+            policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
+            all_policies = requests.get(policies_api, headers=headers).json()
+            policy_exists = any(
+                [
+                    p
+                    for p in all_policies.get("routes", [])
+                    if p.get("receiver") == webhook_name
+                ]
+            )
+            if not policy_exists:
+                if all_policies["receiver"]:
+                    default_policy = {
+                        "receiver": all_policies["receiver"],
+                        "continue": True,
+                    }
+                    if not any(
+                        [
+                            p
+                            for p in all_policies.get("routes", [])
+                            if p == default_policy
+                        ]
+                    ):
+                        # This is so we won't override the default receiver if customer has one.
+                        all_policies["routes"].append(
+                            {"receiver": all_policies["receiver"], "continue": True}
+                        )
+                all_policies["routes"].append(
+                    {
+                        "receiver": webhook_name,
+                        "continue": True,
+                    }
+                )
+                requests.put(
+                    policies_api,
+                    json=all_policies,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
+                self.logger.info("Updated policices to match alerts to webhook")
+            else:
+                self.logger.info("Policies already match alerts to webhook")
+        self.logger.info("Webhook successfuly setup")
 
     def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
         alert_ids = []
@@ -200,5 +284,5 @@ if __name__ == "__main__":
     provider = ProvidersFactory.get_provider(
         provider_id="grafana-keephq", provider_type="grafana", provider_config=config
     )
-    alerts = provider.get_alerts_configuration()
+    alerts = provider.setup_webhook("http://localhost:8000", "1234", True)
     print(alerts)

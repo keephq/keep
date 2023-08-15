@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_bearer_token
+from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
 from keep.providers.providers_factory import ProvidersFactory
@@ -22,30 +22,100 @@ def get_alerts(
     provider_type: str = None,
     provider_id: str = None,
     tenant_id: str = Depends(verify_bearer_token),
-    # session: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> list[AlertDto]:
-    # if provider_id:
-    #     if not provider_type:
-    #         raise HTTPException(
-    #             400, "provider_type is required when provider_id is set"
-    #         )
+    logger.info(
+        "Fetching all alerts",
+        extra={
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
+    )
     alerts = []
+
+    # Alerts fetched from providers (by Keep)
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
     for provider in installed_providers:
-        provider_type, provider_id, provider_config = provider.values()
+        (
+            installed_provider_type,
+            installed_provider_id,
+            provider_config,
+        ) = provider.values()
         provider = ProvidersFactory.get_provider(
-            provider_id=provider_id,
-            provider_type=provider_type,
+            provider_id=installed_provider_id,
+            provider_type=installed_provider_type,
             provider_config=provider_config,
         )
         try:
+            logger.info(
+                "Fetching alerts from installed provider",
+                extra={
+                    "provider_type": installed_provider_type,
+                    "provider_id": installed_provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
             alerts.extend(provider.get_alerts())
+            logger.info(
+                "Fetched alerts from installed provider",
+                extra={
+                    "provider_type": installed_provider_type,
+                    "provider_id": installed_provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
         except Exception:
             logger.exception(
                 "Could not fetch alerts from provider",
-                extra={"provider_id": provider_id, "provider_type": provider_type},
+                extra={
+                    "provider_id": installed_provider_id,
+                    "provider_type": installed_provider_type,
+                    "tenant_id": tenant_id,
+                },
             )
             pass
+
+    # Alerts pushed to keep
+    try:
+        logger.info(
+            "Fetching alerts DB",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        query = session.query(Alert).filter(Alert.tenant_id == tenant_id)
+        if provider_type:
+            query = query.filter(Alert.provider_type == provider_type)
+        if provider_id:
+            if not provider_type:
+                raise HTTPException(
+                    400, "provider_type is required when provider_id is set"
+                )
+            query = query.filter(Alert.provider_id == provider_id)
+        db_alerts: list[Alert] = query.order_by(Alert.timestamp.desc()).all()
+        alerts.extend([alert.event for alert in db_alerts])
+        logger.info(
+            "Fetched alerts DB",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+    except Exception:
+        logger.exception(
+            "Could not fetch alerts from provider",
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+                "tenant_id": tenant_id,
+            },
+        )
+        pass
+
+    logger.info(
+        "All alerts fetched",
+        extra={"provider_type": provider_type, "provider_id": provider_id},
+    )
     return alerts
 
 
@@ -56,7 +126,7 @@ def receive_event(
     provider_type: str,
     event: dict,
     provider_id: str | None = None,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
     logger.info(
@@ -71,6 +141,7 @@ def receive_event(
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
         formatted_event = provider_class.format_alert(event)
+        formatted_event.pushed = True
         alert = Alert(
             tenant_id=tenant_id,
             provider_type=provider_type,
