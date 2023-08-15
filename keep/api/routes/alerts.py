@@ -35,24 +35,22 @@ def get_alerts(
     alerts = []
 
     # Alerts fetched from providers (by Keep)
-    installed_providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
+    all_providers = ProvidersFactory.get_all_providers()
+    installed_providers = ProvidersFactory.get_installed_providers(
+        tenant_id=tenant_id, all_providers=all_providers
+    )
     for provider in installed_providers:
-        (
-            installed_provider_type,
-            installed_provider_id,
-            provider_config,
-        ) = provider.values()
         provider = ProvidersFactory.get_provider(
-            provider_id=installed_provider_id,
-            provider_type=installed_provider_type,
-            provider_config=provider_config,
+            provider_id=provider.id,
+            provider_type=provider.type,
+            provider_config=provider.details,
         )
         try:
             logger.info(
                 "Fetching alerts from installed provider",
                 extra={
-                    "provider_type": installed_provider_type,
-                    "provider_id": installed_provider_id,
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
                     "tenant_id": tenant_id,
                 },
             )
@@ -60,8 +58,8 @@ def get_alerts(
             logger.info(
                 "Fetched alerts from installed provider",
                 extra={
-                    "provider_type": installed_provider_type,
-                    "provider_id": installed_provider_id,
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
                     "tenant_id": tenant_id,
                 },
             )
@@ -69,8 +67,8 @@ def get_alerts(
             logger.exception(
                 "Could not fetch alerts from provider",
                 extra={
-                    "provider_id": installed_provider_id,
-                    "provider_type": installed_provider_type,
+                    "provider_id": provider.id,
+                    "provider_type": provider.type,
                     "tenant_id": tenant_id,
                 },
             )
