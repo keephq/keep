@@ -173,10 +173,21 @@ class GrafanaProvider(BaseProvider):
             )
             if not policy_exists:
                 if all_policies["receiver"]:
-                    # This is so we won't override the default receiver if customer has one.
-                    all_policies["routes"].append(
-                        {"receiver": all_policies["receiver"], "continue": True}
-                    )
+                    default_policy = {
+                        "receiver": all_policies["receiver"],
+                        "continue": True,
+                    }
+                    if not any(
+                        [
+                            p
+                            for p in all_policies.get("routes", [])
+                            if p == default_policy
+                        ]
+                    ):
+                        # This is so we won't override the default receiver if customer has one.
+                        all_policies["routes"].append(
+                            {"receiver": all_policies["receiver"], "continue": True}
+                        )
                 all_policies["routes"].append(
                     {
                         "receiver": GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME,
