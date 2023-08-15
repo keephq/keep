@@ -105,8 +105,8 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
         height={60}
         alt={provider.type}
         className={`${
-          provider.installed ? "grayscale-0" : "grayscale"
-        } group-hover:grayscale-0`}
+          provider.installed ? "" : "grayscale group-hover:grayscale-0"
+        }`}
       />
       <div className="h-8">
         <Text
