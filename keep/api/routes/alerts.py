@@ -40,7 +40,7 @@ def get_alerts(
         tenant_id=tenant_id, all_providers=all_providers
     )
     for provider in installed_providers:
-        provider = ProvidersFactory.get_provider(
+        provider_class = ProvidersFactory.get_provider(
             provider_id=provider.id,
             provider_type=provider.type,
             provider_config=provider.details,
@@ -54,7 +54,7 @@ def get_alerts(
                     "tenant_id": tenant_id,
                 },
             )
-            alerts.extend(provider.get_alerts())
+            alerts.extend(provider_class.get_alerts())
             logger.info(
                 "Fetched alerts from installed provider",
                 extra={
