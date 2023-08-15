@@ -156,8 +156,9 @@ class AlertStore:
     def _load_providers_from_installed_providers(self, tenant_id: str):
         # TODO: should be refactored and moved to ProvidersManager or something
         # Load installed providers
+        all_providers = ProvidersFactory.get_all_providers()
         installed_providers = ProvidersFactory.get_installed_providers(
-            tenant_id=tenant_id
+            tenant_id=tenant_id, all_providers=all_providers
         )
         for provider in installed_providers:
             self.logger.info(f"Loading provider {provider}")
