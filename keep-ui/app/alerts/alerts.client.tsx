@@ -23,11 +23,7 @@ import { useSession } from "../../utils/customAuth";
 import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
 import Loading from "../loading";
-import {
-  BellAlertIcon,
-  CircleStackIcon,
-  ServerStackIcon,
-} from "@heroicons/react/24/outline";
+import { BellAlertIcon, ServerStackIcon } from "@heroicons/react/24/outline";
 import { AlertTable } from "./alert-table";
 import { onlyUnique } from "../../utils/helpers";
 
@@ -114,41 +110,36 @@ export default function AlertsPage() {
           Export
         </Button>
       </Flex>
-      {data.length === 0 ? (
-        <Callout title="No Data" icon={CircleStackIcon} color="yellow">
-          Please connect your providers to see alerts
-        </Callout>
-      ) : (
-        <TabGroup>
-          <TabList>
-            <Tab>Pushed to Keep</Tab>
-            <Tab>Pulled from Providers</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel>
-              <AlertTable
-                data={data.filter(
-                  (alert) =>
-                    alert.pushed &&
-                    environmentIsSeleected(alert) &&
-                    statusIsSeleected(alert)
-                )}
-                groupBy="name"
-              />
-            </TabPanel>
-            <TabPanel>
-              <AlertTable
-                data={data.filter(
-                  (alert) =>
-                    !alert.pushed &&
-                    environmentIsSeleected(alert) &&
-                    statusIsSeleected(alert)
-                )}
-              />
-            </TabPanel>
-          </TabPanels>
-        </TabGroup>
-      )}
+      <TabGroup>
+        <TabList>
+          <Tab>Pushed to Keep</Tab>
+          <Tab>Pulled from Providers</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <AlertTable
+              data={data.filter(
+                (alert) =>
+                  alert.pushed &&
+                  environmentIsSeleected(alert) &&
+                  statusIsSeleected(alert)
+              )}
+              groupBy="name"
+              pushed={true}
+            />
+          </TabPanel>
+          <TabPanel>
+            <AlertTable
+              data={data.filter(
+                (alert) =>
+                  !alert.pushed &&
+                  environmentIsSeleected(alert) &&
+                  statusIsSeleected(alert)
+              )}
+            />
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
     </>
   );
 }

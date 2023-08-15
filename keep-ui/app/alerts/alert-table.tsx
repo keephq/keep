@@ -4,19 +4,24 @@ import {
   TableRow,
   TableHeaderCell,
   Icon,
+  Callout,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { Alert, AlertTableKeys } from "./models";
 import { useState } from "react";
 import { AlertTransition } from "./alert-transition";
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import {
+  CircleStackIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
 
 interface Props {
   data: Alert[];
   groupBy?: string;
+  pushed?: boolean;
 }
 
-export function AlertTable({ data, groupBy }: Props) {
+export function AlertTable({ data, groupBy, pushed = false }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -45,7 +50,13 @@ export function AlertTable({ data, groupBy }: Props) {
     setIsOpen(true);
   };
 
-  return (
+  return data.length === 0 ? (
+    <Callout title="No Data" icon={CircleStackIcon} color="yellow" className="mt-5">
+      {pushed
+        ? "Install webhook integration in supported providers to see pushed alerts"
+        : "Please connect supported providers to see pulled alerts"}
+    </Callout>
+  ) : (
     <>
       <Table>
         <TableHead>
