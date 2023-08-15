@@ -95,7 +95,7 @@ class ProvidersFactory:
             return {}
 
     @staticmethod
-    def get_all_providers() -> dict[str, Provider]:
+    def get_all_providers() -> list[Provider]:
         """
         Get all the providers.
 
@@ -184,25 +184,42 @@ class ProvidersFactory:
         return providers
 
     @staticmethod
-    def get_installed_providers(tenant_id: str, include_details: bool = True) -> list:
+    def get_installed_providers(
+        tenant_id: str, all_providers: list[Provider], include_details: bool = True
+    ) -> list[Provider]:
         # TODO: installed providers should be kept in the DB
         # but for now we just fetch it from the secret manager
         secret_manager = SecretManagerFactory.get_secret_manager()
-        installed_providers = secret_manager.list_secrets(prefix=f"{tenant_id}_")
-        # TODO: mask the sensitive data
-        installed_providers = [
-            {
-                "type": secret.split("_")[1],
-                "id": secret.split("_")[2],
-                "details": secret_manager.read_secret(
-                    secret.split("/")[-1], is_json=True
+        installed_providers_secrets = secret_manager.list_secrets(
+            prefix=f"{tenant_id}_"
+        )
+        installed_providers = []
+        for provider_secret in installed_providers_secrets:
+            secret_split = provider_secret.split("_")
+            if len(provider_secret.split("_")) == 3:
+                provider_type = secret_split[1]
+                provider_id = secret_split[2]
+                details = (
+                    secret_manager.read_secret(
+                        provider_secret.split("/")[-1], is_json=True
+                    )
+                    if include_details
+                    else None
                 )
-                if include_details
-                else None,
-            }
-            for secret in installed_providers
-            if len(secret.split("_")) == 3  # avoid the installation api key
-        ]
-        # Merge with PROVIDERS_CONFIG env var
-
+                provider = next(
+                    filter(
+                        lambda provider: provider.type == provider_type,
+                        all_providers,
+                    ),
+                    None,
+                )
+                if not provider:
+                    logger.warning(
+                        f"Installed provider {provider_type} does not exist anymore?"
+                    )
+                    continue
+                provider_copy = provider.copy()
+                provider_copy.id = provider_id
+                provider_copy.details = details
+                installed_providers.append(provider_copy)
         return installed_providers

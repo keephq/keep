@@ -4,17 +4,20 @@ import { Bars3Icon, ChevronDownIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { ArrowPathIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { Provider } from "./providers";
 
 interface Props {
   onDelete?: () => Promise<void>;
   onEdit?: () => void;
   onInstallWebhook?: () => Promise<void>;
+  provider: Provider;
 }
 
 export default function ProviderMenu({
   onDelete,
   onEdit,
   onInstallWebhook,
+  provider,
 }: Props) {
   return (
     <div className="fixed w-44 text-right">
@@ -42,7 +45,8 @@ export default function ProviderMenu({
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
-                  <button disabled
+                  <button
+                    disabled
                     className={`${
                       active ? "bg-slate-200" : "text-gray-900"
                     } group flex w-full items-center rounded-md px-2 py-2 text-xs text-slate-300 cursor-not-allowed`}
@@ -57,8 +61,13 @@ export default function ProviderMenu({
                   <button
                     className={`${
                       active ? "bg-slate-200" : "text-gray-900"
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs ${
+                      provider.can_setup_webhook
+                        ? ""
+                        : "text-slate-300 cursor-not-allowed"
+                    }`}
                     onClick={onInstallWebhook}
+                    disabled={!provider.can_setup_webhook}
                   >
                     <ArrowPathIcon
                       className="mr-2 h-4 w-4"

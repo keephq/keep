@@ -17,14 +17,19 @@ interface Props {
 
 function InstalledSection(
   onDelete?: () => Promise<void>,
-  onInstallWebhook?: () => Promise<void>
+  onInstallWebhook?: () => Promise<void>,
+  provider?: Provider
 ) {
   return (
     <div className="flex w-full items-center justify-between">
       <Text color="green" className="ml-2.5 text-xs">
         Connected
       </Text>
-      <ProviderMenu onDelete={onDelete} onInstallWebhook={onInstallWebhook} />
+      <ProviderMenu
+        onDelete={onDelete}
+        onInstallWebhook={onInstallWebhook}
+        provider={provider!}
+      />
     </div>
   );
 }
@@ -95,7 +100,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
         />
       )}
       {provider.installed ? (
-        InstalledSection(deleteProvider, callInstallWebhook)
+        InstalledSection(deleteProvider, callInstallWebhook, provider)
       ) : (
         <div></div>
       )}
