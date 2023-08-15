@@ -1,6 +1,6 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
-import { CodeBlock, CopyBlock, a11yLight } from "react-code-blocks";
+import { CopyBlock, a11yLight } from "react-code-blocks";
 import { stringify } from "yaml";
 import { Alert } from "./alert";
 import { useState } from "react";
@@ -30,6 +30,17 @@ export default function BuilderModalContent({
     downloadFileFromString(alertYaml, `${compiledAlert!.id}.yaml`);
   }
 
+  const copyBlockProps = {
+    theme: { a11yLight },
+    customStyle: {
+      height: "450px",
+      overflowY: "scroll",
+    },
+    language: "yaml",
+    text: alertYaml,
+    codeBlock: true,
+  };
+
   return (
     <>
       <div className="flex justify-between items-center">
@@ -53,16 +64,7 @@ export default function BuilderModalContent({
         <div className="flex flex-col">
           {!isLoading ? (
             <>
-              <CopyBlock
-                language="yaml"
-                text={alertYaml}
-                theme={a11yLight}
-                customStyle={{
-                  height: "450px",
-                  overflowY: "scroll",
-                }}
-                codeBlock={true}
-              />
+              <CopyBlock {...copyBlockProps} />
               <div className="flex justify-end">
                 <Button
                   color="orange"
