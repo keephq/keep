@@ -95,7 +95,8 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
 
 def get_app(multi_tenant: bool = False) -> FastAPI:
-    os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
+    if not os.environ.get("KEEP_API_URL", None):
+        os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
     app = FastAPI(dependencies=[Depends(dispose_context_manager)])
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
