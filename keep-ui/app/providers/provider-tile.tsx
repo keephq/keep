@@ -29,7 +29,7 @@ function InstalledSection(
   );
 }
 
-const WebhookIcon = (props) => (
+const WebhookIcon = (props: any) => (
   <svg
     width="256px"
     height="256px"
