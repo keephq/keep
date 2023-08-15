@@ -15,3 +15,4 @@ class AlertDto(BaseModel, extra=Extra.allow):
     description: str | None = None
     severity: str | None = None
     fatigueMeter: int | None = None
+    pushed: bool = False  # Whether the alert was pushed or pulled from the provider

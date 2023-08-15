@@ -4,19 +4,21 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 import dataclasses
 import datetime
 import json
+import os
 import random
+import re
 import time
 
 import pydantic
 from datadog_api_client import ApiClient, Configuration
+from datadog_api_client.exceptions import NotFoundException
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
+from datadog_api_client.v1.api.webhooks_integration_api import WebhooksIntegrationApi
 from datadog_api_client.v1.model.monitor import Monitor
-from datadog_api_client.v1.model.monitor_type import MonitorType
 
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.alert import Alert
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
@@ -31,6 +33,8 @@ class DatadogProviderAuthConfig:
     """
     Datadog authentication configuration.
     """
+
+    KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME = "keep-datadog-webhook-integration"
 
     api_key: str = dataclasses.field(
         metadata={
@@ -55,13 +59,15 @@ class DatadogProvider(BaseProvider):
     Datadog provider class.
     """
 
+    EVENT_NAME_PATTERN = r".*\] (.*)"
+
     def convert_to_seconds(s):
         seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
         return int(s[:-1]) * seconds_per_unit[s[-1]]
 
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
-        self.configuration = Configuration()
+        self.configuration = Configuration(request_timeout=5)
         self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
         self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key
         # to be exposed
@@ -176,6 +182,91 @@ class DatadogProvider(BaseProvider):
                 raise GetAlertException(message=str(e), status_code=e.status)
         return formatted_alerts
 
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        self.logger.info("Creating or updating webhook")
+        webhook_name = f"{DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
+        with ApiClient(self.configuration) as api_client:
+            api = WebhooksIntegrationApi(api_client)
+            try:
+                webhook = api.get_webhooks_integration(webhook_name=webhook_name)
+                if webhook.url != keep_api_url:
+                    api.update_webhooks_integration(
+                        webhook.name, body={"url": keep_api_url}
+                    )
+                    self.logger.info("Webhook updated")
+            except NotFoundException:
+                webhook = api.create_webhooks_integration(
+                    body={
+                        "name": webhook_name,
+                        "url": keep_api_url,
+                        "custom_headers": json.dumps(
+                            {
+                                "Content-Type": "application/json",
+                                "X-API-KEY": api_key,
+                            }
+                        ),
+                        "encode_as": "json",
+                        "payload": json.dumps(
+                            {
+                                "body": "$EVENT_MSG",
+                                "last_updated": "$LAST_UPDATED",
+                                "event_type": "$EVENT_TYPE",
+                                "title": "$EVENT_TITLE",
+                                "severity": "$ALERT_PRIORITY",
+                                "alert_type": "$ALERT_TYPE",
+                                "alert_query": "$ALERT_QUERY",
+                                "alert_transition": "$ALERT_TRANSITION",
+                                "date": "$DATE",
+                                "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
+                                "url": "$LINK",
+                                "tags": "$TAGS",
+                                "id": "$ID",
+                            }
+                        ),
+                    }
+                )
+                self.logger.info("Webhook created")
+            self.logger.info("Webhook created or updated")
+            if setup_alerts:
+                self.logger.info("Updating monitors")
+                api = MonitorsApi(api_client)
+                monitors = api.list_monitors()
+                for monitor in monitors:
+                    try:
+                        self.logger.info(
+                            "Updating monitor",
+                            extra={
+                                "monitor_id": monitor.id,
+                                "monitor_name": monitor.name,
+                            },
+                        )
+                        monitor_message = monitor.message
+                        if f"@webhook-{webhook_name}" not in monitor_message:
+                            monitor_message = (
+                                f"{monitor_message} @webhook-{webhook_name}"
+                            )
+                            api.update_monitor(
+                                monitor.id, body={"message": monitor_message}
+                            )
+                            self.logger.info(
+                                "Monitor updated",
+                                extra={
+                                    "monitor_id": monitor.id,
+                                    "monitor_name": monitor.name,
+                                },
+                            )
+                    except Exception:
+                        self.logger.exception(
+                            "Could not update monitor",
+                            extra={
+                                "monitor_id": monitor.id,
+                                "monitor_name": monitor.name,
+                            },
+                        )
+                self.logger.info("Monitors updated")
+
     def format_alert(event: dict) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
@@ -183,14 +274,18 @@ class DatadogProvider(BaseProvider):
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000
         )
+        event_name = event.get("title")
+        match = re.match(DatadogProvider.EVENT_NAME_PATTERN, event_name)
+        if match:
+            event_name = match.group(1)
         return AlertDto(
             id=event.get("id"),
-            name=event.get("title"),
+            name=event_name,
             status=event.get("alert_transition"),
             lastReceived=str(event_time),
             source=["datadog"],
-            message=event.get("title"),
-            description=event.get("body"),
+            message=event.get("body"),
+            description=event_name,
             severity=DatadogProvider.__get_priorty(event.get("severity")),
             fatigueMeter=random.randint(0, 100),
             **tags,
@@ -235,11 +330,13 @@ if __name__ == "__main__":
     api_key = os.environ.get("DATADOG_API_KEY")
     app_key = os.environ.get("DATADOG_APP_KEY")
 
-    config = {
+    provider_config = {
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="datadog-keephq", provider_type="datadog", provider_config=config
+        provider_id="datadog-keephq",
+        provider_type="datadog",
+        provider_config=provider_config,
     )
-    results = provider.get_logs(10)
+    results = provider.setup_webhook("http://localhost:8000", "1234", True)
     print(results)

@@ -1,31 +1,20 @@
 "use client";
 import {
-  Table,
-  TableHead,
-  TableHeaderCell,
-  TableBody,
-  TableRow,
-  TableCell,
-  BadgeDelta,
-  DeltaType,
-  Icon,
   MultiSelect,
   MultiSelectItem,
-  CategoryBar,
   Flex,
   Button,
   Callout,
-  Accordion,
-  AccordionHeader,
-  AccordionBody,
+  TabGroup,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@tremor/react";
-import Image from "next/image";
-import { Alert, AlertKnownKeys, AlertTableKeys, Severity } from "./models";
+import { Alert } from "./models";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
-  ServerIcon,
-  ShieldCheckIcon,
 } from "@heroicons/react/20/solid";
 import "./alerts.client.css";
 import { useState } from "react";
@@ -34,44 +23,20 @@ import { useSession } from "../../utils/customAuth";
 import useSWR from "swr";
 import { fetcher } from "../../utils/fetcher";
 import Loading from "../loading";
-import { CircleStackIcon } from "@heroicons/react/24/outline";
-
-function getSeverity(severity: Severity | undefined) {
-  let deltaType: string;
-  switch (severity) {
-    case "critical":
-      deltaType = "increase";
-      break;
-    case "high":
-      deltaType = "moderateIncrease";
-      break;
-    case "medium":
-      deltaType = "unchanged";
-      break;
-    case "low":
-      deltaType = "moderateDecrease";
-      break;
-    default:
-      deltaType = "decrease";
-      break;
-  }
-  return (
-    <BadgeDelta
-      title={severity?.toString() ?? "lowest"}
-      deltaType={deltaType as DeltaType}
-    />
-  );
-}
-
-function onlyUnique(value: string, index: number, array: string[]) {
-  return array.indexOf(value) === index;
-}
+import {
+  BellAlertIcon,
+  CircleStackIcon,
+  ServerStackIcon,
+} from "@heroicons/react/24/outline";
+import { AlertTable } from "./alert-table";
+import { onlyUnique } from "../../utils/helpers";
 
 export default function AlertsPage() {
   const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const { data: session, status, update } = useSession();
   const { data, error, isLoading } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
@@ -98,29 +63,47 @@ export default function AlertsPage() {
     .filter(onlyUnique);
 
   function environmentIsSeleected(alert: Alert): boolean {
-    console.log(alert);
-    console.log(selectedEnvironments);
     return (
       selectedEnvironments.includes(alert.environment) ||
       selectedEnvironments.length === 0
     );
   }
 
+  const statuses = data.map((alert) => alert.status).filter(onlyUnique);
+
+  function statusIsSeleected(alert: Alert): boolean {
+    return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
+  }
+
   return (
     <>
       <Flex justifyContent="between">
-        <MultiSelect
-          onValueChange={setSelectedEnvironments}
-          placeholder="Select Environment..."
-          className="max-w-xs mb-5"
-          icon={ServerIcon}
-        >
-          {environments!.map((item) => (
-            <MultiSelectItem key={item} value={item}>
-              {item}
-            </MultiSelectItem>
-          ))}
-        </MultiSelect>
+        <div className="flex w-full">
+          <MultiSelect
+            onValueChange={setSelectedEnvironments}
+            placeholder="Select Environment..."
+            className="max-w-xs mb-5"
+            icon={ServerStackIcon}
+          >
+            {environments!.map((item) => (
+              <MultiSelectItem key={item} value={item}>
+                {item}
+              </MultiSelectItem>
+            ))}
+          </MultiSelect>
+          <MultiSelect
+            onValueChange={setSelectedStatus}
+            placeholder="Select Status..."
+            className="max-w-xs mb-5 ml-2.5"
+            icon={BellAlertIcon}
+          >
+            {statuses!.map((item) => (
+              <MultiSelectItem key={item} value={item}>
+                {item}
+              </MultiSelectItem>
+            ))}
+          </MultiSelect>
+        </div>
         <Button
           icon={ArchiveBoxIcon}
           color="orange"
@@ -136,100 +119,35 @@ export default function AlertsPage() {
           Please connect your providers to see alerts
         </Callout>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>{/** For the menu */}</TableHeaderCell>
-              {AlertTableKeys.map((key) => (
-                <TableHeaderCell key={key}>{key}</TableHeaderCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data
-              .filter((alert) => environmentIsSeleected(alert))
-              .map((alert) => {
-                const extraPayload = Object.keys(alert)
-                  .filter((key) => !AlertKnownKeys.includes(key))
-                  .reduce((obj, key) => {
-                    return {
-                      ...obj,
-                      [key]: (alert as any)[key],
-                    };
-                  }, {});
-                const extraIsEmpty = Object.keys(extraPayload).length === 0;
-                return (
-                  <TableRow key={alert.id}>
-                    <TableCell>
-                      <div className="menu"></div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getSeverity(alert.severity)}
-                    </TableCell>
-                    <TableCell>{alert.status}</TableCell>
-                    <TableCell>
-                      <CategoryBar
-                        values={[40, 30, 20, 10]}
-                        colors={["emerald", "yellow", "orange", "rose"]}
-                        markerValue={alert.fatigueMeter ?? 0}
-                        tooltip={alert.fatigueMeter?.toString() ?? "0"}
-                        className="w-48"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(alert.lastReceived).toISOString()}
-                    </TableCell>
-                    <TableCell className="text-center" align="center">
-                      {alert.isDuplicate ? (
-                        <Icon
-                          icon={ShieldCheckIcon}
-                          variant="light"
-                          color="orange"
-                          tooltip={
-                            alert.duplicateReason ?? "This alert is a duplicate"
-                          }
-                          size="xs"
-                        />
-                      ) : null}
-                    </TableCell>
-                    <TableCell>{alert.environment}</TableCell>
-                    <TableCell>{alert.service}</TableCell>
-                    <TableCell>
-                      {alert.source?.map((source, index) => {
-                        return (
-                          <Image
-                            className={`inline-block rounded-full ${
-                              index == 0 ? "" : "-ml-2"
-                            }`}
-                            key={source}
-                            alt={source}
-                            height={24}
-                            width={24}
-                            title={source}
-                            src={`/icons/${source}-icon.png`}
-                          />
-                        );
-                      })}
-                    </TableCell>
-                    <TableCell>{alert.description}</TableCell>
-                    <TableCell>{alert.message}</TableCell>
-                    <TableCell className="w-96">
-                      {extraIsEmpty ? null : (
-                        <Accordion>
-                          <AccordionHeader className="w-96">Extra Payload</AccordionHeader>
-                          <AccordionBody>
-                            <pre className="w-80 overflow-y-scroll">
-                              {JSON.stringify(extraPayload, null, 2)}
-                            </pre>
-                          </AccordionBody>
-                        </Accordion>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
+        <TabGroup>
+          <TabList>
+            <Tab>Pushed to Keep</Tab>
+            <Tab>Pulled from Providers</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              <AlertTable
+                data={data.filter(
+                  (alert) =>
+                    alert.pushed &&
+                    environmentIsSeleected(alert) &&
+                    statusIsSeleected(alert)
+                )}
+                groupBy="name"
+              />
+            </TabPanel>
+            <TabPanel>
+              <AlertTable
+                data={data.filter(
+                  (alert) =>
+                    !alert.pushed &&
+                    environmentIsSeleected(alert) &&
+                    statusIsSeleected(alert)
+                )}
+              />
+            </TabPanel>
+          </TabPanels>
+        </TabGroup>
       )}
     </>
   );

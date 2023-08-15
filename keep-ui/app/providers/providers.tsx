@@ -35,6 +35,7 @@ export interface Provider {
   can_notify: boolean;
   notify_params?: string[];
   type: string;
+  can_setup_webhook?: boolean;
 }
 
 export type Providers = Provider[];

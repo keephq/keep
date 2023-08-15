@@ -18,6 +18,8 @@ class TenantApiKey(SQLModel, table=True):
     )
     key_hash: str = Field(primary_key=True)
     tenant: Tenant = Relationship()
+    is_system: bool = False
+    system_description: Optional[str] = None
 
 
 class TenantInstallation(SQLModel, table=True):

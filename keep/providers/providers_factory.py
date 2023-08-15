@@ -125,6 +125,10 @@ class ProvidersFactory:
                 )
                 provider_type = provider_directory.replace("_provider", "")
                 provider_class = ProvidersFactory.get_provider_class(provider_type)
+                can_setup_webhook = (
+                    issubclass(provider_class, BaseProvider)
+                    and provider_class.__dict__.get("setup_webhook") is not None
+                )
                 can_notify = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("notify") is not None
@@ -171,6 +175,7 @@ class ProvidersFactory:
                         can_query=can_query,
                         notify_params=notify_params,
                         query_params=query_params,
+                        can_setup_webhook=can_setup_webhook,
                     )
                 )
             except ModuleNotFoundError:

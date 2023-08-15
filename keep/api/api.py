@@ -28,6 +28,7 @@ load_dotenv(find_dotenv())
 keep.api.logging.setup()
 logger = logging.getLogger(__name__)
 
+HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 
 
@@ -94,6 +95,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
 
 def get_app(multi_tenant: bool = False) -> FastAPI:
+    os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
     app = FastAPI(dependencies=[Depends(dispose_context_manager)])
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
@@ -133,6 +135,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
         public_url = ngrok.connect(PORT).public_url
         logger.info(f"ngrok tunnel: {public_url}")
+        os.environ["KEEP_API_URL"] = public_url
 
     return app
 
@@ -145,7 +148,7 @@ def run(app: FastAPI):
     nest_asyncio.apply()
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host=HOST,
         port=PORT,
         log_config=logging_config,
     )

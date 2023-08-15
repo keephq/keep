@@ -6,20 +6,22 @@ import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import "./provider-form.css";
-import { Title, Text, Button, Callout } from "@tremor/react";
+import { Title, Text, Button, Callout, Icon } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { installWebhook } from "../../utils/helpers";
 
 type ProviderFormProps = {
   provider: Provider;
   formData: Record<string, string>; // New prop for form data
   formErrorsData: Record<string, string>; // New prop for form data
-  onFormChange: (
+  onFormChange?: (
     formValues: Record<string, string>,
     formErrors: Record<string, string>
   ) => void;
-  onConnectChange: (isConnecting: boolean, isConnected: boolean) => void;
+  onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
-  onAddProvider: (provider: Provider) => void;
+  onAddProvider?: (provider: Provider) => void;
 };
 
 const ProviderForm = ({
@@ -35,6 +37,7 @@ const ProviderForm = ({
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
+    install_webhook: true,
   });
   const [formErrors, setFormErrors] = useState<{
     [key: string]: string;
@@ -84,6 +87,14 @@ const ProviderForm = ({
     onFormChange(updatedFormValues, formErrors);
   };
 
+  const handleWebhookChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      install_webhook: checked,
+    }));
+  };
+
   const markErrors = (errors: Record<string, boolean>) => {
     const inputElements = document.querySelectorAll(".form-group input");
     inputElements.forEach((input) => {
@@ -127,7 +138,8 @@ const ProviderForm = ({
             );
           });
         }
-        return response.json();
+        const response_json = response.json();
+        return response_json;
       })
       .then((data) => {
         setFormErrors({});
@@ -169,6 +181,9 @@ const ProviderForm = ({
         console.log("Connect Result:", data);
         setIsLoading(false);
         onConnectChange(false, true);
+        if (formValues.install_webhook) {
+          installWebhook(data as Provider, accessToken);
+        }
         onAddProvider(data as Provider);
       })
       .catch((error) => {
@@ -208,6 +223,7 @@ const ProviderForm = ({
               value={formValues.provider_name || ""}
               onChange={handleInputChange}
               placeholder="Enter provider name"
+              color="orange"
             />
           </div>
           {Object.keys(provider.config).map((configKey) => {
@@ -247,6 +263,34 @@ const ProviderForm = ({
               </div>
             );
           })}
+          {provider.can_setup_webhook && (
+            <div className="flex items-center w-full" key="install_webhook">
+              <input
+                type="checkbox"
+                id="install_webhook"
+                name="install_webhook"
+                className="mr-2.5"
+                onChange={handleWebhookChange}
+                checked={formValues["install_webhook"] || false}
+              />
+              <label
+                htmlFor="install_webhook"
+                className="label-container w-full"
+              >
+                <Text className="capitalize">Install Webhook</Text>
+                <Icon
+                  icon={QuestionMarkCircleIcon}
+                  variant="simple"
+                  color="orange"
+                  size="sm"
+                  tooltip={`Whether to install Keep as a webhook integration in ${provider.type}.
+
+                  This allows Keep to asynchronously receive alerts from ${provider.type}.
+                  Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notificaiton policy to include Keep.`}
+                />
+              </label>
+            </div>
+          )}
           {/* Hidden input for provider ID */}
           <input type="hidden" name="providerId" value={provider.id} />
         </form>
