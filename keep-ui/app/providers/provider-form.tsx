@@ -282,7 +282,11 @@ const ProviderForm = ({
                   icon={QuestionMarkCircleIcon}
                   variant="simple"
                   color="orange"
-                  tooltip="Whether to install Keep as a webhook integration in the provider, in order to receive alerts from it."
+                  size="sm"
+                  tooltip={`Whether to install Keep as a webhook integration in ${provider.type}.
+
+                  This allows Keep to asynchronously receive alerts from ${provider.type}.
+                  Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notificaiton policy to include Keep.`}
                 />
               </label>
             </div>
