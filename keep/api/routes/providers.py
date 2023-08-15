@@ -27,7 +27,7 @@ def get_providers(
 ):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
-    installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
+    installed_providers = ProvidersFactory.get_installed_providers(tenant_id, providers)
 
     try:
         return {
