@@ -39,7 +39,7 @@ pymysql = "^1.0.3"
 google-cloud-secret-manager = "^2.16.1"
 python-jose = "^3.3.0"
 jwcrypto = "^1.4.2"
-langchain = "^0.0.178"
+langchain = "^0.0.236"
 sqlalchemy = "1.4.41"
 # 3.0.4 missing wheels - https://github.com/snowflakedb/snowflake-connector-python/issues/1584
 snowflake-connector-python = "3.0.3"
