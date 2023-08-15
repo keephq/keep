@@ -89,10 +89,10 @@ const navigationItems = [
     navigate: '/providers'
   },
   {
-    icon: <GoToDashboardIcon />,
-    label: 'Go to dashboard',
+    icon: <CreateAlertIcon />,
+    label: 'Go to alert workflow builder',
     shortcut: ['D'],
-    navigate: '/dashboard'
+    navigate: '/builder'
   }
 ]
 

@@ -124,18 +124,21 @@ class GrafanaProvider(BaseProvider):
             **alert.get("labels", {}),
         )
 
-    def setup_webhook(self, keep_api_url: str, api_key: str, setup_alerts: bool = True):
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
         self.logger.info("Setting up webhook")
+        webhook_name = (
+            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME + f"-{tenant_id}"
+        )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
         all_contact_points = requests.get(contacts_api, headers=headers).json()
         webhook_exists = [
             webhook_exists
             for webhook_exists in all_contact_points
-            if webhook_exists.get("name")
-            == GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
-            or webhook_exists.get("uid")
-            == GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
+            if webhook_exists.get("name") == webhook_name
+            or webhook_exists.get("uid") == webhook_name
         ]
         if webhook_exists:
             webhook = webhook_exists[0]
@@ -148,8 +151,8 @@ class GrafanaProvider(BaseProvider):
             self.logger.info(f'Updated webhook {webhook["uid"]}')
         else:
             webhook = {
-                "name": GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME,
-                "uid": GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME,
+                "name": webhook_name,
+                "uid": webhook_name,
                 "type": "webhook",
                 "settings": {
                     "httpMethod": "POST",
@@ -167,8 +170,7 @@ class GrafanaProvider(BaseProvider):
                 [
                     p
                     for p in all_policies.get("routes", [])
-                    if p.get("receiver")
-                    == GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
+                    if p.get("receiver") == webhook_name
                 ]
             )
             if not policy_exists:
@@ -190,7 +192,7 @@ class GrafanaProvider(BaseProvider):
                         )
                 all_policies["routes"].append(
                     {
-                        "receiver": GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME,
+                        "receiver": webhook_name,
                         "continue": True,
                     }
                 )

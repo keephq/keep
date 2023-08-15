@@ -238,7 +238,7 @@ def install_provider_webhook(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
-    provider.setup_webhook(keep_api_url, webhook_api_key, True)
+    provider.setup_webhook(tenant_id, keep_api_url, webhook_api_key, True)
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 

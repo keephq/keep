@@ -182,14 +182,15 @@ class DatadogProvider(BaseProvider):
                 raise GetAlertException(message=str(e), status_code=e.status)
         return formatted_alerts
 
-    def setup_webhook(self, keep_api_url: str, api_key: str, setup_alerts: bool = True):
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
         self.logger.info("Creating or updating webhook")
+        webhook_name = f"{DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
         with ApiClient(self.configuration) as api_client:
             api = WebhooksIntegrationApi(api_client)
             try:
-                webhook = api.get_webhooks_integration(
-                    webhook_name=DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME
-                )
+                webhook = api.get_webhooks_integration(webhook_name=webhook_name)
                 if webhook.url != keep_api_url:
                     api.update_webhooks_integration(
                         webhook.name, body={"url": keep_api_url}
@@ -198,7 +199,7 @@ class DatadogProvider(BaseProvider):
             except NotFoundException:
                 webhook = api.create_webhooks_integration(
                     body={
-                        "name": DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME,
+                        "name": webhook_name,
                         "url": keep_api_url,
                         "custom_headers": json.dumps(
                             {
@@ -242,11 +243,10 @@ class DatadogProvider(BaseProvider):
                             },
                         )
                         monitor_message = monitor.message
-                        if (
-                            f"@webhook-{DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME}"
-                            not in monitor_message
-                        ):
-                            monitor_message = f"{monitor_message} @webhook-{DatadogProviderAuthConfig.KEEP_DATADOG_WEBHOOK_INTEGRATION_NAME}"
+                        if f"@webhook-{webhook_name}" not in monitor_message:
+                            monitor_message = (
+                                f"{monitor_message} @webhook-{webhook_name}"
+                            )
                             api.update_monitor(
                                 monitor.id, body={"message": monitor_message}
                             )
