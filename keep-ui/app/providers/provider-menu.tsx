@@ -20,7 +20,7 @@ export default function ProviderMenu({
   provider,
 }: Props) {
   return (
-    <div className="fixed w-44 text-right">
+    <div className="w-44 text-right">
       <Menu as="div" className="relative inline-block text-left">
         <div>
           <Menu.Button className="inline-flex w-full justify-center rounded-md text-sm">
