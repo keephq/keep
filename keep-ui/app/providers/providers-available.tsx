@@ -46,16 +46,20 @@ const ProvidersConnect = ({
     if (isConnected) handleCloseModal();
   };
 
-  const providersWithConfig = providers.filter((provider) => {
-    const config = (provider as Provider).config;
-    return config && Object.keys(config).length > 0; // Filter out providers with empty config
-  }) as Providers;
+  const providersWithConfig = providers
+    .filter((provider) => {
+      const config = (provider as Provider).config;
+      return config && Object.keys(config).length > 0; // Filter out providers with empty config
+    })
+    .sort(
+      (a, b) => Number(b.can_setup_webhook) - Number(a.can_setup_webhook)
+    ) as Providers;
 
   return (
     <div>
       <Text className="ml-2.5 mt-5">Available Providers</Text>
       <div className="provider-tiles">
-        {Object.values(providersWithConfig).map((provider, index) => (
+        {providersWithConfig.map((provider, index) => (
           <ProviderTile
             key={provider.id}
             provider={provider}

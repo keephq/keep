@@ -241,16 +241,15 @@ const ProviderForm = ({
                     {method.description}
                     {method.required !== false ? "" : " (optional)"}
                   </Text>
-                  {/* <span className="question-icon">
-                  {method.hint && <FaQuestionCircle />}
-                </span> */}
-                  {/* {isHovered && method.hint && (
-                    <div className="help-bubble-container">
-                      <div className="help-bubble">
-                        <span className="hint">{method.hint}</span>
-                      </div>
-                    </div>
-                  )} */}
+                  {method.hint && (
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      variant="simple"
+                      color="gray"
+                      size="sm"
+                      tooltip={`${method.hint}`}
+                    />
+                  )}
                 </label>
                 <input
                   type={method.type}
@@ -281,7 +280,7 @@ const ProviderForm = ({
                 <Icon
                   icon={QuestionMarkCircleIcon}
                   variant="simple"
-                  color="orange"
+                  color="gray"
                   size="sm"
                   tooltip={`Whether to install Keep as a webhook integration in ${provider.type}.
 

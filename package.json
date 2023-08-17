@@ -1,9 +1,0 @@
-{
-  "dependencies": {
-    "google-auth-library": "^8.8.0",
-    "uuid": "^9.0.0"
-  },
-  "devDependencies": {
-    "@types/uuid": "^9.0.1"
-  }
-}
