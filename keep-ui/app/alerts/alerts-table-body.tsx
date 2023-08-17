@@ -56,6 +56,16 @@ export function AlertsTableBody({
   groupedByData,
   openModal,
 }: Props) {
+  const getAlertLastReceieved = (alert: Alert) => {
+    let lastReceived = "unknown";
+    if (alert.lastReceived) {
+      try {
+        lastReceived = new Date(alert.lastReceived).toISOString();
+      } catch {}
+    }
+    return lastReceived;
+  };
+
   return (
     <TableBody>
       {data.map((alert) => {
@@ -99,7 +109,7 @@ export function AlertsTableBody({
                 className="w-48"
               />
             </TableCell>
-            <TableCell>{new Date(alert.lastReceived).toISOString()}</TableCell>
+            <TableCell>{getAlertLastReceieved(alert)}</TableCell>
             <TableCell className="text-center" align="center">
               {alert.isDuplicate ? (
                 <Icon

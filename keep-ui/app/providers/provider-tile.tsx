@@ -93,7 +93,7 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       {provider.can_setup_webhook && !provider.installed && (
         <Icon
           icon={WebhookIcon}
-          className="absolute top-[-15px] right-[-15px]"
+          className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
           color="green"
           size="sm"
           tooltip="Webhook available"
@@ -114,15 +114,15 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
         }`}
       />
       <div className="h-8">
-        <Text
-          className={`truncate capitalize ${
+        <p
+          className={`text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize ${
             provider.installed ? "" : "group-hover:hidden"
-          } ${provider.details?.name ? "w-[100px]" : ""}`}
-          title={provider.installed ? provider.details.name : ""}
+          } ${provider.details?.name ? "w-[85px]" : ""}`}
+          title={provider.details?.name}
         >
           {provider.type}{" "}
           {provider.details.name && `(${provider.details.name})`}
-        </Text>
+        </p>
         {!provider.installed && (
           <Button
             variant="secondary"
