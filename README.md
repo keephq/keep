@@ -56,6 +56,10 @@ Having a structured alerting policy in your enviroment is pivotal to gain better
 Keep has two main component that play with each other:
 1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps.
 2. [Keep Core](https://www.keephq.wiki/platform/getting-started) - The engine behind Keep.
+
+>**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for and CLI commands)
+To turn PostHog off, set the `DISABLE_POSTHOG` environment variable.
+
 #### Keep UI
 The easiest way to start with Keep is to run it via docker-compose:
 ```shell
