@@ -170,6 +170,26 @@ class ZabbixProvider(BaseProvider):
                 "process_tags": 1,
                 "show_event_menu": 0,
                 "description": "Please refer to https://docs.keephq.dev/platform/core/providers/documentation/zabbix-provider or https://platform.keephq.dev/",
+                "message_templates": [
+                    {
+                        "eventsource": 0,
+                        "recovery": 0,
+                        "subject": "Problem: {EVENT.NAME}",
+                        "message": "Problem started at {EVENT.TIME} on {EVENT.DATE}\nProblem name: {EVENT.NAME}\nHost: {HOST.NAME}\nSeverity: {EVENT.SEVERITY}\nOperational data: {EVENT.OPDATA}\nOriginal problem ID: {EVENT.ID}\n{TRIGGER.URL}\n",
+                    },
+                    {
+                        "eventsource": 0,
+                        "recovery": 2,
+                        "subject": "Updated problem in {EVENT.AGE}: {EVENT.NAME}",
+                        "message": "{USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.\n{EVENT.UPDATE.MESSAGE}\n\nCurrent problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.\n",
+                    },
+                    {
+                        "eventsource": 0,
+                        "recovery": 1,
+                        "subject": "Resolved in {EVENT.DURATION}: {EVENT.NAME}",
+                        "message": "Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}\nProblem name: {EVENT.NAME}\nProblem duration: {EVENT.DURATION}\nHost: {HOST.NAME}\nSeverity: {EVENT.SEVERITY}\nOriginal problem ID: {EVENT.ID}\n{TRIGGER.URL}\n",
+                    },
+                ],
             }
             response_json = self.__send_request("mediatype.create", params)
             self.__send_request(
@@ -183,13 +203,30 @@ class ZabbixProvider(BaseProvider):
             )
             self.logger.info("Created media type")
 
+    @staticmethod
+    def __get_priorty(priority):
+        if priority == "disaster":
+            return "critical"
+        elif priority == "high":
+            return "high"
+        elif priority == "average":
+            return "medium"
+        else:
+            return "low"
+
+    @staticmethod
     def format_alert(event: dict) -> AlertDto:
         environment = "unknown"
         tags = event.get("tags", {})
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
+        severity = ZabbixProvider.__get_priorty(event.get("severity", "").lower())
         return AlertDto(
-            **event, environment=environment, pushed=True, source=["zabbix"]
+            **event,
+            environment=environment,
+            pushed=True,
+            source=["zabbix"],
+            severity=severity,
         )
 
 
