@@ -211,7 +211,12 @@ def delete_provider(
     )
     secret_manager = SecretManagerFactory.get_secret_manager()
     secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
-    secret_manager.delete_secret(secret_name)
+    try:
+        secret_manager.delete_secret(secret_name)
+    except Exception as exc:
+        # TODO: handle it better
+        logger.exception("Failed to delete the provider secret")
+        pass
     logger.info("Deleted provider", extra={"secret_name": secret_name})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
@@ -231,6 +236,11 @@ def install_provider_webhook(
         provider_id, provider_type, provider_config
     )
     api_url = config("KEEP_API_URL")
+    if "0.0.0.0" in api_url or "127.0.0.1" in api_url or "localhost" in api_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid KEEP_API_URL - webhook installation must be a public URL, you can restart keep and run it with USE_NGROK=true to get a public URL",
+        )
     keep_api_url = f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
     webhook_api_key = get_or_create_api_key(
         session=session,

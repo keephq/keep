@@ -1,7 +1,9 @@
+import json
 import logging
 from functools import reduce
 
-from fastapi import APIRouter, Depends, HTTPException
+import requests
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
@@ -120,13 +122,37 @@ def get_alerts(
 @router.post(
     "/event/{provider_type}", description="Receive an alert event from a provider"
 )
-def receive_event(
+async def receive_event(
     provider_type: str,
-    event: dict,
+    request: Request,
     provider_id: str | None = None,
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
+    # if this request is just to confirm the sns subscription, return ok
+    # TODO: think of a more elegant way to do this
+    # Get the raw body as bytes
+    body = await request.body()
+    if tenant_id == "amazon_sns":
+        subscribe_url = json.loads(body.decode()).get("SubscribeURL")
+        resp = requests.get(subscribe_url)
+        return {"status": "ok"}
+
+    # Start process the event
+    # Attempt to parse as JSON if the content type is not text/plain
+    content_type = request.headers.get("Content-Type")
+    # SNS events
+    if "text/plain" in content_type:
+        try:
+            event = json.loads(body.decode())
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON")
+    else:
+        event = (
+            body.decode()
+        )  # Here you have the plain text, but based on your example, you'd likely want to parse it as JSON anyway
+
+    # else, process the event
     logger.info(
         "Received event", extra={"provider_type": provider_type, "event": event}
     )

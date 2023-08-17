@@ -28,10 +28,9 @@ class CloudwatchProviderAuthConfig:
     )
     region: str = dataclasses.field(
         metadata={
-            "required": False,
+            "required": True,
             "description": "AWS region",
         },
-        default="us-west-2",
     )
 
 
@@ -70,6 +69,28 @@ class CloudwatchProvider(BaseProvider):
         self.authentication_config = CloudwatchProviderAuthConfig(
             **self.config.authentication
         )
+
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        # first, list all Cloudwatch alarms
+        cloudwatch_client = self.__generate_client("cloudwatch")
+        sns_client = self.__generate_client("sns")
+        resp = cloudwatch_client.describe_alarms()
+        alarms = resp.get("MetricAlarms")
+        alarms.extend(resp.get("CompositeAlarms"))
+        # for each alarm, we need to iterate the actions topics and subscribe to them
+        for alarm in alarms:
+            topics = alarm.get("AlarmActions", [])
+            for topic in topics:
+                # TODO - list subscriptions and check if we are already subscribed
+                url_with_api_key = keep_api_url.replace("https://", f"https://123456@")
+                sns_client.subscribe(
+                    TopicArn=topic,
+                    Protocol="https",
+                    Endpoint=url_with_api_key,
+                )
+        self.logger.info("Webhook setup completed!")
 
 
 class CloudwatchLogsProvider(CloudwatchProvider):

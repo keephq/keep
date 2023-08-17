@@ -4,10 +4,12 @@ import os
 from typing import Optional
 
 import jwt
-from fastapi import Depends, HTTPException, Security
+from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import (
     APIKeyHeader,
     HTTPAuthorizationCredentials,
+    HTTPBasic,
+    HTTPBasicCredentials,
     HTTPDigest,
     OAuth2PasswordBearer,
 )
@@ -22,6 +24,8 @@ auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key", auto_error=F
 http_digest = HTTPDigest(
     auto_error=False
 )  # hack for grafana, they don't support api key header
+http_basic = HTTPBasic(auto_error=False)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Just a fake random tenant id
@@ -33,8 +37,9 @@ def verify_single_tenant() -> str:
 
 
 def verify_api_key(
+    request: Request,
     api_key: str = Security(auth_header),
-    digest: HTTPAuthorizationCredentials = Security(http_digest),
+    authorization: HTTPAuthorizationCredentials = Security(http_basic),
     session: Session = Depends(get_session),
 ) -> str:
     """
@@ -51,8 +56,36 @@ def verify_api_key(
         str: The tenant id.
     """
     if not api_key:
-        if digest and digest.credentials:
-            api_key = digest.credentials
+        # For example SNS topics will send a digest auth header
+        if authorization.scheme.lower() == "basic":
+            # Validate Basic credentials
+            decoded_credentials = base64.b64decode(authorization.credentials).decode(
+                "utf-8"
+            )
+            username, _, password = decoded_credentials.partition(":")
+            # Verify username and password
+            if not username or not password:
+                raise HTTPException(status_code=403, detail="Invalid Basic credentials")
+        # For example, Grafana use digest
+        elif authorization.scheme.lower() == "digest":
+            # Validate Digest credentials
+            if not authorization.credentials:
+                raise HTTPException(
+                    status_code=403, detail="Invalid Digest credentials"
+                )
+            else:
+                api_key = digest.credentials
+        elif "Amazon Simple Notification Service Agent" in request.headers.get(
+            "user-agent"
+        ):
+            # we must force SNS to use basic auth
+            if not basic or not basic.username or not basic.password:
+                raise HTTPException(
+                    status_code=401,
+                    headers={"WWW-Authenticate": "Basic"},
+                    detail="Missing API Key",
+                )
+            return "amazon_sns"
         else:
             raise HTTPException(status_code=401, detail="Missing API Key")
 
