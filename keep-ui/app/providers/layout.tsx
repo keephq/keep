@@ -19,11 +19,12 @@ export default function ProvidersLayout({
             <SelectItem value="filter-2">Filter 2</SelectItem>
           </Select> */}
         </div>
+        {/* TODO: uncomment and implement search providers
         <Icon
           icon={MagnifyingGlassIcon}
           color="gray"
           className="mr-5 hover:bg-gray-100"
-        />
+        /> */}
       </div>
       <div className="flex flex-col">{children}</div>
     </main>
