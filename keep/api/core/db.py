@@ -86,7 +86,7 @@ elif db_connection_string:
     )
 else:
     engine = create_engine(
-        "sqlite:///./keep.db",
+        "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
 
