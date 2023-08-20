@@ -138,16 +138,29 @@ def receive_event(
         )
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
-        formatted_event = provider_class.format_alert(event)
-        formatted_event.pushed = True
-        alert = Alert(
-            tenant_id=tenant_id,
-            provider_type=provider_type,
-            event=formatted_event.dict(),
-            provider_id=provider_id,
-        )
-        session.add(alert)
-        session.commit()
+        formatted_events = provider_class.format_alert(event)
+        if isinstance(formatted_events, AlertDto):
+            formatted_events.pushed = True
+            alert = Alert(
+                tenant_id=tenant_id,
+                provider_type=provider_type,
+                event=formatted_events.dict(),
+                provider_id=provider_id,
+            )
+            session.add(alert)
+            session.commit()
+        elif isinstance(formatted_events, list):
+            # Support multiple alerts in one event
+            for formatted_event in formatted_events:
+                formatted_event.pushed = True
+                alert = Alert(
+                    tenant_id=tenant_id,
+                    provider_type=provider_type,
+                    event=formatted_event.dict(),
+                    provider_id=provider_id,
+                )
+                session.add(alert)
+            session.commit()
         logger.info(
             "New alert created successfully",
             extra={"provider_type": provider_type, "event": event},

@@ -36,7 +36,14 @@ class PrometheusProviderAuthConfig:
 
 class PrometheusProvider(BaseProvider):
     webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
-    webhook_template = """receivers:
+    webhook_template = """route:
+  receiver: "keep"
+  group_by: ['alertname']
+  group_wait:      15s
+  group_interval:  15s
+  repeat_interval: 1m
+
+receivers:
 - name: "keep"
   webhook_configs:
   - url: '{keep_webhook_api_url}'
@@ -100,25 +107,33 @@ class PrometheusProvider(BaseProvider):
         return alert_dtos
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
-        alert_id = event.get("id", event.get("labels", {}).get("alertname"))
-        description = event.get("annotations", {}).pop(
-            "description", None
-        ) or event.get("annotations", {}).get("summary", alert_id)
+    def format_alert(event: dict) -> list[AlertDto]:
+        # TODO: need to support more than 1 alert per event
+        alert_dtos = []
+        alerts = event.get("alerts", [event])
+        for alert in alerts:
+            alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
+            description = alert.get("annotations", {}).pop(
+                "description", None
+            ) or alert.get("annotations", {}).get("summary", alert_id)
 
-        labels = {k.lower(): v for k, v in event.get("labels", {}).items()}
-        annotations = {k.lower(): v for k, v in event.get("annotations", {}).items()}
-        alert_dto = AlertDto(
-            id=alert_id,
-            name=alert_id,
-            description=description,
-            status=event.get("state"),
-            lastReceived=event.get("activeAt"),
-            source=["prometheus"],
-            **labels,
-            **annotations,
-        )
-        return alert_dto
+            labels = {k.lower(): v for k, v in alert.pop("labels", {}).items()}
+            annotations = {
+                k.lower(): v for k, v in alert.pop("annotations", {}).items()
+            }
+            alert_dto = AlertDto(
+                id=alert_id,
+                name=alert_id,
+                description=description,
+                status=alert.pop("state", None) or alert.pop("status", None),
+                lastReceived=alert.pop("activeAt", None) or alert.pop("startsAt", None),
+                source=["prometheus"],
+                **labels,
+                **annotations,
+                **alert,
+            )
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def dispose(self):
         """

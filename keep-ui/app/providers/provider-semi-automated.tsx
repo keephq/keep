@@ -32,6 +32,8 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
     customStyle: {
       backgroundColor: "white",
       color: "orange",
+      maxHeight: "200px",
+      overflow: "scroll",
     },
     language: "yaml",
     text: data!.webhookTemplate,
@@ -39,7 +41,7 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
   };
 
   return (
-    <div className="mt-2.5">
+    <div className="my-2.5">
       <Title>
         Push alerts from{" "}
         {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
