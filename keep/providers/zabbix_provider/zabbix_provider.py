@@ -1,7 +1,9 @@
 """
 Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
+import datetime
 import dataclasses
+import json
 import os
 import random
 
@@ -43,7 +45,9 @@ class ZabbixProvider(BaseProvider):
     Zabbix provider class.
     """
 
-    KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "kz"  # keep-zabbix
+    KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
+    KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = "zabbix_provider_script.js"  # zabbix mediatype script file
+    KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE = 4
 
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
@@ -86,6 +90,10 @@ class ZabbixProvider(BaseProvider):
             "id": random.randint(1000, 2000),
         }
 
+        # zabbix < 6.4 compatibility
+        data["auth"] = f"{self.authentication_config.auth_token}"
+        self.logger.info(f"Sending data: {data}")
+
         response = requests.post(url, json=data, headers=headers)
 
         response.raise_for_status()
@@ -103,73 +111,76 @@ class ZabbixProvider(BaseProvider):
     ):
         # Copied from https://git.zabbix.com/projects/ZBX/repos/zabbix/browse/templates/media/ilert/media_ilert.yaml?at=release%2F6.4
         # Based on @SomeAverageDev hints and suggestions ;) Thanks!
+        # TODO: this can be done once when loading the provider file
+        self.logger.info("Reading webhook JS script file")
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        with open(os.path.join(__location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME)) as f:
+            script = f.read()
+
         self.logger.info("Creating or updating webhook")
-        name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}-{tenant_id.replace('-', '')}"
-        script = "try {\r\n    var result = { tags: {} },\r\n        params = JSON.parse(value),\r\n        req = new HttpRequest(),\r\n        resp = '';\r\n\r\n    if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {\r\n        req.setProxy(params.HTTPProxy);\r\n    }\r\n\r\n    var incidentKey = \"zabbix-\" + params['EVENT.ID'];\r\n\r\n    req.addHeader('Accept: application/json');\r\n    req.addHeader('Content-Type: application/json');\r\n    req.addHeader('X-API-KEY: %%API_KEY%%');\r\n\r\n    Zabbix.log(4, '[Keep Webhook] Sending request:' + JSON.stringify(params));\r\n    resp = req.post('%%KEEP_API_URL%%', JSON.stringify(params));\r\n    Zabbix.log(4, '[Keep Webhook] Receiving response:' + resp);\r\n\r\n    if (req.getStatus() != 200) {\r\n        throw 'Response code not 200'; }\r\nelse\r\n {\r\n          return JSON.stringify(result);\r\n    }\r\n}\r\ncatch (error) {\r\n    Zabbix.log(3, '[Keep Webhook] Notification failed : ' + error);\r\n    throw 'Keep notification failed : ' + error;\r\n}\r\n".replace(
-            "%%KEEP_API_URL%%", keep_api_url
-        ).replace(
-            "%%API_KEY%%", api_key
-        )
+        mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}" #-{tenant_id.replace('-', '')}
+
         self.logger.info("Getting existing media types")
-        existing_media_types = self.__send_request("mediatype.get")
+        existing_mediatypes = self.__send_request(
+            "mediatype.get",
+            {
+                "output": ["mediatypeid", "name"],
+                "filter": {
+                    "type": [ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE]
+                }
+            },
+        )
+
+        mediatype_description = "Please refer to https://docs.keephq.dev/platform/core/providers/documentation/zabbix-provider or https://platform.keephq.dev/."
+
         self.logger.info("Got existing media types")
-        media_type_exists = [
-            mt for mt in existing_media_types.get("result", []) if mt["name"] == name
+        mediatype_list = [
+            mt for mt in existing_mediatypes.get("result", []) if mt["name"] == mediatype_name
         ]
-        if media_type_exists:
-            existing_media_type = media_type_exists[0]
+
+        if mediatype_list:
+            existing_mediatype = mediatype_list[0]
             self.logger.info("Updating existing media type")
             self.__send_request(
                 "mediatype.update",
                 {
-                    "mediatypeid": str(existing_media_type["mediatypeid"]),
+                    "mediatypeid": str(existing_mediatype["mediatypeid"]),
                     "script": script,
                     "status": "0",
+                    "description": mediatype_description,
                 },
             )
             self.logger.info("Updated existing media type")
         else:
             self.logger.info("Creating new media type")
             params = {
-                "name": name,
-                "type": "4",  # webhook
+                "name": mediatype_name,
+                "type": f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE}",  # webhook
                 "parameters": [
-                    {"name": "message", "value": "{ALERT.MESSAGE}"},
-                    {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
-                    {"name": "EVENT.ACK.STATUS", "value": "{EVENT.ACK.STATUS}"},
-                    {"name": "lastReceived", "value": "{EVENT.DATE}"},
+                    {"name": "keepApiKey", "value": api_key},
+                    {"name": "keepApiUrl", "value": keep_api_url},
                     {"name": "id", "value": "{EVENT.ID}"},
+                    {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
+                    {"name": "message", "value": "{ALERT.MESSAGE}"},
                     {"name": "name", "value": "{EVENT.NAME}"},
-                    {"name": "EVENT.NSEVERITY", "value": "{EVENT.NSEVERITY}"},
-                    {"name": "EVENT.OPDATA", "value": "{EVENT.OPDATA}"},
-                    {"name": "EVENT.RECOVERY.DATE", "value": "{EVENT.RECOVERY.DATE}"},
-                    {"name": "EVENT.RECOVERY.TIME", "value": "{EVENT.RECOVERY.TIME}"},
-                    {"name": "EVENT.RECOVERY.VALUE", "value": "{EVENT.RECOVERY.VALUE}"},
+                    {"name": "service", "value": "{HOST.HOST}"},
+                    {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
+                    {"name": "status", "value": "{TRIGGER.STATUS}"},
+                    {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
                     {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
                     {"name": "EVENT.TAGS", "value": "{EVENT.TAGS}"},
                     {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
-                    {"name": "EVENT.UPDATE.ACTION", "value": "{EVENT.UPDATE.ACTION}"},
-                    {"name": "EVENT.UPDATE.DATE", "value": "{EVENT.UPDATE.DATE}"},
-                    {"name": "EVENT.UPDATE.MESSAGE", "value": "{EVENT.UPDATE.MESSAGE}"},
-                    {"name": "EVENT.UPDATE.STATUS", "value": "{EVENT.UPDATE.STATUS}"},
-                    {"name": "EVENT.UPDATE.TIME", "value": "{EVENT.UPDATE.TIME}"},
                     {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
-                    {"name": "service", "value": "{HOST.HOST}"},
                     {"name": "HOST.IP", "value": "{HOST.IP}"},
                     {"name": "HOST.NAME", "value": "{HOST.NAME}"},
                     {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
-                    {"name": "TRIGGER.ID", "value": "{TRIGGER.ID}"},
-                    {"name": "TRIGGER.NAME", "value": "{TRIGGER.NAME}"},
-                    {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
-                    {"name": "status", "value": "{TRIGGER.STATUS}"},
-                    {"name": "TRIGGER.URL", "value": "{TRIGGER.URL}"},
-                    {"name": "TRIGGER.VALUE", "value": "{TRIGGER.VALUE}"},
-                    {"name": "USER.FULLNAME", "value": "{USER.FULLNAME}"},
                 ],
                 "script": script,
                 "process_tags": 1,
                 "show_event_menu": 0,
-                "description": "Please refer to https://docs.keephq.dev/platform/core/providers/documentation/zabbix-provider or https://platform.keephq.dev/",
+                "description": mediatype_description,
                 "message_templates": [
                     {
                         "eventsource": 0,
@@ -220,7 +231,7 @@ class ZabbixProvider(BaseProvider):
         tags = event.get("tags", {})
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
-        severity = ZabbixProvider.__get_priorty(event.get("severity", "").lower())
+        severity = ZabbixProvider.__get_priorty(event.pop("severity", "").lower())
         return AlertDto(
             **event,
             environment=environment,
