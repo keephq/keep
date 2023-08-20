@@ -2,14 +2,14 @@
 import React, { useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
-import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import "./provider-form.css";
 import { Title, Text, Button, Callout, Icon } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { QuestionMarkCircleIcon, ArrowLongRightIcon, ArrowLongLeftIcon } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
+import { ProviderSemiAutomated } from "./provider-semi-automated";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -34,7 +34,9 @@ const ProviderForm = ({
   closeModal,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({
+  const [formValues, setFormValues] = useState<{
+    [key: string]: string | boolean;
+  }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
     install_webhook: true,
@@ -47,17 +49,8 @@ const ProviderForm = ({
 
   const [hoveredLabel, setHoveredLabel] = useState(null);
 
-  const handleLabelMouseEnter = (labelKey) => {
-    setHoveredLabel(labelKey);
-  };
-
-  const handleLabelMouseLeave = (labelKey) => {
-    setHoveredLabel(null);
-  };
-  // @ts-ignore
   const accessToken = session?.accessToken;
 
-  // @ts-ignore
   const validateForm = (updatedFormValues) => {
     const errors = {};
     for (const [configKey, method] of Object.entries(provider.config)) {
@@ -151,25 +144,6 @@ const ProviderForm = ({
       });
   };
 
-  // const handleTestClick = async () => {
-  //   try {
-  //     if (!validate()) {
-  //       return;
-  //     }
-  //     const data = await submit(`${getApiURL()}/providers/test`);
-  //     if (data && data.alerts) {
-  //       console.log("Test successful");
-  //       setTestResult("success");
-  //       setAlertData(data.alerts);
-  //     } else {
-  //       setTestResult("error");
-  //     }
-  //   } catch (error) {
-  //     setFormErrors({ error: error.toString() });
-  //     console.error("Test failed:", error);
-  //   }
-  // };
-
   const handleConnectClick = () => {
     if (!validate()) {
       return;
@@ -204,13 +178,26 @@ const ProviderForm = ({
           Connect to{" "}
           {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
         </Title>
+        <div className="flex items-center">
+        <Image
+          src={`/keep.png`}
+          width={55}
+          height={64}
+          alt={provider.type}
+          className="mt-5 mb-9 mr-2.5"
+        />
+        <div className="flex flex-col">
+        <Icon icon={ArrowLongLeftIcon} size="xl" color="orange" className="py-0" />
+        <Icon icon={ArrowLongRightIcon} size="xl" color="orange" className="py-0 pb-2.5" />
+        </div>
         <Image
           src={`/icons/${provider.type}-icon.png`}
           width={64}
-          height={64}
+          height={55}
           alt={provider.type}
-          className="mt-5 mb-9"
+          className="mt-5 mb-9 ml-2.5"
         />
+      </div>
         <form>
           <div className="form-group">
             <label htmlFor="provider_name" className="label-container mb-1">
@@ -231,12 +218,7 @@ const ProviderForm = ({
             const isHovered = hoveredLabel === configKey;
             return (
               <div className="form-group" key={configKey}>
-                <label
-                  htmlFor={configKey}
-                  className="label-container mb-1"
-                  onMouseEnter={() => handleLabelMouseEnter(configKey)}
-                  onMouseLeave={() => handleLabelMouseLeave(configKey)}
-                >
+                <label htmlFor={configKey} className="label-container mb-1">
                   <Text className="capitalize">
                     {method.description}
                     {method.required !== false ? "" : " (optional)"}
@@ -289,6 +271,12 @@ const ProviderForm = ({
                 />
               </label>
             </div>
+          )}
+          {provider.supports_webhook && (
+            <ProviderSemiAutomated
+              provider={provider}
+              accessToken={accessToken}
+            />
           )}
           {/* Hidden input for provider ID */}
           <input type="hidden" name="providerId" value={provider.id} />

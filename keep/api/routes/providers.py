@@ -10,6 +10,7 @@ from sqlmodel import Session
 from keep.api.core.config import config
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
@@ -216,32 +217,6 @@ def delete_provider(
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
 
-@router.post("/install/webhook/{provider_type}/{provider_id}")
-def install_provider_webhook(
-    provider_type: str,
-    provider_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
-    session: Session = Depends(get_session),
-):
-    secret_manager = SecretManagerFactory.get_secret_manager()
-    provider_config = secret_manager.read_secret(
-        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
-    provider = ProvidersFactory.get_provider(
-        provider_id, provider_type, provider_config
-    )
-    api_url = config("KEEP_API_URL")
-    keep_api_url = f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
-    webhook_api_key = get_or_create_api_key(
-        session=session,
-        tenant_id=tenant_id,
-        unique_api_key_id="webhook",
-        system_description="Webhooks API key",
-    )
-    provider.setup_webhook(tenant_id, keep_api_url, webhook_api_key, True)
-    return JSONResponse(status_code=200, content={"message": "webhook installed"})
-
-
 @router.post("/install")
 async def install_provider(
     provider_info: dict = Body(...),
@@ -289,3 +264,59 @@ async def install_provider(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# Webhook related
+
+
+@router.post("/install/webhook/{provider_type}/{provider_id}")
+def install_provider_webhook(
+    provider_type: str,
+    provider_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    secret_manager = SecretManagerFactory.get_secret_manager()
+    provider_config = secret_manager.read_secret(
+        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
+    )
+    provider = ProvidersFactory.get_provider(
+        provider_id, provider_type, provider_config
+    )
+    api_url = config("KEEP_API_URL")
+    keep_webhook_api_url = (
+        f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
+    )
+    webhook_api_key = get_or_create_api_key(
+        session=session,
+        tenant_id=tenant_id,
+        unique_api_key_id="webhook",
+        system_description="Webhooks API key",
+    )
+    provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
+    return JSONResponse(status_code=200, content={"message": "webhook installed"})
+
+
+@router.get("/{provider_type}/webhook")
+def get_webhook_settings(
+    provider_type: str,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+) -> ProviderWebhookSettings:
+    logger.info("Getting webhook settings", extra={"provider_type": provider_type})
+    api_url = config("KEEP_API_URL")
+    keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"
+    provider_class = ProvidersFactory.get_provider_class(provider_type)
+    webhook_api_key = get_or_create_api_key(
+        session=session,
+        tenant_id=tenant_id,
+        unique_api_key_id="webhook",
+        system_description="Webhooks API key",
+    )
+    logger.info("Got webhook settings", extra={"provider_type": provider_type})
+    return ProviderWebhookSettings(
+        webhookDescription=provider_class.webhook_description,
+        webhookTemplate=provider_class.webhook_template.format(
+            keep_webhook_api_url=keep_webhook_api_url, api_key=webhook_api_key
+        ),
+    )
