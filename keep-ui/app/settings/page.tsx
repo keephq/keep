@@ -1,8 +1,7 @@
-import UnderConstruction from "../under-construction";
+import SettingsPage from "./settings.client";
 
-export default function SettingsPage() {
-  // Not Implemented
-  return UnderConstruction();
+export default function Page() {
+  return <SettingsPage />;
 }
 
 export const metadata = {

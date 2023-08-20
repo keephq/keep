@@ -12,4 +12,7 @@ class Provider(BaseModel):
     can_query: bool
     query_params: list[str] | None = None
     installed: bool = False
+    # Whether we support webhooks without install
+    supports_webhook: bool = False
+    # Whether we also support auto install for webhooks
     can_setup_webhook: bool = False

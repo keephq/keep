@@ -19,6 +19,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     provider_id: str
     provider_type: str = field(init=False)
     config: ProviderConfig
+    # Should include {keep_webhook_api_url} and {keep_api_key} in the template string
+    webhook_template: Optional[str] = None
+    webhook_description: Optional[str] = None  # Describe how to connect the webhook
 
     def __post_init__(self):
         """
@@ -98,7 +101,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def format_alert(event: dict) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alerts() method not implemented")
 
     def get_alerts_configuration(self, alert_id: Optional[str] = None):

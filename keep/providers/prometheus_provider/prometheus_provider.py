@@ -35,6 +35,24 @@ class PrometheusProviderAuthConfig:
 
 
 class PrometheusProvider(BaseProvider):
+    webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
+    webhook_template = """route:
+  receiver: "keep"
+  group_by: ['alertname']
+  group_wait:      15s
+  group_interval:  15s
+  repeat_interval: 1m
+
+receivers:
+- name: "keep"
+  webhook_configs:
+  - url: '{keep_webhook_api_url}'
+    send_resolved: true
+    http_config:
+      basic_auth:
+        username: api_key
+        password: {api_key}"""
+
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
 
@@ -84,24 +102,35 @@ class PrometheusProvider(BaseProvider):
         alerts = response.json().get("data", {}).get("alerts", [])
         alert_dtos = []
         for alert in alerts:
+            alert_dto = self.format_alert(alert)
+            alert_dtos.append(alert_dto)
+        return alert_dtos
+
+    @staticmethod
+    def format_alert(event: dict) -> list[AlertDto]:
+        # TODO: need to support more than 1 alert per event
+        alert_dtos = []
+        alerts = event.get("alerts", [event])
+        for alert in alerts:
             alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
             description = alert.get("annotations", {}).pop(
                 "description", None
             ) or alert.get("annotations", {}).get("summary", alert_id)
 
-            labels = {k.lower(): v for k, v in alert.get("labels", {}).items()}
+            labels = {k.lower(): v for k, v in alert.pop("labels", {}).items()}
             annotations = {
-                k.lower(): v for k, v in alert.get("annotations", {}).items()
+                k.lower(): v for k, v in alert.pop("annotations", {}).items()
             }
             alert_dto = AlertDto(
                 id=alert_id,
                 name=alert_id,
                 description=description,
-                status=alert.get("state"),
-                lastReceived=alert.get("activeAt"),
+                status=alert.pop("state", None) or alert.pop("status", None),
+                lastReceived=alert.pop("activeAt", None) or alert.pop("startsAt", None),
                 source=["prometheus"],
                 **labels,
                 **annotations,
+                **alert,
             )
             alert_dtos.append(alert_dto)
         return alert_dtos

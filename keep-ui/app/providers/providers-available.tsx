@@ -52,7 +52,9 @@ const ProvidersConnect = ({
       return config && Object.keys(config).length > 0; // Filter out providers with empty config
     })
     .sort(
-      (a, b) => Number(b.can_setup_webhook) - Number(a.can_setup_webhook)
+      (a, b) =>
+        Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
+        Number(b.supports_webhook) - Number(a.supports_webhook)
     ) as Providers;
 
   return (
