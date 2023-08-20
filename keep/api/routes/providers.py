@@ -236,11 +236,6 @@ def install_provider_webhook(
         provider_id, provider_type, provider_config
     )
     api_url = config("KEEP_API_URL")
-    if "0.0.0.0" in api_url or "127.0.0.1" in api_url or "localhost" in api_url:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid KEEP_API_URL - webhook installation must be a public URL, you can restart keep and run it with USE_NGROK=true to get a public URL",
-        )
     keep_api_url = f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
     webhook_api_key = get_or_create_api_key(
         session=session,
