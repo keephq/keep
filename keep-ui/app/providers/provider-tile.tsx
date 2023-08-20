@@ -90,15 +90,16 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       className={`relative group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 h-44 m-2.5 hover:shadow-xl hover:grayscale-0`}
       onClick={onClick}
     >
-      {provider.can_setup_webhook && !provider.installed && (
-        <Icon
-          icon={WebhookIcon}
-          className="absolute top-[-15px] right-[-15px]"
-          color="green"
-          size="sm"
-          tooltip="Webhook available"
-        />
-      )}
+      {(provider.can_setup_webhook || provider.supports_webhook) &&
+        !provider.installed && (
+          <Icon
+            icon={WebhookIcon}
+            className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+            color="green"
+            size="sm"
+            tooltip="Webhook available"
+          />
+        )}
       {provider.installed ? (
         InstalledSection(deleteProvider, callInstallWebhook, provider)
       ) : (
@@ -114,15 +115,15 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
         }`}
       />
       <div className="h-8">
-        <Text
-          className={`truncate capitalize ${
+        <p
+          className={`text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize ${
             provider.installed ? "" : "group-hover:hidden"
-          } ${provider.details?.name ? "w-[100px]" : ""}`}
-          title={provider.installed ? provider.details.name : ""}
+          } ${provider.details?.name ? "w-[85px]" : ""}`}
+          title={provider.details?.name}
         >
           {provider.type}{" "}
           {provider.details.name && `(${provider.details.name})`}
-        </Text>
+        </p>
         {!provider.installed && (
           <Button
             variant="secondary"
