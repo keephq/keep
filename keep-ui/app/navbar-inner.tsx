@@ -10,7 +10,7 @@ import { Icon } from "@tremor/react";
 const navigation = [
   { name: "Providers", href: "/providers" },
   { name: "Alerts", href: "/alerts" },
-  // { name: "CI", href: "/ci" },
+  { name: "Workflows", href: "/workflows"},
   { name: "Workflow Builder", href: "/builder" },
 ];
 

@@ -175,7 +175,7 @@ class IOHandler:
 
     def render_context(self, context_to_render: dict):
         """
-        Iterates the provider context and renders it using the alert context.
+        Iterates the provider context and renders it using the workflow context.
         """
         # Don't modify the original context
         context_to_render = copy.deepcopy(context_to_render)
@@ -190,7 +190,7 @@ class IOHandler:
 
     def _render_list_context(self, context_to_render: list):
         """
-        Iterates the provider context and renders it using the alert context.
+        Iterates the provider context and renders it using the workflow context.
         """
         for i in range(0, len(context_to_render)):
             value = context_to_render[i]
@@ -208,7 +208,6 @@ class IOHandler:
 
         Args:
             template (str): template (string) to render
-            alert_context (dict): alert run context
 
         Returns:
             str: rendered template

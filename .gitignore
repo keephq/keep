@@ -181,3 +181,4 @@ keep-ui/node_modules/*
 cov.xml
 keep.db
 RANDOM_USER_ID
+storage

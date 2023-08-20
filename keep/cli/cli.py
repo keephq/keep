@@ -8,11 +8,11 @@ import click
 import yaml
 from dotenv import find_dotenv, load_dotenv
 
-from keep.alertmanager.alertmanager import AlertManager
-from keep.alertmanager.alertstore import AlertStore
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client, get_random_user_id
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 posthog_client = get_posthog_client()
@@ -196,7 +196,7 @@ def run(
             "args": sys.argv,
         },
     )
-    alert_manager = AlertManager(interval)
+    alert_manager = WorkflowManager(interval)
     alert_workflow_manager = AlertStore()
     alerts = alert_workflow_manager.get_alerts(
         alerts_directory or alert_url, providers_file
