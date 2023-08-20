@@ -70,6 +70,7 @@ const getSeverity = (severity: Severity | undefined) => {
       icon={icon}
       tooltip={severityText}
       size="xs"
+      className="ml-2.5"
     ></Badge>
   );
 };
@@ -114,46 +115,15 @@ export function AlertsTableBody({
                 />
               </TableCell>
             )}
-            {/* {groupBy && groupedByData && openModal ? (
-              <TableCell>
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  color="gray"
-                  disabled={!groupedByData[(alert as any)[groupBy]]}
-                  onClick={() => openModal(alert)}
-                >
-                  Open
-                </Button>
-              </TableCell>
-            ) : null} */}
-            <TableCell className="text-center">
+            <TableCell>
               {getSeverity(alert.severity)}
             </TableCell>
+            <TableCell className="max-w-[340px] truncate" title={alert.name}>
+              {alert.name}
+            </TableCell>
+            <TableCell>{alert.description}</TableCell>
             <TableCell>{alert.status}</TableCell>
-            <TableCell>
-              <CategoryBar
-                values={[40, 30, 20, 10]}
-                colors={["emerald", "yellow", "orange", "rose"]}
-                markerValue={alert.fatigueMeter ?? 0}
-                tooltip={alert.fatigueMeter?.toString() ?? "0"}
-                className="w-48"
-              />
-            </TableCell>
             <TableCell>{getAlertLastReceieved(alert)}</TableCell>
-            <TableCell className="text-center" align="center">
-              {alert.isDuplicate ? (
-                <Icon
-                  icon={ShieldCheckIcon}
-                  variant="light"
-                  color="orange"
-                  tooltip={alert.duplicateReason ?? "This alert is a duplicate"}
-                  size="xs"
-                />
-              ) : null}
-            </TableCell>
-            <TableCell>{alert.environment}</TableCell>
-            <TableCell>{alert.service}</TableCell>
             <TableCell>
               {alert.source?.map((source, index) => {
                 return (
@@ -171,25 +141,17 @@ export function AlertsTableBody({
                 );
               })}
             </TableCell>
-            <TableCell className="max-w-[340px] truncate" title={alert.name}>
-              <div className="flex items-center">
-                {alert.name}{" "}
-                {alert.url && (
-                  <a href={alert.url} target="_blank">
-                    <Icon
-                      icon={ArrowTopRightOnSquareIcon}
-                      tooltip="Open Alert"
-                      color="gray"
-                      size="sm"
-                    />
-                  </a>
-                )}
-              </div>
+
+            <TableCell>
+              <CategoryBar
+                values={[40, 30, 20, 10]}
+                colors={["emerald", "yellow", "orange", "rose"]}
+                markerValue={alert.fatigueMeter ?? 0}
+                tooltip={alert.fatigueMeter?.toString() ?? "0"}
+                className="w-48"
+              />
             </TableCell>
-            <TableCell>{alert.description}</TableCell>
-            <TableCell className="max-w-[340px] truncate" title={alert.message}>
-              {alert.message}
-            </TableCell>
+            <TableCell>List of workflows refs</TableCell>
             <TableCell className="w-96">
               {extraIsEmpty ? null : (
                 <Accordion>

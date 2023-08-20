@@ -47,7 +47,7 @@ class ContextManager:
         self.steps_context = {}
         self.actions_context = {}
         self.providers_context = {}
-        self.alert_context = {}
+        self.workflow_context = {}
         self.foreach_context = {
             "value": None,
         }
@@ -63,16 +63,16 @@ class ContextManager:
         self.dependencies = set()
         self.__load_state()
 
-    # TODO - If we want to support multiple alerts at once we need to change this
-    def set_alert_context(self, alert_context):
-        self.alert_context = alert_context
+    # TODO - If we want to support multiple workflows at once we need to change this
+    def set_workflow_context(self, workflow_context):
+        self.workflow_context = workflow_context
 
-    def get_alert_id(self):
-        return self.alert_context.get("alert_id")
+    def get_workflow_id(self):
+        return self.workflow_context.get("workflow_id")
 
     def get_full_context(self, exclude_state=False):
         """
-        Gets full context on the alerts
+        Gets full context on the workflows
 
         Usage: context injection used, for example, in iohandler
 
@@ -81,7 +81,7 @@ class ContextManager:
                 it's already there. Defaults to False.
 
         Returns:
-            dict: dictinoary contains all context about this alert
+            dict: dictinoary contains all context about this workflow
                   providers - all context about providers (configuration, etc)
                   steps - all context about steps (output, conditions, etc)
                   foreach - all context about the current 'foreach'
@@ -106,7 +106,7 @@ class ContextManager:
         return full_context
 
     def update_full_context(self, providers_context, steps_context, actions_context):
-        # If the alert workflow triggered by HTTP, we accept context from the HTTP body
+        # If the workflow triggered by HTTP, we accept context from the HTTP body
         self.providers_context.update(providers_context)
         self.steps_context.update(steps_context)
         self.actions_context.update(actions_context)
@@ -190,9 +190,9 @@ class ContextManager:
                 self.logger.warning("Failed to load state file, using empty state")
                 self.state = {}
 
-    def get_last_alert_run(self, alert_id):
-        if alert_id in self.state:
-            return self.state[alert_id][-1]
+    def get_last_workflow_run(self, workflow_id):
+        if workflow_id in self.state:
+            return self.state[workflow_id][-1]
         # no previous runs
         else:
             return {}
@@ -203,25 +203,25 @@ class ContextManager:
             json.dump(self.state, f, default=str)
         self.logger.info("State file dumped")
 
-    def set_last_alert_run(self, alert_id, alert_context, alert_status):
+    def set_last_workflow_run(self, workflow_id, workflow_context, workflow_status):
         # TODO - SQLite
         self.logger.debug(
-            "Adding alert to state",
+            "Adding workflow to state",
             extra={
-                "alert_id": alert_id,
+                "workflow_id": workflow_id,
             },
         )
-        if alert_id not in self.state:
-            self.state[alert_id] = []
-        self.state[alert_id].append(
+        if workflow_id not in self.state:
+            self.state[workflow_id] = []
+        self.state[workflow_id].append(
             {
-                "alert_status": alert_status,
-                "alert_context": alert_context,
+                "workflow_status": workflow_status,
+                "workflow_context": workflow_context,
             }
         )
         self.logger.debug(
-            "Added alert to state",
+            "Added workflow to state",
             extra={
-                "alert_id": alert_id,
+                "workflow_id": workflow_id,
             },
         )

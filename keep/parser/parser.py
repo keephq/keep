@@ -7,12 +7,12 @@ import typing
 import requests
 import yaml
 
-from keep.alert.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
+from keep.workflowmanager.workflow import Workflow
 
 
 class Parser:
@@ -22,52 +22,57 @@ class Parser:
         self.io_handler = IOHandler()
 
     def parse(
-        self, parsed_alert_yaml: dict, providers_file: str = None
-    ) -> typing.List[Alert]:
+        self, parsed_workflow_yaml: dict, providers_file: str = None
+    ) -> typing.List[Workflow]:
         """_summary_
 
         Args:
-            alert_source (str): could be a url or a file path
+            parsed_workflow_yaml (str): could be a url or a file path
             providers_file (str, optional): _description_. Defaults to None.
 
         Returns:
-            typing.List[Alert]: _description_
+            typing.List[Workflow]: _description_
         """
-        # Parse the providers (from the alert yaml or from the providers directory)
-        self.load_providers_config(parsed_alert_yaml, providers_file)
-        # Parse the alert itself
-        if parsed_alert_yaml.get("alerts"):
-            alerts = [
-                self._parse_alert(alert) for alert in parsed_alert_yaml.get("alerts")
-            ]
+        # Parse the providers (from the workflow yaml or from the providers directory)
+        self.load_providers_config(parsed_workflow_yaml, providers_file)
+        # Parse the workflow itself (the alerts here is backward compatibility)
+        if parsed_workflow_yaml.get("workflows") or parsed_workflow_yaml.get("alerts"):
+            raw_workflows = parsed_workflow_yaml.get(
+                "workflows"
+            ) or parsed_workflow_yaml.get("alerts")
+            workflows = [self._parse_workflow(workflow) for workflow in raw_workflows]
         else:
-            alert = self._parse_alert(parsed_alert_yaml.get("alert"))
-            alerts = [alert]
-        return alerts
+            # the alert here is backward compatibility
+            raw_workflow = parsed_workflow_yaml.get(
+                "workflow"
+            ) or parsed_workflow_yaml.get("alert")
+            workflow = self._parse_workflow(raw_workflow)
+            workflows = [workflow]
+        return workflows
 
-    def _parse_alert(self, alert: dict) -> Alert:
-        self.logger.debug("Parsing alert")
-        alert_id = self._parse_id(alert)
-        alert_owners = self._parse_owners(alert)
-        alert_tags = self._parse_tags(alert)
-        alert_steps = self._parse_steps(alert)
-        alert_actions = self._parse_actions(alert)
-        alert_interval = self._parse_interval(alert)
-        on_failure_action = self._get_on_failure_action(alert)
-        alert = Alert(
-            alert_id=alert_id,
-            alert_description=alert.get("description"),
-            alert_owners=alert_owners,
-            alert_tags=alert_tags,
-            alert_interval=alert_interval,
-            alert_steps=alert_steps,
-            alert_actions=alert_actions,
+    def _parse_workflow(self, workflow: dict) -> Workflow:
+        self.logger.debug("Parsing workflow")
+        workflow_id = self._parse_id(workflow)
+        workflow_owners = self._parse_owners(workflow)
+        workflow_tags = self._parse_tags(workflow)
+        workflow_steps = self._parse_steps(workflow)
+        workflow_actions = self._parse_actions(workflow)
+        workflow_interval = self._parse_interval(workflow)
+        on_failure_action = self._get_on_failure_action(workflow)
+        workflow = Workflow(
+            workflow_id=workflow_id,
+            workflow_description=workflow.get("description"),
+            workflow_owners=workflow_owners,
+            workflow_tags=workflow_tags,
+            workflow_interval=workflow_interval,
+            workflow_steps=workflow_steps,
+            workflow_actions=workflow_actions,
             on_failure=on_failure_action,
         )
-        self.logger.debug("Alert parsed successfully")
-        return alert
+        self.logger.debug("Workflow parsed successfully")
+        return workflow
 
-    def load_providers_config(self, alert: dict, providers_file: str):
+    def load_providers_config(self, workflow: dict, providers_file: str):
         self.logger.debug("Parsing providers")
         providers_file = (
             providers_file or os.environ.get("KEEP_PROVIDERS_FILE") or "providers.yaml"
@@ -75,8 +80,8 @@ class Parser:
         if providers_file and os.path.exists(providers_file):
             self._parse_providers_from_file(providers_file)
 
-        if alert.get("providers"):
-            self._parse_providers_from_alert(alert)
+        if workflow.get("providers"):
+            self._parse_providers_from_workflow(workflow)
 
         self._parse_providers_from_env()
         self.logger.debug("Providers parsed and loaded successfully")
@@ -127,9 +132,11 @@ class Parser:
                         f"Error parsing provider config from environment variable {env}"
                     )
 
-    def _parse_providers_from_alert(self, alert: dict) -> typing.List[BaseProvider]:
-        self.context_manager.providers_context.update(alert.get("providers"))
-        self.logger.debug("Alert providers parsed successfully")
+    def _parse_providers_from_workflow(
+        self, workflow: dict
+    ) -> typing.List[BaseProvider]:
+        self.context_manager.providers_context.update(workflow.get("providers"))
+        self.logger.debug("Workflow providers parsed successfully")
 
     def _parse_providers_from_file(self, providers_file: str):
         with open(providers_file, "r") as file:
@@ -141,29 +148,29 @@ class Parser:
             self.context_manager.providers_context.update(providers)
         self.logger.debug("Providers config parsed successfully")
 
-    def _parse_id(self, alert) -> str:
-        alert_id = alert.get("id")
-        if alert_id is None:
-            raise ValueError("Alert ID is required")
-        return alert_id
+    def _parse_id(self, workflow) -> str:
+        workflow_id = workflow.get("id")
+        if workflow_id is None:
+            raise ValueError("Workflow ID is required")
+        return workflow_id
 
-    def _parse_owners(self, alert) -> typing.List[str]:
-        alert_owners = alert.get("owners", [])
-        return alert_owners
+    def _parse_owners(self, workflow) -> typing.List[str]:
+        workflow_owners = workflow.get("owners", [])
+        return workflow_owners
 
-    def _parse_tags(self, alert) -> typing.List[str]:
-        alert_tags = alert.get("tags", [])
-        return alert_tags
+    def _parse_tags(self, workflow) -> typing.List[str]:
+        workflow_tags = workflow.get("tags", [])
+        return workflow_tags
 
-    def _parse_interval(self, alert) -> int:
-        alert_interval = alert.get("interval", 0)
-        return alert_interval
+    def _parse_interval(self, workflow) -> int:
+        workflow_interval = workflow.get("interval", 0)
+        return workflow_interval
 
-    def _parse_steps(self, alert) -> typing.List[Step]:
+    def _parse_steps(self, workflow) -> typing.List[Step]:
         self.logger.debug("Parsing steps")
-        alert_steps = alert.get("steps", [])
-        alerts_steps_parsed = []
-        for _step in alert_steps:
+        workflow_steps = workflow.get("steps", [])
+        workflow_steps_parsed = []
+        for _step in workflow_steps:
             provider = self._get_step_provider(_step)
             provider_parameters = _step.get("provider", {}).get("with")
             step_id = _step.get("name")
@@ -174,9 +181,9 @@ class Parser:
                 provider_parameters=provider_parameters,
                 step_type=StepType.STEP,
             )
-            alerts_steps_parsed.append(step)
+            workflow_steps_parsed.append(step)
         self.logger.debug("Steps parsed successfully")
-        return alerts_steps_parsed
+        return workflow_steps_parsed
 
     def _get_step_provider(self, _step: dict) -> dict:
         step_provider = _step.get("provider")
@@ -213,30 +220,30 @@ class Parser:
         )
         return action
 
-    def _parse_actions(self, alert) -> typing.List[Step]:
+    def _parse_actions(self, workflow) -> typing.List[Step]:
         self.logger.debug("Parsing actions")
-        alert_actions = alert.get("actions", [])
-        alert_actions_parsed = []
-        for _action in alert_actions:
+        workflow_actions = workflow.get("actions", [])
+        workflow_actions_parsed = []
+        for _action in workflow_actions:
             parsed_action = self._get_action(_action)
-            alert_actions_parsed.append(parsed_action)
+            workflow_actions_parsed.append(parsed_action)
         self.logger.debug("Actions parsed successfully")
-        return alert_actions_parsed
+        return workflow_actions_parsed
 
-    def _get_on_failure_action(self, alert) -> Step | None:
+    def _get_on_failure_action(self, workflow) -> Step | None:
         """
         Parse the on-failure action
 
         Args:
-            alert (_type_): _description_
+            workflow (_type_): _description_
 
         Returns:
             Action | None: _description_
         """
         self.logger.debug("Parsing on-faliure")
-        alert_on_failure = alert.get("on-failure", {})
-        if alert_on_failure:
-            parsed_action = self._get_action(alert_on_failure, "on-faliure")
+        workflow_on_failure = workflow.get("on-failure", {})
+        if workflow_on_failure:
+            parsed_action = self._get_action(workflow_on_failure, "on-faliure")
             self.logger.debug("Parsed on-failure successfully")
             return parsed_action
         self.logger.debug("No on-failure action")
