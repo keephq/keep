@@ -69,6 +69,7 @@ export default function ProvidersPage() {
         can_notify: false,
         type: provider.type,
         can_setup_webhook: provider.can_setup_webhook,
+        supports_webhook: provider.supports_webhook,
       };
       return updatedProvider;
     }) as Providers;

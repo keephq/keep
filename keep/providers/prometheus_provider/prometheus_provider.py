@@ -35,6 +35,17 @@ class PrometheusProviderAuthConfig:
 
 
 class PrometheusProvider(BaseProvider):
+    webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
+    webhook_template = """receivers:
+- name: "keep"
+  webhook_configs:
+  - url: '{keep_webhook_api_url}'
+    send_resolved: true
+    http_config:
+      basic_auth:
+        username: api_key
+        password: {api_key}"""
+
     def __init__(self, provider_id: str, config: ProviderConfig):
         super().__init__(provider_id, config)
 

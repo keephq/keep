@@ -19,6 +19,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     provider_id: str
     provider_type: str = field(init=False)
     config: ProviderConfig
+    # Should include {keep_webhook_api_url} and {keep_api_key} in the template string
+    webhook_template: Optional[str] = None
+    webhook_description: Optional[str] = None  # Describe how to connect the webhook
 
     def __post_init__(self):
         """
