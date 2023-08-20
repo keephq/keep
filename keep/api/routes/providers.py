@@ -212,7 +212,12 @@ def delete_provider(
     )
     secret_manager = SecretManagerFactory.get_secret_manager()
     secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
-    secret_manager.delete_secret(secret_name)
+    try:
+        secret_manager.delete_secret(secret_name)
+    except Exception as exc:
+        # TODO: handle it better
+        logger.exception("Failed to delete the provider secret")
+        pass
     logger.info("Deleted provider", extra={"secret_name": secret_name})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
