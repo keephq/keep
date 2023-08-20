@@ -56,36 +56,32 @@ def verify_api_key(
         str: The tenant id.
     """
     if not api_key:
-        # For example SNS topics will send a digest auth header
-        if authorization.scheme.lower() == "basic":
-            # Validate Basic credentials
-            decoded_credentials = base64.b64decode(authorization.credentials).decode(
-                "utf-8"
+        # if its from Amazon SNS and we don't have any bearer - force basic auth
+        if (
+            not authorization
+            and "Amazon Simple Notification Service Agent"
+            in request.headers.get("user-agent")
+        ):
+            raise HTTPException(
+                status_code=401,
+                headers={"WWW-Authenticate": "Basic"},
+                detail="Missing API Key",
             )
-            username, _, password = decoded_credentials.partition(":")
-            # Verify username and password
-            if not username or not password:
-                raise HTTPException(status_code=403, detail="Invalid Basic credentials")
-        # For example, Grafana use digest
-        elif authorization.scheme.lower() == "digest":
+
+        auth_header = request.headers.get("Authorization")
+        scheme, _, credentials = auth_header.partition(" ")
+        # support basic auth (e.g. AWS SNS)
+        if scheme.lower() == "basic":
+            api_key = authorization.password
+        # support Digest auth (e.g. Grafana)
+        elif scheme.lower() == "digest":
             # Validate Digest credentials
             if not authorization.credentials:
                 raise HTTPException(
                     status_code=403, detail="Invalid Digest credentials"
                 )
             else:
-                api_key = digest.credentials
-        elif "Amazon Simple Notification Service Agent" in request.headers.get(
-            "user-agent"
-        ):
-            # we must force SNS to use basic auth
-            if not basic or not basic.username or not basic.password:
-                raise HTTPException(
-                    status_code=401,
-                    headers={"WWW-Authenticate": "Basic"},
-                    detail="Missing API Key",
-                )
-            return "amazon_sns"
+                api_key = authorization.credentials
         else:
             raise HTTPException(status_code=401, detail="Missing API Key")
 

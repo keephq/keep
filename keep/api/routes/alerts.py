@@ -133,15 +133,10 @@ async def receive_event(
     # TODO: think of a more elegant way to do this
     # Get the raw body as bytes
     body = await request.body()
-    if tenant_id == "amazon_sns":
-        subscribe_url = json.loads(body.decode()).get("SubscribeURL")
-        resp = requests.get(subscribe_url)
-        return {"status": "ok"}
-
     # Start process the event
     # Attempt to parse as JSON if the content type is not text/plain
     content_type = request.headers.get("Content-Type")
-    # SNS events
+    # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
     if "text/plain" in content_type:
         try:
             event = json.loads(body.decode())
@@ -165,6 +160,11 @@ async def receive_event(
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
         formatted_event = provider_class.format_alert(event)
+        # If the format_alert does not return an AlertDto object, it means that the event
+        # should not be pushed to the client.
+        if not formatted_event:
+            raise {"status": "ok"}
+        # else, let's push it to the db
         formatted_event.pushed = True
         alert = Alert(
             tenant_id=tenant_id,
