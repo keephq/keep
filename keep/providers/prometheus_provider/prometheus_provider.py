@@ -84,27 +84,30 @@ class PrometheusProvider(BaseProvider):
         alerts = response.json().get("data", {}).get("alerts", [])
         alert_dtos = []
         for alert in alerts:
-            alert_id = alert.get("id", alert.get("labels", {}).get("alertname"))
-            description = alert.get("annotations", {}).pop(
-                "description", None
-            ) or alert.get("annotations", {}).get("summary", alert_id)
-
-            labels = {k.lower(): v for k, v in alert.get("labels", {}).items()}
-            annotations = {
-                k.lower(): v for k, v in alert.get("annotations", {}).items()
-            }
-            alert_dto = AlertDto(
-                id=alert_id,
-                name=alert_id,
-                description=description,
-                status=alert.get("state"),
-                lastReceived=alert.get("activeAt"),
-                source=["prometheus"],
-                **labels,
-                **annotations,
-            )
+            alert_dto = self.format_alert(alert)
             alert_dtos.append(alert_dto)
         return alert_dtos
+
+    @staticmethod
+    def format_alert(event: dict) -> AlertDto:
+        alert_id = event.get("id", event.get("labels", {}).get("alertname"))
+        description = event.get("annotations", {}).pop(
+            "description", None
+        ) or event.get("annotations", {}).get("summary", alert_id)
+
+        labels = {k.lower(): v for k, v in event.get("labels", {}).items()}
+        annotations = {k.lower(): v for k, v in event.get("annotations", {}).items()}
+        alert_dto = AlertDto(
+            id=alert_id,
+            name=alert_id,
+            description=description,
+            status=event.get("state"),
+            lastReceived=event.get("activeAt"),
+            source=["prometheus"],
+            **labels,
+            **annotations,
+        )
+        return alert_dto
 
     def dispose(self):
         """

@@ -129,6 +129,10 @@ class ProvidersFactory:
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
                 )
+                supports_webhook = (
+                    issubclass(provider_class, BaseProvider)
+                    and provider_class.__dict__.get("format_alert") is not None
+                )
                 can_notify = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("notify") is not None
@@ -176,6 +180,7 @@ class ProvidersFactory:
                         notify_params=notify_params,
                         query_params=query_params,
                         can_setup_webhook=can_setup_webhook,
+                        supports_webhook=supports_webhook,
                     )
                 )
             except ModuleNotFoundError:
@@ -185,8 +190,13 @@ class ProvidersFactory:
 
     @staticmethod
     def get_installed_providers(
-        tenant_id: str, all_providers: list[Provider], include_details: bool = True
+        tenant_id: str,
+        all_providers: list[Provider] | None = None,
+        include_details: bool = True,
     ) -> list[Provider]:
+        if all_providers is None:
+            all_providers = ProvidersFactory.get_all_providers()
+
         # TODO: installed providers should be kept in the DB
         # but for now we just fetch it from the secret manager
         secret_manager = SecretManagerFactory.get_secret_manager()
