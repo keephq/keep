@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { Fragment } from "react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { Icon } from "@tremor/react";
 
 const navigation = [
   { name: "Providers", href: "/providers" },
@@ -16,6 +17,36 @@ const navigation = [
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
+
+const SlackLogo = (props: any) => (
+  <svg
+    width="800px"
+    height="800px"
+    viewBox="0 0 16 16"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    {...props}
+  >
+    <g fillRule="evenodd" clipRule="evenodd">
+      <path
+        fill="#E01E5A"
+        d="M2.471 11.318a1.474 1.474 0 001.47-1.471v-1.47h-1.47A1.474 1.474 0 001 9.846c.001.811.659 1.469 1.47 1.47zm3.682-2.942a1.474 1.474 0 00-1.47 1.471v3.683c.002.811.66 1.468 1.47 1.47a1.474 1.474 0 001.47-1.47V9.846a1.474 1.474 0 00-1.47-1.47z"
+      />
+      <path
+        fill="#36C5F0"
+        d="M4.683 2.471c.001.811.659 1.469 1.47 1.47h1.47v-1.47A1.474 1.474 0 006.154 1a1.474 1.474 0 00-1.47 1.47zm2.94 3.682a1.474 1.474 0 00-1.47-1.47H2.47A1.474 1.474 0 001 6.153c.002.812.66 1.469 1.47 1.47h3.684a1.474 1.474 0 001.47-1.47z"
+      />
+      <path
+        fill="#2EB67D"
+        d="M9.847 7.624a1.474 1.474 0 001.47-1.47V2.47A1.474 1.474 0 009.848 1a1.474 1.474 0 00-1.47 1.47v3.684c.002.81.659 1.468 1.47 1.47zm3.682-2.941a1.474 1.474 0 00-1.47 1.47v1.47h1.47A1.474 1.474 0 0015 6.154a1.474 1.474 0 00-1.47-1.47z"
+      />
+      <path
+        fill="#ECB22E"
+        d="M8.377 9.847c.002.811.659 1.469 1.47 1.47h3.683A1.474 1.474 0 0015 9.848a1.474 1.474 0 00-1.47-1.47H9.847a1.474 1.474 0 00-1.47 1.47zm2.94 3.682a1.474 1.474 0 00-1.47-1.47h-1.47v1.47c.002.812.659 1.469 1.47 1.47a1.474 1.474 0 001.47-1.47z"
+      />
+    </g>
+  </svg>
+);
 
 export default function NavbarInner({ user }: { user: any }) {
   const pathname = usePathname();
@@ -53,18 +84,31 @@ export default function NavbarInner({ user }: { user: any }) {
                       {item.name}
                     </Link>
                   ))}
-                  <Link key="ctrlk" href="#" passHref className={classNames(
-                        "border-transparent text-gray-300",
-                        "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium cursor-default"
-                      )}>
-                        (or start with ⌘K)
+                  <Link
+                    key="ctrlk"
+                    href="#"
+                    passHref
+                    className={classNames(
+                      "border-transparent text-gray-300",
+                      "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium cursor-default"
+                    )}
+                  >
+                    (or start with ⌘K)
                   </Link>
                 </div>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
                 {user ? (
                   <Menu as="div" className="relative ml-3">
-                    <div>
+                    <div className="flex items-center">
+                      <a href={"https://slack.keephq.dev/"} target="_blank">
+                        <Icon
+                          icon={SlackLogo}
+                          size="lg"
+                          className="mr-2.5 grayscale hover:grayscale-0"
+                          tooltip="Join our Slack"
+                        />
+                      </a>
                       <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
                         <span className="sr-only">Open user menu</span>
                         <Image
