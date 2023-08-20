@@ -20,7 +20,15 @@ from keep.api.core.dependencies import (
     verify_single_tenant,
 )
 from keep.api.logging import CONFIG as logging_config
-from keep.api.routes import ai, alerts, alertsworkflows, healthcheck, providers, tenant
+from keep.api.routes import (
+    ai,
+    alerts,
+    alertsworkflows,
+    healthcheck,
+    providers,
+    settings,
+    tenant,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.posthog.posthog import get_posthog_client
 
@@ -116,6 +124,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
     app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+    app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
         alertsworkflows.router, prefix="/alerts-workflows", tags=["alerts-workflows"]
     )

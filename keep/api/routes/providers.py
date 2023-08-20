@@ -10,7 +10,7 @@ from sqlmodel import Session
 from keep.api.core.config import config
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
-from keep.api.models.webhook import WebhookSettings
+from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
@@ -302,7 +302,7 @@ def get_webhook_settings(
     provider_type: str,
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
-) -> WebhookSettings:
+) -> ProviderWebhookSettings:
     logger.info("Getting webhook settings", extra={"provider_type": provider_type})
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"
@@ -314,7 +314,7 @@ def get_webhook_settings(
         system_description="Webhooks API key",
     )
     logger.info("Got webhook settings", extra={"provider_type": provider_type})
-    return WebhookSettings(
+    return ProviderWebhookSettings(
         webhookDescription=provider_class.webhook_description,
         webhookTemplate=provider_class.webhook_template.format(
             keep_webhook_api_url=keep_webhook_api_url, api_key=webhook_api_key

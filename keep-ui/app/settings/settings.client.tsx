@@ -1,21 +1,22 @@
 "use client";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
-import UnderConstruction from "../under-construction";
 import { GlobeAltIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { UsersSettings } from "./users-settings";
+import { WebhookSettings } from "./webhook-settings";
 
 export default function SettingsPage() {
   return (
     <TabGroup>
-      <TabList>
+      <TabList color="orange">
         <Tab icon={UserGroupIcon}>Users</Tab>
         <Tab icon={GlobeAltIcon}>Webhook</Tab>
       </TabList>
       <TabPanels>
         <TabPanel>
-          <UnderConstruction />
+          <UsersSettings />
         </TabPanel>
         <TabPanel>
-          <UnderConstruction />
+          <WebhookSettings />
         </TabPanel>
       </TabPanels>
     </TabGroup>
