@@ -111,13 +111,13 @@ class ZabbixProvider(BaseProvider):
     ):
         # Copied from https://git.zabbix.com/projects/ZBX/repos/zabbix/browse/templates/media/ilert/media_ilert.yaml?at=release%2F6.4
         # Based on @SomeAverageDev hints and suggestions ;) Thanks!
+        # TODO: this can be done once when loading the provider file
         self.logger.info("Reading webhook JS script file")
         __location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
         with open(os.path.join(__location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME)) as f:
             script = f.read()
-            f.close()
 
         self.logger.info("Creating or updating webhook")
         mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}" #-{tenant_id.replace('-', '')}
