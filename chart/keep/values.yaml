@@ -16,8 +16,6 @@ backend:
       value: /state
     - name: DATABASE_CONNECTION_STRING
       value: mysql+pymysql://root@keep-database:3306/keep
-    - name: USE_NGROK
-      value: "true"
   openAiApi:
     enabled: false
     openAiApiKey: ""
