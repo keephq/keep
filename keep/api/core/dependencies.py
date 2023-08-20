@@ -76,12 +76,12 @@ def verify_api_key(
         # support Digest auth (e.g. Grafana)
         elif scheme.lower() == "digest":
             # Validate Digest credentials
-            if not authorization.credentials:
+            if not credentials:
                 raise HTTPException(
                     status_code=403, detail="Invalid Digest credentials"
                 )
             else:
-                api_key = authorization.credentials
+                api_key = credentials
         else:
             raise HTTPException(status_code=401, detail="Missing API Key")
 

@@ -137,15 +137,10 @@ async def receive_event(
     # Attempt to parse as JSON if the content type is not text/plain
     content_type = request.headers.get("Content-Type")
     # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
-    if "text/plain" in content_type:
-        try:
-            event = json.loads(body.decode())
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON")
-    else:
-        event = (
-            body.decode()
-        )  # Here you have the plain text, but based on your example, you'd likely want to parse it as JSON anyway
+    try:
+        event = json.loads(body.decode())
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
 
     # else, process the event
     logger.info(
