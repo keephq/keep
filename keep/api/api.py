@@ -131,7 +131,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
     keep.api.observability.setup(app)
 
-    if os.environ.get("USE_NGROK"):
+    if os.environ.get("USE_NGROK", "false") == "true":
         from pyngrok import ngrok
 
         public_url = ngrok.connect(PORT).public_url
