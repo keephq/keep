@@ -1,6 +1,5 @@
 import logging
 import os
-import threading
 import time
 import typing
 
@@ -29,9 +28,13 @@ class WorkflowManager:
         else:
             pass
 
+    async def start(self):
+        """Runs the workflow manager in server mode"""
+        await self.scheduler.start()
+
     def run(self, workflows: list[Workflow]):
         """
-        Run workflows from a file or directory.
+        Run list of workflows.
 
         Args:
             workflow (str): Either an workflow yaml or a directory containing workflow yamls or a list of URLs to get the workflows from.

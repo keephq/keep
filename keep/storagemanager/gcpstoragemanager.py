@@ -1,3 +1,4 @@
+import json
 import logging
 
 from google.cloud import storage
@@ -19,10 +20,22 @@ class GcpStorageManager(BaseStorageManager):
             bucket = self.storage_client.create_bucket(bucket_name)
         return bucket
 
+    def get_file(self, tenant_id, filename) -> str:
+        """
+        Get a file from Google Cloud Storage.
+        Args:
+            filename (str): The name of the file to get.
+        Returns:
+            str: The content of the file.
+        """
+        bucket = self.create_bucket_if_not_exists(tenant_id)
+        blob = bucket.blob(filename)
+        f = blob.download_as_string()
+        return f
+
     def get_files(self, tenant_id) -> list[str]:
         """
         List all files from Google Cloud Storage.
-
         Returns:
             list[str]: A list of file names.
         """
@@ -37,3 +50,19 @@ class GcpStorageManager(BaseStorageManager):
             files.append(blob_content)
 
         return files
+
+    def store_file(self, tenant_id, file_name, file_content: dict | str):
+        """
+        Store a file in Google Cloud Storage.
+        Args:
+            file_name (str): The name of the file to store.
+            file_content (bytes): The content of the file to store.
+        """
+        bucket = self.create_bucket_if_not_exists(tenant_id)
+        blob = bucket.blob(file_name)
+
+        if isinstance(file_content, dict):
+            file_content = json.dumps(file_content, default=str)
+
+        file_content = file_content.encode("utf-8")
+        blob.upload_from_string(file_content)

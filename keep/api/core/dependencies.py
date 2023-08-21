@@ -14,6 +14,7 @@ from fastapi.security import (
     OAuth2PasswordBearer,
 )
 from sqlmodel import Session, select
+from starlette_context import context
 
 from keep.api.core.db import get_session
 from keep.api.models.db.tenant import TenantApiKey
@@ -33,6 +34,7 @@ SINGLE_TENANT_UUID = "e1faa321-35df-486b-8fa8-3601ee714011"
 
 
 def verify_single_tenant() -> str:
+    context.data["tenant_id"] = SINGLE_TENANT_UUID
     return SINGLE_TENANT_UUID
 
 
@@ -91,6 +93,9 @@ def verify_api_key(
     tenant_api_key = session.exec(statement).first()
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    # keep it in the context for later use
+    context.data["tenant_id"] = tenant_api_key.tenant_id
     return tenant_api_key.tenant_id
 
 
@@ -111,7 +116,10 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
             audience=auth_audience,
             issuer=issuer,
         )
-        return payload["keep_tenant_id"]
+        tenant_id = payload.get("keep_tenant_id")
+        # keep it in the context for later use
+        context.data["tenant_id"] = tenant_id
+        return tenant_id
     except Exception as e:
         logger.exception("Failed to validate token")
         raise HTTPException(status_code=401, detail=str(e))

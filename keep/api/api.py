@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -31,6 +32,7 @@ from keep.api.routes import (
 )
 from keep.contextmanager.contextmanager import ContextManager
 from keep.posthog.posthog import get_posthog_client
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -130,13 +132,16 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     )
 
     @app.on_event("startup")
-    def on_startup():
+    async def on_startup():
         create_db_and_tables()
         if not multi_tenant:
             # When running in single tenant mode, we want to override the secured endpoints
             app.dependency_overrides[verify_api_key] = verify_single_tenant
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
+
+        wf_manager = WorkflowManager()
+        asyncio.create_task(wf_manager.start())
 
     keep.api.observability.setup(app)
 

@@ -3,7 +3,9 @@ from dataclasses import asdict
 from functools import reduce
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+import jwt
+import yaml
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 
 from keep.api.core.dependencies import verify_bearer_token
 from keep.api.models.workflow import WorkflowDTO
@@ -85,3 +87,35 @@ def run_workflow(
     else:
         # TODO - add some workflow_execution id to track the execution
         return {"workflow_id": workflow_id, "status": "sucess"}
+
+
+@router.post(
+    "",
+    description="Create a workflow",
+)
+async def create_workflow(
+    request: Request,
+    tenant_id: str = Depends(verify_bearer_token),
+) -> dict:
+    try:
+        workflow_yaml = await request.body()
+        workflow_data = yaml.safe_load(workflow_yaml)
+        # backward comptability
+        if "alert" in workflow_data:
+            workflow = workflow_data.pop("alert")
+        #
+        else:
+            workflow = workflow_data.pop("workflow")
+
+    except yaml.YAMLError as e:
+        raise HTTPException(status_code=400, detail="Invalid YAML format")
+
+    token = request.headers.get("Authorization").split(" ")[1]
+    decoded_token = jwt.decode(token, options={"verify_signature": False})
+    created_by = decoded_token.get("email")
+    workflowstore = WorkflowStore()
+    # Create the workflow
+    workflow = workflowstore.create_workflow(
+        tenant_id=tenant_id, created_by=created_by, workflow=workflow
+    )
+    return {"workflow_id": workflow.workflow_id, "status": "created"}

@@ -5,6 +5,8 @@ import os
 import click
 from starlette_context import context
 
+from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
+
 
 def get_context_manager_id():
     try:
@@ -15,6 +17,16 @@ def get_context_manager_id():
         return "main"
 
 
+def get_tenant_id():
+    try:
+        # Extract the tenant id (the env var is for CLI)
+        tenant_id = context.data["tenant_id"] or os.environ.get("KEEP_TENANT_ID")
+        return tenant_id
+    except Exception as exc:
+        # single tenant or CLI
+        return "main"
+
+
 class ContextManager:
     STATE_FILE = "keepstate.json"
     __instances = {}
@@ -22,19 +34,23 @@ class ContextManager:
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
     @staticmethod
     def get_instance() -> "ContextManager":
+        tenant_id = get_tenant_id()
         context_manager_id = get_context_manager_id()
         if context_manager_id not in ContextManager.__instances:
-            ContextManager.__instances[context_manager_id] = ContextManager()
+            ContextManager.__instances[context_manager_id] = ContextManager(tenant_id)
         return ContextManager.__instances[context_manager_id]
 
     @staticmethod
     def delete_instance():
         context_manager_id = get_context_manager_id()
         if context_manager_id in ContextManager.__instances:
+            ContextManager.__instances[context_manager_id].dump()
             del ContextManager.__instances[context_manager_id]
 
-    def __init__(self):
+    def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
+        self.tenant_id = tenant_id
+        self.storage_manager = StorageManagerFactory.get_file_manager()
         context_manager_id = get_context_manager_id()
         if context_manager_id in ContextManager.__instances:
             raise Exception(
@@ -181,14 +197,13 @@ class ContextManager:
         self.steps_context["this"] = self.steps_context[step_id]
 
     def __load_state(self):
-        if self.state_file:
-            # TODO - SQLite
-            try:
-                with open(self.state_file, "r") as f:
-                    self.state = json.load(f)
-            except Exception:
-                self.logger.warning("Failed to load state file, using empty state")
-                self.state = {}
+        try:
+            self.state = json.loads(
+                self.storage_manager.get_file(self.tenant_id, self.state_file)
+            )
+        except Exception:
+            self.logger.warning("Failed to load state file, using empty state")
+            self.state = {}
 
     def get_last_workflow_run(self, workflow_id):
         if workflow_id in self.state:
@@ -199,8 +214,15 @@ class ContextManager:
 
     def dump(self):
         self.logger.info("Dumping state file")
-        with open(self.state_file, "w") as f:
-            json.dump(self.state, f, default=str)
+        # Write the updated state back to the file
+        try:
+            self.storage_manager.store_file(self.tenant_id, self.state_file, self.state)
+        except Exception as e:
+            self.logger.error(
+                "Failed to dump state file",
+                extra={"exception": e},
+            )
+            # TODO - should we raise an exception here?
         self.logger.info("State file dumped")
 
     def set_last_workflow_run(self, workflow_id, workflow_context, workflow_status):
