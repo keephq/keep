@@ -155,7 +155,7 @@ const ProviderForm = ({
         console.log("Connect Result:", data);
         setIsLoading(false);
         onConnectChange(false, true);
-        if (formValues.install_webhook) {
+        if (formValues.install_webhook && provider.can_setup_webhook) {
           installWebhook(data as Provider, accessToken);
         }
         onAddProvider(data as Provider);
