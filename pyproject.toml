@@ -53,6 +53,7 @@ google-cloud-bigquery = "^3.11.0"
 websocket-client = "^1.6.0"
 posthog = "^3.0.1"
 google-cloud-storage = "^2.10.0"
+asyncio = "^3.4.3"
 
 
 

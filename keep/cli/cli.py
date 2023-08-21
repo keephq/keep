@@ -196,13 +196,13 @@ def run(
             "args": sys.argv,
         },
     )
-    alert_manager = WorkflowManager(interval)
-    alert_workflow_manager = AlertStore()
-    alerts = alert_workflow_manager.get_alerts(
+    workflow_manager = WorkflowManager(interval)
+    workflow_store = WorkflowStore()
+    workflows = workflow_store.get_workflows(
         alerts_directory or alert_url, providers_file
     )
     try:
-        alert_manager.run(alerts)
+        workflow_manager.run(workflows)
     except KeyboardInterrupt:
         logger.info("Keep stopped by user, stopping the scheduler")
         posthog_client.capture(
@@ -212,7 +212,7 @@ def run(
                 "args": sys.argv,
             },
         )
-        alert_manager.stop()
+        workflow_manager.stop()
         logger.info("Scheduler stopped")
     except Exception as e:
         posthog_client.capture(

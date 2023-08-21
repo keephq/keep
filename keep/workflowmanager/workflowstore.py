@@ -2,12 +2,14 @@ import io
 import logging
 import os
 import typing
+import uuid
 
 import requests
 import validators
 import yaml
 from fastapi import HTTPException
 
+from keep.api.core.db import add_workflow, get_workflow, get_workflows
 from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -22,8 +24,22 @@ class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
-        self.storage_manager = StorageManagerFactory.get_file_manager()
         self.context_manager = ContextManager.get_instance()
+
+    def create_workflow(self, tenant_id: str, created_by, workflow: dict):
+        workflow_id = workflow.get("id")
+        self.logger.info(f"Creating workflow {workflow_id}")
+        workflow = add_workflow(
+            id=str(uuid.uuid4()),
+            name=workflow_id,
+            tenant_id=tenant_id,
+            description=workflow.get("description"),
+            created_by=created_by,
+            interval=workflow.get("interval", 0),
+            workflow_raw=yaml.dump(workflow),
+        )
+        self.logger.info(f"Workflow {workflow_id} created successfully")
+        return workflow
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
         """
@@ -46,26 +62,19 @@ class WorkflowStore:
                 return self._read_workflow_from_stream(file)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        # TODO: this should be refactored
-        #       we should get workflows from a database
-        #       its a patch to get all workflows and look for an id
-        #       this is not efficient
+        workflow = get_workflow(tenant_id, workflow_id)
 
-        # get specific workflow
-        workflows = self.get_all_workflows(tenant_id)
-        for workflow in workflows:
-            if workflow.workflow_id == workflow_id:
-                return workflow
-
-        # If not workflow
-        raise HTTPException(
-            status_code=404,
-            detail=f"Workflow {workflow_id} not found",
-        )
+        if workflow:
+            return workflow
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow {workflow_id} not found",
+            )
 
     def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
         # list all tenant's workflows
-        workflow_files = self.storage_manager.get_files(tenant_id)
+        workflow_files = get_workflows(tenant_id)
         self._load_providers_from_installed_providers(tenant_id)
         raw_workflows = []
         for workflow in workflow_files:
