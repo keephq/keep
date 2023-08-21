@@ -36,7 +36,6 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     (url) => fetcher(url, accessToken)
   );
 
-  if (isLoading || !data) return <Loading />;
   if (error) {
     return (
       <Callout
@@ -49,6 +48,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       </Callout>
     );
   }
+  if (isLoading || !data) return <Loading />;
 
   const environments = data
     .map((alert) => alert.environment)

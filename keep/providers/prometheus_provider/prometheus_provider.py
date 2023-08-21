@@ -99,11 +99,8 @@ receivers:
         )
         if not response.ok:
             return []
-        alerts = response.json().get("data", {}).get("alerts", [])
-        alert_dtos = []
-        for alert in alerts:
-            alert_dto = self.format_alert(alert)
-            alert_dtos.append(alert_dto)
+        alerts_data = response.json().get("data", {})
+        alert_dtos = self.format_alert(alerts_data)
         return alert_dtos
 
     @staticmethod
