@@ -90,15 +90,16 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
       className={`relative group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 h-44 m-2.5 hover:shadow-xl hover:grayscale-0`}
       onClick={onClick}
     >
-      {provider.can_setup_webhook && !provider.installed && (
-        <Icon
-          icon={WebhookIcon}
-          className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
-          color="green"
-          size="sm"
-          tooltip="Webhook available"
-        />
-      )}
+      {(provider.can_setup_webhook || provider.supports_webhook) &&
+        !provider.installed && (
+          <Icon
+            icon={WebhookIcon}
+            className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+            color="green"
+            size="sm"
+            tooltip="Webhook available"
+          />
+        )}
       {provider.installed ? (
         InstalledSection(deleteProvider, callInstallWebhook, provider)
       ) : (

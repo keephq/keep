@@ -1,4 +1,3 @@
-import { string } from "prop-types";
 
 export interface ProviderAuthConfig {
   name: string;
@@ -36,6 +35,7 @@ export interface Provider {
   notify_params?: string[];
   type: string;
   can_setup_webhook?: boolean;
+  supports_webhook?: boolean;
 }
 
 export type Providers = Provider[];
