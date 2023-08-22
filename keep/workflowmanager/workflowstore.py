@@ -24,7 +24,6 @@ class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
-        self.context_manager = ContextManager.get_instance()
 
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
@@ -63,7 +62,9 @@ class WorkflowStore:
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_workflow(tenant_id, workflow_id)
-
+        workflow_yaml = yaml.safe_load(workflow)
+        self._load_providers_from_installed_providers(tenant_id)
+        workflow = self.parser.parse(workflow_yaml)
         if workflow:
             return workflow
         else:
@@ -74,27 +75,7 @@ class WorkflowStore:
 
     def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
         # list all tenant's workflows
-        workflow_files = get_workflows(tenant_id)
-        self._load_providers_from_installed_providers(tenant_id)
-        raw_workflows = []
-        for workflow in workflow_files:
-            try:
-                raw_workflows.append(yaml.safe_load(workflow))
-            except yaml.YAMLError as e:
-                self.logger.error(f"Error parsing workflow: {e}")
-                # TODO handle
-                pass
-
-        workflows = []
-        for workflow in raw_workflows:
-            self.logger.info(f"Getting workflow {workflow}")
-            try:
-                workflows.extend(self.parser.parse(workflow))
-                self.logger.info(f"Workflow {workflow} fetched successfully")
-            except Exception as e:
-                self.logger.error(
-                    f"Error parsing workflow {workflow}", extra={"exception": e}
-                )
+        workflows = get_workflows(tenant_id)
         return workflows
 
     def get_workflows(
@@ -176,16 +157,14 @@ class WorkflowStore:
         for provider in installed_providers:
             self.logger.info(f"Loading provider {provider}")
             try:
-                provider = ProvidersFactory.get_provider(
-                    provider_id=provider.id,
-                    provider_type=provider.type,
-                    provider_config=provider.details,
-                )
-                self.context_manager.providers_context[
-                    provider.provider_id
-                ] = provider.config
-                self.logger.info(f"Provider {provider.provider_id} loaded successfully")
+                provider_name = provider.details.get("name")
+                context_manager = ContextManager.get_instance(tenant_id=tenant_id)
+                context_manager.providers_context[provider.id] = provider.details
+                # map also the name of the provider, not only the id
+                # so that we can use the name to reference the provider
+                context_manager.providers_context[provider_name] = provider.details
+                self.logger.info(f"Provider {provider.id} loaded successfully")
             except Exception as e:
                 self.logger.error(
-                    f"Error loading provider {provider}", extra={"exception": e}
+                    f"Error loading provider {provider.id}", extra={"exception": e}
                 )

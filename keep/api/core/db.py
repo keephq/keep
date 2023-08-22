@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 # This import is required to create the tables
 from keep.api.core.config import config
 from keep.api.models.db.alert import *
+from keep.api.models.db.provider import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
 
@@ -147,7 +149,10 @@ def get_last_completed_execution(
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
-        .where(WorkflowExecution.status == "completed")
+        .where(
+            (WorkflowExecution.status == "completed")
+            | (WorkflowExecution.status == "error")
+        )
         .order_by(WorkflowExecution.started.desc())
         .limit(1)
     ).first()
@@ -156,7 +161,9 @@ def get_last_completed_execution(
 def get_workflows_that_should_run():
     with Session(engine) as session:
         workflows_with_interval = session.exec(
-            select(Workflow).where(Workflow.interval != None)
+            select(Workflow)
+            .where(Workflow.interval != None)
+            .where(Workflow.interval > 0)
         ).all()
 
         workflows_to_run = []
@@ -176,7 +183,7 @@ def get_workflows_that_should_run():
                 ).first()
 
                 if not ongoing_execution:
-                    create_workflow_execution(
+                    workflow_execution = create_workflow_execution(
                         session, workflow.id, workflow.tenant_id, "scheduler"
                     )
                     # the workflow obejct itself is only under this session so we need to use the
@@ -185,6 +192,7 @@ def get_workflows_that_should_run():
                         {
                             "tenant_id": workflow.tenant_id,
                             "workflow_id": workflow.id,
+                            "execution_id": workflow_execution.id,
                         }
                     )
                 # if there is ongoing execution, check if it is running for more than 60 minutes and if so
@@ -193,7 +201,7 @@ def get_workflows_that_should_run():
                     ongoing_execution.status = "timeout"
                     session.commit()
                     # re-create the execution
-                    create_workflow_execution(
+                    workflow_execution = create_workflow_execution(
                         session, workflow.id, workflow.tenant_id, "scheduler"
                     )
                     # the workflow obejct itself is only under this session so we need to use the
@@ -202,6 +210,7 @@ def get_workflows_that_should_run():
                         {
                             "tenant_id": workflow.tenant_id,
                             "workflow_id": workflow.id,
+                            "execution_id": workflow_execution.id,
                         }
                     )
                 else:
@@ -234,7 +243,6 @@ def get_workflows(tenant_id: str) -> List[str]:
         workflows = session.exec(
             select(Workflow).where(Workflow.tenant_id == tenant_id)
         ).all()
-        workflows = [workflow.workflow_raw for workflow in workflows]
     return workflows
 
 
@@ -246,3 +254,41 @@ def get_workflow(tenant_id: str, workflow_id: str) -> str:
             .where(Workflow.id == workflow_id)
         ).first()
     return workflow.workflow_raw
+
+
+def get_installed_providers(tenant_id: str) -> List[str]:
+    with Session(engine) as session:
+        providers = session.exec(
+            select(Provider).where(Provider.tenant_id == tenant_id)
+        ).all()
+    return providers
+
+
+def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
+    with Session(engine) as session:
+        workflow_execution = session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.id == execution_id)
+        ).first()
+
+        workflow_execution.status = status
+        workflow_execution.error = error
+        workflow_execution.execution_time = (
+            time.time() - workflow_execution.started.timestamp()
+        )
+        # TODO: logs
+        session.commit()
+
+
+def get_workflow_executions(tenant_id, workflow_id, limit=50):
+    with Session(engine) as session:
+        workflow_executions = session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .order_by(WorkflowExecution.started.desc())
+            .limit(limit)
+        ).all()
+    return workflow_executions

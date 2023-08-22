@@ -1,15 +1,17 @@
 import logging
 from dataclasses import asdict
 from functools import reduce
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import jwt
 import yaml
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
 
+from keep.api.core.db import get_installed_providers, get_workflow_executions
 from keep.api.core.dependencies import verify_bearer_token
-from keep.api.models.workflow import WorkflowDTO
+from keep.api.models.workflow import ProviderDTO, WorkflowDTO, WorkflowExecutionDTO
 from keep.contextmanager.contextmanager import ContextManager
+from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -25,18 +27,51 @@ def get_workflows(
     tenant_id: str = Depends(verify_bearer_token),
 ) -> list[WorkflowDTO]:
     workflowstore = WorkflowStore()
+    parser = Parser()
+    workflows_dto = []
+    # get all workflows
     workflows = workflowstore.get_all_workflows(tenant_id=tenant_id)
-    workflows_dto = [
-        WorkflowDTO(
-            id=workflow.workflow_id,
-            description=workflow.workflow_description,
-            owners=workflow.workflow_owners,
-            interval=workflow.workflow_interval,
-            steps=[asdict(step) for step in workflow.workflow_steps],
-            actions=[asdict(action) for action in workflow.workflow_actions],
+    # iterate workflows
+    for workflow in workflows:
+        # extract the providers
+        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+        providers = parser.get_providers_from_workflow(workflow_yaml)
+        installed_providers = get_installed_providers(tenant_id)
+        installed_providers = {
+            provider.name: provider for provider in installed_providers
+        }
+        providers_dto = []
+        # get the provider details
+        for provider in providers:
+            try:
+                provider = installed_providers[provider.get("name")]
+                provider_dto = ProviderDTO(
+                    name=provider.name,
+                    type=provider.type,
+                    id=provider.id,
+                    installed=True,
+                )
+                providers_dto.append(provider_dto)
+            except KeyError:
+                # the provider is not installed
+                provider_dto = ProviderDTO(
+                    name=provider.get("name"),
+                    type=provider.get("type"),
+                    id=None,
+                    installed=False,
+                )
+                providers_dto.append(provider_dto)
+
+        # create the workflow DTO
+        workflow_dto = WorkflowDTO(
+            id=workflow.id,
+            description=workflow.description,
+            created_by=workflow.created_by,
+            creation_time=workflow.creation_time,
+            interval=workflow.interval,
+            providers=providers_dto,
         )
-        for workflow in workflows
-    ]
+        workflows_dto.append(workflow_dto)
     return workflows_dto
 
 
@@ -95,11 +130,16 @@ def run_workflow(
 )
 async def create_workflow(
     request: Request,
+    file: UploadFile = File(...),
     tenant_id: str = Depends(verify_bearer_token),
 ) -> dict:
     try:
-        workflow_yaml = await request.body()
-        workflow_data = yaml.safe_load(workflow_yaml)
+        # we support both File upload (from frontend) or raw yaml (e.g. curl)
+        if file:
+            workflow_raw_data = await file.read()
+        else:
+            workflow_raw_data = await request.body()
+        workflow_data = yaml.safe_load(workflow_raw_data)
         # backward comptability
         if "alert" in workflow_data:
             workflow = workflow_data.pop("alert")
@@ -118,4 +158,26 @@ async def create_workflow(
     workflow = workflowstore.create_workflow(
         tenant_id=tenant_id, created_by=created_by, workflow=workflow
     )
-    return {"workflow_id": workflow.workflow_id, "status": "created"}
+    return {"workflow_id": workflow.id, "status": "created"}
+
+
+@router.get("/{workflow_id}", description="Get workflow executions by ID")
+def get_workflow_by_id(
+    workflow_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+) -> List[WorkflowExecutionDTO]:
+    workflow_executions = get_workflow_executions(tenant_id, workflow_id)
+    workflow_executions_dtos = []
+    for workflow_execution in workflow_executions:
+        workflow_execution_dto = WorkflowExecutionDTO(
+            id=workflow_execution.id,
+            workflow_id=workflow_execution.workflow_id,
+            status=workflow_execution.status,
+            started=workflow_execution.started,
+            triggered_by=workflow_execution.triggered_by,
+            error=workflow_execution.error,
+            execution_time=workflow_execution.execution_time,
+        )
+        workflow_executions_dtos.append(workflow_execution_dto)
+
+    return workflow_executions_dtos

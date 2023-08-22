@@ -4,7 +4,7 @@ import threading
 import time
 import typing
 
-from keep.api.core.db import get_workflows_that_should_run
+from keep.api.core.db import finish_workflow_execution, get_workflows_that_should_run
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -17,11 +17,19 @@ class WorkflowScheduler:
         self.workflow_store = WorkflowStore()
         self._stop = False
 
-    async def start(self):
+    def start(self):
+        self.logger.info("Starting workflows scheduler")
+        thread = threading.Thread(target=self._start)
+        thread.start()
+        self.threads.append(thread)
+        self.logger.info("Workflows scheduler started")
+
+    def _start(self):
         self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
             self.logger.info("Getting workflows that should run...")
+            workflows = []
             try:
                 workflows = get_workflows_that_should_run()
             except Exception as e:
@@ -29,9 +37,20 @@ class WorkflowScheduler:
                 pass
             for workflow in workflows:
                 self.logger.info("Running workflow on background")
-                workflow = self.workflow_store.get_workflow(
-                    workflow.get("tenant_id"), workflow.get("workflow_id")
-                )
+                try:
+                    workflow = self.workflow_store.get_workflow(
+                        workflow.get("tenant_id"), workflow.get("workflow_id")
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error getting workflow: {e}")
+                    finish_workflow_execution(
+                        tenant_id=workflow.get("tenant_id"),
+                        workflow_id=workflow.get("workflow_id"),
+                        execution_id=workflow.get("execution_id"),
+                        status="error",
+                        error=f"Error getting workflow: {e}",
+                    )
+                    continue
                 thread = threading.Thread(
                     target=self.workflow_manager._run_workflow,
                     args=[workflow],
@@ -39,7 +58,7 @@ class WorkflowScheduler:
                 thread.start()
                 self.threads.append(thread)
             self.logger.info("Sleeping until next iteration")
-            await asyncio.sleep(1)
+            time.sleep(1)
         self.logger.info("Workflows scheduler stopped")
 
     def run_workflows(self, workflows: typing.List[Workflow]):

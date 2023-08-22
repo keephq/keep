@@ -1,3 +1,4 @@
+import React from "react";
 import WorkflowsPage from "./workflows.client";
 
 export default function Page() {
