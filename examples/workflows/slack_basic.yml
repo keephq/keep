@@ -1,0 +1,15 @@
+workflow:
+  id: slack-basic-demo
+  description: Send a slack message when a cloudwatch alarm is triggered
+  triggers:
+    - type: alert
+      filters:
+        - key: alert.source
+          value: awscloudwatch
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-prod }} "
+        with:
+          message: "Got alarm from aws cloudwatch! {{ alert.name }}"

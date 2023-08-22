@@ -5,6 +5,16 @@ type Provider = {
   installed: boolean;
 }
 
+type Filter = {
+  key: string;
+  value: string;
+};
+
+type Trigger = {
+  type: string;
+  filters: Filter[];
+};
+
 export type Workflow = {
   id: string;
   description: string;
@@ -12,4 +22,5 @@ export type Workflow = {
   creation_time: string;
   interval: string; // This can be a string like "Everyday at 9AM" or whatever suits you.
   providers: Provider[];
+  triggers: Trigger[];
 }

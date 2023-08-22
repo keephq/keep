@@ -1,6 +1,0 @@
-provider:
-  id: slack
-  description: Paladin's slack
-  provider_type: slack
-  authentication:
-    webhook-url: https://yourorg.slack.com/webhooks-whatever1234

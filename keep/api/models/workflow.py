@@ -16,7 +16,7 @@ class WorkflowDTO(BaseModel):
     description: Optional[str] = None
     created_by: str
     creation_time: datetime
-    triggers: List[str] = None
+    triggers: List[dict] = None
     interval: int
     providers: List[ProviderDTO]
 

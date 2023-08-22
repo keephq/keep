@@ -9,7 +9,7 @@ import validators
 import yaml
 from fastapi import HTTPException
 
-from keep.api.core.db import add_workflow, get_workflow, get_workflows
+from keep.api.core.db import add_workflow, delete_workflow, get_workflow, get_workflows
 from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -39,6 +39,15 @@ class WorkflowStore:
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
         return workflow
+
+    def delete_workflow(self, tenant_id, workflow_id):
+        self.logger.info(f"Deleting workflow {workflow_id}")
+        try:
+            workflow = delete_workflow(tenant_id, workflow_id)
+        except Exception as e:
+            raise HTTPException(
+                status_code=404, detail=f"Workflow {workflow_id} not found"
+            )
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
         """

@@ -292,3 +292,16 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50):
             .limit(limit)
         ).all()
     return workflow_executions
+
+
+def delete_workflow(tenant_id, workflow_id):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.id == workflow_id)
+        ).first()
+
+        if workflow:
+            session.delete(workflow)
+            session.commit()

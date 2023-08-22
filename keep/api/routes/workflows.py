@@ -62,6 +62,7 @@ def get_workflows(
                 )
                 providers_dto.append(provider_dto)
 
+        triggers = parser.get_triggers_from_workflow(workflow_yaml)
         # create the workflow DTO
         workflow_dto = WorkflowDTO(
             id=workflow.id,
@@ -70,6 +71,7 @@ def get_workflows(
             creation_time=workflow.creation_time,
             interval=workflow.interval,
             providers=providers_dto,
+            triggers=triggers,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
@@ -181,3 +183,13 @@ def get_workflow_by_id(
         workflow_executions_dtos.append(workflow_execution_dto)
 
     return workflow_executions_dtos
+
+
+@router.delete("/{workflow_id}", description="Delete workflow")
+def delete_workflow_by_id(
+    workflow_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+):
+    workflowstore = WorkflowStore()
+    workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
+    return {"workflow_id": workflow_id, "status": "deleted"}
