@@ -10,6 +10,7 @@ class Workflow(SQLModel, table=True):
     name: str
     description: str
     created_by: str
+    creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
     workflow_raw: str
 

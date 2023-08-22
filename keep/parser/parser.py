@@ -41,12 +41,16 @@ class Parser:
                 "workflows"
             ) or parsed_workflow_yaml.get("alerts")
             workflows = [self._parse_workflow(workflow) for workflow in raw_workflows]
-        else:
-            # the alert here is backward compatibility
+        # the alert here is backward compatibility
+        elif parsed_workflow_yaml.get("workflow") or parsed_workflow_yaml.get("alert"):
             raw_workflow = parsed_workflow_yaml.get(
                 "workflow"
             ) or parsed_workflow_yaml.get("alert")
             workflow = self._parse_workflow(raw_workflow)
+            workflows = [workflow]
+        # else, if it stored in the db, it stored without the "workflow" key
+        else:
+            workflow = self._parse_workflow(parsed_workflow_yaml)
             workflows = [workflow]
         return workflows
 
@@ -306,3 +310,23 @@ class Parser:
                 )
                 provider_config = {"authentication": {}}
             return config_id, provider_config
+
+    def get_providers_from_workflow(self, workflow: dict):
+        """extract the provider names from a worklow
+
+        Args:
+            workflow (dict): _description_
+        """
+        actions_providers = [
+            action.get("provider") for action in workflow.get("actions")
+        ]
+        steps_providers = [step.get("provider") for step in workflow.get("steps")]
+        providers = actions_providers + steps_providers
+        providers = [
+            {
+                "name": p.get("config").split(".")[1].replace("}}", "").strip(),
+                "type": p.get("type"),
+            }
+            for p in providers
+        ]
+        return providers

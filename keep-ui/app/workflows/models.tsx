@@ -1,25 +1,15 @@
 type Provider = {
-  provider_id: string;
-  provider_type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
-}
-
-type Step = {
+  id: string;
+  type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
   name: string;
-  description: string;
-  provider: Provider;
-}
-
-type Action = {
-  name: string;
-  description: string;
-  provider: Provider;
+  installed: boolean;
 }
 
 export type Workflow = {
-  workflow_id: string;
+  id: string;
   description: string;
-  owners: string[];
+  created_by: string;
+  creation_time: string;
   interval: string; // This can be a string like "Everyday at 9AM" or whatever suits you.
-  steps: Step[];
-  actions: Action[];
+  providers: Provider[];
 }

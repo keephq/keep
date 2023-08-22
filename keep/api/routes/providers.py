@@ -1,15 +1,18 @@
 import json
 import logging
+import time
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+import jwt
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.base.provider_exceptions import GetAlertException
@@ -201,7 +204,10 @@ def test_provider(
 
 @router.delete("/{provider_type}/{provider_id}")
 def delete_provider(
-    provider_type: str, provider_id: str, tenant_id: str = Depends(verify_bearer_token)
+    provider_type: str,
+    provider_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
 ):
     logger.info(
         "Deleting provider",
@@ -211,21 +217,29 @@ def delete_provider(
         },
     )
     secret_manager = SecretManagerFactory.get_secret_manager()
-    secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
     try:
-        secret_manager.delete_secret(secret_name)
+        provider = session.exec(
+            select(Provider).where(
+                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+            )
+        ).one()
+        secret_manager.delete_secret(provider.configuration_key)
+        session.delete(provider)
+        session.commit()
     except Exception as exc:
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")
         pass
-    logger.info("Deleted provider", extra={"secret_name": secret_name})
+    logger.info("Deleted provider", extra={"provider_id": provider_id})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
 
 @router.post("/install")
 async def install_provider(
+    request: Request,
     provider_info: dict = Body(...),
     tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
 ):
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
@@ -251,10 +265,26 @@ async def install_provider(
             provider_id, provider_type, provider_config
         )
         secret_manager = SecretManagerFactory.get_secret_manager()
+        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_unique_id}",
+            secret_name=secret_name,
             secret_value=json.dumps(provider_config),
         )
+        token = request.headers.get("Authorization").split(" ")[1]
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        installed_by = decoded_token.get("email")
+        # add the provider to the db
+        provider = Provider(
+            id=provider_unique_id,
+            tenant_id=tenant_id,
+            name=provider_name,
+            type=provider_type,
+            installed_by=installed_by,
+            installation_time=time.time(),
+            configuration_key=secret_name,
+        )
+        session.add(provider)
+        session.commit()
         return JSONResponse(
             status_code=200,
             content={

@@ -7,6 +7,7 @@ import logging
 import os
 from dataclasses import fields
 
+from keep.api.core.db import get_installed_providers
 from keep.api.models.provider import Provider
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -198,39 +199,30 @@ class ProvidersFactory:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
 
-        # TODO: installed providers should be kept in the DB
-        # but for now we just fetch it from the secret manager
+        installed_providers = get_installed_providers(tenant_id)
+        providers = []
         secret_manager = SecretManagerFactory.get_secret_manager()
-        installed_providers_secrets = secret_manager.list_secrets(
-            prefix=f"{tenant_id}_"
-        )
-        installed_providers = []
-        for provider_secret in installed_providers_secrets:
-            secret_split = provider_secret.split("_")
-            if len(provider_secret.split("_")) == 3:
-                provider_type = secret_split[1]
-                provider_id = secret_split[2]
-                details = (
-                    secret_manager.read_secret(
-                        provider_secret.split("/")[-1], is_json=True
-                    )
-                    if include_details
-                    else None
+        for p in installed_providers:
+            provider = next(
+                filter(
+                    lambda provider: provider.type == p.type,
+                    all_providers,
+                ),
+                None,
+            )
+            if not provider:
+                logger.warning(
+                    f"Installed provider {provider_type} does not exist anymore?"
                 )
-                provider = next(
-                    filter(
-                        lambda provider: provider.type == provider_type,
-                        all_providers,
-                    ),
-                    None,
+                continue
+            provider_copy = provider.copy()
+            provider_copy.id = p.id
+            provider_copy.details = (
+                secret_manager.read_secret(
+                    secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                 )
-                if not provider:
-                    logger.warning(
-                        f"Installed provider {provider_type} does not exist anymore?"
-                    )
-                    continue
-                provider_copy = provider.copy()
-                provider_copy.id = provider_id
-                provider_copy.details = details
-                installed_providers.append(provider_copy)
-        return installed_providers
+                if include_details
+                else {}
+            )
+            providers.append(provider_copy)
+        return providers

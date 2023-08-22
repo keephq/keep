@@ -1,31 +1,32 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
 
 
-class WorkflowProvider(BaseModel):
-    provider_id: str
-    provider_type: str
-    config: dict
-
-
-class WorkflowCondition(BaseModel):
-    name: str
+class ProviderDTO(BaseModel):
     type: str
-    value: str
-    compare_to: str
-
-
-class WorkflowStep(BaseModel):
+    id: str | None  # if not installed - no id
     name: str
-    provider: WorkflowProvider
-    condition: Optional[List[WorkflowCondition]]
+    installed: bool
 
 
 class WorkflowDTO(BaseModel):
     id: str
     description: Optional[str] = None
-    owners: List[str]
+    created_by: str
+    creation_time: datetime
+    triggers: List[str] = None
     interval: int
-    steps: List[WorkflowStep]
-    actions: List[WorkflowStep]
+    providers: List[ProviderDTO]
+
+
+class WorkflowExecutionDTO(BaseModel):
+    id: str
+    workflow_id: str
+    started: datetime
+    triggered_by: str
+    status: str
+    logs: Optional[str]
+    error: Optional[str]
+    execution_time: Optional[int]

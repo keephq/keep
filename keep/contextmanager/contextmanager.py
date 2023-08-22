@@ -1,3 +1,4 @@
+# TODO - refactor context manager to support multitenancy in a more robust way
 import json
 import logging
 import os
@@ -33,8 +34,9 @@ class ContextManager:
 
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
     @staticmethod
-    def get_instance() -> "ContextManager":
-        tenant_id = get_tenant_id()
+    def get_instance(tenant_id=None) -> "ContextManager":
+        if not tenant_id:
+            tenant_id = get_tenant_id()
         context_manager_id = get_context_manager_id()
         if context_manager_id not in ContextManager.__instances:
             ContextManager.__instances[context_manager_id] = ContextManager(tenant_id)
