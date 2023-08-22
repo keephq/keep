@@ -25,9 +25,10 @@ const DragAndDrop: React.FC = () => {
       });
 
       if (response.ok) {
-        setError(null); // Clear any previous errors
+        // managed to upload the workflow
+        setError(null);
         fileInputRef.current.value = null;
-        // You can refresh the data or take other actions here
+        window.location.reload();
       } else {
         const errorMessage = await response.text();
         setError(errorMessage); // Set the error message

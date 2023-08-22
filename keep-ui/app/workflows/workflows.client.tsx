@@ -10,7 +10,7 @@ import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import Image from 'next/image';
-import { PlayIcon, ArrowDownTrayIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { PlayIcon, ArrowDownTrayIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import DragAndDrop from "./dragndrop";
 import NoWorkflows from "./noworfklows";
@@ -28,6 +28,8 @@ function copyToClipboard(text) {
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
+  const apiUrl = getApiURL();
+  const { data: session, status, update } = useSession();
   const uniqueProviders = new Set();
   const router = useRouter();
 
@@ -35,6 +37,26 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/${workflow.id}`);
   };
 
+  const handleDeleteClick = async (event) => {
+    try {
+      event.stopPropagation();
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Workflow deleted successfully
+        window.location.reload();
+      } else {
+        console.error("Failed to delete workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while deleting workflow", error);
+    }
+  };
 
   // Prepare the unique list of providers' icons
   const icons = [...workflow.providers].map((provider) => {
@@ -63,12 +85,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         <div className="flex space-x-2">
           <button
             className="p-1 rounded-full hover:bg-gray-200"
-            onClick={() => {
-              // Handle the run action here
-            }}
-            title="Run Workflow"
+            onClick={handleDeleteClick}
+            title="Delete Workflow"
           >
-            <PlayIcon className="h-6 w-6 text-purple-600" />
+            <TrashIcon className="h-6 w-6 text-purple-600" />
           </button>
           <button
             className="p-1 rounded-full hover:bg-gray-200"
@@ -93,9 +113,28 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <div className="flex">{icons}</div>
       <p>Created by: {workflow.created_by}</p>
       <p>Created at: {workflow.creation_time}</p>
-      <p>Triggers: </p>
+      <p>All providers installed properly: </p>
       <p>Last execution time: {workflow.interval}</p>
       <p>Last execution status: </p>
+      <p>Triggers:</p>
+      {workflow.triggers.length > 0 ? (
+        <div className="border border-gray-300 p-2">
+          {workflow.triggers.map((trigger, index) => (
+            <div key={index} className="mb-2">
+              <span className="font-semibold">Trigger type: {trigger.type}<br></br>Filters:</span>
+              {trigger.filters.map((filter, filterIndex) => (
+                <span key={filterIndex} className="mr-1">
+                  <br></br>
+                  - {filter.key}={filter.value}
+                </span>
+              ))}
+            </div>
+        ))}
+  </div>
+) : (
+  <p className="border border-gray-300 p-2">This workflow doesn't have triggers yet.</p>
+)}
+
     </div>
   );
 }
@@ -114,10 +153,13 @@ export default function WorkflowsPage() {
   };
 
 
+  // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
-      `${apiUrl}/workflows`,
-      (url) => fetcher(url, session?.accessToken!)
+    status === "authenticated" ? `${apiUrl}/workflows` : null,
+    (url) => fetcher(url, session?.accessToken!)
   );
+
+  if (isLoading || !data) return <Loading />;
 
   if (error) {
       return (
@@ -131,8 +173,6 @@ export default function WorkflowsPage() {
           </Callout>
       );
   }
-  if (status === "loading" || isLoading || !data) return <Loading />;
-  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
   return (
     <div>

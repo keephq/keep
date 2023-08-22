@@ -318,9 +318,9 @@ class Parser:
             workflow (dict): _description_
         """
         actions_providers = [
-            action.get("provider") for action in workflow.get("actions")
+            action.get("provider") for action in workflow.get("actions", [])
         ]
-        steps_providers = [step.get("provider") for step in workflow.get("steps")]
+        steps_providers = [step.get("provider") for step in workflow.get("steps", [])]
         providers = actions_providers + steps_providers
         providers = [
             {
@@ -330,3 +330,17 @@ class Parser:
             for p in providers
         ]
         return providers
+
+    def get_triggers_from_workflow(self, workflow: dict):
+        """extract the trigger names from a worklow
+
+        Args:
+            workflow (dict): _description_
+        """
+        # on:
+        # - type: alert
+        # filters:
+        # - key: alert.source
+        #   value: awscloudwatch
+        triggers = workflow.get("triggers", [])
+        return triggers
