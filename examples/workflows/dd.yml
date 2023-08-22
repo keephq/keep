@@ -42,5 +42,5 @@ providers:
     authentication:
   datadog:
     authentication:
-      api_key: 350d64edb07f5b4d3bf8383704e4b467
-      app_key: 088d01168819e82e6ef41cd80920c2f50beb7fa1
+      api_key:
+      app_key:

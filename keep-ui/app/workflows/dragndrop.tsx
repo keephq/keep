@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { getApiURL } from "../../utils/apiUrl";
 import { useSession } from "../../utils/customAuth";
 
+
 const DragAndDrop: React.FC = () => {
   const [isDragActive, setIsDragActive] = useState(false);
   const apiUrl = getApiURL();
@@ -58,9 +59,9 @@ const DragAndDrop: React.FC = () => {
 
   return (
     <div
-      className={`flex flex-col items-center justify-center h-full w-1/2 mx-auto p-4 border border-gray-300 rounded-lg ${
+      className={`flex flex-col items-center justify-center h-full w-1/3 mx-auto p-4 border border-gray-300 rounded-lg ${
         isDragActive ? "border-blue-500" : ""
-      }`}
+      } my-4`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={(e) => {
@@ -74,16 +75,6 @@ const DragAndDrop: React.FC = () => {
       }}
     >
         <>
-          <div className="mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 text-gray-400"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              {/* SVG path for the upload icon */}
-            </svg>
-          </div>
           <p className="mb-2">Drag and drop a workflow here</p>
           <p className="mb-2">or</p>
           <label className="cursor-pointer">
@@ -97,6 +88,11 @@ const DragAndDrop: React.FC = () => {
               }}
             />
           </label>
+          <div className="mb-4 mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          </div>
         </>
         {error && <p className="text-red-500 mt-4">Failed to upload the file: {error}<br></br>Please try again with another file.</p>}
     </div>
