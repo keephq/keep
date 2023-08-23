@@ -11,6 +11,7 @@ from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
 from keep.providers.providers_factory import ProvidersFactory
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -169,6 +170,7 @@ async def receive_event(
             )
             session.add(alert)
             session.commit()
+            formatted_events.event_id = alert.id
         elif isinstance(formatted_events, list):
             # Support multiple alerts in one event
             for formatted_event in formatted_events:
@@ -180,11 +182,19 @@ async def receive_event(
                     provider_id=provider_id,
                 )
                 session.add(alert)
+                formatted_event.event_id = alert.id
             session.commit()
         logger.info(
             "New alert created successfully",
             extra={"provider_type": provider_type, "event": event},
         )
+        # Now run any workflow that should run based on this alert
+        # TODO: this should publish event
+        workflow_manager = WorkflowManager.get_instance()
+        if type(formatted_events) is AlertDto:
+            formatted_events = [formatted_events]
+        # insert the events to the workflow manager process queue
+        workflow_manager.insert_events(tenant_id, formatted_events)
         return {"status": "ok"}
     except Exception as e:
         logger.warn("Failed to create new alert", extra={"error": str(e)})

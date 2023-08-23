@@ -20,6 +20,7 @@ class Workflow:
     workflow_owners: typing.List[str]
     workflow_tags: typing.List[str]
     workflow_interval: int
+    workflow_triggers: typing.Optional[typing.List[dict]]
     workflow_steps: typing.List[Step]
     workflow_actions: typing.List[Step]
     workflow_description: str = None

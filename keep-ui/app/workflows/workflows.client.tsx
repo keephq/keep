@@ -15,6 +15,7 @@ import React from "react";
 import DragAndDrop from "./dragndrop";
 import NoWorkflows from "./noworfklows";
 import { useRouter } from 'next/navigation'
+import Link from "next/link";
 
 function copyToClipboard(text) {
   const textarea = document.createElement("textarea");
@@ -117,23 +118,73 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <p>Last execution time: {workflow.interval}</p>
       <p>Last execution status: </p>
       <p>Triggers:</p>
-      {workflow.triggers.length > 0 ? (
-        <div className="border border-gray-300 p-2">
-          {workflow.triggers.map((trigger, index) => (
-            <div key={index} className="mb-2">
-              <span className="font-semibold">Trigger type: {trigger.type}<br></br>Filters:</span>
-              {trigger.filters.map((filter, filterIndex) => (
-                <span key={filterIndex} className="mr-1">
-                  <br></br>
-                  - {filter.key}={filter.value}
-                </span>
-              ))}
-            </div>
-        ))}
-  </div>
-) : (
-  <p className="border border-gray-300 p-2">This workflow doesn't have triggers yet.</p>
-)}
+        {workflow.triggers.length > 0 ? (
+          <div className="border border-gray-300 p-2">
+            {workflow.triggers.map((trigger, index) => (
+              <div key={index} className="mb-2">
+                <span className="font-semibold">Trigger type: {trigger.type}</span>
+                {trigger.type === "alert" ? (
+                  <>
+                    <br />
+                    Filters:
+                    {trigger.filters.map((filter, filterIndex) => (
+                      <span key={filterIndex} className="mr-1">
+                        <br />
+                        - {filter.key}={filter.value}
+                      </span>
+                    ))}
+                  </>
+                ) : trigger.type === "interval" ? (
+                  <>
+                    <br />
+                    Interval: <br /> - {trigger.value} seconds
+                  </>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="border border-gray-300 p-2">This workflow doesn't have triggers yet.</p>
+        )}
+
+    <p>Providers:</p>
+{workflow.providers.reduce((uniqueProviders, provider) => {
+  if (!uniqueProviders.includes(provider.name)) {
+    uniqueProviders.push(provider.name);
+    return uniqueProviders;
+  }
+  return uniqueProviders;
+}, []).map((uniqueProviderName) => {
+  const provider = workflow.providers.find(p => p.name === uniqueProviderName);
+  return (
+    <p key={provider.id} className="mt-2">
+      {provider.installed ? (
+        <span className="text-green-500">- {provider.name} (installed)</span>
+      ) : (
+        <span>
+          <span className="text-red-500">- {provider.name}</span>
+          <Link
+            href={{
+              pathname: "/providers",
+              query: {
+                provider_type: provider.type,
+                provider_name: provider.name,
+              },
+            }}
+            passHref
+            className="text-blue-500 underline"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            (click to install)
+          </Link>
+        </span>
+      )}
+    </p>
+  );
+})}
+
 
     </div>
   );

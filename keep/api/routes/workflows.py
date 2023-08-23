@@ -90,7 +90,7 @@ def run_workflow(
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     context_manager = ContextManager.get_instance()
     workflowstore = WorkflowStore()
-    workflowmanager = WorkflowManager()
+    workflowmanager = WorkflowManager.get_instance()
     workflow = workflowstore.get_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     # Update the context manager with the workflow context
     if body:
