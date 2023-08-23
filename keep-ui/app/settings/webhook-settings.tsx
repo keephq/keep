@@ -18,12 +18,12 @@ export const WebhookSettings = () => {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<Webhook>(
     `${apiUrl}/settings/webhook`,
-    (url) => fetcher(url, session?.accessToken!)
+    (url) => fetcher(session ? url : null, session?.accessToken!)
   );
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated...</div>;
-  if (error) return <div>{error}</div>;
+  if (error) return <div>{error.message}</div>;
   if (isLoading) return <Loading />;
 
   return (
