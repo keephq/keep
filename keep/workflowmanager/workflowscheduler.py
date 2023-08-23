@@ -4,7 +4,14 @@ import threading
 import time
 import typing
 
-from keep.api.core.db import finish_workflow_execution, get_workflows_that_should_run
+from keep.api.core.db import (
+    create_workflow_execution,
+    finish_workflow_execution,
+    get_session,
+    get_workflows_that_should_run,
+)
+from keep.api.models.db.workflow import WorkflowExecution
+from keep.contextmanager.contextmanager import ContextManager
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -15,48 +22,108 @@ class WorkflowScheduler:
         self.threads = []
         self.workflow_manager = workflow_manager
         self.workflow_store = WorkflowStore()
+        # all workflows that needs to be run due to alert event
+        self.workflows_to_run = []
         self._stop = False
 
-    def start(self):
+    async def start(self):
         self.logger.info("Starting workflows scheduler")
         thread = threading.Thread(target=self._start)
         thread.start()
         self.threads.append(thread)
         self.logger.info("Workflows scheduler started")
 
+    def _handle_interval_workflows(self):
+        workflows = []
+        try:
+            # get all workflows that should run due to interval
+            workflows = get_workflows_that_should_run()
+        except Exception as e:
+            self.logger.error(f"Error getting workflows that should run: {e}")
+            pass
+        for workflow in workflows:
+            self.logger.info("Running workflow on background")
+            try:
+                workflow_execution_id = workflow.get("workflow_execution_id")
+                tenant_id = workflow.get("tenant_id")
+                workflow_id = workflow.get("workflow_id")
+                workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
+            except Exception as e:
+                self.logger.error(f"Error getting workflow: {e}")
+                finish_workflow_execution(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    execution_id=workflow_execution_id,
+                    status="error",
+                    error=f"Error getting workflow: {e}",
+                )
+                continue
+            thread = threading.Thread(
+                target=self._run_workflow,
+                args=[tenant_id, workflow_id, workflow, workflow_execution_id],
+            )
+            thread.start()
+            self.threads.append(thread)
+
+    def _run_workflow(
+        self,
+        tenant_id,
+        workflow_id,
+        workflow: Workflow,
+        workflow_execution_id: str,
+        **kwargs,
+    ):
+        self.logger.info(f"Running workflow {workflow.workflow_id}...")
+        try:
+            cm = ContextManager.get_instance()
+            self.workflow_manager._run_workflow(workflow)
+        except Exception as e:
+            self.logger.exception(f"Failed to run alert {workflow.workflow_id}...")
+            finish_workflow_execution(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                execution_id=workflow_execution_id,
+                status="error",
+                error=str(e),
+            )
+
+        finish_workflow_execution(
+            tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            execution_id=workflow_execution_id,
+            status="success",
+            error=None,
+        )
+        self.logger.info(f"Workflow {workflow.workflow_id} ran")
+
+    def _handle_event_workflows(self):
+        # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
+        workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
+        for workflow_to_run in workflows_to_run:
+            self.logger.info("Running event workflow on background")
+            workflow = workflow_to_run.get("workflow")
+            workflow_id = workflow_to_run.get("workflow_id")
+            tenant_id = workflow_to_run.get("tenant_id")
+            event = workflow_to_run.get("event")
+            workflow_execution_id = create_workflow_execution(
+                workflow_id=workflow_id,
+                tenant_id=tenant_id,
+                triggered_by=f"type:alert name:{event.name} id:{event.id}",
+            )
+            thread = threading.Thread(
+                target=self._run_workflow,
+                args=[tenant_id, workflow_id, workflow, workflow_execution_id],
+            )
+            thread.start()
+            self.threads.append(thread)
+
     def _start(self):
         self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
             self.logger.info("Getting workflows that should run...")
-            workflows = []
-            try:
-                workflows = get_workflows_that_should_run()
-            except Exception as e:
-                self.logger.error(f"Error getting workflows that should run: {e}")
-                pass
-            for workflow in workflows:
-                self.logger.info("Running workflow on background")
-                try:
-                    workflow = self.workflow_store.get_workflow(
-                        workflow.get("tenant_id"), workflow.get("workflow_id")
-                    )
-                except Exception as e:
-                    self.logger.error(f"Error getting workflow: {e}")
-                    finish_workflow_execution(
-                        tenant_id=workflow.get("tenant_id"),
-                        workflow_id=workflow.get("workflow_id"),
-                        execution_id=workflow.get("execution_id"),
-                        status="error",
-                        error=f"Error getting workflow: {e}",
-                    )
-                    continue
-                thread = threading.Thread(
-                    target=self.workflow_manager._run_workflow,
-                    args=[workflow],
-                )
-                thread.start()
-                self.threads.append(thread)
+            self._handle_interval_workflows()
+            self._handle_event_workflows()
             self.logger.info("Sleeping until next iteration")
             time.sleep(1)
         self.logger.info("Workflows scheduler stopped")

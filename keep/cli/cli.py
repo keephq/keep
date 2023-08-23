@@ -196,7 +196,8 @@ def run(
             "args": sys.argv,
         },
     )
-    workflow_manager = WorkflowManager(interval)
+    # this should be fixed
+    workflow_manager = WorkflowManager.get_instance()
     workflow_store = WorkflowStore()
     workflows = workflow_store.get_workflows(
         alerts_directory or alert_url, providers_file

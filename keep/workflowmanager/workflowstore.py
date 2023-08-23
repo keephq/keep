@@ -28,13 +28,14 @@ class WorkflowStore:
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
+        interval = self.parser._parse_interval(workflow)
         workflow = add_workflow(
             id=str(uuid.uuid4()),
             name=workflow_id,
             tenant_id=tenant_id,
             description=workflow.get("description"),
             created_by=created_by,
-            interval=workflow.get("interval", 0),
+            interval=interval,
             workflow_raw=yaml.dump(workflow),
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
@@ -74,8 +75,13 @@ class WorkflowStore:
         workflow_yaml = yaml.safe_load(workflow)
         self._load_providers_from_installed_providers(tenant_id)
         workflow = self.parser.parse(workflow_yaml)
-        if workflow:
-            return workflow
+        if len(workflow) > 1:
+            raise HTTPException(
+                status_code=500,
+                detail=f"More than one workflow with id {workflow_id} found",
+            )
+        elif workflow:
+            return workflow[0]
         else:
             raise HTTPException(
                 status_code=404,

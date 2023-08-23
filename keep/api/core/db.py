@@ -128,19 +128,20 @@ def try_create_single_tenant(tenant_id: str) -> None:
 
 
 def create_workflow_execution(
-    session: Session, workflow_id: str, tenant_id: str, triggered_by: str
+    workflow_id: str, tenant_id: str, triggered_by: str
 ) -> WorkflowExecution:
-    workflow_execution = WorkflowExecution(
-        id=str(uuid4()),
-        workflow_id=workflow_id,
-        tenant_id=tenant_id,
-        started=datetime.utcnow(),
-        triggered_by=triggered_by,
-        status="in_progress",
-    )
-    session.add(workflow_execution)
-    session.commit()
-    return workflow_execution
+    with Session(engine) as session:
+        workflow_execution = WorkflowExecution(
+            id=str(uuid4()),
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            started=datetime.utcnow(),
+            triggered_by=triggered_by,
+            status="in_progress",
+        )
+        session.add(workflow_execution)
+        session.commit()
+        return workflow_execution.id
 
 
 def get_last_completed_execution(
@@ -183,8 +184,8 @@ def get_workflows_that_should_run():
                 ).first()
 
                 if not ongoing_execution:
-                    workflow_execution = create_workflow_execution(
-                        session, workflow.id, workflow.tenant_id, "scheduler"
+                    workflow_execution_id = create_workflow_execution(
+                        workflow.id, workflow.tenant_id, "scheduler"
                     )
                     # the workflow obejct itself is only under this session so we need to use the
                     # raw
@@ -192,7 +193,7 @@ def get_workflows_that_should_run():
                         {
                             "tenant_id": workflow.tenant_id,
                             "workflow_id": workflow.id,
-                            "execution_id": workflow_execution.id,
+                            "workflow_execution_id": workflow_execution_id,
                         }
                     )
                 # if there is ongoing execution, check if it is running for more than 60 minutes and if so
@@ -201,8 +202,8 @@ def get_workflows_that_should_run():
                     ongoing_execution.status = "timeout"
                     session.commit()
                     # re-create the execution
-                    workflow_execution = create_workflow_execution(
-                        session, workflow.id, workflow.tenant_id, "scheduler"
+                    workflow_execution_id = create_workflow_execution(
+                        workflow.id, workflow.tenant_id, "scheduler"
                     )
                     # the workflow obejct itself is only under this session so we need to use the
                     # raw
@@ -210,7 +211,7 @@ def get_workflows_that_should_run():
                         {
                             "tenant_id": workflow.tenant_id,
                             "workflow_id": workflow.id,
-                            "execution_id": workflow_execution.id,
+                            "workflow_execution_id": workflow_execution_id,
                         }
                     )
                 else:

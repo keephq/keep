@@ -12,8 +12,10 @@ type Filter = {
 
 type Trigger = {
   type: string;
-  filters: Filter[];
+  filters?: Filter[];
+  value?: string;
 };
+
 
 export type Workflow = {
   id: string;

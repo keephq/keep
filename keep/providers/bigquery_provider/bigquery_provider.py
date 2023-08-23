@@ -14,7 +14,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 @dataclasses.dataclass
-class BigQueryProviderAuthConfig:
+class BigqueryProviderAuthConfig:
     """
     BigQuery authentication configuration.
     """

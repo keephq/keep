@@ -16,6 +16,10 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 logger = logging.getLogger(__name__)
 
 
+class ProviderConfigurationException(Exception):
+    pass
+
+
 class ProvidersFactory:
     @staticmethod
     def get_provider_class(provider_type: str) -> BaseProvider:
@@ -66,7 +70,7 @@ class ProvidersFactory:
         except TypeError as exc:
             error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
             logging.getLogger(__name__).error(error_message)
-            raise exc
+            raise ProviderConfigurationException(exc)
         except Exception as exc:
             raise exc
 

@@ -34,12 +34,17 @@ class ContextManager:
 
     # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
     @staticmethod
-    def get_instance(tenant_id=None) -> "ContextManager":
+    def get_instance(tenant_id=None, workflow_execution_id=None) -> "ContextManager":
         if not tenant_id:
             tenant_id = get_tenant_id()
         context_manager_id = get_context_manager_id()
         if context_manager_id not in ContextManager.__instances:
             ContextManager.__instances[context_manager_id] = ContextManager(tenant_id)
+
+        if workflow_execution_id:
+            ContextManager.__instances[
+                context_manager_id
+            ].workflow_execution_id = workflow_execution_id
         return ContextManager.__instances[context_manager_id]
 
     @staticmethod

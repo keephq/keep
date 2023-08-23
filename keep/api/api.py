@@ -140,7 +140,8 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
-        wf_manager = WorkflowManager()
+        # initialize a workflow manager
+        wf_manager = WorkflowManager.get_instance()
         asyncio.create_task(wf_manager.start())
 
     keep.api.observability.setup(app)
