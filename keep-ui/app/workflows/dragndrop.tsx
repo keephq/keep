@@ -8,10 +8,10 @@ const DragAndDrop: React.FC = () => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
 
-  const onDrop = async (files) => {
+  const onDrop = async (files: any) => {
     setIsDragActive(false);
     const formData = new FormData();
     formData.append("file", files[0]);
@@ -28,32 +28,38 @@ const DragAndDrop: React.FC = () => {
       if (response.ok) {
         // managed to upload the workflow
         setError(null);
-        fileInputRef.current.value = null;
+        if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         window.location.reload();
       } else {
         const errorMessage = await response.text();
         setError(errorMessage); // Set the error message
-        fileInputRef.current.value = null;
+        if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
         console.error("Failed to upload file");
       }
     } catch (error) {
       setError("An error occurred during file upload");
-      fileInputRef.current.value = null;
+      if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       console.error("An error occurred during file upload", error);
     }
   };
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragActive(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragActive(false);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
 
