@@ -106,6 +106,7 @@ class WorkflowManager:
                             "workflow": workflow,
                             "workflow_id": workflow_model.id,
                             "tenant_id": tenant_id,
+                            "triggered_by": "alert",
                             "event": event,
                         }
                     )

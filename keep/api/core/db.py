@@ -242,39 +242,32 @@ def add_workflow(
 
 
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
-    from sqlalchemy import select, func
-
-
-from sqlalchemy.orm import aliased
-
-
-def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
-        latest_executions_subquery = (
+        latest_execution_cte = (
             select(
                 WorkflowExecution.workflow_id,
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
             .group_by(WorkflowExecution.workflow_id)
-            .subquery()
+            .cte("latest_execution_cte")
         )
 
         workflows_with_last_execution_query = (
             select(
                 Workflow,
-                latest_executions_subquery.c.last_execution_time,
+                latest_execution_cte.c.last_execution_time,
                 WorkflowExecution.status,
             )
             .outerjoin(
-                latest_executions_subquery,
-                Workflow.id == latest_executions_subquery.c.workflow_id,
+                latest_execution_cte,
+                Workflow.id == latest_execution_cte.c.workflow_id,
             )
             .outerjoin(
                 WorkflowExecution,
                 and_(
                     Workflow.id == WorkflowExecution.workflow_id,
                     WorkflowExecution.started
-                    == latest_executions_subquery.c.last_execution_time,
+                    == latest_execution_cte.c.last_execution_time,
                 ),
             )
             .where(Workflow.tenant_id == tenant_id)
