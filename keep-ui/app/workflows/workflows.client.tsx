@@ -17,7 +17,7 @@ import NoWorkflows from "./noworfklows";
 import { useRouter } from 'next/navigation'
 import Link from "next/link";
 
-function copyToClipboard(text) {
+function copyToClipboard(text: string) {
   const textarea = document.createElement("textarea");
   textarea.value = text;
   document.body.appendChild(textarea);
@@ -38,7 +38,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/${workflow.id}`);
   };
 
-  const handleDeleteClick = async (event) => {
+  const handleDeleteClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     try {
       event.stopPropagation();
       const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
@@ -123,7 +123,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             {workflow.triggers.map((trigger, index) => (
               <div key={index} className="mb-2">
                 <span className="font-semibold">Trigger type: {trigger.type}</span>
-                {trigger.type === "alert" ? (
+                {trigger.type === "alert" && trigger.filters  ? (
                   <>
                     <br />
                     Filters:
@@ -148,7 +148,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         )}
 
     <p>Providers:</p>
-{workflow.providers.reduce((uniqueProviders, provider) => {
+{workflow.providers.reduce((uniqueProviders: string[], provider) => {
   if (!uniqueProviders.includes(provider.name)) {
     uniqueProviders.push(provider.name);
     return uniqueProviders;
@@ -156,6 +156,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   return uniqueProviders;
 }, []).map((uniqueProviderName) => {
   const provider = workflow.providers.find(p => p.name === uniqueProviderName);
+  if (!provider) return null;
   return (
     <p key={provider.id} className="mt-2">
       {provider.installed ? (
@@ -235,7 +236,7 @@ export default function WorkflowsPage() {
             <DragAndDrop/>
             <div className="grid grid-cols-3 gap-4 mt-10">
               {data.map((workflow) => (
-                <WorkflowTile key={workflow.workflow_id} workflow={workflow} />
+                <WorkflowTile key={workflow.id} workflow={workflow} />
               ))}
             </div>
           </div>
