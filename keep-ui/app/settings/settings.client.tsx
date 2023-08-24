@@ -1,10 +1,16 @@
 "use client";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { GlobeAltIcon, UserGroupIcon } from "@heroicons/react/24/outline";
-import { UsersSettings } from "./users-settings";
-import { WebhookSettings } from "./webhook-settings";
+import UsersSettings from "./users-settings";
+import WebhookSettings from "./webhook-settings";
+import { useSession } from "utils/customAuth";
+import Loading from "app/loading";
 
 export default function SettingsPage() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading" || status === "unauthenticated") return <Loading />;
+
   /**
    * TODO: Refactor this page to use pages
    * Right now we load all components at once when we load the main settings page.
@@ -19,10 +25,10 @@ export default function SettingsPage() {
       </TabList>
       <TabPanels>
         <TabPanel>
-          <UsersSettings />
+          <UsersSettings accessToken={session?.accessToken!} currentUser={session?.user} />
         </TabPanel>
         <TabPanel>
-          <WebhookSettings />
+          <WebhookSettings accessToken={session?.accessToken!} />
         </TabPanel>
       </TabPanels>
     </TabGroup>

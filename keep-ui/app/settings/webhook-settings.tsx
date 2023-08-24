@@ -13,19 +13,22 @@ interface Webhook {
   apiKey: string;
 }
 
-export const WebhookSettings = () => {
-  const { data: session, status } = useSession();
+interface Props {
+  accessToken: string;
+}
+
+export default function WebhookSettings({ accessToken }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<Webhook>(
     `${apiUrl}/settings/webhook`,
-    (url) => fetcher(url, session?.accessToken!)
+    (url) => fetcher(url, accessToken)
   );
 
-  if (status === "loading" || isLoading || error) return <Loading />;
-  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
+  if (!data || isLoading) return <Loading />;
+  if (error) return <div>{error.message}</div>;
 
   return (
-    <div className="mt-2.5">
+    <div className="mt-10">
       <Title>Webhook Settings</Title>
       <Subtitle>View your tenant webhook settings</Subtitle>
       <Card className="mt-2.5">
@@ -35,4 +38,4 @@ export const WebhookSettings = () => {
       </Card>
     </div>
   );
-};
+}
