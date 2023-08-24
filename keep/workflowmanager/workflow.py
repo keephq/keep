@@ -100,11 +100,14 @@ class Workflow:
             else WorkflowStatus.RESOLVED.value
         )
         # TODO: state management should be done in db (how will it work distributed?)
-        # self.context_manager.set_last_workflow_run(
-        #    workflow_id=self.workflow_id,
-        #    workflow_context=self._get_workflow_context(),
-        #    workflow_status=workflow_status,
-        # )
+        self.context_manager.set_last_workflow_run(
+            workflow_id=self.workflow_id,
+            workflow_context={
+                "steps_context": self.context_manager.steps_context,
+                "actions_context": self.context_manager.actions_context,
+            },
+            workflow_status=workflow_status,
+        )
         self.logger.debug(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 

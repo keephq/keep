@@ -45,7 +45,12 @@ class FilesystemStorageManager(BaseStorageManager):
         if isinstance(file_content, dict):
             file_content = json.dumps(file_content, default=str)
 
-        full_path = os.path.join(self.directory, tenant_id, file_name)
+        tenant_directory = os.path.join(self.directory, tenant_id)
+        os.makedirs(
+            tenant_directory, exist_ok=True
+        )  # Create tenant directory if not exist
+
+        full_path = os.path.join(tenant_directory, file_name)
         with open(full_path, "w") as f:
             f.write(file_content)
 

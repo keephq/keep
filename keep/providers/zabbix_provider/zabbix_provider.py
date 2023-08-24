@@ -1,8 +1,8 @@
 """
 Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
-import datetime
 import dataclasses
+import datetime
 import json
 import os
 import random
@@ -11,6 +11,7 @@ import pydantic
 import requests
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -46,11 +47,15 @@ class ZabbixProvider(BaseProvider):
     """
 
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
-    KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = "zabbix_provider_script.js"  # zabbix mediatype script file
+    KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
+        "zabbix_provider_script.js"  # zabbix mediatype script file
+    )
     KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE = 4
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         """
@@ -114,22 +119,25 @@ class ZabbixProvider(BaseProvider):
         # TODO: this can be done once when loading the provider file
         self.logger.info("Reading webhook JS script file")
         __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+            os.path.join(os.getcwd(), os.path.dirname(__file__))
+        )
 
-        with open(os.path.join(__location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME)) as f:
+        with open(
+            os.path.join(
+                __location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME
+            )
+        ) as f:
             script = f.read()
 
         self.logger.info("Creating or updating webhook")
-        mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}" #-{tenant_id.replace('-', '')}
+        mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}"  # -{tenant_id.replace('-', '')}
 
         self.logger.info("Getting existing media types")
         existing_mediatypes = self.__send_request(
             "mediatype.get",
             {
                 "output": ["mediatypeid", "name"],
-                "filter": {
-                    "type": [ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE]
-                }
+                "filter": {"type": [ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE]},
             },
         )
 
@@ -137,7 +145,9 @@ class ZabbixProvider(BaseProvider):
 
         self.logger.info("Got existing media types")
         mediatype_list = [
-            mt for mt in existing_mediatypes.get("result", []) if mt["name"] == mediatype_name
+            mt
+            for mt in existing_mediatypes.get("result", [])
+            if mt["name"] == mediatype_name
         ]
 
         if mediatype_list:
