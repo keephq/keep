@@ -14,16 +14,15 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 
 
-@dataclass
 class BaseProvider(metaclass=abc.ABCMeta):
-    provider_id: str
-    provider_type: str = field(init=False)
-    config: ProviderConfig
-    # Should include {keep_webhook_api_url} and {keep_api_key} in the template string
-    webhook_template: Optional[str] = None
-    webhook_description: Optional[str] = None  # Describe how to connect the webhook
-
-    def __post_init__(self):
+    def __init__(
+        self,
+        context_manager: ContextManager,
+        provider_id: str,
+        config: ProviderConfig,
+        webhooke_template: Optional[str] = None,
+        webhook_description: Optional[str] = None,
+    ):
         """
         Initialize a provider.
 
@@ -31,11 +30,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
             provider_id (str): The provider id.
             **kwargs: Provider configuration loaded from the provider yaml file.
         """
-        # Initalize logger for every provider
+        self.provider_id = provider_id
+
+        self.config = config
+        self.webhooke_template = webhooke_template
+        self.webhook_description = webhook_description
         self.logger = logging.getLogger(self.__class__.__name__)
-        # this is a workaround since you can't pass the context manager to the post init itself
-        # so its being populated after the creation in ProvidersFactory
-        self.context_manager = None
+        self.context_manager = context_manager
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}

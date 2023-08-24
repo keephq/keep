@@ -119,9 +119,7 @@ class WorkflowManager:
         workflows_errors = []
         # If at least one workflow has an interval, run workflows using the scheduler,
         #   otherwise, just run it
-        if self.default_interval or any(
-            [Workflow.workflow_interval for Workflow in workflows]
-        ):
+        if any([Workflow.workflow_interval for Workflow in workflows]):
             # running workglows in scheduler mode
             self.logger.info(
                 "Found at least one workflow with an interval, running in scheduler mode"
@@ -129,9 +127,7 @@ class WorkflowManager:
             self.scheduler_mode = True
             # if the workflows doesn't have an interval, set the default interval
             for workflow in workflows:
-                workflow.workflow_interval = (
-                    workflow.workflow_interval or self.default_interval
-                )
+                workflow.workflow_interval = workflow.workflow_interval
             # This will halt until KeyboardInterrupt
             self.scheduler.run_workflows(workflows)
             self.logger.info("Workflow(s) scheduled")
