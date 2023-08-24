@@ -9,6 +9,7 @@ from dataclasses import fields
 
 from keep.api.core.db import get_installed_providers
 from keep.api.models.provider import Provider
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -51,7 +52,11 @@ class ProvidersFactory:
 
     @staticmethod
     def get_provider(
-        provider_id: str, provider_type: str, provider_config: dict, **kwargs
+        context_manager: ContextManager,
+        provider_id: str,
+        provider_type: str,
+        provider_config: dict,
+        **kwargs,
     ) -> BaseProvider:
         """
         Get the instantiated provider class according to the provider type.
@@ -66,7 +71,10 @@ class ProvidersFactory:
         provider_config = ProviderConfig(**provider_config)
 
         try:
-            return provider_class(provider_id=provider_id, config=provider_config)
+            provider = provider_class(provider_id=provider_id, config=provider_config)
+            # This is a workaround since you can pass the context manager to the post_init
+            provider.context_manager = context_manager
+            return provider
         except TypeError as exc:
             error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
             logging.getLogger(__name__).error(error_message)

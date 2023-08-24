@@ -151,7 +151,7 @@ def get_last_completed_execution(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
         .where(
-            (WorkflowExecution.status == "completed")
+            (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
         )
         .order_by(WorkflowExecution.started.desc())
@@ -306,3 +306,15 @@ def delete_workflow(tenant_id, workflow_id):
         if workflow:
             session.delete(workflow)
             session.commit()
+
+
+def get_workflow_id(tenant_id, workflow_name):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.name == workflow_name)
+        ).first()
+
+        if workflow:
+            return workflow.id

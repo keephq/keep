@@ -33,7 +33,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # Initalize logger for every provider
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.context_manager = ContextManager.get_instance()
+        # this is a workaround since you can't pass the context manager to the post init itself
+        # so its being populated after the creation in ProvidersFactory
+        self.context_manager = None
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}

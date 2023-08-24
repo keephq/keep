@@ -9,6 +9,7 @@ import google.auth
 from google.cloud import bigquery
 from pydantic.dataclasses import dataclass
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -41,8 +42,10 @@ class BigqueryProvider(BaseProvider):
     provider_id: str
     config: ProviderConfig
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         """

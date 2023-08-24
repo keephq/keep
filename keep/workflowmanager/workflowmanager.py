@@ -159,6 +159,9 @@ class WorkflowManager:
                 workflow.on_failure.provider_parameters = {"message": message}
                 workflow.on_failure.run()
             raise
+        finally:
+            # todo - state should be saved in db
+            workflow.context_manager.dump()
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:

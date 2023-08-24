@@ -14,31 +14,32 @@ class WorkflowStatus(enum.Enum):
     FIRING = "firing"
 
 
-@dataclass
 class Workflow:
-    workflow_id: str
-    workflow_owners: typing.List[str]
-    workflow_tags: typing.List[str]
-    workflow_interval: int
-    workflow_triggers: typing.Optional[typing.List[dict]]
-    workflow_steps: typing.List[Step]
-    workflow_actions: typing.List[Step]
-    workflow_description: str = None
-    on_failure: Step = None
-
-    def __post_init__(self):
+    def __init__(
+        self,
+        context_manager: ContextManager,
+        workflow_id: str,
+        workflow_owners: typing.List[str],
+        workflow_tags: typing.List[str],
+        workflow_interval: int,
+        workflow_triggers: typing.Optional[typing.List[dict]],
+        workflow_steps: typing.List[Step],
+        workflow_actions: typing.List[Step],
+        workflow_description: str = None,
+        on_failure: Step = None,
+    ):
+        self.workflow_id = workflow_id
+        self.workflow_owners = workflow_owners
+        self.workflow_tags = workflow_tags
+        self.workflow_interval = workflow_interval
+        self.workflow_triggers = workflow_triggers
+        self.workflow_steps = workflow_steps
+        self.workflow_actions = workflow_actions
+        self.workflow_description = workflow_description
+        self.on_failure = on_failure
+        self.context_manager = context_manager
         self.logger = logging.getLogger(__name__)
-        self.io_nandler = IOHandler()
-        self.context_manager = ContextManager.get_instance()
-
-    def _get_workflow_context(self):
-        return {
-            "workflow_id": self.workflow_id,
-            "workflow_owners": self.workflow_owners,
-            "workflow_tag": self.workflow_tags,
-            "workflow_steps_context": self.context_manager.steps_context,
-            "workflow_actions_context": self.context_manager.actions_context,
-        }
+        self.io_nandler = IOHandler(context_manager)
 
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
@@ -87,11 +88,8 @@ class Workflow:
 
     def run(self):
         self.logger.debug(f"Running workflow {self.workflow_id}")
-        # todo: check why is this needed?
-        self.context_manager.set_workflow_context(self._get_workflow_context())
         self.run_steps()
         actions_firing, actions_errors = self.run_actions()
-
         # Save the state
         #   workflow is firing if one its actions is firing
         workflow_status = (
@@ -99,11 +97,12 @@ class Workflow:
             if any(actions_firing)
             else WorkflowStatus.RESOLVED.value
         )
-        self.context_manager.set_last_workflow_run(
-            workflow_id=self.workflow_id,
-            workflow_context=self._get_workflow_context(),
-            workflow_status=workflow_status,
-        )
+        # TODO: state management should be done in db (how will it work distributed?)
+        # self.context_manager.set_last_workflow_run(
+        #    workflow_id=self.workflow_id,
+        #    workflow_context=self._get_workflow_context(),
+        #    workflow_status=workflow_status,
+        # )
         self.logger.debug(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 

@@ -17,13 +17,12 @@ from keep.contextmanager.contextmanager import ContextManager
 
 
 class IOHandler:
-    def __init__(self):
-        self.context_manager = ContextManager.get_instance()
+    def __init__(self, context_manager: ContextManager):
+        self.context_manager = context_manager
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
         self.shorten_urls = False
-        self.context_manager = ContextManager.get_instance()
         if (
             self.context_manager.click_context
             and self.context_manager.click_context.params.get("api_key")
