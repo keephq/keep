@@ -9,7 +9,12 @@ import validators
 import yaml
 from fastapi import HTTPException
 
-from keep.api.core.db import add_workflow, delete_workflow, get_workflow, get_workflows
+from keep.api.core.db import (
+    add_workflow,
+    delete_workflow,
+    get_workflow,
+    get_workflows_with_last_execution,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -89,7 +94,7 @@ class WorkflowStore:
 
     def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
         # list all tenant's workflows
-        workflows = get_workflows(tenant_id)
+        workflows = get_workflows_with_last_execution(tenant_id)
         return workflows
 
     def get_workflows_from_path(

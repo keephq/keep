@@ -25,4 +25,6 @@ export type Workflow = {
   interval: string; // This can be a string like "Everyday at 9AM" or whatever suits you.
   providers: Provider[];
   triggers: Trigger[];
+  last_execution_time: string;
+  last_execution_status: string;
 }
