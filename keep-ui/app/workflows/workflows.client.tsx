@@ -144,7 +144,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             ))}
           </div>
         ) : (
-          <p className="border border-gray-300 p-2">This workflow doesn't have triggers yet.</p>
+          <p className="border border-gray-300 p-2">This workflow does not have triggers yet.</p>
         )}
 
     <p>Providers:</p>
