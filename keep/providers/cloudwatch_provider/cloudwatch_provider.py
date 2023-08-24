@@ -99,7 +99,9 @@ class CloudwatchProvider(BaseProvider):
                 ).get("Subscriptions", [])
                 hostname = urlparse(keep_api_url).hostname
                 already_subscribed = any(
-                    hostname in sub["Endpoint"] for sub in subscriptions
+                    hostname in sub["Endpoint"]
+                    and not sub["SubscriptionArn"] == "PendingConfirmation"
+                    for sub in subscriptions
                 )
                 if not already_subscribed:
                     url_with_api_key = keep_api_url.replace(
@@ -109,6 +111,10 @@ class CloudwatchProvider(BaseProvider):
                         TopicArn=topic,
                         Protocol="https",
                         Endpoint=url_with_api_key,
+                    )
+                else:
+                    self.logger.info(
+                        "Already subscribed to topic %s, skipping...", topic
                     )
         self.logger.info("Webhook setup completed!")
 
