@@ -78,7 +78,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -90,5 +93,5 @@ if __name__ == "__main__":
         description="Trello Input Provider",
         authentication={"api_key": trello_api_key, "api_token": trello_api_token},
     )
-    provider = TrelloProvider(provider_id="trello-test", config=config)
+    provider = TrelloProvider(context_manager, provider_id="trello-test", config=config)
     provider.query(board_id="trello-board-id", filter="createCard")

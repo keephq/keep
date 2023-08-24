@@ -79,7 +79,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -91,7 +94,9 @@ if __name__ == "__main__":
         description="Zenduty Output Provider",
         authentication={"api_key": zenduty_key},
     )
-    provider = ZendutyProvider(provider_id="zenduty-test", config=config)
+    provider = ZendutyProvider(
+        context_manager, provider_id="zenduty-test", config=config
+    )
     provider.notify(
         message="Simple incident showing context with name: John Doe",
         title="Simple incident",

@@ -80,7 +80,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -92,7 +95,7 @@ if __name__ == "__main__":
         description="Teams Output Provider",
         authentication={"webhook_url": teams_webhook_url},
     )
-    provider = TeamsProvider(config=config)
+    provider = TeamsProvider(context_manager, provider_id="teams", config=config)
     provider.notify(
         typeCard="MessageCard",
         themeColor="0076D7",

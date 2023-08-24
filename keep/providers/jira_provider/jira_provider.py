@@ -75,7 +75,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -86,5 +89,5 @@ if __name__ == "__main__":
         description="Jira Input Provider",
         authentication={"api_token": jira_api_token},
     )
-    provider = JiraProvider(provider_id="jira", config=config)
+    provider = JiraProvider(context_manager, provider_id="jira", config=config)
     provider.query(host="JIRA HOST", board_id="1", email="YOUR EMAIL")

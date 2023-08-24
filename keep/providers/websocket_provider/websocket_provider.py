@@ -72,6 +72,12 @@ if __name__ == "__main__":
         id="websocket-test",
         authentication={},
     )
-    provider = WebsocketProvider(provider_id="websocket", config=config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    provider = WebsocketProvider(
+        context_manager, provider_id="websocket", config=config
+    )
     response = provider.query(socket_url="ws://echo.websockets.events")
     print(response)

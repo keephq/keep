@@ -97,6 +97,10 @@ if __name__ == "__main__":
             "database": os.environ.get("MYSQL_DATABASE"),
         }
     )
-    mysql_provider = MysqlProvider("mysql-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    mysql_provider = MysqlProvider(context_manager, "mysql-prod", config)
     results = mysql_provider.query(query="SELECT MAX(datetime) FROM demo_table LIMIT 1")
     print(results)

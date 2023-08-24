@@ -8,6 +8,6 @@ workflow:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.slack-prod }} "
+        config: " {{ providers.slack-demo }} "
         with:
           message: "Send a slack message every 15 seconds!"

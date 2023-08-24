@@ -137,6 +137,10 @@ if __name__ == "__main__":
             "database": os.environ.get("POSTGRES_DATABASE"),
         }
     )
-    postgres_provider = PostgresProvider("postgres-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    postgres_provider = PostgresProvider(context_manager, "postgres-prod", config)
     results = postgres_provider.query(query="select * from disk")
     print(results)
