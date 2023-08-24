@@ -16,3 +16,7 @@ class AlertDto(BaseModel, extra=Extra.allow):
     severity: str | None = None
     fatigueMeter: int | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
+
+
+class DeleteRequestBody(BaseModel):
+    alert_name: str

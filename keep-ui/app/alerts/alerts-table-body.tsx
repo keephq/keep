@@ -21,12 +21,14 @@ import {
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
 import "./alerts-table-body.css";
+import AlertMenu from "./alert-menu";
 
 interface Props {
   data: Alert[];
   groupBy?: string;
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
+  pushed?: boolean;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -76,6 +78,7 @@ export function AlertsTableBody({
   groupBy,
   groupedByData,
   openModal,
+  pushed,
 }: Props) {
   const getAlertLastReceieved = (alert: Alert) => {
     let lastReceived = "unknown";
@@ -101,10 +104,16 @@ export function AlertsTableBody({
         const extraIsEmpty = Object.keys(extraPayload).length === 0;
         return (
           <TableRow key={alert.id}>
-            {/* <TableCell>
-              <div className="menu"></div>
-            </TableCell> */}
-            {groupBy && groupedByData && openModal ? (
+            {pushed && (
+              <TableCell>
+                <AlertMenu
+                  alertName={alert.name}
+                  canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}
+                  openHistory={() => openModal!(alert)}
+                />
+              </TableCell>
+            )}
+            {/* {groupBy && groupedByData && openModal ? (
               <TableCell>
                 <Button
                   size="xs"
@@ -116,7 +125,7 @@ export function AlertsTableBody({
                   Open
                 </Button>
               </TableCell>
-            ) : null}
+            ) : null} */}
             <TableCell className="text-center">
               {getSeverity(alert.severity)}
             </TableCell>
