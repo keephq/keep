@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
+from sqlalchemy import String
 from sqlmodel import Field, ForeignKey, SQLModel
 
 
@@ -12,7 +13,7 @@ class Workflow(SQLModel, table=True):
     created_by: str
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
-    workflow_raw: str = Field(sql_type="TEXT")
+    workflow_raw: str = Field(sa_column=String(length=65535))
 
     class Config:
         orm_mode = True
