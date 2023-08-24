@@ -12,7 +12,7 @@ class Workflow(SQLModel, table=True):
     created_by: str
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
-    workflow_raw: str
+    workflow_raw: str = Field(sql_type="TEXT")
 
     class Config:
         orm_mode = True
