@@ -10,6 +10,7 @@ from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Alert
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -43,7 +44,12 @@ def get_alerts(
         tenant_id=tenant_id, all_providers=all_providers
     )
     for provider in installed_providers:
+        context_manager = ContextManager(
+            tenant_id=tenant_id,
+            workflow_id=None,
+        )
         provider_class = ProvidersFactory.get_provider(
+            context_manager=context_manager,
             provider_id=provider.id,
             provider_type=provider.type,
             provider_config=provider.details,

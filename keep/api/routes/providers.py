@@ -15,6 +15,7 @@ from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -64,8 +65,11 @@ def get_alerts_configuration(
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
+    context_manager = ContextManager(
+        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+    )
     provider = ProvidersFactory.get_provider(
-        provider_id, provider_type, provider_config
+        context_manager, provider_id, provider_type, provider_config
     )
     return provider.get_alerts_configuration()
 
@@ -93,8 +97,11 @@ def get_logs(
         provider_config = secret_manager.read_secret(
             f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
         )
+        context_manager = ContextManager(
+            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+        )
         provider = ProvidersFactory.get_provider(
-            provider_id, provider_type, provider_config
+            context_manager, provider_id, provider_type, provider_config
         )
         return provider.get_logs(limit=limit)
     except ModuleNotFoundError:
@@ -153,8 +160,11 @@ def add_alert(
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
+    context_manager = ContextManager(
+        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+    )
     provider = ProvidersFactory.get_provider(
-        provider_id, provider_type, provider_config
+        context_manager, provider_id, provider_type, provider_config
     )
     try:
         provider.deploy_alert(alert, alert_id)
@@ -190,8 +200,11 @@ def test_provider(
     # TODO: valdiations:
     # 1. provider_type and provider id is valid
     # 2. the provider config is valid
+    context_manager = ContextManager(
+        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+    )
     provider = ProvidersFactory.get_provider(
-        provider_id, provider_type, provider_config
+        context_manager, provider_id, provider_type, provider_config
     )
     try:
         alerts = provider.get_alerts_configuration()
@@ -261,8 +274,11 @@ async def install_provider(
     }
     try:
         # Instantiate the provider object and perform installation process
+        context_manager = ContextManager(
+            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+        )
         provider = ProvidersFactory.get_provider(
-            provider_id, provider_type, provider_config
+            context_manager, provider_id, provider_type, provider_config
         )
         secret_manager = SecretManagerFactory.get_secret_manager()
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
@@ -315,8 +331,11 @@ def install_provider_webhook(
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
+    context_manager = ContextManager(
+        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+    )
     provider = ProvidersFactory.get_provider(
-        provider_id, provider_type, provider_config
+        context_manager, provider_id, provider_type, provider_config
     )
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = (
