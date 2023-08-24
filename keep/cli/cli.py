@@ -199,8 +199,8 @@ def run(
     # this should be fixed
     workflow_manager = WorkflowManager.get_instance()
     workflow_store = WorkflowStore()
-    workflows = workflow_store.get_workflows(
-        alerts_directory or alert_url, providers_file
+    workflows = workflow_store.get_workflows_from_path(
+        tenant_id, alerts_directory or alert_url, providers_file
     )
     try:
         workflow_manager.run(workflows)

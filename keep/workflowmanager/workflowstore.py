@@ -73,8 +73,7 @@ class WorkflowStore:
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_workflow(tenant_id, workflow_id)
         workflow_yaml = yaml.safe_load(workflow)
-        self._load_providers_from_installed_providers(tenant_id)
-        workflow = self.parser.parse(workflow_yaml)
+        workflow = self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
             raise HTTPException(
                 status_code=500,
@@ -93,28 +92,41 @@ class WorkflowStore:
         workflows = get_workflows(tenant_id)
         return workflows
 
-    def get_workflows(
-        self, workflow_path: str | tuple[str], providers_file: str = None
+    def get_workflows_from_path(
+        self, tenant_id, workflow_path: str | tuple[str], providers_file: str = None
     ) -> list[Workflow]:
+        """Backward compatibility method to get workflows from a path.
+
+        Args:
+            workflow_path (str | tuple[str]): _description_
+            providers_file (str, optional): _description_. Defaults to None.
+
+        Returns:
+            list[Workflow]: _description_
+        """
         # get specific workflows, the original interface
         # to interact with workflows
         workflows = []
         if isinstance(workflow_path, tuple):
             for workflow_url in workflow_path:
                 workflow_yaml = self._parse_workflow_to_dict(workflow_url)
-                workflows.extend(self.parser.parse(workflow_yaml, providers_file))
+                workflows.extend(
+                    self.parser.parse(tenant_id, workflow_yaml, providers_file)
+                )
         elif os.path.isdir(workflow_path):
             workflows.extend(
-                self._get_workflows_from_directory(workflow_path, providers_file)
+                self._get_workflows_from_directory(
+                    tenant_id, workflow_path, providers_file
+                )
             )
         else:
             workflow_yaml = self._parse_workflow_to_dict(workflow_path)
-            workflows = self.parser.parse(workflow_yaml, providers_file)
+            workflows = self.parser.parse(tenant_id, workflow_yaml, providers_file)
 
         return workflows
 
     def _get_workflows_from_directory(
-        self, workflows_dir: str, providers_file: str = None
+        self, tenant_id, workflows_dir: str, providers_file: str = None
     ) -> list[Workflow]:
         """
         Run workflows from a directory.
@@ -132,7 +144,9 @@ class WorkflowStore:
                 )
                 try:
                     workflows.extend(
-                        self.parser.parse(parsed_workflow_yaml, providers_file)
+                        self.parser.parse(
+                            tenant_id, parsed_workflow_yaml, providers_file
+                        )
                     )
                     self.logger.info(f"Workflow from {file} fetched successfully")
                 except Exception as e:
@@ -161,25 +175,3 @@ class WorkflowStore:
             self.logger.error(f"Error parsing workflow: {e}")
             raise e
         return workflow
-
-    def _load_providers_from_installed_providers(self, tenant_id: str):
-        # TODO: should be refactored and moved to ProvidersManager or something
-        # Load installed providers
-        all_providers = ProvidersFactory.get_all_providers()
-        installed_providers = ProvidersFactory.get_installed_providers(
-            tenant_id=tenant_id, all_providers=all_providers
-        )
-        for provider in installed_providers:
-            self.logger.info(f"Loading provider {provider}")
-            try:
-                provider_name = provider.details.get("name")
-                context_manager = ContextManager.get_instance(tenant_id=tenant_id)
-                context_manager.providers_context[provider.id] = provider.details
-                # map also the name of the provider, not only the id
-                # so that we can use the name to reference the provider
-                context_manager.providers_context[provider_name] = provider.details
-                self.logger.info(f"Provider {provider.id} loaded successfully")
-            except Exception as e:
-                self.logger.error(
-                    f"Error loading provider {provider.id}", extra={"exception": e}
-                )

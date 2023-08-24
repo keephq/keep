@@ -71,11 +71,12 @@ class WorkflowScheduler:
         workflow_id,
         workflow: Workflow,
         workflow_execution_id: str,
-        **kwargs,
+        event_context=None,
     ):
         self.logger.info(f"Running workflow {workflow.workflow_id}...")
         try:
-            cm = ContextManager.get_instance()
+            # set the event context, e.g. the event that triggered the workflow
+            workflow.context_manager.set_event_context(event_context)
             self.workflow_manager._run_workflow(workflow)
         except Exception as e:
             self.logger.exception(f"Failed to run alert {workflow.workflow_id}...")
@@ -112,7 +113,7 @@ class WorkflowScheduler:
             )
             thread = threading.Thread(
                 target=self._run_workflow,
-                args=[tenant_id, workflow_id, workflow, workflow_execution_id],
+                args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],
             )
             thread.start()
             self.threads.append(thread)

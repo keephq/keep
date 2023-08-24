@@ -19,6 +19,7 @@ from datadog_api_client.v1.api.webhooks_integration_api import WebhooksIntegrati
 from datadog_api_client.v1.model.monitor import Monitor
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
@@ -65,8 +66,10 @@ class DatadogProvider(BaseProvider):
         seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
         return int(s[:-1]) * seconds_per_unit[s[-1]]
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.configuration = Configuration(request_timeout=5)
         self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
         self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key

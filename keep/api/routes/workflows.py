@@ -86,13 +86,16 @@ def run_workflow(
     body: Optional[Dict[Any, Any]] = Body(None),
     tenant_id: str = Depends(verify_bearer_token),
 ) -> dict:
-    # TODO - add workflow_trigger table to track all executions
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
-    context_manager = ContextManager.get_instance()
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     workflow = workflowstore.get_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     # Update the context manager with the workflow context
+    # TODO THIS SHOULD NOT WORK
+    context_manager = ContextManager(
+        tenant_id=tenant_id,
+        workflow_id=workflow_id,
+    )
     if body:
         context_manager.update_full_context(**body)
 

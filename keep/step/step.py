@@ -20,22 +20,27 @@ class StepType(Enum):
     ACTION = "action"
 
 
-@dataclass(config={"arbitrary_types_allowed": True})
 class Step:
-    name: str = field(default_factory=str)
-    config: dict = field(default_factory=dict)
-    step_id: str = field(default_factory=str)
-    provider: BaseProvider = field(default_factory=BaseProvider)
-    provider_parameters: dict = field(default_factory=dict)
-    conditions_results: dict = field(default_factory=dict)
-    conditions: list = field(default_factory=list)
-    step_type: Enum = field(default=StepType.STEP)
-
-    def __post_init__(self):
-        self.io_handler = IOHandler()
+    def __init__(
+        self,
+        context_manager,
+        name: str,
+        config: dict,
+        step_type: StepType,
+        provider: BaseProvider,
+        provider_parameters: dict,
+    ):
+        self.name = name
+        self.config = config
+        self.step_id = self.config.get("name")
+        self.step_type = step_type
+        self.provider = provider
+        self.provider_parameters = provider_parameters
+        self.context_manager = context_manager
+        self.io_handler = IOHandler(context_manager)
         self.logger = logging.getLogger(__name__)
-        self.context_manager = ContextManager.get_instance()
         self.conditions = self.config.get("condition", [])
+        self.conditions_results = {}
 
     @property
     def foreach(self):

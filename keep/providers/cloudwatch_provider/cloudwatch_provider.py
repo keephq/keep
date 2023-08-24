@@ -17,6 +17,7 @@ import pydantic
 import requests
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -46,8 +47,10 @@ class CloudwatchProvider(BaseProvider):
     CloudwatchProvider is a class that provides a way to read data from AWS Cloudwatch.
     """
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.aws_client_type = None
         self._client = None
 

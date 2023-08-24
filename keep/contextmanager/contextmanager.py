@@ -9,68 +9,18 @@ from starlette_context import context
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 
 
-def get_context_manager_id():
-    try:
-        # If we are running as part of FastAPI, we need context_manager per request
-        request_id = context.data["X-Request-ID"]
-        return request_id
-    except Exception:
-        return "main"
-
-
-def get_tenant_id():
-    try:
-        # Extract the tenant id (the env var is for CLI)
-        tenant_id = context.data["tenant_id"] or os.environ.get("KEEP_TENANT_ID")
-        return tenant_id
-    except Exception as exc:
-        # single tenant or CLI
-        return "main"
-
-
 class ContextManager:
     STATE_FILE = "keepstate.json"
-    __instances = {}
 
-    # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
-    @staticmethod
-    def get_instance(tenant_id=None, workflow_execution_id=None) -> "ContextManager":
-        if not tenant_id:
-            tenant_id = get_tenant_id()
-        context_manager_id = get_context_manager_id()
-        if context_manager_id not in ContextManager.__instances:
-            ContextManager.__instances[context_manager_id] = ContextManager(tenant_id)
-
-        if workflow_execution_id:
-            ContextManager.__instances[
-                context_manager_id
-            ].workflow_execution_id = workflow_execution_id
-        return ContextManager.__instances[context_manager_id]
-
-    @staticmethod
-    def delete_instance():
-        context_manager_id = get_context_manager_id()
-        if context_manager_id in ContextManager.__instances:
-            ContextManager.__instances[context_manager_id].dump()
-            del ContextManager.__instances[context_manager_id]
-
-    def __init__(self, tenant_id):
+    def __init__(self, tenant_id, workflow_id, workflow_execution_id=None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.storage_manager = StorageManagerFactory.get_file_manager()
-        context_manager_id = get_context_manager_id()
-        if context_manager_id in ContextManager.__instances:
-            raise Exception(
-                "Singleton class is a singleton class and cannot be instantiated more than once."
-            )
-        else:
-            ContextManager.__instances[context_manager_id] = self
-
         self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
         self.steps_context = {}
         self.actions_context = {}
         self.providers_context = {}
-        self.workflow_context = {}
+        self.event_context = {}
         self.foreach_context = {
             "value": None,
         }
@@ -87,8 +37,8 @@ class ContextManager:
         self.__load_state()
 
     # TODO - If we want to support multiple workflows at once we need to change this
-    def set_workflow_context(self, workflow_context):
-        self.workflow_context = workflow_context
+    def set_event_context(self, event):
+        self.event_context = event
 
     def get_workflow_id(self):
         return self.workflow_context.get("workflow_id")
@@ -119,6 +69,8 @@ class ContextManager:
             "steps": self.steps_context,
             "actions": self.actions_context,
             "foreach": self.foreach_context,
+            "event": self.event_context,
+            "alert": self.event_context,
             "env": os.environ,
         }
 

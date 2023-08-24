@@ -42,13 +42,6 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 
 
-async def dispose_context_manager() -> None:
-    """Dump context manager after every request."""
-    # https://stackoverflow.com/questions/75486472/flask-teardown-request-equivalent-in-fastapi
-    yield
-    ContextManager.delete_instance()
-
-
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
@@ -107,7 +100,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
-    app = FastAPI(dependencies=[Depends(dispose_context_manager)])
+    app = FastAPI()
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         CORSMiddleware,
