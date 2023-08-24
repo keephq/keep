@@ -64,6 +64,7 @@ def verify_api_key(
             and "Amazon Simple Notification Service Agent"
             in request.headers.get("user-agent")
         ):
+            logger.warning("Got an SNS request without any auth")
             raise HTTPException(
                 status_code=401,
                 headers={"WWW-Authenticate": "Basic"},
