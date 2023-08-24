@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
@@ -39,7 +41,7 @@ def get_users(tenant_id: str = Depends(verify_bearer_token)) -> list[User]:
 
 
 @router.delete("/users/{user_email}", description="Delete a user")
-def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)) -> None:
+def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
     auth0 = getAuth0Client()
     users = auth0.users.list(q=f'app_metadata.keep_tenant_id:"{tenant_id}"')
     for user in users.get("users", []):
@@ -49,6 +51,20 @@ def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)) 
     raise HTTPException(status_code=404, detail="User not found")
 
 
-@router.post("/users", description="Create a user")
-def create_user():
-    pass
+@router.post("/users/{user_email}", description="Create a user")
+def create_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
+    auth0 = getAuth0Client()
+    users = auth0.users.list(q=f'app_metadata.keep_tenant_id:"{tenant_id}"')
+    for user in users.get("users", []):
+        if user["email"] == user_email:
+            raise HTTPException(status_code=409, detail="User already exists")
+    auth0.users.create(
+        {
+            "email": user_email,
+            "password": secrets.token_urlsafe(13),
+            "email_verified": True,
+            "app_metadata": {"keep_tenant_id": tenant_id},
+            "connection": "keep-users",  # TODO: move to env
+        }
+    )
+    return {"status": "OK"}

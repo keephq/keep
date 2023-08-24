@@ -12,7 +12,7 @@ import {
   Button,
 } from "@tremor/react";
 import Loading from "app/loading";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import Image from "next/image";
@@ -35,6 +35,22 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
 
   if (!data || isLoading) return <Loading />;
 
+  async function addUser() {
+    const email = prompt("Enter the user email");
+    console.log(email);
+    if (email) {
+      const response = await fetch(`${apiUrl}/settings/users/${email}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response.ok) {
+        mutate(`${apiUrl}/settings/users`);
+      }
+    }
+  }
+
   return (
     <div className="mt-10">
       <div className="flex justify-between">
@@ -43,7 +59,12 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
           <Subtitle>Add or remove users from your tenant</Subtitle>
         </div>
         <div>
-          <Button color="orange" size="md" icon={UserPlusIcon}>
+          <Button
+            color="orange"
+            size="md"
+            icon={UserPlusIcon}
+            onClick={() => addUser()}
+          >
             Add User
           </Button>
         </div>

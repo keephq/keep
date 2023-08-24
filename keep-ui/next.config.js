@@ -6,6 +6,7 @@ const nextConfig = {
       "avatars.githubusercontent.com",
       "avatar.vercel.sh",
       "lh3.googleusercontent.com",
+      "s.gravatar.com",
     ],
     remotePatterns: [
       {
@@ -29,7 +30,7 @@ const nextConfig = {
             exclude: ["error"],
           }
         : false,
-},
+  },
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
@@ -47,10 +48,10 @@ const nextConfig = {
         {
           source: "/backend/:slug*",
           destination: process.env.API_URL + "/:slug*",
-        }
-      ]
-    }
-  }
+        },
+      ],
+    };
+  },
 };
 
 module.exports = nextConfig;

@@ -8,6 +8,7 @@ import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
 import { User } from "./models";
 import { User as AuthUser } from "next-auth";
+import { mutate } from "swr";
 
 interface Props {
   user: User;
@@ -30,8 +31,7 @@ export default function UsersMenu({ user, currentUser }: Props) {
         },
       });
       if (res.ok) {
-        // TODO: Think about something else but this is an easy way to refresh the page
-        window.location.reload();
+        mutate(`${apiUrl}/settings/users`);
       }
     }
   };
