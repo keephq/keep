@@ -18,6 +18,8 @@ class WorkflowDTO(BaseModel):
     creation_time: datetime
     triggers: List[dict] = None
     interval: int
+    last_execution_time: datetime = None
+    last_execution_status: str = None
     providers: List[ProviderDTO]
 
 

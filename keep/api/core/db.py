@@ -6,7 +6,9 @@ from uuid import uuid4
 
 import pymysql
 from google.cloud.sql.connector import Connector
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -239,12 +241,48 @@ def add_workflow(
     return workflow
 
 
-def get_workflows(tenant_id: str) -> List[str]:
+def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
+    from sqlalchemy import select, func
+
+
+from sqlalchemy.orm import aliased
+
+
+def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
-        workflows = session.exec(
-            select(Workflow).where(Workflow.tenant_id == tenant_id)
-        ).all()
-    return workflows
+        latest_executions_subquery = (
+            select(
+                WorkflowExecution.workflow_id,
+                func.max(WorkflowExecution.started).label("last_execution_time"),
+            )
+            .group_by(WorkflowExecution.workflow_id)
+            .subquery()
+        )
+
+        workflows_with_last_execution_query = (
+            select(
+                Workflow,
+                latest_executions_subquery.c.last_execution_time,
+                WorkflowExecution.status,
+            )
+            .outerjoin(
+                latest_executions_subquery,
+                Workflow.id == latest_executions_subquery.c.workflow_id,
+            )
+            .outerjoin(
+                WorkflowExecution,
+                and_(
+                    Workflow.id == WorkflowExecution.workflow_id,
+                    WorkflowExecution.started
+                    == latest_executions_subquery.c.last_execution_time,
+                ),
+            )
+            .where(Workflow.tenant_id == tenant_id)
+        )
+
+        result = session.execute(workflows_with_last_execution_query).all()
+
+    return result
 
 
 def get_workflow(tenant_id: str, workflow_id: str) -> str:

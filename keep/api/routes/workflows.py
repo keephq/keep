@@ -32,8 +32,9 @@ def get_workflows(
     # get all workflows
     workflows = workflowstore.get_all_workflows(tenant_id=tenant_id)
     # iterate workflows
-    for workflow in workflows:
+    for _workflow in workflows:
         # extract the providers
+        workflow, workflow_last_run_time, workflow_last_run_status = _workflow
         workflow_yaml = yaml.safe_load(workflow.workflow_raw)
         providers = parser.get_providers_from_workflow(workflow_yaml)
         installed_providers = get_installed_providers(tenant_id)
@@ -69,6 +70,8 @@ def get_workflows(
             description=workflow.description,
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
+            last_execution_time=workflow_last_run_time,
+            last_execution_status=workflow_last_run_status,
             interval=workflow.interval,
             providers=providers_dto,
             triggers=triggers,

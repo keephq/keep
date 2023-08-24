@@ -114,9 +114,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <div className="flex">{icons}</div>
       <p>Created by: {workflow.created_by}</p>
       <p>Created at: {workflow.creation_time}</p>
-      <p>All providers installed properly: </p>
-      <p>Last execution time: {workflow.interval}</p>
-      <p>Last execution status: </p>
+      <p>
+        Last execution time:{" "}
+        {workflow.last_execution_time ? workflow.last_execution_time : "N/A"}
+      </p>
+      <p>
+        Last execution status:{" "}
+        {workflow.last_execution_status ? workflow.last_execution_status : "N/A"}
+      </p>
       <p>Triggers:</p>
         {workflow.triggers.length > 0 ? (
           <div className="border border-gray-300 p-2">
