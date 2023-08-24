@@ -84,6 +84,7 @@ class CloudwatchProvider(BaseProvider):
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         # first, list all Cloudwatch alarms
+        self.logger.info("Setting up webhook with url %s", keep_api_url)
         cloudwatch_client = self.__generate_client("cloudwatch")
         sns_client = self.__generate_client("sns")
         resp = cloudwatch_client.describe_alarms()

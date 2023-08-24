@@ -27,9 +27,11 @@ export default function WorkflowDetailPage({ params }: { params: { workflow_id: 
   const { data: session, status, update } = useSession();
 
   const { data, error, isLoading } = useSWR<WorkflowExecution[]>(
-      `${apiUrl}/workflows/${params.workflow_id}`,
+      status === "authenticated" ? `${apiUrl}/workflows/${params.workflow_id}`: null,
       (url) => fetcher(url, session?.accessToken!)
   );
+
+  if (isLoading || !data) return <Loading />;
 
   if (error) {
       return (

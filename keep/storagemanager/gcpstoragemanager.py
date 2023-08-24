@@ -17,7 +17,9 @@ class GcpStorageManager(BaseStorageManager):
         try:
             bucket = self.storage_client.get_bucket(bucket_name)
         except:
+            self.logger.info("Creating bucket %s", bucket_name)
             bucket = self.storage_client.create_bucket(bucket_name)
+            self.logger.info("Bucket %s created successfully", bucket_name)
         return bucket
 
     def get_file(self, tenant_id, filename) -> str:
@@ -58,6 +60,7 @@ class GcpStorageManager(BaseStorageManager):
             file_name (str): The name of the file to store.
             file_content (bytes): The content of the file to store.
         """
+        self.logger.info("Storing file %s in bucket %s", file_name, tenant_id)
         bucket = self.create_bucket_if_not_exists(tenant_id)
         blob = bucket.blob(file_name)
 
@@ -66,3 +69,4 @@ class GcpStorageManager(BaseStorageManager):
 
         file_content = file_content.encode("utf-8")
         blob.upload_from_string(file_content)
+        self.logger.info("File %s stored in bucket %s", file_name, tenant_id)
