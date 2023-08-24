@@ -54,10 +54,10 @@ def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
 @router.post("/users/{user_email}", description="Create a user")
 def create_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
     auth0 = getAuth0Client()
-    users = auth0.users.list(q=f'app_metadata.keep_tenant_id:"{tenant_id}"')
-    for user in users.get("users", []):
-        if user["email"] == user_email:
-            raise HTTPException(status_code=409, detail="User already exists")
+    # User email can exist in 1 tenant only for now.
+    users = auth0.users.list(q=f'email:"{user_email}"')
+    if users.get("users", []):
+        raise HTTPException(status_code=409, detail="User already exists")
     auth0.users.create(
         {
             "email": user_email,
