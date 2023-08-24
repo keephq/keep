@@ -85,9 +85,10 @@ def get_or_create_api_key(
         "Getting or creating API key",
         extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
     )
-    statement = select(TenantApiKey).where(
-        TenantApiKey.reference_id == unique_api_key_id
-        and TenantApiKey.tenant_id == tenant_id
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
     )
     tenant_api_key_entry = session.exec(statement).first()
     if not tenant_api_key_entry:

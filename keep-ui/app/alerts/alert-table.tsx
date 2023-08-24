@@ -51,7 +51,12 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
   };
 
   return data.length === 0 ? (
-    <Callout title="No Data" icon={CircleStackIcon} color="yellow" className="mt-5">
+    <Callout
+      title="No Data"
+      icon={CircleStackIcon}
+      color="yellow"
+      className="mt-5"
+    >
       {pushed
         ? "Install webhook integration in supported providers to see pushed alerts"
         : "Please connect supported providers to see pulled alerts"}
@@ -61,7 +66,8 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
       <Table>
         <TableHead>
           <TableRow>
-            {groupBy && <TableHeaderCell>History</TableHeaderCell>}
+            {pushed && <TableHeaderCell>{/** Menu */}</TableHeaderCell>}
+            {/* {groupBy && <TableHeaderCell>History</TableHeaderCell>} */}
             {Object.keys(AlertTableKeys).map((key) => (
               <TableHeaderCell key={key}>
                 <div className="flex items-center">
@@ -84,6 +90,7 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
           groupBy={groupBy}
           groupedByData={groupedByData}
           openModal={openModal}
+          pushed={pushed}
         />
       </Table>
       <AlertTransition
