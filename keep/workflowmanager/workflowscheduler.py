@@ -106,10 +106,16 @@ class WorkflowScheduler:
             workflow_id = workflow_to_run.get("workflow_id")
             tenant_id = workflow_to_run.get("tenant_id")
             event = workflow_to_run.get("event")
+            triggered_by = workflow_to_run.get("triggered_by")
+            if triggered_by == "manual":
+                triggered_by_user = workflow_to_run.get("triggered_by_user")
+                triggered_by = f"manually by {triggered_by_user}"
+            else:
+                triggered_by = (f"type:alert name:{event.name} id:{event.id}",)
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                triggered_by=f"type:alert name:{event.name} id:{event.id}",
+                triggered_by=triggered_by,
             )
             thread = threading.Thread(
                 target=self._run_workflow,

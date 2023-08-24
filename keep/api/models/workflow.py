@@ -13,7 +13,7 @@ class ProviderDTO(BaseModel):
 
 class WorkflowDTO(BaseModel):
     id: str
-    description: Optional[str] = None
+    description: Optional[str] = "Workflow file doesn't contain description"
     created_by: str
     creation_time: datetime
     triggers: List[dict] = None

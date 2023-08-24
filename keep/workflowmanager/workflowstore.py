@@ -23,9 +23,6 @@ from keep.workflowmanager.workflow import Workflow
 
 
 class WorkflowStore:
-    # TODO: workflow store should be persistent using database and not only "filesystem"
-    #       e.g. we should be able to get workflows from a database
-
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)

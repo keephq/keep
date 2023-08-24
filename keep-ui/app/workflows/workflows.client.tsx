@@ -38,6 +38,27 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     router.push(`/workflows/${workflow.id}`);
   };
 
+  const handleRunClick = async (workflowId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/workflows/${workflowId}/run`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Workflow started successfully
+        // You might want to handle further actions here
+      } else {
+        console.error("Failed to start workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while starting workflow", error);
+    }
+  };
+
+
   const handleDeleteClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     try {
       event.stopPropagation();
@@ -84,6 +105,16 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-lg">{workflow.description}</h2>
         <div className="flex space-x-2">
+        <button
+            className="p-1 rounded-full hover:bg-gray-200"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleRunClick(workflow.id);
+            }}
+            title="Run Workflow"
+          >
+            <PlayIcon className="h-6 w-6 text-purple-600" />
+          </button>
           <button
             className="p-1 rounded-full hover:bg-gray-200"
             onClick={handleDeleteClick}

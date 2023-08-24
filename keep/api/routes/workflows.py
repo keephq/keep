@@ -67,7 +67,7 @@ def get_workflows(
         # create the workflow DTO
         workflow_dto = WorkflowDTO(
             id=workflow.id,
-            description=workflow.description,
+            description=workflow.description or "[This workflow has no description]",
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             last_execution_time=workflow_last_run_time,
@@ -81,10 +81,11 @@ def get_workflows(
 
 
 @router.post(
-    "/run/{aworkflow_id}",
+    "/{workflow_id}/run",
     description="Run a workflow",
 )
 def run_workflow(
+    request: Request,
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
     tenant_id: str = Depends(verify_bearer_token),
@@ -102,12 +103,22 @@ def run_workflow(
     if body:
         context_manager.update_full_context(**body)
 
-    # Currently, the run workflow with interval via API is not supported
-    workflow.workflow_interval = 0
     # Finally, run it
     try:
-        errors = workflowmanager.run(
-            workflows=[workflow],
+        # todo, better way
+        token = request.headers.get("Authorization").split(" ")[1]
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        created_by = decoded_token.get("email")
+        workflowmanager.scheduler.workflows_to_run.append(
+            {
+                "workflow": workflow,
+                "workflow_id": workflow_id,
+                "tenant_id": tenant_id,
+                "triggered_by_user": created_by,
+                "triggered_by": "manual",
+                # TODO - event can get body from the request
+                "event": {},
+            }
         )
     except Exception as e:
         logger.exception(
