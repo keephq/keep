@@ -1,4 +1,11 @@
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowDownIcon,
+  ArrowDownRightIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  ArrowUpRightIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 import {
   TableBody,
   TableRow,
@@ -8,12 +15,12 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
-  BadgeDelta,
-  DeltaType,
   Button,
+  Badge,
 } from "@tremor/react";
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
+import "./alerts-table-body.css";
 
 interface Props {
   data: Alert[];
@@ -23,30 +30,44 @@ interface Props {
 }
 
 const getSeverity = (severity: Severity | undefined) => {
-  let deltaType: string;
+  let icon: any;
+  let color: any;
+  let severityText: string;
   switch (severity) {
     case "critical":
-      deltaType = "increase";
+      icon = ArrowUpIcon;
+      color = "red";
+      severityText = Severity.Critical.toString();
       break;
     case "high":
-      deltaType = "moderateIncrease";
+      icon = ArrowUpRightIcon;
+      color = "orange";
+      severityText = Severity.High.toString();
       break;
     case "medium":
-      deltaType = "unchanged";
+      color = "yellow";
+      icon = ArrowRightIcon;
+      severityText = Severity.Medium.toString();
       break;
     case "low":
-      deltaType = "moderateDecrease";
+      icon = ArrowDownRightIcon;
+      color = "green";
+      severityText = Severity.Low.toString();
       break;
     default:
-      deltaType = "decrease";
+      icon = ArrowDownIcon;
+      color = "emerald";
+      severityText = Severity.Info.toString();
       break;
   }
   return (
-    <BadgeDelta
-      title={severity?.toString() ?? "lowest"}
-      deltaType={deltaType as DeltaType}
-      color=""
-    />
+    <Badge
+      //deltaType={deltaType as DeltaType}
+      color={color}
+      icon={icon}
+      tooltip={severityText}
+      size="xs"
+    ></Badge>
   );
 };
 
