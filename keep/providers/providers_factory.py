@@ -68,6 +68,10 @@ class ProvidersFactory:
             BaseProvider: The provider class.
         """
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        # backward compatibility issues
+        # when providers.yaml could have 'type' too
+        if "type" in provider_config:
+            del provider_config["type"]
         provider_config = ProviderConfig(**provider_config)
 
         try:

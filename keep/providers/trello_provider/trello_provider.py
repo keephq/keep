@@ -6,6 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -28,8 +29,10 @@ class TrelloProviderAuthConfig:
 
 
 class TrelloProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         self.authentication_config = TrelloProviderAuthConfig(

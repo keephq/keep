@@ -11,6 +11,7 @@ import pydantic
 import requests
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -51,8 +52,10 @@ class ZabbixProvider(BaseProvider):
     )
     KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE = 4
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         """

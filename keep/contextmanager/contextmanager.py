@@ -160,8 +160,12 @@ class ContextManager:
             self.state = json.loads(
                 self.storage_manager.get_file(self.tenant_id, self.state_file)
             )
-        except Exception:
+        except Exception as exc:
             self.logger.warning("Failed to load state file, using empty state")
+            self.logger.warning(
+                f"State storage: {self.storage_manager.__class__.__name__}"
+            )
+            self.logger.warning(f"Reason: {exc}")
             self.state = {}
 
     def get_last_workflow_run(self, workflow_id):

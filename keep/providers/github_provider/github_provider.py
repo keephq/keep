@@ -7,6 +7,7 @@ import dataclasses
 import pydantic
 from github import Github
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -31,8 +32,10 @@ class GithubProvider(BaseProvider):
     GithubProvider is a class that provides a way to read data from AWS Cloudwatch.
     """
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.client = self.__generate_client()
 
     def __generate_client(self):
@@ -60,8 +63,10 @@ class GithubStarsProvider(GithubProvider):
     GithubStarsProvider is a class that provides a way to read stars from a GitHub repository.
     """
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def _query(
         self, repository: str, previous_stars_count: int = 0, **kwargs: dict
@@ -95,6 +100,19 @@ class GithubStarsProvider(GithubProvider):
 
 
 if __name__ == "__main__":
-    github_stars_provider = GithubStarsProvider("test", ProviderConfig({}))
-    result = github_stars_provider.query("keephq/keep", 910)
+    import os
+
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    github_stars_provider = GithubStarsProvider(
+        context_manager,
+        "test",
+        ProviderConfig(authentication={"access_token": os.environ.get("GITHUB_PAT")}),
+    )
+
+    result = github_stars_provider.query(
+        repository="keephq/keep", previous_stars_count=910
+    )
     print(result)
