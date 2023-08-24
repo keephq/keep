@@ -8,6 +8,7 @@ from typing import Optional
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -28,8 +29,10 @@ class AxiomProvider(BaseProvider):
     Axiom provider class.
     """
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         """
@@ -95,7 +98,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -105,7 +111,10 @@ if __name__ == "__main__":
         "authentication": {"api_token": api_token, "organization_id": "keephq-rxpb"},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="axiom_test", provider_type="axiom", provider_config=config
+        context_manager,
+        provider_id="axiom_test",
+        provider_type="axiom",
+        provider_config=config,
     )
     result = provider.query(dataset="test", startTime="2023-04-26T09:52:04.000Z")
     print(result)

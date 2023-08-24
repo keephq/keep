@@ -77,7 +77,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -88,7 +91,9 @@ if __name__ == "__main__":
         description="Discord Output Provider",
         authentication={"webhook_url": discord_webhook_url},
     )
-    provider = DiscordProvider(provider_id="discord-test", config=config)
+    provider = DiscordProvider(
+        context_manager, provider_id="discord-test", config=config
+    )
 
     provider.notify(
         content="Hey Discord By: Sakthi Ratnam",

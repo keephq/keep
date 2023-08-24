@@ -74,7 +74,10 @@ async def send_message():
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -86,7 +89,9 @@ async def send_message():
         description="Telegram Provider",
         authentication={"bot_token": telegram_bot_token},
     )
-    provider = TelegramProvider(provider_id="telegram-test", config=config)
+    provider = TelegramProvider(
+        context_manager, provider_id="telegram-test", config=config
+    )
     await provider.notify(
         message="Keep Alert",
         chat_id=telegram_chat_id,

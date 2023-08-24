@@ -82,7 +82,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -95,7 +98,10 @@ if __name__ == "__main__":
         "authentication": {"api_token": sentry_api_token, "org_slug": sentry_org_slug},
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="sentry", provider_config=config, project=sentry_project
+        context_manager,
+        provider_type="sentry",
+        provider_config=config,
+        project=sentry_project,
     )
     result = provider.query("")
     print(result)

@@ -204,7 +204,13 @@ if __name__ == "__main__":
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         }
     )
-    cloudwatch_provider = CloudwatchMetricsProvider("cloudwatch-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    cloudwatch_provider = CloudwatchMetricsProvider(
+        context_manager, "cloudwatch-prod", config
+    )
     results = cloudwatch_provider.query(
         query="fields @timestamp, @message, @logStream, @log | sort @timestamp desc | limit 20",
         log_group="Test",

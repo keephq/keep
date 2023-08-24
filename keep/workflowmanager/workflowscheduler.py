@@ -79,7 +79,7 @@ class WorkflowScheduler:
             workflow.context_manager.set_event_context(event_context)
             self.workflow_manager._run_workflow(workflow)
         except Exception as e:
-            self.logger.exception(f"Failed to run alert {workflow.workflow_id}...")
+            self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
             finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
@@ -166,11 +166,15 @@ class WorkflowScheduler:
             try:
                 self.workflow_manager._run_workflow(workflow)
             except Exception as e:
-                self.logger.exception(f"Failed to run alert {workflow.alert_id}...")
-            self.logger.info(f"Workflow {workflow.alert_id} ran")
-            if workflow.alert_interval > 0:
-                self.logger.info(f"Sleeping for {workflow.alert_interval} seconds...")
-                time.sleep(workflow.alert_interval)
+                self.logger.exception(
+                    f"Failed to run workflow {workflow.workflow_id}..."
+                )
+            self.logger.info(f"Workflow {workflow.workflow_id} ran")
+            if workflow.workflow_interval > 0:
+                self.logger.info(
+                    f"Sleeping for {workflow.workflow_interval} seconds..."
+                )
+                time.sleep(workflow.workflow_interval)
             else:
                 self.logger.info("Workflow will not run again")
                 break

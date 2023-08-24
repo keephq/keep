@@ -280,12 +280,18 @@ if __name__ == "__main__":
 
     host = os.environ.get("GRAFANA_HOST")
     token = os.environ.get("GRAFANA_TOKEN")
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     config = {
         "authentication": {"host": host, "token": token},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="grafana-keephq", provider_type="grafana", provider_config=config
+        context_manager,
+        provider_id="grafana-keephq",
+        provider_type="grafana",
+        provider_config=config,
     )
     alerts = provider.setup_webhook("http://localhost:8000", "1234", True)
     print(alerts)

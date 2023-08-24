@@ -130,7 +130,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # If you want to use application default credentials, you can omit the authentication config
     config = {
         "authentication": {
@@ -140,7 +143,7 @@ if __name__ == "__main__":
     }
     # Create the provider
     provider = Auth0LogsProvider(
-        provider_id="auth0-provider", config=ProviderConfig(**config)
+        context_manager, provider_id="auth0-provider", config=ProviderConfig(**config)
     )
 
     users = provider.query(log_type="ss")

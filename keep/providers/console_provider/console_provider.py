@@ -40,12 +40,19 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Initalize the provider and provider config
     config = {
         "description": "Console Output Provider",
         "authentication": {},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="mock", provider_type="console", provider_config=config
+        context_manager,
+        provider_id="mock",
+        provider_type="console",
+        provider_config=config,
     )
     provider.notify(alert_message="Simple alert showing context with name: John Doe")

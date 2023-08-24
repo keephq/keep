@@ -26,6 +26,10 @@ class WorkflowManager:
         """Runs the workflow manager in server mode"""
         await self.scheduler.start()
 
+    def stop(self):
+        """Stops the workflow manager"""
+        self.scheduler.stop()
+
     def insert_events(self, tenant_id, events: typing.List[dict]):
         workflows_that_should_be_run = []
         for event in events:

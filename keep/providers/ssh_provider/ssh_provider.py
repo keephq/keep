@@ -138,7 +138,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -155,7 +158,7 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="ssh", provider_config=config
+        context_manager, provider_id="ssh", provider_type="ssh", provider_config=config
     )
     result = provider.query("df -h")
     print(result)

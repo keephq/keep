@@ -326,7 +326,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -337,6 +340,7 @@ if __name__ == "__main__":
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
     provider = ProvidersFactory.get_provider(
+        context_manager=context_manager,
         provider_id="datadog-keephq",
         provider_type="datadog",
         provider_config=provider_config,

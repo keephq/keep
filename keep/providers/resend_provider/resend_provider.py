@@ -85,13 +85,16 @@ if __name__ == "__main__":
     import os
 
     resend_api_key = os.environ.get("RESEND_API_KEY")
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Initalize the provider and provider config
     config = ProviderConfig(
         id="resend-test",
         authentication={"api_key": resend_api_key},
     )
-    provider = ResendProvider(provider_id="resend-test", config=config)
+    provider = ResendProvider(context_manager, provider_id="resend-test", config=config)
     response = provider.notify(
         "onboarding@resend.dev",
         "youremail@gmail.com",

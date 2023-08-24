@@ -156,7 +156,11 @@ if __name__ == "__main__":
             "password": os.environ.get("PROMETHEUS_PASSWORD"),
         }
     )
-    prometheus_provider = PrometheusProvider("prometheus-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    prometheus_provider = PrometheusProvider(context_manager, "prometheus-prod", config)
     results = prometheus_provider.query(
         query="sum by (job) (rate(prometheus_http_requests_total[5m]))"
     )
