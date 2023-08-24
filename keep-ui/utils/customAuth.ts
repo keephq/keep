@@ -3,6 +3,7 @@ import {
   SessionContextValue,
   UseSessionOptions,
   useSession as useNextAuthSession,
+  getSession as useGetSession,
 } from "next-auth/react";
 import { getServerSession as useNextGetServerSession } from "next-auth/next";
 import {
@@ -85,4 +86,14 @@ export function useSession<R extends boolean>(
 
   // Return the original session object as is
   return session;
+}
+
+export function getSession(params?: any) {
+  if (isSingleTenant) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return Promise.resolve(useCustomSession());
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useGetSession(params);
 }

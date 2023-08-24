@@ -1,6 +1,6 @@
 import SettingsPage from "./settings.client";
 
-export default function Page() {
+export default async function Page() {
   return <SettingsPage />;
 }
 
