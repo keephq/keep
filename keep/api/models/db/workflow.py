@@ -9,7 +9,7 @@ class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str
-    description: str
+    description: Optional[str]
     created_by: str
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]

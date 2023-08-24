@@ -19,6 +19,7 @@ class ProviderConfig:
     """
 
     authentication: Optional[dict]
+    name: Optional[str] = None
     description: Optional[str] = None
 
     def __post_init__(self):
