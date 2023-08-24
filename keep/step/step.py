@@ -24,15 +24,14 @@ class Step:
     def __init__(
         self,
         context_manager,
-        name: str,
+        step_id: str,
         config: dict,
         step_type: StepType,
         provider: BaseProvider,
         provider_parameters: dict,
     ):
-        self.name = name
         self.config = config
-        self.step_id = self.config.get("name")
+        self.step_id = step_id
         self.step_type = step_type
         self.provider = provider
         self.provider_parameters = provider_parameters
@@ -45,6 +44,10 @@ class Step:
     @property
     def foreach(self):
         return self.config.get("foreach")
+
+    @property
+    def name(self):
+        return self.step_id
 
     def run(self):
         try:
@@ -95,6 +98,7 @@ class Step:
 
             conditions.append(
                 ConditionFactory.get_condition(
+                    self.context_manager,
                     condition.get("type"),
                     condition_name,
                     condition,
@@ -108,7 +112,7 @@ class Step:
                 condition_compare_to, condition_compare_value
             )
             self.context_manager.set_condition_results(
-                self.name,
+                self.step_id,
                 condition.condition_name,
                 condition.condition_type,
                 condition_compare_to,

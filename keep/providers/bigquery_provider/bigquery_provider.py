@@ -54,7 +54,7 @@ class BigqueryProvider(BaseProvider):
         """
         if self.config.authentication is None:
             self.config.authentication = {}
-        self.authentication_config = BigQueryProviderAuthConfig(
+        self.authentication_config = BigqueryProviderAuthConfig(
             **self.config.authentication
         )
         # Check for project_id and handle it here.

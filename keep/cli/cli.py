@@ -8,6 +8,8 @@ import click
 import yaml
 from dotenv import find_dotenv, load_dotenv
 
+from keep.api.core.db import try_create_single_tenant
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client, get_random_user_id
 from keep.providers.providers_factory import ProvidersFactory
@@ -170,6 +172,13 @@ def api(multi_tenant: bool):
     required=False,
     default="providers.yaml",
 )
+@click.option(
+    "--tenant-id",
+    "-t",
+    help="The tenant id",
+    required=False,
+    default="singletenant",
+)
 @click.option("--api-key", help="The API key for keep's API", required=False)
 @click.option(
     "--api-url",
@@ -184,6 +193,7 @@ def run(
     alert_url: list[str],
     interval: int,
     providers_file,
+    tenant_id,
     api_key,
     api_url,
 ):
@@ -199,6 +209,8 @@ def run(
     # this should be fixed
     workflow_manager = WorkflowManager.get_instance()
     workflow_store = WorkflowStore()
+    if tenant_id == SINGLE_TENANT_UUID:
+        try_create_single_tenant(SINGLE_TENANT_UUID)
     workflows = workflow_store.get_workflows_from_path(
         tenant_id, alerts_directory or alert_url, providers_file
     )

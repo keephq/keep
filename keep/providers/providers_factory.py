@@ -71,9 +71,11 @@ class ProvidersFactory:
         provider_config = ProviderConfig(**provider_config)
 
         try:
-            provider = provider_class(provider_id=provider_id, config=provider_config)
-            # This is a workaround since you can pass the context manager to the post_init
-            provider.context_manager = context_manager
+            provider = provider_class(
+                context_manager=context_manager,
+                provider_id=provider_id,
+                config=provider_config,
+            )
             return provider
         except TypeError as exc:
             error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
