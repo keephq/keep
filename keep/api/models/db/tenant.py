@@ -13,13 +13,15 @@ class Tenant(SQLModel, table=True):
 
 class TenantApiKey(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
-    reference_id: str = Field(
-        unique=True, description="For instance, the GitHub installation ID"
-    )
+    reference_id: str = Field(description="For instance, the GitHub installation ID")
     key_hash: str = Field(primary_key=True)
     tenant: Tenant = Relationship()
     is_system: bool = False
     system_description: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        unique_together = ["tenant_id", "reference_id"]
 
 
 class TenantInstallation(SQLModel, table=True):
