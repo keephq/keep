@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
-import { ArchiveBoxIcon } from "@heroicons/react/24/outline";
+import { ArchiveBoxIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
 
@@ -64,6 +64,22 @@ export default function AlertMenu({
         >
           <Menu.Items className="z-50 fixed mt-2 w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-1 py-1">
+              <Menu.Item>
+                {({ active }) => (
+                  <button
+                    disabled={true}
+                    className={`${
+                      active ? "bg-slate-200" : "text-gray-900"
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs text-slate-300 cursor-not-allowed`}
+                  >
+                    <BellSlashIcon
+                      className="mr-2 h-4 w-4"
+                      aria-hidden="true"
+                    />
+                    Silence
+                  </button>
+                )}
+              </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
                   <button
