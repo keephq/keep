@@ -7,7 +7,7 @@ import tempfile
 import pytest
 from starlette_context import context
 
-from keep.contextmanager.contextmanager import ContextManager, get_context_manager_id
+from keep.contextmanager.contextmanager import ContextManager
 
 STATE_FILE_MOCK_DATA = {
     "new-github-stars": [

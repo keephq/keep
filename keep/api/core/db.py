@@ -288,6 +288,8 @@ def get_workflow(tenant_id: str, workflow_id: str) -> str:
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
         ).first()
+    if not workflow:
+        return None
     return workflow.workflow_raw
 
 

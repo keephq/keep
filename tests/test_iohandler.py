@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from keep.contextmanager.contextmanager import ContextManager, get_context_manager_id
+from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 
 

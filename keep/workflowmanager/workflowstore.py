@@ -83,6 +83,11 @@ class WorkflowStore:
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_workflow(tenant_id, workflow_id)
+        if not workflow:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow {workflow_id} not found",
+            )
         workflow_yaml = yaml.safe_load(workflow)
         workflow = self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
