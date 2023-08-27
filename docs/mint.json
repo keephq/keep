@@ -133,7 +133,60 @@
     },
     {
       "group": "Keep API",
-      "pages": ["applications/api"]
+      "pages": [
+        {
+          "group": "Providers",
+          "pages": [
+            "api/providers/get-providers",
+            "api/providers/get-alerts-configuration",
+            "api/providers/get-logs",
+            "api/providers/get-alerts-schema",
+            "api/providers/add-alert",
+            "api/providers/test-provider",
+            "api/providers/delete-provider",
+            "api/providers/install-provider",
+            "api/providers/install-provider-webhook",
+            "api/providers/get-webhook-settings"
+          ]
+        },
+        {
+          "group": "Healthcheck",
+          "pages": [
+            "api/healthcheck/healthcheck"
+          ]
+        },
+        {
+          "group": "Tenant",
+          "pages": [
+            "api/tenant/is-onboarded",
+            "api/tenant/save-github-installation-id"
+          ]
+        },
+        {
+          "group": "Alerts",
+          "pages": [
+            "api/alerts/get-alerts",
+            "api/alerts/receive-event"
+          ]
+        },
+        {
+          "group": "Webhook settings",
+          "pages": [
+            "api/settings/webhook-settings"
+          ]
+        },
+        {
+          "group": "Workflows",
+          "pages": [
+            "api/workflows/get-workflows",
+            "api/workflows/create-workflow",
+            "api/workflows/run-workflow",
+            "api/workflows/get-workflow-by-id",
+            "api/workflows/delete-workflow-by-id",
+            "api/workflows/get-workflow-execution-status"
+          ]
+        }
+      ]
     },
     {
       "group": "Keep CLI",
