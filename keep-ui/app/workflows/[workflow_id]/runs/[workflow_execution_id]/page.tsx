@@ -69,7 +69,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
             </TableRow>
           </TableHead>
           <TableBody>
-            {logs.map((log, index) => (
+            {logs.map((log: any, index: any) => (
               <TableRow key={index}>
                 <TableCell>{log.timestamp}</TableCell>
                 <TableCell>{log.message}</TableCell>
