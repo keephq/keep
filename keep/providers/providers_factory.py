@@ -235,12 +235,21 @@ class ProvidersFactory:
                 continue
             provider_copy = provider.copy()
             provider_copy.id = p.id
-            provider_copy.details = (
-                secret_manager.read_secret(
-                    secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+            try:
+                provider_auth = (
+                    secret_manager.read_secret(
+                        secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+                    )
+                    if include_details
+                    else {}
                 )
-                if include_details
-                else {}
-            )
+            # Somehow the provider is installed but the secret is missing, probably bug in deletion
+            # TODO: solve its root cause
+            except Exception:
+                logger.exception(
+                    f"Could not get provider {provider_copy.id} auth config from secret manager"
+                )
+                continue
+            provider_copy.details = provider_auth
             providers.append(provider_copy)
         return providers

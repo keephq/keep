@@ -1,0 +1,36 @@
+---
+title: "Key concepts"
+---
+## Alert
+Alert is an event that triggered when something bad happens or going to happen.
+The term alert sometime can be replaced with "alarm" (Cloudwatch) or "monitor" (Datadog).
+
+You can easily trigger a [Workflow](#workflow) when an alert triggers.
+
+## Provider
+Provider is the input/output building block in Keep.
+
+When you connect a Provider, Keep starts to read the alerts from the Provider and process it. For example, after connecting your Promethues, you'll start see your Promethues alerts in Keep.
+
+
+In a Workflow context, Provider also:
+- Query data - queries Datadog's API or runs a SQL query against a database.
+- Push data - sends a Slack message or create a PagerDuty incident.
+
+To learn more about what's a Provider, visit the [Provider](provider/) page.
+
+## Workflow
+Workflows are list of [Steps](#steps) and [Actions](overview/keyconcepts#actions).
+The entry point of a workflow can be either:
+- When Alert is triggered.
+- In a predefined interval.
+- Manually.
+
+Workflows are being used to:
+1. Add more context to your alerts.
+2. Automate the response to alert.
+3. Create multi-steps alerts.
+
+## API first
+Keep is an API-first, and as such, each of the things that you can do in the [UI](ui/) can be done via the [API](api/)
+This give you the power to integrate Keep with your existing stack and automate the alert remediation and enrichment process.
