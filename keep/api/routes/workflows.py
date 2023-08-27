@@ -9,7 +9,12 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Uplo
 
 from keep.api.core.db import get_installed_providers, get_workflow_executions
 from keep.api.core.dependencies import verify_bearer_token
-from keep.api.models.workflow import ProviderDTO, WorkflowDTO, WorkflowExecutionDTO
+from keep.api.models.workflow import (
+    ProviderDTO,
+    WorkflowDTO,
+    WorkflowExecutionDTO,
+    WorkflowExecutionLogsDTO,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -93,15 +98,12 @@ def run_workflow(
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
-    workflow = workflowstore.get_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
-    # Update the context manager with the workflow context
-    # TODO THIS SHOULD NOT WORK
+    # workflow = workflowstore.get_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=workflow_id,
+        load_state=False,  # state is not needed
     )
-    if body:
-        context_manager.update_full_context(**body)
 
     # Finally, run it
     try:
@@ -109,16 +111,8 @@ def run_workflow(
         token = request.headers.get("Authorization").split(" ")[1]
         decoded_token = jwt.decode(token, options={"verify_signature": False})
         created_by = decoded_token.get("email")
-        workflowmanager.scheduler.workflows_to_run.append(
-            {
-                "workflow": workflow,
-                "workflow_id": workflow_id,
-                "tenant_id": tenant_id,
-                "triggered_by_user": created_by,
-                "triggered_by": "manual",
-                # TODO - event can get body from the request
-                "event": {},
-            }
+        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+            workflow_id, tenant_id, created_by, "manual", body
         )
     except Exception as e:
         logger.exception(
@@ -133,14 +127,13 @@ def run_workflow(
         "Workflow ran successfully",
         extra={"workflow_id": workflow_id},
     )
-    if any(errors[0]):
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to run workflow {workflow_id}: {errors}",
-        )
-    else:
-        # TODO - add some workflow_execution id to track the execution
-        return {"workflow_id": workflow_id, "status": "sucess"}
+    # TODO - add some workflow_execution id to track the execution
+    # TODO - add workflow execution_id
+    return {
+        "workflow_id": workflow_id,
+        "workflow_execution_id": workflow_execution_id,
+        "status": "sucess",
+    }
 
 
 @router.post(
@@ -210,3 +203,36 @@ def delete_workflow_by_id(
     workflowstore = WorkflowStore()
     workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     return {"workflow_id": workflow_id, "status": "deleted"}
+
+
+@router.get(
+    "/{workflow_id}/runs/{workflow_execution_id}",
+    description="Get a workflow execution status",
+)
+def get_workflow_execution_status(
+    workflow_id: str,
+    workflow_execution_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+) -> WorkflowExecutionDTO:
+    workflowstore = WorkflowStore()
+    workflow_execution = workflowstore.get_workflow_execution(
+        workflow_id=workflow_id,
+        workflow_execution_id=workflow_execution_id,
+        tenant_id=tenant_id,
+    )
+    workflow_execution_dto = WorkflowExecutionDTO(
+        id=workflow_execution.id,
+        workflow_id=workflow_execution.workflow_id,
+        status=workflow_execution.status,
+        started=workflow_execution.started,
+        triggered_by=workflow_execution.triggered_by,
+        error=workflow_execution.error,
+        execution_time=workflow_execution.execution_time,
+        logs=[
+            WorkflowExecutionLogsDTO(
+                id=log.id, timestamp=log.timestamp, message=log.message
+            )
+            for log in workflow_execution.logs
+        ],
+    )
+    return workflow_execution_dto

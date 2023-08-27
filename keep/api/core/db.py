@@ -8,7 +8,7 @@ import pymysql
 from google.cloud.sql.connector import Connector
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -165,6 +165,7 @@ def get_workflows_that_should_run():
     with Session(engine) as session:
         workflows_with_interval = session.exec(
             select(Workflow)
+            .where(Workflow.is_deleted == False)
             .where(Workflow.interval != None)
             .where(Workflow.interval > 0)
         ).all()
@@ -271,6 +272,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 ),
             )
             .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
         )
 
         result = session.execute(workflows_with_last_execution_query).all()
@@ -284,6 +286,7 @@ def get_workflow(tenant_id: str, workflow_id: str) -> str:
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+            .where(Workflow.is_deleted == False)
         ).first()
     return workflow.workflow_raw
 
@@ -335,7 +338,7 @@ def delete_workflow(tenant_id, workflow_id):
         ).first()
 
         if workflow:
-            session.delete(workflow)
+            workflow.is_deleted = True
             session.commit()
 
 
@@ -349,3 +352,37 @@ def get_workflow_id(tenant_id, workflow_name):
 
         if workflow:
             return workflow.id
+
+
+def push_logs_to_db(log_entries):
+    db_log_entries = [
+        WorkflowExecutionLog(
+            workflow_execution_id=log_entry["workflow_execution_id"],
+            timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
+            message=log_entry["message"],
+        )
+        for log_entry in log_entries
+    ]
+
+    # Add the LogEntry instances to the database session
+    with Session(engine) as session:
+        session.add_all(db_log_entries)
+        session.commit()
+
+
+def get_workflow_execution(
+    tenant_id: str, workflow_id: str, workflow_execution_id: str
+):
+    with Session(engine) as session:
+        execution_with_logs = (
+            session.query(WorkflowExecution)
+            .filter(
+                WorkflowExecution.workflow_id == workflow_id,
+                WorkflowExecution.id == workflow_execution_id,
+            )
+            .options(joinedload(WorkflowExecution.logs))
+            .one()
+        )
+
+        return execution_with_logs
+    return execution_with_logs

@@ -6,7 +6,7 @@ import { getApiURL } from '../../../utils/apiUrl';
 import { useSession } from '../../../utils/customAuth';
 import useSWR from 'swr';
 import { fetcher } from '../../../utils/fetcher';
-import { ExclamationCircleIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ExclamationCircleIcon, ArrowLeftIcon, PlayIcon } from '@heroicons/react/24/outline';
 import Loading from '../../loading';
 
 interface WorkflowExecution {
@@ -70,6 +70,7 @@ export default function WorkflowDetailPage({ params }: { params: { workflow_id: 
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Error</TableHeaderCell>
                 <TableHeaderCell>Execution time</TableHeaderCell>
+                <TableHeaderCell>Logs</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -81,6 +82,11 @@ export default function WorkflowDetailPage({ params }: { params: { workflow_id: 
                   <TableCell>{execution.status}</TableCell>
                   <TableCell>{execution.error}</TableCell>
                   <TableCell>{execution.execution_time}</TableCell>
+                  <TableCell>
+                    <Link className="text-orange-500 hover:underline flex items-center" href={`/workflows/${execution.workflow_id}/runs/${execution.id}`} passHref>
+                       <PlayIcon className="h-4 w-4 ml-1" />
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

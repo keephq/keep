@@ -23,12 +23,18 @@ class WorkflowDTO(BaseModel):
     providers: List[ProviderDTO]
 
 
+class WorkflowExecutionLogsDTO(BaseModel):
+    id: int
+    timestamp: datetime
+    message: str
+
+
 class WorkflowExecutionDTO(BaseModel):
     id: str
     workflow_id: str
     started: datetime
     triggered_by: str
     status: str
-    logs: Optional[str]
+    logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
     execution_time: Optional[int]
