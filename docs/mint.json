@@ -13,7 +13,7 @@
   },
   "topbarCtaButton": {
     "name": "Login",
-    "url": "https://app.keephq.dev/"
+    "url": "https://platform.keephq.dev/"
   },
   "topbarLinks": [
     {
@@ -22,24 +22,23 @@
     }
   ],
   "anchors": [
-    {
-      "name": "Slack",
-      "icon": "slack",
-      "url": "https://keephq.dev/slack"
-    },
-    {
-      "name": "Blog",
-      "icon": "newspaper",
-      "url": "https://medium.com/keepalerting"
-    }
   ],
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["overview/introduction", "overview/quickstart"]
+      "pages": ["overview/introduction", "overview/keyconcepts", "overview/usecases", "overview/examples", "overview/alternatives"]
     },
     {
       "group": "Platform",
+      "pages": [
+        "platform/overview",
+        "platform/providers",
+        "platform/alerts",
+        "platform/workflows"
+      ]
+    },
+    {
+      "group": "Workflows",
       "pages": [
         "platform/getting-started",
         {
@@ -129,19 +128,19 @@
               ]
             }
           ]
-        },
-        {
-          "group": "UI",
-          "pages": ["platform/ui/getting-started"]
         }
       ]
     },
     {
-      "group": "Applications",
-      "pages": ["applications/github"]
+      "group": "Keep API",
+      "pages": ["applications/api"]
     },
     {
-      "group": "Deployment",
+      "group": "Keep CLI",
+      "pages": ["applications/api"]
+    },
+    {
+      "group": "Development",
       "pages": ["deployment"]
     }
   ],
