@@ -193,9 +193,20 @@ class DatadogProvider(BaseProvider):
                 webhook = api.get_webhooks_integration(webhook_name=webhook_name)
                 if webhook.url != keep_api_url:
                     api.update_webhooks_integration(
-                        webhook.name, body={"url": keep_api_url}
+                        webhook.name,
+                        body={
+                            "url": keep_api_url,
+                            "custom_headers": json.dumps(
+                                {
+                                    "Content-Type": "application/json",
+                                    "X-API-KEY": api_key,
+                                }
+                            ),
+                        },
                     )
-                    self.logger.info("Webhook updated")
+                    self.logger.info(
+                        "Webhook updated",
+                    )
             except NotFoundException:
                 webhook = api.create_webhooks_integration(
                     body={
