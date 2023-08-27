@@ -1,8 +1,8 @@
 """
 Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
-import datetime
 import dataclasses
+import datetime
 import json
 import os
 import random
@@ -46,7 +46,9 @@ class ZabbixProvider(BaseProvider):
     """
 
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
-    KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = "zabbix_provider_script.js"  # zabbix mediatype script file
+    KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
+        "zabbix_provider_script.js"  # zabbix mediatype script file
+    )
     KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE = 4
 
     def __init__(self, provider_id: str, config: ProviderConfig):
@@ -114,22 +116,25 @@ class ZabbixProvider(BaseProvider):
         # TODO: this can be done once when loading the provider file
         self.logger.info("Reading webhook JS script file")
         __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+            os.path.join(os.getcwd(), os.path.dirname(__file__))
+        )
 
-        with open(os.path.join(__location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME)) as f:
+        with open(
+            os.path.join(
+                __location__, ZabbixProvider.KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME
+            )
+        ) as f:
             script = f.read()
 
         self.logger.info("Creating or updating webhook")
-        mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}" #-{tenant_id.replace('-', '')}
+        mediatype_name = f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME}"  # -{tenant_id.replace('-', '')}
 
         self.logger.info("Getting existing media types")
         existing_mediatypes = self.__send_request(
             "mediatype.get",
             {
                 "output": ["mediatypeid", "name"],
-                "filter": {
-                    "type": [ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE]
-                }
+                "filter": {"type": [ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE]},
             },
         )
 
@@ -137,7 +142,9 @@ class ZabbixProvider(BaseProvider):
 
         self.logger.info("Got existing media types")
         mediatype_list = [
-            mt for mt in existing_mediatypes.get("result", []) if mt["name"] == mediatype_name
+            mt
+            for mt in existing_mediatypes.get("result", [])
+            if mt["name"] == mediatype_name
         ]
 
         if mediatype_list:
@@ -162,6 +169,7 @@ class ZabbixProvider(BaseProvider):
                     {"name": "keepApiKey", "value": api_key},
                     {"name": "keepApiUrl", "value": keep_api_url},
                     {"name": "id", "value": "{EVENT.ID}"},
+                    {"name": "triggerId", "value": "{TRIGGER.ID}"},
                     {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
                     {"name": "message", "value": "{ALERT.MESSAGE}"},
                     {"name": "name", "value": "{EVENT.NAME}"},
@@ -176,6 +184,7 @@ class ZabbixProvider(BaseProvider):
                     {"name": "HOST.IP", "value": "{HOST.IP}"},
                     {"name": "HOST.NAME", "value": "{HOST.NAME}"},
                     {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
+                    {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
                 ],
                 "script": script,
                 "process_tags": 1,
@@ -232,12 +241,21 @@ class ZabbixProvider(BaseProvider):
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
         severity = ZabbixProvider.__get_priorty(event.pop("severity", "").lower())
+        event_id = event.get("id")
+        trigger_id = event.get("triggerId")
+        zabbix_url = event.pop("ZABBIX.URL", None)
+        url = None
+        if event_id and trigger_id and zabbix_url:
+            url = (
+                f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
+            )
         return AlertDto(
             **event,
             environment=environment,
             pushed=True,
             source=["zabbix"],
             severity=severity,
+            url=url,
         )
 
 

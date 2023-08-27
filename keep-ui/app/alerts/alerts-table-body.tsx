@@ -2,6 +2,7 @@ import {
   ArrowDownIcon,
   ArrowDownRightIcon,
   ArrowRightIcon,
+  ArrowTopRightOnSquareIcon,
   ArrowUpIcon,
   ArrowUpRightIcon,
   ShieldCheckIcon,
@@ -171,7 +172,19 @@ export function AlertsTableBody({
               })}
             </TableCell>
             <TableCell className="max-w-[340px] truncate" title={alert.name}>
-              {alert.name}
+              <div className="flex items-center">
+                {alert.name}{" "}
+                {alert.url && (
+                  <a href={alert.url} target="_blank">
+                    <Icon
+                      icon={ArrowTopRightOnSquareIcon}
+                      tooltip="Open Alert"
+                      color="gray"
+                      size="sm"
+                    />
+                  </a>
+                )}
+              </div>
             </TableCell>
             <TableCell>{alert.description}</TableCell>
             <TableCell className="max-w-[340px] truncate" title={alert.message}>

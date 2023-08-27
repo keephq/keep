@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Extra
+from pydantic import AnyHttpUrl, BaseModel, Extra
 
 
 class AlertDto(BaseModel, extra=Extra.allow):
@@ -16,6 +16,7 @@ class AlertDto(BaseModel, extra=Extra.allow):
     severity: str | None = None
     fatigueMeter: int | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
+    url: AnyHttpUrl | None = None
 
 
 class DeleteRequestBody(BaseModel):
