@@ -287,6 +287,7 @@ class DatadogProvider(BaseProvider):
         )
         event_name = event.get("title")
         match = re.match(DatadogProvider.EVENT_NAME_PATTERN, event_name)
+        url = event.pop("url", None)
         if match:
             event_name = match.group(1)
         return AlertDto(
@@ -299,6 +300,7 @@ class DatadogProvider(BaseProvider):
             description=event_name,
             severity=DatadogProvider.__get_priorty(event.get("severity")),
             fatigueMeter=random.randint(0, 100),
+            url=url,
             **tags,
         )
 
