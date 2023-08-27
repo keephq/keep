@@ -49,7 +49,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
       if (response.ok) {
         // Workflow started successfully
-        // You might want to handle further actions here
+        const responseData = await response.json();
+        const { workflow_execution_id } = responseData;
+        router.push(`/workflows/${workflowId}/runs/${workflow_execution_id}`);
       } else {
         console.error("Failed to start workflow");
       }
@@ -100,20 +102,24 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     return null; // Return null for duplicated providers
   });
 
+  const hasManualTrigger = workflow.triggers.some((trigger) => trigger.type === 'manual');
+
   return (
     <div className="border border-gray-300 p-4 rounded-lg relative hover:bg-gray-100 cursor-pointer" onClick={handleTileClick}>
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-lg">{workflow.description}</h2>
         <div className="flex space-x-2">
-        <button
-            className="p-1 rounded-full hover:bg-gray-200"
-            onClick={(event) => {
-              event.stopPropagation();
-              handleRunClick(workflow.id);
+          <button
+            className={`absolute bottom-2 right-2 px-2 py-1 text-sm rounded-md ${
+              hasManualTrigger ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              hasManualTrigger && handleRunClick(workflow.id);
             }}
-            title="Run Workflow"
+            disabled={!hasManualTrigger}
           >
-            <PlayIcon className="h-6 w-6 text-purple-600" />
+            Run manually
           </button>
           <button
             className="p-1 rounded-full hover:bg-gray-200"

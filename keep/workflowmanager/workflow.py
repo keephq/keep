@@ -40,8 +40,8 @@ class Workflow:
         self.workflow_providers = workflow_providers
         self.on_failure = on_failure
         self.context_manager = context_manager
-        self.logger = logging.getLogger(__name__)
         self.io_nandler = IOHandler(context_manager)
+        self.logger = self.context_manager.get_logger()
 
     def run_step(self, step: Step):
         self.logger.info("Running step %s", step.step_id)
@@ -88,8 +88,9 @@ class Workflow:
         self.logger.debug("Actions run")
         return actions_firing, actions_errors
 
-    def run(self):
+    def run(self, workflow_execution_id):
         self.logger.debug(f"Running workflow {self.workflow_id}")
+        self.context_manager.set_execution_context(workflow_execution_id)
         self.run_steps()
         actions_firing, actions_errors = self.run_actions()
         # Save the state

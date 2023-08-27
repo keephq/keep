@@ -13,6 +13,7 @@ from keep.api.core.db import (
     add_workflow,
     delete_workflow,
     get_workflow,
+    get_workflow_execution,
     get_workflows_with_last_execution,
 )
 from keep.contextmanager.contextmanager import ContextManager
@@ -26,6 +27,14 @@ class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
+
+    def get_workflow_execution(
+        self, tenant_id: str, workflow_id: str, workflow_execution_id: str
+    ):
+        workflow_execution = get_workflow_execution(
+            tenant_id, workflow_id, workflow_execution_id
+        )
+        return workflow_execution
 
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")

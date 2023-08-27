@@ -6,14 +6,20 @@ import os
 import click
 from starlette_context import context
 
+from keep.api.logging import WorkflowLoggerAdapter
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 
 
 class ContextManager:
     STATE_FILE = "keepstate.json"
 
-    def __init__(self, tenant_id, workflow_id, workflow_execution_id=None):
+    def __init__(
+        self, tenant_id, workflow_id, workflow_execution_id=None, load_state=True
+    ):
         self.logger = logging.getLogger(__name__)
+        self.logger_adapter = WorkflowLoggerAdapter(
+            self.logger, tenant_id, workflow_id, workflow_execution_id
+        )
         self.tenant_id = tenant_id
         self.storage_manager = StorageManagerFactory.get_file_manager()
         self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
@@ -34,9 +40,17 @@ class ContextManager:
         # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row
         #     and we want to use it in iohandler, we need to import it before the eval
         self.dependencies = set()
-        self.__load_state()
+        if load_state:
+            self.__load_state()
+        self.workflow_execution_id = None
 
-    # TODO - If we want to support multiple workflows at once we need to change this
+    def set_execution_context(self, workflow_execution_id):
+        self.workflow_execution_id = workflow_execution_id
+        self.logger_adapter.workflow_execution_id = workflow_execution_id
+
+    def get_logger(self):
+        return self.logger_adapter
+
     def set_event_context(self, event):
         self.event_context = event
 
@@ -70,7 +84,7 @@ class ContextManager:
             "actions": self.actions_context,
             "foreach": self.foreach_context,
             "event": self.event_context,
-            "alert": self.event_context,
+            "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
             "env": os.environ,
         }
 
@@ -79,12 +93,6 @@ class ContextManager:
 
         full_context.update(self.aliases)
         return full_context
-
-    def update_full_context(self, providers_context, steps_context, actions_context):
-        # If the workflow triggered by HTTP, we accept context from the HTTP body
-        self.providers_context.update(providers_context)
-        self.steps_context.update(steps_context)
-        self.actions_context.update(actions_context)
 
     def set_for_each_context(self, value):
         self.foreach_context["value"] = value
@@ -186,6 +194,15 @@ class ContextManager:
                 extra={"exception": e},
             )
             # TODO - should we raise an exception here?
+        # dump the workflow logs to the db
+        try:
+            self.logger_adapter.dump()
+        except Exception as e:
+            # TODO - should be handled
+            self.logger.error(
+                "Failed to dump workflow logs",
+                extra={"exception": e},
+            )
         self.logger.info("State file dumped")
 
     def set_last_workflow_run(self, workflow_id, workflow_context, workflow_status):

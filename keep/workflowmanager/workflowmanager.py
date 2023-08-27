@@ -142,11 +142,11 @@ class WorkflowManager:
 
         return workflows_errors
 
-    def _run_workflow(self, workflow: Workflow):
+    def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
         self.logger.info(f"Running workflow {workflow.workflow_id}")
         errors = []
         try:
-            errors = workflow.run()
+            errors = workflow.run(workflow_execution_id)
         except Exception as e:
             self.logger.error(
                 f"Error running workflow {workflow.workflow_id}", extra={"exception": e}
@@ -156,7 +156,9 @@ class WorkflowManager:
                     f"Running on_failure action for workflow {workflow.workflow_id}"
                 )
                 # Adding the exception message to the provider context so it'll be available for the action
-                message = f"Workflow `{workflow.workflow_id}` failed with exception: `{str(e)}`"
+                message = (
+                    f"Workflow {workflow.workflow_id} failed with exception: {str(e)}å"
+                )
                 workflow.on_failure.provider_parameters = {"message": message}
                 workflow.on_failure.run()
             raise

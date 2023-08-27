@@ -1,5 +1,7 @@
 alert:
   id: db-disk-space
+  triggers:
+  - type: manual
   steps:
     - name: check-error-rate
       provider:

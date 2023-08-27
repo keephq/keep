@@ -77,7 +77,7 @@ class WorkflowScheduler:
         try:
             # set the event context, e.g. the event that triggered the workflow
             workflow.context_manager.set_event_context(event_context)
-            self.workflow_manager._run_workflow(workflow)
+            self.workflow_manager._run_workflow(workflow, workflow_execution_id)
         except Exception as e:
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
             finish_workflow_execution(
@@ -97,7 +97,30 @@ class WorkflowScheduler:
         )
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
+    def handle_manual_event_workflow(
+        self, workflow_id, tenant_id, triggered_by_user, triggered, event
+    ):
+        # TODO: handle errors
+        workflow_execution_id = create_workflow_execution(
+            workflow_id=workflow_id,
+            tenant_id=tenant_id,
+            triggered_by=f"manually by {triggered_by_user}",
+        )
+        self.workflows_to_run.append(
+            {
+                "workflow_id": workflow_id,
+                "workflow_execution_id": workflow_execution_id,
+                "tenant_id": tenant_id,
+                "triggered_by": "manual",
+                "triggered_by_user": triggered_by_user,
+                "event": event,
+            }
+        )
+        return workflow_execution_id
+
     def _handle_event_workflows(self):
+        # TODO - event workflows should be in DB too, to avoid any state problems.
+
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
         workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
         for workflow_to_run in workflows_to_run:
@@ -105,6 +128,11 @@ class WorkflowScheduler:
             workflow = workflow_to_run.get("workflow")
             workflow_id = workflow_to_run.get("workflow_id")
             tenant_id = workflow_to_run.get("tenant_id")
+            if not workflow:
+                self.logger.info("Loading workflow")
+                workflow = self.workflow_store.get_workflow(
+                    workflow_id=workflow_id, tenant_id=tenant_id
+                )
             event = workflow_to_run.get("event")
             triggered_by = workflow_to_run.get("triggered_by")
             if triggered_by == "manual":
@@ -112,11 +140,17 @@ class WorkflowScheduler:
                 triggered_by = f"manually by {triggered_by_user}"
             else:
                 triggered_by = (f"type:alert name:{event.name} id:{event.id}",)
-            workflow_execution_id = create_workflow_execution(
-                workflow_id=workflow_id,
-                tenant_id=tenant_id,
-                triggered_by=triggered_by,
-            )
+
+            workflow_execution_id = workflow_to_run.get("workflow_execution_id")
+            # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
+            # In event (e.g. alarm), we will create it here
+            # TODO: one more robust way to do it
+            if not workflow_execution_id:
+                workflow_execution_id = create_workflow_execution(
+                    workflow_id=workflow_id,
+                    tenant_id=tenant_id,
+                    triggered_by=triggered_by,
+                )
             thread = threading.Thread(
                 target=self._run_workflow,
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],

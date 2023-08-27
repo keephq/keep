@@ -37,9 +37,9 @@ class Step:
         self.provider_parameters = provider_parameters
         self.context_manager = context_manager
         self.io_handler = IOHandler(context_manager)
-        self.logger = logging.getLogger(__name__)
         self.conditions = self.config.get("condition", [])
         self.conditions_results = {}
+        self.logger = context_manager.get_logger()
 
     @property
     def foreach(self):
