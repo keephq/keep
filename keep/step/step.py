@@ -20,26 +20,34 @@ class StepType(Enum):
     ACTION = "action"
 
 
-@dataclass(config={"arbitrary_types_allowed": True})
 class Step:
-    name: str = field(default_factory=str)
-    config: dict = field(default_factory=dict)
-    step_id: str = field(default_factory=str)
-    provider: BaseProvider = field(default_factory=BaseProvider)
-    provider_parameters: dict = field(default_factory=dict)
-    conditions_results: dict = field(default_factory=dict)
-    conditions: list = field(default_factory=list)
-    step_type: Enum = field(default=StepType.STEP)
-
-    def __post_init__(self):
-        self.io_handler = IOHandler()
-        self.logger = logging.getLogger(__name__)
-        self.context_manager = ContextManager.get_instance()
+    def __init__(
+        self,
+        context_manager,
+        step_id: str,
+        config: dict,
+        step_type: StepType,
+        provider: BaseProvider,
+        provider_parameters: dict,
+    ):
+        self.config = config
+        self.step_id = step_id
+        self.step_type = step_type
+        self.provider = provider
+        self.provider_parameters = provider_parameters
+        self.context_manager = context_manager
+        self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
+        self.conditions_results = {}
+        self.logger = context_manager.get_logger()
 
     @property
     def foreach(self):
         return self.config.get("foreach")
+
+    @property
+    def name(self):
+        return self.step_id
 
     def run(self):
         try:
@@ -60,7 +68,7 @@ class Step:
         throttling_type = throttling.get("type")
         throttling_config = throttling.get("with")
         throttle = ThrottleFactory.get_instance(throttling_type, throttling_config)
-        alert_id = self.context_manager.get_alert_id()
+        alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
     def _run_foreach(self):
@@ -90,6 +98,7 @@ class Step:
 
             conditions.append(
                 ConditionFactory.get_condition(
+                    self.context_manager,
                     condition.get("type"),
                     condition_name,
                     condition,
@@ -103,7 +112,7 @@ class Step:
                 condition_compare_to, condition_compare_value
             )
             self.context_manager.set_condition_results(
-                self.name,
+                self.step_id,
                 condition.condition_name,
                 condition.condition_type,
                 condition_compare_to,

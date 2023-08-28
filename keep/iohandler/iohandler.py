@@ -17,13 +17,12 @@ from keep.contextmanager.contextmanager import ContextManager
 
 
 class IOHandler:
-    def __init__(self):
-        self.context_manager = ContextManager.get_instance()
+    def __init__(self, context_manager: ContextManager):
+        self.context_manager = context_manager
         self.logger = logging.getLogger(self.__class__.__name__)
         # whether Keep should shorten urls in the message or not
         # todo: have a specific parameter for this?
         self.shorten_urls = False
-        self.context_manager = ContextManager.get_instance()
         if (
             self.context_manager.click_context
             and self.context_manager.click_context.params.get("api_key")
@@ -175,7 +174,7 @@ class IOHandler:
 
     def render_context(self, context_to_render: dict):
         """
-        Iterates the provider context and renders it using the alert context.
+        Iterates the provider context and renders it using the workflow context.
         """
         # Don't modify the original context
         context_to_render = copy.deepcopy(context_to_render)
@@ -190,7 +189,7 @@ class IOHandler:
 
     def _render_list_context(self, context_to_render: list):
         """
-        Iterates the provider context and renders it using the alert context.
+        Iterates the provider context and renders it using the workflow context.
         """
         for i in range(0, len(context_to_render)):
             value = context_to_render[i]
@@ -208,7 +207,6 @@ class IOHandler:
 
         Args:
             template (str): template (string) to render
-            alert_context (dict): alert run context
 
         Returns:
             str: rendered template

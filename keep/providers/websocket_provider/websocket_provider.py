@@ -6,6 +6,7 @@ import pydantic
 import websocket
 import websocket._exceptions
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -16,8 +17,10 @@ class WebsocketProviderAuthConfig:
 
 
 class WebsocketProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.ws = None
 
     def validate_config(self):
@@ -69,6 +72,12 @@ if __name__ == "__main__":
         id="websocket-test",
         authentication={},
     )
-    provider = WebsocketProvider(provider_id="websocket", config=config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    provider = WebsocketProvider(
+        context_manager, provider_id="websocket", config=config
+    )
     response = provider.query(socket_url="ws://echo.websockets.events")
     print(response)

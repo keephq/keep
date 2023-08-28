@@ -83,6 +83,7 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
                 </div>
               </TableHeaderCell>
             ))}
+              {groupBy && <TableHeaderCell>History</TableHeaderCell>}
           </TableRow>
         </TableHead>
         <AlertsTableBody

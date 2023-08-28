@@ -1,116 +1,25 @@
 ---
 title: "Introduction"
-description: "Keep is an open-source alert management tool that contains everything you need to create and manage Alerts."
+description: "Keep is an open-source alert management and automation tool that provides everything you need to create and manage alerts effectively."
 ---
+<Note>Start using Keep by logging in to the [platform](https://platform.keephq.dev).</Note>
 
-## 🗼 A glance of Keep
+## What's alert?
 
-<Card
-  title="10s of providers ready to use with your own data"
-  icon="database"
-  iconType="duotone"
-></Card>
-<Card
-  title="A simple and intuitive UI that covers all your needs"
-  icon="sidebar-flip"
-  iconType="duotone"
-></Card>
-<Card
-  title="Simple CLI to configure, trigger and test your alerts"
-  icon="square-terminal"
-  iconType="duotone"
-></Card>
-<Card
-  title="Easily deployable via docker, vercel, github actions, etc."
-  icon="rocket"
-  iconType="duotone"
-></Card>
-<Card
-  title="Alerts are managed by simple yaml files that are human-readable"
-  icon="circle-exclamation"
-  iconType="duotone"
-></Card>
+An alert is an event that is triggered when something undesirable occurs or is about to occur.
+It is usually triggered by monitoring tools such as Prometheus, Grafana, or CloudWatch, and in some cases, proprietary tools.
 
-Brought to you by developers, **EASY** to use and managed by code.
+Alerts usually categorized into three different groups:
+- Infrastructure-related alerts - e.g., a virtual machine consumes more than 99% CPU.
+- Application-related alerts - e.g., an endpoint starts returning 5XX status codes.
+- Business-related alerts - e.g., a drop in the number of sign-ins or purchases.
 
-## 📟 Console
+## What problem does Keep solve?
+Keep helps with every step of the alert lifecycle:
+1. Creation - Keep offers a framework for creating, debugging, and testing alerts through code that scales with your teams.
+2. Maintenance - Keep integrates with your existing tools, allowing you to manage all of your alerts within a single interface.
+3. Noise reduction - By integrating with tools that trigger alerts, Keep can deduplicate and correlate alerts to reduce noise in your organization.
+4. Automation - [Keep Workflows](/workflows) enable automated alert enrichment and response.
 
-<CardGroup cols={2}>
-  <Card
-    title="Manage and maintain alerts"
-    icon="traffic-light-stop"
-    iconType="duotone"
-  ></Card>
-  <Card
-    title="Connect and configure Providers"
-    icon="plug"
-    iconType="duotone"
-    href="https://github.com/keephq/keep/tree/main/keep/providers"
-  ></Card>
-  <Card
-    title="Connect 3rd party applications (e.g. GitHub)"
-    icon="github"
-    iconType="duotone"
-  ></Card>
-  <Card
-    title="Single pane of glass to all of your different monitoring tools"
-    icon="rectangle"
-    iconType="duotone"
-  ></Card>
-</CardGroup>
-
-## 🚨 Providers
-
-We tried our best to cover all common providers, [missing any?](https://github.com/keephq/keep/issues/new?assignees=&labels=feature,provider&template=feature_request.md&title=Missing%20PROVIDER_NAME), providers include:
-
-<CardGroup cols={2}>
-  <Card title="Cloud" icon="cloud-arrow-up" iconType="duotone">
-    AWS, GCP, Azure, etc.
-  </Card>
-  <Card title="Monitoring" icon="glasses-round" iconType="duotone">
-    Sentry, New Relic, Datadog, etc.
-  </Card>
-  <Card title="Incident Management" icon="traffic-cone" iconType="duotone">
-    PagerDuty, OpsGenie, etc.
-  </Card>
-  <Card title="Communication" icon="envelopes-bulk" iconType="duotone">
-    Email, Slack, Discord, Microsoft Teams, etc.
-  </Card>
-</CardGroup>
-[and more...](https://github.com/keephq/keep/tree/main/keep/providers)
-## 🔍 Learn more
-
-<CardGroup cols={3}>
-  <Card
-    title="Share feedback/ask questions via our Slack"
-    icon="slack"
-    iconType="duotone"
-    href="https://keephq.dev/slack"
-  ></Card>
-  <Card
-    title="Explore the documentation"
-    icon="books"
-    iconType="duotone"
-    href="https://keephq.wiki"
-  ></Card>
-  <Card
-  title="Check out our website"
-  icon="browser"
-  iconType="duotone"
-  href="https://www.keephq.dev"
-></Card>
-</CardGroup>
-<CardGroup cols={2}>
-  <Card
-    title="Explore the full list of supported providers"
-    icon="magnifying-glass"
-    iconType="duotone"
-    href="https://keephq.dev/slack"
-  ></Card>
-  <Card
-    title="Adding a new provider"
-    icon="user-plus"
-    iconType="duotone"
-    href="https://keephq.wiki/new-provider"
-  ></Card>
-</CardGroup>
+## How does Keep integrate with the alerts?
+Alerts can either be [pulled](/platform/alerts#pulled-alerts) by Keep or [pushed](/platform/alerts#pushed-alerts) into it. Keep also offers zero-click alert instrumentation through [webhook instllation](/platform/providers#webhook-integration).

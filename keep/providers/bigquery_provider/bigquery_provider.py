@@ -9,12 +9,13 @@ import google.auth
 from google.cloud import bigquery
 from pydantic.dataclasses import dataclass
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
 
 @dataclasses.dataclass
-class BigQueryProviderAuthConfig:
+class BigqueryProviderAuthConfig:
     """
     BigQuery authentication configuration.
     """
@@ -41,8 +42,10 @@ class BigqueryProvider(BaseProvider):
     provider_id: str
     config: ProviderConfig
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         """
@@ -51,7 +54,7 @@ class BigqueryProvider(BaseProvider):
         """
         if self.config.authentication is None:
             self.config.authentication = {}
-        self.authentication_config = BigQueryProviderAuthConfig(
+        self.authentication_config = BigqueryProviderAuthConfig(
             **self.config.authentication
         )
         # Check for project_id and handle it here.
@@ -121,7 +124,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # If you want to use application default credentials, you can omit the authentication config
     config = {
         # "authentication": {"credentials_path": "/path/to/your/service_account.json"},
@@ -130,7 +136,10 @@ if __name__ == "__main__":
 
     # Create the provider
     provider = BigqueryProvider(
-        provider_id="bigquery-provider", config=ProviderConfig(**config)
+        context_manager,
+        provider_id="bigquery-provider",
+        provider_type="bigquery",
+        config=ProviderConfig(**config),
     )
     # Use the provider to execute a query
     results = provider.query(

@@ -7,7 +7,7 @@ import tempfile
 import pytest
 from starlette_context import context
 
-from keep.contextmanager.contextmanager import ContextManager, get_context_manager_id
+from keep.contextmanager.contextmanager import ContextManager
 
 STATE_FILE_MOCK_DATA = {
     "new-github-stars": [
@@ -111,16 +111,16 @@ def test_context_manager_set_alert_context(context_manager: ContextManager):
     """
     Test the set_alert_context function
     """
-    context_manager.set_alert_context({"test": "mock"})
-    assert context_manager.alert_context == {"test": "mock"}
+    context_manager.set_workflow_context({"test": "mock"})
+    assert context_manager.workflow_context == {"test": "mock"}
 
 
 def test_context_manager_get_alert_id(context_manager: ContextManager):
     """
     Test the get_alert_id function
     """
-    context_manager.set_alert_context({"alert_id": "1234"})
-    assert context_manager.get_alert_id() == "1234"
+    context_manager.set_workflow_context({"alert_id": "1234"})
+    assert context_manager.get_workflow_id() == "1234"
 
 
 def test_context_manager_get_full_context(context_manager_with_state: ContextManager):
@@ -219,7 +219,7 @@ def test_context_manager_set_last_alert_run(context_manager: ContextManager):
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
-    context_manager.set_last_alert_run(alert_id, alert_context, alert_status)
+    context_manager.set_last_workflow_run(alert_id, alert_context, alert_status)
     context_manager.dump()
     assert alert_id in context_manager.state
     with open(context_manager.STATE_FILE, "r") as f:
@@ -231,10 +231,10 @@ def test_context_manager_get_last_alert_run(context_manager: ContextManager):
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
-    last_run = context_manager.get_last_alert_run(alert_id)
+    last_run = context_manager.get_last_workflow_run(alert_id)
     assert last_run == {}
-    context_manager.set_last_alert_run(alert_id, alert_context, alert_status)
-    last_run = context_manager.get_last_alert_run(alert_id)
+    context_manager.set_last_workflow_run(alert_id, alert_context, alert_status)
+    last_run = context_manager.get_last_workflow_run(alert_id)
     assert last_run["alert_status"] == alert_status
 
 

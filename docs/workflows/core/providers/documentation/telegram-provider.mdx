@@ -1,0 +1,34 @@
+---
+title: "Telegram Provider"
+description: "Telegram Provider is a provider that allows to notify alerts to telegram chats."
+---
+
+## Inputs
+
+The `notify` function in the `TelegramProvider` class takes the following parameters:
+
+```python
+kwargs (dict):
+    message (str): The message to send. *Required*
+    chat_id (str): The chat_id of which to send the message to. *Required* (How to get chat id - https://stackoverflow.com/questions/32423837/telegram-bot-how-to-get-a-group-chat-id)
+```
+
+## Authentication Parameters
+
+The TelegramProviderAuthConfig class takes the following parameters:
+
+- bot_token (str): The bot of the token. \*Required\*\*
+
+## Connecting with the Provider
+
+To use the Telegram Provider you'll need a bot token.
+How to create telegram bot - https://core.telegram.org/bots#how-do-i-create-a-bot
+
+## Useful Links
+
+- Telegram Bot docs - https://core.telegram.org/bots
+- Telegram how to get chat id - https://stackoverflow.com/questions/32423837/telegram-bot-how-to-get-a-group-chat-id
+
+## Example
+
+See `examples/alerts/db_disk_space_telegram.yml` for a full working example.

@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from keep.contextmanager.contextmanager import ContextManager, get_context_manager_id
+from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 
 
@@ -18,7 +18,9 @@ def test_vanilla():
 
 def test_with_basic_context():
     iohandler = IOHandler()
-    context_manager = ContextManager.get_instance()
+    context_manager = ContextManager(
+        tenant_id="tenant_id", workflow_execution_id="workflow_execution_id"
+    )
     context_manager.update_full_context(
         steps_context={"name": "s"},
         actions_context={"name": "s2"},
@@ -34,7 +36,9 @@ def test_with_basic_context():
 
 def test_with_function():
     iohandler = IOHandler()
-    context_manager = ContextManager.get_instance()
+    context_manager = ContextManager(
+        tenant_id="tenant_id", workflow_execution_id="workflow_execution_id"
+    )
     context_manager.update_full_context(
         steps_context={"some_list": [1, 2, 3]},
         actions_context={"name": "s2"},
@@ -46,7 +50,9 @@ def test_with_function():
 
 def test_with_function_2():
     iohandler = IOHandler()
-    context_manager = ContextManager.get_instance()
+    context_manager = ContextManager(
+        tenant_id="tenant_id", workflow_execution_id="workflow_execution_id"
+    )
     context_manager.update_full_context(
         steps_context={"some_list": [1, 2, 3]},
         actions_context={"some_string": "abcde"},

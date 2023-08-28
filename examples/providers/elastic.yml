@@ -1,7 +1,0 @@
-provider:
-  id: elastic
-  description: Elastic Production
-  provider_type: elasticsearch
-  authentication:
-    api_key:  1234-abcd-efgh-5678-1111 # {{ELASTIC_API_KEY}} to read from secret store
-    account: m12345.elastic.co

@@ -6,6 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -25,8 +26,10 @@ class ResendProviderAuthConfig:
 class ResendProvider(BaseProvider):
     RESEND_API_URL = "https://api.resend.com"
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         self.authentication_config = ResendProviderAuthConfig(
@@ -82,13 +85,16 @@ if __name__ == "__main__":
     import os
 
     resend_api_key = os.environ.get("RESEND_API_KEY")
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Initalize the provider and provider config
     config = ProviderConfig(
         id="resend-test",
         authentication={"api_key": resend_api_key},
     )
-    provider = ResendProvider(provider_id="resend-test", config=config)
+    provider = ResendProvider(context_manager, provider_id="resend-test", config=config)
     response = provider.notify(
         "onboarding@resend.dev",
         "youremail@gmail.com",

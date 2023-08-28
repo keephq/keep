@@ -7,6 +7,7 @@ import json
 import pydantic
 from elasticsearch import Elasticsearch
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
 from keep.providers.base.base_provider import BaseProvider
@@ -42,8 +43,10 @@ class ElasticProviderAuthConfig:
 
 
 class ElasticProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self._client = None
 
     @property
@@ -154,7 +157,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -172,7 +178,10 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="elastic", provider_config=config
+        context_manager,
+        provider_id="elastic",
+        provider_type="elastic",
+        provider_config=config,
     )
     result = provider.query('{"match_all": {}}', index="test-index")
     print(result)

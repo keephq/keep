@@ -1,0 +1,74 @@
+---
+title: "Workflows"
+sidebarTitle: Workflows
+---
+
+## Overview
+<Tip>You can manage Workflows programmatically using the <a href="/api/workflows">Workflow API</a>.</Tip>
+The Workflows page implements a convinent interface to manage your workflows.
+
+Workflows can be triggered by:
+
+1. Alert
+2. Predefined interval
+3. Manually
+
+You can learn more about how to [create workflows](/workflows/getting-started) and about the [workflows syntax](/workflows/syntax) in the workflows docs or in the [examples](https://github.com/keephq/keep/tree/main/examples/workflows) section in Keep repository.
+
+## Upload a Workflow
+Drop your workflow yaml file or use the "upload workflow":
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/addworkflow.png" />
+</Frame>
+
+## Connect a missing Provider
+When you upload a Workflow, Keep parse it and checks what Providers this workflow needs in order to run.
+If the provider is not installed, the Workflow won't be able to run. To install the missing Provider, just click on the "install" link:
+
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/connectmissingprovider.png" />
+</Frame>
+
+You will be taken to the specific Provider installation page:
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/connectmissingproviderinstallation.png" />
+</Frame>
+
+## Run a Workflow manually
+If a Workflow was defined with the manual trigger, the "run manually" button will be enabled:
+
+
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/runworkflow.png" />
+</Frame>
+
+## Delete a Workflow
+To delete a Workflow, just click on the "trash icon":
+
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/deleteworkflow.png" />
+</Frame>
+
+## View Workflow executions history
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/viewworkflowhistory.png" />
+</Frame>
+
+## View a specific Workflow execution logs
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/viewworkflowlogs.png" />
+</Frame>

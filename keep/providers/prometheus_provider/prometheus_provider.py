@@ -10,6 +10,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -53,8 +54,10 @@ receivers:
         username: api_key
         password: {api_key}"""
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         """
@@ -153,7 +156,11 @@ if __name__ == "__main__":
             "password": os.environ.get("PROMETHEUS_PASSWORD"),
         }
     )
-    prometheus_provider = PrometheusProvider("prometheus-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    prometheus_provider = PrometheusProvider(context_manager, "prometheus-prod", config)
     results = prometheus_provider.query(
         query="sum by (job) (rate(prometheus_http_requests_total[5m]))"
     )

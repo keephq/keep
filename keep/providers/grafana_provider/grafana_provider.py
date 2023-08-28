@@ -13,6 +13,7 @@ from grafana_api.alerting_provisioning import AlertingProvisioning
 from grafana_api.model import APIEndpoints, APIModel
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
@@ -47,8 +48,10 @@ class GrafanaProvider(BaseProvider):
 
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         """
@@ -277,12 +280,18 @@ if __name__ == "__main__":
 
     host = os.environ.get("GRAFANA_HOST")
     token = os.environ.get("GRAFANA_TOKEN")
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     config = {
         "authentication": {"host": host, "token": token},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="grafana-keephq", provider_type="grafana", provider_config=config
+        context_manager,
+        provider_id="grafana-keephq",
+        provider_type="grafana",
+        provider_config=config,
     )
     alerts = provider.setup_webhook("http://localhost:8000", "1234", True)
     print(alerts)

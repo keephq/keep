@@ -17,6 +17,7 @@ import pydantic
 import requests
 
 from keep.api.models.alert import AlertDto
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -46,8 +47,10 @@ class CloudwatchProvider(BaseProvider):
     CloudwatchProvider is a class that provides a way to read data from AWS Cloudwatch.
     """
 
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.aws_client_type = None
         self._client = None
 
@@ -81,6 +84,7 @@ class CloudwatchProvider(BaseProvider):
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         # first, list all Cloudwatch alarms
+        self.logger.info("Setting up webhook with url %s", keep_api_url)
         cloudwatch_client = self.__generate_client("cloudwatch")
         sns_client = self.__generate_client("sns")
         resp = cloudwatch_client.describe_alarms()
@@ -95,7 +99,9 @@ class CloudwatchProvider(BaseProvider):
                 ).get("Subscriptions", [])
                 hostname = urlparse(keep_api_url).hostname
                 already_subscribed = any(
-                    hostname in sub["Endpoint"] for sub in subscriptions
+                    hostname in sub["Endpoint"]
+                    and not sub["SubscriptionArn"] == "PendingConfirmation"
+                    for sub in subscriptions
                 )
                 if not already_subscribed:
                     url_with_api_key = keep_api_url.replace(
@@ -105,6 +111,10 @@ class CloudwatchProvider(BaseProvider):
                         TopicArn=topic,
                         Protocol="https",
                         Endpoint=url_with_api_key,
+                    )
+                else:
+                    self.logger.info(
+                        "Already subscribed to topic %s, skipping...", topic
                     )
         self.logger.info("Webhook setup completed!")
 
@@ -201,7 +211,13 @@ if __name__ == "__main__":
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         }
     )
-    cloudwatch_provider = CloudwatchMetricsProvider("cloudwatch-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    cloudwatch_provider = CloudwatchMetricsProvider(
+        context_manager, "cloudwatch-prod", config
+    )
     results = cloudwatch_provider.query(
         query="fields @timestamp, @message, @logStream, @log | sort @timestamp desc | limit 20",
         log_group="Test",

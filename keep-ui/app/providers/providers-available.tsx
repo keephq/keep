@@ -1,12 +1,13 @@
 "use client";
 import { Text } from "@tremor/react";
 import { Providers, Provider } from "./providers";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
 import "./providers-available.css";
 import "react-sliding-side-panel/lib/index.css";
+import { useSearchParams } from 'next/navigation'
 
 const ProvidersConnect = ({
   providers,
@@ -15,12 +16,34 @@ const ProvidersConnect = ({
   providers: Providers;
   addProvider: (provider: Provider) => void;
 }) => {
+  const searchParams = useSearchParams()
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  const providerType = searchParams?.get("provider_type")
+  const providerName = searchParams?.get("provider_name")
+
+  useEffect(() => {
+    if (providerType && providerName) {
+      // Find the provider based on providerType and providerName
+      const provider = providers.find(
+        (provider) =>
+          provider.type === providerType
+      );
+
+      if (provider) {
+        setSelectedProvider(provider);
+        setFormValues({
+          "provider_name": providerName
+        });
+        setOpenPanel(true);
+      }
+    }
+  }, [providerType, providerName, providers]);
 
   const handleFormChange = (
     updatedFormValues: Record<string, string>,

@@ -1,14 +1,17 @@
 """
 Simple Console Output Provider
 """
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
 
 class ConsoleProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         # No configuration to validate, so just do nothing.
@@ -37,14 +40,19 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Initalize the provider and provider config
     config = {
         "description": "Console Output Provider",
         "authentication": {},
     }
     provider = ProvidersFactory.get_provider(
-        provider_id="mock", provider_type="console", provider_config=config
+        context_manager,
+        provider_id="mock",
+        provider_type="console",
+        provider_config=config,
     )
-    provider.notify(
-        alert_message="Simple alert showing context with name: John Doe"
-    )
+    provider.notify(alert_message="Simple alert showing context with name: John Doe")

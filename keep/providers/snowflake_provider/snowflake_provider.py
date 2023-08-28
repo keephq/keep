@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives import serialization
 from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -43,8 +44,10 @@ class SnowflakeProviderAuthConfig:
 
 
 class SnowflakeProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self._client = None
 
     @property
@@ -123,7 +126,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -139,7 +145,10 @@ if __name__ == "__main__":
         },
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="snowflake", provider_config=config
+        context_manager,
+        provider_id="snowflake",
+        provider_type="snowflake",
+        provider_config=config,
     )
     result = provider.query(
         "select * from {table} limit 10", table="TEST_DB.PUBLIC.CUSTOMERS"

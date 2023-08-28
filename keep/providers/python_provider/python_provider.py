@@ -3,6 +3,7 @@ PythonProvider is a class that implements the BaseOutputProvider.
 """
 
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
@@ -10,8 +11,10 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class PythonProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.io_handler = IOHandler()
 
     def validate_config(self):

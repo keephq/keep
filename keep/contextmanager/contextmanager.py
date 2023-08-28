@@ -1,3 +1,4 @@
+# TODO - refactor context manager to support multitenancy in a more robust way
 import json
 import logging
 import os
@@ -5,49 +6,27 @@ import os
 import click
 from starlette_context import context
 
-
-def get_context_manager_id():
-    try:
-        # If we are running as part of FastAPI, we need context_manager per request
-        request_id = context.data["X-Request-ID"]
-        return request_id
-    except Exception:
-        return "main"
+from keep.api.logging import WorkflowLoggerAdapter
+from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 
 
 class ContextManager:
     STATE_FILE = "keepstate.json"
-    __instances = {}
 
-    # https://stackoverflow.com/questions/36286894/name-not-defined-in-type-annotation
-    @staticmethod
-    def get_instance() -> "ContextManager":
-        context_manager_id = get_context_manager_id()
-        if context_manager_id not in ContextManager.__instances:
-            ContextManager.__instances[context_manager_id] = ContextManager()
-        return ContextManager.__instances[context_manager_id]
-
-    @staticmethod
-    def delete_instance():
-        context_manager_id = get_context_manager_id()
-        if context_manager_id in ContextManager.__instances:
-            del ContextManager.__instances[context_manager_id]
-
-    def __init__(self):
+    def __init__(
+        self, tenant_id, workflow_id, workflow_execution_id=None, load_state=True
+    ):
         self.logger = logging.getLogger(__name__)
-        context_manager_id = get_context_manager_id()
-        if context_manager_id in ContextManager.__instances:
-            raise Exception(
-                "Singleton class is a singleton class and cannot be instantiated more than once."
-            )
-        else:
-            ContextManager.__instances[context_manager_id] = self
-
+        self.logger_adapter = WorkflowLoggerAdapter(
+            self.logger, tenant_id, workflow_id, workflow_execution_id
+        )
+        self.tenant_id = tenant_id
+        self.storage_manager = StorageManagerFactory.get_file_manager()
         self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
         self.steps_context = {}
         self.actions_context = {}
         self.providers_context = {}
-        self.alert_context = {}
+        self.event_context = {}
         self.foreach_context = {
             "value": None,
         }
@@ -61,18 +40,26 @@ class ContextManager:
         # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row
         #     and we want to use it in iohandler, we need to import it before the eval
         self.dependencies = set()
-        self.__load_state()
+        if load_state:
+            self.__load_state()
+        self.workflow_execution_id = None
 
-    # TODO - If we want to support multiple alerts at once we need to change this
-    def set_alert_context(self, alert_context):
-        self.alert_context = alert_context
+    def set_execution_context(self, workflow_execution_id):
+        self.workflow_execution_id = workflow_execution_id
+        self.logger_adapter.workflow_execution_id = workflow_execution_id
 
-    def get_alert_id(self):
-        return self.alert_context.get("alert_id")
+    def get_logger(self):
+        return self.logger_adapter
+
+    def set_event_context(self, event):
+        self.event_context = event
+
+    def get_workflow_id(self):
+        return self.workflow_context.get("workflow_id")
 
     def get_full_context(self, exclude_state=False):
         """
-        Gets full context on the alerts
+        Gets full context on the workflows
 
         Usage: context injection used, for example, in iohandler
 
@@ -81,7 +68,7 @@ class ContextManager:
                 it's already there. Defaults to False.
 
         Returns:
-            dict: dictinoary contains all context about this alert
+            dict: dictinoary contains all context about this workflow
                   providers - all context about providers (configuration, etc)
                   steps - all context about steps (output, conditions, etc)
                   foreach - all context about the current 'foreach'
@@ -96,6 +83,8 @@ class ContextManager:
             "steps": self.steps_context,
             "actions": self.actions_context,
             "foreach": self.foreach_context,
+            "event": self.event_context,
+            "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
             "env": os.environ,
         }
 
@@ -104,12 +93,6 @@ class ContextManager:
 
         full_context.update(self.aliases)
         return full_context
-
-    def update_full_context(self, providers_context, steps_context, actions_context):
-        # If the alert workflow triggered by HTTP, we accept context from the HTTP body
-        self.providers_context.update(providers_context)
-        self.steps_context.update(steps_context)
-        self.actions_context.update(actions_context)
 
     def set_for_each_context(self, value):
         self.foreach_context["value"] = value
@@ -181,47 +164,66 @@ class ContextManager:
         self.steps_context["this"] = self.steps_context[step_id]
 
     def __load_state(self):
-        if self.state_file:
-            # TODO - SQLite
-            try:
-                with open(self.state_file, "r") as f:
-                    self.state = json.load(f)
-            except Exception:
-                self.logger.warning("Failed to load state file, using empty state")
-                self.state = {}
+        try:
+            self.state = json.loads(
+                self.storage_manager.get_file(self.tenant_id, self.state_file)
+            )
+        except Exception as exc:
+            self.logger.warning("Failed to load state file, using empty state")
+            self.logger.warning(
+                f"State storage: {self.storage_manager.__class__.__name__}"
+            )
+            self.logger.warning(f"Reason: {exc}")
+            self.state = {}
 
-    def get_last_alert_run(self, alert_id):
-        if alert_id in self.state:
-            return self.state[alert_id][-1]
+    def get_last_workflow_run(self, workflow_id):
+        if workflow_id in self.state:
+            return self.state[workflow_id][-1]
         # no previous runs
         else:
             return {}
 
     def dump(self):
         self.logger.info("Dumping state file")
-        with open(self.state_file, "w") as f:
-            json.dump(self.state, f, default=str)
+        # Write the updated state back to the file
+        try:
+            self.storage_manager.store_file(self.tenant_id, self.state_file, self.state)
+        except Exception as e:
+            self.logger.error(
+                "Failed to dump state file",
+                extra={"exception": e},
+            )
+            # TODO - should we raise an exception here?
+        # dump the workflow logs to the db
+        try:
+            self.logger_adapter.dump()
+        except Exception as e:
+            # TODO - should be handled
+            self.logger.error(
+                "Failed to dump workflow logs",
+                extra={"exception": e},
+            )
         self.logger.info("State file dumped")
 
-    def set_last_alert_run(self, alert_id, alert_context, alert_status):
+    def set_last_workflow_run(self, workflow_id, workflow_context, workflow_status):
         # TODO - SQLite
         self.logger.debug(
-            "Adding alert to state",
+            "Adding workflow to state",
             extra={
-                "alert_id": alert_id,
+                "workflow_id": workflow_id,
             },
         )
-        if alert_id not in self.state:
-            self.state[alert_id] = []
-        self.state[alert_id].append(
+        if workflow_id not in self.state:
+            self.state[workflow_id] = []
+        self.state[workflow_id].append(
             {
-                "alert_status": alert_status,
-                "alert_context": alert_context,
+                "workflow_status": workflow_status,
+                "workflow_context": workflow_context,
             }
         )
         self.logger.debug(
-            "Added alert to state",
+            "Added workflow to state",
             extra={
-                "alert_id": alert_id,
+                "workflow_id": workflow_id,
             },
         )
