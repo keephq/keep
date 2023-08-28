@@ -7,7 +7,7 @@ import { getApiURL } from "../../utils/apiUrl";
 import Loader from "./loader";
 import { Provider } from "../providers/providers";
 import { fetcher } from "../../utils/fetcher";
-import {KeepApiError} from "../error";
+import { KeepApiError } from "../error";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -20,6 +20,7 @@ interface Props {
   enableButtons: () => void;
   enableGenerate: (state: boolean) => void;
   triggerGenerate: number;
+  workflow?: string;
 }
 
 export function BuilderCard({
@@ -29,6 +30,7 @@ export function BuilderCard({
   enableButtons,
   enableGenerate,
   triggerGenerate,
+  workflow,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const apiUrl = getApiURL();
@@ -37,8 +39,11 @@ export function BuilderCard({
     fetcher(url, accessToken)
   );
 
-  if(error){
-    throw new KeepApiError("The builder has failed to load providers", `${apiUrl}/providers`);
+  if (error) {
+    throw new KeepApiError(
+      "The builder has failed to load providers",
+      `${apiUrl}/providers`
+    );
   }
 
   useEffect(() => {
@@ -47,6 +52,17 @@ export function BuilderCard({
       enableButtons();
     }
   }, [data, providers, enableButtons]);
+
+  if (!providers || isLoading)
+    return (
+      <Card
+        className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${
+          error ? null : "h-5/6"
+        }`}
+      >
+        <Loader />
+      </Card>
+    );
 
   return (
     <Card
@@ -61,7 +77,7 @@ export function BuilderCard({
         >
           Failed to load providers
         </Callout>
-      ) : fileContents == "" || isLoading || !providers ? (
+      ) : fileContents == "" && !workflow ? (
         <Loader />
       ) : (
         <Builder
@@ -70,6 +86,7 @@ export function BuilderCard({
           fileName={fileName}
           enableGenerate={enableGenerate}
           triggerGenerate={triggerGenerate}
+          workflow={workflow}
         />
       )}
     </Card>

@@ -2,10 +2,10 @@ import PageClient from "./page.client";
 import { Suspense } from "react";
 import Loading from "../loading";
 
-export default function Page() {
+export default function Page({ workflow }: { workflow: string }) {
   return (
     <Suspense fallback={<Loading />}>
-      <PageClient />
+      <PageClient workflow={workflow} />
     </Suspense>
   );
 }

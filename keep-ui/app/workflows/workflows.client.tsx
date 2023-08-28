@@ -1,20 +1,28 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import useSWR from "swr";
 import { Callout } from "@tremor/react";
-import { ExclamationCircleIcon, ClipboardIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationCircleIcon,
+  ClipboardIcon,
+} from "@heroicons/react/24/outline";
 import { useSession } from "../../utils/customAuth";
 import { fetcher } from "../../utils/fetcher";
 import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
-import Image from 'next/image';
-import { PlayIcon, ArrowDownTrayIcon, EyeIcon, TrashIcon } from "@heroicons/react/24/outline";
+import Image from "next/image";
+import {
+  PlayIcon,
+  ArrowDownTrayIcon,
+  EyeIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import React from "react";
 import DragAndDrop from "./dragndrop";
 import NoWorkflows from "./noworfklows";
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 function copyToClipboard(text: string) {
@@ -25,7 +33,6 @@ function copyToClipboard(text: string) {
   document.execCommand("copy");
   document.body.removeChild(textarea);
 }
-
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
@@ -60,8 +67,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     }
   };
 
-
-  const handleDeleteClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDeleteClick = async (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
     try {
       event.stopPropagation();
       const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
@@ -89,7 +97,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       uniqueProviders.add(providerType);
       return (
         <Image
-          className={`inline-block rounded-full ${uniqueProviders.size === 1 ? "" : "-ml-2"}`}
+          className={`inline-block rounded-full ${
+            uniqueProviders.size === 1 ? "" : "-ml-2"
+          }`}
           key={provider.id}
           alt={providerType}
           height={24}
@@ -102,16 +112,23 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     return null; // Return null for duplicated providers
   });
 
-  const hasManualTrigger = workflow.triggers.some((trigger) => trigger.type === 'manual');
+  const hasManualTrigger = workflow.triggers.some(
+    (trigger) => trigger.type === "manual"
+  );
 
   return (
-    <div className="border border-gray-300 p-4 rounded-lg relative hover:bg-gray-100 cursor-pointer" onClick={handleTileClick}>
+    <div
+      className="border border-gray-300 p-4 rounded-lg relative hover:bg-gray-100 cursor-pointer"
+      onClick={handleTileClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-lg">{workflow.description}</h2>
         <div className="flex space-x-2">
           <button
             className={`absolute bottom-2 right-2 px-2 py-1 text-sm rounded-md ${
-              hasManualTrigger ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+              hasManualTrigger
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-gray-300 text-gray-600 cursor-not-allowed"
             }`}
             onClick={(e) => {
               e.stopPropagation();
@@ -139,8 +156,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           </button>
           <button
             className="p-1 rounded-full hover:bg-gray-200"
-            onClick={() => {
-              // Handle the view action here
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/builder/${workflow.id}`);
             }}
             title="View Workflow"
           >
@@ -157,82 +175,90 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       </p>
       <p>
         Last execution status:{" "}
-        {workflow.last_execution_status ? workflow.last_execution_status : "N/A"}
+        {workflow.last_execution_status
+          ? workflow.last_execution_status
+          : "N/A"}
       </p>
       <p>Triggers:</p>
-        {workflow.triggers.length > 0 ? (
-          <div className="border border-gray-300 p-2">
-            {workflow.triggers.map((trigger, index) => (
-              <div key={index} className="mb-2">
-                <span className="font-semibold">Trigger type: {trigger.type}</span>
-                {trigger.type === "alert" && trigger.filters  ? (
-                  <>
-                    <br />
-                    Filters:
-                    {trigger.filters.map((filter, filterIndex) => (
-                      <span key={filterIndex} className="mr-1">
-                        <br />
-                        - {filter.key}={filter.value}
-                      </span>
-                    ))}
-                  </>
-                ) : trigger.type === "interval" ? (
-                  <>
-                    <br />
-                    Interval: <br /> - {trigger.value} seconds
-                  </>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="border border-gray-300 p-2">This workflow does not have triggers yet.</p>
-        )}
-
-    <p>Providers:</p>
-{workflow.providers.reduce((uniqueProviders: string[], provider) => {
-  if (!uniqueProviders.includes(provider.name)) {
-    uniqueProviders.push(provider.name);
-    return uniqueProviders;
-  }
-  return uniqueProviders;
-}, []).map((uniqueProviderName) => {
-  const provider = workflow.providers.find(p => p.name === uniqueProviderName);
-  if (!provider) return null;
-  return (
-    <p key={provider.id} className="mt-2">
-      {provider.installed ? (
-        <span className="text-green-500">- {provider.name} (installed)</span>
+      {workflow.triggers.length > 0 ? (
+        <div className="border border-gray-300 p-2">
+          {workflow.triggers.map((trigger, index) => (
+            <div key={index} className="mb-2">
+              <span className="font-semibold">
+                Trigger type: {trigger.type}
+              </span>
+              {trigger.type === "alert" && trigger.filters ? (
+                <>
+                  <br />
+                  Filters:
+                  {trigger.filters.map((filter, filterIndex) => (
+                    <span key={filterIndex} className="mr-1">
+                      <br />- {filter.key}={filter.value}
+                    </span>
+                  ))}
+                </>
+              ) : trigger.type === "interval" ? (
+                <>
+                  <br />
+                  Interval: <br /> - {trigger.value} seconds
+                </>
+              ) : null}
+            </div>
+          ))}
+        </div>
       ) : (
-        <span>
-          <span className="text-red-500">- {provider.name}</span>
-          <Link
-            href={{
-              pathname: "/providers",
-              query: {
-                provider_type: provider.type,
-                provider_name: provider.name,
-              },
-            }}
-            passHref
-            className="text-blue-500 underline"
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            (click to install)
-          </Link>
-        </span>
+        <p className="border border-gray-300 p-2">
+          This workflow does not have triggers yet.
+        </p>
       )}
-    </p>
-  );
-})}
 
-
+      <p>Providers:</p>
+      {workflow.providers
+        .reduce((uniqueProviders: string[], provider) => {
+          if (!uniqueProviders.includes(provider.name)) {
+            uniqueProviders.push(provider.name);
+            return uniqueProviders;
+          }
+          return uniqueProviders;
+        }, [])
+        .map((uniqueProviderName) => {
+          const provider = workflow.providers.find(
+            (p) => p.name === uniqueProviderName
+          );
+          if (!provider) return null;
+          return (
+            <p key={provider.id} className="mt-2">
+              {provider.installed ? (
+                <span className="text-green-500">
+                  - {provider.name} (installed)
+                </span>
+              ) : (
+                <span>
+                  <span className="text-red-500">- {provider.name}</span>
+                  <Link
+                    href={{
+                      pathname: "/providers",
+                      query: {
+                        provider_type: provider.type,
+                        provider_name: provider.name,
+                      },
+                    }}
+                    passHref
+                    className="text-blue-500 underline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    (click to install)
+                  </Link>
+                </span>
+              )}
+            </p>
+          );
+        })}
     </div>
   );
 }
-
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -246,7 +272,6 @@ export default function WorkflowsPage() {
     setCopied(true);
   };
 
-
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
     status === "authenticated" ? `${apiUrl}/workflows` : null,
@@ -256,16 +281,16 @@ export default function WorkflowsPage() {
   if (isLoading || !data) return <Loading />;
 
   if (error) {
-      return (
-          <Callout
-              className="mt-4"
-              title="Error"
-              icon={ExclamationCircleIcon}
-              color="rose"
-          >
-              Failed to load workflows
-          </Callout>
-      );
+    return (
+      <Callout
+        className="mt-4"
+        title="Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        Failed to load workflows
+      </Callout>
+    );
   }
 
   return (
@@ -275,7 +300,7 @@ export default function WorkflowsPage() {
           <NoWorkflows copyCurlCommand={copyCurlCommand} />
         ) : (
           <div>
-            <DragAndDrop/>
+            <DragAndDrop />
             <div className="grid grid-cols-3 gap-4 mt-10">
               {data.map((workflow) => (
                 <WorkflowTile key={workflow.id} workflow={workflow} />
@@ -286,5 +311,4 @@ export default function WorkflowsPage() {
       </div>
     </div>
   );
-
 }
