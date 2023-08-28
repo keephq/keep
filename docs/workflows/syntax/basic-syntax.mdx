@@ -4,8 +4,8 @@ description: "At Keep, we view alerts as workflows, which consist of a series of
 ---
 ## Full Example
 ```yaml title=examples/raw_sql_query_datetime.yml
-# Alert if a result queried from the DB is above a certain thershold.
-alert:
+# Notify if a result queried from the DB is above a certain thershold.
+workflow:
   id: raw-sql-query
   description: Monitor that time difference is no more than 1 hour
   steps:
@@ -36,9 +36,9 @@ alert:
 
 ## Breakdown 🔨
 
-### Alert
+### Workflow
 ```yaml
-alert:
+workflow:
   id: raw-sql-query
   description: Monitor that time difference is no more than 1 hour
   steps:
@@ -47,7 +47,7 @@ alert:
     -
 ```
 
-`Alert` is built of:
+`Workflow` is built of:
 - Metadata (id, description. owners and tags will be added soon)
 - `steps` - list of steps
 - `actions` - list of actions
@@ -62,7 +62,7 @@ provider:
         query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
 ```
 `Provider` is built of:
-- `type` - the type of the provider ([see supported providers](../022_providers/01-what-is-a-provider.md))
+- `type` - the type of the provider ([see supported providers](/workflows/providers/))
 - `config` - the provider configuration. you can either supply it explicitly or using `"{{ providers.mysql-prod }}"`
 - `with` - all type-specific provider configuration. for example, for `mysql` we will provide the SQL query.
 

@@ -1,6 +1,8 @@
 ---
-title: "Keep vs alternatives"
+title: "Comparison to other tools"
 ---
+
+Sometimes, it's easier to understand a tool's capabilities by comparing it to other tools in the same ecosystem. In this section, we'll discuss how Keep interacts with and compares to other tools in the ecosystem.
 
 
 ## Keep vs Alerta
@@ -39,9 +41,9 @@ title: "Keep vs alternatives"
 
 
 ## Keep vs observability tools (Datadog, New Relic, etc)
-Any of the existing observability tools implements alerting mechanism. However, they have two disadvanteges:
+Most existing observability tools, such as Datadog and New Relic, have implemented alerting mechanisms. However, they generally have two main limitations:
 - They are data centric - which means your data needs to be in the tool in order to be able to alert on it.
-- Alerts are third-class citizen - its easy to set up some basic alerts, but its hard to create a great alert culture.
+- In many observability tools, alerting features are often not as robust or flexible as other functionalities. While setting up basic alerts is usually straightforward, these tools often fall short when it comes to build a mature alerting culture.
 
 > If you are not suffering from the problems above or the [problems Keep solves](overview/) and satisfied with your alerting, you probably don't need Keep
 
@@ -50,4 +52,4 @@ Keep mitigates these concerns by being agnostic to where the data is, so you can
 
 
 ## Keep vs incident management tools (PagerDuty, OpsGenie, etc)
-Most of the incident management tools offers alert aggregation and workflow automation. However, their core value is the incident management itself, which Keep aim to prevent. Keep focuses only on the alert lifecycle.
+Most incident management tools offer features like alert aggregation and workflow automation. However, their core value is the incident management itself, which Keep aims to prevent. Keep focuses only on the alert lifecycle.

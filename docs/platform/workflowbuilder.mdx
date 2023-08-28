@@ -1,6 +1,6 @@
 ---
-title: "Providers"
-sidebarTitle: Providers
+title: "Workflow builder"
+sidebarTitle: Workflow builder
 ---
 
 <Frame
@@ -10,7 +10,6 @@ sidebarTitle: Providers
 </Frame>
 
 ## Overview
-<Tip>You can manage Providers programmatically using the <a href="/api/providers">Providers API</a>.</Tip>
 The providers page let you manage your Providers in easy way.
 
 
@@ -29,8 +28,7 @@ Each provider has its own authentication process. To learn about a specific Prov
 
 ## Webhook Integration
 The webhook integration let you seamlessly push your alerts to Keep.
-It means that when you connect the Provider, Keep hooks the Provider configuration to add itself as a destination.
-After install
+It means that when you connect the Provider, Keep hooks the Provider configuration to add itself as a destination. For example, when you connect AWS CloudWatch, Keep subscribes itself to all Alarm's topics, so every alarm goes through Keep.
 
 A webhook integration available if it has "Webhook available" icon:
 <Frame

@@ -3,21 +3,26 @@ title: "Use cases"
 ---
 
 ## Central Alerts management
-No more navigating between your Promethues'es instances, no more per-region per-account Cloudwatch. By connecting your alert-triggering tools, you get a single pane of glass for all of your alerts.
-With Keep, you can review, throttle, mute and fine tune all of your alerts within a one console.
+No more navigating between multiple Prometheus instances and dealing with per-region, per-account CloudWatch settings.
+
+By linking your alert-triggering tools to Keep, you gain a centralized dashboard for managing all your alerts.
+
+
+With Keep, you can review, throttle, mute, and fine-tune all of your alerts from a single console.
 
 ## Alerts enrichment
-You are no more limited by the alert mechanism that your tools implements.
+You're no longer constrained by the alerting mechanisms implemented in your tools.
 
-You want the alert to trigger only on your enterprise customers? No problem.
-You want to add more context that doesn't live in your tool? Easy.
+Want alerts to be triggered solely for your enterprise customers? No problem.
+Want to include additional context not available in your current tools? Easy.
 
-Just connect your observability tools, databases, ticketing systems, or any other tool which might add context, and integrate them with your alerts.
-
+Simply connect your observability tools, databases, ticketing systems, or any other tools that can provide additional context, and integrate them with your alerts.
 
 ## Automate the alert response process
-"If you can automate the response for alert, it shouldn't be an alert", right?
-Maybe in an optimal world. In fact, we know that most of the times alert response can be automated - either by "double checking" or adding steps that will verify the alert is not false positive.
+The saying goes, "If you can automate the response to an alert, it shouldn't be an alert," right?
 
-Imagine a common use case - you get an 502 in one of your endpoints. You need an alert for it, don't you?
-But what if you could verify that its a real error by another query? Or even checking if its an free trial user which can wait for the morning?
+While that might hold true in an ideal world, we understand that many times the response to an alert can be automated—whether by double-checking or taking steps to verify that the alert is not a false positive.
+
+Consider a common scenario—you receive a 502 error on one of your endpoints. That's alert-worthy, isn't it?
+
+But what if you could confirm that it's a genuine error with an additional query? Or even determine if it's a free-trial user whose issue can wait until morning?
