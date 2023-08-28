@@ -172,6 +172,7 @@ class ZabbixProvider(BaseProvider):
                     {"name": "keepApiKey", "value": api_key},
                     {"name": "keepApiUrl", "value": keep_api_url},
                     {"name": "id", "value": "{EVENT.ID}"},
+                    {"name": "triggerId", "value": "{TRIGGER.ID}"},
                     {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
                     {"name": "message", "value": "{ALERT.MESSAGE}"},
                     {"name": "name", "value": "{EVENT.NAME}"},
@@ -186,6 +187,7 @@ class ZabbixProvider(BaseProvider):
                     {"name": "HOST.IP", "value": "{HOST.IP}"},
                     {"name": "HOST.NAME", "value": "{HOST.NAME}"},
                     {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
+                    {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
                 ],
                 "script": script,
                 "process_tags": 1,
@@ -242,12 +244,21 @@ class ZabbixProvider(BaseProvider):
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
         severity = ZabbixProvider.__get_priorty(event.pop("severity", "").lower())
+        event_id = event.get("id")
+        trigger_id = event.get("triggerId")
+        zabbix_url = event.pop("ZABBIX.URL", None)
+        url = None
+        if event_id and trigger_id and zabbix_url:
+            url = (
+                f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
+            )
         return AlertDto(
             **event,
             environment=environment,
             pushed=True,
             source=["zabbix"],
             severity=severity,
+            url=url,
         )
 
 

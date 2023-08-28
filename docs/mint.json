@@ -34,6 +34,7 @@
         "platform/overview",
         "platform/providers",
         "platform/alerts",
+<<<<<<< HEAD
         "platform/workflows",
         "platform/workflowbuilder",
         "platform/settings"
@@ -76,6 +77,18 @@
       "group": "Workflows",
       "pages": [
         "Workflows/overview",
+=======
+        "platform/workflows"
+      ]
+    },
+    {
+      "group": "Workflows",
+      "pages": [
+        "platform/getting-started",
+        {
+          "group": "Core",
+          "pages": [
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
             {
               "group": "Syntax",
               "pages": [
@@ -129,6 +142,7 @@
               "pages": ["workflows/state"]
             }
           ]
+<<<<<<< HEAD
 
       },
     {
@@ -185,10 +199,13 @@
             "api/workflows/delete-workflow-by-id",
             "api/workflows/get-workflow-execution-status"
           ]
+=======
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
         }
       ]
     },
     {
+<<<<<<< HEAD
       "group": "Keep CLI",
       "pages": [
         "cli/overview",
@@ -203,13 +220,76 @@
             "cli/commands/cli-run",
             "cli/commands/cli-version",
             "cli/commands/cli-config-provider"
+=======
+      "group": "Keep API",
+      "pages": [
+        {
+          "group": "Providers",
+          "pages": [
+            "api/providers/get-providers",
+            "api/providers/get-alerts-configuration",
+            "api/providers/get-logs",
+            "api/providers/get-alerts-schema",
+            "api/providers/add-alert",
+            "api/providers/test-provider",
+            "api/providers/delete-provider",
+            "api/providers/install-provider",
+            "api/providers/install-provider-webhook",
+            "api/providers/get-webhook-settings"
+          ]
+        },
+        {
+          "group": "Healthcheck",
+          "pages": [
+            "api/healthcheck/healthcheck"
+          ]
+        },
+        {
+          "group": "Tenant",
+          "pages": [
+            "api/tenant/is-onboarded",
+            "api/tenant/save-github-installation-id"
+          ]
+        },
+        {
+          "group": "Alerts",
+          "pages": [
+            "api/alerts/get-alerts",
+            "api/alerts/receive-event"
+          ]
+        },
+        {
+          "group": "Webhook settings",
+          "pages": [
+            "api/settings/webhook-settings"
+          ]
+        },
+        {
+          "group": "Workflows",
+          "pages": [
+            "api/workflows/get-workflows",
+            "api/workflows/create-workflow",
+            "api/workflows/run-workflow",
+            "api/workflows/get-workflow-by-id",
+            "api/workflows/delete-workflow-by-id",
+            "api/workflows/get-workflow-execution-status"
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
           ]
         }
       ]
     },
     {
+<<<<<<< HEAD
       "group": "Development",
       "pages": ["development/getting-started", "development/deployments", "development/adding-a-new-provider"]
+=======
+      "group": "Keep CLI",
+      "pages": ["applications/api"]
+    },
+    {
+      "group": "Development",
+      "pages": ["deployment"]
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
     }
   ],
   "footerSocials": {

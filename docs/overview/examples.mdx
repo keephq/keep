@@ -2,18 +2,30 @@
 title: "Examples"
 ---
 
+<<<<<<< HEAD
 <Tip>Got an interesting example of how would you use Keep? Feel free to submit a <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=use_case.md&title=">new example issue</a> and we'll credit you when we add it!</Tip>
 
 
 ## Create an incident only if the customer is on Enterprise tier
 In this example we will utilze:
+=======
+<Tip>Have any interesting example? Just submit a <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=use_case.md&title=">new use case issue</a> and we will add it with eternal credit!</Tip>
+
+
+## Create an incident only if the customer is on Enterprise tier
+In this example we will use:
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 1. Datadog for monitoring
 2. OpsGenie for incident managment
 3. A postgres database that stores the customer tier.
 
 This example consists of two steps:
 1. Connect your tools - Datadog, OpsGenie and Postgres.
+<<<<<<< HEAD
 2. Create a workflow that is triggered by the alert, runs an SQL query, and decides whether to create an incident.  Once the workflow is created, you can upload it via the [Workflows](workflow) page.
+=======
+2. Create a workflow that triggered by the alert, run an SQL query and decide if to create the incident. After writing the workflow, you can upload it via the  [Workflows](workflow) page.
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 ```yaml
 alert:
   id: enterprise-tier-alerts
@@ -49,7 +61,11 @@ alert:
 
 ## Send a slack message for every Cloudwatch alarm
 1. Connect your Cloudwatch(/es) and Slack to Keep.
+<<<<<<< HEAD
 2. Create a straightforward Workflow that filters for CloudWatch events and sends a Slack message:
+=======
+2. Create a simple Workflow that filters on Cloudwatch and sends a Slack message:
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 ```yaml
 workflow:
   id: cloudwatch-slack
@@ -71,8 +87,13 @@ workflow:
 
 
 ## Monitor a HTTP service
+<<<<<<< HEAD
 Suppose you want to monitor an HTTP service.
 All you have to do is upload the following workflow:
+=======
+Let's say we want to monitor some HTTP service.
+All you need to do is to upload the following workflow:
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 ```yaml
 workflow:
   id: monitor-http-service

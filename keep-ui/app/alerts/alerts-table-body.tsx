@@ -1,4 +1,12 @@
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowDownIcon,
+  ArrowDownRightIcon,
+  ArrowRightIcon,
+  ArrowTopRightOnSquareIcon,
+  ArrowUpIcon,
+  ArrowUpRightIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 import {
   TableBody,
   TableRow,
@@ -8,45 +16,62 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
-  BadgeDelta,
-  DeltaType,
   Button,
+  Badge,
 } from "@tremor/react";
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
+import "./alerts-table-body.css";
+import AlertMenu from "./alert-menu";
 
 interface Props {
   data: Alert[];
   groupBy?: string;
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
+  pushed?: boolean;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
-  let deltaType: string;
+  let icon: any;
+  let color: any;
+  let severityText: string;
   switch (severity) {
     case "critical":
-      deltaType = "increase";
+      icon = ArrowUpIcon;
+      color = "red";
+      severityText = Severity.Critical.toString();
       break;
     case "high":
-      deltaType = "moderateIncrease";
+      icon = ArrowUpRightIcon;
+      color = "orange";
+      severityText = Severity.High.toString();
       break;
     case "medium":
-      deltaType = "unchanged";
+      color = "yellow";
+      icon = ArrowRightIcon;
+      severityText = Severity.Medium.toString();
       break;
     case "low":
-      deltaType = "moderateDecrease";
+      icon = ArrowDownRightIcon;
+      color = "green";
+      severityText = Severity.Low.toString();
       break;
     default:
-      deltaType = "decrease";
+      icon = ArrowDownIcon;
+      color = "emerald";
+      severityText = Severity.Info.toString();
       break;
   }
   return (
-    <BadgeDelta
-      title={severity?.toString() ?? "lowest"}
-      deltaType={deltaType as DeltaType}
-      color=""
-    />
+    <Badge
+      //deltaType={deltaType as DeltaType}
+      color={color}
+      icon={icon}
+      tooltip={severityText}
+      size="xs"
+      className="ml-2.5"
+    ></Badge>
   );
 };
 
@@ -55,6 +80,7 @@ export function AlertsTableBody({
   groupBy,
   groupedByData,
   openModal,
+  pushed,
 }: Props) {
   const getAlertLastReceieved = (alert: Alert) => {
     let lastReceived = "unknown";
@@ -80,7 +106,16 @@ export function AlertsTableBody({
         const extraIsEmpty = Object.keys(extraPayload).length === 0;
         return (
           <TableRow key={alert.id}>
-            <TableCell className="text-center">
+            {pushed && (
+              <TableCell>
+                <AlertMenu
+                  alertName={alert.name}
+                  canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}
+                  openHistory={() => openModal!(alert)}
+                />
+              </TableCell>
+            )}
+            <TableCell>
               {getSeverity(alert.severity)}
             </TableCell>
             <TableCell className="max-w-[340px] truncate" title={alert.name}>

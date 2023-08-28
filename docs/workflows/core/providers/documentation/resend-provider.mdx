@@ -1,0 +1,66 @@
+---
+title: "Resend"
+sidebarTitle: "Resend Provider"
+---
+
+# Resend Provider
+
+ResendProvider is a class that implements the Resend API and allows email sending through Keep.
+
+## Inputs
+The `notify` function of `ResendProvider` takes the following arguments:
+
+- `_from` (str): Required. The email address of the sender.
+- `to` (str): Required. The email address of the recipient.
+- `subject` (str): Required. The subject of the email.
+- `html` (str): Required. The HTML body of the email.
+- `**kwargs` (optional): Additional optional parameters can be provided as key-value pairs.
+
+See [documentation](https://resend.com/docs/api-reference/emails/send-email) for more
+
+## Outputs
+The `notify` function of `ResendProvider` outputs the following format (example):
+
+```json
+{
+  "id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
+  "from": "onboarding@resend.dev",
+  "to": "user@example.com",
+  "created_at": "2022-07-25T00:28:32.493138+00:00"
+}
+```
+
+See [documentation](https://resend.com/docs/api-reference/emails/send-email) for more
+
+
+## Authentication Parameters
+The Resend provider requires the following authentication parameter:
+
+- `api_key`: Required. Resend API key. You can obtain an API key by visiting [Resend API Keys](https://resend.com/api-keys).
+
+## Connecting with the Provider
+To connect with the Resend provider and send emails through Keep, follow these steps:
+
+1. Obtain a Resend API key: Visit [Resend API Keys](https://resend.com/api-keys) to obtain an API key if you don't have one already.
+2. Configure the Resend provider in your system with the obtained API key.
+3. Use the following YAML example to send an email notification using the Resend provider:
+
+```yaml title=examples/alert_example.yml
+# Send an email notification using the Resend provider.
+alert:
+  id: email-notification
+  description: Send an email notification using Resend
+  actions:
+    - name: send-email
+      provider:
+        type: resend
+        config: "{{ providers.resend-provider }}"
+        with:
+          _from: "sender@example.com"
+          to: "recipient@example.com"
+          subject: "Hello from Resend Provider"
+          html: "<p>This is the email body.</p>"
+```
+
+## Useful Links
+- [Resend API Keys](https://resend.com/api-keys)

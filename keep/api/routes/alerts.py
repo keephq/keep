@@ -4,11 +4,13 @@ from functools import reduce
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+from sqlalchemy import String, cast
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, DeleteRequestBody
 from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -124,6 +126,29 @@ def get_alerts(
         extra={"provider_type": provider_type, "provider_id": provider_id},
     )
     return alerts
+
+
+@router.delete("", description="Delete alert by name")
+def delete_alert(
+    delete_alert: DeleteRequestBody,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    logger.info(
+        "Deleting alert",
+        extra={
+            "alert_name": delete_alert.alert_name,
+            "tenant_id": tenant_id,
+        },
+    )
+    delete_query = f"""
+    DELETE FROM {Alert.__tablename__}
+    WHERE alert.tenant_id = :tenant_id AND JSON_EXTRACT(alert.event, '$.name') = :alert_name
+"""
+    alert_name = delete_alert.alert_name.strip("'").strip('"')
+    session.execute(delete_query, {"tenant_id": tenant_id, "alert_name": alert_name})
+    session.commit()
+    return {"status": "ok"}
 
 
 @router.post(

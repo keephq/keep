@@ -1,4 +1,5 @@
 ---
+<<<<<<< HEAD
 title: "Workflows"
 sidebarTitle: Workflows
 ---
@@ -26,10 +27,54 @@ Drop your workflow yaml file or use the "upload workflow":
 ## Connect a missing Provider
 When you upload a Workflow, Keep parse it and checks what Providers this workflow needs in order to run.
 If the provider is not installed, the Workflow won't be able to run. To install the missing Provider, just click on the "install" link:
+=======
+title: "Providers"
+sidebarTitle: Providers
+---
 
 <Frame
     width="100"
   height="200">
+  <img height="10" src="/images/providermain.png" />
+</Frame>
+
+## Overview
+The providers page let you manage your Providers in easy way.
+
+
+## Connecting your first Provider
+To connect a Provider, just click on the Provider tile.
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/providerinstall.png" />
+</Frame>
+You'll need to provide:
+1. Provider name.
+2. Provider authentication details.
+Each provider has its own authentication process. To learn about a specific Provider authentication, you can go to the Provider page.
+
+
+## Webhook Integration
+The webhook integration let you seamlessly push your alerts to Keep.
+It means that when you connect the Provider, Keep hooks the Provider configuration to add itself as a destination.
+After install
+
+A webhook integration available if it has "Webhook available" icon:
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/providerwebhook.png" />
+</Frame>
+
+## Delete a Provider
+To delete a Provider, just click on the right bottom corner of the Provider tile:
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
+
+<Frame
+    width="100"
+  height="200">
+<<<<<<< HEAD
   <img height="10" src="/images/connectmissingprovider.png" />
 </Frame>
 
@@ -71,4 +116,7 @@ To delete a Workflow, just click on the "trash icon":
     width="100"
   height="200">
   <img height="10" src="/images/viewworkflowlogs.png" />
+=======
+  <img height="10" src="/images/providerdelete.png" />
+>>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 </Frame>

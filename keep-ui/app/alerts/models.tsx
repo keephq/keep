@@ -20,6 +20,7 @@ export interface Alert {
   description?: string;
   severity?: Severity;
   fatigueMeter?: number;
+  url?: string;
   pushed: boolean;
 }
 
@@ -38,6 +39,7 @@ export const AlertKnownKeys = [
   "severity",
   "fatigueMeter",
   "pushed",
+  "url",
 ];
 
 export const AlertTableKeys: { [key: string]: string } = {
