@@ -13,13 +13,6 @@ export function globalValidator(
 ): boolean {
   const onlyOneAlert = definition.sequence.length === 1;
   if (!onlyOneAlert) setGlobalValidationError("Only one alert is allowed.");
-  const atleastOneStep =
-    (definition.sequence[0] as SequentialStep)?.sequence?.length >= 1 &&
-    (definition.sequence[0] as SequentialStep)?.sequence[0].type.includes(
-      "step-"
-    );
-  if (!atleastOneStep)
-    setGlobalValidationError("Alert must contain at least one step.");
   const anyActionsInMainSequence = (
     definition.sequence[0] as SequentialStep
   )?.sequence?.some((step) => step.type.includes("action-"));
@@ -43,7 +36,7 @@ export function globalValidator(
       }
     }
   }
-  const valid = onlyOneAlert && atleastOneStep;
+  const valid = onlyOneAlert;
   if (valid) setGlobalValidationError(null);
   return valid;
 }

@@ -142,9 +142,43 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
   );
 }
 
+function WorkflowEditor(properties: Properties, updateProperty: any) {
+  /**
+   * TODO: support generate, add more triggers and complex filters
+   *  Need to think about UX for this
+   */
+  const propertyKeys = Object.keys(properties).filter(
+    (k) => k !== "isLocked" && k !== "description" && k !== "id"
+  );
+
+  return (
+    <EditorLayout>
+      <Title>Workflow Editor</Title>
+      {propertyKeys.map((key) => {
+        return (
+          <>
+            <Text>{key} Trigger</Text>
+            <TextInput
+              placeholder="Value"
+              onChange={(e: any) => updateProperty(key, e.target.value)}
+              className="mb-2.5"
+              value={properties[key] as string}
+            />
+          </>
+        );
+      })}
+    </EditorLayout>
+  );
+}
+
 export default function StepEditor() {
   const { type, componentType, name, setName, properties, setProperty } =
     useStepEditor();
+
+  // Type should be changed to workflow
+  if (type === "alert") {
+    return WorkflowEditor(properties, setProperty);
+  }
 
   function onNameChanged(e: any) {
     setName(e.target.value);

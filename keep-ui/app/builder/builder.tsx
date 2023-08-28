@@ -18,8 +18,8 @@ import StepEditor, { GlobalEditor } from "./editors";
 import { Callout } from "@tremor/react";
 import { Provider } from "../providers/providers";
 import {
-  parseAlert,
-  generateAlert,
+  parseWorkflow,
+  generateWorkflow,
   getToolboxConfiguration,
   buildAlert,
 } from "./utils";
@@ -63,11 +63,11 @@ function Builder({
     if (loadedAlertFile == null) {
       setDefinition(
         wrapDefinition(
-          generateAlert("new-alert-id", "new-alert-description", [], [])
+          generateWorkflow("new-alert-id", "new-alert-description", [], [])
         )
       );
     } else {
-      setDefinition(wrapDefinition(parseAlert(loadedAlertFile!)));
+      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!)));
     }
   }, [loadedAlertFile]);
 

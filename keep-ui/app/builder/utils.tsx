@@ -153,14 +153,15 @@ export function generateCondition(condition: any, action: any): any {
   return generatedCondition;
 }
 
-export function generateAlert(
-  alertId: string,
+export function generateWorkflow(
+  workflowId: string,
   description: string,
   steps: Step[],
-  conditions: Step[]
+  conditions: Step[],
+  triggers: { [key: string]: string } = {}
 ): Definition {
   /**
-   * Generate the alert definition
+   * Generate the workflow definition
    */
   const alert = {
     id: Uid.next(),
@@ -168,25 +169,33 @@ export function generateAlert(
     componentType: "container",
     type: "alert",
     properties: {
-      id: alertId,
+      id: workflowId,
       description: description,
       isLocked: true,
+      ...triggers,
     },
     sequence: [...steps, ...conditions],
   };
   return { sequence: [alert], properties: {} };
 }
 
-export function parseAlert(alertToParse: string): Definition {
+export function parseWorkflow(workflowString: string): Definition {
   /**
    * Parse the alert file and generate the definition
    */
-  const parsedAlertFile = load(alertToParse, { schema: JSON_SCHEMA }) as any;
-  const steps = parsedAlertFile.alert.steps.map((step: any) => {
-    return getActionOrStepObj(step, "step");
-  });
+  const parsedWorkflowFile = load(workflowString, {
+    schema: JSON_SCHEMA,
+  }) as any;
+  // This is to support both old and new structure of workflow
+  const workflow = parsedWorkflowFile.alert
+    ? parsedWorkflowFile.alert
+    : parsedWorkflowFile.workflow;
+  const steps =
+    workflow.steps?.map((step: any) => {
+      return getActionOrStepObj(step, "step");
+    }) || [];
   const conditions = [] as any;
-  parsedAlertFile.alert.actions.forEach((action: any) => {
+  workflow.actions?.forEach((action: any) => {
     // This means this action always runs, there's no condition and no alias
     if (!action.condition && !action.if) {
       steps.push(getActionOrStepObj(action, "action"));
@@ -207,11 +216,23 @@ export function parseAlert(alertToParse: string): Definition {
     }
   });
 
-  return generateAlert(
-    parsedAlertFile.alert.id,
-    parsedAlertFile.alert.description,
+  const triggers =
+    workflow.triggers?.reduce((prev: any, curr: any) => {
+      const currType = curr.type;
+      let value = curr.value;
+      if (currType === "alert") {
+        value = curr.filters.find((f: any) => f.key === "source").value;
+      }
+      prev[currType] = value;
+      return prev;
+    }, {}) || {};
+
+  return generateWorkflow(
+    workflow.id,
+    workflow.description,
     steps,
-    conditions
+    conditions,
+    triggers
   );
 }
 
