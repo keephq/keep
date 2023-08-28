@@ -157,13 +157,19 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
       {propertyKeys.map((key) => {
         return (
           <>
-            <Text>{key} Trigger</Text>
-            <TextInput
-              placeholder="Value"
-              onChange={(e: any) => updateProperty(key, e.target.value)}
-              className="mb-2.5"
-              value={properties[key] as string}
-            />
+            <Text className="capitalize">{key} Trigger</Text>
+            {key === "manual" ? (
+              <div>
+                <input type="checkbox" checked disabled />
+              </div>
+            ) : (
+              <TextInput
+                placeholder="Value"
+                onChange={(e: any) => updateProperty(key, e.target.value)}
+                className="mb-2.5"
+                value={properties[key] as string}
+              />
+            )}
           </>
         );
       })}

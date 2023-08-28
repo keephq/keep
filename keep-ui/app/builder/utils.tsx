@@ -337,14 +337,30 @@ export function buildAlert(definition: Definition): Alert {
       );
       actions = [...actions, ...conditionActions];
     });
+
+  const triggers = [];
+  if (Object.keys(alert.properties).includes("manual"))
+    triggers.push({ type: "manual" });
+  if (alert.properties.alert) {
+    triggers.push({
+      type: "alert",
+      filters: [{ key: "source", value: alert.properties.alert }],
+    });
+  }
+  if (alert.properties.interval) {
+    triggers.push({
+      type: "interval",
+      value: alert.properties.interval,
+    });
+  }
   const compiledAlert = {
     id: alertId,
+    triggers: triggers,
     description: description,
     owners: owners,
     services: services,
     steps: steps,
     actions: actions,
   };
-  console.log(compiledAlert);
   return compiledAlert;
 }
