@@ -81,6 +81,12 @@ class WorkflowStore:
             with open(workflow_path, "r") as file:
                 return self._read_workflow_from_stream(file)
 
+    def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
+        raw_workflow = get_workflow(tenant_id, workflow_id)
+        workflow_yaml = yaml.safe_load(raw_workflow)
+        valid_workflow_yaml = {"workflow": workflow_yaml}
+        return yaml.dump(valid_workflow_yaml)
+
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_workflow(tenant_id, workflow_id)
         if not workflow:

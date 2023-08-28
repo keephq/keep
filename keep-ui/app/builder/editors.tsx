@@ -159,11 +159,12 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
           <>
             <Text className="capitalize">{key} Trigger</Text>
             {key === "manual" ? (
-              <div>
+              <div key={key}>
                 <input type="checkbox" checked disabled />
               </div>
             ) : (
               <TextInput
+                key={key}
                 placeholder="Value"
                 onChange={(e: any) => updateProperty(key, e.target.value)}
                 className="mb-2.5"

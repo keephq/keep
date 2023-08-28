@@ -15,7 +15,7 @@ import {
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
-import { Callout } from "@tremor/react";
+import { Callout, Card } from "@tremor/react";
 import { Provider } from "../providers/providers";
 import {
   parseWorkflow,
@@ -31,6 +31,8 @@ import { globalValidator, stepValidator } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
+import { getApiURL } from "utils/apiUrl";
+import Loader from "./loader";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -38,6 +40,7 @@ interface Props {
   providers: Provider[];
   enableGenerate: (status: boolean) => void;
   triggerGenerate: number;
+  workflow?: string;
 }
 
 function Builder({
@@ -46,10 +49,12 @@ function Builder({
   providers,
   enableGenerate,
   triggerGenerate,
+  workflow,
 }: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
+  const [isLoading, setIsLoading] = useState(true);
   const [stepValidationError, setStepValidationError] = useState<string | null>(
     null
   );
@@ -60,16 +65,22 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
-    if (loadedAlertFile == null) {
+    if (workflow) {
+      setIsLoading(true);
+      setDefinition(wrapDefinition(parseWorkflow(workflow)));
+      setIsLoading(false);
+    } else if (loadedAlertFile == null) {
       setDefinition(
         wrapDefinition(
           generateWorkflow("new-alert-id", "new-alert-description", [], [])
         )
       );
+      setIsLoading(false);
     } else {
       setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!)));
+      setIsLoading(false);
     }
-  }, [loadedAlertFile]);
+  }, [loadedAlertFile, workflow]);
 
   useEffect(() => {
     if (triggerGenerate) {
@@ -88,9 +99,17 @@ function Builder({
     definition.isValid,
   ]);
 
+  if (isLoading) {
+    return (
+      <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6`}>
+        <Loader />
+      </Card>
+    );
+  }
+
   function IconUrlProvider(componentType: string, type: string): string | null {
-    if (type === "alert") return "keep.png";
-    return `icons/${type
+    if (type === "alert" || type === "workflow") return "/keep.png";
+    return `/icons/${type
       .replace("step-", "")
       .replace("action-", "")
       .replace("condition-", "")}-icon.png`;
@@ -132,8 +151,15 @@ function Builder({
 
   return (
     <>
-      <Modal onRequestClose={closeModal} isOpen={modalIsOpen} className='bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md'>
-        <BuilderModalContent closeModal={closeModal} compiledAlert={compiledAlert}/>
+      <Modal
+        onRequestClose={closeModal}
+        isOpen={modalIsOpen}
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+      >
+        <BuilderModalContent
+          closeModal={closeModal}
+          compiledAlert={compiledAlert}
+        />
       </Modal>
       {modalIsOpen ? null : (
         <>

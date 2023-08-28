@@ -173,6 +173,15 @@ async def create_workflow(
     return {"workflow_id": workflow.id, "status": "created"}
 
 
+@router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
+def get_raw_workflow_by_id(
+    workflow_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+) -> str:
+    workflowstore = WorkflowStore()
+    return workflowstore.get_raw_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+
+
 @router.get("/{workflow_id}", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
