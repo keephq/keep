@@ -76,23 +76,11 @@ def test_parse_sanity_check(db_session):
 
 
 def test_parse_all_alerts(db_session):
-    # Define the mock files
-    with open(workflow_path, "r") as file:
-        mock_files = [file.read()]
-
-    # Mock the get_files function to return the mock_files
-    os.environ["STORAGE_MANAGER_TYPE"] = StorageManagerTypes.FILESYSTEM.value
-    os.environ["KEEP_PROVIDERS_FILE"] = providers_path
-    with mock.patch(
-        "keep.storagemanager.filesystemstoragemanager.FilesystemStorageManager.get_files"
-    ) as mock_get_files:
-        mock_get_files.return_value = mock_files
-        # Run the function:
-        workflow_store = WorkflowStore()
-        all_workflows = workflow_store.get_all_workflows(tenant_id="testing")
-        # Complete the asserts:
-        assert len(all_workflows) == 1  # Assuming two mock alert files were returned
-        # You can add more specific assertions based on the content of mock_files and how they are parsed into alerts.
+    workflow_store = WorkflowStore()
+    all_workflows = workflow_store.get_all_workflows(tenant_id=SINGLE_TENANT_UUID)
+    # Complete the asserts:
+    assert len(all_workflows) == 2  # Assuming two mock alert files were returned
+    # You can add more specific assertions based on the content of mock_files and how they are parsed into alerts.
 
 
 # This test depends on the previous one because of global providers configuration
