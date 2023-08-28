@@ -136,53 +136,53 @@
         {
           "group": "Providers",
           "pages": [
-            "api/providers/get-providers",
-            "api/providers/get-alerts-configuration",
-            "api/providers/get-logs",
-            "api/providers/get-alerts-schema",
-            "api/providers/add-alert",
-            "api/providers/test-provider",
-            "api/providers/delete-provider",
-            "api/providers/install-provider",
-            "api/providers/install-provider-webhook",
-            "api/providers/get-webhook-settings"
+            "api-ref/providers/get-providers",
+            "api-ref/providers/get-alerts-configuration",
+            "api-ref/providers/get-logs",
+            "api-ref/providers/get-alerts-schema",
+            "api-ref/providers/add-alert",
+            "api-ref/providers/test-provider",
+            "api-ref/providers/delete-provider",
+            "api-ref/providers/install-provider",
+            "api-ref/providers/install-provider-webhook",
+            "api-ref/providers/get-webhook-settings"
           ]
         },
         {
           "group": "Healthcheck",
           "pages": [
-            "api/healthcheck/healthcheck"
+            "api-ref/healthcheck/healthcheck"
           ]
         },
         {
           "group": "Tenant",
           "pages": [
-            "api/tenant/is-onboarded",
-            "api/tenant/save-github-installation-id"
+            "api-ref/tenant/is-onboarded",
+            "api-ref/tenant/save-github-installation-id"
           ]
         },
         {
           "group": "Alerts",
           "pages": [
-            "api/alerts/get-alerts",
-            "api/alerts/receive-event"
+            "api-ref/alerts/get-alerts",
+            "api-ref/alerts/receive-event"
           ]
         },
         {
           "group": "Webhook settings",
           "pages": [
-            "api/settings/webhook-settings"
+            "api-ref/settings/webhook-settings"
           ]
         },
         {
           "group": "Workflows",
           "pages": [
-            "api/workflows/get-workflows",
-            "api/workflows/create-workflow",
-            "api/workflows/run-workflow",
-            "api/workflows/get-workflow-by-id",
-            "api/workflows/delete-workflow-by-id",
-            "api/workflows/get-workflow-execution-status"
+            "api-ref/workflows/get-workflows",
+            "api-ref/workflows/create-workflow",
+            "api-ref/workflows/run-workflow",
+            "api-ref/workflows/get-workflow-by-id",
+            "api-ref/workflows/delete-workflow-by-id",
+            "api-ref/workflows/get-workflow-execution-status"
           ]
         }
       ]
