@@ -16,6 +16,7 @@ from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
+from keep.contextmanager.contextmanager import ContextManager
 
 
 @pytest.fixture
@@ -30,6 +31,11 @@ def ctx_store() -> dict:
 def mocked_context(ctx_store) -> None:
     with request_cycle_context(ctx_store):
         yield context
+
+
+@pytest.fixture
+def context_manager():
+    return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id=None)
 
 
 @pytest.fixture

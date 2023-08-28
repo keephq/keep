@@ -74,48 +74,18 @@ STATE_FILE_MOCK_DATA = {
 
 
 @pytest.fixture
-def context_manager(mocked_context) -> ContextManager:
-    """
-    Create a context manager
-    """
-    with tempfile.NamedTemporaryFile() as fp:
-        ContextManager.STATE_FILE = fp.name
-        yield ContextManager()
-
-
-@pytest.fixture
 def context_manager_with_state(mocked_context) -> ContextManager:
     with tempfile.NamedTemporaryFile() as fp:
-        ContextManager.STATE_FILE = fp.name
+        import os
+
+        os.environ["STATE_FILE"] = fp.name
         fp.write(json.dumps(STATE_FILE_MOCK_DATA).encode())
         fp.seek(0)
-        yield ContextManager()
+        context_manager = ContextManager(tenant_id="some-tenant_id", workflow_id="mock")
+        yield context_manager
 
 
-def test_get_context_manager_id_no_starlette_context():
-    """
-    Test the get_context_manager_id function when starlette context is not available
-    """
-    del context.data["X-Request-ID"]
-    assert get_context_manager_id() == "main"
-
-
-def test_get_contexst_manager_id_with_starlette_context(mocked_context):
-    """
-    Test the get_context_manager_id function when starlette context is available with mock data§
-    """
-    assert isinstance(get_context_manager_id(), int)
-
-
-def test_context_manager_set_alert_context(context_manager: ContextManager):
-    """
-    Test the set_alert_context function
-    """
-    context_manager.set_workflow_context({"test": "mock"})
-    assert context_manager.workflow_context == {"test": "mock"}
-
-
-def test_context_manager_get_alert_id(context_manager: ContextManager):
+def test_context_manager_get_alert_id(context_manager):
     """
     Test the get_alert_id function
     """
