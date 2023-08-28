@@ -3,7 +3,6 @@ title: "Key concepts"
 ---
 ## Alert
 Alert is an event that triggered when something bad happens or going to happen.
-<<<<<<< HEAD
 The term "alert" can sometimes be interchanged with "alarm" (in CloudWatch) or "monitor" (in Datadog).
 
 You can easily initiate a [Workflow](#workflow) when an alert is triggered.
@@ -33,48 +32,17 @@ In compatible tools, Keep can automatically integrate with the alerting policy o
 Keep also integrates with the alert APIs of various tools and can automatically pull alerts. While pulling is easier to set up (requiring only credentials), pushing is preferable when automation is involved.
 
 ## Workflow
-Workflows consist of a list of [Steps](/workflows/overview#steps) and [Actions](/workflows/overview#steps).
+Workflows consist of a list of [Steps](/workflows/overview#steps) and [Actions](/workflows/overview#actions).
 A workflow can be triggered in the following ways:
-=======
-The term alert sometime can be replaced with "alarm" (Cloudwatch) or "monitor" (Datadog).
-
-You can easily trigger a [Workflow](#workflow) when an alert triggers.
-
-## Provider
-Provider is the input/output building block in Keep.
-
-When you connect a Provider, Keep starts to read the alerts from the Provider and process it. For example, after connecting your Promethues, you'll start see your Promethues alerts in Keep.
-
-
-In a Workflow context, Provider also:
-- Query data - queries Datadog's API or runs a SQL query against a database.
-- Push data - sends a Slack message or create a PagerDuty incident.
-
-To learn more about what's a Provider, visit the [Provider](provider/) page.
-
-## Workflow
-Workflows are list of [Steps](#steps) and [Actions](overview/keyconcepts#actions).
-The entry point of a workflow can be either:
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 - When Alert is triggered.
 - In a predefined interval.
 - Manually.
 
-<<<<<<< HEAD
 Workflows are commonly used to:
 1. Enrich your alerts with more context.
-=======
-Workflows are being used to:
-1. Add more context to your alerts.
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
 2. Automate the response to alert.
 3. Create multi-steps alerts.
 
 ## API first
-<<<<<<< HEAD
 Keep is an API-first platform, meaning that anything you can do via the [UI](ui/) can also be accomplished through the [API](api/)
 This gives you the flexibility to integrate Keep with your existing stack and to automate alert remediation and enrichment processes.
-=======
-Keep is an API-first, and as such, each of the things that you can do in the [UI](ui/) can be done via the [API](api/)
-This give you the power to integrate Keep with your existing stack and automate the alert remediation and enrichment process.
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8

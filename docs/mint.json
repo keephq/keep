@@ -34,7 +34,6 @@
         "platform/overview",
         "platform/providers",
         "platform/alerts",
-<<<<<<< HEAD
         "platform/workflows",
         "platform/workflowbuilder",
         "platform/settings"
@@ -42,53 +41,44 @@
     },
     {
       "group": "Providers",
-      "pages": ["providers/overview",
-      {
-        "group": "Supported providers",
-        "pages": [
-          "providers/documentation/axiom-provider",
-          "providers/documentation/cloudwatch-logs",
-          "providers/documentation/cloudwatch-metrics",
-          "providers/documentation/console-provider",
-          "providers/documentation/discord-provider",
-          "providers/documentation/elastic-provider",
-          "providers/documentation/http-provider",
-          "providers/documentation/jira-provider",
-          "providers/documentation/mock-provider",
-          "providers/documentation/mysql-provider",
-          "providers/documentation/new-relic-provider",
-          "providers/documentation/opsgenie-provider",
-          "providers/documentation/pagerduty-provider",
-          "providers/documentation/postgresql-provider",
-          "providers/documentation/pushover-provider",
-          "providers/documentation/sentry-provider",
-          "providers/documentation/slack-provider",
-          "providers/documentation/snowflake-provider",
-          "providers/documentation/ssh-provider",
-          "providers/documentation/teams-provider",
-          "providers/documentation/telegram-provider",
-          "providers/documentation/trello-provider",
-          "providers/documentation/zenduty-provider",
-          "providers/documentation/resend-provider",
-          "providers/documentation/websocket-provider"
-        ]}
-  ]},
-    {
-      "group": "Workflows",
       "pages": [
-        "Workflows/overview",
-=======
-        "platform/workflows"
+        "providers/overview",
+        {
+          "group": "Supported providers",
+          "pages": [
+            "providers/documentation/axiom-provider",
+            "providers/documentation/cloudwatch-logs",
+            "providers/documentation/cloudwatch-metrics",
+            "providers/documentation/console-provider",
+            "providers/documentation/discord-provider",
+            "providers/documentation/elastic-provider",
+            "providers/documentation/http-provider",
+            "providers/documentation/jira-provider",
+            "providers/documentation/mock-provider",
+            "providers/documentation/mysql-provider",
+            "providers/documentation/new-relic-provider",
+            "providers/documentation/opsgenie-provider",
+            "providers/documentation/pagerduty-provider",
+            "providers/documentation/postgresql-provider",
+            "providers/documentation/pushover-provider",
+            "providers/documentation/sentry-provider",
+            "providers/documentation/slack-provider",
+            "providers/documentation/snowflake-provider",
+            "providers/documentation/ssh-provider",
+            "providers/documentation/teams-provider",
+            "providers/documentation/telegram-provider",
+            "providers/documentation/trello-provider",
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/resend-provider",
+            "providers/documentation/websocket-provider"
+          ]
+        }
       ]
     },
     {
       "group": "Workflows",
       "pages": [
-        "platform/getting-started",
-        {
-          "group": "Core",
-          "pages": [
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
+        "workflows/overview",
             {
               "group": "Syntax",
               "pages": [
@@ -137,14 +127,9 @@
             {
               "group": "Examples",
               "pages": ["workflows/examples/multi-step-alert"]
-            },{
-              "group": "State",
-              "pages": ["workflows/state"]
-            }
-          ]
-<<<<<<< HEAD
-
-      },
+            },"workflows/state"
+      ]
+    },
     {
       "group": "Keep API",
       "pages": [
@@ -199,13 +184,10 @@
             "api/workflows/delete-workflow-by-id",
             "api/workflows/get-workflow-execution-status"
           ]
-=======
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
         }
       ]
     },
     {
-<<<<<<< HEAD
       "group": "Keep CLI",
       "pages": [
         "cli/overview",
@@ -220,77 +202,14 @@
             "cli/commands/cli-run",
             "cli/commands/cli-version",
             "cli/commands/cli-config-provider"
-=======
-      "group": "Keep API",
-      "pages": [
-        {
-          "group": "Providers",
-          "pages": [
-            "api/providers/get-providers",
-            "api/providers/get-alerts-configuration",
-            "api/providers/get-logs",
-            "api/providers/get-alerts-schema",
-            "api/providers/add-alert",
-            "api/providers/test-provider",
-            "api/providers/delete-provider",
-            "api/providers/install-provider",
-            "api/providers/install-provider-webhook",
-            "api/providers/get-webhook-settings"
-          ]
-        },
-        {
-          "group": "Healthcheck",
-          "pages": [
-            "api/healthcheck/healthcheck"
-          ]
-        },
-        {
-          "group": "Tenant",
-          "pages": [
-            "api/tenant/is-onboarded",
-            "api/tenant/save-github-installation-id"
-          ]
-        },
-        {
-          "group": "Alerts",
-          "pages": [
-            "api/alerts/get-alerts",
-            "api/alerts/receive-event"
-          ]
-        },
-        {
-          "group": "Webhook settings",
-          "pages": [
-            "api/settings/webhook-settings"
-          ]
-        },
-        {
-          "group": "Workflows",
-          "pages": [
-            "api/workflows/get-workflows",
-            "api/workflows/create-workflow",
-            "api/workflows/run-workflow",
-            "api/workflows/get-workflow-by-id",
-            "api/workflows/delete-workflow-by-id",
-            "api/workflows/get-workflow-execution-status"
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
           ]
         }
       ]
-    },
-    {
-<<<<<<< HEAD
-      "group": "Development",
-      "pages": ["development/getting-started", "development/deployments", "development/adding-a-new-provider"]
-=======
-      "group": "Keep CLI",
-      "pages": ["applications/api"]
-    },
-    {
-      "group": "Development",
-      "pages": ["deployment"]
->>>>>>> 42eb3bd10e6cf131d87398401cf9479952e0e8a8
-    }
+      },
+      {
+        "group": "Development",
+        "pages": ["development/getting-started", "development/adding-a-new-provider"]
+      }
   ],
   "footerSocials": {
     "github": "https://github.com/keephq/keep"
