@@ -7,12 +7,18 @@ import logging
 import os
 from dataclasses import fields
 
+from keep.api.core.db import get_installed_providers
 from keep.api.models.provider import Provider
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
+
+
+class ProviderConfigurationException(Exception):
+    pass
 
 
 class ProvidersFactory:
@@ -46,7 +52,11 @@ class ProvidersFactory:
 
     @staticmethod
     def get_provider(
-        provider_id: str, provider_type: str, provider_config: dict, **kwargs
+        context_manager: ContextManager,
+        provider_id: str,
+        provider_type: str,
+        provider_config: dict,
+        **kwargs,
     ) -> BaseProvider:
         """
         Get the instantiated provider class according to the provider type.
@@ -58,14 +68,23 @@ class ProvidersFactory:
             BaseProvider: The provider class.
         """
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        # backward compatibility issues
+        # when providers.yaml could have 'type' too
+        if "type" in provider_config:
+            del provider_config["type"]
         provider_config = ProviderConfig(**provider_config)
 
         try:
-            return provider_class(provider_id=provider_id, config=provider_config)
+            provider = provider_class(
+                context_manager=context_manager,
+                provider_id=provider_id,
+                config=provider_config,
+            )
+            return provider
         except TypeError as exc:
             error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
             logging.getLogger(__name__).error(error_message)
-            raise exc
+            raise ProviderConfigurationException(exc)
         except Exception as exc:
             raise exc
 
@@ -198,39 +217,39 @@ class ProvidersFactory:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
 
-        # TODO: installed providers should be kept in the DB
-        # but for now we just fetch it from the secret manager
+        installed_providers = get_installed_providers(tenant_id)
+        providers = []
         secret_manager = SecretManagerFactory.get_secret_manager()
-        installed_providers_secrets = secret_manager.list_secrets(
-            prefix=f"{tenant_id}_"
-        )
-        installed_providers = []
-        for provider_secret in installed_providers_secrets:
-            secret_split = provider_secret.split("_")
-            if len(provider_secret.split("_")) == 3:
-                provider_type = secret_split[1]
-                provider_id = secret_split[2]
-                details = (
+        for p in installed_providers:
+            provider = next(
+                filter(
+                    lambda provider: provider.type == p.type,
+                    all_providers,
+                ),
+                None,
+            )
+            if not provider:
+                logger.warning(
+                    f"Installed provider {provider_type} does not exist anymore?"
+                )
+                continue
+            provider_copy = provider.copy()
+            provider_copy.id = p.id
+            try:
+                provider_auth = (
                     secret_manager.read_secret(
-                        provider_secret.split("/")[-1], is_json=True
+                        secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                     )
                     if include_details
-                    else None
+                    else {}
                 )
-                provider = next(
-                    filter(
-                        lambda provider: provider.type == provider_type,
-                        all_providers,
-                    ),
-                    None,
+            # Somehow the provider is installed but the secret is missing, probably bug in deletion
+            # TODO: solve its root cause
+            except Exception:
+                logger.exception(
+                    f"Could not get provider {provider_copy.id} auth config from secret manager"
                 )
-                if not provider:
-                    logger.warning(
-                        f"Installed provider {provider_type} does not exist anymore?"
-                    )
-                    continue
-                provider_copy = provider.copy()
-                provider_copy.id = provider_id
-                provider_copy.details = details
-                installed_providers.append(provider_copy)
-        return installed_providers
+                continue
+            provider_copy.details = provider_auth
+            providers.append(provider_copy)
+        return providers

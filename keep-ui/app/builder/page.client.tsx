@@ -12,7 +12,7 @@ import { useSession } from "../../utils/customAuth";
 import { BuilderCard } from "./builder-card";
 import Loading from "../loading";
 
-export default function PageClient() {
+export default function PageClient({ workflow }: { workflow?: string }) {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [generateEnabled, setGenerateEnabled] = useState(false);
   const [triggerGenerate, setTriggerGenerate] = useState(0);
@@ -42,13 +42,12 @@ export default function PageClient() {
     };
     reader.readAsText(file);
   }
-  if (status === "loading")
+  if (status === "loading" || status === "unauthenticated")
     return (
       <div>
         <Loading />
       </div>
     );
-  if (status === "unauthenticated") return <div>Unauthenticated...</div>;
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl h-full">
@@ -57,55 +56,69 @@ export default function PageClient() {
           <Title>Builder</Title>
           <Subtitle>Alert building kit</Subtitle>
         </div>
-        <div>
-          <Button
-            color="orange"
-            size="md"
-            className="mr-2"
-            onClick={newAlert}
-            icon={PlusIcon}
-            variant="secondary"
-            disabled={!buttonsEnabled}
-          >
-            New
-          </Button>
-          <Button
-            color="orange"
-            size="md"
-            className="mr-2"
-            variant="secondary"
-            icon={ArrowUpOnSquareIcon}
-            disabled={true}
-          >
-            Save 👷‍♀️
-          </Button>
-          <Button
-            color="orange"
-            size="md"
-            className="mr-2"
-            onClick={loadAlert}
-            variant="secondary"
-            icon={ArrowDownOnSquareIcon}
-            disabled={!buttonsEnabled}
-          >
-            Load
-          </Button>
-          <input
-            type="file"
-            id="alertFile"
-            style={{ display: "none" }}
-            onChange={handleFileChange}
-          />
-          <Button
-            disabled={!generateEnabled}
-            color="orange"
-            size="md"
-            icon={BoltIcon}
-            onClick={() => setTriggerGenerate(triggerGenerate + 1)}
-          >
-            Generate
-          </Button>
-        </div>
+        {workflow ? (
+          <div>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              variant="secondary"
+              icon={ArrowUpOnSquareIcon}
+            >
+              Save
+            </Button>
+          </div>
+        ) : (
+          <div>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              onClick={newAlert}
+              icon={PlusIcon}
+              variant="secondary"
+              disabled={!buttonsEnabled}
+            >
+              New
+            </Button>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              variant="secondary"
+              icon={ArrowUpOnSquareIcon}
+              disabled={true}
+            >
+              Save
+            </Button>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              onClick={loadAlert}
+              variant="secondary"
+              icon={ArrowDownOnSquareIcon}
+              disabled={!buttonsEnabled}
+            >
+              Load
+            </Button>
+            <input
+              type="file"
+              id="alertFile"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <Button
+              disabled={!generateEnabled}
+              color="orange"
+              size="md"
+              icon={BoltIcon}
+              onClick={() => setTriggerGenerate(triggerGenerate + 1)}
+            >
+              Generate
+            </Button>
+          </div>
+        )}
       </div>
       <BuilderCard
         accessToken={session?.accessToken!}
@@ -114,6 +127,7 @@ export default function PageClient() {
         enableButtons={enableButtons}
         enableGenerate={enableGenerate}
         triggerGenerate={triggerGenerate}
+        workflow={workflow}
       />
     </main>
   );

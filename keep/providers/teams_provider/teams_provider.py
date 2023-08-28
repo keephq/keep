@@ -6,6 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -25,8 +26,10 @@ class TeamsProviderAuthConfig:
 
 
 class TeamsProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         self.authentication_config = TeamsProviderAuthConfig(
@@ -77,7 +80,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -89,7 +95,7 @@ if __name__ == "__main__":
         description="Teams Output Provider",
         authentication={"webhook_url": teams_webhook_url},
     )
-    provider = TeamsProvider(config=config)
+    provider = TeamsProvider(context_manager, provider_id="teams", config=config)
     provider.notify(
         typeCard="MessageCard",
         themeColor="0076D7",

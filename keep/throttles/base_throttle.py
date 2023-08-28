@@ -8,7 +8,9 @@ from keep.contextmanager.contextmanager import ContextManager
 
 
 class BaseThrottle(metaclass=abc.ABCMeta):
-    def __init__(self, throttle_type, throttle_config, **kwargs):
+    def __init__(
+        self, context_manager: ContextManager, throttle_type, throttle_config, **kwargs
+    ):
         """
         Initialize a provider.
 
@@ -19,7 +21,7 @@ class BaseThrottle(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.throttle_type = throttle_type
         self.throttle_config = throttle_config
-        self.context_manager = ContextManager.get_instance()
+        self.context_manager = context_manager
 
     @abc.abstractmethod
     def check_throttling(self, action_name, alert_id, **kwargs) -> bool:

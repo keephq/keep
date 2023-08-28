@@ -6,6 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -25,8 +26,10 @@ class JiraProviderAuthConfig:
 
 
 class JiraProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
         self.authentication_config = JiraProviderAuthConfig(
@@ -72,7 +75,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -83,5 +89,5 @@ if __name__ == "__main__":
         description="Jira Input Provider",
         authentication={"api_token": jira_api_token},
     )
-    provider = JiraProvider(provider_id="jira", config=config)
+    provider = JiraProvider(context_manager, provider_id="jira", config=config)
     provider.query(host="JIRA HOST", board_id="1", email="YOUR EMAIL")

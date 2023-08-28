@@ -1,6 +1,0 @@
-provider:
-  id: github-prod
-  description: GitHub Production
-  provider_type: github
-  authentication:
-    pat:  abcdegh123456 # {{GITHUB_PAT}} to read from secret store

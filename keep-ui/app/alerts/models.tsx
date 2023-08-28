@@ -44,15 +44,12 @@ export const AlertKnownKeys = [
 
 export const AlertTableKeys: { [key: string]: string } = {
   Severity: "",
-  "Last Status": "",
-  "Fatigue Meter": "Calculated based on various factors",
-  "Last Received": "",
-  Duplicate: "",
-  Environment: "",
-  Service: "",
-  Source: "",
   Name: "",
   Description: "",
-  Message: "",
+  Status: "",
+  "Last Received": "",
+  Source: "",
+  "Fatigue Meter": "Calculated based on various factors",
+  "Automated workflow": "Workflows that defined to be executed automatically when this alert triggers",
   Payload: "",
 };

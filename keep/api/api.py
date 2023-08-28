@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -23,14 +24,15 @@ from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     ai,
     alerts,
-    alertsworkflows,
     healthcheck,
     providers,
     settings,
     tenant,
+    workflows,
 )
 from keep.contextmanager.contextmanager import ContextManager
 from keep.posthog.posthog import get_posthog_client
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -38,13 +40,6 @@ logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
-
-
-async def dispose_context_manager() -> None:
-    """Dump context manager after every request."""
-    # https://stackoverflow.com/questions/75486472/flask-teardown-request-equivalent-in-fastapi
-    yield
-    ContextManager.delete_instance()
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -105,7 +100,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
-    app = FastAPI(dependencies=[Depends(dispose_context_manager)])
+    app = FastAPI()
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         CORSMiddleware,
@@ -126,17 +121,21 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
-        alertsworkflows.router, prefix="/alerts-workflows", tags=["alerts-workflows"]
+        workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
 
     @app.on_event("startup")
-    def on_startup():
+    async def on_startup():
         create_db_and_tables()
         if not multi_tenant:
             # When running in single tenant mode, we want to override the secured endpoints
             app.dependency_overrides[verify_api_key] = verify_single_tenant
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
+
+        # initialize a workflow manager
+        wf_manager = WorkflowManager.get_instance()
+        asyncio.create_task(wf_manager.start())
 
     keep.api.observability.setup(app)
 

@@ -13,7 +13,7 @@
   },
   "topbarCtaButton": {
     "name": "Login",
-    "url": "https://app.keephq.dev/"
+    "url": "https://platform.keephq.dev/"
   },
   "topbarLinks": [
     {
@@ -22,128 +22,194 @@
     }
   ],
   "anchors": [
-    {
-      "name": "Slack",
-      "icon": "slack",
-      "url": "https://keephq.dev/slack"
-    },
-    {
-      "name": "Blog",
-      "icon": "newspaper",
-      "url": "https://medium.com/keepalerting"
-    }
   ],
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["overview/introduction", "overview/quickstart"]
+      "pages": ["overview/introduction", "overview/keyconcepts", "overview/usecases", "overview/examples", "overview/alternatives"]
     },
     {
       "group": "Platform",
       "pages": [
-        "platform/getting-started",
+        "platform/overview",
+        "platform/providers",
+        "platform/alerts",
+        "platform/workflows",
+        "platform/workflowbuilder",
+        "platform/settings"
+      ]
+    },
+    {
+      "group": "Providers",
+      "pages": [
+        "providers/overview",
         {
-          "group": "Core",
+          "group": "Supported providers",
           "pages": [
+            "providers/documentation/axiom-provider",
+            "providers/documentation/cloudwatch-logs",
+            "providers/documentation/cloudwatch-metrics",
+            "providers/documentation/console-provider",
+            "providers/documentation/discord-provider",
+            "providers/documentation/elastic-provider",
+            "providers/documentation/http-provider",
+            "providers/documentation/jira-provider",
+            "providers/documentation/mock-provider",
+            "providers/documentation/mysql-provider",
+            "providers/documentation/new-relic-provider",
+            "providers/documentation/opsgenie-provider",
+            "providers/documentation/pagerduty-provider",
+            "providers/documentation/postgresql-provider",
+            "providers/documentation/pushover-provider",
+            "providers/documentation/sentry-provider",
+            "providers/documentation/slack-provider",
+            "providers/documentation/snowflake-provider",
+            "providers/documentation/ssh-provider",
+            "providers/documentation/teams-provider",
+            "providers/documentation/telegram-provider",
+            "providers/documentation/trello-provider",
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/resend-provider",
+            "providers/documentation/websocket-provider"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Workflows",
+      "pages": [
+        "workflows/overview",
             {
               "group": "Syntax",
               "pages": [
-                "platform/core/syntax/basic-syntax",
-                "platform/core/syntax/foreach-syntax",
-                "platform/core/syntax/context-syntax",
-                "platform/core/syntax/slate"
+                "workflows/syntax/basic-syntax",
+                "workflows/syntax/foreach-syntax",
+                "workflows/syntax/context-syntax"
               ]
             },
             {
               "group": "Providers",
               "pages": [
-                "platform/core/providers/getting-started",
-                "platform/core/providers/what-is-a-provider",
-                "platform/core/providers/adding-a-new-provider",
-                {
-                  "group": "Documentation",
-                  "pages": [
-                    "platform/core/providers/documentation/template",
-                    "platform/core/providers/documentation/axiom-provider",
-                    "platform/core/providers/documentation/cloudwatch-logs",
-                    "platform/core/providers/documentation/cloudwatch-metrics",
-                    "platform/core/providers/documentation/console-provider",
-                    "platform/core/providers/documentation/discord-provider",
-                    "platform/core/providers/documentation/elastic-provider",
-                    "platform/core/providers/documentation/http-provider",
-                    "platform/core/providers/documentation/jira-provider",
-                    "platform/core/providers/documentation/mock-provider",
-                    "platform/core/providers/documentation/mysql-provider",
-                    "platform/core/providers/documentation/new-relic-provider",
-                    "platform/core/providers/documentation/opsgenie-provider",
-                    "platform/core/providers/documentation/pagerduty-provider",
-                    "platform/core/providers/documentation/postgresql-provider",
-                    "platform/core/providers/documentation/pushover-provider",
-                    "platform/core/providers/documentation/sentry-provider",
-                    "platform/core/providers/documentation/slack-provider",
-                    "platform/core/providers/documentation/snowflake-provider",
-                    "platform/core/providers/documentation/ssh-provider",
-                    "platform/core/providers/documentation/teams-provider",
-                    "platform/core/providers/documentation/telegram-provider",
-                    "platform/core/providers/documentation/trello-provider",
-                    "platform/core/providers/documentation/zenduty-provider",
-                    "platform/core/providers/documentation/resend-provider",
-                    "platform/core/providers/documentation/websocket-provider"
-                  ]
-                }
+                "workflows/providers/getting-started",
+                "workflows/providers/what-is-a-provider"
               ]
             },
             {
               "group": "Conditions",
               "pages": [
-                "platform/core/conditions/what-is-a-condition",
-                "platform/core/conditions/threshold",
-                "platform/core/conditions/assert",
-                "platform/core/conditions/stddev"
+                "workflows/conditions/what-is-a-condition",
+                "workflows/conditions/threshold",
+                "workflows/conditions/assert",
+                "workflows/conditions/stddev"
               ]
             },
             {
               "group": "Functions",
               "pages": [
-                "platform/core/functions/what-is-a-function",
-                "platform/core/functions/all",
-                "platform/core/functions/diff",
-                "platform/core/functions/len",
-                "platform/core/functions/split",
-                "platform/core/functions/first",
-                "platform/core/functions/utcnow",
-                "platform/core/functions/to-utc",
-                "platform/core/functions/datetime-compare",
-                "platform/core/functions/encode",
-                {
-                  "group": "Throttles",
-                  "pages": [
-                    "platform/core/throttles/what-is-a-throttle",
-                    "platform/core/throttles/one-until-resolved"
-                  ]
-                },
-                {
-                  "group": "Examples",
-                  "pages": ["platform/core/examples/multi-step-alert"]
-                }
+                "workflows/functions/what-is-a-function",
+                "workflows/functions/all",
+                "workflows/functions/diff",
+                "workflows/functions/len",
+                "workflows/functions/split",
+                "workflows/functions/first",
+                "workflows/functions/utcnow",
+                "workflows/functions/to-utc",
+                "workflows/functions/datetime-compare",
+                "workflows/functions/encode"
               ]
-            }
+            },{
+              "group": "Throttles",
+              "pages": [
+                "workflows/throttles/what-is-a-throttle",
+                "workflows/throttles/one-until-resolved"
+              ]
+            },
+            {
+              "group": "Examples",
+              "pages": ["workflows/examples/multi-step-alert"]
+            },"workflows/state"
+      ]
+    },
+    {
+      "group": "Keep API",
+      "pages": [
+        {
+          "group": "Providers",
+          "pages": [
+            "api/providers/get-providers",
+            "api/providers/get-alerts-configuration",
+            "api/providers/get-logs",
+            "api/providers/get-alerts-schema",
+            "api/providers/add-alert",
+            "api/providers/test-provider",
+            "api/providers/delete-provider",
+            "api/providers/install-provider",
+            "api/providers/install-provider-webhook",
+            "api/providers/get-webhook-settings"
           ]
         },
         {
-          "group": "UI",
-          "pages": ["platform/ui/getting-started"]
+          "group": "Healthcheck",
+          "pages": [
+            "api/healthcheck/healthcheck"
+          ]
+        },
+        {
+          "group": "Tenant",
+          "pages": [
+            "api/tenant/is-onboarded",
+            "api/tenant/save-github-installation-id"
+          ]
+        },
+        {
+          "group": "Alerts",
+          "pages": [
+            "api/alerts/get-alerts",
+            "api/alerts/receive-event"
+          ]
+        },
+        {
+          "group": "Webhook settings",
+          "pages": [
+            "api/settings/webhook-settings"
+          ]
+        },
+        {
+          "group": "Workflows",
+          "pages": [
+            "api/workflows/get-workflows",
+            "api/workflows/create-workflow",
+            "api/workflows/run-workflow",
+            "api/workflows/get-workflow-by-id",
+            "api/workflows/delete-workflow-by-id",
+            "api/workflows/get-workflow-execution-status"
+          ]
         }
       ]
     },
     {
-      "group": "Applications",
-      "pages": ["applications/github"]
-    },
-    {
-      "group": "Deployment",
-      "pages": ["deployment"]
-    }
+      "group": "Keep CLI",
+      "pages": [
+        "cli/overview",
+        "cli/installation",
+        {
+          "group": "Commands",
+          "pages": [
+            "cli/commands/cli",
+            "cli/commands/cli-api",
+            "cli/commands/cli-config",
+            "cli/commands/cli-init",
+            "cli/commands/cli-run",
+            "cli/commands/cli-version",
+            "cli/commands/cli-config-provider"
+          ]
+        }
+      ]
+      },
+      {
+        "group": "Development",
+        "pages": ["development/getting-started", "development/adding-a-new-provider"]
+      }
   ],
   "footerSocials": {
     "github": "https://github.com/keephq/keep"

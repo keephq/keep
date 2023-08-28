@@ -1,0 +1,78 @@
+---
+title: "Getting started"
+sidebarTitle: "Getting started"
+---
+
+## Docker-compose
+
+### Spin up Keep with docker-compose latest images
+The easiest way to start keep is is with docker-compose:
+```
+curl -s https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml | docker-compose -f - up
+```
+
+The docker-compose.yml contains two services:
+- keep-backend - a fastapi service that as the API server.
+- keep-frontend - a nextjs app that serves as Keep UI interface.
+
+### Docker-compose dev images
+You can use `docker-compose.dev.yaml` to start Keep in a development mode.
+
+First, clone the Keep repo:
+```
+git clone https://github.com/keephq/keep.git && cd keep
+```
+
+Next, run
+```
+docker-compose -f docker-compose.dev.yaml - up
+```
+
+
+## Kubernetes
+Keep can be installed via Helm Chart.
+
+First, clone Keep:
+```
+git clone https://github.com/keephq/keep.git && cd keep
+```
+
+Next, install using:
+```
+helm install -f chart/keep/values.yaml keep chart/keep/
+```
+
+Notice for it to work locally, you'll need this port forwarding:
+```
+kubectl port-forward svc/keep-frontend 3000:3000
+```
+
+To learn more about Keep's helm chart, see https://github.com/keephq/keep/blob/main/chart/keep/README.md
+
+## VSCode
+You can run Keep from your VSCode (after cloning the repo) by adding this configurations to your `launch.json`:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Keep Backend",
+        "type": "python",
+        "request": "launch",
+        "program": "keep/cli/cli.py",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "args": ["--json", "api","--multi-tenant"],
+        "env": {"PYDEVD_DISABLE_FILE_VALIDATION": "1"}
+      },
+      {
+        "name": "Keep Frontend",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "npm run dev",
+        "cwd": "${workspaceFolder}/keep-ui",
+      }
+    ]
+  }
+```

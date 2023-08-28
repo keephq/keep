@@ -1,0 +1,68 @@
+---
+title: "keep config provider"
+sidebarTitle: "keep config provider"
+---
+
+Set the provider configuration.
+
+## Usage
+
+```
+Usage: keep config provider [OPTIONS]
+```
+
+## Options
+* `provider_type` (REQUIRED):
+  * Type: STRING
+  * Default: `none`
+  * Usage: `--provider-type
+-p`
+
+  The provider to configure [e.g. elastic]
+
+
+* `provider_id` (REQUIRED):
+  * Type: STRING
+  * Default: `none`
+  * Usage: `--provider-id
+-i`
+
+  The provider unique identifier [e.g. elastic-prod]
+
+
+* `provider_config_file`:
+  * Type: STRING
+  * Default: `providers.yaml`
+  * Usage: `--provider-config-file
+-c`
+
+  The provider config
+
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+
+## CLI Help
+
+```
+Usage: keep config provider [OPTIONS]
+
+  Set the provider configuration.
+
+Options:
+  -p, --provider-type TEXT        The provider to configure [e.g. elastic]
+                                  [required]
+
+  -i, --provider-id TEXT          The provider unique identifier [e.g.
+                                  elastic-prod]  [required]
+
+  -c, --provider-config-file TEXT
+                                  The provider config
+  --help                          Show this message and exit.
+```

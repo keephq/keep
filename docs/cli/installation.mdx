@@ -1,0 +1,75 @@
+---
+title: "Installation"
+---
+<Info>Missing an installation? submit a <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=use_case.md&title=">new installation</a>  request and we will add it as soon as we can.</Info>
+## Clone and install (Option 1)
+
+### Install
+First, clone Keep repository:
+
+```shell
+git clone https://github.com/keephq/keep.git && cd keep
+```
+
+Install Keep CLI with `pip`:
+
+```shell
+pip install .
+```
+or with `poetry`:
+
+```shell
+poetry install
+```
+
+From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
+
+```
+keep version
+```
+
+### Test
+Get a Slack Incoming Webhook using [this tutorial](https://api.slack.com/messaging/webhooks) and use use Keep to configure it
+
+```
+keep config provider --provider-type slack --provider-id slack-demo
+```
+Paste the Slack Incoming Webhook URL (e.g. https://hooks.slack.com/services/...) and you're good to go 👌
+
+Let's now execute our example "Paper DB has insufficient disk space" alert
+
+```bash
+keep run --alerts-file examples/workflows/db_disk_space.yml
+```
+
+Congrats 🥳 You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
+
+
+## Docker image (Option 2)
+### Install
+
+```
+docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli config provider --provider-type slack --provider-id slack-demo
+```
+
+### Test
+```
+docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
+```
+
+
+## Enable Auto Completion
+Keep's CLI supports shell auto-completion, which can make your life a whole lot easier 😌
+If you're using zsh
+
+```shell title=~/.zshrc
+eval "$(_KEEP_COMPLETE=zsh_source keep)"
+```
+
+If you're using bash
+
+```bash title=~/.bashrc
+eval "$(_KEEP_COMPLETE=bash_source keep)"
+```
+
+<Info>Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that.</Info>

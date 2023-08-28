@@ -8,6 +8,7 @@ import os
 import psycopg2
 import pydantic
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -37,8 +38,10 @@ class PostgresProviderAuthConfig:
 
 
 class PostgresProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.conn = None
 
     def __init_connection(self):
@@ -134,6 +137,10 @@ if __name__ == "__main__":
             "database": os.environ.get("POSTGRES_DATABASE"),
         }
     )
-    postgres_provider = PostgresProvider("postgres-prod", config)
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    postgres_provider = PostgresProvider(context_manager, "postgres-prod", config)
     results = postgres_provider.query(query="select * from disk")
     print(results)

@@ -6,6 +6,7 @@ import dataclasses
 import pydantic
 import requests
 
+from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -25,8 +26,10 @@ class SentryProviderAuthConfig:
 
 
 class SentryProvider(BaseProvider):
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("org_slug")
 
     def get_events_url(self, project, date="14d"):
@@ -79,7 +82,10 @@ if __name__ == "__main__":
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
     # Load environment variables
     import os
 
@@ -92,7 +98,10 @@ if __name__ == "__main__":
         "authentication": {"api_token": sentry_api_token, "org_slug": sentry_org_slug},
     }
     provider = ProvidersFactory.get_provider(
-        provider_type="sentry", provider_config=config, project=sentry_project
+        context_manager,
+        provider_type="sentry",
+        provider_config=config,
+        project=sentry_project,
     )
     result = provider.query("")
     print(result)
