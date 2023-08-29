@@ -10,12 +10,11 @@ from keep.api.core.db import (
     get_workflows_that_should_run,
 )
 from keep.workflowmanager.workflow import Workflow
-from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
 class WorkflowScheduler:
-    def __init__(self, workflow_manager: WorkflowManager):
+    def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
         self.threads = []
         self.workflow_manager = workflow_manager
