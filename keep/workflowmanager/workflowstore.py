@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from keep.api.core.db import (
     add_workflow,
     delete_workflow,
-    get_workflow,
+    get_raw_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
 )
@@ -39,7 +39,7 @@ class WorkflowStore:
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
-        interval = self.parser._parse_interval(workflow)
+        interval = self.parser.parse_interval(workflow)
         workflow = add_workflow(
             id=str(uuid.uuid4()),
             name=workflow_id,
@@ -82,13 +82,13 @@ class WorkflowStore:
                 return self._read_workflow_from_stream(file)
 
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
-        raw_workflow = get_workflow(tenant_id, workflow_id)
+        raw_workflow = get_raw_workflow(tenant_id, workflow_id)
         workflow_yaml = yaml.safe_load(raw_workflow)
         valid_workflow_yaml = {"workflow": workflow_yaml}
         return yaml.dump(valid_workflow_yaml)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = get_workflow(tenant_id, workflow_id)
+        workflow = get_raw_workflow(tenant_id, workflow_id)
         if not workflow:
             raise HTTPException(
                 status_code=404,

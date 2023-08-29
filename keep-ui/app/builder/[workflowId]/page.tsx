@@ -16,5 +16,5 @@ export default async function PageWithId({
     },
   });
   const workflow = (await response.text()).slice(1, -1).replaceAll("\\n", "\n");
-  return <Page workflow={workflow} />;
+  return <Page workflow={workflow} workflowId={params.workflowId} />;
 }

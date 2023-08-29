@@ -148,7 +148,7 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
    *  Need to think about UX for this
    */
   const propertyKeys = Object.keys(properties).filter(
-    (k) => k !== "isLocked" && k !== "description" && k !== "id"
+    (k) => k !== "isLocked" && k !== "id"
   );
 
   return (
@@ -157,17 +157,22 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
       {propertyKeys.map((key) => {
         return (
           <>
-            <Text className="capitalize">{key} Trigger</Text>
+            <Text className="capitalize mt-2.5">{key}</Text>
             {key === "manual" ? (
               <div key={key}>
-                <input type="checkbox" checked disabled />
+                <input
+                  type="checkbox"
+                  checked={properties[key] === "true"}
+                  onChange={(e) =>
+                    updateProperty(key, e.target.checked ? "true" : "false")
+                  }
+                />
               </div>
             ) : (
               <TextInput
                 key={key}
                 placeholder="Value"
                 onChange={(e: any) => updateProperty(key, e.target.value)}
-                className="mb-2.5"
                 value={properties[key] as string}
               />
             )}

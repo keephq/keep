@@ -119,6 +119,10 @@ def get_session() -> Session:
 
 
 def try_create_single_tenant(tenant_id: str) -> None:
+    try:
+        create_db_and_tables()
+    except:
+        pass
     with Session(engine) as session:
         try:
             # Do everything related with single tenant creation in here
@@ -280,7 +284,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
-def get_workflow(tenant_id: str, workflow_id: str) -> str:
+def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
@@ -288,6 +292,13 @@ def get_workflow(tenant_id: str, workflow_id: str) -> str:
             .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
         ).first()
+    if not workflow:
+        return None
+    return workflow
+
+
+def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
+    workflow = get_workflow(tenant_id, workflow_id)
     if not workflow:
         return None
     return workflow.workflow_raw

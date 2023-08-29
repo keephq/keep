@@ -111,7 +111,7 @@ class Parser:
         workflow_tags = self._parse_tags(workflow)
         workflow_steps = self._parse_steps(context_manager, workflow)
         workflow_actions = self._parse_actions(context_manager, workflow)
-        workflow_interval = self._parse_interval(workflow)
+        workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(workflow)
         workflow_triggers = self.get_triggers_from_workflow(workflow)
         workflow = Workflow(
@@ -261,7 +261,7 @@ class Parser:
         workflow_tags = workflow.get("tags", [])
         return workflow_tags
 
-    def _parse_interval(self, workflow) -> int:
+    def parse_interval(self, workflow) -> int:
         # backward compatibility
         workflow_interval = workflow.get("interval", 0)
         triggers = workflow.get("triggers", [])
@@ -442,7 +442,10 @@ class Parser:
         providers = actions_providers + steps_providers
         providers = [
             {
-                "name": p.get("config").split(".")[1].replace("}}", "").strip(),
+                "name": p.get("config", "NAME.NO_PROVIDER_NAME")
+                .split(".")[1]
+                .replace("}}", "")
+                .strip(),
                 "type": p.get("type"),
             }
             for p in providers

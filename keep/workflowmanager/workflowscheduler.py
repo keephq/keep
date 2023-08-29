@@ -1,17 +1,14 @@
-import asyncio
 import logging
 import threading
 import time
 import typing
+import uuid
 
 from keep.api.core.db import (
     create_workflow_execution,
     finish_workflow_execution,
-    get_session,
     get_workflows_that_should_run,
 )
-from keep.api.models.db.workflow import WorkflowExecution
-from keep.contextmanager.contextmanager import ContextManager
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -204,7 +201,7 @@ class WorkflowScheduler:
         while True and not self._stop:
             self.logger.info(f"Running workflow {workflow.workflow_id}...")
             try:
-                self.workflow_manager._run_workflow(workflow)
+                self.workflow_manager._run_workflow(workflow, uuid.uuid4())
             except Exception as e:
                 self.logger.exception(
                     f"Failed to run workflow {workflow.workflow_id}..."

@@ -20,7 +20,9 @@ interface Props {
   enableButtons: () => void;
   enableGenerate: (state: boolean) => void;
   triggerGenerate: number;
+  triggerSave: number;
   workflow?: string;
+  workflowId?: string;
 }
 
 export function BuilderCard({
@@ -30,7 +32,9 @@ export function BuilderCard({
   enableButtons,
   enableGenerate,
   triggerGenerate,
+  triggerSave,
   workflow,
+  workflowId,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const apiUrl = getApiURL();
@@ -56,9 +60,7 @@ export function BuilderCard({
   if (!providers || isLoading)
     return (
       <Card
-        className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${
-          error ? null : "h-5/6"
-        }`}
+        className="mt-10 p-4 md:p-10 mx-auto"
       >
         <Loader />
       </Card>
@@ -66,7 +68,7 @@ export function BuilderCard({
 
   return (
     <Card
-      className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 ${error ? null : "h-5/6"}`}
+      className={`mt-10 p-4 md:p-10 mx-auto ${error ? null : "h-5/6"}`}
     >
       {error ? (
         <Callout
@@ -86,7 +88,10 @@ export function BuilderCard({
           fileName={fileName}
           enableGenerate={enableGenerate}
           triggerGenerate={triggerGenerate}
+          triggerSave={triggerSave}
           workflow={workflow}
+          accessToken={accessToken}
+          workflowId={workflowId}
         />
       )}
     </Card>
