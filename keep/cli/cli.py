@@ -177,7 +177,7 @@ def api(multi_tenant: bool):
     "-t",
     help="The tenant id",
     required=False,
-    default="singletenant",
+    default=SINGLE_TENANT_UUID,
 )
 @click.option("--api-key", help="The API key for keep's API", required=False)
 @click.option(

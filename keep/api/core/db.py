@@ -119,6 +119,10 @@ def get_session() -> Session:
 
 
 def try_create_single_tenant(tenant_id: str) -> None:
+    try:
+        create_db_and_tables()
+    except:
+        pass
     with Session(engine) as session:
         try:
             # Do everything related with single tenant creation in here
