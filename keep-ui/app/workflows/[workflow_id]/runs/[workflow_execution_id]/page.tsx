@@ -59,7 +59,6 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
 
   return (
     <div>
-      <h1>Workflow Execution Details</h1>
       {executionStatus === 'success' ? (
         <Table>
           <TableHead>

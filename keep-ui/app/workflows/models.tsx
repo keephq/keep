@@ -1,4 +1,4 @@
-type Provider = {
+export type Provider = {
   id: string;
   type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
   name: string;
@@ -10,7 +10,7 @@ type Filter = {
   value: string;
 };
 
-type Trigger = {
+export type Trigger = {
   type: string;
   filters?: Filter[];
   value?: string;

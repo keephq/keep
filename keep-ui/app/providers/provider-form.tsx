@@ -22,6 +22,7 @@ type ProviderFormProps = {
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
   onAddProvider?: (provider: Provider) => void;
+  isProviderNameDisabled?: boolean;
 };
 
 const ProviderForm = ({
@@ -32,6 +33,7 @@ const ProviderForm = ({
   onConnectChange,
   onAddProvider,
   closeModal,
+  isProviderNameDisabled,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const [formValues, setFormValues] = useState<{
@@ -211,6 +213,9 @@ const ProviderForm = ({
               onChange={handleInputChange}
               placeholder="Enter provider name"
               color="orange"
+              disabled={isProviderNameDisabled}
+              className={isProviderNameDisabled ? "disabled-input" : ""}
+              title={isProviderNameDisabled ? "This field is disabled because it is pre-filled from the workflow." : ""}
             />
           </div>
           {Object.keys(provider.config).map((configKey) => {
