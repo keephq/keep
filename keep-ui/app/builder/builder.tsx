@@ -33,6 +33,8 @@ import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
 import { getApiURL } from "utils/apiUrl";
 import Loader from "./loader";
+import { stringify } from "yaml";
+import { useRouter } from "next/navigation";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -40,7 +42,10 @@ interface Props {
   providers: Provider[];
   enableGenerate: (status: boolean) => void;
   triggerGenerate: number;
+  triggerSave: number;
   workflow?: string;
+  workflowId?: string;
+  accessToken?: string;
 }
 
 function Builder({
@@ -49,7 +54,10 @@ function Builder({
   providers,
   enableGenerate,
   triggerGenerate,
+  triggerSave,
   workflow,
+  workflowId,
+  accessToken,
 }: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
@@ -63,6 +71,51 @@ function Builder({
   >(null);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
+  const router = useRouter();
+
+  const updateWorkflow = () => {
+    const apiUrl = getApiURL();
+    const url = `${apiUrl}/workflows/${workflowId}`;
+    const method = "PUT";
+    const headers = {
+      "Content-Type": "text/html",
+      Authorization: `Bearer ${accessToken}`,
+    };
+    const body = stringify(buildAlert(definition.value));
+    fetch(url, { method, headers, body })
+      .then((response) => {
+        if (response.ok) {
+          router.push("/workflows");
+        } else {
+          throw new Error(response.statusText);
+        }
+      })
+      .catch((error) => {
+        alert(`Error: ${error}`);
+      });
+  };
+
+  const addWorkflow = () => {
+    const apiUrl = getApiURL();
+    const url = `${apiUrl}/workflows`;
+    const method = "POST";
+    const headers = {
+      "Content-Type": "text/html",
+      Authorization: `Bearer ${accessToken}`,
+    };
+    const body = stringify(buildAlert(definition.value));
+    fetch(url, { method, headers, body })
+      .then((response) => {
+        if (response.ok) {
+          router.push("/workflows");
+        } else {
+          throw new Error(response.statusText);
+        }
+      })
+      .catch((error) => {
+        alert(`Error: ${error}`);
+      });
+  };
 
   useEffect(() => {
     if (workflow) {
@@ -72,7 +125,11 @@ function Builder({
     } else if (loadedAlertFile == null) {
       setDefinition(
         wrapDefinition(
-          generateWorkflow("new-alert-id", "new-alert-description", [], [])
+          generateWorkflow("new-alert-id", "new-alert-description", [], [], {
+            interval: "",
+            alert: "",
+            manual: "true",
+          })
         )
       );
       setIsLoading(false);
@@ -89,6 +146,17 @@ function Builder({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGenerate]);
+
+  useEffect(() => {
+    if (triggerSave) {
+      if (workflowId) {
+        updateWorkflow();
+      } else {
+        addWorkflow();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerSave]);
 
   useEffect(() => {
     enableGenerate(definition.isValid || false);
