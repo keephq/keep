@@ -160,10 +160,10 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
         workflow_data = yaml.safe_load(workflow_raw_data)
         # backward comptability
         if "alert" in workflow_data:
-            workflow_data.pop("alert")
+            workflow_data = workflow_data.pop("alert")
         #
         elif "workflow" in workflow_data:
-            workflow_data.pop("workflow")
+            workflow_data = workflow_data.pop("workflow")
 
     except yaml.YAMLError as e:
         raise HTTPException(status_code=400, detail="Invalid YAML format")
