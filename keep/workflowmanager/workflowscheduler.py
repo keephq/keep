@@ -159,10 +159,10 @@ class WorkflowScheduler:
         self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
-            self.logger.info("Getting workflows that should run...")
+            self.logger.debug("Getting workflows that should run...")
             self._handle_interval_workflows()
             self._handle_event_workflows()
-            self.logger.info("Sleeping until next iteration")
+            self.logger.debug("Sleeping until next iteration")
             time.sleep(1)
         self.logger.info("Workflows scheduler stopped")
 
