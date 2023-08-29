@@ -222,6 +222,8 @@ export function parseWorkflow(workflowString: string): Definition {
       let value = curr.value;
       if (currType === "alert") {
         value = curr.filters.find((f: any) => f.key === "source").value;
+      } else if (currType === "manual") {
+        value = "true";
       }
       prev[currType] = value;
       return prev;
@@ -339,8 +341,7 @@ export function buildAlert(definition: Definition): Alert {
     });
 
   const triggers = [];
-  if (Object.keys(alert.properties).includes("manual"))
-    triggers.push({ type: "manual" });
+  if (alert.properties.manual === "true") triggers.push({ type: "manual" });
   if (alert.properties.alert) {
     triggers.push({
       type: "alert",

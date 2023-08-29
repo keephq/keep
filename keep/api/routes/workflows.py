@@ -1,16 +1,30 @@
 import logging
-from dataclasses import asdict
-from functools import reduce
 from typing import Any, Dict, List, Optional
 
 import jwt
 import yaml
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from sqlmodel import Session
 
-from keep.api.core.db import get_installed_providers, get_workflow_executions
+from keep.api.core.db import (
+    get_installed_providers,
+    get_session,
+    get_workflow,
+    get_workflow_executions,
+)
 from keep.api.core.dependencies import verify_bearer_token
 from keep.api.models.workflow import (
     ProviderDTO,
+    WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
@@ -136,15 +150,7 @@ def run_workflow(
     }
 
 
-@router.post(
-    "",
-    description="Create a workflow",
-)
-async def create_workflow(
-    request: Request,
-    file: UploadFile = File(...),
-    tenant_id: str = Depends(verify_bearer_token),
-) -> dict:
+async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:
@@ -154,14 +160,25 @@ async def create_workflow(
         workflow_data = yaml.safe_load(workflow_raw_data)
         # backward comptability
         if "alert" in workflow_data:
-            workflow = workflow_data.pop("alert")
+            workflow_data.pop("alert")
         #
-        else:
-            workflow = workflow_data.pop("workflow")
+        elif "workflow" in workflow_data:
+            workflow_data.pop("workflow")
 
     except yaml.YAMLError as e:
         raise HTTPException(status_code=400, detail="Invalid YAML format")
+    return workflow_data
 
+
+@router.post(
+    "", description="Create or update a workflow", status_code=status.HTTP_201_CREATED
+)
+async def create_workflow(
+    request: Request,
+    file: UploadFile = None,
+    tenant_id: str = Depends(verify_bearer_token),
+) -> WorkflowCreateOrUpdateDTO:
+    workflow = await __get_workflow_raw_data(request, file)
     token = request.headers.get("Authorization").split(" ")[1]
     decoded_token = jwt.decode(token, options={"verify_signature": False})
     created_by = decoded_token.get("email")
@@ -170,7 +187,55 @@ async def create_workflow(
     workflow = workflowstore.create_workflow(
         tenant_id=tenant_id, created_by=created_by, workflow=workflow
     )
-    return {"workflow_id": workflow.id, "status": "created"}
+    return WorkflowCreateOrUpdateDTO(workflow_id=workflow.id, status="created")
+
+
+@router.put(
+    "/{workflow_id}",
+    description="Update a workflow",
+    status_code=status.HTTP_201_CREATED,
+)
+async def update_workflow_by_id(
+    workflow_id: str,
+    request: Request,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+) -> WorkflowCreateOrUpdateDTO:
+    """
+    Update a workflow
+
+    Args:
+        workflow_id (str): The workflow ID
+        request (Request): The FastAPI Request object
+        file (UploadFile, optional): File if was uploaded via file. Defaults to File(...).
+        tenant_id (str, optional): The tenant ID. Defaults to Depends(verify_bearer_token).
+        session (Session, optional): DB Session object injected via DI. Defaults to Depends(get_session).
+
+    Raises:
+        HTTPException: If the workflow was not found
+
+    Returns:
+        Workflow: The updated workflow
+    """
+    logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
+    workflow_from_db = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    if not workflow_from_db:
+        logger.warning(
+            f"Tenant tried to update workflow {workflow_id} that does not exist",
+            extra={"tenant_id": tenant_id},
+        )
+        raise HTTPException(404, "Workflow not found")
+    workflow = await __get_workflow_raw_data(request, None)
+    parser = Parser()
+    workflow_interval = parser.parse_interval(workflow)
+    workflow_from_db.description = workflow.get("description")
+    workflow_from_db.interval = workflow_interval
+    workflow_from_db.workflow_raw = yaml.dump(workflow)
+    session.add(workflow_from_db)
+    session.commit()
+    session.refresh(workflow_from_db)
+    logger.info(f"Updated workflow {workflow_id}", extra={"tenant_id": tenant_id})
+    return WorkflowCreateOrUpdateDTO(workflow_id=workflow_id, status="updated")
 
 
 @router.get("/{workflow_id}/raw", description="Get workflow executions by ID")

@@ -12,10 +12,17 @@ import { useSession } from "../../utils/customAuth";
 import { BuilderCard } from "./builder-card";
 import Loading from "../loading";
 
-export default function PageClient({ workflow }: { workflow?: string }) {
+export default function PageClient({
+  workflow,
+  workflowId,
+}: {
+  workflow?: string;
+  workflowId?: string;
+}) {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [generateEnabled, setGenerateEnabled] = useState(false);
   const [triggerGenerate, setTriggerGenerate] = useState(0);
+  const [triggerSave, setTriggerSave] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
@@ -50,20 +57,20 @@ export default function PageClient({ workflow }: { workflow?: string }) {
     );
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-7xl h-full">
+    <main className="p-4 md:p-10 mx-auto max-w-full h-full">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>Builder</Title>
-          <Subtitle>Alert building kit</Subtitle>
+          <Subtitle>Workflow building kit</Subtitle>
         </div>
         {workflow ? (
           <div>
             <Button
               color="orange"
               size="md"
-              className="mr-2"
-              variant="secondary"
               icon={ArrowUpOnSquareIcon}
+              disabled={!generateEnabled}
+              onClick={() => setTriggerSave(triggerSave + 1)}
             >
               Save
             </Button>
@@ -85,16 +92,6 @@ export default function PageClient({ workflow }: { workflow?: string }) {
               color="orange"
               size="md"
               className="mr-2"
-              variant="secondary"
-              icon={ArrowUpOnSquareIcon}
-              disabled={true}
-            >
-              Save
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
               onClick={loadAlert}
               variant="secondary"
               icon={ArrowDownOnSquareIcon}
@@ -108,6 +105,16 @@ export default function PageClient({ workflow }: { workflow?: string }) {
               style={{ display: "none" }}
               onChange={handleFileChange}
             />
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              icon={ArrowUpOnSquareIcon}
+              disabled={!generateEnabled}
+              onClick={() => setTriggerSave(triggerSave + 1)}
+            >
+              Save
+            </Button>
             <Button
               disabled={!generateEnabled}
               color="orange"
@@ -127,7 +134,9 @@ export default function PageClient({ workflow }: { workflow?: string }) {
         enableButtons={enableButtons}
         enableGenerate={enableGenerate}
         triggerGenerate={triggerGenerate}
+        triggerSave={triggerSave}
         workflow={workflow}
+        workflowId={workflowId}
       />
     </main>
   );

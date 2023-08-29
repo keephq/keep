@@ -3,14 +3,18 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Fragment } from "react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  DocumentTextIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { Icon } from "@tremor/react";
 
 const navigation = [
   { name: "Providers", href: "/providers" },
   { name: "Alerts", href: "/alerts" },
-  { name: "Workflows", href: "/workflows"},
+  { name: "Workflows", href: "/workflows" },
   { name: "Workflow Builder", href: "/builder" },
 ];
 
@@ -45,6 +49,20 @@ const SlackLogo = (props: any) => (
         d="M8.377 9.847c.002.811.659 1.469 1.47 1.47h3.683A1.474 1.474 0 0015 9.848a1.474 1.474 0 00-1.47-1.47H9.847a1.474 1.474 0 00-1.47 1.47zm2.94 3.682a1.474 1.474 0 00-1.47-1.47h-1.47v1.47c.002.812.659 1.469 1.47 1.47a1.474 1.474 0 001.47-1.47z"
       />
     </g>
+  </svg>
+);
+
+const GnipLogo = (props: any) => (
+  <svg
+    width="24px"
+    height="24px"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    {...props}
+  >
+    {" "}
+    <image id="image0" width={"24"} height={"24"} href="/gnip.webp" />
   </svg>
 );
 
@@ -101,15 +119,32 @@ export default function NavbarInner({ user }: { user: any }) {
                 {user ? (
                   <Menu as="div" className="relative ml-3">
                     <div className="flex items-center">
+                      <a href={"https://www.gnip.io/?ref=keep"} target="_blank">
+                        <Icon
+                          icon={GnipLogo}
+                          size="lg"
+                          className="grayscale hover:grayscale-0"
+                          tooltip="gniP - Reverse Ping"
+                        />
+                      </a>
                       <a href={"https://slack.keephq.dev/"} target="_blank">
                         <Icon
                           icon={SlackLogo}
                           size="lg"
-                          className="mr-2.5 grayscale hover:grayscale-0"
+                          className="grayscale hover:grayscale-0"
                           tooltip="Join our Slack"
                         />
                       </a>
-                      <Menu.Button className="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">
+                      <a href={"https://docs.keephq.dev/"} target="_blank">
+                        <Icon
+                          icon={DocumentTextIcon}
+                          color="orange"
+                          size="lg"
+                          className="mr-2.5 grayscale hover:grayscale-0"
+                          tooltip="Documentation"
+                        />
+                      </a>
+                      <Menu.Button className="flex rounded-full bg-white text-sm hover:ring-orange-500 hover:ring-offset-2 hover:ring-2">
                         <span className="sr-only">Open user menu</span>
                         <Image
                           className="h-8 w-8 rounded-full"

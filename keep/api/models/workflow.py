@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -38,3 +38,8 @@ class WorkflowExecutionDTO(BaseModel):
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
     execution_time: Optional[int]
+
+
+class WorkflowCreateOrUpdateDTO(BaseModel):
+    workflow_id: str
+    status: Literal["created", "updated"]
