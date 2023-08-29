@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout } from "@tremor/react";
+import { Callout, Subtitle } from "@tremor/react";
 import {
+  ArrowDownOnSquareIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useSession } from "../../utils/customAuth";
@@ -12,9 +13,10 @@ import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import React from "react";
-import DragAndDrop from "./dragndrop";
 import NoWorkflows from "./noworfklows";
 import WorkflowTile from "./workflow-tile";
+import { Button, Card, Title} from "@tremor/react";
+
 
 
 function copyToClipboard(text: string) {
@@ -32,6 +34,9 @@ export default function WorkflowsPage() {
   const apiUrl = getApiURL();
   const { data: session, status, update } = useSession();
   const [copied, setCopied] = useState(false);
+  const [fileContents, setFileContents] = useState<string | null>("");
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const copyCurlCommand = () => {
     copyToClipboard(`curl -X POST ...\n...`);
@@ -59,22 +64,97 @@ export default function WorkflowsPage() {
     );
   }
 
+  const onDrop = async (files: any) => {
+    const formData = new FormData();
+    const file = files.target.files[0];
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(`${apiUrl}/workflows`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        setFileError(null);
+        if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        window.location.reload();
+      } else {
+        const errorMessage = await response.text();
+        setFileError(errorMessage);
+        if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    } catch (error) {
+      setFileError("An error occurred during file upload");
+      if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+
+  function handleFileChange(event: any) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const contents = event.target!.result as string;
+      setFileContents(contents);
+      // Do something with the file contents
+    };
+    reader.readAsText(file);
+  }
+
+  function loadAlert() {
+    document.getElementById("workflowFile")?.click();
+  }
+
   return (
-    <div>
-      <div>
-        {data.length === 0 ? (
-          <NoWorkflows copyCurlCommand={copyCurlCommand} />
-        ) : (
+    <main className="p-4 md:p-10 mx-auto max-w-full">
+        <div className="flex justify-between items-center">
           <div>
-            <DragAndDrop />
-            <div className="grid grid-cols-3 gap-4 mt-10">
-              {data.map((workflow) => (
-                <WorkflowTile key={workflow.id} workflow={workflow} />
-              ))}
-            </div>
+            <Title>Workflows</Title>
+            <Subtitle>Automate your alert management with workflows.</Subtitle>
           </div>
-        )}
-      </div>
-    </div>
+          <Button
+            color="orange"
+            size="md"
+            onClick={loadAlert}
+            variant="secondary"
+            icon={ArrowDownOnSquareIcon}
+          >
+            Load a Workflow
+          </Button>
+        </div>
+        <Card className="mt-10 p-4 md:p-10 mx-auto">
+        <div>
+          <div>
+            {data.length === 0 ? (
+              <NoWorkflows copyCurlCommand={copyCurlCommand} />
+            ) : (
+              <div>
+                <input
+                  type="file"
+                  id="workflowFile"
+                  style={{ display: "none" }}
+                  onChange={onDrop}
+                />
+                <div className="grid grid-cols-3 gap-4 mt-10">
+                  {data.map((workflow) => (
+                    <WorkflowTile key={workflow.id} workflow={workflow} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+         </div>
+        </Card>
+      </main>
   );
 }

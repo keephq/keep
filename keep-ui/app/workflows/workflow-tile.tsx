@@ -232,7 +232,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   ) => {};
 
   const handleViewClick = async () => {
-      router.push(`/builder/${workflow.id}`);
+      router.push(`/workflows/${workflow.id}`);
   };
 
   const handleBuilderClick = async () => {
@@ -270,7 +270,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
 
   return (
-    <div className={`relative group flex flex-col justify-around  bg-white rounded-md shadow-md w-full h-auto m-2.5 `}>
+    <div className={`rounded-md relative group flex flex-col justify-around  bg-white rounded-md shadow-md w-full h-auto m-2.5 `}>
         <div  className={`hover:shadow-xl hover:grayscale-0`}>
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
