@@ -6,9 +6,9 @@ import { EyeIcon, PencilIcon, PlayIcon, TrashIcon, WrenchIcon } from "@heroicons
 import { DownloadIcon } from "@radix-ui/react-icons";
 
 interface WorkflowMenuProps {
-  onDelete?: (event: React.MouseEvent<HTMLButtonElement>) => Promise<void>;
+  onDelete?: () => Promise<void>;
   onRun?: (workflowId: string) => Promise<void>;
-  onView?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onView?: () => void;
   onDownload?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onBuilder?: () => void;
 }
@@ -51,7 +51,7 @@ export default function WorkflowMenu({
               <Menu.Item>
                 {({ active }) => (
                   <button
-                    onClick={(e) => { stopPropagation(e); onRun?.(); }}
+                    onClick={(e) => { stopPropagation(e); }} // onRun?.(); }}
                     className={`${
                       active ? "bg-slate-200" : "text-gray-900"
                     } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
@@ -64,7 +64,7 @@ export default function WorkflowMenu({
               <Menu.Item>
                 {({ active }) => (
                   <button
-                  onClick={(e) => { stopPropagation(e); onDownload?.(); }}
+                  onClick={(e) => { stopPropagation(e); }} // onDownload?.(); }}
                     className={`${
                       active ? "bg-slate-200" : "text-gray-900"
                     } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
