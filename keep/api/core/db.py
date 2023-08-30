@@ -187,7 +187,7 @@ def get_workflows_that_should_run():
         for workflow in workflows_with_interval:
             current_time = datetime.utcnow()
             last_execution = get_last_completed_execution(session, workflow.id)
-            # if there no last execution
+            # if there no last execution, that's the first time we run the workflow
             if not last_execution:
                 try:
                     # try to get the lock
@@ -210,8 +210,8 @@ def get_workflows_that_should_run():
                         "scheduler",
                         last_execution.execution_number + 1,
                     )
-                    # the workflow obejct itself is only under this session so we need to use the
-                    # raw
+                    # we succeed to get the lock on this executio number :)
+                    # let's run it
                     workflows_to_run.append(
                         {
                             "tenant_id": workflow.tenant_id,
@@ -221,7 +221,7 @@ def get_workflows_that_should_run():
                     )
                 # some other thread/instance has already started to work on it
                 except IntegrityError:
-                    # let's verify the locking is still valid and not timeouted:
+                    # we need to verify the locking is still valid and not timeouted
                     pass
                 # get the ongoing execution
                 ongoing_execution = session.exec(
@@ -245,7 +245,7 @@ def get_workflows_that_should_run():
                 elif ongoing_execution.started + timedelta(minutes=60) <= current_time:
                     ongoing_execution.status = "timeout"
                     session.commit()
-                    # re-create the execution
+                    # re-create the execution and try to get the lock
                     try:
                         workflow_execution_id = create_workflow_execution(
                             workflow.id,
@@ -253,14 +253,13 @@ def get_workflows_that_should_run():
                             "scheduler",
                             ongoing_execution.execution_number + 1,
                         )
-                    # some other thread/instance has already started to work on it
+                    # some other thread/instance has already started to work on it and that's ok
                     except IntegrityError:
                         logger.debug(
                             f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
                         )
                         continue
-                    # the workflow obejct itself is only under this session so we need to use the
-                    # raw
+                    # managed to acquire the (workflow_id, execution_number) lock
                     workflows_to_run.append(
                         {
                             "tenant_id": workflow.tenant_id,
