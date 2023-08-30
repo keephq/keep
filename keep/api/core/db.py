@@ -183,29 +183,33 @@ def get_workflows_that_should_run():
         ).all()
 
         workflows_to_run = []
-
+        # for each workflow:
         for workflow in workflows_with_interval:
             current_time = datetime.utcnow()
             last_execution = get_last_completed_execution(session, workflow.id)
-
-            if not last_execution or (
+            # if there no last execution
+            if not last_execution:
+                try:
+                    # try to get the lock
+                    workflow_execution_id = create_workflow_execution(
+                        workflow.id, workflow.tenant_id, "scheduler"
+                    )
+                # some other thread/instance has already started to work on it
+                except IntegrityError:
+                    continue
+            # else, if the last execution was more than interval seconds ago, we need to run it
+            elif (
                 last_execution.started + timedelta(seconds=workflow.interval)
                 <= current_time
             ):
-                ongoing_execution = session.exec(
-                    select(WorkflowExecution)
-                    .where(WorkflowExecution.workflow_id == workflow.id)
-                    .where(WorkflowExecution.status == "in_progress")
-                ).first()
-
-                if not ongoing_execution:
-                    try:
-                        workflow_execution_id = create_workflow_execution(
-                            workflow.id, workflow.tenant_id, "scheduler"
-                        )
-                    # some other thread/instance has already started to work on it
-                    except IntegrityError:
-                        continue
+                try:
+                    # try to get the lock with execution_number + 1
+                    workflow_execution_id = create_workflow_execution(
+                        workflow.id,
+                        workflow.tenant_id,
+                        "scheduler",
+                        last_execution.execution_number + 1,
+                    )
                     # the workflow obejct itself is only under this session so we need to use the
                     # raw
                     workflows_to_run.append(
@@ -215,8 +219,29 @@ def get_workflows_that_should_run():
                             "workflow_execution_id": workflow_execution_id,
                         }
                     )
-                # if there is ongoing execution, check if it is running for more than 60 minutes and if so
-                # mark it as timeout
+                # some other thread/instance has already started to work on it
+                except IntegrityError:
+                    # let's verify the locking is still valid and not timeouted:
+                    pass
+                # get the ongoing execution
+                ongoing_execution = session.exec(
+                    select(WorkflowExecution)
+                    .where(WorkflowExecution.workflow_id == workflow.id)
+                    .where(
+                        WorkflowExecution.execution_number
+                        == last_execution.execution_number + 1
+                    )
+                    .limit(1)
+                ).first()
+                # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
+                # we would be able to acquire the lock
+                if not ongoing_execution:
+                    logger.error("WTF: ongoing execution not found")
+                    continue
+                # if this completed, error, than that's ok - the service who locked the execution is done
+                elif ongoing_execution.status != "in_progress":
+                    continue
+                # if the ongoing execution runs more than 60 minutes, than its timeout
                 elif ongoing_execution.started + timedelta(minutes=60) <= current_time:
                     ongoing_execution.status = "timeout"
                     session.commit()
@@ -243,8 +268,10 @@ def get_workflows_that_should_run():
                             "workflow_execution_id": workflow_execution_id,
                         }
                     )
-                else:
-                    logger.info(f"Workflow {workflow.id} is already running")
+            else:
+                logger.info(
+                    f"Workflow {workflow.id} is already running by someone else"
+                )
 
         return workflows_to_run
 
