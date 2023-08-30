@@ -26,7 +26,7 @@ export default function WorkflowMenu({
         };
   return (
     <div className="w-44 text-right">
-      <Menu as="div" className="relative inline-block text-left">
+      <Menu as="div" className="relative inline-block text-left z-10">
         <div>
         <Menu.Button className="inline-flex w-full justify-center rounded-md text-sm" onClick={stopPropagation} >
         <Icon

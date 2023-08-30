@@ -4,22 +4,17 @@ import { useSession } from "../../utils/customAuth";
 import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import {
-  ArrowDownTrayIcon,
-  EyeIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
-import {Trigger, Provider} from "./models";
-import { Button, Text } from "@tremor/react";
+import { Trigger, Provider } from "./models";
+import { Button, Text, Card, Title, Icon, ListItem, List } from "@tremor/react";
 import ProviderForm from "app/providers/provider-form";
 import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "app/providers/page.client";
-import { Provider as FullProvider } from 'app/providers/providers';
-
-
+import { Provider as FullProvider } from "app/providers/providers";
+import "./workflow-tile.css";
+import { CheckBadgeIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 function WorkflowMenuSection({
   onDelete,
@@ -37,69 +32,85 @@ function WorkflowMenuSection({
   workflow: Workflow;
 }) {
   return (
-    <div className="flex w-full items-center justify-end">
-      <WorkflowMenu
-        onDelete={onDelete}
-        onRun={onRun}
-        onDownload={onDownload}
-        onView={onView}
-        onBuilder={onBuilder}
-      />
-    </div>
+    <WorkflowMenu
+      onDelete={onDelete}
+      onRun={onRun}
+      onDownload={onDownload}
+      onView={onView}
+      onBuilder={onBuilder}
+    />
   );
 }
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
   return (
-    <div className="border rounded p-2 m-1 flex flex-col justify-between items-start h-full">
-      <p className="text-left self-start text-xs">type: {trigger.type}</p>
-
-      {trigger.type === "interval" && (
-        <div className="flex text-left items-center justify-center h-full text-xs">
-          <p>value: {trigger.value}s</p>
-        </div>
+    <ListItem>
+      <span className="text-sm">{trigger.type}</span>
+      {trigger.type === "manual" && (
+        <span>
+          <Icon icon={CheckCircleIcon} color="green" size="xs" />
+        </span>
       )}
-
-      {trigger.type === "alert" && trigger.filters && (
-        <div className="self-start">
-          <p className="text-left self-start text-xs">filters:</p>
-          {trigger.filters.map((filter, index) => (
-            <p className="text-xs" key={index}>- {filter.key} = {filter.value}</p>
-          ))}
-        </div>
+      {trigger.type === "interval" && <span>{trigger.value} seconds</span>}
+      {trigger.type === "alert" && (
+        <span className="text-sm text-right">
+          {trigger.filters &&
+            trigger.filters.map((filter, index) => (
+              <>
+                {filter.key} = {filter.value}
+                <br />
+              </>
+            ))}
+        </span>
       )}
-    </div>
+    </ListItem>
   );
 }
 
-function ProviderTile({ provider, onConnectClick }: { provider: FullProvider, onConnectClick: (provider: FullProvider) => void }) {
+function ProviderTile({
+  provider,
+  onConnectClick,
+}: {
+  provider: FullProvider;
+  onConnectClick: (provider: FullProvider) => void;
+}) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative border rounded p-2 m-1 flex flex-col justify-between items-center h-full"
+      className={`relative group flex flex-col justify-around items-center bg-white rounded-lg w-24 h-28 mt-2.5 mr-2.5 hover:grayscale-0 shadow-md hover:shadow-lg`}
+      title={`${provider.details.name} (${provider.type})`}
     >
-      {provider.installed && (
-        <div className="absolute top-0 left-0 mt-1">
-          <Text color="green" className="text-xs">
-            Connected
-          </Text>
-        </div>
-      )}
-
+      {provider.installed ? (
+        <Icon
+          icon={CheckCircleIcon}
+          className="absolute top-[-15px] right-[-15px]"
+          color="green"
+          size="sm"
+          tooltip="Connected"
+        />
+      ) : (<Icon
+        icon={XCircleIcon}
+        className="absolute top-[-15px] right-[-15px]"
+        color="red"
+        size="sm"
+        tooltip="Disconnected"
+      />)}
       <Image
         src={`/icons/${provider.type}-icon.png`}
         width={30}
         height={30}
         alt={provider.type}
-        className={`${provider.installed ? "mt-6" : "mt-6 grayscale"}`}
+        className={`${
+          provider.installed ? "mt-6" : "mt-6 grayscale group-hover:grayscale-0"
+        }`}
       />
 
-      <div className="h-8">
-        { !provider.installed && isHovered ? (
-            <Button
+      <div className="h-8 w-[70px] flex justify-center">
+        {!provider.installed && isHovered ? (
+          <Button
             variant="secondary"
             size="xs"
             color="green"
@@ -108,11 +119,8 @@ function ProviderTile({ provider, onConnectClick }: { provider: FullProvider, on
             Connect
           </Button>
         ) : (
-          <p
-            className="text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize"
-            title={provider.id}
-          >
-            {provider.type}
+          <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate">
+            {provider.details.name}
           </p>
         )}
       </div>
@@ -120,16 +128,15 @@ function ProviderTile({ provider, onConnectClick }: { provider: FullProvider, on
   );
 }
 
-
-
-
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
   const apiUrl = getApiURL();
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
+    null
+  );
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { providers, installedProviders, error } = useFetchProviders();
@@ -172,7 +179,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     setFormValues(updatedFormValues);
     setFormErrors(updatedFormErrors);
   };
-
 
   const handleTileClick = () => {
     router.push(`/workflows/${workflow.id}`);
@@ -221,7 +227,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
-    if (isConnected){
+    if (isConnected) {
       handleCloseModal();
       // refresh the page to show the changes
       window.location.reload();
@@ -232,7 +238,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   ) => {};
 
   const handleViewClick = async () => {
-      router.push(`/workflows/${workflow.id}`);
+    router.push(`/workflows/${workflow.id}`);
   };
 
   const handleBuilderClick = async () => {
@@ -243,88 +249,92 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     (trigger) => trigger.type === "manual"
   );
 
-  const workflowProvidersMap = new Map(workflow.providers.map(p => [p.type, p]));
+  const workflowProvidersMap = new Map(
+    workflow.providers.map((p) => [p.type, p])
+  );
 
+  const uniqueProviders: FullProvider[] = Array.from(
+    new Set(workflow.providers.map((p) => p.type))
+  )
+    .map((type) => {
+      let fullProvider =
+        providers.find((fp) => fp.type === type) || ({} as FullProvider);
+      let workflowProvider =
+        workflowProvidersMap.get(type) || ({} as FullProvider);
 
-  const uniqueProviders: FullProvider[] = Array.from(new Set(workflow.providers.map(p => p.type)))
-  .map(type => {
-    let fullProvider = providers.find(fp => fp.type === type) || {} as FullProvider;
-    let workflowProvider = workflowProvidersMap.get(type) || {} as FullProvider;
+      // Merge properties
+      const mergedProvider: FullProvider = {
+        ...fullProvider,
+        ...workflowProvider,
+        installed: workflowProvider.installed || fullProvider.installed,
+        details: {
+          authentication: {},
+          name: (workflowProvider as Provider).name || fullProvider.id,
+        },
+        id: fullProvider.type,
+      };
 
-    // Merge properties
-    const mergedProvider: FullProvider = {
-      ...fullProvider,
-      ...workflowProvider,
-      installed: workflowProvider.installed || fullProvider.installed,
-      details: {
-        authentication: {},
-        name: (workflowProvider as Provider).name || fullProvider.id,
-      },
-      id: fullProvider.type,
-    };
-
-    return mergedProvider;
-  })
-  .filter(Boolean) as FullProvider[];
-
-
+      return mergedProvider;
+    })
+    .filter(Boolean) as FullProvider[];
 
   return (
-    <div className={`rounded-md relative group flex flex-col justify-around  bg-white rounded-md shadow-md w-full h-auto m-2.5 `}>
-        <div  className={`hover:shadow-xl hover:grayscale-0`}>
-          {WorkflowMenuSection({
-            onDelete: handleDeleteClick,
-            onRun: handleRunClick,
-            onDownload: handleDownloadClick,
-            onView: handleViewClick,
-            onBuilder: handleBuilderClick,
-            workflow,
-          })}
-
-          <p className="text-tremor-default truncate capitalize mx-2">
-            {workflow.description}
-          </p>
-
-          <p className="text-sm mx-4 mt-8  text-tremor-content dark:text-dark-tremor-content">Created by: {workflow.created_by}</p>
-          <p className="text-sm mx-4 mt-2  text-tremor-content dark:text-dark-tremor-content">Created at: {workflow.creation_time}</p>
-          <p className="text-sm mx-4 mt-2  text-tremor-content dark:text-dark-tremor-content">
-            Last execution time: {workflow.last_execution_time ? workflow.last_execution_time : "N/A"}
-          </p>
-          <p className="text-sm mx-4 mt-2  text-tremor-content dark:text-dark-tremor-content">
-            Last execution status: {workflow.last_execution_status ? workflow.last_execution_status : "N/A"}
-          </p>
-          <div
-            className="bg-white rounded-lg shadow p-4 my-4 mx-4"
-            style={{ minHeight: '120px' }} // Set the minimum height here
-          >
-            <p className="text-tremor-content dark:text-dark-tremor-content text-sm">
-              Triggers:
-            </p>
-            <div className={`grid gap-2 ${workflow.triggers.length > 0 ? 'md:grid-cols-2 lg:grid-cols-2' : 'grid-cols-1'}`}>
-              {workflow.triggers.length > 0 ? (
-                workflow.triggers.map((trigger, index) => (
-                  <TriggerTile key={index} trigger={trigger} />
-                ))
-              ) : (
-                <p className="text-xs text-center mx-4 mt-2 text-tremor-content dark:text-dark-tremor-content">
-                  This workflow does not have triggers yet.
-                </p>
-              )}
-            </div>
-          </div>
-
-
-          <div className="bg-white rounded-lg shadow p-4 my-4 mx-4">
-            <p className="text-tremor-content dark:text-dark-tremor-content text-sm">
-              Providers:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {uniqueProviders.map((provider) => (
-                <ProviderTile key={provider.id} provider={provider} onConnectClick={handleConnectProvider}/>
-              ))}
-            </div>
-        </div>
+    <Card className="tile-basis mt-2.5">
+      <div className="flex w-full justify-between items-center h-14">
+        <Title>{workflow.description}</Title>
+        {WorkflowMenuSection({
+          onDelete: handleDeleteClick,
+          onRun: handleRunClick,
+          onDownload: handleDownloadClick,
+          onView: handleViewClick,
+          onBuilder: handleBuilderClick,
+          workflow,
+        })}
       </div>
+
+      <p className="text-sm mt-4  text-tremor-content dark:text-dark-tremor-content">
+        Created by: {workflow.created_by}
+      </p>
+      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
+        Created at: {workflow.creation_time}
+      </p>
+      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
+        Last execution time:{" "}
+        {workflow.last_execution_time ? workflow.last_execution_time : "N/A"}
+      </p>
+      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
+        Last execution status:{" "}
+        {workflow.last_execution_status
+          ? workflow.last_execution_status
+          : "N/A"}
+      </p>
+      <Card className="min-h-[120px] mt-4">
+        <Text>Triggers:</Text>
+        {workflow.triggers.length > 0 ? (
+          <List>
+            {workflow.triggers.map((trigger, index) => (
+              <TriggerTile key={index} trigger={trigger} />
+            ))}
+          </List>
+        ) : (
+          <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+            This workflow does not have any triggers.
+          </p>
+        )}
+      </Card>
+
+      <Card className="mt-2.5">
+        <Text>Providers:</Text>
+        <div className="flex flex-wrap justify-start">
+          {uniqueProviders.map((provider) => (
+            <ProviderTile
+              key={provider.id}
+              provider={provider}
+              onConnectClick={handleConnectProvider}
+            />
+          ))}
+        </div>
+      </Card>
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}
@@ -334,17 +344,17 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       >
         {selectedProvider && (
           <ProviderForm
-          provider={selectedProvider}
-          formData={formValues}
-          formErrorsData={formErrors}
-          onFormChange={handleFormChange}
-          onConnectChange={handleConnecting}
-          closeModal={handleCloseModal}
-          isProviderNameDisabled={true}
-        />
+            provider={selectedProvider}
+            formData={formValues}
+            formErrorsData={formErrors}
+            onFormChange={handleFormChange}
+            onConnectChange={handleConnecting}
+            closeModal={handleCloseModal}
+            isProviderNameDisabled={true}
+          />
         )}
       </SlidingPanel>
-    </div>
+    </Card>
   );
 }
 

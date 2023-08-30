@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle } from "@tremor/react";
+import { Callout, Col, Grid, Subtitle } from "@tremor/react";
 import {
   ArrowDownOnSquareIcon,
   ExclamationCircleIcon,
@@ -13,11 +13,9 @@ import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import React from "react";
-import NoWorkflows from "./noworfklows";
+import WorkflowsEmptyState from "./noworfklows";
 import WorkflowTile from "./workflow-tile";
-import { Button, Card, Title} from "@tremor/react";
-
-
+import { Button, Card, Title } from "@tremor/react";
 
 function copyToClipboard(text: string) {
   const textarea = document.createElement("textarea");
@@ -28,8 +26,6 @@ function copyToClipboard(text: string) {
   document.body.removeChild(textarea);
 }
 
-
-
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
   const { data: session, status, update } = useSession();
@@ -37,11 +33,6 @@ export default function WorkflowsPage() {
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const copyCurlCommand = () => {
-    copyToClipboard(`curl -X POST ...\n...`);
-    setCopied(true);
-  };
 
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
@@ -80,25 +71,24 @@ export default function WorkflowsPage() {
 
       if (response.ok) {
         setFileError(null);
-        if(fileInputRef.current) {
+        if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
         window.location.reload();
       } else {
         const errorMessage = await response.text();
         setFileError(errorMessage);
-        if(fileInputRef.current) {
+        if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
       }
     } catch (error) {
       setFileError("An error occurred during file upload");
-      if(fileInputRef.current) {
+      if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   };
-
 
   function handleFileChange(event: any) {
     const file = event.target.files[0];
@@ -117,44 +107,41 @@ export default function WorkflowsPage() {
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
-        <div className="flex justify-between items-center">
-          <div>
-            <Title>Workflows</Title>
-            <Subtitle>Automate your alert management with workflows.</Subtitle>
-          </div>
-          <Button
-            color="orange"
-            size="md"
-            onClick={loadAlert}
-            variant="secondary"
-            icon={ArrowDownOnSquareIcon}
-          >
-            Load a Workflow
-          </Button>
+      <div className="flex justify-between items-center">
+        <div>
+          <Title>Workflows</Title>
+          <Subtitle>Automate your alert management with workflows.</Subtitle>
         </div>
-        <Card className="mt-10 p-4 md:p-10 mx-auto">
+        <Button
+          color="orange"
+          size="md"
+          onClick={loadAlert}
+          icon={ArrowDownOnSquareIcon}
+        >
+          Load a Workflow
+        </Button>
+      </div>
+      <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
           <div>
             {data.length === 0 ? (
-              <NoWorkflows copyCurlCommand={copyCurlCommand} />
+              <WorkflowsEmptyState />
             ) : (
-              <div>
-                <input
-                  type="file"
-                  id="workflowFile"
-                  style={{ display: "none" }}
-                  onChange={onDrop}
-                />
-                <div className="grid grid-cols-3 gap-4 mt-10">
-                  {data.map((workflow) => (
-                    <WorkflowTile key={workflow.id} workflow={workflow} />
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {data.map((workflow) => (
+                  <WorkflowTile key={workflow.id} workflow={workflow} />
+                ))}
               </div>
             )}
           </div>
-         </div>
-        </Card>
-      </main>
+        </div>
+      </Card>
+      <input
+        type="file"
+        id="workflowFile"
+        style={{ display: "none" }}
+        onChange={onDrop}
+      />
+    </main>
   );
 }
