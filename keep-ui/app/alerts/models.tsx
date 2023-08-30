@@ -50,6 +50,6 @@ export const AlertTableKeys: { [key: string]: string } = {
   "Last Received": "",
   Source: "",
   "Fatigue Meter": "Calculated based on various factors",
-  "Automated workflow": "Workflows that defined to be executed automatically when this alert triggers",
+  // "Automated workflow": "Workflows that defined to be executed automatically when this alert triggers",
   Payload: "",
 };
