@@ -8,7 +8,18 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import { Trigger, Provider } from "./models";
-import { Button, Text, Card, Title, Icon, ListItem, List } from "@tremor/react";
+import {
+  Button,
+  Text,
+  Card,
+  Title,
+  Icon,
+  ListItem,
+  List,
+  Accordion,
+  AccordionBody,
+  AccordionHeader,
+} from "@tremor/react";
 import ProviderForm from "app/providers/provider-form";
 import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "app/providers/page.client";
@@ -325,20 +336,22 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </ListItem>
       </List>
 
-      <Card className="min-h-[120px] mt-4">
-        <Text>Triggers:</Text>
-        {workflow.triggers.length > 0 ? (
-          <List>
-            {workflow.triggers.map((trigger, index) => (
-              <TriggerTile key={index} trigger={trigger} />
-            ))}
-          </List>
-        ) : (
-          <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
-            This workflow does not have any triggers.
-          </p>
-        )}
-      </Card>
+      <Accordion className="mt-2.5">
+        <AccordionHeader>Triggers</AccordionHeader>
+        <AccordionBody>
+          {workflow.triggers.length > 0 ? (
+            <List>
+              {workflow.triggers.map((trigger, index) => (
+                <TriggerTile key={index} trigger={trigger} />
+              ))}
+            </List>
+          ) : (
+            <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+              This workflow does not have any triggers.
+            </p>
+          )}
+        </AccordionBody>
+      </Accordion>
 
       <Card className="mt-2.5">
         <Text>Providers:</Text>
