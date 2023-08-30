@@ -194,6 +194,15 @@ def get_workflows_that_should_run():
                     workflow_execution_id = create_workflow_execution(
                         workflow.id, workflow.tenant_id, "scheduler"
                     )
+                    # we succeed to get the lock on this execution number :)
+                    # let's run it
+                    workflows_to_run.append(
+                        {
+                            "tenant_id": workflow.tenant_id,
+                            "workflow_id": workflow.id,
+                            "workflow_execution_id": workflow_execution_id,
+                        }
+                    )
                 # some other thread/instance has already started to work on it
                 except IntegrityError:
                     continue
@@ -210,7 +219,7 @@ def get_workflows_that_should_run():
                         "scheduler",
                         last_execution.execution_number + 1,
                     )
-                    # we succeed to get the lock on this executio number :)
+                    # we succeed to get the lock on this execution number :)
                     # let's run it
                     workflows_to_run.append(
                         {
