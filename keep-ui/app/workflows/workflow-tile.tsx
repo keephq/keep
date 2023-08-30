@@ -19,6 +19,7 @@ import {
   Accordion,
   AccordionBody,
   AccordionHeader,
+  Badge,
 } from "@tremor/react";
 import ProviderForm from "app/providers/provider-form";
 import SlidingPanel from "react-sliding-side-panel";
@@ -294,7 +295,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       return mergedProvider;
     })
     .filter(Boolean) as FullProvider[];
-
+  const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
   return (
     <Card className="tile-basis mt-2.5">
       <div className="flex w-full justify-between items-center h-14">
@@ -337,7 +338,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       </List>
 
       <Accordion className="mt-2.5">
-        <AccordionHeader>Triggers</AccordionHeader>
+        <AccordionHeader>
+          <span className="mr-1">Triggers:</span>
+          {triggerTypes.map((t) => (
+            <Badge key={t} size="xs" color="orange">
+              {t}
+            </Badge>
+          ))}
+        </AccordionHeader>
         <AccordionBody>
           {workflow.triggers.length > 0 ? (
             <List>
