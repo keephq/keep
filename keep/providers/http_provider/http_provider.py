@@ -1,6 +1,7 @@
 """
 HttpProvider is a class that provides a way to send HTTP requests.
 """
+import json
 import typing
 
 import requests
@@ -66,6 +67,8 @@ class HttpProvider(BaseProvider):
         """
         if headers is None:
             headers = {}
+        if isinstance(headers, str):
+            headers = json.loads(headers)
         if body is None:
             body = {}
         if params is None:
