@@ -98,11 +98,16 @@ class WorkflowScheduler:
         self, workflow_id, tenant_id, triggered_by_user, triggered, event
     ):
         # TODO: handle errors
-        workflow_execution_id = create_workflow_execution(
-            workflow_id=workflow_id,
-            tenant_id=tenant_id,
-            triggered_by=f"manually by {triggered_by_user}",
-        )
+        try:
+            workflow_execution_id = create_workflow_execution(
+                workflow_id=workflow_id,
+                tenant_id=tenant_id,
+                triggered_by=f"manually by {triggered_by_user}",
+            )
+        # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
+        except Exception as e:
+            self.logger.error(f"Error creating workflow execution: {e}")
+            return None
         self.workflows_to_run.append(
             {
                 "workflow_id": workflow_id,
@@ -143,11 +148,16 @@ class WorkflowScheduler:
             # In event (e.g. alarm), we will create it here
             # TODO: one more robust way to do it
             if not workflow_execution_id:
-                workflow_execution_id = create_workflow_execution(
-                    workflow_id=workflow_id,
-                    tenant_id=tenant_id,
-                    triggered_by=triggered_by,
-                )
+                try:
+                    workflow_execution_id = create_workflow_execution(
+                        workflow_id=workflow_id,
+                        tenant_id=tenant_id,
+                        triggered_by=triggered_by,
+                    )
+                # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
+                except Exception as e:
+                    self.logger.error(f"Error creating workflow execution: {e}")
+                    continue
             thread = threading.Thread(
                 target=self._run_workflow,
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],
