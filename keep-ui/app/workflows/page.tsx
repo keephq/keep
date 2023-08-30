@@ -7,5 +7,5 @@ export default function Page() {
 
 export const metadata = {
   title: "Keep - Workflows",
-  description: "Single pane of glass for all your alerts.",
+  description: "Automate your workflows with Keep.",
 };
