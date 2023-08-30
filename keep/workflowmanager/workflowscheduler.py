@@ -9,6 +9,7 @@ from keep.api.core.db import (
     finish_workflow_execution,
     get_workflows_that_should_run,
 )
+from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -45,6 +46,16 @@ class WorkflowScheduler:
                 tenant_id = workflow.get("tenant_id")
                 workflow_id = workflow.get("workflow_id")
                 workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
+            except ProviderConfigurationException as e:
+                self.logger.error(f"Error getting workflow: {e}")
+                finish_workflow_execution(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    execution_id=workflow_execution_id,
+                    status="providers_not_configured",
+                    error=f"Providers are not configured for workflow {workflow_id}, please configure it so Keep will be able to run it",
+                )
+                continue
             except Exception as e:
                 self.logger.error(f"Error getting workflow: {e}")
                 finish_workflow_execution(

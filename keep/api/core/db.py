@@ -167,6 +167,7 @@ def get_last_completed_execution(
         .where(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
+            | (WorkflowExecution.status == "providers_not_configured")
         )
         .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
@@ -231,6 +232,7 @@ def get_workflows_that_should_run():
                 # some other thread/instance has already started to work on it
                 except IntegrityError:
                     # we need to verify the locking is still valid and not timeouted
+                    session.rollback()
                     pass
                 # get the ongoing execution
                 ongoing_execution = session.exec(
