@@ -67,7 +67,6 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
         <TableHead>
           <TableRow>
             {pushed && <TableHeaderCell>{/** Menu */}</TableHeaderCell>}
-            {/* {groupBy && <TableHeaderCell>History</TableHeaderCell>} */}
             {Object.keys(AlertTableKeys).map((key) => (
               <TableHeaderCell key={key}>
                 <div className="flex items-center">
@@ -83,7 +82,6 @@ export function AlertTable({ data, groupBy, pushed = false }: Props) {
                 </div>
               </TableHeaderCell>
             ))}
-              {groupBy && <TableHeaderCell>History</TableHeaderCell>}
           </TableRow>
         </TableHead>
         <AlertsTableBody
