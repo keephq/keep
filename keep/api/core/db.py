@@ -167,6 +167,7 @@ def get_last_completed_execution(
         .where(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
+            | (WorkflowExecution.status == "providers_not_configured")
         )
         .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
