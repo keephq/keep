@@ -14,7 +14,11 @@ import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "app/providers/page.client";
 import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
-import { CheckBadgeIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckBadgeIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 
 function WorkflowMenuSection({
   onDelete,
@@ -91,13 +95,15 @@ function ProviderTile({
           size="sm"
           tooltip="Connected"
         />
-      ) : (<Icon
-        icon={XCircleIcon}
-        className="absolute top-[-15px] right-[-15px]"
-        color="red"
-        size="sm"
-        tooltip="Disconnected"
-      />)}
+      ) : (
+        <Icon
+          icon={XCircleIcon}
+          className="absolute top-[-15px] right-[-15px]"
+          color="red"
+          size="sm"
+          tooltip="Disconnected"
+        />
+      )}
       <Image
         src={`/icons/${provider.type}-icon.png`}
         width={30}
@@ -292,22 +298,33 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         })}
       </div>
 
-      <p className="text-sm mt-4  text-tremor-content dark:text-dark-tremor-content">
-        Created by: {workflow.created_by}
-      </p>
-      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
-        Created at: {workflow.creation_time}
-      </p>
-      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
-        Last execution time:{" "}
-        {workflow.last_execution_time ? workflow.last_execution_time : "N/A"}
-      </p>
-      <p className="text-sm mt-2  text-tremor-content dark:text-dark-tremor-content">
-        Last execution status:{" "}
-        {workflow.last_execution_status
-          ? workflow.last_execution_status
-          : "N/A"}
-      </p>
+      <List>
+        <ListItem>
+          <span>Created By</span>
+          <span className="text-right">{workflow.created_by}</span>
+        </ListItem>
+        <ListItem>
+          <span>Created At</span>
+          <span className="text-right">{workflow.creation_time}</span>
+        </ListItem>
+        <ListItem>
+          <span>Last Execution</span>
+          <span className="text-right">
+            {workflow.last_execution_time
+              ? workflow.last_execution_time
+              : "N/A"}
+          </span>
+        </ListItem>
+        <ListItem>
+          <span>Last Status</span>
+          <span className="text-right">
+            {workflow.last_execution_status
+              ? workflow.last_execution_status
+              : "N/A"}
+          </span>
+        </ListItem>
+      </List>
+
       <Card className="min-h-[120px] mt-4">
         <Text>Triggers:</Text>
         {workflow.triggers.length > 0 ? (

@@ -32,7 +32,7 @@ export default function WorkflowMenu({
         <Icon
             size="sm"
             icon={Bars3Icon}
-            className="mr-2.5 hover:bg-gray-100 w-8 h-8"  // you can manually adjust the size here
+            className="hover:bg-gray-100 w-8 h-8"  // you can manually adjust the size here
             color="gray"
             />
           </Menu.Button>
