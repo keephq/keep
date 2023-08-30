@@ -168,7 +168,7 @@ def get_last_completed_execution(
             (WorkflowExecution.status == "success")
             | (WorkflowExecution.status == "error")
         )
-        .order_by(WorkflowExecution.started.desc())
+        .order_by(WorkflowExecution.execution_number.desc())
         .limit(1)
     ).first()
 
