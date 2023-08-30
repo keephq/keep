@@ -115,9 +115,7 @@ export function AlertsTableBody({
                 />
               </TableCell>
             )}
-            <TableCell>
-              {getSeverity(alert.severity)}
-            </TableCell>
+            <TableCell>{getSeverity(alert.severity)}</TableCell>
             <TableCell className="max-w-[340px] truncate" title={alert.name}>
               {alert.name}
             </TableCell>
@@ -151,7 +149,7 @@ export function AlertsTableBody({
                 className="w-48"
               />
             </TableCell>
-            <TableCell>List of workflows refs</TableCell>
+            {/* <TableCell>List of workflows refs</TableCell> */}
             <TableCell className="w-96">
               {extraIsEmpty ? null : (
                 <Accordion>
@@ -166,19 +164,6 @@ export function AlertsTableBody({
                 </Accordion>
               )}
             </TableCell>
-            {groupBy && groupedByData && openModal ? (
-              <TableCell>
-                <Button
-                  size="xs"
-                  variant="secondary"
-                  color="gray"
-                  disabled={!groupedByData[(alert as any)[groupBy]]}
-                  onClick={() => openModal(alert)}
-                >
-                  Open
-                </Button>
-              </TableCell>
-            ) : null}
           </TableRow>
         );
       })}
