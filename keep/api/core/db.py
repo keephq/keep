@@ -134,20 +134,28 @@ def try_create_single_tenant(tenant_id: str) -> None:
 
 
 def create_workflow_execution(
-    workflow_id: str, tenant_id: str, triggered_by: str
+    workflow_id: str, tenant_id: str, triggered_by: str, execution_number: int = 1
 ) -> WorkflowExecution:
     with Session(engine) as session:
-        workflow_execution = WorkflowExecution(
-            id=str(uuid4()),
-            workflow_id=workflow_id,
-            tenant_id=tenant_id,
-            started=datetime.utcnow(),
-            triggered_by=triggered_by,
-            status="in_progress",
-        )
-        session.add(workflow_execution)
-        session.commit()
-        return workflow_execution.id
+        try:
+            workflow_execution = WorkflowExecution(
+                id=str(uuid4()),
+                workflow_id=workflow_id,
+                tenant_id=tenant_id,
+                started=datetime.utcnow(),
+                triggered_by=triggered_by,
+                execution_number=execution_number,
+                status="in_progress",
+            )
+            session.add(workflow_execution)
+            session.commit()
+            return workflow_execution.id
+        except IntegrityError:
+            # Workflow execution already exists
+            logger.debug(
+                f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
+            )
+            raise
 
 
 def get_last_completed_execution(
@@ -191,9 +199,13 @@ def get_workflows_that_should_run():
                 ).first()
 
                 if not ongoing_execution:
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id, workflow.tenant_id, "scheduler"
-                    )
+                    try:
+                        workflow_execution_id = create_workflow_execution(
+                            workflow.id, workflow.tenant_id, "scheduler"
+                        )
+                    # some other thread/instance has already started to work on it
+                    except IntegrityError:
+                        continue
                     # the workflow obejct itself is only under this session so we need to use the
                     # raw
                     workflows_to_run.append(
@@ -209,9 +221,19 @@ def get_workflows_that_should_run():
                     ongoing_execution.status = "timeout"
                     session.commit()
                     # re-create the execution
-                    workflow_execution_id = create_workflow_execution(
-                        workflow.id, workflow.tenant_id, "scheduler"
-                    )
+                    try:
+                        workflow_execution_id = create_workflow_execution(
+                            workflow.id,
+                            workflow.tenant_id,
+                            "scheduler",
+                            ongoing_execution.execution_number + 1,
+                        )
+                    # some other thread/instance has already started to work on it
+                    except IntegrityError:
+                        logger.debug(
+                            f"Failed to create a new execution for workflow {workflow.id} [timeout]. Constraint is met."
+                        )
+                        continue
                     # the workflow obejct itself is only under this session so we need to use the
                     # raw
                     workflows_to_run.append(
