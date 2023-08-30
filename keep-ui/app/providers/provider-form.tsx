@@ -214,7 +214,7 @@ const ProviderForm = ({
               placeholder="Enter provider name"
               color="orange"
               disabled={isProviderNameDisabled}
-              className={isProviderNameDisabled ? "disabled-input" : ""}
+              className={isProviderNameDisabled ? "disabled-input text-slate-400 bg-slate-100" : ""}
               title={isProviderNameDisabled ? "This field is disabled because it is pre-filled from the workflow." : ""}
             />
           </div>
