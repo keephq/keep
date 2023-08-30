@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alerts management platform</h1>
+<h1 align="center">The open-source alerts management and automation platform</h1>
 <br />
 
 
@@ -18,11 +18,28 @@
     </a>
 </div>
 <h4 align="center">
-Keep enables you to create, manage, test, and maintain your alerts all in one place.
-</h4>
-<div align="center">
+Keep changes alert management and automation by acting as a centralized hub for your alerts, integrating seamlessly with your existing tools and automating alert responses. Cut through the noise, simplify alert handling, and automate workflows—all in one place.</h4>
 
-- *Integrations*: Integrates with your existing tools (e.g. grafana/sentry/datadog/slack/pagerduty)
+> (*) An alert is an event that is triggered when something undesirable occurs or is about to occur. It is usually triggered by monitoring tools such as Prometheus, Grafana, or CloudWatch, and in some cases, proprietary tools.
+
+<div>
+How it works?
+1. Connect any tool from your stack (from observability tools through database to ticketing systems)
+2. Create Workflows and define them to run when an alert triggers, on defined interval or manually
+3. Profit
+</div>
+
+<div>
+<h5> Why Keep?
+- Centralized dashboard: Manage all your alerts across different platforms in a single interface.
+- Smart Noise Reduction: Deduplicate and correlate alerts to reduce alert fatigue
+- Automation: Trigger workflows for alert enrichment and response.
+- API-First and Developer-First: Integrate effortlessly with your existing stack, manage your alerts as code.
+</div>
+<div align="center">
+Key Features
+- Integrations: Works with Prmoethues, Grafana, Sentry, Datadog, Slack, PagerDuty, and more.
+- Workflows: Automate alert enrichment
 - *Intutive*: Create alerts via a simple and intuitive (GitHub actions-like) syntax.
 - *Alerts as code*: Declarative alerting that can be easily managed and versioned in your version control and service repository.
 - *Alerts as workflows*: Create alerts from multiple data sources for added context and insights.
