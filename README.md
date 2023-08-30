@@ -17,165 +17,65 @@
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
-<h4 align="center">
-Keep changes alert management and automation by acting as a centralized hub for your alerts, integrating seamlessly with your existing tools and automating alert responses. Cut through the noise, simplify alert handling, and automate workflows—all in one place.</h4>
-
-> (*) An alert is an event that is triggered when something undesirable occurs or is about to occur. It is usually triggered by monitoring tools such as Prometheus, Grafana, or CloudWatch, and in some cases, proprietary tools.
-
-<div>
-How it works?
-1. Connect any tool from your stack (from observability tools through database to ticketing systems)
-2. Create Workflows and define them to run when an alert triggers, on defined interval or manually
-3. Profit
-</div>
-
-<div>
-<h5> Why Keep?
-- Centralized dashboard: Manage all your alerts across different platforms in a single interface.
-- Smart Noise Reduction: Deduplicate and correlate alerts to reduce alert fatigue
-- Automation: Trigger workflows for alert enrichment and response.
-- API-First and Developer-First: Integrate effortlessly with your existing stack, manage your alerts as code.
-</div>
-<div align="center">
-Key Features
-- Integrations: Works with Prmoethues, Grafana, Sentry, Datadog, Slack, PagerDuty, and more.
-- Workflows: Automate alert enrichment
-- *Intutive*: Create alerts via a simple and intuitive (GitHub actions-like) syntax.
-- *Alerts as code*: Declarative alerting that can be easily managed and versioned in your version control and service repository.
-- *Alerts as workflows*: Create alerts from multiple data sources for added context and insights.
-
-</div>
-
 <p align="center">
-    <a href="https://github.com/orgs/keephq/projects/1">Roadmap</a>
+    <a href="https://platform.keephq.dev">Try it out</a>
     ·
-    <a href="https://github.com/keephq/keep/tree/main/examples">Examples</a>
+    <a href="https://docs.keephq.dev/overview/examples">Examples</a>
     ·
-    <a href="https://github.com/keephq/keep/tree/main/keep/providers">Providers</a>
+    <a href="https://docs.keephq.dev/providers/overview">Providers</a>
     ·
-    <a href="https://keephq.wiki/">Docs</a>
+    <a href="https://docs.keephq.dev">Docs</a>
     ·
     <a href="https://keephq.dev">Website</a>
-    ·
-    <a href="https://www.keephq.wiki/platform/core/providers/new-provider">Add Providers</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 
-#### 🚨 What is an alert?
-An alert is a human-readable notification that informs about the status of a service or a component. Alerts are sent, based on their urgency, to ticketing platforms, queues or directly to the owners of the components being affected.
+<br />
+<h3>
+Keep streamlines alert management by consolidating all your alerts in one central location, integrating with your current toolset, and automating responses.
+</h3 >
 
-Having a structured alerting policy in your enviroment is pivotal to gain better visibility of the monitored components and reduce MTTD (Mean Time To Detect) of issues that could undermine the functionality of your system.
 
-#### 🚀 Quickstart
-Keep has two main component that play with each other:
-1. [Keep UI](https://www.keephq.wiki/platform/ui/getting-started) - UI to manage your alerts, connect providers and install apps.
-2. [Keep Core](https://www.keephq.wiki/platform/getting-started) - The engine behind Keep.
+### How does it work?
+
+1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
+2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
+3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
+
+
+### Why Keep?
+1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
+2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
+3. **Automation**: Trigger workflows for alert enrichment and response.
+4. **Developer-first**: Keep is API-first and let you manage your workflows as code.
+
+
+
+### For developers
+#### Overview
+Keep composed of three main components:
+1. [Keep UI](https://github.com/keephq/keep/tree/main/keep-ui) - A NextJS app to connect your providers, centralize alerts and create the workflows.
+2. [Keep Backend](https://github.com/keephq/keep/tree/main/keep) - A FastAPI server that implements the buisness logic behind Keep, including integrating with the tools, working with alerts and scheduling and running the workflows.
+3. [Keep CLI](https://github.com/keephq/keep/blob/main/keep/cli/cli.py) - A CLI that let you control and manage Keep via CLI.
 
 >**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for and CLI commands)
 To turn PostHog off, set the `DISABLE_POSTHOG` environment variable.
 
-#### Keep UI
+#### Quickstart
+##### Spinning up Keep with docker-compose
 The easiest way to start with Keep is to run it via docker-compose:
 ```shell
 wget -O docker-compose.yml https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml
 docker-compose -f docker-compose.yml up
 ```
-Keep UI is now available at http://localhost:3000
-
-#### Keep Core
-Try our first mock alert and get it up and running in <5 minutes - Ready? Let's Go! ⏰
-
-First, clone Keep repository:
-
-```shell
-git clone https://github.com/keephq/keep.git && cd keep
-```
-
-Install Keep CLI
-
-```shell
-pip install .
-```
-
-or
-
-```shell
-poetry shell
-poetry install
-```
-
-From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
+The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
+##### Local development
+You can also start Keep within your favourite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
 
 
-```
-keep version
-```
-
-<h5>Get a Slack incoming webhook using <a href="https://api.slack.com/messaging/webhooks">this tutorial</a> and use Keep to configure it:</h5>
-
-```
-keep config provider --provider-type slack --provider-id slack-demo
-```
-
-Paste the Slack Incoming Webhook URL (e.g. <https://hooks.slack.com/services/...>) and you're good to go 👌
-
-<h6>** If you don't want to create your own webhook, you can follow these easy 3 steps: **
-
-1. Go to [keep's slack](https://keephq.dev/slack).
-
-2. Enter the #alerts-playground channel.
-
-3. In the channel's topic, you can find the webhook provided by Keep.
-
-<h5>Let's now execute our example "Paper DB has insufficient disk space" alert</h5>
-
-```bash
-keep run --alerts-file examples/alerts/db_disk_space.yml
-```
-
-<div align="center">
-    Voilà 🥳
-    <br />
-    <img src="/assets/alert-example.png">
-    <br />
-    You should have received your first "Dunder Mifflin Paper Company" alert in Slack by now.
-    <br />
-</div>
-
-
-##### Docker
-
-Configure the Slack provider (See "[Run locally](https://github.com/keephq/keep#from-now-on-keep-should-be-installed-locally-and-accessible-from-your-cli-test-it-by-executing)" on how to obtain the webhook URL)
-
-```bash
-docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli config provider --provider-type slack --provider-id slack-demo
-```
-
-You should now have a providers.yaml file created locally
-
-Run Keep and execute our example "Paper DB has insufficient disk space" alert
-
-```bash
-docker run -v ${PWD}:/app -it us-central1-docker.pkg.dev/keephq/keep/keep-cli -j run --alert-url https://raw.githubusercontent.com/keephq/keep/main/examples/alerts/db_disk_space.yml
-```
-
-##### Render
-Click the Deploy to Render button to deploy Keep as a background worker running in [Render](https://www.render.com)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/keephq/keep)
-
-To run Keep and execute our example "Paper DB has insufficient disk space" alert, you will need to configure you Slack provider.
-<br />
-When clicking the Deploy to Render button, you will be asked to provide the `KEEP_PROVIDER_SLACK_DEMO` environment variable, this is the expected format:
-
-```json
-{"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}
-```
-
-\* Refer to [Run locally](https://github.com/keephq/keep/tree/feature/api-multi-tenant#get-a-slack-incoming-webhook-using-this-tutorial-and-use-keep-to-configure-it) on how to obtain the webhook URL
 
 ##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
@@ -183,8 +83,8 @@ When clicking the Deploy to Render button, you will be asked to provide the `KEE
 
 - Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
 - Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
-- Explore the [documentation](https://keephq.wiki)
-- [Adding a new provider](https://keephq.wiki/providers/new-provider)
+- Explore the [documentation](https://docs.keephq.dev)
+- [Adding a new provider](https://docs.keephq.dev/development/adding-a-new-provider)
 - Check out our [website](https://www.keephq.dev)
 
 ## 🫵 Keepers
