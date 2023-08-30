@@ -247,7 +247,9 @@ def get_workflows_that_should_run():
                 # this is a WTF exception since if this (workflow_id, execution_number) does not exist,
                 # we would be able to acquire the lock
                 if not ongoing_execution:
-                    logger.error("WTF: ongoing execution not found")
+                    logger.error(
+                        f"WTF: ongoing execution not found {workflow.id} {last_execution.execution_number + 1}"
+                    )
                     continue
                 # if this completed, error, than that's ok - the service who locked the execution is done
                 elif ongoing_execution.status != "in_progress":
