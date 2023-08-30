@@ -34,7 +34,7 @@
 </p>
 
 <br />
-<h3>
+<h3 align="center">
 Keep streamlines alert management by consolidating all your alerts in one central location, integrating with your current toolset, and automating responses.
 </h3 >
 
