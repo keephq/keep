@@ -231,6 +231,7 @@ def get_workflows_that_should_run():
                 # some other thread/instance has already started to work on it
                 except IntegrityError:
                     # we need to verify the locking is still valid and not timeouted
+                    session.rollback()
                     pass
                 # get the ongoing execution
                 ongoing_execution = session.exec(
