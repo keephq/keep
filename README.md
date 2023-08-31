@@ -48,8 +48,17 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 
 </div>
 
-3. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
-4. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
+2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
+
+<div align="center">
+    
+| Connect providers | Receive alerts |
+|----------|----------|
+| <a href="examples/workflows/failed-to-login-workflow.yml"><img src="/assets/failed_to_login_screenshot.png" /></a> | <img src="/assets/upload_workflow.gif" />   |
+
+</div>
+
+3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
 
 
 ### Why Keep?
