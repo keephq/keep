@@ -33,18 +33,21 @@
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 <h3 align="center">
-Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate and automate your end-to-end processes. <br /><br /> Like Datadog Workflow Automation but for any tool.
+Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate workflows to automate your end-to-end processes. <br /><br /> Like Datadog Workflow Automation but for any tool.
 </h3 >
 
 
 ### How does it work?
 
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
-   
+<div align="center">
+    
 | Connect providers | Receive alerts |
 |----------|----------|
 | <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
-   
+
+</div>
+
 3. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
 4. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
 
