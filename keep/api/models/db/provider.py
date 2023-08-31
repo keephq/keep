@@ -7,7 +7,7 @@ from sqlmodel import Field, ForeignKey, SQLModel
 class Provider(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    name: str
+    name: str = Field(unique=True)
     description: Optional[str]
     type: str
     installed_by: str

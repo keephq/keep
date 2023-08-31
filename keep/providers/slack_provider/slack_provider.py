@@ -42,7 +42,7 @@ class SlackProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def notify(self, message="", blocks=[], **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
@@ -52,8 +52,6 @@ class SlackProvider(BaseProvider):
         """
         self.logger.debug("Notifying alert message to Slack")
         webhook_url = self.authentication_config.webhook_url
-        message = kwargs.pop("message", "")
-        blocks = kwargs.pop("blocks", [])
 
         if not message:
             message = blocks[0].get("text")

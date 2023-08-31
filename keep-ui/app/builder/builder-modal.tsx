@@ -31,7 +31,7 @@ export default function BuilderModalContent({
   }
 
   const copyBlockProps = {
-    theme: { a11yLight },
+    theme: { ...a11yLight },
     customStyle: {
       height: "450px",
       overflowY: "scroll",
