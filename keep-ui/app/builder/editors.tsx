@@ -5,6 +5,7 @@ import {
   Select,
   SelectItem,
   Subtitle,
+  Icon,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Properties } from "sequential-workflow-designer";
@@ -38,7 +39,7 @@ export function GlobalEditor() {
 interface keepEditorProps {
   properties: Properties;
   updateProperty: (key: string, value: any) => void;
-  installedProviders?: Provider[];
+  installedProviders?: Provider[] | null | undefined;
   providerType?: string;
 }
 
@@ -67,6 +68,25 @@ function KeepStepEditor({
     (p) => p.type === providerType
   );
 
+  const DynamicIcon = (props: any) => (
+    <svg
+      width="24px"
+      height="24px"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      {...props}
+    >
+      {" "}
+      <image
+        id="image0"
+        width={"24"}
+        height={"24"}
+        href={`/icons/${providerType}-icon.png`}
+      />
+    </svg>
+  );
+
   return (
     <>
       <Text>Provider Name</Text>
@@ -82,7 +102,11 @@ function KeepStepEditor({
           installedProviderByTypes?.map((provider) => {
             const providerName = provider.details?.name ?? provider.id;
             return (
-              <SelectItem key={providerName} value={providerName}>
+              <SelectItem
+                icon={DynamicIcon}
+                key={providerName}
+                value={providerName}
+              >
                 {providerName}
               </SelectItem>
             );
