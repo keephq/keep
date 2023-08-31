@@ -224,7 +224,7 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
 export default function StepEditor({
   installedProviders,
 }: {
-  installedProviders?: Provider[];
+  installedProviders?: Provider[] | undefined | null;
 }) {
   const { type, componentType, name, setName, properties, setProperty } =
     useStepEditor();
