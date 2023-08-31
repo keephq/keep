@@ -40,8 +40,13 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 ### How does it work?
 
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
-2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
-3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
+   
+| Connect providers | Receive alerts |
+|----------|----------|
+| <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
+   
+3. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
+4. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
 
 
 ### Why Keep?
