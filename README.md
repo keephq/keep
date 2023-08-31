@@ -18,15 +18,15 @@
     </a>
 </div>
 <p align="center">
-    <a href="https://docs.keephq.dev">Docs</a>
+    <a href="#why-keep">Why Keep?</a>
     ·
     <a href="#getting-started">Getting started</a>
     ·
+    <a href="#supported-providers">Supported tools and integrations</a>
+    ·
+    <a href="https://docs.keephq.dev">Docs</a>
+    ·
     <a href="https://platform.keephq.dev">Try it out</a>
-    ·
-    <a href="https://docs.keephq.dev/overview/examples">Examples</a>
-    ·
-    <a href="https://docs.keephq.dev/providers/overview">Providers</a>
     ·
     <a href="https://keephq.dev">Website</a>
     ·
@@ -39,8 +39,8 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 </h3 >
 
 
-## How does it work?
 
+## How does it work?
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
 <div align="center">
     
@@ -190,15 +190,7 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 
 
 
-#### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
-
-## 🔍 Learn more
-
-- Share feedback/ask questions via our [Slack](https://keephq.dev/slack)
-- Explore [the full list of supported providers](https://github.com/keephq/keep/tree/main/keep/providers)
-- Explore the [documentation](https://docs.keephq.dev)
-- [Adding a new provider](https://docs.keephq.dev/development/adding-a-new-provider)
-- Check out our [website](https://www.keephq.dev)
+#### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
 ## 🫵 Keepers
 
