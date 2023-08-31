@@ -37,7 +37,7 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 </h3 >
 
 
-### How does it work?
+## How does it work?
 
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
 <div align="center">
@@ -62,7 +62,7 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
 
 
-### Why Keep?
+## Why Keep?
 1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
 2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
 3. **Automation**: Trigger workflows for alert enrichment and response.
@@ -70,8 +70,8 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 
 
 
-### For developers
-#### Overview
+## Getting Started
+### Overview
 Keep composed of three main components:
 1. [Keep UI](https://github.com/keephq/keep/tree/main/keep-ui) - A NextJS app to connect your providers, centralize alerts and create the workflows.
 2. [Keep Backend](https://github.com/keephq/keep/tree/main/keep) - A FastAPI server that implements the buisness logic behind Keep, including integrating with the tools, working with alerts and scheduling and running the workflows.
@@ -80,20 +80,20 @@ Keep composed of three main components:
 >**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for and CLI commands)
 To turn PostHog off, set the `DISABLE_POSTHOG` environment variable.
 
-#### Quickstart
-##### Spinning up Keep with docker-compose
+### Quickstart
+#### Spinning up Keep with docker-compose
 The easiest way to start with Keep is to run it via docker-compose:
 ```shell
 wget -O docker-compose.yml https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml
 docker-compose -f docker-compose.yml up
 ```
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
-##### Local development
+#### Local development
 You can also start Keep within your favourite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
 
 
 
-##### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
+#### Wanna have your alerts up and running in production? Go through our more detailed [Deployment Guide](https://keephq.wiki/deployment)
 
 ## 🔍 Learn more
 
