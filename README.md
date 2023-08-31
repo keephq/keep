@@ -33,7 +33,7 @@
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 <h3 align="center">
-Keep streamlines alert management by consolidating all your alerts in one central location, integrating with your current toolset, and automating responses.
+Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate and automate your end-to-end processes. <br /><br /> Like Datadog Workflow Automation but for any tool.
 </h3 >
 
 
