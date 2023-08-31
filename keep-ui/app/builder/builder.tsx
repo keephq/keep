@@ -46,7 +46,7 @@ interface Props {
   workflow?: string;
   workflowId?: string;
   accessToken?: string;
-  installedProviders?: Provider[];
+  installedProviders?: Provider[] | undefined | null;
 }
 
 function Builder({
