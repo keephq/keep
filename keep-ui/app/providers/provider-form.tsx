@@ -7,7 +7,11 @@ import Image from "next/image";
 import "./provider-form.css";
 import { Title, Text, Button, Callout, Icon } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
-import { QuestionMarkCircleIcon, ArrowLongRightIcon, ArrowLongLeftIcon } from "@heroicons/react/24/outline";
+import {
+  QuestionMarkCircleIcon,
+  ArrowLongRightIcon,
+  ArrowLongLeftIcon,
+} from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 
@@ -181,25 +185,35 @@ const ProviderForm = ({
           {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
         </Title>
         <div className="flex items-center">
-        <Image
-          src={`/keep.png`}
-          width={55}
-          height={64}
-          alt={provider.type}
-          className="mt-5 mb-9 mr-2.5"
-        />
-        <div className="flex flex-col">
-        <Icon icon={ArrowLongLeftIcon} size="xl" color="orange" className="py-0" />
-        <Icon icon={ArrowLongRightIcon} size="xl" color="orange" className="py-0 pb-2.5" />
+          <Image
+            src={`/keep.png`}
+            width={55}
+            height={64}
+            alt={provider.type}
+            className="mt-5 mb-9 mr-2.5"
+          />
+          <div className="flex flex-col">
+            <Icon
+              icon={ArrowLongLeftIcon}
+              size="xl"
+              color="orange"
+              className="py-0"
+            />
+            <Icon
+              icon={ArrowLongRightIcon}
+              size="xl"
+              color="orange"
+              className="py-0 pb-2.5"
+            />
+          </div>
+          <Image
+            src={`/icons/${provider.type}-icon.png`}
+            width={64}
+            height={55}
+            alt={provider.type}
+            className="mt-5 mb-9 ml-2.5"
+          />
         </div>
-        <Image
-          src={`/icons/${provider.type}-icon.png`}
-          width={64}
-          height={55}
-          alt={provider.type}
-          className="mt-5 mb-9 ml-2.5"
-        />
-      </div>
         <form>
           <div className="form-group">
             <label htmlFor="provider_name" className="label-container mb-1">
@@ -213,9 +227,18 @@ const ProviderForm = ({
               onChange={handleInputChange}
               placeholder="Enter provider name"
               color="orange"
+              autoComplete="off"
               disabled={isProviderNameDisabled}
-              className={isProviderNameDisabled ? "disabled-input text-slate-400 bg-slate-100" : ""}
-              title={isProviderNameDisabled ? "This field is disabled because it is pre-filled from the workflow." : ""}
+              className={
+                isProviderNameDisabled
+                  ? "disabled-input text-slate-400 bg-slate-100"
+                  : ""
+              }
+              title={
+                isProviderNameDisabled
+                  ? "This field is disabled because it is pre-filled from the workflow."
+                  : ""
+              }
             />
           </div>
           {Object.keys(provider.config).map((configKey) => {
@@ -244,6 +267,7 @@ const ProviderForm = ({
                   name={configKey}
                   value={formValues[configKey] || ""}
                   onChange={handleInputChange}
+                  autoComplete="off"
                   placeholder={method.placeholder || "Enter " + configKey}
                 />
               </div>

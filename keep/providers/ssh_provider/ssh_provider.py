@@ -117,7 +117,7 @@ class SshProvider(BaseProvider):
         """
         self.authentication_config = SshProviderAuthConfig(**self.config.authentication)
 
-    def _query(self, **kwargs: dict):
+    def _query(self, command: str, **kwargs: dict):
         """
         Query snowflake using the given query
 
@@ -127,7 +127,6 @@ class SshProvider(BaseProvider):
         Returns:
             list: of the results for the executed command.
         """
-        command = kwargs.pop("command")
         stdin, stdout, stderr = self.client.exec_command(command.format(**kwargs))
         stdout.channel.set_combine_stderr(True)
         return stdout.readlines()
