@@ -18,6 +18,8 @@
     </a>
 </div>
 <p align="center">
+    <a href="#getting-started">Getting started</a>
+    ·
     <a href="https://platform.keephq.dev">Try it out</a>
     ·
     <a href="https://docs.keephq.dev/overview/examples">Examples</a>
