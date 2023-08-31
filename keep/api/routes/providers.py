@@ -238,7 +238,14 @@ def delete_provider(
                 (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
             )
         ).one()
-        secret_manager.delete_secret(provider.configuration_key)
+        try:
+            secret_manager.delete_secret(provider.configuration_key)
+        # in case the secret does not deleted, just log it but still
+        # delete the provider so
+        except Exception as exc:
+            logger.exception("Failed to delete the provider secret")
+            pass
+        # delete the provider anyway
         session.delete(provider)
         session.commit()
     except Exception as exc:

@@ -116,45 +116,45 @@ export default function NavbarInner({ user }: { user: any }) {
                 </div>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                <div className="flex items-center">
+                  <a href={"https://www.gnip.io/?ref=keep"} target="_blank">
+                    <Icon
+                      icon={GnipLogo}
+                      size="lg"
+                      className="grayscale hover:grayscale-0"
+                      tooltip="gniP - Reverse Ping"
+                    />
+                  </a>
+                  <a href={"https://slack.keephq.dev/"} target="_blank">
+                    <Icon
+                      icon={SlackLogo}
+                      size="lg"
+                      className="grayscale hover:grayscale-0"
+                      tooltip="Join our Slack"
+                    />
+                  </a>
+                  <a href={"https://docs.keephq.dev/"} target="_blank">
+                    <Icon
+                      icon={DocumentTextIcon}
+                      color="orange"
+                      size="lg"
+                      className="grayscale hover:grayscale-0"
+                      tooltip="Documentation"
+                    />
+                  </a>
+                </div>
                 {user ? (
                   <Menu as="div" className="relative ml-3">
-                    <div className="flex items-center">
-                      <a href={"https://www.gnip.io/?ref=keep"} target="_blank">
-                        <Icon
-                          icon={GnipLogo}
-                          size="lg"
-                          className="grayscale hover:grayscale-0"
-                          tooltip="gniP - Reverse Ping"
-                        />
-                      </a>
-                      <a href={"https://slack.keephq.dev/"} target="_blank">
-                        <Icon
-                          icon={SlackLogo}
-                          size="lg"
-                          className="grayscale hover:grayscale-0"
-                          tooltip="Join our Slack"
-                        />
-                      </a>
-                      <a href={"https://docs.keephq.dev/"} target="_blank">
-                        <Icon
-                          icon={DocumentTextIcon}
-                          color="orange"
-                          size="lg"
-                          className="mr-2.5 grayscale hover:grayscale-0"
-                          tooltip="Documentation"
-                        />
-                      </a>
-                      <Menu.Button className="flex rounded-full bg-white text-sm hover:ring-orange-500 hover:ring-offset-2 hover:ring-2">
-                        <span className="sr-only">Open user menu</span>
-                        <Image
-                          className="h-8 w-8 rounded-full"
-                          src={user?.image || "https://avatar.vercel.sh/leerob"}
-                          height={32}
-                          width={32}
-                          alt={`${user?.name || "placeholder"} avatar`}
-                        />
-                      </Menu.Button>
-                    </div>
+                    <Menu.Button className="flex rounded-full bg-white text-sm hover:ring-orange-500 hover:ring-offset-2 hover:ring-2">
+                      <span className="sr-only">Open user menu</span>
+                      <Image
+                        className="h-8 w-8 rounded-full"
+                        src={user?.image || "https://avatar.vercel.sh/leerob"}
+                        height={32}
+                        width={32}
+                        alt={`${user?.name || "placeholder"} avatar`}
+                      />
+                    </Menu.Button>
                     <Transition
                       as={Fragment}
                       enter="transition ease-out duration-200"

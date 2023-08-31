@@ -6,6 +6,7 @@ workflow:
       filters:
         - key: source
           value: cloudwatch
+    - type: manual
   actions:
     - name: trigger-slack
       provider:
