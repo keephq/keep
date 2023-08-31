@@ -10,6 +10,7 @@ import {
 } from "sequential-workflow-designer";
 import { KeepStep } from "./types";
 import { Action, Alert } from "./alert";
+import { stringify } from "yaml";
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**
@@ -111,7 +112,10 @@ export function getActionOrStepObj(
     componentType: "task",
     type: `${type}-${actionOrStep.provider?.type}`,
     properties: {
-      config: actionOrStep.provider?.config,
+      config: (actionOrStep.provider?.config as string)
+        ?.replaceAll("{{", "")
+        .replaceAll("}}", "")
+        .replaceAll("providers.", ""),
       with: actionOrStep.provider?.with,
     },
   };
@@ -238,6 +242,23 @@ export function parseWorkflow(workflowString: string): Definition {
   );
 }
 
+function getWithParams(s: Step): any {
+  const withParams =
+    (s.properties.with as {
+      [key: string]: string | number | boolean | object;
+    }) ?? {};
+  if (withParams) {
+    Object.keys(withParams).forEach((key) => {
+      try {
+        const withParamValue = withParams[key] as string;
+        const withParamJson = JSON.parse(withParamValue);
+        withParams[key] = withParamJson;
+      } catch {}
+    });
+  }
+  return withParams;
+}
+
 function getActionsFromCondition(
   condition: BranchedStep,
   foreach?: string
@@ -248,12 +269,16 @@ function getActionsFromCondition(
     ...condition.properties,
   };
   const compiledActions = condition.branches.true.map((a) => {
+    const withParams = getWithParams(a);
     const compiledAction = {
       name: a.name,
       provider: {
         type: a.type.replace("action-", ""),
-        config: a.properties.config,
-        with: a.properties.with,
+        config: (a.properties.config as string)
+          ?.replaceAll("{{", "")
+          .replaceAll("}}", "")
+          .replaceAll("providers.", ""),
+        with: withParams,
       },
       condition: compiledCondition,
     } as Action;
@@ -289,13 +314,11 @@ export function buildAlert(definition: Definition): Alert {
   const steps = alert.sequence
     .filter((s) => s.type.startsWith("step-"))
     .map((s) => {
+      const withParams = getWithParams(s);
       const provider = {
         type: s.type.replace("step-", ""),
-        config: s.properties.config as string,
-        with:
-          (s.properties.with as {
-            [key: string]: string | number | boolean | object;
-          }) ?? {},
+        config: `{{ providers.${(s.properties.config as string)?.trim()} }}`,
+        with: withParams,
       };
       return {
         name: s.name,
@@ -306,13 +329,11 @@ export function buildAlert(definition: Definition): Alert {
   let actions = alert.sequence
     .filter((s) => s.type.startsWith("action-"))
     .map((s) => {
+      const withParams = getWithParams(s);
       const provider = {
-        type: s.type.replace("step-", ""),
-        config: s.properties.config as string,
-        with:
-          (s.properties.with as {
-            [key: string]: string | number | boolean | object;
-          }) ?? {},
+        type: s.type.replace("action-", ""),
+        config: `{{ providers.${s.properties.config as string} }}`,
+        with: withParams,
       };
       return {
         name: s.name,

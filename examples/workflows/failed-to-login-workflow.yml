@@ -1,0 +1,34 @@
+workflow:
+  id: query-bigquery-when-alert-triggers-by-cloudwatch
+  description: Decide how to alert based on customer tier and enrich context
+  triggers:
+    - type: alert
+      filters:
+        - key: name
+          value: "User failed to login"
+  steps:
+    - name: get-customer-tier-by-id
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquery-prod }}"
+        with:
+          query: "SELECT customer_name, tier FROM `bigquery-production.prod-db.customers` WHERE customer_id = {{ alert.customer_id }} LIMIT 1"
+  actions:
+    # for enterprise customer, open an incident in opsgenie
+    - name: opsgenie-alert
+      condition:
+        - name: enterprise-tier
+          type: assert
+          assert: "{{ steps.get-customer-tier-by-id.result.tier }} == 'enterprise'"
+      provider:
+        type: opsgenie
+        config: " {{ providers.opsgenie-prod }} "
+        with:
+          message: "User of customer {{ steps.get-customer-tier-by-id.result.customer_name }} failed to login!"
+    # for every customer, send a slack message
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-prod }} "
+        with:
+          message: "User of customer {{ steps.get-customer-tier-by-id.result.customer_name }} failed to login!"

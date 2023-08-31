@@ -229,9 +229,7 @@ class ProvidersFactory:
                 None,
             )
             if not provider:
-                logger.warning(
-                    f"Installed provider {provider_type} does not exist anymore?"
-                )
+                logger.warning(f"Installed provider {p.type} does not exist anymore?")
                 continue
             provider_copy = provider.copy()
             provider_copy.id = p.id
@@ -241,7 +239,7 @@ class ProvidersFactory:
                         secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                     )
                     if include_details
-                    else {}
+                    else {"name": p.name}
                 )
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
