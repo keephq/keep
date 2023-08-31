@@ -69,19 +69,44 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
 3. **Automation**: Trigger workflows for alert enrichment and response.
 4. **Developer-first**: Keep is API-first and let you manage your workflows as code.
+5. **Works with every tool**: Plenty of [supported providers](#supported-providers) and more to come.
 
 
 ## Workflows
-The easiest way of thinking about Workflow in Keep is the GitHub Action workflow. 
-
-At its core, a Workflow in Keep is a declarative YAML ([examples](https://github.com/keephq/keep/tree/main/examples/workflows)) file. This gives the power to manage Worfklows as code and integrate your workflows with your code.
-
-Workflows serve to manage, enrich, and automate responses to alerts. Triggers can either be executed manually when an alert is activated or run at predefined intervals.
-
-At its core, a workflow in Keep is defined by a declarative YAML file (examples). This approach allows you to manage workflows as code and integrate these workflows seamlessly with your existing codebase.
-
+The easiest way of thinking about Workflow in Keep is GitHub Actions. At its core, a Workflow in Keep is a declarative YAML file, composed of triggers, steps, and actions and serves to manage, enrich, and automate responses to alerts:
+```yaml
+workflow:
+  id: most-basic-keep-workflow
+  description: send a slack message when a cloudwatch alarm is triggered
+  # workflow triggers - supports alerts, interval, and manual triggers
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: cloudwatch
+    - type: manual
+  # list of steps that can add context to your alert
+  steps:
+    - name: enrich-alert-with-more-data-from-a-database
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquery-prod }}"
+        with:
+          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
+  # list of actions that can automate response and do things with your alert
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-prod }} "
+        with:
+          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
+```
+Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ## Supported Providers
+> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=new_provider.md&title=) and we will add it in the blink of an eye.
+
 <h3 align="center">Observability tools</h3>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/newrelic-icon.png?raw=true"/>
