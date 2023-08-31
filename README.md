@@ -33,7 +33,7 @@
     <a href="https://keephq.dev/slack">Slack Community</a>
 </p>
 <h3 align="center">
-Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate workflows to automate your end-to-end processes. <br /><br /> Like Datadog Workflow Automation but for any tool.
+Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate workflows to automate your end-to-end processes. <br /><br /> Enrich any tool with <a href="https://docs.datadoghq.com/service_management/workflows/">Datadog Workflow Automation</a> like capabilities.
 </h3 >
 
 
