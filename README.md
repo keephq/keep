@@ -51,10 +51,11 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
 
 <div align="center">
-    
-| Connect providers | Receive alerts |
-|----------|----------|
-| <a href="examples/workflows/failed-to-login-workflow.yml"><img src="/assets/failed_to_login_screenshot.png" /></a> | <img src="/assets/upload_workflow.gif" />   |
+
+
+| Create and upload workflows |
+|----------|
+| <img src="/assets/upload_workflow.gif" />    |
 
 </div>
 
