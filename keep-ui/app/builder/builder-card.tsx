@@ -37,6 +37,7 @@ export function BuilderCard({
   workflowId,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
+  const [installedProviders, setInstalledProviders] = useState<Provider[] | null>(null);
   const apiUrl = getApiURL();
 
   const { data, error, isLoading } = useSWR(`${apiUrl}/providers`, (url) =>
@@ -51,11 +52,12 @@ export function BuilderCard({
   }
 
   useEffect(() => {
-    if (data && !providers) {
+    if (data && !providers && !installedProviders) {
       setProviders(data.providers);
+      setInstalledProviders(data.installed_providers)
       enableButtons();
     }
-  }, [data, providers, enableButtons]);
+  }, [data, providers, installedProviders, enableButtons]);
 
   if (!providers || isLoading)
     return (
@@ -84,6 +86,7 @@ export function BuilderCard({
       ) : (
         <Builder
           providers={providers}
+          installedProviders={installedProviders}
           loadedAlertFile={fileContents}
           fileName={fileName}
           enableGenerate={enableGenerate}

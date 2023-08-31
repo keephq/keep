@@ -46,6 +46,7 @@ interface Props {
   workflow?: string;
   workflowId?: string;
   accessToken?: string;
+  installedProviders?: Provider[] | undefined | null;
 }
 
 function Builder({
@@ -58,6 +59,7 @@ function Builder({
   workflow,
   workflowId,
   accessToken,
+  installedProviders,
 }: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
@@ -259,7 +261,7 @@ function Builder({
             undoStackSize={10}
             controlBar={true}
             globalEditor={<GlobalEditor />}
-            stepEditor={<StepEditor />}
+            stepEditor={<StepEditor installedProviders={installedProviders} />}
           />
         </>
       )}

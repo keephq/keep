@@ -68,9 +68,6 @@ class GrafanaProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, **kwargs: dict):
-        pass
-
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}

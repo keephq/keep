@@ -1,10 +1,19 @@
-import { Title, Text, TextInput } from "@tremor/react";
+import {
+  Title,
+  Text,
+  TextInput,
+  Select,
+  SelectItem,
+  Subtitle,
+  Icon,
+} from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Properties } from "sequential-workflow-designer";
 import {
   useStepEditor,
   useGlobalEditor,
 } from "sequential-workflow-designer-react";
+import { Provider } from "app/providers/providers";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -30,9 +39,16 @@ export function GlobalEditor() {
 interface keepEditorProps {
   properties: Properties;
   updateProperty: (key: string, value: any) => void;
+  installedProviders?: Provider[] | null | undefined;
+  providerType?: string;
 }
 
-function KeepStepEditor({ properties, updateProperty }: keepEditorProps) {
+function KeepStepEditor({
+  properties,
+  updateProperty,
+  installedProviders,
+  providerType,
+}: keepEditorProps) {
   const stepParams = (properties.stepParams ??
     properties.actionParams ??
     []) as string[];
@@ -47,33 +63,79 @@ function KeepStepEditor({ properties, updateProperty }: keepEditorProps) {
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
-  const providerConfig = (properties.config as string) ?? "";
+  const providerConfig = properties.config as string;
+  const installedProviderByTypes = installedProviders?.filter(
+    (p) => p.type === providerType
+  );
+
+  const DynamicIcon = (props: any) => (
+    <svg
+      width="24px"
+      height="24px"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      {...props}
+    >
+      {" "}
+      <image
+        id="image0"
+        width={"24"}
+        height={"24"}
+        href={`/icons/${providerType}-icon.png`}
+      />
+    </svg>
+  );
 
   return (
     <>
-      <Text>Provider Config</Text>
+      <Text>Provider Name</Text>
+      <Select
+        className="my-2.5"
+        placeholder={`Select from installed ${providerType} providers`}
+        disabled={
+          installedProviderByTypes?.length === 0 || !installedProviderByTypes
+        }
+        onValueChange={(value) => updateProperty("config", value)}
+      >
+        {
+          installedProviderByTypes?.map((provider) => {
+            const providerName = provider.details?.name ?? provider.id;
+            return (
+              <SelectItem
+                icon={DynamicIcon}
+                key={providerName}
+                value={providerName}
+              >
+                {providerName}
+              </SelectItem>
+            );
+          })!
+        }
+      </Select>
+      <Subtitle>Or</Subtitle>
       <TextInput
-        placeholder="E.g. {{ providers.provider-id }}"
+        placeholder="Enter provider name manually"
         onChange={(e: any) => updateProperty("config", e.target.value)}
-        className="mb-2.5"
+        className="my-2.5"
         value={providerConfig}
       />
+      <Text className="my-2.5">Provider Parameters</Text>
       {uniqueParams?.map((key) => {
         let currentPropertyValue = ((properties.with as any) ?? {})[key];
         if (typeof currentPropertyValue === "object") {
           currentPropertyValue = JSON.stringify(currentPropertyValue);
         }
-        const randomKey = `${key}-${Math.floor(Math.random() * 1000)}`;
         return (
           <>
-            <Text key={`text-${randomKey}`}>{key}</Text>
+            <Text key={key}>{key}</Text>
             <TextInput
               id={`${key}`}
-              key={`${randomKey}`}
+              key={`${key}`}
               placeholder={key}
               onChange={propertyChanged}
               className="mb-2.5"
-              value={currentPropertyValue ?? ""}
+              value={currentPropertyValue}
             />
           </>
         );
@@ -183,7 +245,11 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   );
 }
 
-export default function StepEditor() {
+export default function StepEditor({
+  installedProviders,
+}: {
+  installedProviders?: Provider[] | undefined | null;
+}) {
   const { type, componentType, name, setName, properties, setProperty } =
     useStepEditor();
 
@@ -196,11 +262,11 @@ export default function StepEditor() {
     setName(e.target.value);
   }
 
-  const keepType = type.split("-")[1] as "action" | "step" | "condition";
+  const providerType = type.split("-")[1];
 
   return (
     <EditorLayout>
-      <Title>{keepType} Editor</Title>
+      <Title className="capitalize">{providerType} Editor</Title>
       <Text>Name</Text>
       <TextInput
         className="mb-2.5"
@@ -209,7 +275,12 @@ export default function StepEditor() {
         onChange={onNameChanged}
       />
       {type.includes("step-") || type.includes("action-") ? (
-        <KeepStepEditor properties={properties} updateProperty={setProperty} />
+        <KeepStepEditor
+          properties={properties}
+          updateProperty={setProperty}
+          installedProviders={installedProviders}
+          providerType={providerType}
+        />
       ) : type === "condition-threshold" ? (
         <KeepThresholdConditionEditor
           properties={properties}
