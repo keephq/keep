@@ -68,7 +68,7 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
 2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
 3. **Automation**: Trigger workflows for alert enrichment and response.
-4. **Developer-first**: Keep is API-first and let you manage your workflows as code.
+4. **Developer-first**: Keep is API-first and lets you manage your workflows as code.
 5. **Works with every tool**: Plenty of [supported providers](#supported-providers) and more to come.
 
 
