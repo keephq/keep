@@ -307,7 +307,7 @@ export function buildAlert(definition: Definition): Alert {
     .filter((s) => s.type.startsWith("action-"))
     .map((s) => {
       const provider = {
-        type: s.type.replace("step-", ""),
+        type: s.type.replace("action-", ""),
         config: s.properties.config as string,
         with:
           (s.properties.with as {
