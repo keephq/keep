@@ -101,6 +101,7 @@ frontend:
 database:
   enabled: true
   replicaCount: 1
+  size: 5Gi
   image:
     repository: mysql
     pullPolicy: IfNotPresent
