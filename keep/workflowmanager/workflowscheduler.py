@@ -1,8 +1,12 @@
+import hashlib
 import logging
+import sys
 import threading
 import time
 import typing
 import uuid
+
+from sqlalchemy.exc import IntegrityError
 
 from keep.api.core.db import (
     create_workflow_execution,
@@ -153,7 +157,10 @@ class WorkflowScheduler:
                 triggered_by = f"manually by {triggered_by_user}"
             else:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
-
+            # This is a hack so we get a large number as the execution number
+            workflow_execution_number = (
+                int(hashlib.sha256(event.json().encode()).hexdigest(), 16) % sys.maxsize
+            )
             workflow_execution_id = workflow_to_run.get("workflow_execution_id")
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
@@ -164,8 +171,14 @@ class WorkflowScheduler:
                         workflow_id=workflow_id,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
+                        execution_number=workflow_execution_number,
                     )
                 # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
+                except IntegrityError:
+                    self.logger.exception(
+                        f"Collision with workflow execution! will retry next time"
+                    )
+                    continue
                 except Exception as e:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
