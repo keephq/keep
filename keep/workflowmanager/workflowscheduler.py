@@ -152,7 +152,7 @@ class WorkflowScheduler:
                 triggered_by_user = workflow_to_run.get("triggered_by_user")
                 triggered_by = f"manually by {triggered_by_user}"
             else:
-                triggered_by = (f"type:alert name:{event.name} id:{event.id}",)
+                triggered_by = f"type:alert name:{event.name} id:{event.id}"
 
             workflow_execution_id = workflow_to_run.get("workflow_execution_id")
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
