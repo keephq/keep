@@ -347,6 +347,16 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     return result
 
 
+def get_all_workflows(tenant_id: str) -> List[Workflow]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
 def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     with Session(engine) as session:
         workflow = session.exec(

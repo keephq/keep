@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from keep.api.core.db import (
     add_workflow,
     delete_workflow,
+    get_all_workflows,
     get_raw_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
@@ -110,6 +111,11 @@ class WorkflowStore:
             )
 
     def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
+        # list all tenant's workflows
+        workflows = get_all_workflows(tenant_id)
+        return workflows
+
+    def get_all_workflows_with_last_execution(self, tenant_id: str) -> list[Workflow]:
         # list all tenant's workflows
         workflows = get_workflows_with_last_execution(tenant_id)
         return workflows

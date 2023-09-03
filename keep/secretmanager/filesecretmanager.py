@@ -9,14 +9,14 @@ class FileSecretManager(BaseSecretManager):
         super().__init__()
         self.directory = os.environ.get("SECRET_MANAGER_DIRECTORY", "./")
 
-    def read_secret(self, path: str, is_json: bool = False) -> str | dict:
-        path = os.path.join(self.directory, path)
-        self.logger.debug(f"Reading {path}", extra={"is_json": is_json})
-        with open(path, "r") as f:
+    def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
+        secret_name = os.path.join(self.directory, secret_name)
+        self.logger.debug(f"Reading {secret_name}", extra={"is_json": is_json})
+        with open(secret_name, "r") as f:
             file_data = f.read()
         if is_json:
             return json.loads(file_data)
-        self.logger.debug(f"Read {path}", extra={"is_json": is_json})
+        self.logger.debug(f"Read {secret_name}", extra={"is_json": is_json})
         return file_data
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
