@@ -49,7 +49,7 @@ def get_workflows(
     parser = Parser()
     workflows_dto = []
     # get all workflows
-    workflows = workflowstore.get_all_workflows(tenant_id=tenant_id)
+    workflows = workflowstore.get_all_workflows_with_last_execution(tenant_id=tenant_id)
     # iterate workflows
     for _workflow in workflows:
         # extract the providers

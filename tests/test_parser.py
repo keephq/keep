@@ -77,7 +77,9 @@ def test_parse_sanity_check(db_session):
 
 def test_parse_all_alerts(db_session):
     workflow_store = WorkflowStore()
-    all_workflows = workflow_store.get_all_workflows(tenant_id=SINGLE_TENANT_UUID)
+    all_workflows = workflow_store.get_all_workflows_with_last_execution(
+        tenant_id=SINGLE_TENANT_UUID
+    )
     # Complete the asserts:
     assert len(all_workflows) == 2  # Assuming two mock alert files were returned
     # You can add more specific assertions based on the content of mock_files and how they are parsed into alerts.
