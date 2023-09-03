@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import sys
 import threading
 import time
 import typing
@@ -19,6 +18,8 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 
 class WorkflowScheduler:
+    MAX_SIZE_SIGNED_INT = 2147483647
+
     def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
         self.threads = []
@@ -158,9 +159,9 @@ class WorkflowScheduler:
             else:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
             # This is a hack so we get a large number as the execution number
-            workflow_execution_number = (
-                int(hashlib.sha256(event.json().encode()).hexdigest(), 16) % sys.maxsize
-            )
+            workflow_execution_number = int(
+                hashlib.sha256(event.json().encode()).hexdigest(), 16
+            ) % (WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1)
             workflow_execution_id = workflow_to_run.get("workflow_execution_id")
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
