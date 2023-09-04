@@ -94,6 +94,7 @@ def get_workflows(
             interval=workflow.interval,
             providers=providers_dto,
             triggers=triggers,
+            workflow_raw=workflow.workflow_raw,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto

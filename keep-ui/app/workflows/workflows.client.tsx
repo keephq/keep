@@ -17,20 +17,9 @@ import WorkflowsEmptyState from "./noworfklows";
 import WorkflowTile from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 
-function copyToClipboard(text: string) {
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
-}
-
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
   const { data: session, status, update } = useSession();
-  const [copied, setCopied] = useState(false);
-  const [fileContents, setFileContents] = useState<string | null>("");
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -89,17 +78,6 @@ export default function WorkflowsPage() {
       }
     }
   };
-
-  function handleFileChange(event: any) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const contents = event.target!.result as string;
-      setFileContents(contents);
-      // Do something with the file contents
-    };
-    reader.readAsText(file);
-  }
 
   function loadAlert() {
     document.getElementById("workflowFile")?.click();
