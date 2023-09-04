@@ -1,5 +1,7 @@
 import hashlib
+import json
 import logging
+import random
 import threading
 import time
 import typing
@@ -113,16 +115,26 @@ class WorkflowScheduler:
     def handle_manual_event_workflow(
         self, workflow_id, tenant_id, triggered_by_user, triggered, event
     ):
-        # TODO: handle errors
         try:
+            # if the event is not defined, add some entropy
+            if not event:
+                event = {
+                    "workflow_id": workflow_id,
+                    "triggered_by_user": triggered_by_user,
+                    "time": time.time(),
+                }
+            unique_execution_number = self._get_unique_execution_number(
+                json.dumps(event).encode()
+            )
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
+                execution_number=unique_execution_number,
             )
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
-            self.logger.error(f"Error creating workflow execution: {e}")
+            self.logger.error(f"WTF: error creating workflow execution: {e}")
             return None
         self.workflows_to_run.append(
             {
@@ -136,6 +148,24 @@ class WorkflowScheduler:
         )
         return workflow_execution_id
 
+    def _get_unique_execution_number(self, payload: bytes):
+        """Gets a unique execution number for a workflow execution
+        # TODO: this is a hack. the execution number is a way to enforce that
+        #       the interval mechanism will work. we need to find a better way to do it
+        #       the "correct way" should be to seperate the interval mechanism from the event/manual mechanishm
+
+        Args:
+            workflow_id (str): the id of the workflow
+            tenant_id (str): the id ot the tenant
+            payload (bytes): some encoded binary payload
+
+        Returns:
+            int: an int represents unique execution number
+        """
+        return int(hashlib.sha256(payload).hexdigest(), 16) % (
+            WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1
+        )
+
     def _handle_event_workflows(self):
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
@@ -146,11 +176,35 @@ class WorkflowScheduler:
             workflow = workflow_to_run.get("workflow")
             workflow_id = workflow_to_run.get("workflow_id")
             tenant_id = workflow_to_run.get("tenant_id")
+            workflow_execution_id = workflow_to_run.get("workflow_execution_id")
             if not workflow:
                 self.logger.info("Loading workflow")
-                workflow = self.workflow_store.get_workflow(
-                    workflow_id=workflow_id, tenant_id=tenant_id
-                )
+                try:
+                    workflow = self.workflow_store.get_workflow(
+                        workflow_id=workflow_id, tenant_id=tenant_id
+                    )
+                # In case the provider are not configured properly
+                except ProviderConfigurationException as e:
+                    self.logger.error(f"Error getting workflow: {e}")
+                    finish_workflow_execution(
+                        tenant_id=tenant_id,
+                        workflow_id=workflow_id,
+                        execution_id=workflow_execution_id,
+                        status="providers_not_configured",
+                        error=f"Providers are not configured for workflow {workflow_id}, please configure it so Keep will be able to run it",
+                    )
+                    continue
+                except Exception as e:
+                    self.logger.error(f"Error getting workflow: {e}")
+                    finish_workflow_execution(
+                        tenant_id=tenant_id,
+                        workflow_id=workflow_id,
+                        execution_id=workflow_execution_id,
+                        status="error",
+                        error=f"Error getting workflow: {e}",
+                    )
+                    continue
+
             event = workflow_to_run.get("event")
             triggered_by = workflow_to_run.get("triggered_by")
             if triggered_by == "manual":
@@ -158,16 +212,15 @@ class WorkflowScheduler:
                 triggered_by = f"manually by {triggered_by_user}"
             else:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
-            # This is a hack so we get a large number as the execution number
-            workflow_execution_number = int(
-                hashlib.sha256(event.json().encode()).hexdigest(), 16
-            ) % (WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1)
-            workflow_execution_id = workflow_to_run.get("workflow_execution_id")
+
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
             # TODO: one more robust way to do it
             if not workflow_execution_id:
                 try:
+                    workflow_execution_number = self._get_unique_execution_number(
+                        event.json().encode()
+                    )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
                         tenant_id=tenant_id,

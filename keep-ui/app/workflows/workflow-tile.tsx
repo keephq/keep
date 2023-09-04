@@ -31,6 +31,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import yaml from 'js-yaml';
 
 function WorkflowMenuSection({
   onDelete,
@@ -41,12 +42,18 @@ function WorkflowMenuSection({
   workflow,
 }: {
   onDelete: () => Promise<void>;
-  onRun: (workflowId: string) => Promise<void>;
-  onDownload: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onRun: () => Promise<void>;
+  onDownload: () => void;
   onView: () => void;
   onBuilder: () => void;
   workflow: Workflow;
 }) {
+  // Determine if all providers are installed
+  const allProvidersInstalled = workflow.providers.every(provider => provider.installed);
+
+  // Check if there is a manual trigger
+  const hasManualTrigger = workflow.triggers.some(trigger => trigger.type === 'manual');  // Replace 'manual' with the actual value that represents a manual trigger in your data
+
   return (
     <WorkflowMenu
       onDelete={onDelete}
@@ -54,6 +61,8 @@ function WorkflowMenuSection({
       onDownload={onDownload}
       onView={onView}
       onBuilder={onBuilder}
+      allProvidersInstalled={allProvidersInstalled}
+      hasManualTrigger={hasManualTrigger}
     />
   );
 }
@@ -159,23 +168,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { providers, installedProviders, error } = useFetchProviders();
 
-  // Function to handle "Connect" button click
-  const handleConnectClick = (providerType: string) => {
-    if (status === "loading") return; // Optionally, handle loading state
-    if (error) {
-      console.error("An error occurred:", error);
-      return;
-    }
-
-    // Find the provider with the specified type
-    const providerToConnect = providers.find((p) => p.type === providerType);
-
-    if (providerToConnect) {
-      setSelectedProvider(providerToConnect);
-      setOpenPanel(true);
-    }
-  };
-
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
     // prepopulate it with the name
@@ -198,13 +190,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     setFormErrors(updatedFormErrors);
   };
 
-  const handleTileClick = () => {
-    router.push(`/workflows/${workflow.id}`);
-  };
-
-  const handleRunClick = async (workflowId: string) => {
+  const handleRunClick = async () => {
     try {
-      const response = await fetch(`${apiUrl}/workflows/${workflowId}/run`, {
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
@@ -215,7 +203,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         // Workflow started successfully
         const responseData = await response.json();
         const { workflow_execution_id } = responseData;
-        router.push(`/workflows/${workflowId}/runs/${workflow_execution_id}`);
+        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
       } else {
         console.error("Failed to start workflow");
       }
@@ -251,9 +239,32 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       window.location.reload();
     }
   };
-  const handleDownloadClick = async (
-    event: React.MouseEvent<HTMLButtonElement>
-  ) => {};
+  const handleDownloadClick = async () => {
+    try {
+      // Use the raw workflow data directly, as it is already in YAML format
+      const workflowYAML = workflow.workflow_raw;
+
+      // Create a Blob object representing the data as a YAML file
+      const blob = new Blob([workflowYAML], { type: 'text/yaml' });
+
+      // Create an anchor element with a URL object created from the Blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a "hidden" anchor tag with the download attribute and click it
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${workflow.workflow_raw_id}.yaml`; // The file will be named after the workflow's id
+      document.body.appendChild(a);
+      a.click();
+
+      // Release the object URL to free up resources
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("An error occurred while downloading the YAML", error);
+    }
+  };
+
 
   const handleViewClick = async () => {
     router.push(`/workflows/${workflow.id}`);

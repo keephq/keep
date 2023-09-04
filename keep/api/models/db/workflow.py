@@ -31,7 +31,7 @@ class WorkflowExecution(SQLModel, table=True):
     status: str
     execution_number: int
     logs: Optional[str]
-    error: Optional[str]
+    error: str = Field(sa_column=String(length=10240))
     execution_time: Optional[int]
 
     logs: List["WorkflowExecutionLog"] = Relationship(
