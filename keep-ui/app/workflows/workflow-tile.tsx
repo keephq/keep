@@ -7,6 +7,7 @@ import Image from "next/image";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
+import Loading from '../loading';
 import { Trigger, Provider } from "./models";
 import {
   Button,
@@ -166,6 +167,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   );
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [isRunning, setIsRunning] = useState(false);
+
   const { providers, installedProviders, error } = useFetchProviders();
 
   const handleConnectProvider = (provider: FullProvider) => {
@@ -191,6 +194,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   const handleRunClick = async () => {
+    setIsRunning(true);
     try {
       const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
         method: "POST",
@@ -203,6 +207,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         // Workflow started successfully
         const responseData = await response.json();
         const { workflow_execution_id } = responseData;
+        setIsRunning(false);
         router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
       } else {
         console.error("Failed to start workflow");
@@ -210,6 +215,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     } catch (error) {
       console.error("An error occurred while starting workflow", error);
     }
+    setIsRunning(false);
   };
 
   const handleDeleteClick = async () => {
@@ -308,102 +314,109 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
   return (
-    <Card className="tile-basis mt-2.5">
-      <div className="flex w-full justify-between items-center h-14">
-        <Title>{workflow.description}</Title>
-        {WorkflowMenuSection({
-          onDelete: handleDeleteClick,
-          onRun: handleRunClick,
-          onDownload: handleDownloadClick,
-          onView: handleViewClick,
-          onBuilder: handleBuilderClick,
-          workflow,
-        })}
+    <div className="tile-basis mt-2.5">
+      {isRunning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <Loading />
       </div>
-
-      <List>
-        <ListItem>
-          <span>Created By</span>
-          <span className="text-right">{workflow.created_by}</span>
-        </ListItem>
-        <ListItem>
-          <span>Created At</span>
-          <span className="text-right">{workflow.creation_time}</span>
-        </ListItem>
-        <ListItem>
-          <span>Last Execution</span>
-          <span className="text-right">
-            {workflow.last_execution_time
-              ? workflow.last_execution_time
-              : "N/A"}
-          </span>
-        </ListItem>
-        <ListItem>
-          <span>Last Status</span>
-          <span className="text-right">
-            {workflow.last_execution_status
-              ? workflow.last_execution_status
-              : "N/A"}
-          </span>
-        </ListItem>
-      </List>
-
-      <Accordion className="mt-2.5">
-        <AccordionHeader>
-          <span className="mr-1">Triggers:</span>
-          {triggerTypes.map((t) => (
-            <Badge key={t} size="xs" color="orange">
-              {t}
-            </Badge>
-          ))}
-        </AccordionHeader>
-        <AccordionBody>
-          {workflow.triggers.length > 0 ? (
-            <List>
-              {workflow.triggers.map((trigger, index) => (
-                <TriggerTile key={index} trigger={trigger} />
-              ))}
-            </List>
-          ) : (
-            <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
-              This workflow does not have any triggers.
-            </p>
-          )}
-        </AccordionBody>
-      </Accordion>
-
-      <Card className="mt-2.5">
-        <Text>Providers:</Text>
-        <div className="flex flex-wrap justify-start">
-          {uniqueProviders.map((provider) => (
-            <ProviderTile
-              key={provider.id}
-              provider={provider}
-              onConnectClick={handleConnectProvider}
-            />
-          ))}
+      )}
+      <Card >
+        <div className="flex w-full justify-between items-center h-14">
+          <Title>{workflow.description}</Title>
+          {WorkflowMenuSection({
+            onDelete: handleDeleteClick,
+            onRun: handleRunClick,
+            onDownload: handleDownloadClick,
+            onView: handleViewClick,
+            onBuilder: handleBuilderClick,
+            workflow,
+          })}
         </div>
+
+        <List>
+          <ListItem>
+            <span>Created By</span>
+            <span className="text-right">{workflow.created_by}</span>
+          </ListItem>
+          <ListItem>
+            <span>Created At</span>
+            <span className="text-right">{workflow.creation_time}</span>
+          </ListItem>
+          <ListItem>
+            <span>Last Execution</span>
+            <span className="text-right">
+              {workflow.last_execution_time
+                ? workflow.last_execution_time
+                : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Last Status</span>
+            <span className="text-right">
+              {workflow.last_execution_status
+                ? workflow.last_execution_status
+                : "N/A"}
+            </span>
+          </ListItem>
+        </List>
+
+        <Accordion className="mt-2.5">
+          <AccordionHeader>
+            <span className="mr-1">Triggers:</span>
+            {triggerTypes.map((t) => (
+              <Badge key={t} size="xs" color="orange">
+                {t}
+              </Badge>
+            ))}
+          </AccordionHeader>
+          <AccordionBody>
+            {workflow.triggers.length > 0 ? (
+              <List>
+                {workflow.triggers.map((trigger, index) => (
+                  <TriggerTile key={index} trigger={trigger} />
+                ))}
+              </List>
+            ) : (
+              <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+                This workflow does not have any triggers.
+              </p>
+            )}
+          </AccordionBody>
+        </Accordion>
+
+        <Card className="mt-2.5">
+          <Text>Providers:</Text>
+          <div className="flex flex-wrap justify-start">
+            {uniqueProviders.map((provider) => (
+              <ProviderTile
+                key={provider.id}
+                provider={provider}
+                onConnectClick={handleConnectProvider}
+              />
+            ))}
+          </div>
+        </Card>
+        <SlidingPanel
+          type={"right"}
+          isOpen={openPanel}
+          size={30}
+          backdropClicked={handleCloseModal}
+          panelContainerClassName="bg-white z-[2000]"
+        >
+          {selectedProvider && (
+            <ProviderForm
+              provider={selectedProvider}
+              formData={formValues}
+              formErrorsData={formErrors}
+              onFormChange={handleFormChange}
+              onConnectChange={handleConnecting}
+              closeModal={handleCloseModal}
+              isProviderNameDisabled={true}
+            />
+          )}
+        </SlidingPanel>
       </Card>
-      <SlidingPanel
-        type={"right"}
-        isOpen={openPanel}
-        size={30}
-        backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[2000]"
-      >
-        {selectedProvider && (
-          <ProviderForm
-            provider={selectedProvider}
-            formData={formValues}
-            formErrorsData={formErrors}
-            onFormChange={handleFormChange}
-            onConnectChange={handleConnecting}
-            closeModal={handleCloseModal}
-            isProviderNameDisabled={true}
-          />
-        )}
-      </SlidingPanel>
-    </Card>
+    </div>
   );
 }
 

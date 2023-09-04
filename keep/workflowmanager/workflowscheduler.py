@@ -102,6 +102,7 @@ class WorkflowScheduler:
                 status="error",
                 error=str(e),
             )
+            return
 
         finish_workflow_execution(
             tenant_id=tenant_id,
@@ -121,6 +122,7 @@ class WorkflowScheduler:
                 event = {
                     "workflow_id": workflow_id,
                     "triggered_by_user": triggered_by_user,
+                    "trigger": "manual",
                     "time": time.time(),
                 }
             unique_execution_number = self._get_unique_execution_number(
