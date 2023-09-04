@@ -53,6 +53,10 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
       console.log("Stopping refresh interval");
       setRefreshInterval(0);
     }
+    else {
+      setError(executionData?.error);
+      setRefreshInterval(0); // Disable refresh interval when execution is complete
+    }
   }, [executionData]);
 
   if (executionError) {
@@ -99,7 +103,11 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
            <Loading></Loading>
         </div>
       ) : (
+<<<<<<< HEAD
         <Callout className="mt-4" title="Error during workflow exceution" icon={ExclamationCircleIcon} color="rose">
+=======
+        <Callout className="mt-4" title="Error" icon={ExclamationCircleIcon} color="rose">
+>>>>>>> main
           {error || 'An unknown error occurred during execution.'}
         </Callout>
 

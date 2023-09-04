@@ -225,7 +225,10 @@ export function parseWorkflow(workflowString: string): Definition {
       const currType = curr.type;
       let value = curr.value;
       if (currType === "alert") {
-        value = curr.filters.find((f: any) => f.key === "source").value;
+        value = curr.filters.reduce((prev: any, curr: any) => {
+          prev[curr.key] = curr.value;
+          return prev;
+        }, {});
       } else if (currType === "manual") {
         value = "true";
       }
@@ -363,10 +366,19 @@ export function buildAlert(definition: Definition): Alert {
 
   const triggers = [];
   if (alert.properties.manual === "true") triggers.push({ type: "manual" });
-  if (alert.properties.alert) {
+  if (
+    alert.properties.alert &&
+    Object.keys(alert.properties.alert).length > 0
+  ) {
+    const filters = Object.keys(alert.properties.alert).map((key) => {
+      return {
+        key: key,
+        value: (alert.properties.alert as any)[key],
+      };
+    });
     triggers.push({
       type: "alert",
-      filters: [{ key: "source", value: alert.properties.alert }],
+      filters: filters,
     });
   }
   if (alert.properties.interval) {
