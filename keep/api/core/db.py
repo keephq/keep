@@ -283,7 +283,7 @@ def get_workflows_that_should_run():
                         }
                     )
             else:
-                logger.info(
+                logger.debug(
                     f"Workflow {workflow.id} is already running by someone else"
                 )
 
