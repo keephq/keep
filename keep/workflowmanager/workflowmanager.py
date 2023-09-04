@@ -101,6 +101,7 @@ class WorkflowManager:
                             continue
 
                     # if we got here, it means the event should trigger the workflow
+                    event["trigger"] = "alert"
                     self.scheduler.workflows_to_run.append(
                         {
                             "workflow": workflow,

@@ -26,18 +26,32 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
     status === 'authenticated'
       ? `${apiUrl}/workflows/${params.workflow_id}/runs/${params.workflow_execution_id}`
       : null,
-    (url) => fetcher(url, session?.accessToken!),
+    async (url) => {
+      const fetchedData = await fetcher(url, session?.accessToken!);
+      if (fetchedData.status === 'in_progress') {
+        setChecks(c => c + 1);
+      }
+      return fetchedData;
+    },
     {
       refreshInterval: refreshInterval
     }
   );
+
   // disable refresh interval when execution is complete
   useEffect(() => {
-    if (executionData?.status === 'success') {
-      setRefreshInterval(0); // Disable refresh interval when execution is complete
+    if (!executionData) return;
+
+    // if the status is other than in_progress, stop the refresh interval
+    if (executionData?.status !== 'in_progress') {
+      console.log("Stopping refresh interval");
+      setRefreshInterval(0);
     }
-    else if (executionData?.status === 'in_progress') {
-      setChecks(c => c + 1);
+    // if there's an error - show it
+    if(executionData?.error){
+      setError(executionData?.error);
+      console.log("Stopping refresh interval");
+      setRefreshInterval(0);
     }
     else {
       setError(executionData?.error);
@@ -83,14 +97,13 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
         </Table>
       ) : executionStatus === 'in_progress' ? (
         <div>
-           <Loading></Loading>
            <div className="flex items-center justify-center">
-             <p>The workflow is still in progress, will check again in one second</p>
-             <p> (Check number {checks})</p>
+             <p>The workflow is in progress, will check again in one second (times checked: {checks})</p>
            </div>
+           <Loading></Loading>
         </div>
       ) : (
-        <Callout className="mt-4" title="Error" icon={ExclamationCircleIcon} color="rose">
+        <Callout className="mt-4" title="Error during workflow exceution" icon={ExclamationCircleIcon} color="rose">
           {error || 'An unknown error occurred during execution.'}
         </Callout>
 
