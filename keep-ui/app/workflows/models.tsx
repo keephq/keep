@@ -22,9 +22,11 @@ export type Workflow = {
   description: string;
   created_by: string;
   creation_time: string;
-  interval: string; // This can be a string like "Everyday at 9AM" or whatever suits you.
+  interval: string;
   providers: Provider[];
   triggers: Trigger[];
   last_execution_time: string;
   last_execution_status: string;
+  workflow_raw: string;
+  workflow_raw_id: string;
 }

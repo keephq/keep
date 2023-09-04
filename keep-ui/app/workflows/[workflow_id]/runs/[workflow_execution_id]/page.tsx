@@ -20,6 +20,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
   const { data: session, status, update } = useSession();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: executionData, error: executionError } = useSWR(
     status === 'authenticated'
@@ -37,6 +38,10 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
     }
     else if (executionData?.status === 'in_progress') {
       setChecks(c => c + 1);
+    }
+    else {
+      setError(executionData?.error);
+      setRefreshInterval(0); // Disable refresh interval when execution is complete
     }
   }, [executionData]);
 
@@ -76,7 +81,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
             ))}
           </TableBody>
         </Table>
-      ) : (
+      ) : executionStatus === 'in_progress' ? (
         <div>
            <Loading></Loading>
            <div className="flex items-center justify-center">
@@ -84,6 +89,11 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
              <p> (Check number {checks})</p>
            </div>
         </div>
+      ) : (
+        <Callout className="mt-4" title="Error" icon={ExclamationCircleIcon} color="rose">
+          {error || 'An unknown error occurred during execution.'}
+        </Callout>
+
       )}
     </div>
   );
