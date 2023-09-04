@@ -35,6 +35,7 @@ import { getApiURL } from "utils/apiUrl";
 import Loader from "./loader";
 import { stringify } from "yaml";
 import { useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -125,13 +126,10 @@ function Builder({
       setDefinition(wrapDefinition(parseWorkflow(workflow)));
       setIsLoading(false);
     } else if (loadedAlertFile == null) {
+      const alertUuid = uuidv4();
       setDefinition(
         wrapDefinition(
-          generateWorkflow("new-alert-id", "new-alert-description", [], [], {
-            interval: "",
-            alert: "",
-            manual: "true",
-          })
+          generateWorkflow(alertUuid, "New Workflow Description", [], [])
         )
       );
       setIsLoading(false);
