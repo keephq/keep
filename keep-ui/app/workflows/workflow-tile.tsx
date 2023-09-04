@@ -32,6 +32,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import yaml from 'js-yaml';
 
 function WorkflowMenuSection({
   onDelete,
@@ -192,11 +193,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     setFormErrors(updatedFormErrors);
   };
 
-  const handleTileClick = () => {
-    router.push(`/workflows/${workflow.id}`);
-  };
-
-  const handleRunClick = async (workflowId: string) => {
+  const handleRunClick = async () => {
+    setIsRunning(true);
     try {
       const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
         method: "POST",
@@ -209,7 +207,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         // Workflow started successfully
         const responseData = await response.json();
         const { workflow_execution_id } = responseData;
-        router.push(`/workflows/${workflowId}/runs/${workflow_execution_id}`);
+        setIsRunning(false);
+        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
       } else {
         console.error("Failed to start workflow");
       }
