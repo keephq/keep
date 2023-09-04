@@ -1,11 +1,7 @@
 import json
 import logging
-from functools import reduce
 
-import requests
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
-from sqlalchemy import String, cast
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
@@ -151,12 +147,72 @@ def delete_alert(
     return {"status": "ok"}
 
 
+def handle_formatted_events(
+    tenant_id,
+    provider_type,
+    session: Session,
+    formatted_events: AlertDto | list[AlertDto],
+    provider_id: str | None = None,
+):
+    if isinstance(formatted_events, AlertDto):
+        formatted_events = [formatted_events]
+
+    logger.info(
+        "Asyncronusly adding new alerts to the DB",
+        extra={
+            "provider_type": provider_type,
+            "num_of_alerts": len(formatted_events),
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    try:
+        for formatted_event in formatted_events:
+            formatted_event.pushed = True
+            alert = Alert(
+                tenant_id=tenant_id,
+                provider_type=provider_type,
+                event=formatted_event.dict(),
+                provider_id=provider_id,
+            )
+            session.add(alert)
+            formatted_event.event_id = alert.id
+        session.commit()
+        logger.info(
+            "Asyncronusly added new alerts to the DB",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        # Now run any workflow that should run based on this alert
+        # TODO: this should publish event
+        workflow_manager = WorkflowManager.get_instance()
+        # insert the events to the workflow manager process queue
+        logger.info("Adding events to the workflow manager queue")
+        workflow_manager.insert_events(tenant_id, formatted_events)
+        logger.info("Added events to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to alerts to the DB",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+
+
 @router.post(
     "/event/{provider_type}", description="Receive an alert event from a provider"
 )
 async def receive_event(
     provider_type: str,
     request: Request,
+    bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
@@ -167,7 +223,7 @@ async def receive_event(
     body = await request.body()
     # Start process the event
     # Attempt to parse as JSON if the content type is not text/plain
-    content_type = request.headers.get("Content-Type")
+    # content_type = request.headers.get("Content-Type")
     # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
     try:
         event = json.loads(body.decode())
@@ -176,57 +232,54 @@ async def receive_event(
 
     # else, process the event
     logger.info(
-        "Received event", extra={"provider_type": provider_type, "event": event}
+        "Handling event",
+        extra={
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
     )
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     try:
-        logger.info(
-            "Creating new alert in DB",
-            extra={"provider_type": provider_type, "event": event},
-        )
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
+        logger.info(
+            "Formatting alerts from",
+            extra={
+                "provider_type": provider_type,
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
         formatted_events = provider_class.format_alert(event)
+        logger.info(
+            "Formatted alerts",
+            extra={
+                "provider_type": provider_type,
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
         # If the format_alert does not return an AlertDto object, it means that the event
         # should not be pushed to the client.
-        if not formatted_events:
-            raise {"status": "ok"}
-        if isinstance(formatted_events, AlertDto):
-            formatted_events.pushed = True
-            alert = Alert(
-                tenant_id=tenant_id,
-                provider_type=provider_type,
-                event=formatted_events.dict(),
-                provider_id=provider_id,
+        if formatted_events:
+            bg_tasks.add_task(
+                handle_formatted_events,
+                tenant_id,
+                provider_type,
+                session,
+                formatted_events,
+                provider_id,
             )
-            session.add(alert)
-            session.commit()
-            formatted_events.event_id = alert.id
-        elif isinstance(formatted_events, list):
-            # Support multiple alerts in one event
-            for formatted_event in formatted_events:
-                formatted_event.pushed = True
-                alert = Alert(
-                    tenant_id=tenant_id,
-                    provider_type=provider_type,
-                    event=formatted_event.dict(),
-                    provider_id=provider_id,
-                )
-                session.add(alert)
-                formatted_event.event_id = alert.id
-            session.commit()
         logger.info(
-            "New alert created successfully",
-            extra={"provider_type": provider_type, "event": event},
+            "Handled event successfully",
+            extra={
+                "provider_type": provider_type,
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
         )
-        # Now run any workflow that should run based on this alert
-        # TODO: this should publish event
-        workflow_manager = WorkflowManager.get_instance()
-        if type(formatted_events) is AlertDto:
-            formatted_events = [formatted_events]
-        # insert the events to the workflow manager process queue
-        workflow_manager.insert_events(tenant_id, formatted_events)
         return {"status": "ok"}
     except Exception as e:
-        logger.warn("Failed to create new alert", extra={"error": str(e)})
+        logger.warn("Failed to handle event", extra={"error": str(e)})
         return {"status": "failed"}
