@@ -11,7 +11,11 @@ from sqlmodel import Session, select
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.core.dependencies import (
+    get_user_email,
+    verify_api_key,
+    verify_bearer_token,
+)
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
@@ -258,10 +262,10 @@ def delete_provider(
 
 @router.post("/install")
 async def install_provider(
-    request: Request,
     provider_info: dict = Body(...),
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
+    installed_by: str = Depends(get_user_email),
 ):
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
@@ -295,9 +299,6 @@ async def install_provider(
             secret_name=secret_name,
             secret_value=json.dumps(provider_config),
         )
-        token = request.headers.get("Authorization").split(" ")[1]
-        decoded_token = jwt.decode(token, options={"verify_signature": False})
-        installed_by = decoded_token.get("email")
         # add the provider to the db
         provider = Provider(
             id=provider_unique_id,

@@ -21,7 +21,7 @@ from keep.api.core.db import (
     get_workflow,
     get_workflow_executions,
 )
-from keep.api.core.dependencies import verify_bearer_token
+from keep.api.core.dependencies import get_user_email, verify_bearer_token
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -105,10 +105,10 @@ def get_workflows(
     description="Run a workflow",
 )
 def run_workflow(
-    request: Request,
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
     tenant_id: str = Depends(verify_bearer_token),
+    created_by: str = Depends(get_user_email),
 ) -> dict:
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     workflowstore = WorkflowStore()
@@ -122,10 +122,6 @@ def run_workflow(
 
     # Finally, run it
     try:
-        # todo, better way
-        token = request.headers.get("Authorization").split(" ")[1]
-        decoded_token = jwt.decode(token, options={"verify_signature": False})
-        created_by = decoded_token.get("email")
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, "manual", body
         )
@@ -178,11 +174,9 @@ async def create_workflow(
     request: Request,
     file: UploadFile = None,
     tenant_id: str = Depends(verify_bearer_token),
+    created_by: str = Depends(get_user_email),
 ) -> WorkflowCreateOrUpdateDTO:
     workflow = await __get_workflow_raw_data(request, file)
-    token = request.headers.get("Authorization").split(" ")[1]
-    decoded_token = jwt.decode(token, options={"verify_signature": False})
-    created_by = decoded_token.get("email")
     workflowstore = WorkflowStore()
     # Create the workflow
     workflow = workflowstore.create_workflow(

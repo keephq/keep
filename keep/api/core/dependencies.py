@@ -31,11 +31,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "e1faa321-35df-486b-8fa8-3601ee714011"
+SINGLE_TENANT_EMAIL = "admin@keephq"
 
 
 def verify_single_tenant() -> str:
     context.data["tenant_id"] = SINGLE_TENANT_UUID
     return SINGLE_TENANT_UUID
+
+
+def get_user_email_single_tenant() -> str:
+    return SINGLE_TENANT_EMAIL
+
+
+def get_user_email(request: Request) -> str | None:
+    token = request.headers.get("Authorization").split(" ")[1]
+    decoded_token = jwt.decode(token, options={"verify_signature": False})
+    return decoded_token.get("email")
 
 
 def verify_api_key(
