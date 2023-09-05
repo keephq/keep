@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ $fullName }}-pv
+  name: {{ include "keep.fullname" . }}-pvc
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: default
+  storageClassName: {{ .Values.database.storageClasss }}
   resources:
     requests:
       storage: 5Gi

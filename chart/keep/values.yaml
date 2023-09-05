@@ -102,6 +102,7 @@ database:
   enabled: true
   replicaCount: 1
   size: 5Gi
+  storageClasss: deafult
   image:
     repository: mysql
     pullPolicy: IfNotPresent
