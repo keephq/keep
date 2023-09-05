@@ -16,6 +16,8 @@ import keep.api.observability
 from keep.api.core.db import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
+    get_user_email,
+    get_user_email_single_tenant,
     verify_api_key,
     verify_bearer_token,
     verify_single_tenant,
@@ -127,10 +129,11 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     @app.on_event("startup")
     async def on_startup():
         create_db_and_tables()
-        if not multi_tenant:
+        if not multi_tenant or multi_tenant == "false":
             # When running in single tenant mode, we want to override the secured endpoints
             app.dependency_overrides[verify_api_key] = verify_single_tenant
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
+            app.dependency_overrides[get_user_email] = get_user_email_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
         # initialize a workflow manager
