@@ -17,8 +17,8 @@ class KubernetesSecretManager(BaseSecretManager):
         self.logger.info(
             "Using K8S Secret Manager", extra={"namespace": self.namespace}
         )
-        # kubernetes.config.load_incluster_config()
-        kubernetes.config.load_config()
+        # kubernetes.config.load_config()  # when running locally
+        kubernetes.config.load_incluster_config()
         self.api = kubernetes.client.CoreV1Api()
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
