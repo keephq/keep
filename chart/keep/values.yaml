@@ -1,3 +1,4 @@
+namespace: default
 serviceAccount:
   create: true
   annotations: {}
@@ -9,7 +10,7 @@ backend:
   enabled: true
   env:
     - name: SECRET_MANAGER_TYPE
-      value: FILE
+      value: k8s
     - name: PORT
       value: "8080"
     - name: SECRET_MANAGER_DIRECTORY

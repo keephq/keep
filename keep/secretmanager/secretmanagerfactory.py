@@ -7,6 +7,7 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 class SecretManagerTypes(enum.Enum):
     FILE = "file"
     GCP = "gcp"
+    K8S = "k8s"
 
 
 class SecretManagerFactory:
@@ -26,6 +27,12 @@ class SecretManagerFactory:
             from keep.secretmanager.gcpsecretmanager import GcpSecretManager
 
             return GcpSecretManager(**kwargs)
+        elif secret_manager_type == SecretManagerTypes.K8S:
+            from keep.secretmanager.kubernetessecretmanager import (
+                KubernetesSecretManager,
+            )
+
+            return KubernetesSecretManager(**kwargs)
         raise NotImplementedError(
             f"Secret manager type {str(secret_manager_type)} not implemented"
         )

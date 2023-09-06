@@ -45,7 +45,7 @@ const ProviderForm = ({
   }>({
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
-    install_webhook: true,
+    install_webhook: provider.can_setup_webhook,
   });
   const [formErrors, setFormErrors] = useState<{
     [key: string]: string;
