@@ -46,7 +46,7 @@ spec:
             {{- end }}
           volumeMounts:
           - mountPath: /var/lib/mysql
-            name: {{ $fullName }}-pv
+            name: {{ include "keep.fullname" . }}-pv
             readOnly: false
           resources:
             {{- toYaml .Values.database.resources | nindent 12 }}
@@ -63,6 +63,6 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: {{ $fullName }}-p
+        - name: {{ include "keep.fullname" . }}-pv
           persistentVolumeClaim:
-            claimName: {{ $fullName }}-pvc
+            claimName: {{ include "keep.fullname" . }}-pvc
