@@ -25,10 +25,6 @@ backend:
     repository: localhost:5000/keep/keep-api
     pullPolicy: Always
     tag: "latest"
-  serviceAccount:
-    create: true
-    annotations: {}
-    name: "keep-backend"
   imagePullSecrets: []
   podAnnotations: {}
   podSecurityContext: {}
