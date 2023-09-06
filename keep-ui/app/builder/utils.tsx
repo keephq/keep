@@ -318,9 +318,12 @@ export function buildAlert(definition: Definition): Alert {
     .filter((s) => s.type.startsWith("step-"))
     .map((s) => {
       const withParams = getWithParams(s);
+      const providerType = s.type.replace("step-", "");
+      const providerName =
+        (s.properties.config as string)?.trim() || `default-${providerType}`;
       const provider = {
         type: s.type.replace("step-", ""),
-        config: `{{ providers.${(s.properties.config as string)?.trim()} }}`,
+        config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
       return {
@@ -333,9 +336,12 @@ export function buildAlert(definition: Definition): Alert {
     .filter((s) => s.type.startsWith("action-"))
     .map((s) => {
       const withParams = getWithParams(s);
+      const providerType = s.type.replace("action-", "");
+      const providerName =
+        (s.properties.config as string)?.trim() || `default-${providerType}`;
       const provider = {
         type: s.type.replace("action-", ""),
-        config: `{{ providers.${s.properties.config as string} }}`,
+        config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
       return {

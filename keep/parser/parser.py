@@ -89,6 +89,23 @@ class Parser:
             workflows = [workflow]
         return workflows
 
+    def _get_workflow_provider_types_from_steps_and_actions(
+        self, steps: list[Step], actions: list[Step]
+    ) -> list[str]:
+        provider_types = []
+        steps_and_actions = [*steps, *actions]
+        for step_or_action in steps_and_actions:
+            try:
+                provider_type = step_or_action.provider.provider_type
+                if provider_type not in provider_types:
+                    provider_types.append(provider_type)
+            except:
+                self.logger.warn(
+                    "Could not get provider type from step or action",
+                    extra={"step_or_action": step_or_action},
+                )
+        return provider_types
+
     def _parse_workflow(
         self,
         tenant_id,
@@ -114,6 +131,11 @@ class Parser:
         workflow_interval = self.parse_interval(workflow)
         on_failure_action = self._get_on_failure_action(workflow)
         workflow_triggers = self.get_triggers_from_workflow(workflow)
+        workflow_provider_types = (
+            self._get_workflow_provider_types_from_steps_and_actions(
+                workflow_steps, workflow_actions
+            )
+        )
         workflow = Workflow(
             workflow_id=workflow_id,
             workflow_description=workflow.get("description"),
@@ -125,6 +147,7 @@ class Parser:
             workflow_actions=workflow_actions,
             on_failure=on_failure_action,
             context_manager=context_manager,
+            workflow_providers_type=workflow_provider_types,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow

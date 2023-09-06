@@ -11,6 +11,9 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 
 class WorkflowManager:
+    # List of providers that are not allowed to be used in workflows in multi tenant mode.
+    PREMIUM_PROVIDERS = ["bash", "python", "http"]
+
     @staticmethod
     def get_instance() -> "WorkflowManager":
         if not hasattr(WorkflowManager, "_instance"):
@@ -143,10 +146,29 @@ class WorkflowManager:
 
         return workflows_errors
 
+    def _check_premium_providers(self, workflow: Workflow):
+        """
+        Check if the workflow uses premium providers in multi tenant mode.
+
+        Args:
+            workflow (Workflow): The workflow to check.
+
+        Raises:
+            Exception: If the workflow uses premium providers in multi tenant mode.
+        """
+        multi_tenant = os.environ.get("KEEP_MULTI_TENANT", False)
+        if multi_tenant and multi_tenant != "false":
+            for provider in workflow.workflow_providers_type:
+                if provider in self.PREMIUM_PROVIDERS:
+                    raise Exception(
+                        f"Provider {provider} is a premium provider. You can self-host or contact us to get access to it."
+                    )
+
     def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
         self.logger.info(f"Running workflow {workflow.workflow_id}")
         errors = []
         try:
+            self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
         except Exception as e:
             self.logger.error(
