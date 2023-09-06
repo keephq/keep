@@ -22,7 +22,7 @@ backend:
     openAiApiKey: ""
   replicaCount: 1
   image:
-    repository: localhost:5000/keep/keep-api
+    repository: us-central1-docker.pkg.dev/keephq/keep/keep-api
     pullPolicy: Always
     tag: "latest"
   imagePullSecrets: []
