@@ -27,6 +27,7 @@ class Workflow:
         workflow_actions: typing.List[Step],
         workflow_description: str = None,
         workflow_providers: typing.List[dict] = None,
+        workflow_providers_type: typing.List[str] = [],
         on_failure: Step = None,
     ):
         self.workflow_id = workflow_id
@@ -38,6 +39,7 @@ class Workflow:
         self.workflow_actions = workflow_actions
         self.workflow_description = workflow_description
         self.workflow_providers = workflow_providers
+        self.workflow_providers_type = workflow_providers_type
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.io_nandler = IOHandler(context_manager)
