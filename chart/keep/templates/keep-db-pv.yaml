@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ $fullName }}-pv
+  name: {{ include "keep.fullname" . }}-pv
 spec:
   capacity:
     storage: {{ .Values.database.size }}
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: manual
+  storageClassName: {{ .Values.database.storageClasss }}
   hostPath:
     path: "/var/lib/mysql"
