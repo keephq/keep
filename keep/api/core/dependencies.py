@@ -30,7 +30,7 @@ http_basic = HTTPBasic(auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Just a fake random tenant id
-SINGLE_TENANT_UUID = "e1faa321-35df-486b-8fa8-3601ee714011"
+SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
 
 
