@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 
@@ -16,7 +17,8 @@ class KubernetesSecretManager(BaseSecretManager):
         self.logger.info(
             "Using K8S Secret Manager", extra={"namespace": self.namespace}
         )
-        kubernetes.config.load_incluster_config()
+        # kubernetes.config.load_incluster_config()
+        kubernetes.config.load_config()
         self.api = kubernetes.client.CoreV1Api()
 
     def write_secret(self, secret_name: str, secret_value: str) -> None:
@@ -29,10 +31,15 @@ class KubernetesSecretManager(BaseSecretManager):
         Raises:
             ApiException: If an error occurs while writing the secret.
         """
+        # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        secret_name = secret_name.replace("_", "-")
         self.logger.info("Writing secret", extra={"secret_name": secret_name})
 
         try:
-            body = kubernetes.client.V1Secret(data={secret_name: secret_value})
+            body = kubernetes.client.V1Secret(
+                metadata=kubernetes.client.V1ObjectMeta(name=secret_name),
+                data={"value": base64.b64encode(secret_value.encode()).decode()},
+            )
             self.api.create_namespaced_secret(namespace=self.namespace, body=body)
             self.logger.info(
                 "Secret created/updated successfully",
@@ -46,12 +53,14 @@ class KubernetesSecretManager(BaseSecretManager):
             raise
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
+        # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        secret_name = secret_name.replace("_", "-")
         self.logger.info("Getting secret", extra={"secret_name": secret_name})
         try:
             response = self.api.read_namespaced_secret(
                 name=secret_name, namespace=self.namespace
             )
-            secret_data = response.data.get(secret_name, "").decode("utf-8")
+            secret_data = base64.b64decode(response.data.get("value", "")).decode()
             if is_json:
                 secret_data = json.loads(secret_data)
             self.logger.info(
