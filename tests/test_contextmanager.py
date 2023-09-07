@@ -78,7 +78,7 @@ def context_manager_with_state(mocked_context) -> ContextManager:
     with tempfile.NamedTemporaryFile() as fp:
         import os
 
-        print(fp.file.name)
+        print(fp.name)
         old_keep_state_file = os.environ["KEEP_STATE_FILE"]
         old_storage_manager_directory = os.environ["STORAGE_MANAGER_DIRECTORY"]
         fp_name_split = fp.name.split("/")
