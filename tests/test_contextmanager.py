@@ -79,11 +79,9 @@ def context_manager_with_state(mocked_context) -> ContextManager:
         import os
 
         print(fp.name)
-        old_keep_state_file = os.environ["KEEP_STATE_FILE"]
-        old_storage_manager_directory = os.environ["STORAGE_MANAGER_DIRECTORY"]
         fp_name_split = fp.name.split("/")
         storage_manager_directory = "/".join(fp_name_split[0:-2])
-        tenant_id = fp_name_split[-2]
+        tenant_id = fp_name_split[-2] if len(fp_name_split) > 3 else ""
         file_name = fp_name_split[-1]
         os.environ["KEEP_STATE_FILE"] = file_name
         os.environ["STORAGE_MANAGER_DIRECTORY"] = storage_manager_directory
@@ -91,8 +89,6 @@ def context_manager_with_state(mocked_context) -> ContextManager:
         fp.seek(0)
         context_manager = ContextManager(tenant_id=tenant_id, workflow_id="mock")
         yield context_manager
-        os.environ["KEEP_STATE_FILE"] = old_keep_state_file
-        os.environ["STORAGE_MANAGER_DIRECTORY"] = old_storage_manager_directory
 
 
 def test_context_manager_get_alert_id(context_manager: ContextManager):
