@@ -90,11 +90,10 @@ def context_manager_with_state(mocked_context) -> ContextManager:
         yield context_manager
 
 
-def test_context_manager_get_alert_id(context_manager):
+def test_context_manager_get_alert_id(context_manager: ContextManager):
     """
     Test the get_alert_id function
     """
-    context_manager.set_workflow_context({"alert_id": "1234"})
     assert context_manager.get_workflow_id() == "1234"
 
 

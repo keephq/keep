@@ -20,6 +20,7 @@ class ContextManager:
         self.logger_adapter = WorkflowLoggerAdapter(
             self.logger, tenant_id, workflow_id, workflow_execution_id
         )
+        self.workflow_id = workflow_id
         self.tenant_id = tenant_id
         self.storage_manager = StorageManagerFactory.get_file_manager()
         self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
@@ -55,7 +56,7 @@ class ContextManager:
         self.event_context = event
 
     def get_workflow_id(self):
-        return self.workflow_context.get("workflow_id")
+        return self.workflow_id
 
     def get_full_context(self, exclude_state=False):
         """

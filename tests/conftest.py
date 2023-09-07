@@ -35,7 +35,7 @@ def mocked_context(ctx_store) -> None:
 
 @pytest.fixture
 def context_manager():
-    return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id=None)
+    return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
 
 
 @pytest.fixture
