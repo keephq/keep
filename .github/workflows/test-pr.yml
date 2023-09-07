@@ -1,8 +1,9 @@
 name: Tests
 on: [push, pull_request]
 
-env: 
+env:
   PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
 
 jobs:
   tests:

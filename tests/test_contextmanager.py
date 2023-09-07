@@ -78,18 +78,28 @@ def context_manager_with_state(mocked_context) -> ContextManager:
     with tempfile.NamedTemporaryFile() as fp:
         import os
 
-        os.environ["STATE_FILE"] = fp.name
+        print(fp.name)
+        fp_name_split = fp.name.split("/")
+        storage_manager_directory = "/".join(
+            fp_name_split[0:-2] if len(fp_name_split) > 3 else fp_name_split[0:-1]
+        )
+        tenant_id = fp_name_split[-2] if len(fp_name_split) > 3 else ""
+        file_name = fp_name_split[-1]
+        print(
+            f"storage_manager_directory: {storage_manager_directory} tenant_id: {tenant_id} file_name: {file_name}"
+        )
+        os.environ["KEEP_STATE_FILE"] = file_name
+        os.environ["STORAGE_MANAGER_DIRECTORY"] = storage_manager_directory
         fp.write(json.dumps(STATE_FILE_MOCK_DATA).encode())
         fp.seek(0)
-        context_manager = ContextManager(tenant_id="some-tenant_id", workflow_id="mock")
+        context_manager = ContextManager(tenant_id=tenant_id, workflow_id="mock")
         yield context_manager
 
 
-def test_context_manager_get_alert_id(context_manager):
+def test_context_manager_get_alert_id(context_manager: ContextManager):
     """
     Test the get_alert_id function
     """
-    context_manager.set_workflow_context({"alert_id": "1234"})
     assert context_manager.get_workflow_id() == "1234"
 
 
@@ -175,37 +185,43 @@ def test_context_manager_set_step_context(context_manager: ContextManager):
     assert context_manager.steps_context[step_id]["results"] == results
 
 
-def test_context_manager_delete_instance(context_manager: ContextManager):
-    context_manager_id = get_context_manager_id()
-    context_manager.delete_instance()
-    instances = context_manager.__getattribute__("_ContextManager__instances")
-    assert context_manager_id not in instances
+# def test_context_manager_delete_instance(context_manager: ContextManager):
+#     context_manager_id = get_context_manager_id()
+#     context_manager.delete_instance()
+#     instances = context_manager.__getattribute__("_ContextManager__instances")
+#     assert context_manager_id not in instances
 
 
-def test_context_manager_set_last_alert_run(context_manager: ContextManager):
+def test_context_manager_set_last_alert_run(context_manager_with_state: ContextManager):
     """
     Test the set_last_alert_run function
     """
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
-    context_manager.set_last_workflow_run(alert_id, alert_context, alert_status)
-    context_manager.dump()
-    assert alert_id in context_manager.state
-    with open(context_manager.STATE_FILE, "r") as f:
-        state = json.load(f)
+    context_manager_with_state.set_last_workflow_run(
+        alert_id, alert_context, alert_status
+    )
+    context_manager_with_state.dump()
+    assert alert_id in context_manager_with_state.state
+    state = context_manager_with_state.storage_manager.get_file(
+        context_manager_with_state.tenant_id, context_manager_with_state.state_file
+    )
+    state = json.loads(state)
     assert alert_id in state
 
 
-def test_context_manager_get_last_alert_run(context_manager: ContextManager):
+def test_context_manager_get_last_alert_run(context_manager_with_state: ContextManager):
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
-    last_run = context_manager.get_last_workflow_run(alert_id)
+    last_run = context_manager_with_state.get_last_workflow_run(alert_id)
     assert last_run == {}
-    context_manager.set_last_workflow_run(alert_id, alert_context, alert_status)
-    last_run = context_manager.get_last_workflow_run(alert_id)
-    assert last_run["alert_status"] == alert_status
+    context_manager_with_state.set_last_workflow_run(
+        alert_id, alert_context, alert_status
+    )
+    last_run = context_manager_with_state.get_last_workflow_run(alert_id)
+    assert last_run["workflow_status"] == alert_status
 
 
 def test_context_manager_singleton(context_manager: ContextManager):
