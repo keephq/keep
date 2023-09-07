@@ -12,7 +12,7 @@ export function globalValidator(
   setGlobalValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
   const onlyOneAlert = definition.sequence.length === 1;
-  if (!onlyOneAlert) setGlobalValidationError("Only one alert is allowed.");
+  if (!onlyOneAlert) setGlobalValidationError("Please place the steps/actions within the workflow container.");
   const anyActionsInMainSequence = (
     definition.sequence[0] as SequentialStep
   )?.sequence?.some((step) => step.type.includes("action-"));

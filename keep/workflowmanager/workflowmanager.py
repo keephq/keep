@@ -13,7 +13,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
-    PREMIUM_PROVIDERS = ["bash", "python", "http"]
+    PREMIUM_PROVIDERS = ["bash", "python"]
 
     @staticmethod
     def get_instance() -> "WorkflowManager":
