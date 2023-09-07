@@ -3,6 +3,7 @@ import os
 import time
 import typing
 
+from keep.api.models.alert import AlertDto
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -33,7 +34,7 @@ class WorkflowManager:
         """Stops the workflow manager"""
         self.scheduler.stop()
 
-    def insert_events(self, tenant_id, events: typing.List[dict]):
+    def insert_events(self, tenant_id, events: typing.List[AlertDto]):
         workflows_that_should_be_run = []
         for event in events:
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
@@ -104,7 +105,7 @@ class WorkflowManager:
                             continue
 
                     # if we got here, it means the event should trigger the workflow
-                    event["trigger"] = "alert"
+                    event.trigger = "alert"
                     self.scheduler.workflows_to_run.append(
                         {
                             "workflow": workflow,
