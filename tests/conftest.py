@@ -35,6 +35,7 @@ def mocked_context(ctx_store) -> None:
 
 @pytest.fixture
 def context_manager():
+    os.environ["STORAGE_MANAGER_DIRECTORY"] = "/tmp/storage-manager"
     return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
 
 
