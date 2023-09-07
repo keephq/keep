@@ -13,10 +13,26 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class HttpProvider(BaseProvider):
+    BLACKLISTED_ENDPOINTS = [
+        "metadata.google.internal",
+        "metadata.internal",
+        "169.254.169.254",
+        "localhost",
+        "googleapis.com",
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    def __validate_url(self, url: str):
+        """
+        Validate that the url is not blacklisted.
+        """
+        for endpoint in HttpProvider.BLACKLISTED_ENDPOINTS:
+            if endpoint in url:
+                raise Exception(f"URL {url} is blacklisted")
 
     def dispose(self):
         """
@@ -65,6 +81,7 @@ class HttpProvider(BaseProvider):
         """
         Send a HTTP request to the given url.
         """
+        self.__validate_url(url)
         if headers is None:
             headers = {}
         if isinstance(headers, str):

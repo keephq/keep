@@ -72,7 +72,7 @@ export default function PageClient({
               disabled={!generateEnabled}
               onClick={() => setTriggerSave(triggerSave + 1)}
             >
-              Save
+              Deploy
             </Button>
           </div>
         ) : (
@@ -113,7 +113,7 @@ export default function PageClient({
               disabled={!generateEnabled}
               onClick={() => setTriggerSave(triggerSave + 1)}
             >
-              Save
+              Deploy
             </Button>
             <Button
               disabled={!generateEnabled}

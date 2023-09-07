@@ -28,7 +28,6 @@ jobs:
         key: pydeps-${{ hashFiles('**/poetry.lock') }}
     - name: Install dependencies using poetry
       run: poetry install --no-interaction --no-root
-      if: steps.cache-deps.outputs.cache-hit != 'true'
     - name: Run unit tests and report coverage
       run: poetry run coverage run --branch -m pytest
     - name: Convert coverage results to JSON (for CodeCov support)

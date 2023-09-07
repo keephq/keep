@@ -34,11 +34,11 @@ export function GlobalEditor() {
       <Title>Keep Workflow Editor</Title>
       <Text>
         Use this visual workflow editor to easily create or edit existing Keep
-        alerts YAML specification.
+        workflow YAML specifications.
       </Text>
       <Text className="mt-5">
         Use the toolbox to add steps, conditions and actions to your workflow
-        and click the `Generate` button to compile the alert.
+        and click the `Generate` button to compile the workflow / `Deploy` button to deploy the workflow to Keep.
       </Text>
     </EditorLayout>
   );
