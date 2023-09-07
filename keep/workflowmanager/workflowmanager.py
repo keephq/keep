@@ -60,6 +60,7 @@ class WorkflowManager:
                     # TODO: handle it better
                     if not trigger.get("type") == "alert":
                         continue
+                    should_run = True
                     for filter in trigger.get("filters", []):
                         # TODO: more sophisticated filtering/attributes/nested, etc
                         filter_key = filter.get("key")
@@ -80,7 +81,8 @@ class WorkflowManager:
                                         "event": event,
                                     },
                                 )
-                                continue
+                                should_run = False
+                                break
                         # elif the filter is string/int/float, compare them:
                         elif type(getattr(event, filter_key, None)) in [
                             int,
@@ -96,25 +98,28 @@ class WorkflowManager:
                                         "event": event,
                                     },
                                 )
-                                continue
+                                should_run = False
+                                break
                         # other types currently does not supported
                         else:
                             self.logger.warning(
                                 "Could not run the filter on unsupported type, skipping the event. Probably misconfigured workflow."
                             )
-                            continue
+                            should_run = False
+                            break
 
                     # if we got here, it means the event should trigger the workflow
-                    event.trigger = "alert"
-                    self.scheduler.workflows_to_run.append(
-                        {
-                            "workflow": workflow,
-                            "workflow_id": workflow_model.id,
-                            "tenant_id": tenant_id,
-                            "triggered_by": "alert",
-                            "event": event,
-                        }
-                    )
+                    if should_run:
+                        event.trigger = "alert"
+                        self.scheduler.workflows_to_run.append(
+                            {
+                                "workflow": workflow,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
+                                "triggered_by": "alert",
+                                "event": event,
+                            }
+                        )
 
     # TODO should be fixed to support the usual CLI
     def run(self, workflows: list[Workflow]):
