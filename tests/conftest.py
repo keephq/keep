@@ -35,7 +35,8 @@ def mocked_context(ctx_store) -> None:
 
 @pytest.fixture
 def context_manager():
-    return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id=None)
+    os.environ["STORAGE_MANAGER_DIRECTORY"] = "/tmp/storage-manager"
+    return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
 
 
 @pytest.fixture
@@ -81,5 +82,3 @@ def db_session():
 
     # Clean up after the test
     session.close()
-    Base.metadata.drop_all(engine)
-    os.remove("keeptest.db")

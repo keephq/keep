@@ -11,6 +11,7 @@ import yaml
 from fastapi import HTTPException
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.providers.mock_provider.mock_provider import MockProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -93,24 +94,24 @@ def test_parse_with_alert_source_with_no_providers_file():
         parser.parse(str(workflow_path))
 
 
-def parse_env_setup():
+def parse_env_setup(context_manager):
     parser = Parser()
-    parser._parse_providers_from_env()
+    parser._parse_providers_from_env(context_manager=context_manager)
     return parser
 
 
 class TestParseProvidersFromEnv:
-    def test_parse_providers_from_env_empty(self, monkeypatch):
+    def test_parse_providers_from_env_empty(self, monkeypatch, context_manager):
         # ARRANGE
         monkeypatch.setenv("KEEP_PROVIDERS", "")
 
         # ACT
-        parser = parse_env_setup()
+        parse_env_setup(context_manager=context_manager)
 
         # ASSERT
-        assert parser.context_manager.providers_context == {}
+        assert context_manager.providers_context == {}
 
-    def test_parse_providers_from_env_providers(self, monkeypatch):
+    def test_parse_providers_from_env_providers(self, monkeypatch, context_manager):
         # ARRANGE
         providers_dict = {
             "slack-demo": {"authentication": {"webhook_url": "https://not.a.real.url"}}
@@ -118,77 +119,83 @@ class TestParseProvidersFromEnv:
         monkeypatch.setenv("KEEP_PROVIDERS", json.dumps(providers_dict))
 
         # ACT
-        parser = parse_env_setup()
+        parse_env_setup(context_manager=context_manager)
 
         # ASSERT
-        assert parser.context_manager.providers_context == providers_dict
+        assert context_manager.providers_context == providers_dict
 
-    def test_parse_providers_from_env_providers_bad_json(self, monkeypatch):
+    def test_parse_providers_from_env_providers_bad_json(
+        self, monkeypatch, context_manager
+    ):
         # ARRANGE
         providers_str = '{"slack-demo": {"authentication": {"webhook_url": '
         monkeypatch.setenv("KEEP_PROVIDERS", providers_str)
 
         # ACT
-        parser = parse_env_setup()
+        parse_env_setup(context_manager=context_manager)
 
         # ASSERT
-        assert parser.context_manager.providers_context == {}
+        assert context_manager.providers_context == {}
 
 
 class TestProviderFromEnv:
-    def test_parse_provider_from_env_empty(self, monkeypatch):
+    def test_parse_provider_from_env_empty(self, monkeypatch, context_manager):
         # ARRANGE
         provider_name = "TEST_NAME_STUB"
         provider_dict = {"hi": 0}
         monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", json.dumps(provider_dict))
 
         # ACT
-        parser = parse_env_setup()
+        parse_env_setup(context_manager)
 
         # ASSERT
         expected = {provider_name.replace("_", "-").lower(): provider_dict}
-        assert parser.context_manager.providers_context == expected
+        assert context_manager.providers_context == expected
 
-    def test_parse_provider_from_env_provider_bad_json(self, monkeypatch):
+    def test_parse_provider_from_env_provider_bad_json(
+        self, monkeypatch, context_manager
+    ):
         # ARRANGE
         provider_name = "BAD"
         providers_str = '{"authentication": {"webhook_url": '
         monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", providers_str)
 
         # ACT
-        parser = parse_env_setup()
+        parser = parse_env_setup(context_manager)
 
         # ASSERT
-        assert parser.context_manager.providers_context == {}
+        assert context_manager.providers_context == {}
 
-    def test_parse_provider_from_env_provider_var_missing_name(self, monkeypatch):
+    def test_parse_provider_from_env_provider_var_missing_name(
+        self, monkeypatch, context_manager
+    ):
         # ARRANGE
         provider_name = ""
         provider_dict = {"hi": 1}
         monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", json.dumps(provider_dict))
 
         # ACT
-        parser = parse_env_setup()
+        parser = parse_env_setup(context_manager)
 
         # ASSERT
         expected = {provider_name.replace("_", "-").lower(): provider_dict}
 
         # This might be a bug?
         # It will create a provider context with an empty string as a provider name: {'': {'hi': 1}}
-        assert parser.context_manager.providers_context == expected
+        assert context_manager.providers_context == expected
 
         # I would expect it to not create the provider
         # assert parser.context_manager.providers_context == {}
 
 
-def parse_file_setup():
+def parse_file_setup(context_manager):
     parser = Parser()
-    parser._parse_providers_from_file("whatever")
+    parser._parse_providers_from_file(context_manager, "whatever")
     return parser
 
 
 class TestProvidersFromFile:
-    def test_parse_providers_from_file(self, monkeypatch, mocker):
+    def test_parse_providers_from_file(self, monkeypatch, mocker, context_manager):
         # ARRANGE
         providers_dict = {
             "providers-file-provider": {
@@ -207,12 +214,14 @@ class TestProvidersFromFile:
         monkeypatch.setattr(yaml, "safe_load", mock_safeload)
 
         # ACT
-        parser = parse_file_setup()
+        parser = parse_file_setup(context_manager)
 
         # ASSERT
-        assert parser.context_manager.providers_context == providers_dict
+        assert context_manager.providers_context == providers_dict
 
-    def test_parse_providers_from_file_bad_yaml(self, monkeypatch, mocker):
+    def test_parse_providers_from_file_bad_yaml(
+        self, monkeypatch, mocker, context_manager
+    ):
         # ARRANGE
 
         # Mocking yaml.safeload to simulate a malformed yaml file
@@ -226,7 +235,7 @@ class TestProvidersFromFile:
 
         # ACT/ASSERT
         with pytest.raises(yaml.YAMLError):
-            parse_file_setup()
+            parse_file_setup(context_manager)
 
 
 class TestParseAlert:
@@ -259,8 +268,9 @@ class TestParseAlert:
         provider_id = "mock"
         description = "test description"
         authentication = ""
-
+        context_manager = ContextManager(tenant_id="mock", workflow_id=None)
         expected_provider = MockProvider(
+            context_manager=context_manager,
             provider_id=provider_id,
             config=ProviderConfig(
                 authentication=authentication, description=description
@@ -281,7 +291,8 @@ class TestParseAlert:
         parser = Parser()
 
         # ACT / ASSERT
-        provider = parser._get_step_provider(step)
+        provider = parser._get_step_provider(context_manager, step)
 
         # ASSERT
-        assert provider == expected_provider
+        assert provider.provider_id == expected_provider.provider_id
+        assert provider.provider_type == expected_provider.provider_id

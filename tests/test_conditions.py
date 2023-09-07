@@ -4,25 +4,29 @@ from keep.conditions.assert_condition import AssertCondition
 from keep.conditions.condition_factory import ConditionFactory
 from keep.conditions.stddev_condition import StddevCondition
 from keep.conditions.threshold_condition import ThresholdCondition
+from keep.contextmanager.contextmanager import ContextManager
 
 
 def test_condition_factory():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     condition_type = "assert"
     condition_name = "mock"
     condition_config = {"assert": "mock"}
     condition = ConditionFactory.get_condition(
-        condition_type, condition_name, condition_config
+        context_manager, condition_type, condition_name, condition_config
     )
     assert isinstance(condition, AssertCondition)
     condition_type = "unknown"
     with pytest.raises(ModuleNotFoundError):
         condition = ConditionFactory.get_condition(
-            condition_type, condition_name, condition_config
+            context_manager, condition_type, condition_name, condition_config
         )
 
 
 def test_assert_condition():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     assert_condtion = AssertCondition(
+        context_manager=context_manager,
         condition_type="assert",
         condition_name="mock",
         condition_config={"assert": "mock"},
@@ -37,7 +41,9 @@ def test_assert_condition():
 
 
 def test_threshold_condition_single_threshold_gt():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "gt"},
@@ -48,7 +54,9 @@ def test_threshold_condition_single_threshold_gt():
 
 
 def test_threshold_condition_single_threshold_lt():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "lt"},
@@ -59,7 +67,9 @@ def test_threshold_condition_single_threshold_lt():
 
 
 def test_threshold_condition_invalid_threshold_type():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "invalid"},
@@ -69,7 +79,9 @@ def test_threshold_condition_invalid_threshold_type():
 
 
 def test_threshold_condition_invalid_threshold_value():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "gt"},
@@ -79,7 +91,9 @@ def test_threshold_condition_invalid_threshold_value():
 
 
 def test_threshold_condition_different_threshold_types():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "gt"},
@@ -89,7 +103,9 @@ def test_threshold_condition_different_threshold_types():
 
 
 def test_threshold_condition_one_value_is_precentage():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"compare_type": "gt"},
@@ -99,7 +115,9 @@ def test_threshold_condition_one_value_is_precentage():
 
 
 def test_threshold_condition_multithreshold():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"level": "1, 2 ,3"},
@@ -109,7 +127,9 @@ def test_threshold_condition_multithreshold():
 
 
 def test_threshold_condition_multithreshold_not_equals():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
         condition_type="threshold",
         condition_name="mock",
         condition_config={"level": "1, 2 ,3"},
@@ -121,7 +141,9 @@ def test_threshold_condition_multithreshold_not_equals():
 
 
 def test_stddev_condition():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     stddev_condition = StddevCondition(
+        context_manager=context_manager,
         condition_type="stddev",
         condition_name="mock",
         condition_config={},
