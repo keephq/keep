@@ -80,7 +80,9 @@ def context_manager_with_state(mocked_context) -> ContextManager:
 
         print(fp.name)
         fp_name_split = fp.name.split("/")
-        storage_manager_directory = "/".join(fp_name_split[0:-2])
+        storage_manager_directory = "/".join(
+            fp_name_split[0:-2] if len(fp_name_split) > 3 else fp_name_split[0:-1]
+        )
         tenant_id = fp_name_split[-2] if len(fp_name_split) > 3 else ""
         file_name = fp_name_split[-1]
         print(
