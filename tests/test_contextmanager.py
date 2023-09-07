@@ -83,6 +83,9 @@ def context_manager_with_state(mocked_context) -> ContextManager:
         storage_manager_directory = "/".join(fp_name_split[0:-2])
         tenant_id = fp_name_split[-2] if len(fp_name_split) > 3 else ""
         file_name = fp_name_split[-1]
+        print(
+            f"storage_manager_directory: {storage_manager_directory} tenant_id: {tenant_id} file_name: {file_name}"
+        )
         os.environ["KEEP_STATE_FILE"] = file_name
         os.environ["STORAGE_MANAGER_DIRECTORY"] = storage_manager_directory
         fp.write(json.dumps(STATE_FILE_MOCK_DATA).encode())
