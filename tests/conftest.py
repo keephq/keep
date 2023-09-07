@@ -81,5 +81,3 @@ def db_session():
 
     # Clean up after the test
     session.close()
-    Base.metadata.drop_all(engine)
-    os.remove("keeptest.db")
