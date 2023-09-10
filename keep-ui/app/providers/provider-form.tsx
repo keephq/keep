@@ -40,13 +40,16 @@ const ProviderForm = ({
   isProviderNameDisabled,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
-  const [formValues, setFormValues] = useState<{
-    [key: string]: string | boolean;
-  }>({
+  const initialData = {
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
-    install_webhook: provider.can_setup_webhook,
-  });
+  };
+  if (provider.can_setup_webhook) {
+    initialData["install_webhook"] = provider.can_setup_webhook;
+  }
+  const [formValues, setFormValues] = useState<{
+    [key: string]: string | boolean;
+  }>(initialData);
   const [formErrors, setFormErrors] = useState<{
     [key: string]: string;
   } | null>(null);
