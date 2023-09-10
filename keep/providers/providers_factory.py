@@ -191,6 +191,9 @@ class ProvidersFactory:
                     if provider_auth_config_class
                     else {}
                 )
+                provider_description = provider_class.__dict__.get(
+                    "provider_description"
+                )
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -201,6 +204,7 @@ class ProvidersFactory:
                         query_params=query_params,
                         can_setup_webhook=can_setup_webhook,
                         supports_webhook=supports_webhook,
+                        provider_description=provider_description,
                     )
                 )
             except ModuleNotFoundError:
