@@ -3,18 +3,25 @@ import { Fragment } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
-import { ArchiveBoxIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import {
+  ArchiveBoxIcon,
+  BellSlashIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
+import Link from "next/link";
 
 interface Props {
   alertName: string;
+  alertSource?: string;
   canOpenHistory: boolean;
   openHistory: () => void;
 }
 
 export default function AlertMenu({
   alertName,
+  alertSource,
   canOpenHistory,
   openHistory,
 }: Props) {
@@ -64,6 +71,23 @@ export default function AlertMenu({
         >
           <Menu.Items className="z-50 fixed mt-2 w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-1 py-1">
+              <Menu.Item>
+                {({ active }) => (
+                  <Link
+                    href={`builder?alertName=${alertName}&alertSource=${alertSource}`}
+                  >
+                    <button
+                      disabled={!alertSource}
+                      className={`${
+                        active ? "bg-slate-200" : "text-gray-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                    >
+                      <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Create Workflow
+                    </button>
+                  </Link>
+                )}
+              </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
                   <button

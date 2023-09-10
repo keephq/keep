@@ -162,7 +162,7 @@ export function generateWorkflow(
   description: string,
   steps: Step[],
   conditions: Step[],
-  triggers: { [key: string]: string } = {}
+  triggers: { [key: string]: { [key: string]: string } } = {}
 ): Definition {
   /**
    * Generate the workflow definition
