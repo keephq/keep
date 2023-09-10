@@ -5,7 +5,7 @@ import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import "./provider-form.css";
-import { Title, Text, Button, Callout, Icon } from "@tremor/react";
+import { Title, Text, Button, Callout, Icon, Subtitle } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
@@ -184,6 +184,9 @@ const ProviderForm = ({
           Connect to{" "}
           {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
         </Title>
+        {provider.provider_description && (
+          <Subtitle>{provider.provider_description}</Subtitle>
+        )}
         <div className="flex items-center">
           <Image
             src={`/keep.png`}

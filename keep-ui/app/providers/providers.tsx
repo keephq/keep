@@ -36,6 +36,7 @@ export interface Provider {
   type: string;
   can_setup_webhook?: boolean;
   supports_webhook?: boolean;
+  provider_description?: string;
 }
 
 export type Providers = Provider[];

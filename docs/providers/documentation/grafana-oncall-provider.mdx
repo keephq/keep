@@ -1,0 +1,101 @@
+---
+title: "Grafana Oncall Provider"
+description: "Grafana Oncall Provider is a class that allows to ingest/digest data from Grafana On-Call."
+---
+
+## Inputs
+
+- **title** (required): The title of the incident.
+- **roomPrefix** (optional): Prefix for the incident room (default: "incident").
+- **labels** (optional): List of labels to associate with the incident (default: ["keep-generated"]).
+- **isDrill** (optional): Whether the incident is a drill or not (default: False).
+- **severity** (optional): Severity of the incident (default: "minor").
+- **status** (optional): Status of the incident (default: "active").
+- **attachCaption** (optional): Caption for any attachment.
+- **attachURL** (optional): URL for any attachment.
+- **incidentID** (optional): ID of an existing incident to update.
+
+## Outputs
+
+Grafana Oncall Provider does not currently support the `query` function.
+
+## Authentication Parameters
+
+The Grafana Oncall Provider uses API token authentication. You need to provide the following authentication parameters to connect to Grafana On-Call:
+
+- **token** (required): Your Grafana On-Call API Token.
+- **host** (required): The URL of your Grafana On-Call host (e.g., https://keephq.grafana.net).
+
+## Connecting with the Provider
+
+To connect to Grafana On-Call, you need to create an API Token:
+
+1. Log in to your Grafana On-Call account.
+2. Go to the **API Tokens** page.
+3. Click the **Generate Token** button and provide a name for your token.
+4. Copy the token value and keep it secure.
+5. Add the token value to the `authentication` section in the Grafana Oncall Provider configuration.
+
+## Notes
+
+- This provider allows you to interact with Grafana On-Call to create or update incidents.
+- The `random_color` function generates a random color for incident labels.
+- The `startTime` and `endTime` parameters use ISO-8601 format.
+- The `notify` function returns information about the incident created or updated.
+
+Payload example:
+
+```json
+{
+  "incident": {
+    "incidentID": "4",
+    "severity": "minor",
+    "labels": [
+      {
+        "label": "keep-generated",
+        "description": "keep-generated",
+        "colorHex": "#9E0847"
+      }
+    ],
+    "isDrill": false,
+    "createdTime": "2023-09-10T10:31:58.030369Z",
+    "modifiedTime": "2023-09-10T10:31:58.030369Z",
+    "createdByUser": {
+      "userID": "grafana-incident:user-64fd801847a9191105b3c2df",
+      "name": "Service Account: keep-tests",
+      "photoURL": "https://www.gravatar.com/avatar/dbb34057685b3bc2bdc2a2808ec80772?s=512&d=retro"
+    },
+    "closedTime": "",
+    "durationSeconds": 0,
+    "status": "active",
+    "title": "Test Incident",
+    "overviewURL": "/a/grafana-incident-app/incidents/4/test-incident",
+    "roles": [],
+    "taskList": {
+      "tasks": [
+        {
+          "taskID": "must-choose-severity",
+          "immutable": true,
+          "createdTime": "2023-09-10T10:31:58.005917795Z",
+          "modifiedTime": "2023-09-10T10:31:58.005922353Z",
+          "text": "Specify incident severity",
+          "status": "done",
+          "authorUser": null,
+          "assignedUser": null
+        }
+      ],
+      "todoCount": 0,
+      "doneCount": 1
+    },
+    "summary": "",
+    "heroImagePath": "/api/hero-images/548564/uoKQrUg5gxteZJ6SdFrMOEhBiN6JtLHLmCSqDzDD0SX93NAhe6ChvhLORmTrSqbC2SEzde7YSKa94UcRsoizm45y3nCGv7eq7Zolk0Y5MzDJrhZRkwrksitQm2eR4iEV/v3/4.png",
+    "incidentStart": "2023-09-10T10:31:58.030369Z",
+    "incidentEnd": ""
+  }
+}
+```
+
+## Useful Links
+
+- [Grafana On-Call](https://keephq.grafana.net)
+- [Grafana On-Call API Documentation](https://keephq.grafana.net/docs/api)

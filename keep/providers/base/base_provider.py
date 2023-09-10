@@ -22,6 +22,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         config: ProviderConfig,
         webhooke_template: Optional[str] = None,
         webhook_description: Optional[str] = None,
+        provider_description: Optional[str] = None,
     ):
         """
         Initialize a provider.
@@ -35,6 +36,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.config = config
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
+        self.provider_description = provider_description
         self.logger = logging.getLogger(self.__class__.__name__)
         self.context_manager = context_manager
         self.validate_config()
