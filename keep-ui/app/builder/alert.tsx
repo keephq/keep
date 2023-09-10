@@ -25,7 +25,7 @@ interface AssertCondition extends Condition {
 }
 
 export interface Action extends Step {
-  condition?: ThresholdCondition | AssertCondition;
+  condition?: ThresholdCondition | AssertCondition[];
   foreach?: string;
 }
 
