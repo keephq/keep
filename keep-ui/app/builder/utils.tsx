@@ -273,17 +273,18 @@ function getActionsFromCondition(
   };
   const compiledActions = condition.branches.true.map((a) => {
     const withParams = getWithParams(a);
+    const providerType = a.type.replace("action-", "");
+    const providerName =
+      (a.properties.config as string)?.trim() || `default-${providerType}`;
+    const provider = {
+      type: a.type.replace("action-", ""),
+      config: `{{ providers.${providerName} }}`,
+      with: withParams,
+    };
     const compiledAction = {
       name: a.name,
-      provider: {
-        type: a.type.replace("action-", ""),
-        config: (a.properties.config as string)
-          ?.replaceAll("{{", "")
-          .replaceAll("}}", "")
-          .replaceAll("providers.", ""),
-        with: withParams,
-      },
-      condition: compiledCondition,
+      provider: provider,
+      condition: [compiledCondition],
     } as Action;
     if (foreach) compiledAction["foreach"] = foreach;
     return compiledAction;

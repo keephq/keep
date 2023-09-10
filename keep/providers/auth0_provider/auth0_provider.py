@@ -2,6 +2,7 @@
 Auth0 provider.
 """
 import dataclasses
+import datetime
 import os
 from typing import Optional
 
@@ -23,15 +24,16 @@ class Auth0ProviderAuthConfig:
         default=None,
         metadata={
             "required": True,
-            "description": "Auth0 api token",
-            "hint": "https://manage.auth0.com/dashboard/us/YOUR TENANT/apis/management/explorer",
+            "description": "Auth0 API Token",
+            "hint": "https://manage.auth0.com/dashboard/us/YOUR_ACCOUNT/apis/management/explorer",
         },
     )
     domain: str = dataclasses.field(
         default=None,
         metadata={
             "required": True,
-            "description": "Auth0 domain",
+            "description": "Auth0 Domain",
+            "hint": "tenantname.us.auth0.com",
         },
     )
 
@@ -56,43 +58,47 @@ class Auth0Provider(BaseProvider):
             **self.config.authentication
         )
 
-    def notify(self, **kwargs):
-        pass  # Define how to notify about any alerts or issues
+    def _query(self, log_type: str, from_: str = None, **kwargs: dict):
+        """
+        Query Auth0 logs.
+
+        Args:
+            log_type (str): The log type: https://auth0.com/docs/deploy-monitor/logs/log-event-type-codes
+            from_ (str, optional): 2023-09-10T11:43:34.213Z for example. Defaults to None.
+
+        Raises:
+            Exception: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        url = f"https://{self.authentication_config.domain}/api/v2/logs"
+        headers = {
+            "content-type": "application/json",
+            "Authorization": f"Bearer {self.authentication_config.token}",
+        }
+        if not log_type:
+            raise Exception("log_type is required")
+        params = {
+            "q": f"type:{log_type}",  # Lucene query syntax to search for logs with type 's' (Success Signup)
+            "per_page": 100,  # specify the number of entries per page
+        }
+        if from_:
+            params[
+                "q"
+            ] = f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.utcnow().isoformat()}])"
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        logs = response.json()
+        return logs
 
     def dispose(self):
         pass
 
 
 class Auth0LogsProvider(Auth0Provider):
-    def _query(self, **kargs: dict):
-        url = f"https://{self.authentication_config.domain}/api/v2/logs"
-        headers = {
-            "content-type": "application/json",
-            "Authorization": f"Bearer {self.authentication_config.token}",
-        }
-        log_type = kargs.get("log_type")
-        previous_users = kargs.get("previous_users", [])
-        if not log_type:
-            raise Exception("log_type is required")
-        # types: https://auth0.com/docs/deploy-monitor/logs/log-event-type-codes
-        params = {
-            "q": f"type:{log_type}",  # Lucene query syntax to search for logs with type 's' (Success Signup)
-            "per_page": 100,  # specify the number of entries per page
-        }
-        response = requests.get(url, headers=headers, params=params)
-        logs = []
-        if response.status_code == 200:
-            logs = response.json()
-            if isinstance(logs, list):
-                logs = logs
-            else:
-                print(
-                    f"Expected a list but got {type(logs)}. Here is the response: {logs}"
-                )
-        else:
-            print(
-                f"Failed to get logs. Status code: {response.status_code}, message: {response.text}"
-            )
+    def _query(self, log_type: str, previous_users: list, **kargs: dict):
+        logs = super().query(log_type=log_type, **kargs)
 
         self.logger.debug(f"Previous users: {previous_users}")
         previous_users_count = len(previous_users)
@@ -108,22 +114,6 @@ class Auth0LogsProvider(Auth0Provider):
             "new_users": new_users,
             "new_users_count": len(new_users),
         }
-
-    def get_alerts(self, alert_id: Optional[str] = None):
-        pass  # Define how to get alerts from BigQuery if applicable
-
-    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
-        pass  # Define how to deploy an alert to BigQuery if applicable
-
-    @staticmethod
-    def get_alert_schema() -> dict:
-        pass  # Return alert schema specific to BigQuery
-
-    def get_logs(self, limit: int = 5) -> list:
-        pass  # Define how to get logs from BigQuery if applicable
-
-    def expose(self):
-        return {}  # Define any parameters to expose
 
 
 if __name__ == "__main__":
@@ -142,11 +132,9 @@ if __name__ == "__main__":
         },
     }
     # Create the provider
-    provider = Auth0LogsProvider(
+    provider = Auth0Provider(
         context_manager, provider_id="auth0-provider", config=ProviderConfig(**config)
     )
 
-    users = provider.query(log_type="ss")
-    previous_users = users.get("users")
-    users = provider.query(log_type="ss", previous_users=previous_users)
-    print(users)
+    logs = provider.query(log_type="f", from_="2023-09-10T11:43:34.213Z")
+    print(logs)

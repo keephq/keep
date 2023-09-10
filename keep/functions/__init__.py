@@ -41,6 +41,20 @@ def utcnow() -> datetime.datetime:
     return dt
 
 
+def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
+    """
+    Substract minutes from a datetime object
+
+    Args:
+        dt (datetime.datetime): The datetime object
+        minutes (int): The number of minutes to substract
+
+    Returns:
+        datetime.datetime: The new datetime object
+    """
+    return dt - datetime.timedelta(minutes=minutes)
+
+
 def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
     if isinstance(dt, str):
         dt = parser.parse(dt)
