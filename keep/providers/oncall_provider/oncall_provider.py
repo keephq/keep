@@ -1,8 +1,8 @@
 """
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
-
 import dataclasses
+import random
 from typing import Literal
 
 import pydantic
@@ -36,22 +36,12 @@ class OncallProviderAuthConfig:
     )
 
 
-class GrafanaOncallLabel(pydantic.BaseModel):
-    """
-    Grafana On-Call label model.
-    """
-
-    colorHex: str
-    description: str
-    label: str
-
-
 class OncallProvider(BaseProvider):
     """
     Grafana On-Call provider class.
     """
 
-    API_URI = "api/plugins/grafana-incident-app/resources/api/v1"
+    API_URI = "api/plugins/grafana-incident-app/resources/api"
     provider_description = "Grafana On-Call is a SaaS incident management solution that helps you resolve incidents faster."
 
     def __init__(
@@ -74,56 +64,89 @@ class OncallProvider(BaseProvider):
             **self.config.authentication
         )
 
+    @staticmethod
+    def random_color() -> str:
+        return random.randint(0, 255)
+
     def notify(
         self,
         title: str,
         roomPrefix: str = "incident",
-        labels: list[GrafanaOncallLabel] = [
-            GrafanaOncallLabel(
-                colorHex="#ff0000",
-                description="Generated with Keep",
-                label="keep-generated",
-            )
-        ],
+        labels: list[str] = ["keep-generated"],
         isDrill: bool = False,
         severity: Literal["pending", "minor", "major", "critical"] = "minor",
         status: Literal["active", "resolved"] = "active",
-        attachCaption: str = None,
-        attachURL: str = None,
-        incidentID: str = None,
+        attachCaption: str = "",
+        attachURL: str = "",
+        incidentID: str = "",
         **kwargs,
     ):
         headers = {
             "Authorization": f"Bearer {self.authentication_config.token}",
             "Content-Type": "application/json",
         }
+        response = requests.post(
+            url=f"{self.authentication_config.host}/{self.API_URI}/OrgService.GetOrg",
+            headers=headers,
+            json={},
+        )
+        response.raise_for_status()
+        response = response.json()
+        existing_labels = [
+            l.get("label") for l in response.get("org", {}).get("incidentLabels", [])
+        ]
         if not incidentID:
+            self.logger.info(f'Creating incident "{title}"')
+            labels_obj = []
+            for label in labels:
+                if label not in existing_labels:
+                    response = requests.post(
+                        url=f"{self.authentication_config.host}/{self.API_URI}/OrgService.AddIncidentLabel",
+                        headers=headers,
+                        json={
+                            "incidentLabel": {
+                                "label": label,
+                                "colorHex": "#%02X%02X%02X"
+                                % (
+                                    self.random_color(),
+                                    self.random_color(),
+                                    self.random_color(),
+                                ),
+                                "description": label,
+                            }
+                        },
+                    )
+                labels_obj.append({"label": label})
             payload = {
                 "attachCaption": attachCaption,
                 "attachURL": attachURL,
-                isDrill: isDrill,
-                labels: labels,
-                roomPrefix: roomPrefix,
-                severity: severity,
-                status: status,
-                title: title,
+                "isDrill": isDrill,
+                "labels": labels_obj,
+                "roomPrefix": roomPrefix,
+                "severity": severity,
+                "status": status,
+                "title": title,
             }
             response = requests.post(
-                url=f"{self.authentication_config.host}/{self.API_URI}/IncidentsService.CreateIncident",
+                url=f"{self.authentication_config.host}/{self.API_URI}/v1/IncidentsService.CreateIncident",
                 headers=headers,
                 json=payload,
             )
+            response.raise_for_status()
+            self.logger.info(f'Created incident "{title}"')
         else:
+            self.logger.info(f'Updating incident status for incident "{incidentID}"')
             payload = {
                 "incidentID": incidentID,
                 "status": status,
             }
             response = requests.post(
-                url=f"{self.authentication_config.host}/{self.API_URI}/IncidentsService.UpdateStatus",
+                url=f"{self.authentication_config.host}/{self.API_URI}/v1/IncidentsService.UpdateStatus",
                 headers=headers,
                 json=payload,
             )
-        response.raise_for_status()
+            response.raise_for_status()
+            self.logger.info(f'Updated incident status for incident "{incidentID}"')
         return response.json()
 
 
@@ -145,9 +168,11 @@ if __name__ == "__main__":
     config = {
         "authentication": {"host": host, "token": token},
     }
-    provider = ProvidersFactory.get_provider(
+    provider: OncallProvider = ProvidersFactory.get_provider(
         context_manager,
         provider_id="grafana-oncall-keephq",
         provider_type="oncall",
         provider_config=config,
     )
+    incident = provider.notify("Test Incident")
+    print(incident)
