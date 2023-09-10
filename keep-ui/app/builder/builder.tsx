@@ -34,7 +34,7 @@ import BuilderModalContent from "./builder-modal";
 import { getApiURL } from "utils/apiUrl";
 import Loader from "./loader";
 import { stringify } from "yaml";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 interface Props {
@@ -74,7 +74,9 @@ function Builder({
   >(null);
   const [modalIsOpen, setIsOpen] = useState(false);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
@@ -127,9 +129,21 @@ function Builder({
       setIsLoading(false);
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
+      const alertName = searchParams?.get("alertName");
+      const alertSource = searchParams?.get("alertSource");
+      let triggers = {};
+      if (alertName && alertSource) {
+        triggers = { alert: { source: alertSource, name: alertName } };
+      }
       setDefinition(
         wrapDefinition(
-          generateWorkflow(alertUuid, "New Workflow Description", [], [])
+          generateWorkflow(
+            alertUuid,
+            "New Workflow Description",
+            [],
+            [],
+            triggers
+          )
         )
       );
       setIsLoading(false);
@@ -137,7 +151,7 @@ function Builder({
       setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!)));
       setIsLoading(false);
     }
-  }, [loadedAlertFile, workflow]);
+  }, [loadedAlertFile, workflow, searchParams]);
 
   useEffect(() => {
     if (triggerGenerate) {
