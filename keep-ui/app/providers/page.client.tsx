@@ -5,11 +5,12 @@ import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
 import ProvidersAvailable from "./providers-available";
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useContext } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
 import Image from "next/image";
 import ProvidersInstalled from "./providers-installed";
+import { LayoutContext } from "./context";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -76,6 +77,7 @@ export default function ProvidersPage() {
     status,
     error,
   } = useFetchProviders();
+  const { searchProviderString } = useContext(LayoutContext);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated</div>;
@@ -95,6 +97,13 @@ export default function ProvidersPage() {
     );
   };
 
+  const searchProviders = (provider: Provider) => {
+    return (
+      !searchProviderString ||
+      provider.type?.toLowerCase().includes(searchProviderString)
+    );
+  };
+
   return (
     <Suspense
       fallback={
@@ -105,7 +114,10 @@ export default function ProvidersPage() {
         providers={installedProviders}
         onDelete={deleteProvider}
       />
-      <ProvidersAvailable providers={providers} addProvider={addProvider} />
+      <ProvidersAvailable
+        providers={providers.filter(searchProviders)}
+        addProvider={addProvider}
+      />
     </Suspense>
   );
 }

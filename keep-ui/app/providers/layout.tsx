@@ -1,12 +1,17 @@
 "use client";
-import { Icon, Select, SelectItem, Title } from "@tremor/react";
+import { TextInput, Title } from "@tremor/react";
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
+import { useState } from "react";
+import { LayoutContext } from "./context";
 
 export default function ProvidersLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [providersSearchString, setProvidersSearchString] =
+    useState<string>("");
+  const searchProviderString = providersSearchString;
   return (
     <main className="p-4">
       <div className="flex w-full justify-between mb-4 ml-2.5">
@@ -19,14 +24,19 @@ export default function ProvidersLayout({
             <SelectItem value="filter-2">Filter 2</SelectItem>
           </Select> */}
         </div>
-        {/* TODO: uncomment and implement search providers
-        <Icon
-          icon={MagnifyingGlassIcon}
-          color="gray"
-          className="mr-5 hover:bg-gray-100"
-        /> */}
+        <div>
+          <TextInput
+            id="search-providers"
+            icon={MagnifyingGlassIcon}
+            placeholder="Search Provider..."
+            value={providersSearchString}
+            onChange={(e) => setProvidersSearchString(e.target.value)}
+          />
+        </div>
       </div>
-      <div className="flex flex-col">{children}</div>
+      <LayoutContext.Provider value={{ searchProviderString }}>
+        <div className="flex flex-col">{children}</div>
+      </LayoutContext.Provider>
     </main>
   );
 }
