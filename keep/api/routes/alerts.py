@@ -217,10 +217,13 @@ async def receive_event(
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
+    provider_class = ProvidersFactory.get_provider_class(provider_type)
     # if this request is just to confirm the sns subscription, return ok
     # TODO: think of a more elegant way to do this
     # Get the raw body as bytes
     body = await request.body()
+    # Parse the raw body
+    body = provider_class.parse_event_raw_body(body)
     # Start process the event
     # Attempt to parse as JSON if the content type is not text/plain
     # content_type = request.headers.get("Content-Type")
