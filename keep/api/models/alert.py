@@ -18,7 +18,6 @@ class AlertDto(BaseModel, extra=Extra.allow):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
-    trigger: str | None = None
 
 
 class DeleteRequestBody(BaseModel):
