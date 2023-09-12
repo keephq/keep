@@ -22,6 +22,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         config: ProviderConfig,
         webhooke_template: Optional[str] = None,
         webhook_description: Optional[str] = None,
+        provider_description: Optional[str] = None,
     ):
         """
         Initialize a provider.
@@ -35,6 +36,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.config = config
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
+        self.provider_description = provider_description
         self.logger = logging.getLogger(self.__class__.__name__)
         self.context_manager = context_manager
         self.validate_config()
@@ -162,6 +164,26 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError(
             "get_alert_format_description() method not implemented"
         )
+
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes) -> bytes:
+        """
+        Parse the raw body of an event and create an ingestable dict from it.
+
+        For instance, in parseable, the "event" is just a string
+        > b'Alert: Server side error triggered on teststream1\nMessage: server reporting status as 500\nFailing Condition: status column equal to abcd, 2 times'
+        and we want to return an object
+        > b"{'alert': 'Server side error triggered on teststream1', 'message': 'server reporting status as 500', 'failing_condition': 'status column equal to abcd, 2 times'}"
+
+        If this method is not implemented for a provider, just return the raw body.
+
+        Args:
+            raw_body (bytes): The raw body of the incoming event (/event endpoint in alerts.py)
+
+        Returns:
+            dict: Ingestable event
+        """
+        return raw_body
 
     def get_logs(self, limit: int = 5) -> list:
         """

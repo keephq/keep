@@ -1,7 +1,7 @@
 "use client";
 
 import { Title, Button, Subtitle } from "@tremor/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PlusIcon,
   ArrowDownOnSquareIcon,
@@ -11,6 +11,7 @@ import {
 import { useSession } from "../../utils/customAuth";
 import { BuilderCard } from "./builder-card";
 import Loading from "../loading";
+import { useSearchParams } from "next/navigation";
 
 export default function PageClient({
   workflow,
@@ -26,6 +27,17 @@ export default function PageClient({
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
+
+  const searchParams = useSearchParams();
+  const alertName = searchParams?.get("alertName");
+  const alertSource = searchParams?.get("alertSource");
+
+  useEffect(() => {
+    if (alertName && alertSource) {
+      newAlert();
+    }
+  });
+
   function loadAlert() {
     document.getElementById("alertFile")?.click();
   }

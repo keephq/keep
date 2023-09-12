@@ -112,7 +112,7 @@ class IOHandler:
                     _arg = None
                     if isinstance(arg, ast.Call):
                         _arg = _parse(self, arg)
-                    elif isinstance(arg, ast.Str):
+                    elif isinstance(arg, ast.Str) or isinstance(arg, ast.Constant):
                         _arg = arg.s
                     # set is basically {{ value }}
                     elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):

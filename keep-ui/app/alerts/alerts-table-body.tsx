@@ -110,6 +110,7 @@ export function AlertsTableBody({
               <TableCell>
                 <AlertMenu
                   alertName={alert.name}
+                  alertSource={alert.source![0]}
                   canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}
                   openHistory={() => openModal!(alert)}
                 />

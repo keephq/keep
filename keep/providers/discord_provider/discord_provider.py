@@ -42,7 +42,7 @@ class DiscordProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def notify(self, content: str = "", components: list = [], **kwargs: dict):
         """
         Notify alert message to Discord using the Discord Incoming Webhook API
         https://discord.com/developers/docs/resources/webhook
@@ -52,8 +52,6 @@ class DiscordProvider(BaseProvider):
         """
         self.logger.debug("Notifying alert message to Discord")
         webhook_url = self.authentication_config.webhook_url
-        content = kwargs.pop("content", "")
-        components = kwargs.pop("components", [])
 
         if not content and not components:
             raise ProviderException(
@@ -64,6 +62,7 @@ class DiscordProvider(BaseProvider):
             webhook_url,
             json={"content": content, "components": components},
         )
+
         if response.status_code != 204:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Discord: {response.text}"

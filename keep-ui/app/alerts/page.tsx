@@ -1,5 +1,6 @@
 import AlertsPage from "./alerts.client";
 
+
 export default function Page() {
   return <AlertsPage />;
 }

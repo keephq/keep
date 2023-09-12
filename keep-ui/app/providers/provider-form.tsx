@@ -5,7 +5,7 @@ import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import "./provider-form.css";
-import { Title, Text, Button, Callout, Icon } from "@tremor/react";
+import { Title, Text, Button, Callout, Icon, Subtitle } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
@@ -40,13 +40,16 @@ const ProviderForm = ({
   isProviderNameDisabled,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
-  const [formValues, setFormValues] = useState<{
-    [key: string]: string | boolean;
-  }>({
+  const initialData = {
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
-    install_webhook: provider.can_setup_webhook,
-  });
+  };
+  if (provider.can_setup_webhook) {
+    initialData["install_webhook"] = provider.can_setup_webhook;
+  }
+  const [formValues, setFormValues] = useState<{
+    [key: string]: string | boolean;
+  }>(initialData);
   const [formErrors, setFormErrors] = useState<{
     [key: string]: string;
   } | null>(null);
@@ -184,6 +187,9 @@ const ProviderForm = ({
           Connect to{" "}
           {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
         </Title>
+        {provider.provider_description && (
+          <Subtitle>{provider.provider_description}</Subtitle>
+        )}
         <div className="flex items-center">
           <Image
             src={`/keep.png`}
