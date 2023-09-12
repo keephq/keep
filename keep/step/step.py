@@ -172,38 +172,34 @@ class Step:
             result = self._run_single_async()
         # else, just run the provider
         else:
-            try:
-                rendered_providers_parameters = {}
-                for parameter in self.provider_parameters:
-                    rendered_providers_parameters[parameter] = self.io_handler.render(
-                        self.provider_parameters[parameter]
+            for curr_retry_count in range(self.__retry_count + 1):
+                try:
+                    rendered_providers_parameters = {}
+                    for parameter in self.provider_parameters:
+                        rendered_providers_parameters[parameter] = self.io_handler.render(
+                            self.provider_parameters[parameter]
+                        )
+
+                    if self.step_type == StepType.STEP:
+                        step_output = self.provider.query(**rendered_value)
+                        self.context_manager.set_step_context(
+                            self.step_id, results=step_output, foreach=self.foreach
+                        )
+                    else:
+                        self.provider.notify(**rendered_value)
+
+                    extra_context = self.provider.expose()
+                    rendered_providers_parameters.update(extra_context)
+                    self.context_manager.set_step_provider_paremeters(
+                        self.step_id, rendered_providers_parameters
                     )
-
-                if self.step_type == StepType.STEP:
-                    for curr_retry_count in range(self.__retry_count + 1):
-                        try:
-                            step_output = self.provider.query(
-                                **rendered_value)
-                            self.context_manager.set_step_context(
-                                self.step_id, results=step_output, foreach=self.foreach
-                            )
-                        except Exception as e:
-                            if curr_retry_count == self.__retry_count:
-                                raise StepError(e)
-                            else:
-                                self.logger.info(
-                                    "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
-                                time.sleep(self.__retry_interval)
-                else:
-                    self.provider.notify(**rendered_value)
-
-                extra_context = self.provider.expose()
-                rendered_providers_parameters.update(extra_context)
-                self.context_manager.set_step_provider_paremeters(
-                    self.step_id, rendered_providers_parameters
-                )
-            except Exception as e:
-                raise StepError(e)
+                except Exception as e:
+                    if curr_retry_count == self.__retry_count:
+                        raise StepError(e)
+                    else:
+                        self.logger.info(
+                            "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
+                        time.sleep(self.__retry_interval)
 
             return True
 
