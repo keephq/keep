@@ -2,6 +2,7 @@
 SlackOutput is a class that implements the BaseOutputProvider interface for Slack messages.
 """
 import dataclasses
+import os
 
 import pydantic
 import requests
@@ -26,6 +27,8 @@ class SlackProviderAuthConfig:
 
 
 class SlackProvider(BaseProvider):
+    OAUTH2_URL = os.environ.get("SLACK_OAUTH2_URL")
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

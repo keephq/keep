@@ -5,12 +5,21 @@ import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import "./provider-form.css";
-import { Title, Text, Button, Callout, Icon, Subtitle } from "@tremor/react";
+import {
+  Title,
+  Text,
+  Button,
+  Callout,
+  Icon,
+  Subtitle,
+  Divider,
+} from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
+  ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -222,6 +231,24 @@ const ProviderForm = ({
         </div>
         <form>
           <div className="form-group">
+            {provider.oauth2_url ? (
+              <>
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  icon={ArrowTopRightOnSquareIcon}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.assign(
+                      `${provider.oauth2_url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}`
+                    );
+                  }}
+                >
+                  Install with OAuth2
+                </Button>
+                <Divider />
+              </>
+            ) : null}
             <label htmlFor="provider_name" className="label-container mb-1">
               <Text>Provider Name</Text>
             </label>
@@ -249,7 +276,6 @@ const ProviderForm = ({
           </div>
           {Object.keys(provider.config).map((configKey) => {
             const method = provider.config[configKey];
-            const isHovered = hoveredLabel === configKey;
             return (
               <div className="form-group" key={configKey}>
                 <label htmlFor={configKey} className="label-container mb-1">

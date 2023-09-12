@@ -1,4 +1,3 @@
-
 export interface ProviderAuthConfig {
   name: string;
   description: string;
@@ -37,6 +36,7 @@ export interface Provider {
   can_setup_webhook?: boolean;
   supports_webhook?: boolean;
   provider_description?: string;
+  oauth2_url?: string;
 }
 
 export type Providers = Provider[];

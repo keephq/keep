@@ -53,6 +53,7 @@ export const useFetchProviders = () => {
         can_setup_webhook: provider.can_setup_webhook,
         supports_webhook: provider.supports_webhook,
         provider_description: provider.provider_description,
+        oauth2_url: provider.oauth2_url,
       };
       return updatedProvider;
     }) as Providers;

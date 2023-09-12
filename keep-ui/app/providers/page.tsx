@@ -1,7 +1,7 @@
 import ProvidersPage from "./page.client";
 
 export default function Page() {
-  return <ProvidersPage />
+  return <ProvidersPage />;
 }
 
 export const metadata = {
