@@ -7,6 +7,7 @@ export interface ProviderAuthConfig {
   required?: boolean;
   value?: string;
   sensitive?: boolean;
+  hidden?: boolean;
 }
 
 export interface Provider {

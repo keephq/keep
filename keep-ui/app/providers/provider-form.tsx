@@ -276,6 +276,7 @@ const ProviderForm = ({
           </div>
           {Object.keys(provider.config).map((configKey) => {
             const method = provider.config[configKey];
+            if (method.hidden) return null;
             return (
               <div className="form-group" key={configKey}>
                 <label htmlFor={configKey} className="label-container mb-1">

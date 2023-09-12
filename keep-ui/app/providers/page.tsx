@@ -1,7 +1,11 @@
 import ProvidersPage from "./page.client";
 
-export default function Page() {
-  return <ProvidersPage />;
+export default function Page({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string };
+}) {
+  return <ProvidersPage searchParams={searchParams} />;
 }
 
 export const metadata = {

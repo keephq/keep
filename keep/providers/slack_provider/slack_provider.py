@@ -22,12 +22,24 @@ class SlackProviderAuthConfig:
             "required": True,
             "description": "Slack Webhook Url",
             "sensitive": True,
-        }
+        },
+        default="",
+    )
+    access_token: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "sensitive": True,
+            "hidden": True,
+        },
+        default="",
     )
 
 
 class SlackProvider(BaseProvider):
     OAUTH2_URL = os.environ.get("SLACK_OAUTH2_URL")
+    SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
+    SLACK_CLIENT_SECRET = os.environ.get("SLACK_CLIENT_SECRET")
+    SLACK_OAUTH_API = "https://slack.com/api/oauth.v2.access"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -44,6 +56,36 @@ class SlackProvider(BaseProvider):
         No need to dispose of anything, so just do nothing.
         """
         pass
+
+    @staticmethod
+    def oauth2_logic(**payload):
+        """
+        Logic for handling oauth2 callback.
+
+        Args:
+            payload (dict): The payload from the oauth2 callback.
+
+        Returns:
+            dict: The provider configuration.
+        """
+        code = payload.get("code")
+        if not code:
+            raise Exception("No code provided")
+        exchange_request_payload = {
+            **payload,
+            "client_id": SlackProvider.SLACK_CLIENT_ID,
+            "client_secret": SlackProvider.SLACK_CLIENT_SECRET,
+        }
+        response = requests.post(
+            SlackProvider.SLACK_OAUTH_API,
+            data=exchange_request_payload,
+        )
+        response_json = response.json()
+        if not response.ok or not response_json.get("ok"):
+            raise Exception(
+                response_json.get("error"),
+            )
+        return {"access_token": response_json.get("access_token")}
 
     def notify(self, message="", blocks=[], **kwargs: dict):
         """
