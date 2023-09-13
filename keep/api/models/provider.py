@@ -17,3 +17,4 @@ class Provider(BaseModel):
     # Whether we also support auto install for webhooks
     can_setup_webhook: bool = False
     provider_description: str | None = None
+    oauth2_url: str | None = None

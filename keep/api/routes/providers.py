@@ -327,6 +327,71 @@ async def install_provider(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/install/oauth2/{provider_type}")
+async def install_provider_oauth2(
+    provider_type: str,
+    provider_info: dict = Body(...),
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+    installed_by: str = Depends(get_user_email),
+):
+    # Extract parameters from the provider_info dictionary
+    provider_name = f"{provider_type}-oauth2"
+
+    provider_unique_id = uuid.uuid4().hex
+    logger.info(
+        "Installing provider",
+        extra={
+            "provider_id": provider_unique_id,
+            "provider_type": provider_type,
+            "tenant_id": tenant_id,
+        },
+    )
+    try:
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+        provider_info = provider_class.oauth2_logic(**provider_info)
+        provider_config = {
+            "authentication": provider_info,
+            "name": provider_name,
+        }
+        # Instantiate the provider object and perform installation process
+        context_manager = ContextManager(
+            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+        )
+        provider = ProvidersFactory.get_provider(
+            context_manager, provider_unique_id, provider_type, provider_config
+        )
+
+        secret_manager = SecretManagerFactory.get_secret_manager()
+        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+        secret_manager.write_secret(
+            secret_name=secret_name,
+            secret_value=json.dumps(provider_config),
+        )
+        # add the provider to the db
+        provider = Provider(
+            id=provider_unique_id,
+            tenant_id=tenant_id,
+            name=provider_name,
+            type=provider_type,
+            installed_by=installed_by,
+            installation_time=time.time(),
+            configuration_key=secret_name,
+        )
+        session.add(provider)
+        session.commit()
+        return JSONResponse(
+            status_code=200,
+            content={
+                "type": provider_type,
+                "id": provider_unique_id,
+                "details": provider_config,
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # Webhook related
 
 
