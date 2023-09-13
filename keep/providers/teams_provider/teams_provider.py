@@ -42,7 +42,14 @@ class TeamsProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def notify(
+        self,
+        message="",
+        typeCard="MessageCard",
+        themeColor=None,
+        sections=[],
+        **kwargs: dict,
+    ):
         """
         Notify alert message to Teams using the Teams Incoming Webhook API
         https://learn.microsoft.com/pt-br/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using?tabs=cURL
@@ -53,10 +60,6 @@ class TeamsProvider(BaseProvider):
         self.logger.debug("Notifying alert message to Teams")
 
         webhook_url = self.authentication_config.webhook_url
-        message = kwargs.pop("message", "")
-        typeCard = kwargs.pop("typeCard", "MessageCard")
-        themeColor = kwargs.pop("themeColor", None)
-        sections = kwargs.pop("sections", [])
 
         response = requests.post(
             webhook_url,
