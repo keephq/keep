@@ -15,6 +15,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
+    OAUTH2_URL = None
+
     def __init__(
         self,
         context_manager: ContextManager,
@@ -164,6 +166,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError(
             "get_alert_format_description() method not implemented"
         )
+
+    @staticmethod
+    def oauth2_logic(**payload) -> dict:
+        """
+        Logic for oauth2 authentication.
+
+        For example, in Slack oauth2, we need to get the code from the payload and exchange it for a token.
+
+        return: dict: The secrets to be saved as the provider configuration. (e.g. the Slack access token)
+        """
+        raise NotImplementedError("oauth2_logic() method not implemented")
 
     @staticmethod
     def parse_event_raw_body(raw_body: bytes) -> bytes:

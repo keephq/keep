@@ -77,7 +77,8 @@ const ProvidersConnect = ({
     .sort(
       (a, b) =>
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
-        Number(b.supports_webhook) - Number(a.supports_webhook)
+        Number(b.supports_webhook) - Number(a.supports_webhook) ||
+        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
     ) as Providers;
 
   return (
