@@ -42,7 +42,7 @@ class JiraProvider(BaseProvider):
         """
         pass
 
-    def _query(self, **kwargs: dict):
+    def _query(self, host="", board_id="", email="", **kwargs: dict):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
@@ -53,10 +53,6 @@ class JiraProvider(BaseProvider):
         self.logger.debug("Fetching data from Jira")
 
         jira_api_token = self.authentication_config.api_token
-
-        host = kwargs.pop("host", "")
-        board_id = kwargs.pop("board_id", "")
-        email = kwargs.pop("email", "")
 
         request_url = f"https://{host}/rest/agile/1.0/board/{board_id}/issue"
         response = requests.get(request_url, auth=(email, jira_api_token))
