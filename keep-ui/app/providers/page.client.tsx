@@ -74,7 +74,7 @@ export const useFetchProviders = () => {
 export default function ProvidersPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string };
+  searchParams?: { [key: string]: string };
 }) {
   const {
     providers,

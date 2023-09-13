@@ -3,7 +3,7 @@ import ProvidersPage from "./page.client";
 export default function Page({
   searchParams,
 }: {
-  searchParams: { [key: string]: string };
+  searchParams?: { [key: string]: string };
 }) {
   return <ProvidersPage searchParams={searchParams} />;
 }
