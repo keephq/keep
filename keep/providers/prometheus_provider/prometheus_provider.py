@@ -25,13 +25,18 @@ class PrometheusProviderAuthConfig:
         }
     )
     username: str = dataclasses.field(
-        metadata={"description": "Prometheus username"},
+        metadata={
+            "description": "Prometheus username",
+            "sensitive": False,
+        },
+        default="",
     )
     password: str = dataclasses.field(
         metadata={
             "description": "Prometheus password",
             "sensitive": True,
         },
+        default="",
     )
 
 
@@ -77,12 +82,16 @@ receivers:
         if not query:
             raise ValueError("Query is required")
 
+        auth = None
+        if self.authentication_config.username and self.authentication_config.password:
+            auth = HTTPBasicAuth(
+                self.authentication_config.username, self.authentication_config.password
+            )
+
         response = requests.get(
             f"{self.authentication_config.url}/api/v1/query",
             params={"query": query},
-            auth=HTTPBasicAuth(
-                self.authentication_config.username, self.authentication_config.password
-            )
+            auth=auth
             if self.authentication_config.username
             and self.authentication_config.password
             else None,
@@ -94,11 +103,14 @@ receivers:
         return response.json()
 
     def get_alerts(self) -> list[AlertDto]:
+        auth = None
+        if self.authentication_config.username and self.authentication_config.password:
+            auth = HTTPBasicAuth(
+                self.authentication_config.username, self.authentication_config.password
+            )
         response = requests.get(
             f"{self.authentication_config.url}/api/v1/alerts",
-            auth=HTTPBasicAuth(
-                self.authentication_config.username, self.authentication_config.password
-            ),
+            auth=auth,
         )
         if not response.ok:
             return []
