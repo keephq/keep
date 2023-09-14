@@ -1,16 +1,15 @@
-import { use } from "react";
 import { FrigadeProvider, FrigadeAnnouncement } from "@frigade/react";
 import { getServerSession } from "utils/customAuth";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import ProvidersPage from "./page.client";
 import Cookies from "js-cookie";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
   searchParams?: { [key: string]: string };
 }) {
-  const session = use(getServerSession(authOptions));
+  const session = await getServerSession(authOptions);
   return (
     <FrigadeProvider
       publicApiKey="api_public_6BKR7bUv0YZ5dqnjLGeHpRWCHaDWeb5cVobG3A9YkW0gOgafOEBvtJGZgvhp8PGb"
