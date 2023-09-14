@@ -101,27 +101,32 @@ export function getToolboxConfiguration(providers: Provider[]) {
 
 export function getActionOrStepObj(
   actionOrStep: any,
-  type: "action" | "step"
+  type: "action" | "step",
+  providers?: Provider[]
 ): KeepStep {
   /**
    * Generate a step or action definition (both are kinda the same)
    */
+  const providerType = actionOrStep.provider?.type;
+  const provider = providers?.find((p) => p.type === providerType);
   return {
     id: Uid.next(),
     name: actionOrStep.name,
     componentType: "task",
-    type: `${type}-${actionOrStep.provider?.type}`,
+    type: `${type}-${providerType}`,
     properties: {
       config: (actionOrStep.provider?.config as string)
         ?.replaceAll("{{", "")
         .replaceAll("}}", "")
         .replaceAll("providers.", ""),
       with: actionOrStep.provider?.with,
+      stepParams: provider?.query_params!,
+      actionParams: provider?.notify_params!,
     },
   };
 }
 
-export function generateCondition(condition: any, action: any): any {
+export function generateCondition(condition: any, action: any, providers?: Provider[]): any {
   const generatedCondition = {
     id: Uid.next(),
     name: condition.name,
@@ -135,7 +140,7 @@ export function generateCondition(condition: any, action: any): any {
       assert: condition.assert,
     },
     branches: {
-      true: [getActionOrStepObj(action, "action")],
+      true: [getActionOrStepObj(action, "action", providers)],
       false: [],
     },
   };
@@ -183,7 +188,10 @@ export function generateWorkflow(
   return { sequence: [alert], properties: {} };
 }
 
-export function parseWorkflow(workflowString: string): Definition {
+export function parseWorkflow(
+  workflowString: string,
+  providers: Provider[]
+): Definition {
   /**
    * Parse the alert file and generate the definition
    */
@@ -196,13 +204,13 @@ export function parseWorkflow(workflowString: string): Definition {
     : parsedWorkflowFile.workflow;
   const steps =
     workflow.steps?.map((step: any) => {
-      return getActionOrStepObj(step, "step");
+      return getActionOrStepObj(step, "step", providers);
     }) || [];
   const conditions = [] as any;
   workflow.actions?.forEach((action: any) => {
     // This means this action always runs, there's no condition and no alias
     if (!action.condition && !action.if) {
-      steps.push(getActionOrStepObj(action, "action"));
+      steps.push(getActionOrStepObj(action, "action", providers));
     }
     // If this is an alias, we need to find the existing condition and add this action to it
     else if (action.if) {
@@ -211,11 +219,11 @@ export function parseWorkflow(workflowString: string): Definition {
         (a: any) => a.alias === cleanIf
       );
       existingCondition?.branches.true.push(
-        getActionOrStepObj(action, "action")
+        getActionOrStepObj(action, "action", providers)
       );
     } else {
       action.condition.forEach((condition: any) => {
-        conditions.push(generateCondition(condition, action));
+        conditions.push(generateCondition(condition, action, providers));
       });
     }
   });
