@@ -65,7 +65,7 @@ class MysqlProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, **kwargs: dict) -> list | tuple:
+    def _query(self, query="", **kwargs: dict) -> list | tuple:
         """
         Executes a query against the MySQL database.
 
@@ -75,13 +75,13 @@ class MysqlProvider(BaseProvider):
         client = self.__generate_client()
         cursor = client.cursor()
 
-        query = kwargs.pop("query")
-        formatted_query = query.format(**kwargs)
+        if kwargs:
+            query = query.format(**kwargs)
 
-        cursor.execute(formatted_query)
+        cursor.execute(query)
         results = cursor.fetchall()
 
-        if kwargs.get("single_row"):
+        if kwargs and kwargs.get("single_row"):
             return results[0]
 
         cursor.close()

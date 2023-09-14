@@ -5,10 +5,6 @@ export const metadata = {
   description: "Alerting and on-call management for modern engineering teams.",
 };
 
-export default async function IndexPage() {
-  return (
-    <div>
-      <ProvidersPage />
-    </div>
-  );
+export default function IndexPage() {
+  return <ProvidersPage />;
 }
