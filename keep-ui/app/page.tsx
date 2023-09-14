@@ -5,6 +5,4 @@ export const metadata = {
   description: "Alerting and on-call management for modern engineering teams.",
 };
 
-export default function IndexPage() {
-  return <ProvidersPage />;
-}
+export default ProvidersPage;

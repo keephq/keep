@@ -14,7 +14,10 @@ export default async function Page({
     <FrigadeProvider
       publicApiKey="api_public_6BKR7bUv0YZ5dqnjLGeHpRWCHaDWeb5cVobG3A9YkW0gOgafOEBvtJGZgvhp8PGb"
       userId={session?.user?.email || Cookies.get("anonymousId")}
-      config={{ debug: true }}
+      config={{
+        debug: true,
+        defaultAppearance: { theme: { colorPrimary: "#F97316" } },
+      }}
     >
       <FrigadeAnnouncement
         flowId="flow_VpefBUPWpliWceBm"
