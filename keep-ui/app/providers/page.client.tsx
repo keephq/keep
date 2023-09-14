@@ -1,4 +1,5 @@
 "use client";
+import { FrigadeAnnouncement } from "@frigade/react";
 import { Providers, defaultProvider, Provider } from "./providers";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
@@ -129,6 +130,19 @@ export default function ProvidersPage({
         <Image src="/keep.gif" width={200} height={200} alt="Loading" />
       }
     >
+      <FrigadeAnnouncement
+        flowId="flow_VpefBUPWpliWceBm"
+        modalPosition="center"
+        onButtonClick={(stepData, index, cta) => {
+          if (cta === "primary") {
+            window.open(
+              "https://calendly.com/d/4p7-8dg-399/keep-onboarding",
+              "_blank"
+            );
+          }
+          return true;
+        }}
+      />
       <ProvidersInstalled
         providers={installedProviders}
         onDelete={deleteProvider}
