@@ -1,4 +1,4 @@
-import { FrigadeProvider, FrigadeAnnouncement } from "@frigade/react";
+import { FrigadeProvider } from "@frigade/react";
 import { getServerSession } from "utils/customAuth";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import ProvidersPage from "./page.client";
@@ -19,10 +19,6 @@ export default async function Page({
         defaultAppearance: { theme: { colorPrimary: "#F97316" } },
       }}
     >
-      <FrigadeAnnouncement
-        flowId="flow_VpefBUPWpliWceBm"
-        modalPosition="center"
-      />
       <ProvidersPage searchParams={searchParams} />
     </FrigadeProvider>
   );
