@@ -163,8 +163,11 @@ class ParseableProvider(BaseProvider):
         event = {}
         for line in raw_body_split:
             if line:
-                key, value = line.split(": ")
-                event[key.lower().replace(" ", "_")] = value
+                try:
+                    key, value = line.split(": ")
+                    event[key.lower().replace(" ", "_")] = value
+                except Exception as e:
+                    self.logger.error(f"Failed to parse line {line} with error {e}")
         return json.dumps(event).encode()
 
 
