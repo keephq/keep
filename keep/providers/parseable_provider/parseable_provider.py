@@ -4,6 +4,7 @@ Parseable Provider is a class that allows to ingest/digest data from Parseable.
 import dataclasses
 import datetime
 import json
+import logging
 import os
 import random
 from uuid import uuid4
@@ -157,7 +158,7 @@ class ParseableProvider(BaseProvider):
         Returns:
             bytes: parseable bytes of dictionary for the rest of the flow
         """
-
+        logger = logging.getLogger(__name__)
         raw_body_string = raw_body.decode()
         raw_body_split = raw_body_string.split("\n")
         event = {}
@@ -167,7 +168,7 @@ class ParseableProvider(BaseProvider):
                     key, value = line.split(": ")
                     event[key.lower().replace(" ", "_")] = value
                 except Exception as e:
-                    self.logger.error(f"Failed to parse line {line} with error {e}")
+                    logger.error(f"Failed to parse line {line} with error {e}")
         return json.dumps(event).encode()
 
 
