@@ -172,34 +172,39 @@ class Step:
             result = self._run_single_async()
         # else, just run the provider
         else:
-            for curr_retry_count in range(self.__retry_count + 1):
-                try:
-                    rendered_providers_parameters = {}
-                    for parameter in self.provider_parameters:
-                        rendered_providers_parameters[parameter] = self.io_handler.render(
-                            self.provider_parameters[parameter]
-                        )
-
-                    if self.step_type == StepType.STEP:
-                        step_output = self.provider.query(**rendered_value)
-                        self.context_manager.set_step_context(
-                            self.step_id, results=step_output, foreach=self.foreach
-                        )
-                    else:
-                        self.provider.notify(**rendered_value)
-
-                    extra_context = self.provider.expose()
-                    rendered_providers_parameters.update(extra_context)
-                    self.context_manager.set_step_provider_paremeters(
-                        self.step_id, rendered_providers_parameters
+            try:
+                rendered_providers_parameters = {}
+                for parameter in self.provider_parameters:
+                    rendered_providers_parameters[parameter] = self.io_handler.render(
+                        self.provider_parameters[parameter]
                     )
-                except Exception as e:
-                    if curr_retry_count == self.__retry_count:
-                        raise StepError(e)
-                    else:
-                        self.logger.info(
-                            "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
-                        time.sleep(self.__retry_interval)
+
+                for curr_retry_count in range(self.__retry_count + 1):
+                    try:
+                        if self.step_type == StepType.STEP:
+                            step_output = self.provider.query(
+                                **rendered_value)
+                            self.context_manager.set_step_context(
+                                self.step_id, results=step_output, foreach=self.foreach
+                            )
+                        else:
+                            self.provider.notify(**rendered_value)
+                    except Exception as e:
+                        if curr_retry_count == self.__retry_count:
+                            raise StepError(e)
+                        else:
+                            self.logger.info(
+                                "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
+
+                            time.sleep(self.__retry_interval)
+
+                extra_context = self.provider.expose()
+                rendered_providers_parameters.update(extra_context)
+                self.context_manager.set_step_provider_paremeters(
+                    self.step_id, rendered_providers_parameters
+                )
+            except Exception as e:
+                raise StepError(e)
 
             return True
 
@@ -216,10 +221,18 @@ class Step:
             task = loop.create_task(self.provider.query(**rendered_value))
         else:
             task = loop.create_task(self.provider.notify(**rendered_value))
-        try:
-            loop.run_until_complete(task)
-        except Exception as e:
-            raise ActionError(e)
+
+        for curr_retry_count in range(self.__retry_count+1):
+            try:
+                loop.run_until_complete(task)
+            except Exception as e:
+                if curr_retry_count == self.__retry_count:
+                    raise ActionError(e)
+                else:
+                    self.logger.info(
+                        "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
+
+                    time.sleep(self.__retry_interval)
 
 
 class StepError(Exception):
