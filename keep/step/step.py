@@ -36,7 +36,7 @@ class Step:
         self.step_type = step_type
         self.provider = provider
         self.provider_parameters = provider_parameters
-        self.on_failure = self.config.get("on-failure", {})
+        self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
@@ -182,13 +182,15 @@ class Step:
                 for curr_retry_count in range(self.__retry_count + 1):
                     try:
                         if self.step_type == StepType.STEP:
-                            step_output = self.provider.query(
-                                **rendered_value)
+                            step_output = self.provider.query(**rendered_value)
                             self.context_manager.set_step_context(
                                 self.step_id, results=step_output, foreach=self.foreach
                             )
                         else:
                             self.provider.notify(**rendered_value)
+
+                        # exiting the loop as step/action execution was successful
+                        break
                     except Exception as e:
                         if curr_retry_count == self.__retry_count:
                             raise StepError(e)
@@ -225,6 +227,9 @@ class Step:
         for curr_retry_count in range(self.__retry_count+1):
             try:
                 loop.run_until_complete(task)
+
+                # exiting the loop as the task execution was successful
+                break
             except Exception as e:
                 if curr_retry_count == self.__retry_count:
                     raise ActionError(e)
