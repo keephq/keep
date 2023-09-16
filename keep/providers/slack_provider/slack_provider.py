@@ -2,6 +2,7 @@
 SlackOutput is a class that implements the BaseOutputProvider interface for Slack messages.
 """
 import dataclasses
+import os
 
 import pydantic
 import requests
@@ -21,11 +22,25 @@ class SlackProviderAuthConfig:
             "required": True,
             "description": "Slack Webhook Url",
             "sensitive": True,
-        }
+        },
+        default="",
+    )
+    access_token: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "sensitive": True,
+            "hidden": True,
+        },
+        default="",
     )
 
 
 class SlackProvider(BaseProvider):
+    OAUTH2_URL = os.environ.get("SLACK_OAUTH2_URL")
+    SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
+    SLACK_CLIENT_SECRET = os.environ.get("SLACK_CLIENT_SECRET")
+    SLACK_API = "https://slack.com/api"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -35,6 +50,11 @@ class SlackProvider(BaseProvider):
         self.authentication_config = SlackProviderAuthConfig(
             **self.config.authentication
         )
+        if (
+            not self.authentication_config.webhook_url
+            and not self.authentication_config.access_token
+        ):
+            raise Exception("Slack webhook url OR Slack access token is required")
 
     def dispose(self):
         """
@@ -42,7 +62,37 @@ class SlackProvider(BaseProvider):
         """
         pass
 
-    def notify(self, message="", blocks=[], **kwargs: dict):
+    @staticmethod
+    def oauth2_logic(**payload):
+        """
+        Logic for handling oauth2 callback.
+
+        Args:
+            payload (dict): The payload from the oauth2 callback.
+
+        Returns:
+            dict: The provider configuration.
+        """
+        code = payload.get("code")
+        if not code:
+            raise Exception("No code provided")
+        exchange_request_payload = {
+            **payload,
+            "client_id": SlackProvider.SLACK_CLIENT_ID,
+            "client_secret": SlackProvider.SLACK_CLIENT_SECRET,
+        }
+        response = requests.post(
+            f"{SlackProvider.SLACK_API}/oauth.v2.access",
+            data=exchange_request_payload,
+        )
+        response_json = response.json()
+        if not response.ok or not response_json.get("ok"):
+            raise Exception(
+                response_json.get("error"),
+            )
+        return {"access_token": response_json.get("access_token")}
+
+    def notify(self, message="", blocks=[], channel="", **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
@@ -51,19 +101,36 @@ class SlackProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Slack")
-        webhook_url = self.authentication_config.webhook_url
-
         if not message:
             message = blocks[0].get("text")
-        response = requests.post(
-            webhook_url,
-            json={"text": message, "blocks": blocks},
-        )
-        if not response.ok:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
+        if self.authentication_config.webhook_url:
+            self.logger.debug("Notifying alert message to Slack using webhook url")
+            response = requests.post(
+                self.authentication_config.webhook_url,
+                json={"text": message, "blocks": blocks},
             )
-
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
+                )
+        elif self.authentication_config.access_token:
+            self.logger.debug("Notifying alert message to Slack using access token")
+            if not channel:
+                raise ProviderException("Channel is required (E.g. C12345)")
+            payload = {
+                "channel": channel,
+                "text": message,
+                "blocks": blocks,
+                "token": self.authentication_config.access_token,
+            }
+            response = requests.post(
+                f"{SlackProvider.SLACK_API}/chat.postMessage", data=payload
+            )
+            response_json = response.json()
+            if not response.ok or not response_json.get("ok"):
+                raise ProviderException(
+                    f"Failed to notify alert message to Slack: {response_json.get('error')}"
+                )
         self.logger.debug("Alert message notified to Slack")
 
 

@@ -125,7 +125,7 @@ function Builder({
   useEffect(() => {
     if (workflow) {
       setIsLoading(true);
-      setDefinition(wrapDefinition(parseWorkflow(workflow)));
+      setDefinition(wrapDefinition(parseWorkflow(workflow, providers)));
       setIsLoading(false);
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
@@ -148,7 +148,7 @@ function Builder({
       );
       setIsLoading(false);
     } else {
-      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!)));
+      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
       setIsLoading(false);
     }
   }, [loadedAlertFile, workflow, searchParams]);

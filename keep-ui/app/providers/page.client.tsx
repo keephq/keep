@@ -1,16 +1,18 @@
 "use client";
+import { FrigadeAnnouncement } from "@frigade/react";
 import { Providers, defaultProvider, Provider } from "./providers";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
 import ProvidersAvailable from "./providers-available";
-import React, { useState, Suspense, useContext } from "react";
+import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
 import Image from "next/image";
 import ProvidersInstalled from "./providers-installed";
 import { LayoutContext } from "./context";
+import { toast } from "react-toastify";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -53,6 +55,7 @@ export const useFetchProviders = () => {
         can_setup_webhook: provider.can_setup_webhook,
         supports_webhook: provider.supports_webhook,
         provider_description: provider.provider_description,
+        oauth2_url: provider.oauth2_url,
       };
       return updatedProvider;
     }) as Providers;
@@ -69,7 +72,11 @@ export const useFetchProviders = () => {
   };
 };
 
-export default function ProvidersPage() {
+export default function ProvidersPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string };
+}) {
   const {
     providers,
     installedProviders,
@@ -78,6 +85,19 @@ export default function ProvidersPage() {
     error,
   } = useFetchProviders();
   const { searchProviderString } = useContext(LayoutContext);
+
+  useEffect(() => {
+    if (searchParams?.oauth === "failure") {
+      const reason = JSON.parse(searchParams.reason);
+      toast.error(`Failed to install provider: ${reason.detail}`, {
+        position: toast.POSITION.TOP_LEFT,
+      });
+    } else if (searchParams?.oauth === "success") {
+      toast.success("Successfully installed provider", {
+        position: toast.POSITION.TOP_LEFT,
+      });
+    }
+  }, [searchParams]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated</div>;
@@ -110,6 +130,19 @@ export default function ProvidersPage() {
         <Image src="/keep.gif" width={200} height={200} alt="Loading" />
       }
     >
+      <FrigadeAnnouncement
+        flowId="flow_VpefBUPWpliWceBm"
+        modalPosition="center"
+        onButtonClick={(stepData, index, cta) => {
+          if (cta === "primary") {
+            window.open(
+              "https://calendly.com/d/4p7-8dg-399/keep-onboarding",
+              "_blank"
+            );
+          }
+          return true;
+        }}
+      />
       <ProvidersInstalled
         providers={installedProviders}
         onDelete={deleteProvider}
