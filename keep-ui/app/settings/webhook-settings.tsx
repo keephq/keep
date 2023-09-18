@@ -90,7 +90,7 @@ export default function WebhookSettings({ accessToken }: Props) {
           </Button>
         </div>
         <div className="flex">
-          <div>
+          <div className="w-3/5">
             <Title className="mt-6">URL: {data?.webhookApi}</Title>
             <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
           </div>
