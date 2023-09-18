@@ -7,7 +7,7 @@ import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
 import "./providers-available.css";
 import "react-sliding-side-panel/lib/index.css";
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams } from "next/navigation";
 
 const ProvidersConnect = ({
   providers,
@@ -16,7 +16,7 @@ const ProvidersConnect = ({
   providers: Providers;
   addProvider: (provider: Provider) => void;
 }) => {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
@@ -24,21 +24,20 @@ const ProvidersConnect = ({
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  const providerType = searchParams?.get("provider_type")
-  const providerName = searchParams?.get("provider_name")
+  const providerType = searchParams?.get("provider_type");
+  const providerName = searchParams?.get("provider_name");
 
   useEffect(() => {
     if (providerType && providerName) {
       // Find the provider based on providerType and providerName
       const provider = providers.find(
-        (provider) =>
-          provider.type === providerType
+        (provider) => provider.type === providerType
       );
 
       if (provider) {
         setSelectedProvider(provider);
         setFormValues({
-          "provider_name": providerName
+          provider_name: providerName,
         });
         setOpenPanel(true);
       }
@@ -78,7 +77,8 @@ const ProvidersConnect = ({
       (a, b) =>
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
         Number(b.supports_webhook) - Number(a.supports_webhook) ||
-        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
+        Number(b.oauth2_url ? true : false) -
+          Number(a.oauth2_url ? true : false)
     ) as Providers;
 
   return (

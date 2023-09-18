@@ -15,13 +15,22 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
-class AxiomAuthConfig:
+class AxiomProviderAuthConfig:
     """
     Axiom authentication configuration.
     """
 
-    api_token: str
-    organization_id: Optional[str]
+    api_token: str = dataclasses.field(
+        metadata={"required": True, "sensitive": True, "description": "Axiom API Token"}
+    )
+    organization_id: Optional[str] = dataclasses.field(
+        metadata={
+            "required": False,
+            "sensitive": False,
+            "description": "Axiom Organization ID",
+        },
+        default=None,
+    )
 
 
 class AxiomProvider(BaseProvider):
