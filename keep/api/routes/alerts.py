@@ -207,6 +207,37 @@ def handle_formatted_events(
 
 
 @router.post(
+    "/event",
+    description="Receive a generic alert event",
+    response_model=AlertDto | list[AlertDto],
+    status_code=201,
+)
+async def receive_generic_event(
+    alert: AlertDto | list[AlertDto],
+    bg_tasks: BackgroundTasks,
+    tenant_id: str = Depends(verify_api_key),
+    session: Session = Depends(get_session),
+):
+    """
+    A generic webhook endpoint that can be used by any provider to send alerts to Keep.
+
+    Args:
+        alert (AlertDto | list[AlertDto]): The alert(s) to be sent to Keep.
+        bg_tasks (BackgroundTasks): Background tasks handler.
+        tenant_id (str, optional): Defaults to Depends(verify_api_key).
+        session (Session, optional): Defaults to Depends(get_session).
+    """
+    bg_tasks.add_task(
+        handle_formatted_events,
+        tenant_id,
+        "generic",
+        session,
+        alert,
+    )
+    return alert
+
+
+@router.post(
     "/event/{provider_type}", description="Receive an alert event from a provider"
 )
 async def receive_event(

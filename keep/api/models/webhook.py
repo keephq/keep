@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class WebhookSettings(BaseModel):
     webhookApi: str
     apiKey: str
+    modelSchema: dict
 
 
 class ProviderWebhookSettings(BaseModel):

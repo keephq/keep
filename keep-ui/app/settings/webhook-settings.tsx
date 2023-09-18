@@ -33,8 +33,10 @@ export default function WebhookSettings({ accessToken }: Props) {
       <Subtitle>View your tenant webhook settings</Subtitle>
       <Card className="mt-2.5">
         <Icon variant="light" icon={GlobeAltIcon} size="lg" color="orange" />
-        <Title className="mt-6">URL: {data?.webhookApi}</Title>
-        <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
+        <div>
+          <Title className="mt-6">URL: {data?.webhookApi}</Title>
+          <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
+        </div>
       </Card>
     </div>
   );
