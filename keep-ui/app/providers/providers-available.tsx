@@ -69,10 +69,10 @@ const ProvidersConnect = ({
   };
 
   const providersWithConfig = providers
-    // .filter((provider) => {
-    //   const config = (provider as Provider).config;
-    //   return config && Object.keys(config).length > 0; // Filter out providers with empty config
-    // })
+    .filter((provider) => {
+      const config = (provider as Provider).config;
+      return config && Object.keys(config).length > 0; // Filter out providers with empty config
+    })
     .sort(
       (a, b) =>
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
