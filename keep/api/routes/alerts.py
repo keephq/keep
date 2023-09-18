@@ -70,9 +70,9 @@ def get_alerts(
                     "tenant_id": tenant_id,
                 },
             )
-        except Exception:
-            logger.exception(
-                "Could not fetch alerts from provider",
+        except Exception as e:
+            logger.warn(
+                f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
                     "provider_type": provider.type,
