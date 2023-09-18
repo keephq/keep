@@ -1,7 +1,7 @@
 from pydantic import AnyHttpUrl, BaseModel, Extra
 
 
-class AlertDto(BaseModel, extra=Extra.allow):
+class AlertDto(BaseModel):
     id: str
     name: str
     status: str
@@ -18,6 +18,31 @@ class AlertDto(BaseModel, extra=Extra.allow):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
+
+    class Config:
+        extra = Extra.allow
+        schema_extra = {
+            "examples": [
+                {
+                    "id": "1234",
+                    "name": "Alert name",
+                    "status": "firing",
+                    "lastReceived": "2021-01-01T00:00:00.000Z",
+                    "environment": "production",
+                    "isDuplicate": False,
+                    "duplicateReason": None,
+                    "service": "backend",
+                    "source": ["keep"],
+                    "message": "Alert message",
+                    "description": "Alert description",
+                    "severity": "critical",
+                    "fatigueMeter": 0,
+                    "pushed": True,
+                    "event_id": "1234",
+                    "url": "https://www.google.com/search?q=open+source+alert+management",
+                }
+            ]
+        }
 
 
 class DeleteRequestBody(BaseModel):

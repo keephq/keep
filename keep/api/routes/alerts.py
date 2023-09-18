@@ -70,9 +70,9 @@ def get_alerts(
                     "tenant_id": tenant_id,
                 },
             )
-        except Exception:
-            logger.exception(
-                "Could not fetch alerts from provider",
+        except Exception as e:
+            logger.warn(
+                f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
                     "provider_type": provider.type,
@@ -204,6 +204,37 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+
+
+@router.post(
+    "/event",
+    description="Receive a generic alert event",
+    response_model=AlertDto | list[AlertDto],
+    status_code=201,
+)
+async def receive_generic_event(
+    alert: AlertDto | list[AlertDto],
+    bg_tasks: BackgroundTasks,
+    tenant_id: str = Depends(verify_api_key),
+    session: Session = Depends(get_session),
+):
+    """
+    A generic webhook endpoint that can be used by any provider to send alerts to Keep.
+
+    Args:
+        alert (AlertDto | list[AlertDto]): The alert(s) to be sent to Keep.
+        bg_tasks (BackgroundTasks): Background tasks handler.
+        tenant_id (str, optional): Defaults to Depends(verify_api_key).
+        session (Session, optional): Defaults to Depends(get_session).
+    """
+    bg_tasks.add_task(
+        handle_formatted_events,
+        tenant_id,
+        "generic",
+        session,
+        alert,
+    )
+    return alert
 
 
 @router.post(

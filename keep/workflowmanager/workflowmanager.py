@@ -48,7 +48,7 @@ class WorkflowManager:
                 # todo - handle it better
                 # todo2 - handle if more than one provider is not configured
                 except ProviderConfigurationException as e:
-                    self.logger.error(
+                    self.logger.warn(
                         f"Workflow have a provider that is not configured: {e}"
                     )
                     continue
