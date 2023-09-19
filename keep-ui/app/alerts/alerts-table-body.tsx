@@ -118,7 +118,7 @@ export function AlertsTableBody({
             };
           }, {});
         const extraIsEmpty = Object.keys(extraPayloadNoKnownKeys).length === 0;
-        const ticketId = (alert as any)["ticket_id"];
+        const ticketUrl = (alert as any)["ticket_url"];
         const relevantWorkflows =
           workflows?.filter((workflow) => {
             const alertTrigger = workflow.triggers.find(
@@ -169,8 +169,8 @@ export function AlertsTableBody({
                       />
                     </a>
                   )}
-                  {ticketId && (
-                    <a href={ticketId} target="_blank">
+                  {ticketUrl && (
+                    <a href={ticketUrl} target="_blank">
                       <Icon
                         icon={TicketIcon}
                         tooltip="Ticket Assigned"

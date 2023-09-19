@@ -41,7 +41,7 @@ export const AlertKnownKeys = [
   "pushed",
   "url",
   "event_id",
-  "ticket_id",
+  "ticket_url",
   "ack_status",
 ];
 
