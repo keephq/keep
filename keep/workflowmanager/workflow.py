@@ -68,7 +68,15 @@ class Workflow:
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
     def run_action(self, action: Step):
-        self.logger.info("Running action %s", action.name)
+        self.logger.info(
+            "Running action %s",
+            action.name,
+            extra={
+                "context": self.context_manager.get_full_context(
+                    exclude_state=True, exclude_providers=True, exclude_env=True
+                )
+            },
+        )
         try:
             action_status = action.run()
             action_error = None
@@ -91,7 +99,7 @@ class Workflow:
         return actions_firing, actions_errors
 
     def run(self, workflow_execution_id):
-        self.logger.debug(f"Running workflow {self.workflow_id}")
+        self.logger.info(f"Running workflow {self.workflow_id}")
         self.context_manager.set_execution_context(workflow_execution_id)
         self.run_steps()
         actions_firing, actions_errors = self.run_actions()
@@ -111,7 +119,7 @@ class Workflow:
             },
             workflow_status=workflow_status,
         )
-        self.logger.debug(f"Finish to run workflow {self.workflow_id}")
+        self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
     def _handle_actions(self):

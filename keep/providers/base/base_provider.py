@@ -82,6 +82,30 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Args:
             **kwargs (dict): The provider context (with statement)
         """
+        results = self._notify(**kwargs)
+        enrich_alert = kwargs.get("enrich", False)
+        if not enrich_alert:
+            return results
+
+        self._enrich_alert(results)
+        return results
+
+    def _enrich_alert(self, alert):
+        """
+        Enrich alert with provider specific data.
+
+        Args:
+            alert (AlertDto): The alert to enrich.
+        """
+        raise NotImplementedError("enrich_alert() method not implemented")
+
+    def _notify(self, **kwargs):
+        """
+        Output alert message.
+
+        Args:
+            **kwargs (dict): The provider context (with statement)
+        """
         raise NotImplementedError("notify() method not implemented")
 
     def _query(self, **kwargs: dict):

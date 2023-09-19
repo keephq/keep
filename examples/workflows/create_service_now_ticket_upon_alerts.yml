@@ -1,0 +1,38 @@
+workflow:
+  id: servicenow
+  description: create a ticket in servicenow when an alert is triggered
+  triggers:
+    - type: alert
+      # limit the new ticket only for grafana / prometheus
+      filters:
+        - key: source
+          value: r"(grafana|prometheus)"
+  actions:
+    - name: create-service-now-ticket
+      condition:
+        - name: check-label
+          type: assert
+          assert: "{{ alert.labels.ticket_type }} == 'incident'"
+          alias: A
+      provider:
+        type: servicenow
+        config: " {{ providers.servicenow }} "
+        # enrich the alert with the ticket number and other details returned from servicenow
+        enrich_alert: true
+        with:
+          table_name: incident
+          payload:
+            short_description: "Alert: {{ alert.name }}"
+            description: "Description: alert.description }}"
+    - name: create-service-now-task
+      if: "{{  !A }}"
+      provider:
+        type: servicenow
+        config: " {{ providers.servicenow }} "
+        # enrich the alert with the ticket number and other details returned from servicenow
+        enrich_alert: true
+        with:
+          table_name: tasks
+          payload:
+            short_description: "Alert: {{ alert.name }}"
+            description: "Description: alert.description }}"
