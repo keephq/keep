@@ -15,7 +15,7 @@ class WorkflowDBHandler(logging.Handler):
 
     def push_logs_to_db(self):
         # Convert log records to a list of dictionaries
-        log_entries = [record.__dict__ for record in self.records]
+        log_entries, self.records = [record.__dict__ for record in self.records], []
         # Push log entries to the database
         push_logs_to_db(log_entries)
 
