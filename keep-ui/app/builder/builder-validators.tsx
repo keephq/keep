@@ -75,7 +75,8 @@ export function stepValidator(
   if (step.componentType === "task") {
     const valid = step.name !== "";
     if (!valid) setStepValidationError("Step name cannot be empty.");
-    if (valid) setStepValidationError(null);
+    if (!step.properties.with) setStepValidationError("A step/action must have at least 1 parameters configured");
+    if (valid && step.properties.with) setStepValidationError(null);
     return valid;
   }
   return true;
