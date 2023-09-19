@@ -15,7 +15,7 @@ class PythonProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self.io_handler = IOHandler()
+        self.io_handler = IOHandler(context_manager=context_manager)
 
     def validate_config(self):
         pass

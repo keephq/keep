@@ -14,7 +14,7 @@ from keep.providers.models.provider_config import ProviderConfig
 class BashProvider(BaseProvider):
     def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
-        self.io_handler = IOHandler()
+        self.io_handler = IOHandler(context_manager=context_manager)
 
     def validate_config(self):
         pass

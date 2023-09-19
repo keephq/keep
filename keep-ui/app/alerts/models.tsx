@@ -40,6 +40,9 @@ export const AlertKnownKeys = [
   "fatigueMeter",
   "pushed",
   "url",
+  "event_id",
+  "ticket_id",
+  "ack_status",
 ];
 
 export const AlertTableKeys: { [key: string]: string } = {
