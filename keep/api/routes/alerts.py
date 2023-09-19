@@ -187,6 +187,17 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    except Exception:
+        logger.exception(
+            "Failed to push alerts to the DB",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+    try:
         # Now run any workflow that should run based on this alert
         # TODO: this should publish event
         workflow_manager = WorkflowManager.get_instance()
@@ -194,9 +205,9 @@ def handle_formatted_events(
         logger.info("Adding events to the workflow manager queue")
         workflow_manager.insert_events(tenant_id, formatted_events)
         logger.info("Added events to the workflow manager queue")
-    except Exception:
+    except Exception as e:
         logger.exception(
-            "Failed to alerts to the DB",
+            "Failed to run workflows based on alerts",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),

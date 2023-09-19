@@ -21,10 +21,13 @@ class WorkflowDBHandler(logging.Handler):
 
 
 class WorkflowLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, logger, tenant_id, workflow_id, workflow_execution_id):
+    def __init__(
+        self, logger, context_manager, tenant_id, workflow_id, workflow_execution_id
+    ):
         self.tenant_id = tenant_id
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
+        self.context_manager = context_manager
         super().__init__(logger, None)
 
     def process(self, msg, kwargs):
@@ -32,6 +35,12 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
+        # add the steps/actions context
+        # todo: more robust
+        extra["context"] = {
+            "steps": self.context_manager.steps_context,
+            "actions": self.context_manager.actions_context,
+        }
         kwargs["extra"] = extra
         return msg, kwargs
 

@@ -18,6 +18,16 @@ class AlertDto(BaseModel):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
+    fingerprint: str | None = (
+        None  # The fingerprint of the alert (used for alert de-duplication)
+    )
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # if no fingerprint was provided, use the alert name as fingerprint
+        # todo: this should be configurable
+        if self.fingerprint is None:
+            self.fingerprint = self.name
 
     class Config:
         extra = Extra.allow

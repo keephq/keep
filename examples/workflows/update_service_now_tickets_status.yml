@@ -1,0 +1,28 @@
+workflow:
+  id: servicenow
+  description: update the ticket status every minute
+  triggers:
+    - type: manual
+  steps:
+    # get the alerts from keep
+    - name: get-alerts
+      provider:
+        type: keep
+        # get all the alerts with sys_id (means that ticket exists for them)
+        with:
+          filters:
+          - key: ticket_type
+            value: servicenow
+  actions:
+    # update the tickets
+    - name: update-ticket
+      foreach: " {{ steps.get-alerts.results }} "
+      provider:
+        type: servicenow.update
+        config: " {{ providers.servicenow }} "
+        with:
+          ticket_id: "{{ foreach.value.ticket_id }}"
+          table_name: "{{ foreach.value.table_name }}"
+          enrich_alert:
+          - key: ticket_status
+            value: stage

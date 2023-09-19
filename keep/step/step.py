@@ -108,9 +108,17 @@ class Step:
         for condition in conditions:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
-            condition_result = condition.apply(
-                condition_compare_to, condition_compare_value
-            )
+            try:
+                condition_result = condition.apply(
+                    condition_compare_to, condition_compare_value
+                )
+            except Exception as e:
+                self.logger.error(
+                    "Failed to apply condition %s with error %s",
+                    condition.condition_name,
+                    e,
+                )
+                raise
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition.condition_name,

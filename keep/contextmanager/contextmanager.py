@@ -18,7 +18,7 @@ class ContextManager:
     ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
-            self.logger, tenant_id, workflow_id, workflow_execution_id
+            self.logger, self, tenant_id, workflow_id, workflow_execution_id
         )
         self.workflow_id = workflow_id
         self.tenant_id = tenant_id

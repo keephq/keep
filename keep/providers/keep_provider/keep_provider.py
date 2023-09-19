@@ -12,18 +12,12 @@ from uuid import uuid4
 import pydantic
 import requests
 
+from keep.api.core.db import get_alerts
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
-
-
-@pydantic.dataclasses.dataclass
-class KeepProviderAuthConfig:
-    """
-    Keep authentication configuration.
-    """
 
 
 class KeepProvider(BaseProvider):
@@ -42,17 +36,18 @@ class KeepProvider(BaseProvider):
         """
         pass
 
+    def _query(self, filters, **kwargs):
+        """
+        Query Keep for alerts.
+        """
+        pass
+
     def validate_config(self):
         """
         Validates required configuration for Keep provider.
 
         """
-        self.authentication_config = KeepProviderAuthConfig(
-            **self.config.authentication
-        )
-
-    def _query(self, alert_id: str | None = None, **kwargs: dict):
-        return super()._query(**kwargs)
+        pass
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto:

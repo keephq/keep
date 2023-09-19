@@ -7,6 +7,7 @@ import json
 import pydantic
 import requests
 
+from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -63,15 +64,10 @@ class ServicenowProvider(BaseProvider):
     def _notify(self, table_name: str, payload: dict, **kwargs: dict):
         # Create ticket
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        # if this was triggered by alert, extract alert details and push it to the ticket
-        alert = self.context_manager.event_context
-        if alert:
-            payload[
-                "short_description"
-            ] = f"{alert.name} - {alert.description} [created by Keep]"
-            payload["severity"] = alert.severity
-            payload["source"] = alert.source
-            payload["alert_id"] = alert.event_id
+
+        # otherwise, create the ticket
+        if not table_name:
+            raise ProviderException("Table name is required")
 
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         # HTTP request
@@ -88,9 +84,33 @@ class ServicenowProvider(BaseProvider):
         if response.status_code == 201:  # HTTP status code for "Created"
             resp = response.json()
             self.logger.info(f"Created ticket: {resp}")
+            result = resp.get("result")
+            # Add link to ticket
+            result[
+                "link"
+            ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/sc_req_item.do%3Fsys_id%3D{result['sys_id']}"
+            return result
         else:
             self.logger.info(f"Failed to create ticket: {response.text}")
-            return None
+            resp.raise_for_status()
+
+
+class ServicenowUpdateProvider(ServicenowProvider):
+    def _notify(self, table_name, ticket_id, **kwargs):
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        response = requests.get(
+            url,
+            auth=(
+                self.authentication_config.username,
+                self.authentication_config.password,
+            ),
+            headers=headers,
+        )
+        if response.status_code == 200:
+            resp = response.json()
+            self.logger.info(f"Updated ticket: {resp}")
+            return resp.get("result")
 
 
 if __name__ == "__main__":
@@ -123,7 +143,6 @@ if __name__ == "__main__":
     )
     # mock alert
     context_manager = provider.context_manager
-    from keep.api.models.alert import AlertDto
 
     alert = AlertDto.parse_obj(
         json.loads(

@@ -113,7 +113,7 @@ class WorkflowScheduler:
                 workflow_id=workflow_id,
                 execution_id=workflow_execution_id,
                 status="error",
-                error=",".join(errors),
+                error=",".join(str(e) for e in errors),
             )
         else:
             finish_workflow_execution(

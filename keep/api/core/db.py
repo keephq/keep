@@ -446,6 +446,7 @@ def push_logs_to_db(log_entries):
             workflow_execution_id=log_entry["workflow_execution_id"],
             timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
             message=log_entry["message"],
+            context=log_entry["context"],
         )
         for log_entry in log_entries
     ]
@@ -472,3 +473,50 @@ def get_workflow_execution(
 
         return execution_with_logs
     return execution_with_logs
+
+
+def enrich_alert(tenant_id, fingerprint, enrichments):
+    enrichment = get_enrichment(tenant_id, fingerprint)
+    # TODO - only INSERT new enrichments?
+    if enrichment:
+        enrichment.enrichments.update(enrichments)
+        session.commit()
+        return enrichment
+    # else, the enrichment doesn't exist, create it
+    with Session(engine) as session:
+        alert_enrichment = AlertEnrichment(
+            tenant_id=tenant_id,
+            alert_fingerprint=fingerprint,
+            enrichments=enrichments,
+        )
+        session.add(alert_enrichment)
+        session.commit()
+    return alert_enrichment
+
+
+def get_enrichment(tenant_id, fingerprint):
+    with Session(engine) as session:
+        alert_enrichment = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint == fingerprint)
+        ).first()
+    return alert_enrichment
+
+
+def get_alerts(tenant_id, filters=None):
+    with Session(engine) as session:
+        query = session.query(Alert).options(joinedload(Alert.tenant))
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
+        if filters:
+            for filter_key, filter_value in filters:
+                # Assuming that the "enrichments" field is a JSON object
+                # This syntax depends on the SQL database you are using
+                query = query.join(
+                    AlertEnrichment,
+                    Alert.event[fingerprint] == AlertEnrichment.alert_fingerprint,
+                ).filter(AlertEnrichment.enrichments[filter_key].astext == filter_value)
+        # Execute the query
+        alerts = query.all()
+    return alerts

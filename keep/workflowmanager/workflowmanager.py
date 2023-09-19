@@ -1,8 +1,10 @@
 import logging
 import os
+import re
 import time
 import typing
 
+from keep.api.core.db import get_enrichment
 from keep.api.models.alert import AlertDto
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderConfigurationException
@@ -33,6 +35,22 @@ class WorkflowManager:
     def stop(self):
         """Stops the workflow manager"""
         self.scheduler.stop()
+
+    def _apply_filter(self, filter_val, value):
+        # if its a regex, apply it
+        if filter_val.startswith('r"'):
+            try:
+                # remove the r" and the last "
+                pattern = re.compile(filter_val[2:-1])
+                return pattern.findall(value)
+            except Exception as e:
+                self.logger.error(
+                    f"Error applying regex filter: {filter_val} on value: {value}",
+                    extra={"exception": e},
+                )
+                return False
+        else:
+            return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
         workflows_that_should_be_run = []
@@ -72,24 +90,20 @@ class WorkflowManager:
                             continue
                         # if its list, check if the filter is in the list
                         if type(getattr(event, filter_key)) == list:
-                            if filter_val not in getattr(event, filter_key):
-                                self.logger.debug(
-                                    "Filter didn't match, skipping",
-                                    extra={
-                                        "filter_key": filter_key,
-                                        "filter_val": filter_val,
-                                        "event": event,
-                                    },
-                                )
+                            for val in getattr(event, filter_key):
+                                # if one filter applies, it should run
+                                if self._apply_filter(filter_val, val):
+                                    should_run = True
+                                    break
                                 should_run = False
-                                break
                         # elif the filter is string/int/float, compare them:
                         elif type(getattr(event, filter_key, None)) in [
                             int,
                             str,
                             float,
                         ]:
-                            if not getattr(event, filter_key) == filter_val:
+                            val = getattr(event, filter_key)
+                            if not self._apply_filter(filter_val, val):
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
                                     extra={
@@ -111,6 +125,11 @@ class WorkflowManager:
                     # if we got here, it means the event should trigger the workflow
                     if should_run:
                         event.trigger = "alert"
+                        # prepare the alert with the enrichment
+                        alert_enrichment = get_enrichment(tenant_id, event.fingerprint)
+                        if alert_enrichment:
+                            for k, v in alert_enrichment.enrichments.items():
+                                setattr(event, k, v)
                         self.scheduler.workflows_to_run.append(
                             {
                                 "workflow": workflow,
