@@ -10,7 +10,7 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
-        if hasattr(record, "workflow_execution_id"):
+        if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
             self.records.append(record)
 
     def push_logs_to_db(self):
