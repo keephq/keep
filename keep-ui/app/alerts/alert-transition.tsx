@@ -2,7 +2,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Alert } from "./models";
 import { AlertTable } from "./alert-table";
-import { Button, Flex, LineChart, Title } from "@tremor/react";
+import { Button, Flex, LineChart, Subtitle, Title, Divider } from "@tremor/react";
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +11,9 @@ interface Props {
 }
 
 export function AlertTransition({ isOpen, closeModal, data }: Props) {
+  if (!data) {
+    return <></>;
+  }
   const categoriesByStatus: string[] = [];
   const lastReceivedData = data.map((alert) => new Date(alert.lastReceived));
   const maxLastReceived: Date = new Date(
@@ -94,7 +97,16 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
               >
                 <Flex alignItems="center" justifyContent="between">
-                  <Title>History of: &quot;{data[0]?.name}&quot;</Title>
+                  <div>
+                    <Title>History of: &quot;{data[0]?.name}&quot;</Title>
+                    <Subtitle>Total alerts: {data.length}</Subtitle>
+                    <Subtitle>
+                      First alert: {minLastReceived.toString()}
+                    </Subtitle>
+                    <Subtitle>
+                      Last alert: {maxLastReceived.toString()}
+                    </Subtitle>
+                  </div>
                   <Button
                     className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
                     onClick={closeModal}
@@ -102,6 +114,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                     Close
                   </Button>
                 </Flex>
+                <Divider />
                 <LineChart
                   className="mt-6 max-h-56"
                   data={chartData}
@@ -109,6 +122,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                   categories={categoriesByStatus}
                   yAxisWidth={40}
                 />
+                <Divider />
                 <AlertTable data={data} />
               </Dialog.Panel>
             </Transition.Child>
