@@ -123,6 +123,7 @@ class CloudwatchProvider(BaseProvider):
         resp = cloudwatch_client.describe_alarms()
         alarms = resp.get("MetricAlarms", [])
         alarms.extend(resp.get("CompositeAlarms"))
+        subscribed_topics = []
         # for each alarm, we need to iterate the actions topics and subscribe to them
         for alarm in alarms:
             actions = alarm.get("AlarmActions", [])
@@ -170,7 +171,7 @@ class CloudwatchProvider(BaseProvider):
                         "ThresholdMetricId",
                     }
                     filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
-                    alarm = cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
                     # now it should contain the SNS topic
                     topics = [sns_topic]
                 except Exception:
@@ -186,6 +187,12 @@ class CloudwatchProvider(BaseProvider):
                     "Cannot hook alarm without SNS topic and SNS topic is not supplied, skipping..."
                 )
             for topic in topics:
+                if topic in subscribed_topics:
+                    self.logger.info(
+                        "Already subscribed to topic %s in this transaction, skipping...",
+                        topic,
+                    )
+                    continue
                 self.logger.info("Checking topic %s...", topic)
                 subscriptions = sns_client.list_subscriptions_by_topic(
                     TopicArn=topic
@@ -207,6 +214,7 @@ class CloudwatchProvider(BaseProvider):
                         Endpoint=url_with_api_key,
                     )
                     self.logger.info("Subscribed to topic %s!", topic)
+                    subscribed_topics.append(topic)
                     # we need to subscribe to only one SNS topic per alarm, o/w we will get many duplicates
                     break
                 else:
