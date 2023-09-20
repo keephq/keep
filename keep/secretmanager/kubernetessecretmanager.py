@@ -10,8 +10,8 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 
 
 class KubernetesSecretManager(BaseSecretManager):
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, context_manager, **kwargs):
+        super().__init__(context_manager)
         # Initialize Kubernetes configuration (Assuming it's already set up properly)
         self.namespace = os.environ.get("K8S_NAMESPACE", "default")
         self.logger.info(

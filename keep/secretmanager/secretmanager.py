@@ -1,10 +1,12 @@
 import abc
 import logging
 
+from keep.contextmanager.contextmanager import ContextManager
+
 
 class BaseSecretManager(metaclass=abc.ABCMeta):
-    def __init__(self, **kwargs):
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, context_manager: ContextManager, **kwargs):
+        self.logger = context_manager.get_logger()
 
     @abc.abstractmethod
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:

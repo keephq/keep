@@ -8,8 +8,8 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 
 
 class GcpSecretManager(BaseSecretManager):
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, context_manager, **kwargs):
+        super().__init__(context_manager)
         self.project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
         self.client = secretmanager.SecretManagerServiceClient()
 
