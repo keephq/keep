@@ -72,7 +72,7 @@ function KeepStepEditor({
   }
 
   const providerConfig = properties.config as string;
-  const installedProviderByTypes = installedProviders?.filter(
+  const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
 
@@ -102,12 +102,12 @@ function KeepStepEditor({
         className="my-2.5"
         placeholder={`Select from installed ${providerType} providers`}
         disabled={
-          installedProviderByTypes?.length === 0 || !installedProviderByTypes
+          installedProviderByType?.length === 0 || !installedProviderByType
         }
         onValueChange={(value) => updateProperty("config", value)}
       >
         {
-          installedProviderByTypes?.map((provider) => {
+          installedProviderByType?.map((provider) => {
             const providerName = provider.details?.name ?? provider.id;
             return (
               <SelectItem
@@ -127,9 +127,11 @@ function KeepStepEditor({
         onChange={(e: any) => updateProperty("config", e.target.value)}
         className="my-2.5"
         value={providerConfig}
+        error={providerConfig !== "" && providerConfig !== undefined && installedProviderByType?.find(p => p.details?.name === providerConfig) === undefined}
+        errorMessage={`${providerConfig && installedProviderByType?.find(p => p.details?.name === providerConfig) === undefined ? "Please note this provider is not installed and you'll need to install it before executing this workflow." : ""}`}
       />
       <Text className="my-2.5">Provider Parameters</Text>
-      {uniqueParams?.map((key) => {
+      {uniqueParams?.filter((key) => key !== 'kwargs').map((key) => {
         let currentPropertyValue = ((properties.with as any) ?? {})[key];
         if (typeof currentPropertyValue === "object") {
           currentPropertyValue = JSON.stringify(currentPropertyValue);
@@ -378,7 +380,7 @@ export default function StepEditor({
   return (
     <EditorLayout>
       <Title className="capitalize">{providerType} Editor</Title>
-      <Text>Name</Text>
+      <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
         icon={KeyIcon}

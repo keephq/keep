@@ -93,7 +93,23 @@ class OpsgenieProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def notify(
+        self,
+        user: str | None = None,
+        note: str | None = None,
+        source: str | None = None,
+        message: str | None = None,
+        alias: str | None = None,
+        description: str | None = None,
+        responders: typing.List[OpsGenieRecipient] | None = None,
+        visible_to: typing.List[OpsGenieRecipient] | None = None,
+        actions: typing.List[str] | None = None,
+        tags: typing.List[str] | None = None,
+        details: typing.Dict[str, str] | None = None,
+        entity: str | None = None,
+        priority: str | None = None,
+        **kwargs: dict,
+    ):
         """
         Create a OpsGenie alert.
             Alert/Incident is created either via the Events API or the Incidents API.
@@ -102,11 +118,24 @@ class OpsgenieProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self._create_alert(**kwargs)
+        self._create_alert(
+            user,
+            note,
+            source,
+            message,
+            alias,
+            description,
+            responders,
+            visible_to,
+            actions,
+            tags,
+            details,
+            entity,
+            priority,
+            **kwargs,
+        )
 
-    def _query(self, **kwargs: dict):
-        query_type = kwargs.get("type")
-        query = kwargs.get("query")
+    def _query(self, query_type="", query="", **kwargs: dict):
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
         if query_type == "alerts":
             alerts = api_instance.list_alerts(query=query)

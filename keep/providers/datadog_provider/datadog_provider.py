@@ -98,11 +98,8 @@ class DatadogProvider(BaseProvider):
             "from": int(self._from.timestamp()) * 1000,
         }
 
-    def _query(self, **kwargs: dict):
-        query = kwargs.get("query")
-        timeframe = kwargs.get("timeframe")
+    def _query(self, query="", timeframe="", query_type="", **kwargs: dict):
         timeframe_in_seconds = DatadogProvider.convert_to_seconds(timeframe)
-        query_type = kwargs.get("query_type")
         self.to = datetime.datetime.fromtimestamp(time.time())
         self._from = datetime.datetime.fromtimestamp(
             time.time() - (timeframe_in_seconds)
