@@ -156,8 +156,8 @@ export function AlertsTableBody({
                   {alert.name}{" "}
                 </div>
                 <div>
-                  {alert.url && (
-                    <a href={alert.url} target="_blank">
+                  {(alert.url ?? alert.generatorURL) && (
+                    <a href={alert.url || alert.generatorURL} target="_blank">
                       <Icon
                         icon={ArrowTopRightOnSquareIcon}
                         tooltip="Open Original Alert"
