@@ -22,6 +22,7 @@ export interface Alert {
   fatigueMeter?: number;
   url?: string;
   pushed: boolean;
+  generatorURL?: string;
 }
 
 export const AlertKnownKeys = [
