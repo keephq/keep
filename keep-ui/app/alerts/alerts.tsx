@@ -1,4 +1,8 @@
-import { BellAlertIcon, ServerStackIcon } from "@heroicons/react/24/outline";
+import {
+  BellAlertIcon,
+  MagnifyingGlassIcon,
+  ServerStackIcon,
+} from "@heroicons/react/24/outline";
 import {
   ArchiveBoxIcon,
   ExclamationCircleIcon,
@@ -14,6 +18,7 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  TextInput,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -31,6 +36,8 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [alertNameSearchString, setAlertNameSearchString] =
+    useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const { data, error, isLoading } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
@@ -69,6 +76,17 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     );
   }
 
+  function searchAlert(alert: Alert): boolean {
+    return (
+      alertNameSearchString === "" ||
+      alertNameSearchString === undefined ||
+      alertNameSearchString === null ||
+      alert.name.includes(alertNameSearchString) ||
+      alert.description?.includes(alertNameSearchString) ||
+      false
+    );
+  }
+
   const statuses = data.map((alert) => alert.status).filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
@@ -103,8 +121,15 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
               </MultiSelectItem>
             ))}
           </MultiSelect>
+          <TextInput
+            className="max-w-xs mb-5 ml-2.5"
+            icon={MagnifyingGlassIcon}
+            placeholder="Search Alert..."
+            value={alertNameSearchString}
+            onChange={(e) => setAlertNameSearchString(e.target.value)}
+          />
         </div>
-        <Button
+        {/* <Button
           icon={ArchiveBoxIcon}
           color="orange"
           size="xs"
@@ -112,7 +137,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           title="Coming Soon"
         >
           Export
-        </Button>
+        </Button> */}
       </Flex>
       <TabGroup>
         <TabList color="orange">
@@ -126,7 +151,8 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
                 (alert) =>
                   alert.pushed &&
                   environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert)
+                  statusIsSeleected(alert) &&
+                  searchAlert(alert)
               )}
               groupBy="name"
               pushed={true}
@@ -139,7 +165,8 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
                 (alert) =>
                   !alert.pushed &&
                   environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert)
+                  statusIsSeleected(alert) &&
+                  searchAlert(alert)
               )}
             />
           </TabPanel>
