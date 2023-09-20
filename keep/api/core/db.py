@@ -510,9 +510,8 @@ def get_alerts(tenant_id, filters=None):
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
         if filters:
-            for filter_key, filter_value in filters:
-                # Assuming that the "enrichments" field is a JSON object
-                # This syntax depends on the SQL database you are using
+            for f in filters:
+                filter_key, filter_value = f.get("key"), f.get("value")
                 query = query.join(
                     AlertEnrichment,
                     Alert.event[fingerprint] == AlertEnrichment.alert_fingerprint,
