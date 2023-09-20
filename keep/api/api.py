@@ -6,6 +6,7 @@ import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
@@ -139,6 +140,21 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         # initialize a workflow manager
         wf_manager = WorkflowManager.get_instance()
         asyncio.create_task(wf_manager.start())
+
+    @app.exception_handler(Exception)
+    async def catch_exception(request: Request, exc: Exception):
+        logging.error(
+            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}"
+        )
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "An internal server error occurred.",
+                "trace_id": request.state.trace_id,
+                "error_msg": str(exc),
+            },
+        )
 
     keep.api.observability.setup(app)
 

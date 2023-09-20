@@ -1,7 +1,6 @@
 import enum
 
 from keep.api.core.config import config
-from keep.contextmanager.contextmanager import ContextManager
 from keep.storagemanager.storagemanager import BaseStorageManager
 
 
