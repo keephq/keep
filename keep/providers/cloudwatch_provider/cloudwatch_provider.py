@@ -171,7 +171,7 @@ class CloudwatchProvider(BaseProvider):
                         "ThresholdMetricId",
                     }
                     filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
-                    alarm = cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
                     # now it should contain the SNS topic
                     topics = [sns_topic]
                 except Exception:
@@ -193,6 +193,7 @@ class CloudwatchProvider(BaseProvider):
                         topic,
                     )
                     continue
+                self.logger.info("Checking topic %s...", topic)
                 subscriptions = sns_client.list_subscriptions_by_topic(
                     TopicArn=topic
                 ).get("Subscriptions", [])
