@@ -2,7 +2,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Alert } from "./models";
 import { AlertTable } from "./alert-table";
-import { Button, Flex, Title } from "@tremor/react";
+import { Button, Flex, LineChart, Title } from "@tremor/react";
 
 interface Props {
   isOpen: boolean;
@@ -11,28 +11,58 @@ interface Props {
 }
 
 export function AlertTransition({ isOpen, closeModal, data }: Props) {
-  // const rawChartData = data.reduce((prev, curr) => {
-  //   const date = Intl.DateTimeFormat("en-US").format(
-  //     new Date(curr.lastReceived)
-  //   );
-  //   if (!prev[date]) {
-  //     prev[date] = {
-  //       date,
-  //       [curr.status]: 1,
-  //     };
-  //   } else {
-  //     prev[date][curr.status]
-  //       ? (prev[date][curr.status] += 1)
-  //       : (prev[date][curr.status] = 1);
-  //   }
-  //   return prev;
-  // }, {} as { [date: string]: any });
-  // const chartData = Object.keys(rawChartData).map((key) => {
-  //   return { date: key, ...rawChartData[key] };
-  // });
-  // const categoriesByStatus = data
-  //   .map((alert) => alert.status)
-  //   .filter(onlyUnique);
+  const categoriesByStatus: string[] = [];
+  const lastReceivedData = data.map((alert) => new Date(alert.lastReceived));
+  const maxLastReceived: Date = new Date(
+    Math.max(...lastReceivedData.map((date) => date.getTime()))
+  );
+  const minLastReceived: Date = new Date(
+    Math.min(...lastReceivedData.map((date) => date.getTime()))
+  );
+  const timeDifference: number =
+    maxLastReceived.getTime() - minLastReceived.getTime();
+  let timeUnit = "Days";
+  if (timeDifference < 3600000) {
+    // Less than 1 hour (in milliseconds)
+    timeUnit = "Minutes";
+  } else if (timeDifference < 86400000) {
+    // Less than 24 hours (in milliseconds)
+    timeUnit = "Hours";
+  }
+  const rawChartData = data
+    .sort(
+      (a, b) =>
+        new Date(a.lastReceived).getTime() - new Date(b.lastReceived).getTime()
+    )
+    .reduce((prev, curr) => {
+      const date = new Date(curr.lastReceived);
+      let dateKey: string;
+      if (timeUnit === "Minutes") {
+        dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+      } else if (timeUnit === "Hours") {
+        dateKey = `${date.getHours()}:${date.getMinutes()}`;
+      } else {
+        dateKey = `${date.getDate()}/${
+          date.getMonth() + 1
+        }/${date.getFullYear()}`;
+      }
+      if (!prev[dateKey]) {
+        prev[dateKey] = {
+          [curr.status]: 1,
+        };
+      } else {
+        prev[dateKey][curr.status]
+          ? (prev[dateKey][curr.status] += 1)
+          : (prev[dateKey][curr.status] = 1);
+      }
+      if (categoriesByStatus.includes(curr.status) === false) {
+        categoriesByStatus.push(curr.status);
+      }
+      return prev;
+    }, {} as { [date: string]: any });
+  const chartData = Object.keys(rawChartData).map((key) => {
+    return { ...rawChartData[key], date: key };
+  });
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -60,7 +90,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className="w-full max-w-7xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
+                className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
               >
                 <Flex alignItems="center" justifyContent="between">
@@ -72,13 +102,13 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                     Close
                   </Button>
                 </Flex>
-                {/* <LineChart
-                  className="mt-6"
+                <LineChart
+                  className="mt-6 max-h-56"
                   data={chartData}
                   index="date"
                   categories={categoriesByStatus}
                   yAxisWidth={40}
-                /> */}
+                />
                 <AlertTable data={data} />
               </Dialog.Panel>
             </Transition.Child>
