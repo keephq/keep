@@ -34,7 +34,7 @@ import BuilderModalContent from "./builder-modal";
 import { getApiURL } from "utils/apiUrl";
 import Loader from "./loader";
 import { stringify } from "yaml";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 interface Props {
@@ -75,7 +75,6 @@ function Builder({
   const [modalIsOpen, setIsOpen] = useState(false);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const updateWorkflow = () => {
@@ -90,7 +89,7 @@ function Builder({
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
-          router.push("/workflows");
+          window.location.assign("/workflows");
         } else {
           throw new Error(response.statusText);
         }
@@ -112,7 +111,9 @@ function Builder({
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
-          router.push("/workflows");
+          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
+          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
+          window.location.assign("/workflows");
         } else {
           throw new Error(response.statusText);
         }
@@ -173,7 +174,7 @@ function Builder({
   }, [triggerSave]);
 
   useEffect(() => {
-    enableGenerate(definition.isValid || false);
+    enableGenerate(definition.isValid && stepValidationError === null && globalValidationError === null || false);
   }, [
     stepValidationError,
     globalValidationError,

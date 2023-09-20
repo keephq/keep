@@ -24,6 +24,7 @@ import { getApiURL } from "utils/apiUrl";
 import { useState } from "react";
 import Loading from "app/loading";
 import "./alerts.client.css";
+import { Workflow } from "app/workflows/models";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -34,6 +35,13 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const { data, error, isLoading } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken)
+  );
+  const {
+    data: workflows,
+    error: workflowsError,
+    isLoading: workflowsLoading,
+  } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
+    fetcher(url, accessToken)
   );
 
   if (error) {
@@ -122,6 +130,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
               )}
               groupBy="name"
               pushed={true}
+              workflows={workflows}
             />
           </TabPanel>
           <TabPanel>

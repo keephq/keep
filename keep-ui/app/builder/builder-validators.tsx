@@ -13,6 +13,13 @@ export function globalValidator(
 ): boolean {
   const onlyOneAlert = definition.sequence.length === 1;
   if (!onlyOneAlert) setGlobalValidationError("Please place the steps/actions within the workflow container.");
+  const workflow = (
+    definition.sequence[0] as SequentialStep
+  )
+  const anyStepOrAction = workflow?.sequence?.length > 0;
+  if (onlyOneAlert && !anyStepOrAction) {
+    setGlobalValidationError("At least 1 step/action is required within the workflow container.");
+  }
   const anyActionsInMainSequence = (
     definition.sequence[0] as SequentialStep
   )?.sequence?.some((step) => step.type.includes("action-"));
@@ -36,7 +43,7 @@ export function globalValidator(
       }
     }
   }
-  const valid = onlyOneAlert;
+  const valid = onlyOneAlert && anyStepOrAction;
   if (valid) setGlobalValidationError(null);
   return valid;
 }
@@ -75,7 +82,8 @@ export function stepValidator(
   if (step.componentType === "task") {
     const valid = step.name !== "";
     if (!valid) setStepValidationError("Step name cannot be empty.");
-    if (valid) setStepValidationError(null);
+    if (!step.properties.with) setStepValidationError("A step/action must have at least 1 parameters configured");
+    if (valid && step.properties.with) setStepValidationError(null);
     return valid;
   }
   return true;
