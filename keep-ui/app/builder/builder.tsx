@@ -174,7 +174,7 @@ function Builder({
   }, [triggerSave]);
 
   useEffect(() => {
-    enableGenerate(definition.isValid || false);
+    enableGenerate(definition.isValid && stepValidationError === null && globalValidationError === null || false);
   }, [
     stepValidationError,
     globalValidationError,
