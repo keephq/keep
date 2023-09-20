@@ -40,6 +40,15 @@ class CloudwatchProviderAuthConfig:
             "description": "AWS region",
         },
     )
+    session_token: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS Session Token",
+            "hint": "For temporary credentials. Note that if you connect CloudWatch with temporary credentials, the initial connection will succeed, but when the credentials expired alarms won't be sent to Keep.",
+            "sensitive": True,
+        },
+    )
 
 
 class CloudwatchProvider(BaseProvider):
@@ -61,12 +70,22 @@ class CloudwatchProvider(BaseProvider):
         return self._client
 
     def __generate_client(self, aws_client_type: str):
-        client = boto3.client(
-            aws_client_type,
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.access_key_secret,
-            region_name=self.authentication_config.region,
-        )
+        if self.authentication_config.session_token:
+            self.logger.info("Using temporary credentials")
+            client = boto3.client(
+                aws_client_type,
+                aws_access_key_id=self.authentication_config.access_key,
+                aws_secret_access_key=self.authentication_config.access_key_secret,
+                aws_session_token=self.authentication_config.session_token,
+                region_name=self.authentication_config.region,
+            )
+        else:
+            client = boto3.client(
+                aws_client_type,
+                aws_access_key_id=self.authentication_config.access_key,
+                aws_secret_access_key=self.authentication_config.access_key_secret,
+                region_name=self.authentication_config.region,
+            )
         return client
 
     def dispose(self):
