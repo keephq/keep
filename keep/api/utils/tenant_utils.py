@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlmodel import Session, select
 
 from keep.api.models.db.tenant import TenantApiKey
+from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,8 @@ def create_api_key(
     api_key = str(uuid4())
     hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
     # Save the api key in the secret manager
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     secret_manager.write_secret(
         secret_name=f"{tenant_id}-{unique_api_key_id}",
         secret_value=api_key,
@@ -100,7 +102,8 @@ def get_or_create_api_key(
             system_description=system_description,
         )
     else:
-        secret_manager = SecretManagerFactory.get_secret_manager()
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         tenant_api_key = secret_manager.read_secret(f"{tenant_id}-{unique_api_key_id}")
     logger.info(
         "Got API key",

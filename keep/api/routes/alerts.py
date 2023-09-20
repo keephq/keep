@@ -38,14 +38,14 @@ def get_alerts(
 
     # Alerts fetched from providers (by Keep)
     all_providers = ProvidersFactory.get_all_providers()
+    context_manager = ContextManager(
+        tenant_id=tenant_id,
+        workflow_id=None,
+    )
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id=tenant_id, all_providers=all_providers
     )
     for provider in installed_providers:
-        context_manager = ContextManager(
-            tenant_id=tenant_id,
-            workflow_id=None,
-        )
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider.id,

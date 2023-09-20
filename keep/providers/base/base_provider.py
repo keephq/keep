@@ -39,8 +39,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
         self.provider_description = provider_description
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.context_manager = context_manager
+        self.logger = context_manager.get_logger()
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}

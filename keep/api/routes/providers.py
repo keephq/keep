@@ -67,12 +67,10 @@ def get_alerts_configuration(
             "provider_id": provider_id,
         },
     )
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
-    context_manager = ContextManager(
-        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
     )
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
@@ -99,12 +97,10 @@ def get_logs(
                 "provider_id": provider_id,
             },
         )
-        secret_manager = SecretManagerFactory.get_secret_manager()
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         provider_config = secret_manager.read_secret(
             f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-        )
-        context_manager = ContextManager(
-            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
         )
         provider = ProvidersFactory.get_provider(
             context_manager, provider_id, provider_type, provider_config
@@ -160,14 +156,11 @@ def add_alert(
             "provider_id": provider_id,
         },
     )
-    # TODO: validate provider exists, error handling in general
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     # TODO: secrets convention from config?
     provider_config = secret_manager.read_secret(
         f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
-    context_manager = ContextManager(
-        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
     )
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
@@ -235,7 +228,8 @@ def delete_provider(
             "tenant_id": tenant_id,
         },
     )
-    secret_manager = SecretManagerFactory.get_secret_manager()
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     try:
         provider = session.exec(
             select(Provider).where(
@@ -287,13 +281,11 @@ async def install_provider(
     }
     try:
         # Instantiate the provider object and perform installation process
-        context_manager = ContextManager(
-            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
-        )
+        context_manager = ContextManager(tenant_id=tenant_id)
         provider = ProvidersFactory.get_provider(
             context_manager, provider_id, provider_type, provider_config
         )
-        secret_manager = SecretManagerFactory.get_secret_manager()
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
             secret_name=secret_name,
@@ -355,14 +347,12 @@ async def install_provider_oauth2(
             "name": provider_name,
         }
         # Instantiate the provider object and perform installation process
-        context_manager = ContextManager(
-            tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
-        )
+        context_manager = ContextManager(tenant_id=tenant_id)
         provider = ProvidersFactory.get_provider(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
-        secret_manager = SecretManagerFactory.get_secret_manager()
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
             secret_name=secret_name,
@@ -402,12 +392,12 @@ def install_provider_webhook(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ):
-    secret_manager = SecretManagerFactory.get_secret_manager()
-    provider_config = secret_manager.read_secret(
-        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
     context_manager = ContextManager(
         tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+    )
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider_config = secret_manager.read_secret(
+        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
     )
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
