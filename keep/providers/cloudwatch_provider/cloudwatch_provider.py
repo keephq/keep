@@ -54,7 +54,7 @@ class CloudwatchProviderAuthConfig:
         metadata={
             "required": False,
             "description": "AWS Cloudwatch SNS Topic [ARN or name]",
-            "hint": "[You need it only if your alarms doesn't have related SNS topic]\n If you want to setup a webhook for Cloudwatch alarms, you can provide the SNS topic here. This will allow Keep to subscribe to all alarms and send them to the webhook you configured.",
+            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
             "sensitive": False,
         },
     )
