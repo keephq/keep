@@ -171,7 +171,7 @@ class CloudwatchProvider(BaseProvider):
                         "ThresholdMetricId",
                     }
                     filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
-                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                    alarm = cloudwatch_client.put_metric_alarm(**filtered_alarm)
                     # now it should contain the SNS topic
                     topics = [sns_topic]
                 except Exception:
@@ -187,10 +187,9 @@ class CloudwatchProvider(BaseProvider):
                     "Cannot hook alarm without SNS topic and SNS topic is not supplied, skipping..."
                 )
             for topic in topics:
-                self.logger.info("Checking topic %s...", topic)
                 if topic in subscribed_topics:
                     self.logger.info(
-                        "Already subscribed to topic %s in this iteration, skipping...",
+                        "Already subscribed to topic %s in this transaction, skipping...",
                         topic,
                     )
                     continue
@@ -213,8 +212,8 @@ class CloudwatchProvider(BaseProvider):
                         Protocol="https",
                         Endpoint=url_with_api_key,
                     )
-                    subscribed_topics.append(topic)
                     self.logger.info("Subscribed to topic %s!", topic)
+                    subscribed_topics.append(topic)
                     # we need to subscribe to only one SNS topic per alarm, o/w we will get many duplicates
                     break
                 else:
