@@ -146,7 +146,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         logging.error(
             f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}"
         )
-
         return JSONResponse(
             status_code=500,
             content={

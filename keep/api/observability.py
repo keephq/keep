@@ -37,13 +37,3 @@ def setup(app: FastAPI):
 
     # Enable OpenTelemetry Logging Instrumentation
     LoggingInstrumentor().instrument()
-
-
-def get_trace_id():
-    current_span = get_current_span()
-    if current_span.is_recording():
-        trace_id = current_span.get_span_context().trace_id
-        trace_id_str = format(trace_id, "032x")
-        return trace_id_str
-    else:
-        return "0"
