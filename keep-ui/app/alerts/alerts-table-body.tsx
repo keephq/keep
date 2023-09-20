@@ -24,7 +24,6 @@ import Image from "next/image";
 import "./alerts-table-body.css";
 import AlertMenu from "./alert-menu";
 import { Workflow } from "app/workflows/models";
-import { fi } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 
 interface Props {
