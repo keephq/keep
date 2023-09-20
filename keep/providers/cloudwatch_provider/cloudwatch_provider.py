@@ -49,6 +49,15 @@ class CloudwatchProviderAuthConfig:
             "sensitive": True,
         },
     )
+    cloudwatch_sns_topic: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS Cloudwatch SNS Topic [ARN or name]",
+            "hint": "[You need it only if your alarms doesn't have related SNS topic]\n If you want to setup a webhook for Cloudwatch alarms, you can provide the SNS topic here. This will allow Keep to subscribe to all alarms and send them to the webhook you configured.",
+            "sensitive": False,
+        },
+    )
 
 
 class CloudwatchProvider(BaseProvider):
@@ -68,6 +77,11 @@ class CloudwatchProvider(BaseProvider):
         if self._client is None:
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
+
+    def _get_account_id(self):
+        sts_client = self.__generate_client("sts")
+        identity = sts_client.get_caller_identity()
+        return identity["Account"]
 
     def __generate_client(self, aws_client_type: str):
         if self.authentication_config.session_token:
@@ -107,12 +121,72 @@ class CloudwatchProvider(BaseProvider):
         cloudwatch_client = self.__generate_client("cloudwatch")
         sns_client = self.__generate_client("sns")
         resp = cloudwatch_client.describe_alarms()
-        alarms = resp.get("MetricAlarms")
+        alarms = resp.get("MetricAlarms", [])
         alarms.extend(resp.get("CompositeAlarms"))
         # for each alarm, we need to iterate the actions topics and subscribe to them
         for alarm in alarms:
-            topics = alarm.get("AlarmActions", [])
+            actions = alarm.get("AlarmActions", [])
+            # extract only SNS actions
+            topics = [action for action in actions if action.startswith("arn:aws:sns")]
+            # if not topics but the user supplied fallback cloudwatch_sns_topic
+            if not topics and self.authentication_config.cloudwatch_sns_topic:
+                self.logger.warning(
+                    "Cannot hook alarm without SNS topic, trying to add SNS action..."
+                )
+                # add an action to the alarm
+                if not self.authentication_config.cloudwatch_sns_topic.startswith(
+                    "arn:aws:sns"
+                ):
+                    account_id = self._get_account_id()
+                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.cloudwatch_sns_topic}"
+                else:
+                    sns_topic = self.authentication_config.cloudwatch_sns_topic
+                actions.append(sns_topic)
+                try:
+                    alarm["AlarmActions"] = actions
+                    # filter out irrelevant files
+                    valid_keys = {
+                        "AlarmName",
+                        "AlarmDescription",
+                        "ActionsEnabled",
+                        "OKActions",
+                        "AlarmActions",
+                        "InsufficientDataActions",
+                        "MetricName",
+                        "Namespace",
+                        "Statistic",
+                        "ExtendedStatistic",
+                        "Dimensions",
+                        "Period",
+                        "Unit",
+                        "EvaluationPeriods",
+                        "DatapointsToAlarm",
+                        "Threshold",
+                        "ComparisonOperator",
+                        "TreatMissingData",
+                        "EvaluateLowSampleCountPercentile",
+                        "Metrics",
+                        "Tags",
+                        "ThresholdMetricId",
+                    }
+                    filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
+                    alarm = cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                    # now it should contain the SNS topic
+                    topics = [sns_topic]
+                except Exception:
+                    self.logger.exception(
+                        "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                    )
+                    continue
+                self.logger.info(
+                    "SNS action added to alarm %s!", alarm.get("AlarmName")
+                )
+            else:
+                self.logger.warning(
+                    "Cannot hook alarm without SNS topic and SNS topic is not supplied, skipping..."
+                )
             for topic in topics:
+                self.logger.info("Checking topic %s...", topic)
                 subscriptions = sns_client.list_subscriptions_by_topic(
                     TopicArn=topic
                 ).get("Subscriptions", [])
@@ -126,11 +200,15 @@ class CloudwatchProvider(BaseProvider):
                     url_with_api_key = keep_api_url.replace(
                         "https://", f"https://api_key:{api_key}@"
                     )
+                    self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
                         Protocol="https",
                         Endpoint=url_with_api_key,
                     )
+                    self.logger.info("Subscribed to topic %s!", topic)
+                    # we need to subscribe to only one SNS topic per alarm, o/w we will get many duplicates
+                    break
                 else:
                     self.logger.info(
                         "Already subscribed to topic %s, skipping...", topic
