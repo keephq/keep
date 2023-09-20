@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import time
 from dataclasses import field
 from enum import Enum
 
@@ -35,11 +36,15 @@ class Step:
         self.step_type = step_type
         self.provider = provider
         self.provider_parameters = provider_parameters
+        self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
         self.conditions_results = {}
         self.logger = context_manager.get_logger()
+        self.__retry = self.on_failure.get("retry", {})
+        self.__retry_count = self.__retry.get("count", 0)
+        self.__retry_interval = self.__retry.get("interval", 0)
 
     @property
     def foreach(self):
@@ -182,13 +187,29 @@ class Step:
                         self.provider_parameters[parameter]
                     )
 
-                if self.step_type == StepType.STEP:
-                    step_output = self.provider.query(**rendered_value)
-                    self.context_manager.set_step_context(
-                        self.step_id, results=step_output, foreach=self.foreach
-                    )
-                else:
-                    self.provider.notify(**rendered_value)
+                for curr_retry_count in range(self.__retry_count + 1):
+                    try:
+                        if self.step_type == StepType.STEP:
+                            step_output = self.provider.query(**rendered_value)
+                            self.context_manager.set_step_context(
+                                self.step_id, results=step_output, foreach=self.foreach
+                            )
+                        else:
+                            self.provider.notify(**rendered_value)
+
+                        # exiting the loop as step/action execution was successful
+                        break
+                    except Exception as e:
+                        if curr_retry_count == self.__retry_count:
+                            raise StepError(e)
+                        else:
+                            self.logger.info(
+                                "Retrying running %s step after %s second(s)...",
+                                self.step_id,
+                                self.__retry_interval,
+                            )
+
+                            time.sleep(self.__retry_interval)
 
                 extra_context = self.provider.expose()
                 rendered_providers_parameters.update(extra_context)
@@ -213,10 +234,24 @@ class Step:
             task = loop.create_task(self.provider.query(**rendered_value))
         else:
             task = loop.create_task(self.provider.notify(**rendered_value))
-        try:
-            loop.run_until_complete(task)
-        except Exception as e:
-            raise ActionError(e)
+
+        for curr_retry_count in range(self.__retry_count + 1):
+            try:
+                loop.run_until_complete(task)
+
+                # exiting the loop as the task execution was successful
+                break
+            except Exception as e:
+                if curr_retry_count == self.__retry_count:
+                    raise ActionError(e)
+                else:
+                    self.logger.info(
+                        "Retrying running %s step after %s second(s)...",
+                        self.step_id,
+                        self.__retry_interval,
+                    )
+
+                    time.sleep(self.__retry_interval)
 
 
 class StepError(Exception):
