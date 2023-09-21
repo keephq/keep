@@ -1,5 +1,6 @@
 import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
+import { Intercom } from "@/components/ui/Intercom";
 import { Mulish } from "next/font/google";
 
 import "./globals.css";
@@ -34,6 +35,7 @@ export default async function RootLayout({
         </NextAuthProvider>
         <ToastContainer />
       </body>
+      <Intercom />
     </html>
   );
 }

@@ -3,11 +3,11 @@ import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { getApiURL } from "../../utils/apiUrl";
+import { getApiURL } from "../../../utils/apiUrl";
 import Loader from "./loader";
-import { Provider } from "../providers/providers";
-import { fetcher } from "../../utils/fetcher";
-import { KeepApiError } from "../error";
+import { Provider } from "../../providers/providers";
+import { fetcher } from "../../../utils/fetcher";
+import { KeepApiError } from "../../error";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering

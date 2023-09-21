@@ -51,6 +51,12 @@ class GrafanaProvider(BaseProvider):
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
+        if not self.authentication_config.host.startswith(
+            "https://"
+        ) and not self.authentication_config.host.startswith("http://"):
+            self.authentication_config.host = (
+                f"https://{self.authentication_config.host}"
+            )
         super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
