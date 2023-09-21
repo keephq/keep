@@ -14,7 +14,7 @@ class ContextManager:
     STATE_FILE = "keepstate.json"
 
     def __init__(
-        self, tenant_id, workflow_id, workflow_execution_id=None, load_state=True
+        self, tenant_id, workflow_id=None, workflow_execution_id=None, load_state=True
     ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(

@@ -225,7 +225,8 @@ class ProvidersFactory:
 
         installed_providers = get_installed_providers(tenant_id)
         providers = []
-        secret_manager = SecretManagerFactory.get_secret_manager()
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
             provider = next(
                 filter(

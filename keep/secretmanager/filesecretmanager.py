@@ -5,8 +5,8 @@ from keep.secretmanager.secretmanager import BaseSecretManager
 
 
 class FileSecretManager(BaseSecretManager):
-    def __init__(self, **kwargs):
-        super().__init__()
+    def __init__(self, context_manager, **kwargs):
+        super().__init__(context_manager)
         self.directory = os.environ.get("SECRET_MANAGER_DIRECTORY", "./")
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
