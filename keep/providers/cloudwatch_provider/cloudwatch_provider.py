@@ -129,8 +129,8 @@ class CloudwatchProvider(BaseProvider):
             actions = alarm.get("AlarmActions", [])
             # extract only SNS actions
             topics = [action for action in actions if action.startswith("arn:aws:sns")]
-            # if not topics but the user supplied fallback cloudwatch_sns_topic
-            if not topics and self.authentication_config.cloudwatch_sns_topic:
+            # if we got explicitly SNS topic, add is as an action
+            if self.authentication_config.cloudwatch_sns_topic:
                 self.logger.warning(
                     "Cannot hook alarm without SNS topic, trying to add SNS action..."
                 )
@@ -182,11 +182,8 @@ class CloudwatchProvider(BaseProvider):
                 self.logger.info(
                     "SNS action added to alarm %s!", alarm.get("AlarmName")
                 )
-            else:
-                self.logger.warning(
-                    "Cannot hook alarm without SNS topic and SNS topic is not supplied, skipping..."
-                )
             for topic in topics:
+                # protection against adding ourself more than once to the same topic (can happen if different alarams send to the same topic)
                 if topic in subscribed_topics:
                     self.logger.info(
                         "Already subscribed to topic %s in this transaction, skipping...",
@@ -194,9 +191,16 @@ class CloudwatchProvider(BaseProvider):
                     )
                     continue
                 self.logger.info("Checking topic %s...", topic)
-                subscriptions = sns_client.list_subscriptions_by_topic(
-                    TopicArn=topic
-                ).get("Subscriptions", [])
+                try:
+                    subscriptions = sns_client.list_subscriptions_by_topic(
+                        TopicArn=topic
+                    ).get("Subscriptions", [])
+                # this means someone deleted the topic that this alarm sends notification too
+                except botocore.errorfactory.NotFoundException as exc:
+                    self.logger.warning(
+                        "Topic %s not found, skipping...", topic, exc_info=exc
+                    )
+                    continue
                 hostname = urlparse(keep_api_url).hostname
                 already_subscribed = any(
                     hostname in sub["Endpoint"]
