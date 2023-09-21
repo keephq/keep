@@ -74,7 +74,7 @@ export default function AlertMenu({
               <Menu.Item>
                 {({ active }) => (
                   <Link
-                    href={`builder?alertName=${alertName}&alertSource=${alertSource}`}
+                    href={`workflows/builder?alertName=${encodeURIComponent(alertName)}&alertSource=${alertSource}`}
                   >
                     <button
                       disabled={!alertSource}
