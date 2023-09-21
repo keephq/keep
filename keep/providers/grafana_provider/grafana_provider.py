@@ -123,7 +123,7 @@ class GrafanaProvider(BaseProvider):
             name=event.get("title"),
             status=event.get("status"),
             severity=alert.get("severity", None),
-            lastReceived=str(datetime.datetime.fromisoformat(alert.get("startsAt"))),
+            lastReceived=datetime.datetime.utcnow().isoformat(),
             fatigueMeter=random.randint(0, 100),
             description=alert.get("annotations", {}).get("summary", ""),
             source=["grafana"],
@@ -135,7 +135,8 @@ class GrafanaProvider(BaseProvider):
     ):
         self.logger.info("Setting up webhook")
         webhook_name = (
-            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME + f"-{tenant_id}"
+            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
+            + f"-{tenant_id.split('-')[0]}"
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
@@ -167,7 +168,10 @@ class GrafanaProvider(BaseProvider):
                     "authorization_credentials": api_key,
                 },
             }
-            requests.post(contacts_api, json=webhook, headers=headers)
+            response = requests.post(contacts_api, json=webhook, headers=headers)
+            if not response.ok:
+                raise Exception(response.json())
+            self.logger.info(f"Created webhook {webhook_name}")
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
