@@ -55,7 +55,7 @@ export default function AlertMenu({
             <Icon
               size="xs"
               icon={Bars3Icon}
-              className="mr-2.5 hover:bg-gray-100"
+              className="hover:bg-gray-100"
               color="gray"
             />
           </Menu.Button>
