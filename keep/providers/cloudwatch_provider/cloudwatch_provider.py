@@ -34,15 +34,6 @@ class CloudwatchProviderAuthConfig:
             "sensitive": True,
         }
     )
-    session_token: str = dataclasses.field(
-        default=None,
-        metadata={
-            "required": False,
-            "description": "AWS Session Token",
-            "hint": "For temporary credentials. Note that if you connect CloudWatch with temporary credentials, the initial connection will succeed, but when the credentials expired alarms won't be sent to Keep.",
-            "sensitive": True,
-        },
-    )
     region: str = dataclasses.field(
         metadata={
             "required": True,

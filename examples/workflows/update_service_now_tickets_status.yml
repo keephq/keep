@@ -18,7 +18,7 @@ workflow:
     - name: update-ticket
       foreach: " {{ steps.get-alerts.results }} "
       provider:
-        type: servicenow.update
+        type: servicenow
         config: " {{ providers.servicenow }} "
         with:
           ticket_id: "{{ foreach.value.ticket_id }}"

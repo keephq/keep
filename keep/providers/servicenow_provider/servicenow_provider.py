@@ -69,6 +69,10 @@ class ServicenowProvider(BaseProvider):
         if not table_name:
             raise ProviderException("Table name is required")
 
+        # TODO - this could be separated into a ServicenowUpdateProvider once we support
+        if ticket_id in kwargs:
+            self._notify_update(table_name, ticket_id, payload, **kwargs)
+
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         # HTTP request
         response = requests.post(
@@ -88,7 +92,7 @@ class ServicenowProvider(BaseProvider):
             # Add link to ticket
             result[
                 "link"
-            ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/sc_req_item.do%3Fsys_id%3D{result['sys_id']}"
+            ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
             return result
         else:
             self.logger.info(f"Failed to create ticket: {response.text}")
