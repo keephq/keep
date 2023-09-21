@@ -138,6 +138,8 @@ class GrafanaProvider(BaseProvider):
             GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
             + f"-{tenant_id.split('-')[0]}"
         )
+        if len(webhook_name > 40):
+            webhook_name = webhook_name[0:39]
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
         all_contact_points = requests.get(contacts_api, headers=headers).json()
