@@ -13,6 +13,7 @@ import Image from "next/image";
 import ProvidersInstalled from "./providers-installed";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
+import { updateIntercom } from "@/components/ui/Intercom";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -69,6 +70,7 @@ export const useFetchProviders = () => {
     setInstalledProviders,
     status,
     error,
+    session,
   };
 };
 
@@ -83,6 +85,7 @@ export default function ProvidersPage({
     setInstalledProviders,
     status,
     error,
+    session,
   } = useFetchProviders();
   const { searchProviderString } = useContext(LayoutContext);
 
@@ -98,6 +101,9 @@ export default function ProvidersPage({
       });
     }
   }, [searchParams]);
+  useEffect(() => {
+    updateIntercom(session?.user);
+  }, [session?.user]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated</div>;
