@@ -1,3 +1,5 @@
+import inspect
+import logging
 import logging.config
 
 from keep.api.core.db import push_logs_to_db
@@ -71,10 +73,6 @@ CONFIG = {
         "": {"handlers": ["default", "context"], "level": "INFO", "propagate": False}
     },
 }
-
-
-import inspect
-import logging
 
 
 class CustomizedUvicornLogger(logging.Logger):
