@@ -135,8 +135,7 @@ class GrafanaProvider(BaseProvider):
     ):
         self.logger.info("Setting up webhook")
         webhook_name = (
-            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME
-            + f"-{tenant_id.split('-')[0]}"
+            f"{GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
@@ -157,9 +156,9 @@ class GrafanaProvider(BaseProvider):
             )
             self.logger.info(f'Updated webhook {webhook["uid"]}')
         else:
+            self.logger.info('Creating webhook with name "{webhook_name}"')
             webhook = {
                 "name": webhook_name,
-                "uid": webhook_name,
                 "type": "webhook",
                 "settings": {
                     "httpMethod": "POST",
