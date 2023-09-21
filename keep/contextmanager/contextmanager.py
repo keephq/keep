@@ -173,7 +173,9 @@ class ContextManager:
     def __load_state(self):
         try:
             self.state = json.loads(
-                self.storage_manager.get_file(self.tenant_id, self.state_file)
+                self.storage_manager.get_file(
+                    self.tenant_id, self.state_file, create_if_not_exist=True
+                )
             )
         except Exception as exc:
             self.logger.warning("Failed to load state file, using empty state")

@@ -76,10 +76,26 @@ class Step:
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
+    def _get_foreach_items(self):
+        """Get the items to iterate over, when using the `foreach` attribute (see foreach.md)"""
+        # TODO: this should be part of iohandler?
+
+        # the item holds the value we are going to iterate over
+        # TODO: currently foreach will support only {{ a.b.c }} and not functions and other things (which make sense)
+        index = (
+            self.config.get("foreach").replace("{{", "").replace("}}", "").split(".")
+        )
+        index = [i.strip() for i in index]
+        items = self.context_manager.get_full_context()
+        for i in index:
+            # try to get it as a dict
+            items = items.get(i, {})
+        return items
+
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
-        items = self.io_handler.render(self.config.get("foreach"))
+        items = self._get_foreach_items()
         any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
         for item in items:

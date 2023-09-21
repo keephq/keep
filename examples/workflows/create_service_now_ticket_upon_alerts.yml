@@ -10,7 +10,7 @@ workflow:
   actions:
     - name: create-service-now-ticket
       # if the ticket id is not present in the alert, create a ticket
-      if: "not '{{ alert.ticket_id }}'"
+      if: "not '{{ alert.ticket_id }}' and {{ alert.annotations.ticket_type }}"
       provider:
         type: servicenow
         config: " {{ providers.servicenow }} "

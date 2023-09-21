@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -445,8 +446,8 @@ def push_logs_to_db(log_entries):
         WorkflowExecutionLog(
             workflow_execution_id=log_entry["workflow_execution_id"],
             timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
-            message=log_entry["message"],
-            context=log_entry["context"],
+            message=log_entry["message"][0:255],  # limit the message to 255 chars
+            context=json.dumps(log_entry["context"], default=str),
         )
         for log_entry in log_entries
     ]
@@ -476,14 +477,13 @@ def get_workflow_execution(
 
 
 def enrich_alert(tenant_id, fingerprint, enrichments):
-    enrichment = get_enrichment(tenant_id, fingerprint)
-    # TODO - only INSERT new enrichments?
-    if enrichment:
-        enrichment.enrichments.update(enrichments)
-        session.commit()
-        return enrichment
     # else, the enrichment doesn't exist, create it
     with Session(engine) as session:
+        enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
+        if enrichment:
+            enrichment.enrichments.update(enrichments)
+            session.commit()
+            return enrichment
         alert_enrichment = AlertEnrichment(
             tenant_id=tenant_id,
             alert_fingerprint=fingerprint,
@@ -504,18 +504,44 @@ def get_enrichment(tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts(tenant_id, filters=None):
+def get_enrichment_with_session(session, tenant_id, fingerprint):
+    alert_enrichment = session.exec(
+        select(AlertEnrichment)
+        .where(AlertEnrichment.tenant_id == tenant_id)
+        .where(AlertEnrichment.alert_fingerprint == fingerprint)
+    ).first()
+    return alert_enrichment
+
+
+def get_alerts(tenant_id, provider_id=None, filters=None):
     with Session(engine) as session:
-        query = session.query(Alert).options(joinedload(Alert.tenant))
+        # Create the query
+        query = session.query(Alert, AlertEnrichment.enrichments)
+
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
+
+        # Establish the outer join with AlertEnrichment
+        query = query.join(
+            AlertEnrichment,
+            Alert.event["fingerprint"] == AlertEnrichment.alert_fingerprint,
+        )
+
+        # Apply filters if provided
         if filters:
             for f in filters:
                 filter_key, filter_value = f.get("key"), f.get("value")
-                query = query.join(
-                    AlertEnrichment,
-                    Alert.event[fingerprint] == AlertEnrichment.alert_fingerprint,
-                ).filter(AlertEnrichment.enrichments[filter_key].astext == filter_value)
+                query = query.filter(
+                    func.JSON_EXTRACT(
+                        AlertEnrichment.enrichments, "$.{}".format(filter_key)
+                    )
+                    == filter_value
+                )
+
+        if provider_id:
+            query = query.filter(Alert.provider_id == provider_id)
+
         # Execute the query
         alerts = query.all()
+
     return alerts

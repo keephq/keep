@@ -90,16 +90,28 @@ class BaseProvider(metaclass=abc.ABCMeta):
         if not enrich_alert:
             return results
 
-        if results:
-            self._enrich_alert(enrich_alert, results)
+        if not results:
+            return
+
+        # Now try to enrich the alert
+        if "fingerprint" in results:
+            fingerprint = results["fingerprint"]
+        # else, if we are in an event context, use the event fingerprint
+        elif self.context_manager.event_context:
+            fingerprint = self.context_manager.event_context.fingerprint
+        else:
+            raise Exception(
+                "No fingerprint found for alert enrichment",
+                extra={"provider": self.provider_id},
+            )
+        self._enrich_alert(fingerprint, enrich_alert, results)
         return results
 
-    def _enrich_alert(self, enrichments, results):
+    def _enrich_alert(self, fingerprint, enrichments, results):
         """
         Enrich alert with provider specific data.
 
         """
-        fingerprint = self.context_manager.event_context.fingerprint
         _enrichments = {}
         # enrich only the requested fields
         for enrichment in enrichments:

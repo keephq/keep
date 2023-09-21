@@ -61,7 +61,7 @@ class ServicenowProvider(BaseProvider):
         """
         pass
 
-    def _notify(self, table_name: str, payload: dict, **kwargs: dict):
+    def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
         # Create ticket
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
@@ -70,8 +70,10 @@ class ServicenowProvider(BaseProvider):
             raise ProviderException("Table name is required")
 
         # TODO - this could be separated into a ServicenowUpdateProvider once we support
-        if ticket_id in kwargs:
-            self._notify_update(table_name, ticket_id, payload, **kwargs)
+        if "ticket_id" in kwargs:
+            ticket_id = kwargs.pop("ticket_id")
+            fingerprint = kwargs.pop("fingerprint")
+            return self._notify_update(table_name, ticket_id, fingerprint)
 
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         # HTTP request
@@ -94,14 +96,18 @@ class ServicenowProvider(BaseProvider):
                 "link"
             ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
             return result
+        # if the instance is down due to hibranate you'll get 200 instead of 201
+        elif response.status_code == 200:
+            raise ProviderException(
+                "ServiceNow instance is down, you need to restart the instance."
+            )
+
         else:
             self.logger.info(f"Failed to create ticket: {response.text}")
             resp.raise_for_status()
 
-
-class ServicenowUpdateProvider(ServicenowProvider):
-    def _notify(self, table_name, ticket_id, **kwargs):
-        url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
+    def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         response = requests.get(
             url,
@@ -112,9 +118,22 @@ class ServicenowUpdateProvider(ServicenowProvider):
             headers=headers,
         )
         if response.status_code == 200:
-            resp = response.json()
-            self.logger.info(f"Updated ticket: {resp}")
-            return resp.get("result")
+            resp = response.text
+            # if the instance is down due to hibranate you'll get 200 instead of 201
+            if "Want to find out why instances hibernate?" in resp:
+                raise ProviderException(
+                    "ServiceNow instance is down, you need to restart the instance."
+                )
+            # else, we are ok
+            else:
+                resp = json.loads(resp)
+            self.logger.info(f"Updated ticket", extra={"resp": resp})
+            resp = resp.get("result")
+            resp["fingerprint"] = fingerprint
+            return resp
+        else:
+            self.logger.info(f"Failed to update ticket", extra={"resp": response.text})
+            resp.raise_for_status()
 
 
 if __name__ == "__main__":

@@ -67,5 +67,5 @@ class BaseCondition(metaclass=abc.ABCMeta):
             _type_: _description_
         """
         compare_value = self.condition_config.get("value")
-        compare_value = self.io_handler.render(compare_value)
+        compare_value = self.io_handler.render(compare_value).strip()
         return compare_value
