@@ -20,7 +20,7 @@ const WorkflowsEmptyState = () => {
         </Italic>{" "}
         button above or by using the{" "}
         <Italic className="underline">
-          <Link href="/builder">Workflow Builder</Link>
+          <Link href="/workflows/builder">Workflow Builder</Link>
         </Italic>{" "}
         to create a new workflow.
       </Callout>

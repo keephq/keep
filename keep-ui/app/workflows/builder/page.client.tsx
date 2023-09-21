@@ -8,10 +8,9 @@ import {
   BoltIcon,
   ArrowUpOnSquareIcon,
 } from "@heroicons/react/20/solid";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "../../../utils/customAuth";
 import { BuilderCard } from "./builder-card";
-import Loading from "../loading";
-import { useSearchParams } from "next/navigation";
+import Loading from "../../loading";
 
 export default function PageClient({
   workflow,
@@ -28,14 +27,9 @@ export default function PageClient({
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
 
-  const searchParams = useSearchParams();
-  const alertName = searchParams?.get("alertName");
-  const alertSource = searchParams?.get("alertSource");
-
   useEffect(() => {
-    if (alertName && alertSource) {
-      newAlert();
-    }
+    setFileContents(null);
+    setFileName("");
   });
 
   function loadAlert() {
@@ -43,8 +37,8 @@ export default function PageClient({
   }
 
   function newAlert() {
-    setFileContents(null);
-    setFileName("");
+    const confirmed = confirm("Are you sure you want to create a new alert?");
+    if (confirmed) window.location.reload();
   }
 
   const enableButtons = () => setButtonsEnabled(true);

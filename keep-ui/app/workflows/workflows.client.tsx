@@ -6,6 +6,7 @@ import { Callout, Col, Grid, Subtitle } from "@tremor/react";
 import {
   ArrowDownOnSquareIcon,
   ExclamationCircleIcon,
+  PlusCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useSession } from "../../utils/customAuth";
 import { fetcher } from "../../utils/fetcher";
@@ -18,10 +19,12 @@ import WorkflowTile from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { Dialog } from '@headlessui/react';
 import { ArrowRightIcon } from "@radix-ui/react-icons";
+import { useRouter } from "next/navigation";
 
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
+  const router = useRouter();
   const { data: session, status, update } = useSession();
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -148,10 +151,14 @@ export default function WorkflowsPage() {
           <Title>Workflows</Title>
           <Subtitle>Automate your alert management with workflows.</Subtitle>
         </div>
+        <div>
+        <Button className="mr-2.5" color="orange" size="md" variant="secondary" onClick={() => router.push('/workflows/builder')} icon={PlusCircleIcon}>
+          Create a workflow
+        </Button>
         <Button color="orange" size="md" onClick={() => {setIsModalOpen(true);}} icon={ArrowDownOnSquareIcon}>
           Upload a Workflow
         </Button>
-
+        </div>
         <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isModalOpen} onClose={setIsModalOpen}>
           <div className="flex items-center justify-center min-h-screen">
             <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
