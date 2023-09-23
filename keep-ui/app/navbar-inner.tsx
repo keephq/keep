@@ -120,7 +120,7 @@ export default function NavbarInner({ user }: { user: any }) {
                     <Icon
                       icon={GnipLogo}
                       size="lg"
-                      className="grayscale hover:grayscale-0"
+                      className="grayscale hover:grayscale-0 z-50"
                       tooltip="gniP - Reverse Ping"
                     />
                   </a>
@@ -128,7 +128,7 @@ export default function NavbarInner({ user }: { user: any }) {
                     <Icon
                       icon={SlackLogo}
                       size="lg"
-                      className="grayscale hover:grayscale-0"
+                      className="grayscale hover:grayscale-0 z-50"
                       tooltip="Join our Slack"
                     />
                   </a>
