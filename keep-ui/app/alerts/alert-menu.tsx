@@ -1,5 +1,5 @@
 import { Menu, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
@@ -25,6 +25,39 @@ export default function AlertMenu({
   canOpenHistory,
   openHistory,
 }: Props) {
+
+  const menuRef = useRef<HTMLElement | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleMenuFocus = () => {
+    setIsMenuOpen(true);
+  };
+
+  const handleMenuBlur = () => {
+    setIsMenuOpen(false);
+  };
+
+  useEffect(() => {
+    if (isMenuOpen && menuRef.current) {
+        // todo find another way
+        const container = document.querySelector('.tremor-Table-root');
+        if (container) {
+            const menuBottomPosition = menuRef.current.getBoundingClientRect().bottom;
+            const containerTopPosition = container.getBoundingClientRect().top;
+            const containerHeight = container.clientHeight;
+            const relativeMenuBottomPosition = menuBottomPosition - containerTopPosition;
+
+            // If the bottom of the menu goes beyond the container's viewport, adjust the container's scroll position
+            if (relativeMenuBottomPosition > containerHeight) {
+                const scrollAmount = relativeMenuBottomPosition - containerHeight;
+                container.scrollBy(0, scrollAmount);
+            }
+        }
+    }
+}, [isMenuOpen]);
+
+
+
   const onDelete = async () => {
     const confirmed = confirm(
       "Are you sure you want to delete this alert? This is irreversible."
@@ -69,7 +102,7 @@ export default function AlertMenu({
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="z-50 absolute mt-2 min-w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <Menu.Items ref={menuRef}  onFocus={handleMenuFocus} onBlur={handleMenuBlur} className="z-50 absolute mt-2 min-w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
