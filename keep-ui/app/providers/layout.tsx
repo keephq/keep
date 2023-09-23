@@ -26,6 +26,7 @@ export default function ProvidersLayout({
         </div>
         <div>
           <TextInput
+          className="static"
             id="search-providers"
             icon={MagnifyingGlassIcon}
             placeholder="Search Provider..."
