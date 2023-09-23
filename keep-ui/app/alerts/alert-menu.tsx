@@ -28,6 +28,8 @@ export default function AlertMenu({
 
   const menuRef = useRef<HTMLElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [originalContainerHeight, setOriginalContainerHeight] = useState<string | null>(null);
+
 
   const handleMenuFocus = () => {
     setIsMenuOpen(true);
@@ -38,23 +40,35 @@ export default function AlertMenu({
   };
 
   useEffect(() => {
-    if (isMenuOpen && menuRef.current) {
-        // todo find another way
-        const container = document.querySelector('.tremor-Table-root');
-        if (container) {
-            const menuBottomPosition = menuRef.current.getBoundingClientRect().bottom;
-            const containerTopPosition = container.getBoundingClientRect().top;
-            const containerHeight = container.clientHeight;
-            const relativeMenuBottomPosition = menuBottomPosition - containerTopPosition;
+    const container = document.querySelector('.tremor-Table-root') as HTMLElement;
 
-            // If the bottom of the menu goes beyond the container's viewport, adjust the container's scroll position
-            if (relativeMenuBottomPosition > containerHeight) {
-                const scrollAmount = relativeMenuBottomPosition - containerHeight;
-                container.scrollBy(0, scrollAmount);
-            }
-        }
-    }
-}, [isMenuOpen]);
+    if (!container) return;
+
+      if (isMenuOpen && menuRef.current) {
+          if (!originalContainerHeight) {
+              // Store the original height when the menu opens
+              setOriginalContainerHeight(container.style.height || 'auto');
+          }
+
+          const menuBottomPosition = menuRef.current.getBoundingClientRect().bottom;
+          const containerTopPosition = container.getBoundingClientRect().top;
+          const containerHeight = container.clientHeight;
+          const relativeMenuBottomPosition = menuBottomPosition - containerTopPosition;
+
+          // If the bottom of the menu goes beyond the container's viewport, adjust the container's height
+          if (relativeMenuBottomPosition > containerHeight) {
+              const extraHeightNeeded = relativeMenuBottomPosition - containerHeight;
+              container.style.height = `${containerHeight + extraHeightNeeded}px`;
+          }
+
+      } else if (originalContainerHeight) {
+          // If menu is closed, reset the container's height
+          setTimeout(() => {
+            container.style.height = originalContainerHeight;
+            setOriginalContainerHeight(null); // Clear the stored original height for the next time
+        }, 200);
+      }
+  }, [isMenuOpen, originalContainerHeight]);
 
 
 
