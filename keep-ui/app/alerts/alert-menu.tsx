@@ -1,5 +1,5 @@
 import { Menu, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
@@ -25,6 +25,53 @@ export default function AlertMenu({
   canOpenHistory,
   openHistory,
 }: Props) {
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [originalContainerHeight, setOriginalContainerHeight] = useState<string | null>(null);
+
+
+  const handleMenuFocus = () => {
+    setIsMenuOpen(true);
+  };
+
+  const handleMenuBlur = () => {
+    setIsMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const container = document.querySelector('.tremor-Table-root') as HTMLElement;
+
+    if (!container) return;
+
+      if (isMenuOpen && menuRef.current) {
+          if (!originalContainerHeight) {
+              // Store the original height when the menu opens
+              setOriginalContainerHeight(container.style.height || 'auto');
+          }
+
+          const menuBottomPosition = menuRef.current.getBoundingClientRect().bottom;
+          const containerTopPosition = container.getBoundingClientRect().top;
+          const containerHeight = container.clientHeight;
+          const relativeMenuBottomPosition = menuBottomPosition - containerTopPosition;
+
+          // If the bottom of the menu goes beyond the container's viewport, adjust the container's height
+          if (relativeMenuBottomPosition > containerHeight) {
+              const extraHeightNeeded = relativeMenuBottomPosition - containerHeight;
+              container.style.height = `${containerHeight + extraHeightNeeded}px`;
+          }
+
+      } else if (originalContainerHeight) {
+          // If menu is closed, reset the container's height
+          setTimeout(() => {
+            container.style.height = originalContainerHeight;
+            setOriginalContainerHeight(null); // Clear the stored original height for the next time
+        }, 200);
+      }
+  }, [isMenuOpen, originalContainerHeight]);
+
+
+
   const onDelete = async () => {
     const confirmed = confirm(
       "Are you sure you want to delete this alert? This is irreversible."
@@ -69,7 +116,7 @@ export default function AlertMenu({
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="z-50 absolute mt-2 min-w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <Menu.Items ref={menuRef}  onFocus={handleMenuFocus} onBlur={handleMenuBlur} className="z-50 absolute mt-2 min-w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
