@@ -26,7 +26,7 @@ export default function AlertMenu({
   openHistory,
 }: Props) {
 
-  const menuRef = useRef<HTMLElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [originalContainerHeight, setOriginalContainerHeight] = useState<string | null>(null);
 
