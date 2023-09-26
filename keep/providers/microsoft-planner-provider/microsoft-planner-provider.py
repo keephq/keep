@@ -1,96 +1,171 @@
 import dataclasses
 import pydantic
+import requests
+from azure.identity import ClientSecretCredential
+from urllib.parse import urljoin
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.providers_factory import ProvidersFactory
 
 @pydantic.dataclasses.dataclass
 class PlannerProviderAuthConfig:
     """Planner authentication configuration."""
-
-    api_token: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Microsoft Planner API Token",
-            "sensitive": True,
-        }
+    PLANNER_DEFAULT_SCOPE = 'https://graph.microsoft.com/.default'
+    tenant_id: str | None = dataclasses.field(
+        metadata={"required": True, "description": "Planner Tenant ID", "sensitive": True},
     )
-    plan_id: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Microsoft Planner Plan ID",
-            "sensitive": False,
-        }
+    client_id: str | None = dataclasses.field(
+        metadata={"required": True, "description": "Planner Client ID", "sensitive": True},
     )
+    client_secret: str | None = dataclasses.field(
+        metadata={"required": True, "description": "Planner Client Secret", "sensitive": True},
+    )
+    scopes: list = dataclasses.field(default_factory=[PLANNER_DEFAULT_SCOPE])
 
 class PlannerProvider(BaseProvider):
+    """Microsoft Planner provider class."""
+    MS_GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0'
+    MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/plans")
+    MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/tasks")
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-
-    def validate_config(self):
-        self.authentication_config = PlannerProviderAuthConfig(
-            **self.config.authentication
-        )
-
-    def dispose(self):
-        """
-        No need to dispose of anything, so just do nothing.
-        """
-        pass
-
-    def _query(self, **kwargs: dict):
-        """
-        API for fetching Microsoft Planner data.
-        Args:
-            kwargs (dict): Additional parameters for the request.
-        """
-        self.logger.debug("Fetching data from Microsoft Planner")
-
-        planner_api_token = self.authentication_config.api_token
-        plan_id = self.authentication_config.plan_id
-
-        # Construct the request URL and headers based on the Microsoft Planner API documentation
-        request_url = f"https://graph.microsoft.com/v1.0/planner/plans/{plan_id}/tasks"
-        headers = {
-            "Authorization": f"Bearer {planner_api_token}",
-            "Content-Type": "application/json",
+        self.authentication_config = PlannerProviderAuthConfig(**self.config.authentication)
+        self.access_token = self.__generate_access_token()
+        self.headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json"
         }
 
-        response = requests.get(request_url, headers=headers)
+    def __generate_access_token(self):
+        credential = ClientSecretCredential(
+            self.authentication_config.tenant_id,
+            self.authentication_config.client_id,
+            self.authentication_config.client_secret
+        )
+        access_token = credential.get_token(
+            scopes=self.authentication_config.scopes
+        ).token
+        return access_token
 
-        if not response.ok:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to fetch data from Microsoft Planner: {response.text}"
-            )
+    def dispose(self):
+        pass
 
-        self.logger.debug("Fetched data from Microsoft Planner")
+    def validate_config(self):
+        self.authentication_config = PlannerProviderAuthConfig(**self.config.authentication)
 
-        planner_data = response.json()
-        return {"planner_data": planner_data}
+    def __get_plan_by_id(self, plan_id=""):
+        MS_PLAN_URL = f"{self.MS_PLANS_URL}/{plan_id}"
+
+        self.logger.info(f"Fetching plan by id: {plan_id}")
+
+        response = requests.get(
+            url=MS_PLAN_URL,
+            headers=self.headers
+        )
+
+        # In case of an error response
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        self.logger.info(f"Fetched plan by id: {plan_id}")
+
+        return response_data
+
+    def __create_task(self, plan_id="", title="", bucket_id=None):
+        request_body = {
+            "planId": plan_id,
+            "title": title,
+            "bucketId": bucket_id
+        }
+
+        self.logger.info(f"Creating a new task with title: {title}")
+
+        response = requests.post(
+            url=self.MS_TASKS_URL,
+            headers=self.headers,
+            json=request_body
+        )
+
+        # In case of an error response
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        self.logger.info(
+            f"Created a new task with id: {response_data.get('id')} and title: {response_data.get('title')}"
+        )
+
+        return response_data
+
+    def notify(
+        self,
+        plan_id="",
+        title="",
+        bucket_id=None,
+        description="",
+        due_date=None,
+        assigned_to=None,
+        **kwargs: dict
+    ):
+        # To verify if the plan with plan_id exists or not
+        plan = self.__get_plan_by_id(plan_id=plan_id)
+
+        # Create a new task in the given plan
+        created_task = self.__create_task(
+            plan_id=plan_id,
+            title=title,
+            bucket_id=bucket_id
+        )
+
+        return created_task
 
 if __name__ == "__main__":
     # Output debug messages
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[logging.StreamHandler()]
+    )
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
+
     # Load environment variables
     import os
 
-    planner_api_token = os.environ.get("PLANNER_API_TOKEN")
-    planner_plan_id = os.environ.get("PLANNER_PLAN_ID")
+    planner_client_id = os.environ.get("PLANNER_CLIENT_ID")
+    planner_client_secret = os.environ.get("PLANNER_CLIENT_SECRET")
+    planner_tenant_id = os.environ.get("PLANNER_TENANT_ID")
 
-    # Initialize the provider and provider config
-    config = ProviderConfig(
-        description="Microsoft Planner Input Provider",
-        authentication={"api_token": planner_api_token, "plan_id": planner_plan_id},
+    config = {
+        "authentication": {
+            "client_id": planner_client_id,
+            "client_secret": planner_client_secret,
+            "tenant_id": planner_tenant_id
+        },
+    }
+
+    provider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="planner-keephq",
+        provider_type="planner",
+        provider_config=config,
     )
-    provider = PlannerProvider(context_manager, provider_id="planner", config=config)
-    provider.query()  
+
+    result = provider.notify(
+        plan_id="YOUR_PLANNER_ID",
+        title="",
+        bucket_id="",
+        description="",
+        due_date="",
+        assigned_to=""
+    )
+
