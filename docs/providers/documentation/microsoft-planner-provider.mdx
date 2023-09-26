@@ -1,0 +1,39 @@
+---
+title: "Microsoft Planner Provider"
+sidebarTitle: "Planner Provider"
+description: "Planner provider is used to fetch data from Microsoft Planner."
+---
+
+## Inputs
+
+The `query` function takes the following parameters as inputs:
+
+- `plan_id`: Required. Microsoft Planner Plan ID.
+
+## Outputs
+
+The `query` function returns data from Microsoft Planner.
+
+## Authentication Parameters
+
+The `PlannerProvider` requires the following authentication parameter:
+
+- `api_token`: Required. Microsoft Planner API Token.
+
+## Connecting with the Provider
+
+1. **Obtain a Microsoft Planner API Token:**
+   - Go to the Microsoft Planner API Token creation page: [Microsoft Planner API Token](https://example.com/microsoft-planner-api-token).
+   - Generate an API token, which should be passed as the `api_token` for authentication.
+
+2. **Get the `plan_id`:**
+   - Retrieve the `plan_id` from your Microsoft Planner plan. This ID is specific to the plan you want to access.
+
+## Notes
+
+N/A
+
+## Useful Links
+
+- [Microsoft Planner API Token](https://example.com/microsoft-planner-api-token)
+- [Microsoft Planner API Documentation](https://docs.microsoft.com/en-us/graph/api/resources/planner-overview?view=graph-rest-1.0)
