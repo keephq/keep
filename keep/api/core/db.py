@@ -518,7 +518,7 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts(tenant_id, provider_id=None, filters=None):
+def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -539,6 +539,26 @@ def get_alerts(tenant_id, provider_id=None, filters=None):
                 query = query.filter(
                     AlertEnrichment.enrichments[filter_key] == filter_value
                 )
+
+        if provider_id:
+            query = query.filter(Alert.provider_id == provider_id)
+
+        # Execute the query
+        alerts = query.all()
+
+    return alerts
+
+
+def get_alerts(tenant_id, provider_id=None):
+    with Session(engine) as session:
+        # Create the query
+        query = session.query(Alert)
+
+        # Apply subqueryload to force-load the alert_enrichment relationship
+        query = query.options(subqueryload(Alert.alert_enrichment))
+
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)

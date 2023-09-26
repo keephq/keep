@@ -12,7 +12,7 @@ from uuid import uuid4
 import pydantic
 import requests
 
-from keep.api.core.db import get_alerts
+from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -40,7 +40,9 @@ class KeepProvider(BaseProvider):
         """
         Query Keep for alerts.
         """
-        alerts = get_alerts(self.context_manager.tenant_id, filters=filters)
+        alerts = get_alerts_with_filters(
+            self.context_manager.tenant_id, filters=filters
+        )
         return alerts
 
     def validate_config(self):
