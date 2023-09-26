@@ -164,6 +164,7 @@ if __name__ == "__main__":
     provider = ServicenowProvider(
         context_manager, provider_id="servicenow", config=config
     )
+
     # mock alert
     context_manager = provider.context_manager
 
