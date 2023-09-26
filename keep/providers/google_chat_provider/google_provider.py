@@ -6,8 +6,6 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 
 class GoogleChatProvider(BaseProvider):
-    GOOGLE_CHAT_API = "https://chat.googleapis.com/v1/spaces/"
-
     def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
 
@@ -21,7 +19,7 @@ class GoogleChatProvider(BaseProvider):
         """
         pass
 
-    def notify(self, message="", cards=[], space="", **kwargs: dict):
+    def notify(self, message="", **kwargs: dict):
         """
         Notify a message to a Google Chat room using a webhook URL.
 
@@ -36,18 +34,18 @@ class GoogleChatProvider(BaseProvider):
         self.logger.debug("Notifying message to Google Chat")
         webhook_url = self.config.authentication.get("webhook_url")
 
-        if not message and not cards:
-            raise ProviderException("Message or cards are required")
-
-        if not space:
-            raise ProviderException("Google Chat space (room) is required")
+        if not message:
+            raise ProviderException("Message is required")
 
         payload = {
             "text": message,
-            "cards": cards,
+        }
+        
+        requestHeaders = {
+            "Content-Type": "application/json; charset=UTF-8"
         }
 
-        response = requests.post(f"{GoogleChatProvider.GOOGLE_CHAT_API}{space}/messages", json=payload)
+        response = requests.post(webhook_url, json=payload, headers=requestHeaders)
 
         if not response.ok:
             raise ProviderException(f"Failed to notify message to Google Chat: {response.text}")
@@ -72,4 +70,4 @@ if __name__ == "__main__":
         authentication={"webhook_url": google_chat_webhook_url},
     )
     provider = GoogleChatProvider(context_manager, provider_id="google-chat", config=config)
-    provider.notify(message="Simple alert showing context with name: John Doe", space="YOUR_GOOGLE_CHAT_SPACE_ID")
+    provider.notify(message="Simple alert showing context with name: John Doe")
