@@ -1,6 +1,5 @@
 import dataclasses
 import pydantic
-import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -16,6 +15,13 @@ class PlannerProviderAuthConfig:
             "required": True,
             "description": "Microsoft Planner API Token",
             "sensitive": True,
+        }
+    )
+    plan_id: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Microsoft Planner Plan ID",
+            "sensitive": False,
         }
     )
 
@@ -36,16 +42,16 @@ class PlannerProvider(BaseProvider):
         """
         pass
 
-    def _query(self, plan_id="", **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         API for fetching Microsoft Planner data.
-
         Args:
             kwargs (dict): Additional parameters for the request.
         """
         self.logger.debug("Fetching data from Microsoft Planner")
 
         planner_api_token = self.authentication_config.api_token
+        plan_id = self.authentication_config.plan_id
 
         # Construct the request URL and headers based on the Microsoft Planner API documentation
         request_url = f"https://graph.microsoft.com/v1.0/planner/plans/{plan_id}/tasks"
@@ -79,11 +85,12 @@ if __name__ == "__main__":
     import os
 
     planner_api_token = os.environ.get("PLANNER_API_TOKEN")
+    planner_plan_id = os.environ.get("PLANNER_PLAN_ID")
 
     # Initialize the provider and provider config
     config = ProviderConfig(
         description="Microsoft Planner Input Provider",
-        authentication={"api_token": planner_api_token},
+        authentication={"api_token": planner_api_token, "plan_id": planner_plan_id},
     )
     provider = PlannerProvider(context_manager, provider_id="planner", config=config)
-    provider.query(plan_id="planner-plan-id")
+    provider.query()  
