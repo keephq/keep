@@ -1,1 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" height="256" width="256" viewBox="0 0 1024 1024" fill="none" ><path fill="url(#linear-icon-a)" d="M0 0h1024v1024H0z"/><g filter="url(#linear-icon-b)"><path fill="url(#linear-icon-c)" d="M262.274 570.997c-1.139-4.857 4.646-7.915 8.174-4.388l186.943 186.943c3.527 3.528.469 9.313-4.388 8.174-94.339-22.131-168.598-96.39-190.729-190.729Z"/><path fill="url(#linear-icon-d)" d="M256.01 496.072c-.091 1.451.455 2.867 1.482 3.894l266.542 266.542c1.027 1.027 2.443 1.573 3.894 1.482 12.13-.755 24.032-2.355 35.647-4.74 3.914-.804 5.274-5.613 2.449-8.439L269.189 457.976c-2.826-2.825-7.635-1.465-8.439 2.449-2.385 11.615-3.985 23.517-4.74 35.647Z"/><path fill="url(#linear-icon-e)" d="M277.56 408.092c-.852 1.914-.418 4.15 1.063 5.631l331.654 331.654c1.481 1.481 3.717 1.915 5.631 1.063 9.145-4.073 18.008-8.666 26.55-13.742 2.827-1.68 3.263-5.564.938-7.889L299.191 380.604c-2.325-2.325-6.209-1.889-7.889.938-5.076 8.542-9.669 17.405-13.742 26.55Z"/><path fill="url(#linear-icon-f)" d="M320.813 348.539c-1.895-1.895-2.013-4.935-.227-6.933C367.511 289.072 435.77 256 511.754 256 653.275 256 768 370.725 768 512.246c0 75.984-33.072 144.243-85.606 191.168-1.998 1.786-5.038 1.668-6.933-.227L320.813 348.539Z"/></g><defs><linearGradient id="linear-icon-a" x1="512" x2="512" y1="0" y2="1024" gradientUnits="userSpaceOnUse"><stop stop-color="#5C6BF1"/><stop offset="1" stop-color="#283188"/></linearGradient><linearGradient id="linear-icon-c" x1="274.286" x2="541.257" y1="303.543" y2="694.857" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".65"/></linearGradient><linearGradient id="linear-icon-d" x1="274.286" x2="541.257" y1="303.543" y2="694.857" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".65"/></linearGradient><linearGradient id="linear-icon-e" x1="274.286" x2="541.257" y1="303.543" y2="694.857" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".65"/></linearGradient><linearGradient id="linear-icon-f" x1="274.286" x2="541.257" y1="303.543" y2="694.857" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".65"/></linearGradient><filter id="linear-icon-b" width="797.149" height="797.149" x="113.426" y="135.703" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix in="SourceAlpha" result="hardAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/><feOffset dy="22.2772"/><feGaussianBlur stdDeviation="71.2871"/><feColorMatrix values="0 0 0 0 0.118924 0 0 0 0 0.158031 0 0 0 0 0.570833 0 0 0 0.7 0"/><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_9417_5600"/><feColorMatrix in="SourceAlpha" result="hardAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/><feOffset dy="7.79703"/><feGaussianBlur stdDeviation="30"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.17 0"/><feBlend in2="effect1_dropShadow_9417_5600" result="effect2_dropShadow_9417_5600"/><feBlend in="SourceGraphic" in2="effect2_dropShadow_9417_5600" result="shape"/></filter></defs></svg>
+<svg version="1.1" id="Layer_1" xmlns:x="ns_extend;" xmlns:i="ns_ai;" xmlns:graph="ns_graphs;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 223.5 49" style="enable-background:new 0 0 223.5 49;" xml:space="preserve">
+ <style type="text/css">
+  .st0{fill:#5E6AD2;}
+	.st1{fill:#1C1D1F;}
+ </style>
+ <metadata>
+  <sfw xmlns="ns_sfw;">
+   <slices>
+   </slices>
+   <sliceSourceBounds bottomLeftOrigin="true" height="49" width="223.5" x="88.8" y="-370.1">
+   </sliceSourceBounds>
+  </sfw>
+ </metadata>
+ <g>
+  <g>
+   <path class="st0" d="M40.5,43.1c0.5-0.4,0.9-0.8,1.3-1.2c9.6-9.6,9.6-25.1,0-34.7c-9.6-9.6-25.1-9.6-34.7,0
+			C6.7,7.6,6.3,8.1,5.9,8.5L40.5,43.1z">
+   </path>
+   <path class="st0" d="M37.6,45.3L3.7,11.4c-0.7,1.1-1.3,2.2-1.8,3.3L34.2,47C35.4,46.5,36.5,45.9,37.6,45.3z">
+   </path>
+   <path class="st0" d="M30.4,48.3L0.7,18.6C0.3,20,0.1,21.5,0,23l26,26C27.5,48.9,29,48.7,30.4,48.3z">
+   </path>
+   <path class="st0" d="M20.7,48.8L0.2,28.3c0.8,5,3.1,9.7,6.9,13.6C11,45.7,15.7,48,20.7,48.8z">
+   </path>
+  </g>
+  <g>
+   <path class="st1" d="M87.7,40.7V7.5h7v27.5H109v5.8H87.7z">
+   </path>
+   <path class="st1" d="M113.5,40.7v-25h6.9v25H113.5z M117,12.6c-1,0-1.9-0.3-2.6-1c-0.7-0.7-1.1-1.5-1.1-2.5c0-1,0.4-1.8,1.1-2.5
+			c0.7-0.7,1.6-1,2.6-1c1,0,1.9,0.3,2.6,1c0.7,0.7,1.1,1.5,1.1,2.5c0,1-0.4,1.8-1.1,2.5C118.9,12.2,118,12.6,117,12.6z">
+   </path>
+   <path class="st1" d="M132.9,26.3v14.4H126v-25h6.6v4.4h0.3c0.6-1.5,1.5-2.6,2.8-3.4c1.3-0.9,2.9-1.3,4.7-1.3
+			c2.6,0,4.7,0.8,6.3,2.5c1.6,1.7,2.4,4,2.4,6.9v15.9H142V26.1c0-1.5-0.4-2.7-1.2-3.6c-0.8-0.9-1.9-1.3-3.3-1.3
+			c-1.4,0-2.5,0.4-3.4,1.3C133.3,23.5,132.9,24.7,132.9,26.3z">
+   </path>
+   <path class="st1" d="M165.8,41.2c-2.6,0-4.8-0.5-6.6-1.6c-1.9-1.1-3.3-2.5-4.3-4.5c-1-1.9-1.5-4.2-1.5-6.8c0-2.6,0.5-4.8,1.5-6.8
+			c1-1.9,2.4-3.5,4.2-4.5c1.8-1.1,4-1.6,6.4-1.6c2.2,0,4.2,0.5,5.9,1.4c1.8,0.9,3.2,2.3,4.2,4.2c1,1.9,1.6,4.2,1.6,7.1V30h-17v0
+			c0,1.9,0.5,3.3,1.5,4.4s2.4,1.6,4.1,1.6c1.2,0,2.2-0.2,3-0.7c0.8-0.5,1.4-1.2,1.8-2.2l6.4,0.4c-0.5,2.3-1.7,4.2-3.7,5.6
+			C171.4,40.5,168.9,41.2,165.8,41.2z M160.3,25.7h10.5c0-1.5-0.5-2.7-1.4-3.7c-0.9-1-2.2-1.4-3.7-1.4c-1.5,0-2.8,0.5-3.8,1.5
+			C160.9,23.1,160.3,24.3,160.3,25.7z">
+   </path>
+   <path class="st1" d="M188.9,41.2c-2.4,0-4.4-0.6-5.9-1.9c-1.6-1.2-2.4-3.1-2.4-5.6c0-1.9,0.4-3.3,1.3-4.4c0.9-1.1,2-1.8,3.4-2.3
+			c1.4-0.5,3-0.8,4.6-1c2.2-0.2,3.7-0.4,4.6-0.7c0.9-0.2,1.4-0.8,1.4-1.6v-0.1c0-1-0.3-1.8-1-2.4c-0.6-0.6-1.5-0.8-2.7-0.8
+			c-1.2,0-2.2,0.3-3,0.8c-0.7,0.5-1.2,1.2-1.5,2.1l-6.4-0.5c0.5-2.3,1.7-4.1,3.5-5.4c1.9-1.3,4.3-2,7.3-2c1.9,0,3.6,0.3,5.2,0.9
+			c1.6,0.6,2.9,1.5,3.9,2.7c1,1.2,1.5,2.8,1.5,4.8v16.8h-6.6v-3.5h-0.2c-0.6,1.2-1.5,2.1-2.7,2.8C192.3,40.9,190.7,41.2,188.9,41.2z
+			 M190.9,36.4c1.5,0,2.8-0.4,3.7-1.3c1-0.9,1.5-2,1.5-3.3v-2.6c-0.3,0.2-0.7,0.3-1.3,0.5c-0.6,0.1-1.2,0.3-1.8,0.4
+			c-0.6,0.1-1.2,0.2-1.7,0.3c-1.2,0.2-2.2,0.5-2.9,1c-0.7,0.5-1.1,1.3-1.1,2.2c0,1,0.3,1.7,1,2.2C188.9,36.2,189.8,36.4,190.9,36.4z
+			">
+   </path>
+   <path class="st1" d="M208.3,40.7v-25h6.7v4.4h0.3c0.5-1.5,1.2-2.7,2.3-3.5c1.1-0.8,2.3-1.2,3.7-1.2c0.8,0,1.5,0.1,2.2,0.2v6.1
+			c-0.3-0.1-0.8-0.2-1.3-0.3c-0.6-0.1-1.1-0.1-1.6-0.1c-1.5,0-2.8,0.5-3.8,1.4c-1,1-1.5,2.2-1.5,3.7v14.1H208.3z">
+   </path>
+  </g>
+ </g>
+</svg>
