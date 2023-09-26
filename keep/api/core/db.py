@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -6,11 +7,11 @@ from uuid import uuid4
 
 import pymysql
 from google.cloud.sql.connector import Connector
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import aliased, joinedload
+from sqlalchemy.orm import aliased, joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 # This import is required to create the tables
 from keep.api.core.config import config
@@ -161,7 +162,9 @@ def create_workflow_execution(
             raise
 
 
-def get_last_completed_execution(session: Session, workflow_id: str) -> WorkflowExecution:
+def get_last_completed_execution(
+    session: Session, workflow_id: str
+) -> WorkflowExecution:
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
@@ -284,7 +287,9 @@ def get_workflows_that_should_run():
                         }
                     )
             else:
-                logger.debug(f"Workflow {workflow.id} is already running by someone else")
+                logger.debug(
+                    f"Workflow {workflow.id} is already running by someone else"
+                )
 
         return workflows_to_run
 
@@ -444,7 +449,10 @@ def push_logs_to_db(log_entries):
         WorkflowExecutionLog(
             workflow_execution_id=log_entry["workflow_execution_id"],
             timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
-            message=log_entry["message"],
+            message=log_entry["message"][0:255],  # limit the message to 255 chars
+            context=json.loads(
+                json.dumps(log_entry["context"], default=str)
+            ),  # workaround to serialize any object
         )
         for log_entry in log_entries
     ]
@@ -455,7 +463,9 @@ def push_logs_to_db(log_entries):
         session.commit()
 
 
-def get_workflow_execution(tenant_id: str, workflow_id: str, workflow_execution_id: str):
+def get_workflow_execution(
+    tenant_id: str, workflow_id: str, workflow_execution_id: str
+):
     with Session(engine) as session:
         execution_with_logs = (
             session.query(WorkflowExecution)
@@ -469,3 +479,71 @@ def get_workflow_execution(tenant_id: str, workflow_id: str, workflow_execution_
 
         return execution_with_logs
     return execution_with_logs
+
+
+def enrich_alert(tenant_id, fingerprint, enrichments):
+    # else, the enrichment doesn't exist, create it
+    with Session(engine) as session:
+        enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
+        if enrichment:
+            enrichment.enrichments.update(enrichments)
+            session.commit()
+            return enrichment
+        alert_enrichment = AlertEnrichment(
+            tenant_id=tenant_id,
+            alert_fingerprint=fingerprint,
+            enrichments=enrichments,
+        )
+        session.add(alert_enrichment)
+        session.commit()
+    return alert_enrichment
+
+
+def get_enrichment(tenant_id, fingerprint):
+    with Session(engine) as session:
+        alert_enrichment = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint == fingerprint)
+        ).first()
+    return alert_enrichment
+
+
+def get_enrichment_with_session(session, tenant_id, fingerprint):
+    alert_enrichment = session.exec(
+        select(AlertEnrichment)
+        .where(AlertEnrichment.tenant_id == tenant_id)
+        .where(AlertEnrichment.alert_fingerprint == fingerprint)
+    ).first()
+    return alert_enrichment
+
+
+def get_alerts(tenant_id, provider_id=None, filters=None):
+    with Session(engine) as session:
+        # Create the query
+        query = session.query(Alert)
+
+        # Apply subqueryload to force-load the alert_enrichment relationship
+        query = query.options(subqueryload(Alert.alert_enrichment))
+
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
+
+        # Ensure Alert and AlertEnrichment are joined for subsequent filters
+        query = query.join(Alert.alert_enrichment)
+
+        # Apply filters if provided
+        if filters:
+            for f in filters:
+                filter_key, filter_value = f.get("key"), f.get("value")
+                query = query.filter(
+                    AlertEnrichment.enrichments[filter_key] == filter_value
+                )
+
+        if provider_id:
+            query = query.filter(Alert.provider_id == provider_id)
+
+        # Execute the query
+        alerts = query.all()
+
+    return alerts

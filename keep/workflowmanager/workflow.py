@@ -91,7 +91,7 @@ class Workflow:
         return actions_firing, actions_errors
 
     def run(self, workflow_execution_id):
-        self.logger.debug(f"Running workflow {self.workflow_id}")
+        self.logger.info(f"Running workflow {self.workflow_id}")
         self.context_manager.set_execution_context(workflow_execution_id)
         self.run_steps()
         actions_firing, actions_errors = self.run_actions()
@@ -111,7 +111,7 @@ class Workflow:
             },
             workflow_status=workflow_status,
         )
-        self.logger.debug(f"Finish to run workflow {self.workflow_id}")
+        self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
     def _handle_actions(self):
