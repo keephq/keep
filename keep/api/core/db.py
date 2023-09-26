@@ -450,7 +450,9 @@ def push_logs_to_db(log_entries):
             workflow_execution_id=log_entry["workflow_execution_id"],
             timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
             message=log_entry["message"][0:255],  # limit the message to 255 chars
-            context=json.dumps(log_entry["context"], default=str),
+            context=json.loads(
+                json.dumps(log_entry["context"], default=str)
+            ),  # workaround to serialize any object
         )
         for log_entry in log_entries
     ]
