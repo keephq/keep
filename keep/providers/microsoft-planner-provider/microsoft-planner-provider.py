@@ -162,10 +162,6 @@ if __name__ == "__main__":
 
     result = provider.notify(
         plan_id="YOUR_PLANNER_ID",
-        title="",
-        bucket_id="",
-        description="",
-        due_date="",
-        assigned_to=""
+        
     )
 
