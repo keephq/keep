@@ -1,4 +1,3 @@
-
 import dataclasses
 import pydantic
 import requests
@@ -19,6 +18,12 @@ class LinearProviderAuthConfig:
             "sensitive": True,
         }
     )
+    project_id: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Linear Project ID",
+        }
+    )
 
 class LinearProvider(BaseProvider):
     def __init__(
@@ -37,7 +42,7 @@ class LinearProvider(BaseProvider):
         """
         pass
 
-    def _query(self, project_id="", **kwargs: dict):
+    def _query(self, **kwargs: dict):
         """
         API for fetching Linear data.
 
@@ -47,6 +52,7 @@ class LinearProvider(BaseProvider):
         self.logger.debug("Fetching data from Linear")
 
         linear_api_token = self.authentication_config.api_token
+        project_id = self.authentication_config.project_id
 
         # Construct the request URL and headers based on the Linear API documentation
         request_url = f"https://api.linear.app/v1/projects/{project_id}"
@@ -80,11 +86,15 @@ if __name__ == "__main__":
     import os
 
     linear_api_token = os.environ.get("LINEAR_API_TOKEN")
+    linear_project_id = os.environ.get("LINEAR_PROJECT_ID")
 
     # Initialize the provider and provider config
     config = ProviderConfig(
         description="Linear Input Provider",
-        authentication={"api_token": linear_api_token},
+        authentication={
+            "api_token": linear_api_token,
+            "project_id": linear_project_id,
+        },
     )
     provider = LinearProvider(context_manager, provider_id="linear", config=config)
-    provider.query(project_id="linear-project-id")
+    provider.query()  
