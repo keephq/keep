@@ -91,7 +91,12 @@ def get_alerts(
             },
         )
         db_alerts = get_alerts_from_db(tenant_id=tenant_id)
-        alerts.extend([alert.event for alert in db_alerts])
+        # enrich the alerts with the enrichment data
+        for alert in db_alerts:
+            if alert.alert_enrichment:
+                alert.event.update(alert.alert_enrichment.enrichments)
+        db_alerts_dto = [AlertDto(**alert.event) for alert in db_alerts]
+        alerts.extend(db_alerts_dto)
         logger.info(
             "Fetched alerts DB",
             extra={
@@ -166,6 +171,7 @@ def handle_formatted_events(
                 provider_type=provider_type,
                 event=formatted_event.dict(),
                 provider_id=provider_id,
+                fingerprint=formatted_event.fingerprint,
             )
             session.add(alert)
             formatted_event.event_id = alert.id
@@ -179,7 +185,7 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
-    except Exception:
+    except Exception as e:
         logger.exception(
             "Failed to push alerts to the DB",
             extra={

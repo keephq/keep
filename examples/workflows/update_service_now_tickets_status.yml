@@ -21,9 +21,9 @@ workflow:
         type: servicenow
         config: " {{ providers.servicenow }} "
         with:
-          ticket_id: "{{ foreach.value.enrichments.ticket_id }}"
-          table_name: "{{ foreach.value.enrichments.table_name }}"
-          fingerprint: "{{ foreach.value.event.fingerprint }}"
+          ticket_id: "{{ foreach.value.alert_enrichment.enrichments.ticket_id }}"
+          table_name: "{{ foreach.value.alert_enrichment.enrichments.table_name }}"
+          fingerprint: "{{ foreach.value.alert_fingerprint }}"
           enrich_alert:
           - key: ticket_status
             value: results.state
