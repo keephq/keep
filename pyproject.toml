@@ -43,9 +43,9 @@ langchain = "^0.0.178"
 sqlalchemy = "1.4.41"
 snowflake-connector-python = "3.1.0"
 openai = "^0.27.7"
-opentelemetry-sdk = "^1.18.0"
-opentelemetry-instrumentation-fastapi = "^0.39b0"
-opentelemetry-instrumentation-logging = "^0.39b0"
+opentelemetry-sdk = "^1.20.0"
+opentelemetry-instrumentation-fastapi = "^0.41b0"
+opentelemetry-instrumentation-logging = "^0.41b0"
 opentelemetry-propagator-gcp = "^1.5.0"
 pyngrok = "^6.0.0"
 google-cloud-bigquery = "^3.11.0"
@@ -56,7 +56,9 @@ auth0-python = "^4.4.1"
 asyncio = "^3.4.3"
 python-multipart = "^0.0.6"
 kubernetes = "^27.2.0"
-
+opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
+opentelemetry-instrumentation-sqlalchemy = "^0.41b0"
+opentelemetry-instrumentation-requests = "^0.41b0"
 
 
 [tool.poetry.group.dev.dependencies]

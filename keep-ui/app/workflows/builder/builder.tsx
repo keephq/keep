@@ -16,7 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
 import { Callout, Card } from "@tremor/react";
-import { Provider } from "../providers/providers";
+import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
   generateWorkflow,
@@ -124,10 +124,9 @@ function Builder({
   };
 
   useEffect(() => {
+    setIsLoading(true);
     if (workflow) {
-      setIsLoading(true);
       setDefinition(wrapDefinition(parseWorkflow(workflow, providers)));
-      setIsLoading(false);
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
       const alertName = searchParams?.get("alertName");
@@ -147,11 +146,10 @@ function Builder({
           )
         )
       );
-      setIsLoading(false);
     } else {
       setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }, [loadedAlertFile, workflow, searchParams]);
 
   useEffect(() => {

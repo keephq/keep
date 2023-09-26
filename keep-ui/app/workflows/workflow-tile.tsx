@@ -277,7 +277,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   const handleBuilderClick = async () => {
-    router.push(`/builder/${workflow.id}`);
+    router.push(`/workflows/builder/${workflow.id}`);
   };
 
   const workflowProvidersMap = new Map(

@@ -1,5 +1,5 @@
 import { load, JSON_SCHEMA } from "js-yaml";
-import { Provider } from "../providers/providers";
+import { Provider } from "../../providers/providers";
 import {
   BranchedStep,
   Definition,

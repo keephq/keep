@@ -11,6 +11,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased, joinedload
 from sqlmodel import Session, SQLModel, create_engine, select
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 # This import is required to create the tables
 from keep.api.core.config import config
@@ -100,6 +101,8 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
+SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
+
 
 def create_db_and_tables():
     """
@@ -159,9 +162,7 @@ def create_workflow_execution(
             raise
 
 
-def get_last_completed_execution(
-    session: Session, workflow_id: str
-) -> WorkflowExecution:
+def get_last_completed_execution(session: Session, workflow_id: str) -> WorkflowExecution:
     return session.exec(
         select(WorkflowExecution)
         .where(WorkflowExecution.workflow_id == workflow_id)
@@ -284,9 +285,7 @@ def get_workflows_that_should_run():
                         }
                     )
             else:
-                logger.debug(
-                    f"Workflow {workflow.id} is already running by someone else"
-                )
+                logger.debug(f"Workflow {workflow.id} is already running by someone else")
 
         return workflows_to_run
 
@@ -458,9 +457,7 @@ def push_logs_to_db(log_entries):
         session.commit()
 
 
-def get_workflow_execution(
-    tenant_id: str, workflow_id: str, workflow_execution_id: str
-):
+def get_workflow_execution(tenant_id: str, workflow_id: str, workflow_execution_id: str):
     with Session(engine) as session:
         execution_with_logs = (
             session.query(WorkflowExecution)
