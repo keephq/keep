@@ -25,8 +25,6 @@ class GoogleChatProvider(BaseProvider):
 
         Args:
             message (str): The text message to send.
-            cards (list): A list of card objects to attach to the message.
-            space (str): The Google Chat space or room ID.
 
         Raises:
             ProviderException: If the message could not be sent successfully.
