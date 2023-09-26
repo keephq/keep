@@ -22,7 +22,7 @@ class GcpStorageManager(BaseStorageManager):
             self.logger.info("Bucket %s created successfully", bucket_name)
         return bucket
 
-    def get_file(self, tenant_id, filename) -> str:
+    def get_file(self, tenant_id, filename, create_if_not_exist=False) -> str:
         """
         Get a file from Google Cloud Storage.
         Args:

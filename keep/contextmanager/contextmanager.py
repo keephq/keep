@@ -18,7 +18,7 @@ class ContextManager:
     ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
-            self.logger, tenant_id, workflow_id, workflow_execution_id
+            self.logger, self, tenant_id, workflow_id, workflow_execution_id
         )
         self.workflow_id = workflow_id
         self.tenant_id = tenant_id
@@ -58,7 +58,9 @@ class ContextManager:
     def get_workflow_id(self):
         return self.workflow_id
 
-    def get_full_context(self, exclude_state=False):
+    def get_full_context(
+        self, exclude_state=False, exclude_providers=False, exclude_env=False
+    ):
         """
         Gets full context on the workflows
 
@@ -80,17 +82,21 @@ class ContextManager:
                             anyway, this should be refactored to something more structured
         """
         full_context = {
-            "providers": self.providers_context,
             "steps": self.steps_context,
             "actions": self.actions_context,
             "foreach": self.foreach_context,
             "event": self.event_context,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
-            "env": os.environ,
         }
+
+        if not exclude_providers:
+            full_context["providers"] = self.providers_context
 
         if not exclude_state:
             full_context["state"] = self.state
+
+        if not exclude_env:
+            full_context["env"] = os.environ
 
         full_context.update(self.aliases)
         return full_context
@@ -167,7 +173,9 @@ class ContextManager:
     def __load_state(self):
         try:
             self.state = json.loads(
-                self.storage_manager.get_file(self.tenant_id, self.state_file)
+                self.storage_manager.get_file(
+                    self.tenant_id, self.state_file, create_if_not_exist=True
+                )
             )
         except Exception as exc:
             self.logger.warning("Failed to load state file, using empty state")
