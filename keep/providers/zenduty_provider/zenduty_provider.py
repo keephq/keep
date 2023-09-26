@@ -35,7 +35,7 @@ class ZendutyProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def _notify(self, **kwargs: dict):
         """
         Create incident Zenduty using the Zenduty API
 
