@@ -56,6 +56,7 @@ auth0-python = "^4.4.1"
 asyncio = "^3.4.3"
 python-multipart = "^0.0.6"
 kubernetes = "^27.2.0"
+azure-identity = "^1.14.0"
 
 
 
