@@ -76,10 +76,26 @@ class Step:
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
+    def _get_foreach_items(self):
+        """Get the items to iterate over, when using the `foreach` attribute (see foreach.md)"""
+        # TODO: this should be part of iohandler?
+
+        # the item holds the value we are going to iterate over
+        # TODO: currently foreach will support only {{ a.b.c }} and not functions and other things (which make sense)
+        index = (
+            self.config.get("foreach").replace("{{", "").replace("}}", "").split(".")
+        )
+        index = [i.strip() for i in index]
+        items = self.context_manager.get_full_context()
+        for i in index:
+            # try to get it as a dict
+            items = items.get(i, {})
+        return items
+
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
-        items = self.io_handler.render(self.config.get("foreach"))
+        items = self._get_foreach_items()
         any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
         for item in items:
@@ -113,9 +129,17 @@ class Step:
         for condition in conditions:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
-            condition_result = condition.apply(
-                condition_compare_to, condition_compare_value
-            )
+            try:
+                condition_result = condition.apply(
+                    condition_compare_to, condition_compare_value
+                )
+            except Exception as e:
+                self.logger.error(
+                    "Failed to apply condition %s with error %s",
+                    condition.condition_name,
+                    e,
+                )
+                raise
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition.condition_name,
@@ -196,7 +220,10 @@ class Step:
                             raise StepError(e)
                         else:
                             self.logger.info(
-                                "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
+                                "Retrying running %s step after %s second(s)...",
+                                self.step_id,
+                                self.__retry_interval,
+                            )
 
                             time.sleep(self.__retry_interval)
 
@@ -224,7 +251,7 @@ class Step:
         else:
             task = loop.create_task(self.provider.notify(**rendered_value))
 
-        for curr_retry_count in range(self.__retry_count+1):
+        for curr_retry_count in range(self.__retry_count + 1):
             try:
                 loop.run_until_complete(task)
 
@@ -235,7 +262,10 @@ class Step:
                     raise ActionError(e)
                 else:
                     self.logger.info(
-                        "Retrying running %s step after %s second(s)...", self.step_id, self.__retry_interval)
+                        "Retrying running %s step after %s second(s)...",
+                        self.step_id,
+                        self.__retry_interval,
+                    )
 
                     time.sleep(self.__retry_interval)
 
