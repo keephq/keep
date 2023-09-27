@@ -42,7 +42,7 @@ class TelegramProvider(BaseProvider):
         """
         pass
 
-    async def notify(self, **kwargs: dict):
+    async def _notify(self, **kwargs: dict):
         """
         Notify alert message to Telegram using the Telegram Bot API
         https://core.telegram.org/bots/api
