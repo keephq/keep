@@ -6,7 +6,6 @@ import dataclasses
 
 import pydantic
 import requests
-from azure.identity import ClientSecretCredential
 from urllib.parse import urljoin
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -19,8 +18,6 @@ from keep.providers.providers_factory import ProvidersFactory
 @pydantic.dataclasses.dataclass
 class PlannerProviderAuthConfig:
     """Planner authentication configuration."""
-
-    PLANNER_DEFAULT_SCOPE = 'https://graph.microsoft.com/.default'
 
     tenant_id: str | None = dataclasses.field(
         metadata={
@@ -40,38 +37,62 @@ class PlannerProviderAuthConfig:
             "description": "Planner Client Secret", "sensitive": True
         }
     )
-    scopes: list = dataclasses.field(default_factory=[PLANNER_DEFAULT_SCOPE])
 
 
 class PlannerProvider(BaseProvider):
     """
     Microsoft Planner provider class.
     """
-    MS_GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0'
-    MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/plans")
-    MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/tasks")
+    MS_GRAPH_BASE_URL = "https://graph.microsoft.com"
+    MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="/v1.0/planner/plans")
+    MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="/v1.0/planner/tasks")
+    MS_AUTH_BASE_URL = "https://login.microsoftonline.com"
+    MS_GRAPH_RESOURCE = "https://graph.microsoft.com"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self.access_token = self.__generate_access_token()
-        self.headers = {
-            "Authorization": f"Bearer {self.access_token}",
+        self.__access_token = self.__generate_access_token()
+        self.__headers = {
+            "Authorization": f"Bearer {self.__access_token}",
             "Content-Type": "application/json"
         }
 
     def __generate_access_token(self):
-        credential = ClientSecretCredential(
-            self.authentication_config.tenant_id,
-            self.authentication_config.client_id,
-            self.authentication_config.client_secret
-        )
-        access_token = credential.get_token(
-            scopes=self.authentication_config.scopes
-        ).token
+        """
+        Helper method to generate the access token.
+        """
 
-        return access_token
+        MS_TOKEN_URL = urljoin(
+            base=self.MS_AUTH_BASE_URL,
+            url=f"/{self.authentication_config.tenant_id}/oauth2/token"
+        )
+
+        request_body = {
+            "grant_type": "client_credentials",
+            "client_id": self.authentication_config.client_id,
+            "client_secret": self.authentication_config.client_secret,
+            "resource": self.MS_GRAPH_RESOURCE
+        }
+
+        self.logger.info("Generating planner access token...")
+
+        response = requests.post(
+            url=MS_TOKEN_URL,
+            data=request_body
+        )
+
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        if "access_token" in response_data:
+            self.logger.info("Generated planner access token.")
+
+            return response_data["access_token"]
+
+        return None
 
     def dispose(self):
         pass
@@ -92,7 +113,7 @@ class PlannerProvider(BaseProvider):
 
         response = requests.get(
             url=MS_PLAN_URL,
-            headers=self.headers
+            headers=self.__headers
         )
 
         # in case of error response
@@ -119,7 +140,7 @@ class PlannerProvider(BaseProvider):
 
         response = requests.post(
             url=self.MS_TASKS_URL,
-            header=self.headers,
+            headers=self.__headers,
             json=request_body
         )
 
@@ -129,7 +150,7 @@ class PlannerProvider(BaseProvider):
         response_data = response.json()
 
         self.logger.info(
-            f"Created new task with id:{response_data.id} and title:{response_data.title}"
+            "Created new task with id:%s and title:%s", response_data["id"], response_data["title"]
         )
 
         return response_data
