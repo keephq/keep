@@ -5,7 +5,8 @@ import {
   ArrowTopRightOnSquareIcon,
   ArrowUpIcon,
   ArrowUpRightIcon,
-  ShieldCheckIcon,
+  Cog8ToothIcon,
+  TicketIcon,
 } from "@heroicons/react/24/outline";
 import {
   TableBody,
@@ -16,13 +17,14 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
-  Button,
   Badge,
 } from "@tremor/react";
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
 import "./alerts-table-body.css";
 import AlertMenu from "./alert-menu";
+import { Workflow } from "app/workflows/models";
+import { useRouter } from "next/navigation";
 
 interface Props {
   data: Alert[];
@@ -30,6 +32,7 @@ interface Props {
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
   pushed?: boolean;
+  workflows?: Workflow[];
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -81,7 +84,9 @@ export function AlertsTableBody({
   groupedByData,
   openModal,
   pushed,
+  workflows,
 }: Props) {
+  const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
     let lastReceived = "unknown";
     if (alert.lastReceived) {
@@ -92,10 +97,18 @@ export function AlertsTableBody({
     return lastReceived;
   };
 
+  const handleWorkflowClick = (workflows: Workflow[]) => {
+    if (workflows.length === 1) {
+      router.push(`workflows/${workflows[0].id}`);
+    } else {
+      router.push("workflows");
+    }
+  };
+
   return (
     <TableBody>
       {data.map((alert) => {
-        const extraPayload = Object.keys(alert)
+        const extraPayloadNoKnownKeys = Object.keys(alert)
           .filter((key) => !AlertKnownKeys.includes(key))
           .reduce((obj, key) => {
             return {
@@ -103,7 +116,27 @@ export function AlertsTableBody({
               [key]: (alert as any)[key],
             };
           }, {});
-        const extraIsEmpty = Object.keys(extraPayload).length === 0;
+        const extraIsEmpty = Object.keys(extraPayloadNoKnownKeys).length === 0;
+        const ticketUrl = (alert as any)["ticket_url"];
+        const relevantWorkflows =
+          workflows?.filter((workflow) => {
+            const alertTrigger = workflow.triggers.find(
+              (trigger) => trigger.type === "alert"
+            );
+
+            const workflowIsRelevant = alertTrigger?.filters?.every(
+              (filter) => {
+                if (filter.key === "source") {
+                  return alert.source?.includes(filter.value);
+                }
+                return (
+                  (alert as any)[filter.key] === filter.value ||
+                  (extraPayloadNoKnownKeys as any)[filter.key] === filter.value
+                );
+              }
+            );
+            return workflowIsRelevant;
+          }) ?? [];
         return (
           <TableRow key={alert.id}>
             {pushed && (
@@ -117,10 +150,85 @@ export function AlertsTableBody({
               </TableCell>
             )}
             <TableCell>{getSeverity(alert.severity)}</TableCell>
-            <TableCell className="max-w-[340px] truncate" title={alert.name}>
-              {alert.name}
+            <TableCell className="max-w-[340px]">
+              <div className="flex items-center justify-between">
+                <div className="truncate" title={alert.name}>
+                  {alert.name}{" "}
+                </div>
+                <div>
+                  {(alert.url ?? alert.generatorURL) && (
+                    <a href={alert.url || alert.generatorURL} target="_blank">
+                      <Icon
+                        icon={ArrowTopRightOnSquareIcon}
+                        tooltip="Open Original Alert"
+                        color="gray"
+                        variant="solid"
+                        size="xs"
+                        className="ml-1"
+                      />
+                    </a>
+                  )}
+                  {ticketUrl && (
+                    <a href={ticketUrl} target="_blank">
+                      <Icon
+                        icon={TicketIcon}
+                        tooltip="Ticket Assigned"
+                        size="xs"
+                        color="gray"
+                        className="ml-1"
+                        variant="solid"
+                      />
+                    </a>
+                  )}
+                  {relevantWorkflows?.length > 0 && (
+                    <Icon
+                      icon={Cog8ToothIcon}
+                      size="xs"
+                      color={`${
+                        relevantWorkflows.every(
+                          (wf) => wf.last_execution_status === "success"
+                        )
+                          ? "green"
+                          : relevantWorkflows.some(
+                              (wf) => wf.last_execution_status === "error"
+                            )
+                          ? "red"
+                          : relevantWorkflows.some(
+                              (wf) =>
+                                wf.last_execution_status ===
+                                "providers_not_configured"
+                            )
+                          ? "amber"
+                          : "gray"
+                      }`}
+                      tooltip={`${
+                        relevantWorkflows.every(
+                          (wf) => wf.last_execution_status === "success"
+                        )
+                          ? "All workflows executed successfully"
+                          : relevantWorkflows.some(
+                              (wf) => wf.last_execution_status === "error"
+                            )
+                          ? "Some workflows failed to execute"
+                          : relevantWorkflows.some(
+                              (wf) =>
+                                wf.last_execution_status ===
+                                "providers_not_configured"
+                            )
+                          ? "Some workflows are not configured"
+                          : "Workflows have yet to execute"
+                      }`}
+                      onClick={() => handleWorkflowClick(relevantWorkflows)}
+                      className="ml-1 cursor-pointer"
+                      variant="solid"
+                    />
+                  )}
+                </div>
+              </div>
             </TableCell>
-            <TableCell>{alert.description}</TableCell>
+            <TableCell className="max-w-[340px]">
+              <div className="truncate">{alert.description}</div>
+            </TableCell>
             <TableCell>{alert.status}</TableCell>
             <TableCell>{getAlertLastReceieved(alert)}</TableCell>
             <TableCell>
@@ -159,7 +267,7 @@ export function AlertsTableBody({
                   </AccordionHeader>
                   <AccordionBody>
                     <pre className="w-80 overflow-y-scroll">
-                      {JSON.stringify(extraPayload, null, 2)}
+                      {JSON.stringify(extraPayloadNoKnownKeys, null, 2)}
                     </pre>
                   </AccordionBody>
                 </Accordion>

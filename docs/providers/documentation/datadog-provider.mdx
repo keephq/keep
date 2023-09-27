@@ -1,0 +1,72 @@
+---
+title: "Datadog"
+sidebarTitle: "Datadog Provider"
+description: "Datadog provider allows you to query Datadog metrics and logs for monitoring and analytics."
+---
+
+## Inputs
+
+- `query`: str: The query string to search within Datadog metrics and logs.
+- `time_range`: dict = None: The time range for the query (e.g., `{'from': 'now-15m', 'to': 'now'}`)
+- `source`: str = None: The source type (metrics, traces, logs).
+
+## Outputs
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+
+## Authentication Parameters
+
+The `api_key` and `app_key` are required for connecting to the Datadog provider. You can obtain them as described in the "Connecting with the Provider" section.
+
+## Connecting with the Provider
+
+### API Key
+
+To obtain the Datadog API key, follow these steps:
+
+1. Log in to your Datadog account.
+2. Navigate to the "Integrations" section.
+3. Click on the "API" tab.
+4. Generate a new API Key.
+
+### App Key
+
+To obtain the Datadog App Key, follow these steps:
+
+1. Log in to your Datadog account.
+2. Navigate to the "Integrations" section.
+3. Click on the "API" tab.
+4. Generate a new App Key or use an existing one.
+
+### Scopes
+Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use-cases:
+
+#### Monitors
+### `monitors_read`
+
+
+### Webhook Integration
+
+- Required for installing the Datadog Webhook Integration so all monitors will be pushed to Keep.
+
+####
+### `metrics:read`
+
+- Required for querying any metric data.
+
+### `logs:read`
+
+- Required for querying log data.
+
+### `traces:read`
+
+- Required for querying APM trace data.
+
+## Notes
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+
+## Useful Links
+
+- [Datadog API Documentation](https://docs.datadoghq.com/api/)
+- [Datadog Query Language](https://docs.datadoghq.com/dashboards/querying/)

@@ -92,7 +92,7 @@ const navigationItems = [
     icon: <CreateAlertIcon />,
     label: 'Go to alert workflow builder',
     shortcut: ['D'],
-    navigate: '/builder'
+    navigate: '/workflows/builder'
   }
 ]
 

@@ -17,5 +17,6 @@ export default async function PageWithId({
     cache: "no-store",
   });
   const workflow = (await response.text()).slice(1, -1).replaceAll("\\n", "\n");
+  console.log(workflow)
   return <Page workflow={workflow} workflowId={params.workflowId} />;
 }

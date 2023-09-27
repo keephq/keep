@@ -40,6 +40,24 @@ class CloudwatchProviderAuthConfig:
             "description": "AWS region",
         },
     )
+    session_token: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS Session Token",
+            "hint": "For temporary credentials. Note that if you connect CloudWatch with temporary credentials, the initial connection will succeed, but when the credentials expired alarms won't be sent to Keep.",
+            "sensitive": True,
+        },
+    )
+    cloudwatch_sns_topic: str = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "AWS Cloudwatch SNS Topic [ARN or name]",
+            "hint": "Default SNS Topic to send notifications (Optional since if your alarms already sends notifications to SNS topic, Keep will use the exists SNS topic)",
+            "sensitive": False,
+        },
+    )
 
 
 class CloudwatchProvider(BaseProvider):
@@ -60,13 +78,28 @@ class CloudwatchProvider(BaseProvider):
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
 
+    def _get_account_id(self):
+        sts_client = self.__generate_client("sts")
+        identity = sts_client.get_caller_identity()
+        return identity["Account"]
+
     def __generate_client(self, aws_client_type: str):
-        client = boto3.client(
-            aws_client_type,
-            aws_access_key_id=self.authentication_config.access_key,
-            aws_secret_access_key=self.authentication_config.access_key_secret,
-            region_name=self.authentication_config.region,
-        )
+        if self.authentication_config.session_token:
+            self.logger.info("Using temporary credentials")
+            client = boto3.client(
+                aws_client_type,
+                aws_access_key_id=self.authentication_config.access_key,
+                aws_secret_access_key=self.authentication_config.access_key_secret,
+                aws_session_token=self.authentication_config.session_token,
+                region_name=self.authentication_config.region,
+            )
+        else:
+            client = boto3.client(
+                aws_client_type,
+                aws_access_key_id=self.authentication_config.access_key,
+                aws_secret_access_key=self.authentication_config.access_key_secret,
+                region_name=self.authentication_config.region,
+            )
         return client
 
     def dispose(self):
@@ -88,15 +121,86 @@ class CloudwatchProvider(BaseProvider):
         cloudwatch_client = self.__generate_client("cloudwatch")
         sns_client = self.__generate_client("sns")
         resp = cloudwatch_client.describe_alarms()
-        alarms = resp.get("MetricAlarms")
+        alarms = resp.get("MetricAlarms", [])
         alarms.extend(resp.get("CompositeAlarms"))
+        subscribed_topics = []
         # for each alarm, we need to iterate the actions topics and subscribe to them
         for alarm in alarms:
-            topics = alarm.get("AlarmActions", [])
+            actions = alarm.get("AlarmActions", [])
+            # extract only SNS actions
+            topics = [action for action in actions if action.startswith("arn:aws:sns")]
+            # if we got explicitly SNS topic, add is as an action
+            if self.authentication_config.cloudwatch_sns_topic:
+                self.logger.warning(
+                    "Cannot hook alarm without SNS topic, trying to add SNS action..."
+                )
+                # add an action to the alarm
+                if not self.authentication_config.cloudwatch_sns_topic.startswith(
+                    "arn:aws:sns"
+                ):
+                    account_id = self._get_account_id()
+                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.cloudwatch_sns_topic}"
+                else:
+                    sns_topic = self.authentication_config.cloudwatch_sns_topic
+                actions.append(sns_topic)
+                try:
+                    alarm["AlarmActions"] = actions
+                    # filter out irrelevant files
+                    valid_keys = {
+                        "AlarmName",
+                        "AlarmDescription",
+                        "ActionsEnabled",
+                        "OKActions",
+                        "AlarmActions",
+                        "InsufficientDataActions",
+                        "MetricName",
+                        "Namespace",
+                        "Statistic",
+                        "ExtendedStatistic",
+                        "Dimensions",
+                        "Period",
+                        "Unit",
+                        "EvaluationPeriods",
+                        "DatapointsToAlarm",
+                        "Threshold",
+                        "ComparisonOperator",
+                        "TreatMissingData",
+                        "EvaluateLowSampleCountPercentile",
+                        "Metrics",
+                        "Tags",
+                        "ThresholdMetricId",
+                    }
+                    filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
+                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                    # now it should contain the SNS topic
+                    topics = [sns_topic]
+                except Exception:
+                    self.logger.exception(
+                        "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                    )
+                    continue
+                self.logger.info(
+                    "SNS action added to alarm %s!", alarm.get("AlarmName")
+                )
             for topic in topics:
-                subscriptions = sns_client.list_subscriptions_by_topic(
-                    TopicArn=topic
-                ).get("Subscriptions", [])
+                # protection against adding ourself more than once to the same topic (can happen if different alarams send to the same topic)
+                if topic in subscribed_topics:
+                    self.logger.info(
+                        "Already subscribed to topic %s in this transaction, skipping...",
+                        topic,
+                    )
+                    continue
+                self.logger.info("Checking topic %s...", topic)
+                try:
+                    subscriptions = sns_client.list_subscriptions_by_topic(
+                        TopicArn=topic
+                    ).get("Subscriptions", [])
+                # this means someone deleted the topic that this alarm sends notification too
+                except botocore.errorfactory.NotFoundException as exc:
+                    self.logger.warning(
+                        "Topic %s not found, skipping...", topic, exc_info=exc
+                    )
+                    continue
                 hostname = urlparse(keep_api_url).hostname
                 already_subscribed = any(
                     hostname in sub["Endpoint"]
@@ -107,11 +211,16 @@ class CloudwatchProvider(BaseProvider):
                     url_with_api_key = keep_api_url.replace(
                         "https://", f"https://api_key:{api_key}@"
                     )
+                    self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
                         Protocol="https",
                         Endpoint=url_with_api_key,
                     )
+                    self.logger.info("Subscribed to topic %s!", topic)
+                    subscribed_topics.append(topic)
+                    # we need to subscribe to only one SNS topic per alarm, o/w we will get many duplicates
+                    break
                 else:
                     self.logger.info(
                         "Already subscribed to topic %s, skipping...", topic

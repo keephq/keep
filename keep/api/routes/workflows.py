@@ -48,6 +48,17 @@ def get_workflows(
     workflowstore = WorkflowStore()
     parser = Parser()
     workflows_dto = []
+    installed_providers = get_installed_providers(tenant_id)
+    installed_providers_by_type = {}
+    for installed_provider in installed_providers:
+        if installed_provider.type not in installed_providers_by_type:
+            installed_providers_by_type[installed_provider.type] = {
+                installed_provider.name: installed_provider
+            }
+        else:
+            installed_providers_by_type[installed_provider.type][
+                installed_provider.name
+            ] = installed_provider
     # get all workflows
     workflows = workflowstore.get_all_workflows_with_last_execution(tenant_id=tenant_id)
     # iterate workflows
@@ -56,15 +67,13 @@ def get_workflows(
         workflow, workflow_last_run_time, workflow_last_run_status = _workflow
         workflow_yaml = yaml.safe_load(workflow.workflow_raw)
         providers = parser.get_providers_from_workflow(workflow_yaml)
-        installed_providers = get_installed_providers(tenant_id)
-        installed_providers = {
-            provider.name: provider for provider in installed_providers
-        }
         providers_dto = []
         # get the provider details
         for provider in providers:
             try:
-                provider = installed_providers[provider.get("name")]
+                provider = installed_providers_by_type[provider.get("type")][
+                    provider.get("name")
+                ]
                 provider_dto = ProviderDTO(
                     name=provider.name,
                     type=provider.type,
@@ -299,7 +308,10 @@ def get_workflow_execution_status(
         execution_time=workflow_execution.execution_time,
         logs=[
             WorkflowExecutionLogsDTO(
-                id=log.id, timestamp=log.timestamp, message=log.message
+                id=log.id,
+                timestamp=log.timestamp,
+                message=log.message,
+                context=log.context,
             )
             for log in workflow_execution.logs
         ],

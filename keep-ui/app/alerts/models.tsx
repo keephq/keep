@@ -22,6 +22,7 @@ export interface Alert {
   fatigueMeter?: number;
   url?: string;
   pushed: boolean;
+  generatorURL?: string;
 }
 
 export const AlertKnownKeys = [
@@ -40,6 +41,9 @@ export const AlertKnownKeys = [
   "fatigueMeter",
   "pushed",
   "url",
+  "event_id",
+  "ticket_url",
+  "ack_status",
 ];
 
 export const AlertTableKeys: { [key: string]: string } = {

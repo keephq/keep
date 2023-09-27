@@ -9,6 +9,7 @@ from typing import Optional
 
 from pydantic.dataclasses import dataclass
 
+from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
@@ -39,8 +40,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
         self.provider_description = provider_description
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.context_manager = context_manager
+        self.logger = context_manager.get_logger()
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}
@@ -76,6 +77,68 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("validate_config() method not implemented")
 
     def notify(self, **kwargs):
+        """
+        Output alert message.
+
+        Args:
+            **kwargs (dict): The provider context (with statement)
+        """
+        # trigger the provider
+        results = self._notify(**kwargs)
+        # if the alert should be enriched, enrich it
+        enrich_alert = kwargs.get("enrich_alert", [])
+        if not enrich_alert:
+            return results
+
+        if not results:
+            return
+
+        # Now try to enrich the alert
+        if "fingerprint" in results:
+            fingerprint = results["fingerprint"]
+        # else, if we are in an event context, use the event fingerprint
+        elif self.context_manager.event_context:
+            fingerprint = self.context_manager.event_context.fingerprint
+        else:
+            raise Exception(
+                "No fingerprint found for alert enrichment",
+                extra={"provider": self.provider_id},
+            )
+        self._enrich_alert(fingerprint, enrich_alert, results)
+        return results
+
+    def _enrich_alert(self, fingerprint, enrichments, results):
+        """
+        Enrich alert with provider specific data.
+
+        """
+        _enrichments = {}
+        # enrich only the requested fields
+        for enrichment in enrichments:
+            try:
+                if enrichment["value"].startswith("results."):
+                    val = enrichment["value"].replace("results.", "")
+                    _enrichments[enrichment["key"]] = results[val]
+                else:
+                    _enrichments[enrichment["key"]] = enrichment["value"]
+            except Exception as e:
+                self.logger.error(
+                    "Failed to enrich alert",
+                    extra={"fingerprint": fingerprint, "provider": self.provider_id},
+                )
+                continue
+        self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
+        try:
+            enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
+        except Exception as e:
+            self.logger.error(
+                "Failed to enrich alert",
+                extra={"fingerprint": fingerprint, "provider": self.provider_id},
+            )
+            raise e
+        self.logger.info("Alert enriched", extra={"fingerprint": fingerprint})
+
+    def _notify(self, **kwargs):
         """
         Output alert message.
 

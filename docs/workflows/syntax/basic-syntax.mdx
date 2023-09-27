@@ -60,11 +60,19 @@ provider:
     config: "{{ providers.mysql-prod }}"
     with:
         query: "SELECT MAX(datetime) FROM demo_table LIMIT 1"
+    on-failure:
+        retry:
+            count: 4
+            interval: 10
 ```
 `Provider` is built of:
 - `type` - the type of the provider ([see supported providers](/workflows/providers/))
 - `config` - the provider configuration. you can either supply it explicitly or using `"{{ providers.mysql-prod }}"`
 - `with` - all type-specific provider configuration. for example, for `mysql` we will provide the SQL query.
+- `on-failure` - handling the error when provider execution fails, it is built of:
+    - `retry` - specifies the retry parameters which include:
+        - `count`: maximum number of retries.
+        - `interval`: duration in seconds between each retry.
 
 ### Condition
 ```yaml

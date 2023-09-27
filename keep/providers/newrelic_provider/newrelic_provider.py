@@ -50,7 +50,9 @@ class NewrelicProvider(BaseProvider):
         """
         self.newrelic_config = NewrelicProviderAuthConfig(**self.config.authentication)
 
-    def _query(self, **kwargs: dict):
+    def _query(
+        self, nrql="", new_relic_api="https://api.newrelic.com/graphql", **kwargs: dict
+    ):
         """
         Query New Relic account using the given NRQL
 
@@ -60,15 +62,13 @@ class NewrelicProvider(BaseProvider):
         Returns:
             list[tuple] | list[dict]: results of the query
         """
-        if not kwargs.get("nrql"):
+        if not nrql:
             raise ProviderConfigException(
                 "Missing NRQL query", provider_id=self.provider_id
             )
 
-        new_relic_api = kwargs.get("new_relic_api", "https://api.newrelic.com/graphql")
-
         query = '{actor {account(id: %s) {nrql(query: "%s") {results}}}}'.format(
-            self.newrelic_config.account_id, kwargs.get("nrql")
+            self.newrelic_config.account_id, nrql
         )
         payload = {"query": query}
 

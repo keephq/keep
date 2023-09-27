@@ -67,6 +67,12 @@ class GrafanaProvider(BaseProvider):
         self.authentication_config = GrafanaProviderAuthConfig(
             **self.config.authentication
         )
+        if not self.authentication_config.host.startswith(
+            "https://"
+        ) and not self.authentication_config.host.startswith("http://"):
+            self.authentication_config.host = (
+                f"https://{self.authentication_config.host}"
+            )
 
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
@@ -117,7 +123,7 @@ class GrafanaProvider(BaseProvider):
             name=event.get("title"),
             status=event.get("status"),
             severity=alert.get("severity", None),
-            lastReceived=str(datetime.datetime.fromisoformat(alert.get("startsAt"))),
+            lastReceived=datetime.datetime.utcnow().isoformat(),
             fatigueMeter=random.randint(0, 100),
             description=alert.get("annotations", {}).get("summary", ""),
             source=["grafana"],
@@ -129,7 +135,7 @@ class GrafanaProvider(BaseProvider):
     ):
         self.logger.info("Setting up webhook")
         webhook_name = (
-            GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME + f"-{tenant_id}"
+            f"{GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
@@ -150,9 +156,9 @@ class GrafanaProvider(BaseProvider):
             )
             self.logger.info(f'Updated webhook {webhook["uid"]}')
         else:
+            self.logger.info('Creating webhook with name "{webhook_name}"')
             webhook = {
                 "name": webhook_name,
-                "uid": webhook_name,
                 "type": "webhook",
                 "settings": {
                     "httpMethod": "POST",
@@ -161,7 +167,10 @@ class GrafanaProvider(BaseProvider):
                     "authorization_credentials": api_key,
                 },
             }
-            requests.post(contacts_api, json=webhook, headers=headers)
+            response = requests.post(contacts_api, json=webhook, headers=headers)
+            if not response.ok:
+                raise Exception(response.json())
+            self.logger.info(f"Created webhook {webhook_name}")
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"

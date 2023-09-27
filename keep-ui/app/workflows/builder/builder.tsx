@@ -16,7 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
 import { Callout, Card } from "@tremor/react";
-import { Provider } from "../providers/providers";
+import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
   generateWorkflow,
@@ -34,7 +34,7 @@ import BuilderModalContent from "./builder-modal";
 import { getApiURL } from "utils/apiUrl";
 import Loader from "./loader";
 import { stringify } from "yaml";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 interface Props {
@@ -75,7 +75,6 @@ function Builder({
   const [modalIsOpen, setIsOpen] = useState(false);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const updateWorkflow = () => {
@@ -90,7 +89,7 @@ function Builder({
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
-          router.push("/workflows");
+          window.location.assign("/workflows");
         } else {
           throw new Error(response.statusText);
         }
@@ -112,7 +111,9 @@ function Builder({
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
-          router.push("/workflows");
+          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
+          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
+          window.location.assign("/workflows");
         } else {
           throw new Error(response.statusText);
         }
@@ -123,10 +124,9 @@ function Builder({
   };
 
   useEffect(() => {
+    setIsLoading(true);
     if (workflow) {
-      setIsLoading(true);
-      setDefinition(wrapDefinition(parseWorkflow(workflow)));
-      setIsLoading(false);
+      setDefinition(wrapDefinition(parseWorkflow(workflow, providers)));
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
       const alertName = searchParams?.get("alertName");
@@ -146,11 +146,10 @@ function Builder({
           )
         )
       );
-      setIsLoading(false);
     } else {
-      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!)));
-      setIsLoading(false);
+      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
     }
+    setIsLoading(false);
   }, [loadedAlertFile, workflow, searchParams]);
 
   useEffect(() => {
@@ -173,7 +172,7 @@ function Builder({
   }, [triggerSave]);
 
   useEffect(() => {
-    enableGenerate(definition.isValid || false);
+    enableGenerate(definition.isValid && stepValidationError === null && globalValidationError === null || false);
   }, [
     stepValidationError,
     globalValidationError,

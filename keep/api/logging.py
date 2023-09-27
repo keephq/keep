@@ -1,3 +1,5 @@
+import inspect
+import logging
 import logging.config
 
 from keep.api.core.db import push_logs_to_db
@@ -10,21 +12,24 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
-        if hasattr(record, "workflow_execution_id"):
+        if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
             self.records.append(record)
 
     def push_logs_to_db(self):
-        # Convert log records to a list of dictionaries
-        log_entries = [record.__dict__ for record in self.records]
+        # Convert log records to a list of dictionaries and clean the self.records buffer
+        log_entries, self.records = [record.__dict__ for record in self.records], []
         # Push log entries to the database
         push_logs_to_db(log_entries)
 
 
 class WorkflowLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, logger, tenant_id, workflow_id, workflow_execution_id):
+    def __init__(
+        self, logger, context_manager, tenant_id, workflow_id, workflow_execution_id
+    ):
         self.tenant_id = tenant_id
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
+        self.context_manager = context_manager
         super().__init__(logger, None)
 
     def process(self, msg, kwargs):
@@ -32,6 +37,12 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
+        # add the steps/actions context
+        # todo: more robust
+        extra["context"] = {
+            "steps": self.context_manager.steps_context,
+            "actions": self.context_manager.actions_context,
+        }
         kwargs["extra"] = extra
         return msg, kwargs
 
@@ -73,5 +84,70 @@ CONFIG = {
 }
 
 
+class CustomizedUvicornLogger(logging.Logger):
+    """This class overrides the default Uvicorn logger to add trace_id to the log record
+
+    Args:
+        logging (_type_): _description_
+    """
+
+    def makeRecord(
+        self,
+        name,
+        level,
+        fn,
+        lno,
+        msg,
+        args,
+        exc_info,
+        func=None,
+        extra=None,
+        sinfo=None,
+    ):
+        if extra:
+            trace_id = extra.pop("otelTraceID", None)
+        else:
+            trace_id = None
+        rv = super().makeRecord(
+            name, level, fn, lno, msg, args, exc_info, func, extra, sinfo
+        )
+        if trace_id:
+            rv.__dict__["otelTraceID"] = trace_id
+        return rv
+
+    def _log(
+        self,
+        level,
+        msg,
+        args,
+        exc_info=None,
+        extra=None,
+        stack_info=False,
+        stacklevel=1,
+    ):
+        # Find trace_id from call stack
+        frame = (
+            inspect.currentframe().f_back
+        )  # Go one level up to get the caller's frame
+        while frame:
+            if frame.f_code.co_name == "run_asgi":
+                trace_id = (
+                    frame.f_locals.get("self").scope.get("state", {}).get("trace_id", 0)
+                )
+                if trace_id:
+                    if extra is None:
+                        extra = {}
+                    extra.update({"otelTraceID": trace_id})
+                    break
+            frame = frame.f_back
+
+        # Call the original _log function to handle the logging with trace_id
+        logging.Logger._log(
+            self, level, msg, args, exc_info, extra, stack_info, stacklevel
+        )
+
+
 def setup():
     logging.config.dictConfig(CONFIG)
+    uvicorn_error_logger = logging.getLogger("uvicorn.error")
+    uvicorn_error_logger.__class__ = CustomizedUvicornLogger

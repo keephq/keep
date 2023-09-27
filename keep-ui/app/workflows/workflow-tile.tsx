@@ -81,7 +81,7 @@ function TriggerTile({ trigger }: { trigger: Trigger }) {
       {trigger.type === "alert" && (
         <span className="text-sm text-right">
           {trigger.filters &&
-            trigger.filters.map((filter, index) => (
+            trigger.filters.map((filter) => (
               <>
                 {filter.key} = {filter.value}
                 <br />
@@ -159,7 +159,7 @@ function ProviderTile({
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
   const apiUrl = getApiURL();
-  const { data: session, status, update } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
@@ -169,7 +169,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [isRunning, setIsRunning] = useState(false);
 
-  const { providers, installedProviders, error } = useFetchProviders();
+  const { providers } = useFetchProviders();
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -277,12 +277,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   const handleBuilderClick = async () => {
-    router.push(`/builder/${workflow.id}`);
+    router.push(`/workflows/builder/${workflow.id}`);
   };
-
-  const hasManualTrigger = workflow.triggers.some(
-    (trigger) => trigger.type === "manual"
-  );
 
   const workflowProvidersMap = new Map(
     workflow.providers.map((p) => [p.type, p])

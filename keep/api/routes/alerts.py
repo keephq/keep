@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session
 
+from keep.api.core.db import get_alerts as get_alerts_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_api_key, verify_bearer_token
 from keep.api.models.alert import AlertDto, DeleteRequestBody
@@ -38,14 +39,14 @@ def get_alerts(
 
     # Alerts fetched from providers (by Keep)
     all_providers = ProvidersFactory.get_all_providers()
+    context_manager = ContextManager(
+        tenant_id=tenant_id,
+        workflow_id=None,
+    )
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id=tenant_id, all_providers=all_providers
     )
     for provider in installed_providers:
-        context_manager = ContextManager(
-            tenant_id=tenant_id,
-            workflow_id=None,
-        )
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider.id,
@@ -70,9 +71,9 @@ def get_alerts(
                     "tenant_id": tenant_id,
                 },
             )
-        except Exception:
-            logger.exception(
-                "Could not fetch alerts from provider",
+        except Exception as e:
+            logger.warn(
+                f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
                     "provider_type": provider.type,
@@ -89,24 +90,20 @@ def get_alerts(
                 "tenant_id": tenant_id,
             },
         )
-        query = session.query(Alert).filter(Alert.tenant_id == tenant_id)
-        if provider_type:
-            query = query.filter(Alert.provider_type == provider_type)
-        if provider_id:
-            if not provider_type:
-                raise HTTPException(
-                    400, "provider_type is required when provider_id is set"
-                )
-            query = query.filter(Alert.provider_id == provider_id)
-        db_alerts: list[Alert] = query.order_by(Alert.timestamp.desc()).all()
-        alerts.extend([alert.event for alert in db_alerts])
+        db_alerts = get_alerts_from_db(tenant_id=tenant_id)
+        # enrich the alerts with the enrichment data
+        for alert in db_alerts:
+            if alert.alert_enrichment:
+                alert.event.update(alert.alert_enrichment.enrichments)
+        db_alerts_dto = [AlertDto(**alert.event) for alert in db_alerts]
+        alerts.extend(db_alerts_dto)
         logger.info(
             "Fetched alerts DB",
             extra={
                 "tenant_id": tenant_id,
             },
         )
-    except Exception:
+    except Exception as e:
         logger.exception(
             "Could not fetch alerts from provider",
             extra={
@@ -174,6 +171,7 @@ def handle_formatted_events(
                 provider_type=provider_type,
                 event=formatted_event.dict(),
                 provider_id=provider_id,
+                fingerprint=formatted_event.fingerprint,
             )
             session.add(alert)
             formatted_event.event_id = alert.id
@@ -187,16 +185,9 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
-        # Now run any workflow that should run based on this alert
-        # TODO: this should publish event
-        workflow_manager = WorkflowManager.get_instance()
-        # insert the events to the workflow manager process queue
-        logger.info("Adding events to the workflow manager queue")
-        workflow_manager.insert_events(tenant_id, formatted_events)
-        logger.info("Added events to the workflow manager queue")
-    except Exception:
+    except Exception as e:
         logger.exception(
-            "Failed to alerts to the DB",
+            "Failed to push alerts to the DB",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),
@@ -204,6 +195,55 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    try:
+        # Now run any workflow that should run based on this alert
+        # TODO: this should publish event
+        workflow_manager = WorkflowManager.get_instance()
+        # insert the events to the workflow manager process queue
+        logger.info("Adding events to the workflow manager queue")
+        workflow_manager.insert_events(tenant_id, formatted_events)
+        logger.info("Added events to the workflow manager queue")
+    except Exception as e:
+        logger.exception(
+            "Failed to run workflows based on alerts",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+
+
+@router.post(
+    "/event",
+    description="Receive a generic alert event",
+    response_model=AlertDto | list[AlertDto],
+    status_code=201,
+)
+async def receive_generic_event(
+    alert: AlertDto | list[AlertDto],
+    bg_tasks: BackgroundTasks,
+    tenant_id: str = Depends(verify_api_key),
+    session: Session = Depends(get_session),
+):
+    """
+    A generic webhook endpoint that can be used by any provider to send alerts to Keep.
+
+    Args:
+        alert (AlertDto | list[AlertDto]): The alert(s) to be sent to Keep.
+        bg_tasks (BackgroundTasks): Background tasks handler.
+        tenant_id (str, optional): Defaults to Depends(verify_api_key).
+        session (Session, optional): Defaults to Depends(get_session).
+    """
+    bg_tasks.add_task(
+        handle_formatted_events,
+        tenant_id,
+        "generic",
+        session,
+        alert,
+    )
+    return alert
 
 
 @router.post(

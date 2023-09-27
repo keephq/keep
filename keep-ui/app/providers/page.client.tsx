@@ -1,4 +1,5 @@
 "use client";
+import { FrigadeAnnouncement } from "@frigade/react";
 import { Providers, defaultProvider, Provider } from "./providers";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
@@ -12,6 +13,7 @@ import Image from "next/image";
 import ProvidersInstalled from "./providers-installed";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
+import { updateIntercom } from "@/components/ui/Intercom";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -68,6 +70,7 @@ export const useFetchProviders = () => {
     setInstalledProviders,
     status,
     error,
+    session,
   };
 };
 
@@ -82,6 +85,7 @@ export default function ProvidersPage({
     setInstalledProviders,
     status,
     error,
+    session,
   } = useFetchProviders();
   const { searchProviderString } = useContext(LayoutContext);
 
@@ -97,6 +101,9 @@ export default function ProvidersPage({
       });
     }
   }, [searchParams]);
+  useEffect(() => {
+    updateIntercom(session?.user);
+  }, [session?.user]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated</div>;
@@ -129,6 +136,19 @@ export default function ProvidersPage({
         <Image src="/keep.gif" width={200} height={200} alt="Loading" />
       }
     >
+      <FrigadeAnnouncement
+        flowId="flow_VpefBUPWpliWceBm"
+        modalPosition="center"
+        onButtonClick={(stepData, index, cta) => {
+          if (cta === "primary") {
+            window.open(
+              "https://calendly.com/d/4p7-8dg-399/keep-onboarding",
+              "_blank"
+            );
+          }
+          return true;
+        }}
+      />
       <ProvidersInstalled
         providers={installedProviders}
         onDelete={deleteProvider}

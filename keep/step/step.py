@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import time
 from dataclasses import field
 from enum import Enum
 
@@ -35,11 +36,15 @@ class Step:
         self.step_type = step_type
         self.provider = provider
         self.provider_parameters = provider_parameters
+        self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
         self.conditions_results = {}
         self.logger = context_manager.get_logger()
+        self.__retry = self.on_failure.get("retry", {})
+        self.__retry_count = self.__retry.get("count", 0)
+        self.__retry_interval = self.__retry.get("interval", 0)
 
     @property
     def foreach(self):
@@ -71,10 +76,26 @@ class Step:
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
+    def _get_foreach_items(self):
+        """Get the items to iterate over, when using the `foreach` attribute (see foreach.md)"""
+        # TODO: this should be part of iohandler?
+
+        # the item holds the value we are going to iterate over
+        # TODO: currently foreach will support only {{ a.b.c }} and not functions and other things (which make sense)
+        index = (
+            self.config.get("foreach").replace("{{", "").replace("}}", "").split(".")
+        )
+        index = [i.strip() for i in index]
+        items = self.context_manager.get_full_context()
+        for i in index:
+            # try to get it as a dict
+            items = items.get(i, {})
+        return items
+
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
         # the item holds the value we are going to iterate over
-        items = self.io_handler.render(self.config.get("foreach"))
+        items = self._get_foreach_items()
         any_action_run = False
         # apply ALL conditions (the decision whether to run or not is made in the end)
         for item in items:
@@ -108,9 +129,17 @@ class Step:
         for condition in conditions:
             condition_compare_to = condition.get_compare_to()
             condition_compare_value = condition.get_compare_value()
-            condition_result = condition.apply(
-                condition_compare_to, condition_compare_value
-            )
+            try:
+                condition_result = condition.apply(
+                    condition_compare_to, condition_compare_value
+                )
+            except Exception as e:
+                self.logger.error(
+                    "Failed to apply condition %s with error %s",
+                    condition.condition_name,
+                    e,
+                )
+                raise
             self.context_manager.set_condition_results(
                 self.step_id,
                 condition.condition_name,
@@ -174,13 +203,29 @@ class Step:
                         self.provider_parameters[parameter]
                     )
 
-                if self.step_type == StepType.STEP:
-                    step_output = self.provider.query(**rendered_value)
-                    self.context_manager.set_step_context(
-                        self.step_id, results=step_output, foreach=self.foreach
-                    )
-                else:
-                    self.provider.notify(**rendered_value)
+                for curr_retry_count in range(self.__retry_count + 1):
+                    try:
+                        if self.step_type == StepType.STEP:
+                            step_output = self.provider.query(**rendered_value)
+                            self.context_manager.set_step_context(
+                                self.step_id, results=step_output, foreach=self.foreach
+                            )
+                        else:
+                            self.provider.notify(**rendered_value)
+
+                        # exiting the loop as step/action execution was successful
+                        break
+                    except Exception as e:
+                        if curr_retry_count == self.__retry_count:
+                            raise StepError(e)
+                        else:
+                            self.logger.info(
+                                "Retrying running %s step after %s second(s)...",
+                                self.step_id,
+                                self.__retry_interval,
+                            )
+
+                            time.sleep(self.__retry_interval)
 
                 extra_context = self.provider.expose()
                 rendered_providers_parameters.update(extra_context)
@@ -205,10 +250,24 @@ class Step:
             task = loop.create_task(self.provider.query(**rendered_value))
         else:
             task = loop.create_task(self.provider.notify(**rendered_value))
-        try:
-            loop.run_until_complete(task)
-        except Exception as e:
-            raise ActionError(e)
+
+        for curr_retry_count in range(self.__retry_count + 1):
+            try:
+                loop.run_until_complete(task)
+
+                # exiting the loop as the task execution was successful
+                break
+            except Exception as e:
+                if curr_retry_count == self.__retry_count:
+                    raise ActionError(e)
+                else:
+                    self.logger.info(
+                        "Retrying running %s step after %s second(s)...",
+                        self.step_id,
+                        self.__retry_interval,
+                    )
+
+                    time.sleep(self.__retry_interval)
 
 
 class StepError(Exception):
