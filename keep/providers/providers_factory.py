@@ -155,7 +155,7 @@ class ProvidersFactory:
                 )
                 can_notify = (
                     issubclass(provider_class, BaseProvider)
-                    and provider_class.__dict__.get("notify") is not None
+                    and provider_class.__dict__.get("_notify") is not None
                 )
                 notify_params = (
                     None
@@ -163,7 +163,7 @@ class ProvidersFactory:
                     else list(
                         dict(
                             inspect.signature(
-                                provider_class.__dict__.get("notify")
+                                provider_class.__dict__.get("_notify")
                             ).parameters
                         ).keys()
                     )[1:]

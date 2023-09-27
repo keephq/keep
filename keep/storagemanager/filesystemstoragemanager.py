@@ -54,7 +54,7 @@ class FilesystemStorageManager(BaseStorageManager):
         with open(full_path, "w") as f:
             f.write(file_content)
 
-    def get_file(self, tenant_id, filename) -> str:
+    def get_file(self, tenant_id, filename, create_if_not_exist=False) -> str:
         """
         Get a file.
         Args:
@@ -64,6 +64,11 @@ class FilesystemStorageManager(BaseStorageManager):
             str: The content of the file.
         """
         full_path = os.path.join(self.directory, tenant_id, filename)
+        if not os.path.exists(full_path):
+            if create_if_not_exist:
+                self.store_file(tenant_id, filename, {})
+            else:
+                raise Exception("File {} does not exist".format(full_path))
         with open(full_path, "r") as f:
             f_raw = f.read()
         return f_raw

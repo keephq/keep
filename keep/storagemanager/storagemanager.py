@@ -7,7 +7,7 @@ class BaseStorageManager(metaclass=abc.ABCMeta):
         self.logger = logging.getLogger(__name__)
 
     @abc.abstractmethod
-    def get_file(self, tenant_id, filename) -> str:
+    def get_file(self, tenant_id, filename, create_if_not_exist=False) -> str:
         """
         Get a file.
         Args:

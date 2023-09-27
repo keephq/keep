@@ -2,7 +2,15 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import String
-from sqlmodel import Field, ForeignKey, Relationship, SQLModel, UniqueConstraint
+from sqlmodel import (
+    JSON,
+    Column,
+    Field,
+    ForeignKey,
+    Relationship,
+    SQLModel,
+    UniqueConstraint,
+)
 
 
 class Workflow(SQLModel, table=True):
@@ -48,6 +56,7 @@ class WorkflowExecutionLog(SQLModel, table=True):
     timestamp: datetime
     message: str
     workflowexecution: Optional[WorkflowExecution] = Relationship(back_populates="logs")
+    context: dict = Field(sa_column=Column(JSON))
 
     class Config:
         orm_mode = True
