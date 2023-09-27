@@ -1,0 +1,18 @@
+workflow:
+  id: planner-demo
+  description: Create a task in planner.
+  triggers:
+    - type: interval
+      value: 15
+  actions:
+    - name: create-planner-task
+      provider:
+        type: planner
+        config: " {{ providers.planner }} "
+        with:
+          title: "Keep HQ Task1"
+          plan_id: "tAtCor_XPEmqTzVqTigCycgABz0K"
+        on-failure:
+          retry:
+            count: 2
+            interval: 2
