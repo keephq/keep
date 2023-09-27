@@ -53,6 +53,8 @@ class GitlabPipelinesProvider(BaseProvider):
         )
 
         response_status = result["status"]
+
+        print(f"Sent {method} request to {url} with status {response_status}")
         
         self.logger.debug(
             f"Sent {method} request to {url} with status {response_status}",
