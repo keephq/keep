@@ -142,6 +142,7 @@ receivers:
                 source=["prometheus"],
                 **labels,
                 **annotations,
+                annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
                 **alert,
             )
             alert_dtos.append(alert_dto)

@@ -92,7 +92,7 @@ class SlackProvider(BaseProvider):
             )
         return {"access_token": response_json.get("access_token")}
 
-    def notify(self, message="", blocks=[], channel="", **kwargs: dict):
+    def _notify(self, message="", blocks=[], channel="", **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks

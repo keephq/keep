@@ -36,7 +36,7 @@ class ResendProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def notify(self, _from: str, to: str, subject: str, html: str, **kwargs) -> dict:
+    def _notify(self, _from: str, to: str, subject: str, html: str, **kwargs) -> dict:
         """
         Send an email using the Resend API.
 

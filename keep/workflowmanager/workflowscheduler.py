@@ -92,7 +92,9 @@ class WorkflowScheduler:
         try:
             # set the event context, e.g. the event that triggered the workflow
             workflow.context_manager.set_event_context(event_context)
-            self.workflow_manager._run_workflow(workflow, workflow_execution_id)
+            errors = self.workflow_manager._run_workflow(
+                workflow, workflow_execution_id
+            )
         except Exception as e:
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
             finish_workflow_execution(
@@ -104,13 +106,23 @@ class WorkflowScheduler:
             )
             return
 
-        finish_workflow_execution(
-            tenant_id=tenant_id,
-            workflow_id=workflow_id,
-            execution_id=workflow_execution_id,
-            status="success",
-            error=None,
-        )
+        if any(errors):
+            self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
+            finish_workflow_execution(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                execution_id=workflow_execution_id,
+                status="error",
+                error=",".join(str(e) for e in errors),
+            )
+        else:
+            finish_workflow_execution(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                execution_id=workflow_execution_id,
+                status="success",
+                error=None,
+            )
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_manual_event_workflow(
