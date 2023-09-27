@@ -24,7 +24,7 @@ class GitlabPipelinesProviderAuthConfig:
         }
     )
 
-class GitlabPipelinesProvider(BaseProvider):
+class GitlabpipelinesProvider(BaseProvider):
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
