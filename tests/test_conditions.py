@@ -32,9 +32,9 @@ def test_assert_condition():
         condition_config={"assert": "mock"},
     )
     assertion_result = assert_condtion.apply(None, "200 == 200")
-    assert assertion_result == False
-    assertion_result = assert_condtion.apply(None, "200 == 201")
     assert assertion_result == True
+    assertion_result = assert_condtion.apply(None, "200 == 201")
+    assert assertion_result == False
 
     compare_value = assert_condtion.get_compare_value()
     assert compare_value == "mock"

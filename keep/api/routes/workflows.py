@@ -308,7 +308,10 @@ def get_workflow_execution_status(
         execution_time=workflow_execution.execution_time,
         logs=[
             WorkflowExecutionLogsDTO(
-                id=log.id, timestamp=log.timestamp, message=log.message
+                id=log.id,
+                timestamp=log.timestamp,
+                message=log.message,
+                context=log.context,
             )
             for log in workflow_execution.logs
         ],

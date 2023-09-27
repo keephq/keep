@@ -1,10 +1,10 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSession } from '../../../../../utils/customAuth';
 import { getApiURL } from '../../../../../utils/apiUrl';
 import Loading from '../../../../loading';
-import { ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { Callout, Table, TableBody, TableCell, TableHead, TableRow } from '@tremor/react';
+import { ExclamationCircleIcon, DocumentTextIcon, ChevronDoubleDownIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/outline';
+import { Callout, Icon, Table, TableBody, TableCell, TableHead, TableRow } from '@tremor/react';
 import useSWR from 'swr';
 import { fetcher } from '../../../../../utils/fetcher';
 
@@ -12,6 +12,7 @@ import { fetcher } from '../../../../../utils/fetcher';
 interface LogEntry {
   timestamp: string;
   message: string;
+  context: string;
 }
 
 export default function WorkflowExecutionPage({ params }: { params: { workflow_id: string, workflow_execution_id: string } }) {
@@ -21,6 +22,10 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+  const contentRef = useRef<(HTMLDivElement | null)[]>([]);
+
+
 
   const { data: executionData, error: executionError } = useSWR(
     status === 'authenticated'
@@ -64,7 +69,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
   }
 
   const executionStatus = executionData?.status;
-  const logs = executionData?.logs || [];
+  const logs = executionData?.logs as [LogEntry]|| [];
 
   if (status === 'loading' || !executionData) return <Loading />;
 
@@ -79,18 +84,54 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
   return (
     <div>
       {executionStatus === 'success' ? (
-        <Table>
+          <Table className="w-full">
           <TableHead>
             <TableRow>
-              <TableCell>Timestamp</TableCell>
-              <TableCell>Message</TableCell>
+              <TableCell className="w-1/3 break-words whitespace-normal">Timestamp</TableCell>
+              <TableCell className="w-1/3 break-words whitespace-normal">Message</TableCell>
+              <TableCell className="w-1/3 break-words whitespace-normal">Context</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {logs.map((log: any, index: any) => (
+            {logs.map((log, index) => (
               <TableRow key={index}>
-                <TableCell>{log.timestamp}</TableCell>
-                <TableCell>{log.message}</TableCell>
+                <TableCell className="w-1/3 break-words whitespace-normal">{log.timestamp}</TableCell>
+                <TableCell className="w-1/3 break-words whitespace-normal">{log.message}</TableCell>
+                <TableCell
+                  className="w-1/3 break-words whitespace-normal cursor-pointer"
+                  onClick={() => {
+                    if (contentRef.current[index] && expandedRows[index]) {
+                      contentRef.current[index]!.style.maxHeight = '6rem'; // Matches max-h-24
+                    } else if (contentRef.current[index]) {
+                        contentRef.current[index]!.style.maxHeight = `${contentRef.current[index]!.scrollHeight}px`;
+                    }
+                    setExpandedRows(prevState => ({ ...prevState, [index]: !prevState[index] }));
+                  }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div
+                      ref={el => contentRef.current[index] = el}
+                      className={`overflow-hidden transition-max-height duration-300 ${expandedRows[index] ? 'max-h-screen' : 'max-h-24'}`}>
+                      <pre className="whitespace-pre-wrap">{JSON.stringify(log.context, null, 2)}</pre>
+                    </div>
+                    <button
+                      className="ml-4 mt-8"
+                      onClick={(e) => {
+                        e.stopPropagation();  // prevent the TableCell click event from being triggered
+                        setExpandedRows(prevState => ({ ...prevState, [index]: !prevState[index] }));
+                      }}
+                    >
+                      <Icon
+                        icon={ChevronDoubleRightIcon}
+                        color="orange"
+                        size="lg"
+                        className="grayscale hover:grayscale-0"
+                        tooltip="Show more"
+                      />
+                    </button>
+                  </div>
+                </TableCell>
+
               </TableRow>
             ))}
           </TableBody>

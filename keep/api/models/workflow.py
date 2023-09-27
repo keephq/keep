@@ -75,6 +75,7 @@ class WorkflowExecutionLogsDTO(BaseModel):
     id: int
     timestamp: datetime
     message: str
+    context: dict
 
 
 class WorkflowExecutionDTO(BaseModel):
