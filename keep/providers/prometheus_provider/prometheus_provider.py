@@ -140,7 +140,7 @@ receivers:
                 status=alert.pop("state", None) or alert.pop("status", None),
                 lastReceived=alert.pop("activeAt", None) or alert.pop("startsAt", None),
                 source=["prometheus"],
-                **labels,
+                labels=labels,
                 **annotations,
                 annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
                 **alert,
