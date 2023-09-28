@@ -67,7 +67,7 @@ export function AlertTable({ data, groupBy, pushed = false, workflows }: Props) 
       <Table>
         <TableHead>
           <TableRow>
-            {pushed && <TableHeaderCell>{/** Menu */}</TableHeaderCell>}
+            {<TableHeaderCell>{/** Menu */}</TableHeaderCell>}
             {Object.keys(AlertTableKeys).map((key) => (
               <TableHeaderCell key={key}>
                 <div className="flex items-center">
