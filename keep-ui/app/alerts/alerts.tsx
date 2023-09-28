@@ -168,6 +168,9 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
                   statusIsSeleected(alert) &&
                   searchAlert(alert)
               )}
+              groupBy="name"
+              pushed={false}
+              workflows={workflows}
             />
           </TabPanel>
         </TabPanels>
