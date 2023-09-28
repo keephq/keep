@@ -139,7 +139,7 @@ export function AlertsTableBody({
           }) ?? [];
         return (
           <TableRow key={alert.id}>
-            {pushed && (
+            {
               <TableCell>
                 <AlertMenu
                   alertName={alert.name}
@@ -148,7 +148,7 @@ export function AlertsTableBody({
                   openHistory={() => openModal!(alert)}
                 />
               </TableCell>
-            )}
+            }
             <TableCell>{getSeverity(alert.severity)}</TableCell>
             <TableCell className="max-w-[340px]">
               <div className="flex items-center justify-between">
