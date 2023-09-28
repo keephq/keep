@@ -1,12 +1,17 @@
 import os
+
 import requests
-from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
+from keep.providers.base.base_provider import BaseProvider
+from keep.providers.models.provider_config import ProviderConfig
+
 
 class GoogleChatProvider(BaseProvider):
-    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
@@ -38,15 +43,16 @@ class GoogleChatProvider(BaseProvider):
         payload = {
             "text": message,
         }
-        
-        requestHeaders = {
-            "Content-Type": "application/json; charset=UTF-8"
-        }
+
+        requestHeaders = {"Content-Type": "application/json; charset=UTF-8"}
 
         response = requests.post(webhook_url, json=payload, headers=requestHeaders)
 
         if not response.ok:
-            raise ProviderException(f"Failed to notify message to Google Chat: {response.text}")
+            raise ProviderException(
+                f"Failed to notify message to Google Chat: {response.text}"
+            )
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -67,5 +73,7 @@ if __name__ == "__main__":
         description="Google Chat Output Provider",
         authentication={"webhook_url": google_chat_webhook_url},
     )
-    provider = GoogleChatProvider(context_manager, provider_id="google-chat", config=config)
+    provider = GoogleChatProvider(
+        context_manager, provider_id="google-chat", config=config
+    )
     provider.notify(message="Simple alert showing context with name: John Doe")
