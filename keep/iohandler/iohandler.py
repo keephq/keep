@@ -47,6 +47,19 @@ class IOHandler:
         val = self.parse(template)
         return val
 
+    def quote(self, template):
+        """Quote {{ }} with ''
+
+        Args:
+            template (str): string with {{ }} variables in it
+
+        Returns:
+            str: string with {{ }} variables quoted with ''
+        """
+        pattern = r"(?<!')\{\{[\s]*([^\}]+)[\s]*\}\}(?!')"
+        replacement = r"'{{ \1 }}'"
+        return re.sub(pattern, replacement, template)
+
     def parse(self, string):
         """Use AST module to parse 'call stack'-like string and return the result
 
