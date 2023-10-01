@@ -1,4 +1,5 @@
 import chevron
+from asteval import Interpreter
 
 from keep.conditions.base_condition import BaseCondition
 
@@ -27,7 +28,8 @@ class AssertCondition(BaseCondition):
             # will be able to parse characters such as \n
             compare_value = compare_value.encode("unicode_escape").decode("utf-8")
             # if " 'A' == 'A' ", then we should run the action (so condition is true)
-            assert not eval(compare_value)
+            aeval = Interpreter()
+            assert not aeval(compare_value)
             self.logger.debug(f"Asserted {compare_value}")
             return False
         # if the assertion failed, an action should be done
