@@ -130,15 +130,29 @@ class CustomizedUvicornLogger(logging.Logger):
             inspect.currentframe().f_back
         )  # Go one level up to get the caller's frame
         while frame:
+            found_frame = False
             if frame.f_code.co_name == "run_asgi":
                 trace_id = (
                     frame.f_locals.get("self").scope.get("state", {}).get("trace_id", 0)
+                )
+                tenant_id = (
+                    frame.f_locals.get("self")
+                    .scope.get("state", {})
+                    .get("tenant_id", 0)
                 )
                 if trace_id:
                     if extra is None:
                         extra = {}
                     extra.update({"otelTraceID": trace_id})
-                    break
+                    found_frame = True
+                if tenant_id:
+                    if extra is None:
+                        extra = {}
+                    extra.update({"tenant_id": tenant_id})
+                    found_frame = True
+            # if we found the frame, we can stop searching
+            if found_frame:
+                break
             frame = frame.f_back
 
         # Call the original _log function to handle the logging with trace_id
