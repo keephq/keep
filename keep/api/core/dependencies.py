@@ -108,6 +108,7 @@ def verify_api_key(
 
     # keep it in the context for later use
     context.data["tenant_id"] = tenant_api_key.tenant_id
+    request.state.tenant_id = tenant_api_key.tenant_id
     return tenant_api_key.tenant_id
 
 
