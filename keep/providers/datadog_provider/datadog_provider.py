@@ -157,10 +157,11 @@ class DatadogProvider(BaseProvider):
         formatted_alerts = []
         with ApiClient(self.configuration) as api_client:
             api = MonitorsApi(api_client)
-            try:
-                monitors = api.list_monitors()
 
-                for monitor in monitors:
+            monitors = api.list_monitors()
+
+            for monitor in monitors:
+                try:
                     tags = {
                         k: v for k, v in map(lambda tag: tag.split(":"), monitor.tags)
                     }
@@ -177,9 +178,12 @@ class DatadogProvider(BaseProvider):
                         **tags,
                     )
                     formatted_alerts.append(alert)
-
-            except Exception as e:
-                raise GetAlertException(message=str(e), status_code=e.status)
+                except Exception as e:
+                    self.logger.exception(
+                        "Could not get alert",
+                        extra={"monitor_id": monitor.id, "monitor_name": monitor.name},
+                    )
+                    continue
         return formatted_alerts
 
     def setup_webhook(
