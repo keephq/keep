@@ -257,7 +257,6 @@ async def receive_event(
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
 ) -> dict[str, str]:
-    a = b
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     # if this request is just to confirm the sns subscription, return ok
     # TODO: think of a more elegant way to do this
