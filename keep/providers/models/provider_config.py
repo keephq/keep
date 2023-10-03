@@ -9,6 +9,22 @@ import chevron
 
 
 @dataclass
+class ProviderScope:
+    """
+    Provider scope model.
+
+    Args:
+        name (str): The name of the scope.
+        description (Optional[str]): The description of the scope.
+    """
+
+    name: str
+    description: Optional[str] = None
+    mandatory: bool = False
+    documentation_url: Optional[str] = None
+
+
+@dataclass
 class ProviderConfig:
     """
     Provider configuration model.

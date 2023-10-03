@@ -12,11 +12,12 @@ from pydantic.dataclasses import dataclass
 from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
+    PROVIDER_SCOPES: list[ProviderScope] = []
 
     def __init__(
         self,

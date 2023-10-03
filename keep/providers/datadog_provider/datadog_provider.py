@@ -25,7 +25,7 @@ from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -60,6 +60,45 @@ class DatadogProvider(BaseProvider):
     Datadog provider class.
     """
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="monitors_read",
+            description="Read monitors",
+            mandatory=True,
+            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
+            alias="Monitors Read",
+        ),
+        ProviderScope(
+            name="monitors_write",
+            description="Write monitors, *required for webhook installation*",
+            mandatory=False,
+            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
+            alias="Monitors Write",
+        ),
+        ProviderScope(
+            name="create_webhooks",
+            description="Create webhooks integrations, *required for webhook installation*",
+            mandatory=False,
+            alias="Integrations Manage",
+        ),
+        ProviderScope(
+            name="metrics_read",
+            description="View custom metrics.",
+            mandatory=False,
+        ),
+        ProviderScope(
+            name="logs_read",
+            description="Read log data.",
+            mandatory=False,
+            alias="Logs Read Data",
+        ),
+        ProviderScope(
+            name="traces_read",
+            description="Read and query APM and Trace Analytics.",
+            mandatory=False,
+            alias="APM Read",
+        ),
+    ]
     EVENT_NAME_PATTERN = r".*\] (.*)"
 
     def convert_to_seconds(s):
