@@ -60,6 +60,7 @@ opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
 opentelemetry-instrumentation-sqlalchemy = "^0.41b0"
 opentelemetry-instrumentation-requests = "^0.41b0"
 asteval = "^0.9.31"
+prettytable = "^3.9.0"
 
 
 [tool.poetry.group.dev.dependencies]

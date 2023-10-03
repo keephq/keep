@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -18,3 +20,5 @@ class Provider(BaseModel):
     can_setup_webhook: bool = False
     provider_description: str | None = None
     oauth2_url: str | None = None
+    installed_by: str | None = None
+    installation_time: datetime | None = None

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -567,3 +568,11 @@ def get_alerts(tenant_id, provider_id=None):
         alerts = query.all()
 
     return alerts
+
+
+def get_api_key(api_key: str):
+    with Session(engine) as session:
+        api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
+        statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+        tenant_api_key = session.exec(statement).first()
+    return tenant_api_key

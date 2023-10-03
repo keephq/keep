@@ -16,7 +16,7 @@ from fastapi.security import (
 from sqlmodel import Session, select
 from starlette_context import context
 
-from keep.api.core.db import get_session
+from keep.api.core.db import get_api_key, get_session
 from keep.api.models.db.tenant import TenantApiKey
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ http_digest = HTTPDigest(
 )  # hack for grafana, they don't support api key header
 http_basic = HTTPBasic(auto_error=False)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
@@ -53,14 +53,12 @@ def verify_api_key(
     request: Request,
     api_key: str = Security(auth_header),
     authorization: HTTPAuthorizationCredentials = Security(http_basic),
-    session: Session = Depends(get_session),
 ) -> str:
     """
     Verifies that a customer is allowed to access the API.
 
     Args:
         api_key (str, optional): The API key extracted from X-API-KEY header. Defaults to Security(auth_header).
-        session (Session, optional): A databse session. Defaults to Depends(get_session).
 
     Raises:
         HTTPException: 401 if the user is unauthorized.
@@ -99,13 +97,9 @@ def verify_api_key(
         else:
             raise HTTPException(status_code=401, detail="Missing API Key")
 
-    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
-
-    statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
-    tenant_api_key = session.exec(statement).first()
+    tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
-
     # keep it in the context for later use
     context.data["tenant_id"] = tenant_api_key.tenant_id
     request.state.tenant_id = tenant_api_key.tenant_id
@@ -136,3 +130,30 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
     except Exception as e:
         logger.exception("Failed to validate token")
         raise HTTPException(status_code=401, detail=str(e))
+
+
+def verify_token_or_key(
+    request: Request,
+    api_key: Optional[str] = Security(auth_header),
+    authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
+    token: Optional[str] = Depends(oauth2_scheme),
+) -> str:
+    logger.info("Authenticating")
+    # Attempt to verify API Key first
+    if api_key:
+        try:
+            return verify_api_key(request, api_key, authorization)
+        except Exception as e:
+            logger.exception("Failed to validate API Key")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )
+    # If API Key is not present or not valid, attempt to verify the token
+    if token:
+        try:
+            return verify_bearer_token(token)
+        except Exception as e:
+            logger.exception("Failed to validate token")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )

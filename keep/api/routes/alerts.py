@@ -6,7 +6,11 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_alerts as get_alerts_from_db
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_api_key, verify_bearer_token
+from keep.api.core.dependencies import (
+    verify_api_key,
+    verify_bearer_token,
+    verify_token_or_key,
+)
 from keep.api.models.alert import AlertDto, DeleteRequestBody
 from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
@@ -24,8 +28,7 @@ logger = logging.getLogger(__name__)
 def get_alerts(
     provider_type: str = None,
     provider_id: str = None,
-    tenant_id: str = Depends(verify_bearer_token),
-    session: Session = Depends(get_session),
+    tenant_id: str = Depends(verify_token_or_key),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching all alerts",

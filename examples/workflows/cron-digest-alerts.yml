@@ -1,0 +1,27 @@
+workflow:
+  id: alerts-daily-digest
+  description: run alerts digest twice a day (on 11:00 and 14:00)
+  triggers:
+    - type: interval
+      cron: 0 11,14 * * *
+  steps:
+    # get the alerts from keep
+    - name: get-alerts
+      provider:
+        type: keep
+        with:
+          filters:
+          # filter out alerts that are closed
+          - key: status
+            value: open
+          timerange:
+            from: "{{ state.workflows.alerts-daily-digest.last_run_time }}"
+            to: now
+  actions:
+    - name: send-digest
+      foreach: "{{ steps.get-alerts.results }}"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Open alert: {{ foreach.value.name }}"

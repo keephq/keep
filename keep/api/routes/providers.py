@@ -15,6 +15,7 @@ from keep.api.core.dependencies import (
     get_user_email,
     verify_api_key,
     verify_bearer_token,
+    verify_token_or_key,
 )
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
     "",
 )
 def get_providers(
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
 ):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()

@@ -240,6 +240,8 @@ class ProvidersFactory:
                 continue
             provider_copy = provider.copy()
             provider_copy.id = p.id
+            provider_copy.installed_by = p.installed_by
+            provider_copy.installation_time = p.installation_time
             try:
                 provider_auth = (
                     secret_manager.read_secret(

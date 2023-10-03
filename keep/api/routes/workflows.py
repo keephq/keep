@@ -21,7 +21,11 @@ from keep.api.core.db import (
     get_workflow,
     get_workflow_executions,
 )
-from keep.api.core.dependencies import get_user_email, verify_bearer_token
+from keep.api.core.dependencies import (
+    get_user_email,
+    verify_bearer_token,
+    verify_token_or_key,
+)
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -43,7 +47,7 @@ logger = logging.getLogger(__name__)
     description="Get workflows",
 )
 def get_workflows(
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
 ) -> list[WorkflowDTO]:
     workflowstore = WorkflowStore()
     parser = Parser()

@@ -1,3 +1,4 @@
+import json
 import logging
 import logging.config
 import sys
@@ -5,10 +6,12 @@ from dataclasses import fields
 from importlib import metadata
 
 import click
+import requests
 import yaml
 from dotenv import find_dotenv, load_dotenv
+from prettytable import PrettyTable
 
-from keep.api.core.db import try_create_single_tenant
+from keep.api.core.db import get_api_key, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client, get_random_user_id
@@ -58,6 +61,7 @@ class Info:
         """Create a new instance."""
         self.verbose: int = 0
         self.config = {}
+        self.json = False
         self.logger = logging.getLogger(__name__)
 
     def set_config(self, keep_config: str):
@@ -66,6 +70,19 @@ class Info:
             with open(file=keep_config, mode="r") as f:
                 self.logger.debug("Loading configuration file.")
                 self.config = yaml.safe_load(f)
+                self.api_key = (
+                    self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
+                )
+                if self.api_key:
+                    try:
+                        self.tenant_id = get_api_key(self.api_key).tenant_id
+                    except Exception as e:
+                        self.tenant_id = SINGLE_TENANT_UUID
+                else:
+                    self.tenant_id = SINGLE_TENANT_UUID
+                self.keep_api_url = self.config.get("keep_api_url") or os.getenv(
+                    "KEEP_API_URL"
+                )
                 self.logger.debug("Configuration file loaded.")
         except FileNotFoundError:
             logger.debug(
@@ -114,6 +131,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     logging.config.dictConfig(logging_config)
     info.verbose = verbose
     info.set_config(keep_config)
+    info.json = json
 
     @ctx.call_on_close
     def cleanup():
@@ -267,9 +285,156 @@ def init(info: Info, keep_config_file):
 
 
 @cli.group()
+@pass_info
+def workflow(info: Info):
+    """Manage workflows."""
+    pass
+
+
+@workflow.command()
+@pass_info
+def list(info: Info):
+    """List workflows."""
+    resp = requests.get(
+        info.keep_api_url + "/workflows",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting workflows: {resp.text}")
+
+    workflows = resp.json()
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = [
+        "ID",
+        "Name",
+        "Description",
+        "Created By",
+        "Creation Time",
+        "Last Execution Time",
+        "Last Execution Status",
+    ]
+    # TODO - add triggers, steps, actions -> the table format should be better
+    # Add rows for each workflow
+    for workflow in workflows:
+        table.add_row(
+            [
+                workflow["id"],
+                workflow["description"],
+                workflow["workflow_raw_id"],
+                workflow["created_by"],
+                workflow["creation_time"],
+                workflow["last_execution_time"],
+                workflow["last_execution_status"],
+            ]
+        )
+    print(table)
+
+
+@workflow.command()
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="The workflow file",
+    required=True,
+)
+def apply(file_path: str):
+    """Apply a workflow."""
+    with open(file_path, "rb") as file:
+        files = {
+            "file": (file_path.split("/")[-1], file)
+        }  # The field 'file' should match the name in the API endpoint
+        response = requests.post(url, headers=headers, files=files)
+
+
+@cli.group()
+@pass_info
+def provider(info: Info):
+    """Manage providers."""
+    pass
+
+
+@provider.command()
+@pass_info
+def list(info: Info):
+    """List providers."""
+    resp = requests.get(
+        info.keep_api_url + "/providers",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting providers: {resp.text}")
+
+    providers = resp.json()
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = ["ID", "Type", "Name", "Installed by", "Installation time"]
+    installed_providers = providers.get("installed_providers", [])
+    for provider in installed_providers:
+        table.add_row(
+            [
+                provider["id"],
+                provider["type"],
+                provider["details"]["name"],
+                provider["installed_by"],
+                provider["installation_time"],
+            ]
+        )
+    print(table)
+
+
+@cli.group()
+@pass_info
+def alert(info: Info):
+    """Manage alerts."""
+    pass
+
+
+@cli.group()
 def config():
     """Set keep configuration."""
     pass
+
+
+@alert.command()
+@pass_info
+def list(info: Info):
+    """List alerts."""
+    resp = requests.get(
+        info.keep_api_url + "/alerts",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting providers: {resp.text}")
+
+    alerts = resp.json()
+    # Create a new table
+    table = PrettyTable()
+    table.field_names = [
+        "ID",
+        "Name",
+        "Status",
+        "Environment",
+        "Service",
+        "Source",
+        "Last Received",
+    ]
+    for alert in alerts:
+        table.add_row(
+            [
+                alert["id"],
+                alert["name"],
+                alert["status"],
+                alert["environment"],
+                alert["service"],
+                alert["source"],
+                alert["lastReceived"],
+            ]
+        )
+    print(table)
 
 
 @config.command()
