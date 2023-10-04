@@ -16,7 +16,7 @@ export interface ProviderScope {
   mandatory: boolean;
   documentation_url?: string;
   alias?: string;
-  mandatory_for_webhook: boolean
+  mandatory_for_webhook: boolean;
 }
 
 export interface Provider {
@@ -48,6 +48,7 @@ export interface Provider {
   provider_description?: string;
   oauth2_url?: string;
   scopes?: ProviderScope[];
+  validatedScopes?: { [scopeName: string]: boolean | string };
 }
 
 export type Providers = Provider[];

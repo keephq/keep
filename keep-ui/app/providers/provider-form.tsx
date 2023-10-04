@@ -61,9 +61,9 @@ const ProviderForm = ({
     [key: string]: string | boolean;
   }>(initialData);
   const [formErrors, setFormErrors] = useState<string>(null);
-  const [providerValidatedScopes, setProviderValidatedScopes] = useState<{}>(
-    {}
-  );
+  const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
+    [key: string]: boolean | string;
+  }>(provider.validatedScopes);
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
 
@@ -179,7 +179,7 @@ const ProviderForm = ({
           if (formValues.install_webhook && provider.can_setup_webhook) {
             installWebhook(data as Provider, accessToken);
           }
-          onAddProvider({ ...data, ...provider } as Provider);
+          onAddProvider({ ...provider, ...data } as Provider);
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();

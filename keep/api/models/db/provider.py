@@ -13,7 +13,9 @@ class Provider(SQLModel, table=True):
     installed_by: str
     installation_time: datetime
     configuration_key: str
-    scopes: dict = Field(sa_column=Column(JSON))
+    validatedScopes: dict = Field(
+        sa_column=Column(JSON)
+    )  # scope name is key and value is either True if validated or string with error message, e.g: {"read": True, "write": "error message"}
 
     class Config:
         orm_mode = True

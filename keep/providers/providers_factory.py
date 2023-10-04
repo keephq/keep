@@ -234,7 +234,7 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider = next(
+            provider: Provider = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
@@ -262,5 +262,6 @@ class ProvidersFactory:
                 )
                 continue
             provider_copy.details = provider_auth
+            provider_copy.validatedScopes = p.validatedScopes
             providers.append(provider_copy)
         return providers

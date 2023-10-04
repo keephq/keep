@@ -58,6 +58,7 @@ export const useFetchProviders = () => {
         provider_description: provider.provider_description,
         oauth2_url: provider.oauth2_url,
         scopes: provider.scopes,
+        validatedScopes: provider.validatedScopes,
       };
       return updatedProvider;
     }) as Providers;

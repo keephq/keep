@@ -21,3 +21,4 @@ class Provider(BaseModel):
     provider_description: str | None = None
     oauth2_url: str | None = None
     scopes: list[ProviderScope] = []
+    validatedScopes: dict[str, bool | str] | None = {}
