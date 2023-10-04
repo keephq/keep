@@ -37,6 +37,8 @@ type ProviderFormProps = {
   closeModal: () => void;
   onAddProvider?: (provider: Provider) => void;
   isProviderNameDisabled?: boolean;
+  installedProvidersMode: boolean;
+  onDelete?: (provider: Provider) => void;
 };
 
 const ProviderForm = ({
@@ -48,6 +50,8 @@ const ProviderForm = ({
   onAddProvider,
   closeModal,
   isProviderNameDisabled,
+  installedProvidersMode,
+  onDelete,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const initialData = {
@@ -68,6 +72,25 @@ const ProviderForm = ({
   const { data: session, status, update } = useSession();
 
   const accessToken = session?.accessToken;
+
+  async function deleteProvider() {
+    if (confirm("Are you sure you want to delete this provider?")) {
+      const response = await fetch(
+        `${getApiURL()}/providers/${provider.type}/${provider.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken!}`,
+          },
+        }
+      );
+      if (response.ok) {
+        onDelete!(provider);
+      } else {
+        toast.error(`Failed to delete ${provider.type} 😢`);
+      }
+    }
+  }
 
   const validateForm = (updatedFormValues) => {
     const errors = {};
@@ -166,6 +189,8 @@ const ProviderForm = ({
         return data;
       });
   };
+
+  const handleUpdateClick = () => {};
 
   const handleConnectClick = () => {
     if (validate()) {
@@ -379,9 +404,30 @@ const ProviderForm = ({
         >
           Cancel
         </Button>
-        <Button loading={isLoading} onClick={handleConnectClick} color="orange">
-          Connect
-        </Button>
+        {installedProvidersMode && (
+          <>
+            <Button
+              loading={isLoading}
+              onClick={handleUpdateClick}
+              color="orange"
+              className="mr-2.5"
+            >
+              Update
+            </Button>
+            <Button loading={isLoading} onClick={deleteProvider} color="red">
+              Delete
+            </Button>
+          </>
+        )}
+        {!installedProvidersMode && (
+          <Button
+            loading={isLoading}
+            onClick={handleConnectClick}
+            color="orange"
+          >
+            Connect
+          </Button>
+        )}
       </div>
     </div>
   );

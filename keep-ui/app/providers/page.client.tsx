@@ -5,12 +5,11 @@ import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
-import ProvidersAvailable from "./providers-available";
+import ProvidersTiles from "./providers-tiles";
 import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
 import Image from "next/image";
-import ProvidersInstalled from "./providers-installed";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
@@ -151,13 +150,18 @@ export default function ProvidersPage({
           return true;
         }}
       />
-      <ProvidersInstalled
-        providers={installedProviders}
-        onDelete={deleteProvider}
-      />
-      <ProvidersAvailable
+      {installedProviders.length > 0 && (
+        <ProvidersTiles
+          providers={installedProviders}
+          addProvider={addProvider}
+          onDelete={deleteProvider}
+          installedProvidersMode={true}
+        />
+      )}
+      <ProvidersTiles
         providers={providers.filter(searchProviders)}
         addProvider={addProvider}
+        onDelete={deleteProvider}
       />
     </Suspense>
   );
