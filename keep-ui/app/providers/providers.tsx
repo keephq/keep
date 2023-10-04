@@ -10,6 +10,15 @@ export interface ProviderAuthConfig {
   hidden?: boolean;
 }
 
+export interface ProviderScope {
+  name: string;
+  description?: string;
+  mandatory: boolean;
+  documentation_url?: string;
+  alias?: string;
+  mandatory_for_webhook: boolean
+}
+
 export interface Provider {
   // key value pair of auth method name and auth method config
   config: {
@@ -38,6 +47,7 @@ export interface Provider {
   supports_webhook?: boolean;
   provider_description?: string;
   oauth2_url?: string;
+  scopes?: ProviderScope[];
 }
 
 export type Providers = Provider[];

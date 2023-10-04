@@ -24,6 +24,7 @@ class ProviderScope:
     name: str
     description: Optional[str] = None
     mandatory: bool = False
+    mandatory_for_webhook: bool = False
     documentation_url: Optional[str] = None
     alias: Optional[str] = None
 

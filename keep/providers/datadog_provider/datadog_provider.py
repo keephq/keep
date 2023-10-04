@@ -73,15 +73,17 @@ class DatadogProvider(BaseProvider):
         ),
         ProviderScope(
             name="monitors_write",
-            description="Write monitors, *required for webhook installation*",
+            description="Write monitors",
             mandatory=False,
+            mandatory_for_webhook=True,
             documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
             alias="Monitors Write",
         ),
         ProviderScope(
             name="create_webhooks",
-            description="Create webhooks integrations, *required for webhook installation*",
+            description="Create webhooks integrations",
             mandatory=False,
+            mandatory_for_webhook=True,
             alias="Integrations Manage",
         ),
         ProviderScope(
@@ -160,21 +162,35 @@ class DatadogProvider(BaseProvider):
                         api.delete_monitor(monitor.id)
                     elif scope.name == "create_webhooks":
                         api = WebhooksIntegrationApi(api_client)
+                        # We check if we have permissions to query webhooks, this means we have the create_webhooks scope
                         try:
-                            # We check if we have permissions to query webhooks, this means we have the create_webhooks scope
-                            api.get_webhooks_integration("non-existing-webhook")
-                        except NotFoundException:
-                            pass
-                        except Exception as e:
-                            raise e
+                            api.create_webhooks_integration(
+                                body={
+                                    "name": "keep-webhook-scope-validation",
+                                    "url": "https://example.com",
+                                }
+                            )
+                            # for some reason create_webhooks does not allow to delete: api.delete_webhooks_integration(webhook_name), no scope for deletion
+                        except ApiException as e:
+                            # If it's something different from 403 it means we have access! (for example, already exists because we created it once)
+                            if e.status == 403:
+                                raise e
                     elif scope.name == "metrics_read":
                         api = MetricsApi(api_client)
-                        api.query_metrics(query="system.cpu.idle{*}")
+                        api.query_metrics(
+                            query="system.cpu.idle{*}",
+                            _from=int((datetime.datetime.now()).timestamp()),
+                            to=int(datetime.datetime.now().timestamp()),
+                        )
                     elif scope.name == "logs_read":
-                        api = LogsApi(api_client)
-                        api.list_logs(body={"query": "test"})
+                        self._query(
+                            query="*",
+                            timeframe="1h",
+                            query_type="logs",
+                        )
                 except ApiException as e:
                     # API failed and it means we're probably lacking some permissions
+                    # perhaps we should check if status code is 403 and otherwise mark as valid?
                     self.logger.warning(
                         f"Failed to validate scope {scope.name}",
                         extra={"reason": e.reason, "code": e.status},

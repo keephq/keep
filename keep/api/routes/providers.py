@@ -279,44 +279,57 @@ async def install_provider(
         "authentication": provider_info,
         "name": provider_name,
     }
-    try:
-        # Instantiate the provider object and perform installation process
-        context_manager = ContextManager(tenant_id=tenant_id)
-        provider = ProvidersFactory.get_provider(
-            context_manager, provider_id, provider_type, provider_config
-        )
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
-        secret_manager.write_secret(
-            secret_name=secret_name,
-            secret_value=json.dumps(provider_config),
-        )
-        # add the provider to the db
-        provider = Provider(
-            id=provider_unique_id,
-            tenant_id=tenant_id,
-            name=provider_name,
-            type=provider_type,
-            installed_by=installed_by,
-            installation_time=time.time(),
-            configuration_key=secret_name,
-        )
-        session.add(provider)
-        session.commit()
-        return JSONResponse(
-            status_code=200,
-            content={
-                "type": provider_type,
-                "id": provider_unique_id,
-                "details": provider_config,
-            },
+
+    # Instantiate the provider object and perform installation process
+    context_manager = ContextManager(tenant_id=tenant_id)
+    provider = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider_type, provider_config
+    )
+
+    provider_scopes = provider.validate_scopes()
+    mandatory_scopes_validated = True
+    if provider.PROVIDER_SCOPES and provider_scopes:
+        # All of the mandatory scopes must be validated
+        for scope in provider.PROVIDER_SCOPES:
+            if scope.mandatory and (
+                scope.name not in provider_scopes or provider_scopes[scope.name] != True
+            ):
+                mandatory_scopes_validated = False
+                break
+    # Otherwise we fail the installation
+    if not mandatory_scopes_validated:
+        raise HTTPException(
+            status_code=412,
+            detail=provider_scopes,
         )
 
-    except GetAlertException as e:
-        raise HTTPException(status_code=403, detail=e.message)
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+    secret_manager.write_secret(
+        secret_name=secret_name,
+        secret_value=json.dumps(provider_config),
+    )
+    # add the provider to the db
+    provider = Provider(
+        id=provider_unique_id,
+        tenant_id=tenant_id,
+        name=provider_name,
+        type=provider_type,
+        installed_by=installed_by,
+        installation_time=time.time(),
+        configuration_key=secret_name,
+        scopes=provider_scopes,
+    )
+    session.add(provider)
+    session.commit()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "type": provider_type,
+            "id": provider_unique_id,
+            "details": provider_config,
+        },
+    )
 
 
 @router.post("/install/oauth2/{provider_type}")

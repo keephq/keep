@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-from sqlmodel import Field, ForeignKey, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class Provider(SQLModel, table=True):
@@ -13,6 +13,7 @@ class Provider(SQLModel, table=True):
     installed_by: str
     installation_time: datetime
     configuration_key: str
+    scopes: dict = Field(sa_column=Column(JSON))
 
     class Config:
         orm_mode = True

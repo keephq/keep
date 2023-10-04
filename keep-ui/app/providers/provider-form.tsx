@@ -23,6 +23,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
+import ProviderFormScopes from "./provider-form-scopes";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -59,13 +60,12 @@ const ProviderForm = ({
   const [formValues, setFormValues] = useState<{
     [key: string]: string | boolean;
   }>(initialData);
-  const [formErrors, setFormErrors] = useState<{
-    [key: string]: string;
-  } | null>(null);
+  const [formErrors, setFormErrors] = useState<string>(null);
+  const [providerValidatedScopes, setProviderValidatedScopes] = useState<{}>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
-
-  const [hoveredLabel, setHoveredLabel] = useState(null);
 
   const accessToken = session?.accessToken;
 
@@ -94,7 +94,6 @@ const ProviderForm = ({
     const { name, value } = event.target;
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     const updatedFormValues = { ...formValues, [name]: value };
-    validateForm(updatedFormValues);
     onFormChange(updatedFormValues, formErrors);
   };
 
@@ -122,11 +121,15 @@ const ProviderForm = ({
   const validate = () => {
     const errors = validateForm(formValues);
     if (Object.keys(errors).length === 0) {
-      markErrors(errors);
       return true;
     } else {
-      setFormErrors(errors);
-      markErrors(errors);
+      setFormErrors(
+        `Missing required fields: ${JSON.stringify(
+          Object.keys(errors),
+          null,
+          4
+        )}`
+      );
       return false;
     }
   };
@@ -141,56 +144,56 @@ const ProviderForm = ({
       body: JSON.stringify(formValues),
     })
       .then((response) => {
+        const response_json = response.json();
         if (!response.ok) {
           // If the response is not okay, throw the error message
-          return response.json().then((errorData) => {
-            throw new Error(
-              `Error: ${response.status}, ${JSON.stringify(errorData)}`
-            );
+          return response_json.then((errorData) => {
+            const errorDetail = errorData.detail;
+            if (response.status === 412) {
+              setProviderValidatedScopes(errorDetail);
+            }
+            throw `Scopes are invalid for ${provider.type}: ${JSON.stringify(
+              errorDetail,
+              null,
+              4
+            )}`;
           });
         }
-        const response_json = response.json();
         return response_json;
       })
       .then((data) => {
         setFormErrors({});
         return data;
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        throw error;
       });
   };
 
   const handleConnectClick = () => {
-    if (!validate()) {
-      return;
+    if (validate()) {
+      setIsLoading(true);
+      onConnectChange(true, false);
+      submit(`${getApiURL()}/providers/install`)
+        .then((data) => {
+          console.log("Connect Result:", data);
+          setIsLoading(false);
+          onConnectChange(false, true);
+          if (formValues.install_webhook && provider.can_setup_webhook) {
+            installWebhook(data as Provider, accessToken);
+          }
+          onAddProvider({ ...data, ...provider } as Provider);
+        })
+        .catch((error) => {
+          const updatedFormErrors = error.toString();
+          setFormErrors(updatedFormErrors);
+          onFormChange(formValues, updatedFormErrors);
+          setIsLoading(false);
+          onConnectChange(false, false);
+        });
     }
-    setIsLoading(true);
-    onConnectChange(true, false);
-    submit(`${getApiURL()}/providers/install`)
-      .then((data) => {
-        console.log("Connect Result:", data);
-        setIsLoading(false);
-        onConnectChange(false, true);
-        if (formValues.install_webhook && provider.can_setup_webhook) {
-          installWebhook(data as Provider, accessToken);
-        }
-        onAddProvider(data as Provider);
-      })
-      .catch((error) => {
-        console.error("Connect failed:", error);
-        const updatedFormErrors = { error: error.toString() };
-        setFormErrors(updatedFormErrors);
-        onFormChange(formValues, updatedFormErrors);
-        setIsLoading(false);
-        onConnectChange(false, false);
-      });
   };
 
   console.log("ProviderForm component loaded");
   return (
-    <div className="flex flex-col h-screen justify-between p-7">
+    <div className="flex flex-col h-full justify-between p-5">
       <div>
         <Title>
           Connect to{" "}
@@ -229,6 +232,12 @@ const ProviderForm = ({
             className="mt-5 mb-9 ml-2.5"
           />
         </div>
+        {provider.scopes?.length > 0 && (
+          <ProviderFormScopes
+            provider={provider}
+            validatedScopes={providerValidatedScopes}
+          />
+        )}
         <form>
           <div className="form-group">
             {provider.oauth2_url ? (
@@ -250,7 +259,10 @@ const ProviderForm = ({
               </>
             ) : null}
             <label htmlFor="provider_name" className="label-container mb-1">
-              <Text>Provider Name</Text>
+              <Text>
+                Provider Name
+                <span className="text-red-400">*</span>
+              </Text>
             </label>
             <input
               type="text"
@@ -282,7 +294,9 @@ const ProviderForm = ({
                 <label htmlFor={configKey} className="label-container mb-1">
                   <Text className="capitalize">
                     {method.description}
-                    {method.required !== false ? "" : " (optional)"}
+                    {method.required !== false ? (
+                      <span className="text-red-400">*</span>
+                    ) : null}
                   </Text>
                   {method.hint && (
                     <Icon
@@ -340,21 +354,21 @@ const ProviderForm = ({
               accessToken={accessToken}
             />
           )}
+          {formErrors && (
+            <Callout
+              title="Connection Problem"
+              icon={ExclamationCircleIcon}
+              className="my-5"
+              color="rose"
+            >
+              {formErrors}
+            </Callout>
+          )}
           {/* Hidden input for provider ID */}
           <input type="hidden" name="providerId" value={provider.id} />
         </form>
       </div>
-      <div>
-        {formErrors && (
-          <Callout
-            title="Connection Problem"
-            icon={ExclamationCircleIcon}
-            color="rose"
-          >
-            {JSON.stringify(formErrors, null, 2)}
-          </Callout>
-        )}
-      </div>
+
       <div className="flex justify-end">
         <Button
           variant="secondary"
