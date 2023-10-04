@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from keep.providers.models.provider_config import ProviderScope
+
 
 class Provider(BaseModel):
     id: str | None = None
@@ -18,3 +20,4 @@ class Provider(BaseModel):
     can_setup_webhook: bool = False
     provider_description: str | None = None
     oauth2_url: str | None = None
+    scopes: list[ProviderScope] = []

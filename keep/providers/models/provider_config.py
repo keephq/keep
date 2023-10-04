@@ -16,12 +16,16 @@ class ProviderScope:
     Args:
         name (str): The name of the scope.
         description (Optional[str]): The description of the scope.
+        mandatory (bool): Whether the scope is mandatory.
+        documentation_url (Optional[str]): The documentation url of the scope.
+        alias (Optional[str]): Another alias of the scope.
     """
 
     name: str
     description: Optional[str] = None
     mandatory: bool = False
     documentation_url: Optional[str] = None
+    alias: Optional[str] = None
 
 
 @dataclass

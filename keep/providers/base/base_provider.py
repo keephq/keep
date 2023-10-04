@@ -77,6 +77,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("validate_config() method not implemented")
 
+    def validate_scopes(self) -> dict[str, bool | str]:
+        """
+        Validate provider scopes.
+
+        Returns:
+            dict: where key is the scope name and value is whether the scope is valid (True boolean) or string with error message.
+        """
+        return {}
+
     def notify(self, **kwargs):
         """
         Output alert message.

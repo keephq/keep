@@ -144,6 +144,11 @@ class ProvidersFactory:
                 )
                 provider_type = provider_directory.replace("_provider", "")
                 provider_class = ProvidersFactory.get_provider_class(provider_type)
+                scopes = (
+                    provider_class.PROVIDER_SCOPES
+                    if issubclass(provider_class, BaseProvider)
+                    else []
+                )
                 can_setup_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
@@ -207,6 +212,7 @@ class ProvidersFactory:
                         supports_webhook=supports_webhook,
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
+                        scopes=scopes,
                     )
                 )
             except ModuleNotFoundError:

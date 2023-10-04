@@ -11,12 +11,15 @@ import time
 
 import pydantic
 from datadog_api_client import ApiClient, Configuration
-from datadog_api_client.exceptions import NotFoundException
+from datadog_api_client.exceptions import ApiException, NotFoundException
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
 from datadog_api_client.v1.api.webhooks_integration_api import WebhooksIntegrationApi
 from datadog_api_client.v1.model.monitor import Monitor
+from datadog_api_client.v1.model.monitor_options import MonitorOptions
+from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
+from datadog_api_client.v1.model.monitor_type import MonitorType
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -92,12 +95,6 @@ class DatadogProvider(BaseProvider):
             mandatory=False,
             alias="Logs Read Data",
         ),
-        ProviderScope(
-            name="traces_read",
-            description="Read and query APM and Trace Analytics.",
-            mandatory=False,
-            alias="APM Read",
-        ),
     ]
     EVENT_NAME_PATTERN = r".*\] (.*)"
 
@@ -130,6 +127,63 @@ class DatadogProvider(BaseProvider):
         self.authentication_config = DatadogProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self):
+        scopes = {}
+        self.logger.info("Validating scopes")
+        with ApiClient(self.configuration) as api_client:
+            for scope in self.PROVIDER_SCOPES:
+                try:
+                    if scope.name == "monitors_read":
+                        api = MonitorsApi(api_client)
+                        api.list_monitors()
+                    elif scope.name == "monitors_write":
+                        api = MonitorsApi(api_client)
+                        body = Monitor(
+                            name="Example-Monitor",
+                            type=MonitorType.RUM_ALERT,
+                            query='formula("1 * 100").last("15m") >= 200',
+                            message="some message Notify: @hipchat-channel",
+                            tags=[
+                                "test:examplemonitor",
+                                "env:ci",
+                            ],
+                            priority=3,
+                            options=MonitorOptions(
+                                thresholds=MonitorThresholds(
+                                    critical=200,
+                                ),
+                                variables=[],
+                            ),
+                        )
+                        monitor = api.create_monitor(body)
+                        api.delete_monitor(monitor.id)
+                    elif scope.name == "create_webhooks":
+                        api = WebhooksIntegrationApi(api_client)
+                        try:
+                            # We check if we have permissions to query webhooks, this means we have the create_webhooks scope
+                            api.get_webhooks_integration("non-existing-webhook")
+                        except NotFoundException:
+                            pass
+                        except Exception as e:
+                            raise e
+                    elif scope.name == "metrics_read":
+                        api = MetricsApi(api_client)
+                        api.query_metrics(query="system.cpu.idle{*}")
+                    elif scope.name == "logs_read":
+                        api = LogsApi(api_client)
+                        api.list_logs(body={"query": "test"})
+                except ApiException as e:
+                    # API failed and it means we're probably lacking some permissions
+                    self.logger.warning(
+                        f"Failed to validate scope {scope.name}",
+                        extra={"reason": e.reason, "code": e.status},
+                    )
+                    scopes[scope.name] = str(e.reason)
+                    continue
+                scopes[scope.name] = True
+        self.logger.info("Scopes validated", extra=scopes)
+        return scopes
 
     def expose(self):
         return {
@@ -398,5 +452,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    results = provider.setup_webhook("http://localhost:8000", "1234", True)
-    print(results)
+    result = provider.validate_scopes()
+    print(result)
