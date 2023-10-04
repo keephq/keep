@@ -4,6 +4,7 @@ import logging
 import os
 
 import click
+from pympler.asizeof import asizeof
 from starlette_context import context
 
 from keep.api.logging import WorkflowLoggerAdapter
@@ -25,7 +26,7 @@ class ContextManager:
         self.storage_manager = StorageManagerFactory.get_file_manager()
         self.state_file = os.environ.get("KEEP_STATE_FILE") or self.STATE_FILE
         self.steps_context = {}
-        self.actions_context = {}
+        self.steps_context_size = 0
         self.providers_context = {}
         self.event_context = {}
         self.foreach_context = {
@@ -83,7 +84,6 @@ class ContextManager:
         """
         full_context = {
             "steps": self.steps_context,
-            "actions": self.actions_context,
             "foreach": self.foreach_context,
             "event": self.event_context,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
@@ -127,14 +127,14 @@ class ContextManager:
             condition_alias (_type_, optional): _description_. Defaults to None.
             value (_type_): the raw value which the condition was compared to. this is relevant only for foreach conditions
         """
-        if action_id not in self.actions_context:
-            self.actions_context[action_id] = {"conditions": {}, "results": {}}
-        if "conditions" not in self.actions_context[action_id]:
-            self.actions_context[action_id]["conditions"] = {condition_name: []}
-        if condition_name not in self.actions_context[action_id]["conditions"]:
-            self.actions_context[action_id]["conditions"][condition_name] = []
+        if action_id not in self.steps_context:
+            self.steps_context[action_id] = {"conditions": {}, "results": {}}
+        if "conditions" not in self.steps_context[action_id]:
+            self.steps_context[action_id]["conditions"] = {condition_name: []}
+        if condition_name not in self.steps_context[action_id]["conditions"]:
+            self.steps_context[action_id]["conditions"][condition_name] = []
 
-        self.actions_context[action_id]["conditions"][condition_name].append(
+        self.steps_context[action_id]["conditions"][condition_name].append(
             {
                 "value": value,
                 "compare_value": compare_value,
@@ -169,6 +169,7 @@ class ContextManager:
             self.steps_context[step_id]["results"] = results
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
+        self.steps_context_size = asizeof(self.steps_context)
 
     def __load_state(self):
         try:
