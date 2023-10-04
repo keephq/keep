@@ -148,7 +148,7 @@ def test_context_manager_set_condition_results(context_manager: ContextManager):
         value=value,
     )
     assert (
-        context_manager.actions_context[action_id]["conditions"][condition_name][0][
+        context_manager.steps_context[action_id]["conditions"][condition_name][0][
             "type"
         ]
         == condition_type

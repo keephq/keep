@@ -1,4 +1,5 @@
 import inspect
+import json
 import logging
 import logging.config
 
@@ -39,10 +40,12 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["workflow_execution_id"] = self.workflow_execution_id
         # add the steps/actions context
         # todo: more robust
-        extra["context"] = {
-            "steps": self.context_manager.steps_context,
-            "actions": self.context_manager.actions_context,
-        }
+        # added: protection from big steps context (< 64kb)
+        if self.context_manager.steps_context_size < 1024 * 64:
+            extra["context"] = (self.context_manager.steps_context,)
+        else:
+            extra["context"] = "truncated (context size > 64kb)"
+
         kwargs["extra"] = extra
         return msg, kwargs
 
