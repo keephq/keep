@@ -33,7 +33,12 @@ export const useFetchProviders = () => {
     const fetchedInstalledProviders = (
       data["installed_providers"] as Providers
     ).map((provider) => {
-      return { ...provider, installed: true } as Provider;
+      const validatedScopes = provider.validatedScopes ?? {};
+      return {
+        ...provider,
+        installed: true,
+        validatedScopes: validatedScopes,
+      } as Provider;
     });
     // TODO: refactor this to be more readable and move to backend(?)
     const fetchedProviders = data.providers.map((provider: Provider) => {
