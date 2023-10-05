@@ -18,11 +18,25 @@ export async function installWebhook(provider: Provider, accessToken: string) {
           Authorization: `Bearer ${accessToken}`,
         },
       }
-    ),
+    ).then((res) => {
+      return res.json().then((data) => {
+        if (!res.ok) {
+          return Promise.reject(data);
+        }
+      });
+    }),
     {
       pending: "Webhook installing 🤞",
       success: `${provider.type} webhook installed 👌`,
-      error: `Webhook installation failed 😢`,
+      error: {
+        render({ data }) {
+          console.log(data);
+          // When the promise reject, data will contains the error
+          return `Webhook installation failed 😢 Error: ${
+            (data as any).detail
+          }`;
+        },
+      },
     },
     {
       position: toast.POSITION.TOP_LEFT,

@@ -13,22 +13,45 @@ import {
   Button,
 } from "@tremor/react";
 import { Provider } from "./providers";
-import { ArrowPathIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowPathIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
+import { useState } from "react";
+import { getApiURL } from "utils/apiUrl";
 
 const ProviderFormScopes = ({
   provider,
   validatedScopes,
   installedProvidersMode = false,
+  refreshLoading,
+  triggerRevalidateScope,
 }: {
   provider: Provider;
   validatedScopes: { [key: string]: string | boolean };
   installedProvidersMode?: boolean;
+  refreshLoading: boolean;
+  triggerRevalidateScope: any;
 }) => {
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
       <AccordionBody>
-        {installedProvidersMode && <Button color="gray" size="xs" icon={ArrowPathIcon} variant="secondary">Refresh</Button>}
+        {installedProvidersMode && (
+          <Button
+            color="gray"
+            size="xs"
+            icon={ArrowPathIcon}
+            onClick={(e: any) => {
+              triggerRevalidateScope(Math.floor(Math.random() * 1000));
+              e.preventDefault();
+            }}
+            variant="secondary"
+            loading={refreshLoading}
+          >
+            Refresh
+          </Button>
+        )}
         <Table className="mt-5">
           <TableHead>
             <TableRow>

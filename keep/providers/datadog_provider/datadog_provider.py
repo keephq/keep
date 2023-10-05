@@ -11,7 +11,11 @@ import time
 
 import pydantic
 from datadog_api_client import ApiClient, Configuration
-from datadog_api_client.exceptions import ApiException, NotFoundException
+from datadog_api_client.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+)
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
@@ -320,38 +324,44 @@ class DatadogProvider(BaseProvider):
                     self.logger.info(
                         "Webhook updated",
                     )
-            except NotFoundException:
-                webhook = api.create_webhooks_integration(
-                    body={
-                        "name": webhook_name,
-                        "url": keep_api_url,
-                        "custom_headers": json.dumps(
-                            {
-                                "Content-Type": "application/json",
-                                "X-API-KEY": api_key,
-                            }
-                        ),
-                        "encode_as": "json",
-                        "payload": json.dumps(
-                            {
-                                "body": "$EVENT_MSG",
-                                "last_updated": "$LAST_UPDATED",
-                                "event_type": "$EVENT_TYPE",
-                                "title": "$EVENT_TITLE",
-                                "severity": "$ALERT_PRIORITY",
-                                "alert_type": "$ALERT_TYPE",
-                                "alert_query": "$ALERT_QUERY",
-                                "alert_transition": "$ALERT_TRANSITION",
-                                "date": "$DATE",
-                                "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
-                                "url": "$LINK",
-                                "tags": "$TAGS",
-                                "id": "$ID",
-                            }
-                        ),
-                    }
-                )
-                self.logger.info("Webhook created")
+            except (NotFoundException, ForbiddenException):
+                try:
+                    webhook = api.create_webhooks_integration(
+                        body={
+                            "name": webhook_name,
+                            "url": keep_api_url,
+                            "custom_headers": json.dumps(
+                                {
+                                    "Content-Type": "application/json",
+                                    "X-API-KEY": api_key,
+                                }
+                            ),
+                            "encode_as": "json",
+                            "payload": json.dumps(
+                                {
+                                    "body": "$EVENT_MSG",
+                                    "last_updated": "$LAST_UPDATED",
+                                    "event_type": "$EVENT_TYPE",
+                                    "title": "$EVENT_TITLE",
+                                    "severity": "$ALERT_PRIORITY",
+                                    "alert_type": "$ALERT_TYPE",
+                                    "alert_query": "$ALERT_QUERY",
+                                    "alert_transition": "$ALERT_TRANSITION",
+                                    "date": "$DATE",
+                                    "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
+                                    "url": "$LINK",
+                                    "tags": "$TAGS",
+                                    "id": "$ID",
+                                }
+                            ),
+                        }
+                    )
+                    self.logger.info("Webhook created")
+                except ApiException as exc:
+                    if "Webhook already exists" in exc.body.get("errors"):
+                        self.logger.info("Webhook already exists when trying to add")
+                    else:
+                        raise
             self.logger.info("Webhook created or updated")
             if setup_alerts:
                 self.logger.info("Updating monitors")

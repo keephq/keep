@@ -1,10 +1,6 @@
 import { Button, Icon, Text } from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
-import { useSession } from "../../utils/customAuth";
-import { getApiURL } from "../../utils/apiUrl";
-import { toast } from "react-toastify";
-import { installWebhook } from "../../utils/helpers";
 
 interface Props {
   provider: Provider;
@@ -55,10 +51,6 @@ const OAuthIcon = (props: any) => (
 );
 
 export default function ProviderTile({ provider, onClick }: Props) {
-  const { data: session, status, update } = useSession();
-
-  const callInstallWebhook = async () =>
-    installWebhook(provider, session?.accessToken!);
   return (
     <div
       className={`relative group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 h-44 m-2.5 hover:shadow-xl hover:grayscale-0`}

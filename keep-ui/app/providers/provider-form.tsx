@@ -1,5 +1,7 @@
+// TODO: refactor this file and separate in to smaller components
+//  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -13,6 +15,7 @@ import {
   Icon,
   Subtitle,
   Divider,
+  TextInput,
 } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
@@ -20,6 +23,7 @@ import {
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -65,13 +69,47 @@ const ProviderForm = ({
     [key: string]: string | boolean;
   }>(initialData);
   const [formErrors, setFormErrors] = useState<string>(null);
+  const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+
+  // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
   }>(provider.validatedScopes);
+  const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
 
   const accessToken = session?.accessToken;
+
+  const callInstallWebhook = async (e: Event) => {
+    await installWebhook(provider, accessToken!);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (triggerRevalidateScope !== 0) {
+      setRefreshLoading(true);
+      fetch(`${getApiURL()}/providers/${provider.id}/scopes`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }).then((response) => {
+        if (response.ok) {
+          response.json().then((newValidatedScopes) => {
+            setProviderValidatedScopes(newValidatedScopes);
+            setRefreshLoading(false);
+          });
+        } else {
+          setRefreshLoading(false);
+        }
+      });
+    }
+  }, [triggerRevalidateScope, accessToken, provider.id]);
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
@@ -86,6 +124,7 @@ const ProviderForm = ({
       );
       if (response.ok) {
         onDelete!(provider);
+        closeModal();
       } else {
         toast.error(`Failed to delete ${provider.type} 😢`);
       }
@@ -109,7 +148,7 @@ const ProviderForm = ({
         errors["provider_name"] = true;
       }
     }
-    markErrors(errors);
+    setInputErrors(errors);
     return errors;
   };
 
@@ -117,6 +156,13 @@ const ProviderForm = ({
     const { name, value } = event.target;
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     const updatedFormValues = { ...formValues, [name]: value };
+
+    if (Object.keys(inputErrors).includes(name) && value !== "") {
+      const updatedInputErrors = { ...inputErrors };
+      delete updatedInputErrors[name];
+      setInputErrors(updatedInputErrors);
+    }
+
     onFormChange(updatedFormValues, formErrors);
   };
 
@@ -126,19 +172,6 @@ const ProviderForm = ({
       ...prevValues,
       install_webhook: checked,
     }));
-  };
-
-  const markErrors = (errors: Record<string, boolean>) => {
-    const inputElements = document.querySelectorAll(".form-group input");
-    inputElements.forEach((input) => {
-      const name = input.getAttribute("name");
-      // @ts-ignore
-      if (errors[name]) {
-        input.classList.add("error");
-      } else {
-        input.classList.remove("error");
-      }
-    });
   };
 
   const validate = () => {
@@ -216,6 +249,10 @@ const ProviderForm = ({
     }
   };
 
+  const installOrUpdateWebhookEnabled = provider.scopes
+    ?.filter((scope) => scope.mandatory_for_webhook)
+    .every((scope) => providerValidatedScopes[scope.name] === true);
+
   console.log("ProviderForm component loaded");
   return (
     <div className="flex flex-col h-full justify-between p-5">
@@ -262,6 +299,8 @@ const ProviderForm = ({
             provider={provider}
             validatedScopes={providerValidatedScopes}
             installedProvidersMode={installedProvidersMode}
+            triggerRevalidateScope={setTriggerRevalidateScope}
+            refreshLoading={refreshLoading}
           />
         )}
         <form>
@@ -290,7 +329,7 @@ const ProviderForm = ({
                 <span className="text-red-400">*</span>
               </Text>
             </label>
-            <input
+            <TextInput
               type="text"
               id="provider_name"
               name="provider_name"
@@ -300,11 +339,7 @@ const ProviderForm = ({
               color="orange"
               autoComplete="off"
               disabled={isProviderNameDisabled}
-              className={
-                isProviderNameDisabled
-                  ? "disabled-input text-slate-400 bg-slate-100"
-                  : ""
-              }
+              error={Object.keys(inputErrors).includes("provider_name")}
               title={
                 isProviderNameDisabled
                   ? "This field is disabled because it is pre-filled from the workflow."
@@ -334,19 +369,20 @@ const ProviderForm = ({
                     />
                   )}
                 </label>
-                <input
+                <TextInput
                   type={method.type}
                   id={configKey}
                   name={configKey}
                   value={formValues[configKey] || ""}
                   onChange={handleInputChange}
                   autoComplete="off"
+                  error={Object.keys(inputErrors).includes(configKey)}
                   placeholder={method.placeholder || "Enter " + configKey}
                 />
               </div>
             );
           })}
-          {provider.can_setup_webhook && (
+          {provider.can_setup_webhook && !installedProvidersMode && (
             <div className="flex items-center w-full" key="install_webhook">
               <input
                 type="checkbox"
@@ -373,6 +409,23 @@ const ProviderForm = ({
                 />
               </label>
             </div>
+          )}
+          {provider.can_setup_webhook && installedProvidersMode && (
+            <Button
+              icon={GlobeAltIcon}
+              onClick={callInstallWebhook}
+              variant="secondary"
+              color="orange"
+              className="mt-2.5"
+              disabled={!installOrUpdateWebhookEnabled}
+              tooltip={
+                !installOrUpdateWebhookEnabled
+                  ? "Fix required webhook scopes and refresh scopes to enable"
+                  : "This uses server saved credentials. If needed, please use the `Update` button first"
+              }
+            >
+              Install/Update Webhook
+            </Button>
           )}
           {provider.supports_webhook && (
             <ProviderSemiAutomated

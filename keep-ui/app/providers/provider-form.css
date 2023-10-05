@@ -1,19 +1,4 @@
-.form-group input {
-  display: flex;
-  width: 100%;
-  height: 32px;
-  padding: 6px 10px;
-  align-items: center;
-  gap: 128px;
-  flex-shrink: 0;
-  border-radius: 2px;
-  border: 1px solid var(--style, #bbb8c5);
-  margin-bottom: 16px;
-}
 
-.form-group input.error {
-  border-color: red;
-}
 
 .test-button,
 .connect-button {
