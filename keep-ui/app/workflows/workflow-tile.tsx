@@ -7,7 +7,7 @@ import Image from "next/image";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
-import Loading from '../loading';
+import Loading from "../loading";
 import { Trigger, Provider } from "./models";
 import {
   Button,
@@ -32,7 +32,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
-import yaml from 'js-yaml';
+import yaml from "js-yaml";
 
 function WorkflowMenuSection({
   onDelete,
@@ -50,10 +50,14 @@ function WorkflowMenuSection({
   workflow: Workflow;
 }) {
   // Determine if all providers are installed
-  const allProvidersInstalled = workflow.providers.every(provider => provider.installed);
+  const allProvidersInstalled = workflow.providers.every(
+    (provider) => provider.installed
+  );
 
   // Check if there is a manual trigger
-  const hasManualTrigger = workflow.triggers.some(trigger => trigger.type === 'manual');  // Replace 'manual' with the actual value that represents a manual trigger in your data
+  const hasManualTrigger = workflow.triggers.some(
+    (trigger) => trigger.type === "manual"
+  ); // Replace 'manual' with the actual value that represents a manual trigger in your data
 
   return (
     <WorkflowMenu
@@ -251,14 +255,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       const workflowYAML = workflow.workflow_raw;
 
       // Create a Blob object representing the data as a YAML file
-      const blob = new Blob([workflowYAML], { type: 'text/yaml' });
+      const blob = new Blob([workflowYAML], { type: "text/yaml" });
 
       // Create an anchor element with a URL object created from the Blob
       const url = window.URL.createObjectURL(blob);
 
       // Create a "hidden" anchor tag with the download attribute and click it
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
       a.download = `${workflow.workflow_raw_id}.yaml`; // The file will be named after the workflow's id
       document.body.appendChild(a);
@@ -270,7 +274,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       console.error("An error occurred while downloading the YAML", error);
     }
   };
-
 
   const handleViewClick = async () => {
     router.push(`/workflows/${workflow.id}`);
@@ -313,10 +316,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     <div className="tile-basis mt-2.5">
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <Loading />
-      </div>
+          <Loading />
+        </div>
       )}
-      <Card >
+      <Card>
         <div className="flex w-full justify-between items-center h-14">
           <Title>{workflow.description}</Title>
           {WorkflowMenuSection({
@@ -407,6 +410,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               onFormChange={handleFormChange}
               onConnectChange={handleConnecting}
               closeModal={handleCloseModal}
+              installedProvidersMode={selectedProvider.installed}
               isProviderNameDisabled={true}
             />
           )}

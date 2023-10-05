@@ -1,3 +1,4 @@
+import copy
 import inspect
 import json
 import logging
@@ -34,7 +35,7 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         super().__init__(logger, None)
 
     def process(self, msg, kwargs):
-        extra = kwargs.get("extra", {})
+        extra = copy.deepcopy(kwargs.get("extra", {}))
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
