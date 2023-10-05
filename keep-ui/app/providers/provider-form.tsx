@@ -261,6 +261,7 @@ const ProviderForm = ({
           <ProviderFormScopes
             provider={provider}
             validatedScopes={providerValidatedScopes}
+            installedProvidersMode={installedProvidersMode}
           />
         )}
         <form>

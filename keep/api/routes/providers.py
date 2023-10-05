@@ -328,6 +328,7 @@ async def install_provider(
             "type": provider_type,
             "id": provider_unique_id,
             "details": provider_config,
+            "validatedScopes": provider_scopes,
         },
     )
 

@@ -10,21 +10,25 @@ import {
   TableHeaderCell,
   TableRow,
   Icon,
+  Button,
 } from "@tremor/react";
 import { Provider } from "./providers";
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 const ProviderFormScopes = ({
   provider,
   validatedScopes,
+  installedProvidersMode = false,
 }: {
   provider: Provider;
   validatedScopes: { [key: string]: string | boolean };
+  installedProvidersMode?: boolean;
 }) => {
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
       <AccordionBody>
+        {installedProvidersMode && <Button color="gray" size="xs" icon={ArrowPathIcon} variant="secondary">Refresh</Button>}
         <Table className="mt-5">
           <TableHead>
             <TableRow>
@@ -69,17 +73,17 @@ const ProviderFormScopes = ({
                       title={scope.description}
                       className="max-w-xs truncate"
                     >
-                        <div className="flex items-center">
-                      {scope.description}
-                      {scope.mandatory_for_webhook ? (
-                        <Icon
-                        icon={QuestionMarkCircleIcon}
-                        variant="simple"
-                        color="gray"
-                        size="sm"
-                        tooltip="Mandatory for webhook installation"
-                      />
-                      ) : null}
+                      <div className="flex items-center">
+                        {scope.description}
+                        {scope.mandatory_for_webhook ? (
+                          <Icon
+                            icon={QuestionMarkCircleIcon}
+                            variant="simple"
+                            color="gray"
+                            size="sm"
+                            tooltip="Mandatory for webhook installation"
+                          />
+                        ) : null}
                       </div>
                     </TableCell>
                   </TableRow>
