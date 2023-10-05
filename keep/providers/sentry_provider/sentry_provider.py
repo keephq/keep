@@ -15,7 +15,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 @pydantic.dataclasses.dataclass
 class SentryProviderAuthConfig:
-    """Sentry authentication configuration."""
+    """Sentry authentication configuration.""" 
 
     api_key: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry Api Key", "sensitive": True}
@@ -23,9 +23,13 @@ class SentryProviderAuthConfig:
     org_slug: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry organization slug"}
     )
+    project_slug: str = dataclasses.field(
+        metadata={"required": True, "description": "Sentry project slug"}
+    )
 
 
 class SentryProvider(BaseProvider):
+    
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -38,6 +42,23 @@ class SentryProvider(BaseProvider):
 
     def dispose(self):
         return
+
+    def get_alerts(self) -> list[AlertDto]:
+        formatted_alerts = []
+        request = request.get(
+            f"https://sentry.io/api/0/projects/{self.sentry_org_slug}/{self.sentry_project_slug}/rules/",
+            headers={
+                "Authorization": f"Bearer {self.config.authentication['api_token']}"
+            },
+        )
+        if not request.errors:
+            self.logger.error("Failed to get alerts", extra=request.json())
+            raise Exception("Could not get alerts")
+        formatted_alerts = request.json().get("errors", [])
+        formatted_alerts = [
+            self.format_alert({"event": {"data": formatted_alerts}}) for alert in formatted_alerts
+        ]
+        return formatted_alerts
 
     def validate_config(self):
         """Validates required configuration for Sentry's provider."""
