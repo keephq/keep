@@ -6,7 +6,6 @@ import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import "./provider-form.css";
 import {
   Title,
   Text,
@@ -351,11 +350,11 @@ const ProviderForm = ({
             const method = provider.config[configKey];
             if (method.hidden) return null;
             return (
-              <div className="form-group" key={configKey}>
+              <div className="mt-2.5" key={configKey}>
                 <label htmlFor={configKey} className="label-container mb-1">
                   <Text className="capitalize">
                     {method.description}
-                    {method.required !== false ? (
+                    {method.required === true ? (
                       <span className="text-red-400">*</span>
                     ) : null}
                   </Text>
