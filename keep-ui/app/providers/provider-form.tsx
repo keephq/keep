@@ -222,7 +222,12 @@ const ProviderForm = ({
       });
   };
 
-  const handleUpdateClick = () => {};
+  const handleUpdateClick = () => {
+    if (validate()) {
+      setIsLoading(true);
+      submit(`${getApiURL()}/providers/${provider.id}`)
+    }
+  };
 
   const handleConnectClick = () => {
     if (validate()) {

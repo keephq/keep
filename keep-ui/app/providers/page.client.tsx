@@ -127,7 +127,7 @@ export default function ProvidersPage({
   const searchProviders = (provider: Provider) => {
     return (
       !searchProviderString ||
-      provider.type?.toLowerCase().includes(searchProviderString)
+      provider.type?.toLowerCase().includes(searchProviderString.toLowerCase())
     );
   };
 
