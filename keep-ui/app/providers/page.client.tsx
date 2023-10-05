@@ -112,10 +112,15 @@ export default function ProvidersPage({
   if (error) throw new KeepApiError(error.message, `${getApiURL()}/providers`);
 
   const addProvider = (provider: Provider) => {
-    setInstalledProviders((prevProviders) => [
-      ...prevProviders,
-      { ...provider, installed: true } as Provider,
-    ]);
+    setInstalledProviders((prevProviders) => {
+      const existingProvider = prevProviders.findIndex(
+        (p) => p.id === provider.id
+      );
+      if (existingProvider > -1) {
+        prevProviders.splice(existingProvider, 1);
+      }
+      return [...prevProviders, { ...provider, installed: true } as Provider];
+    });
   };
 
   const deleteProvider = (provider: Provider) => {

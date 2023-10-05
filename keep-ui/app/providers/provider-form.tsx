@@ -189,9 +189,12 @@ const ProviderForm = ({
     }
   };
 
-  const submit = (requestUrl: string): Promise<any> => {
+  const submit = (
+    requestUrl: string,
+    method: string = "POST"
+  ): Promise<any> => {
     return fetch(requestUrl, {
-      method: "POST",
+      method: method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -217,15 +220,26 @@ const ProviderForm = ({
         return response_json;
       })
       .then((data) => {
-        setFormErrors({});
+        setFormErrors("");
         return data;
       });
   };
 
-  const handleUpdateClick = () => {
+  const handleUpdateClick = (e: any) => {
+    e.preventDefault();
     if (validate()) {
       setIsLoading(true);
-      submit(`${getApiURL()}/providers/${provider.id}`)
+      submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
+        .then((data) => {
+          setIsLoading(false);
+          onAddProvider({ ...provider, ...data } as Provider);
+        })
+        .catch((error) => {
+          const updatedFormErrors = error.toString();
+          setFormErrors(updatedFormErrors);
+          onFormChange(formValues, updatedFormErrors);
+          setIsLoading(false);
+        });
     }
   };
 
@@ -452,7 +466,7 @@ const ProviderForm = ({
         </form>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end mt-5">
         <Button
           variant="secondary"
           color="orange"
@@ -464,16 +478,15 @@ const ProviderForm = ({
         </Button>
         {installedProvidersMode && (
           <>
+            <Button onClick={deleteProvider} color="red" className="mr-2.5">
+              Delete
+            </Button>
             <Button
               loading={isLoading}
               onClick={handleUpdateClick}
               color="orange"
-              className="mr-2.5"
             >
               Update
-            </Button>
-            <Button loading={isLoading} onClick={deleteProvider} color="red">
-              Delete
             </Button>
           </>
         )}

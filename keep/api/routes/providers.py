@@ -318,7 +318,7 @@ def validate_provider_scopes(
     return validated_scopes
 
 
-@router.put("/{provider_id}", description="Update provider", status_code=204)
+@router.put("/{provider_id}", description="Update provider", status_code=200)
 def update_provider(
     provider_id: str,
     provider_info: dict = Body(...),
@@ -350,16 +350,19 @@ def update_provider(
     provider_instance = ProvidersFactory.get_provider(
         context_manager, provider_id, provider.type, provider_config
     )
-    validate_scopes = validate_scopes(provider_instance)
+    validated_scopes = validate_scopes(provider_instance)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     secret_manager.write_secret(
         secret_name=provider.configuration_key, secret_value=json.dumps(provider_config)
     )
     provider.installed_by = updated_by
-    provider.validatedScopes = validate_scopes
+    provider.validatedScopes = validated_scopes
     session.commit()
     logger.info("Updated provider", extra={"provider_id": provider_id})
-    return "ok"
+    return {
+        "details": provider_config,
+        "validatedScopes": validated_scopes,
+    }
 
 
 @router.post("/install")
