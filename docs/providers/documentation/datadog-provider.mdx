@@ -41,26 +41,25 @@ To obtain the Datadog App Key, follow these steps:
 ### Scopes
 Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use-cases:
 
-#### Monitors
-### `monitors_read`
+### Monitors
+#### `Monitors Read` (Required)
 
 
 ### Webhook Integration
+<Info>Required for installing the Datadog Webhook Integration so all monitors will be pushed to Keep.</Info>
+#### `Monitors Write` (Required)
+#### `Integrations Manage` (Required)
 
-- Required for installing the Datadog Webhook Integration so all monitors will be pushed to Keep.
 
-####
-### `metrics:read`
+### Querying Data
+#### Metrics
+#### `Metrics Read` (Optional - required for querying any metric data.)
 
-- Required for querying any metric data.
+#### Logs
+#### `Logs Read` (Optional - required for querying any log data.)
 
-### `logs:read`
-
-- Required for querying log data.
-
-### `traces:read`
-
-- Required for querying APM trace data.
+#### Traces
+#### `Traces Read` (Optional - required for querying any trace data.)
 
 ## Notes
 

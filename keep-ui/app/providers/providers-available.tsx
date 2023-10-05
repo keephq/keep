@@ -8,6 +8,7 @@ import ProviderTile from "./provider-tile";
 import "./providers-available.css";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
+import { hideOrShowIntercom } from "@/components/ui/Intercom";
 
 const ProvidersConnect = ({
   providers,
@@ -53,12 +54,14 @@ const ProvidersConnect = ({
   };
 
   const handleConnectProvider = (provider: Provider) => {
+    hideOrShowIntercom(true);
     setSelectedProvider(provider);
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
+    hideOrShowIntercom(false);
     setSelectedProvider(null);
     setFormValues({});
     setFormErrors({});

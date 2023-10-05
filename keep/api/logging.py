@@ -1,4 +1,5 @@
 import inspect
+import json
 import logging
 import logging.config
 
@@ -39,10 +40,12 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["workflow_execution_id"] = self.workflow_execution_id
         # add the steps/actions context
         # todo: more robust
-        extra["context"] = {
-            "steps": self.context_manager.steps_context,
-            "actions": self.context_manager.actions_context,
-        }
+        # added: protection from big steps context (< 64kb)
+        if self.context_manager.steps_context_size < 1024 * 64:
+            extra["context"] = (self.context_manager.steps_context,)
+        else:
+            extra["context"] = "truncated (context size > 64kb)"
+
         kwargs["extra"] = extra
         return msg, kwargs
 
@@ -130,15 +133,29 @@ class CustomizedUvicornLogger(logging.Logger):
             inspect.currentframe().f_back
         )  # Go one level up to get the caller's frame
         while frame:
+            found_frame = False
             if frame.f_code.co_name == "run_asgi":
                 trace_id = (
                     frame.f_locals.get("self").scope.get("state", {}).get("trace_id", 0)
+                )
+                tenant_id = (
+                    frame.f_locals.get("self")
+                    .scope.get("state", {})
+                    .get("tenant_id", 0)
                 )
                 if trace_id:
                     if extra is None:
                         extra = {}
                     extra.update({"otelTraceID": trace_id})
-                    break
+                    found_frame = True
+                if tenant_id:
+                    if extra is None:
+                        extra = {}
+                    extra.update({"tenant_id": tenant_id})
+                    found_frame = True
+            # if we found the frame, we can stop searching
+            if found_frame:
+                break
             frame = frame.f_back
 
         # Call the original _log function to handle the logging with trace_id
