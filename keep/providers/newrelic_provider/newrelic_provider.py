@@ -88,7 +88,7 @@ class NewrelicProvider(BaseProvider):
         payload = {"query": query}
 
         response = requests.post(
-            self.authentication_config.new_relic_graphql_url,
+            self.new_relic_graphql_url,
             headers={"Api-Key": self.newrelic_config.api_key},
             json=payload,
         )
