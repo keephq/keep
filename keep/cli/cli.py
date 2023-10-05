@@ -73,13 +73,6 @@ class Info:
                 self.api_key = (
                     self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
                 )
-                if self.api_key:
-                    try:
-                        self.tenant_id = get_api_key(self.api_key).tenant_id
-                    except Exception as e:
-                        self.tenant_id = SINGLE_TENANT_UUID
-                else:
-                    self.tenant_id = SINGLE_TENANT_UUID
                 self.keep_api_url = self.config.get("keep_api_url") or os.getenv(
                     "KEEP_API_URL"
                 )
@@ -143,6 +136,25 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 def version():
     """Get the library version."""
     click.echo(click.style(f"{metadata.version('keep')}", bold=True))
+
+
+@cli.command()
+@pass_info
+def whoami(info: Info):
+    """Verify the api key auth."""
+    resp = requests.get(
+        info.keep_api_url + "/whoami",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+
+    if resp.status_code == 401:
+        click.echo(click.style("Api key invalid"))
+
+    elif resp.ok:
+        click.echo(click.style("Api key valid"))
+        click.echo(resp.json())
+    else:
+        click.echo(click.style("Api key invalid [unknown error]"))
 
 
 @cli.command()
@@ -357,8 +369,15 @@ def provider(info: Info):
 
 
 @provider.command()
+@click.option(
+    "--available",
+    "-a",
+    default=False,
+    is_flag=True,
+    help="List provider that you can install.",
+)
 @pass_info
-def list(info: Info):
+def list(info: Info, available: bool):
     """List providers."""
     resp = requests.get(
         info.keep_api_url + "/providers",
@@ -371,19 +390,79 @@ def list(info: Info):
     # Create a new table
     table = PrettyTable()
     # Add column headers
-    table.field_names = ["ID", "Type", "Name", "Installed by", "Installation time"]
-    installed_providers = providers.get("installed_providers", [])
-    for provider in installed_providers:
-        table.add_row(
-            [
-                provider["id"],
-                provider["type"],
-                provider["details"]["name"],
-                provider["installed_by"],
-                provider["installation_time"],
-            ]
-        )
+    if available:
+        available_providers = providers.get("providers", [])
+        table.field_names = ["Provider", "Description"]
+        for provider in available_providers:
+            provider_type = provider.get("type")
+            provider_docs = provider.get("docs", "")
+            if provider_docs:
+                provider_docs = provider_docs.replace("\n", " ").strip()
+            else:
+                provider_docs = ""
+            table.add_row(
+                [
+                    provider_type,
+                    provider_docs,
+                ]
+            )
+    else:
+        table.field_names = ["ID", "Type", "Name", "Installed by", "Installation time"]
+        installed_providers = providers.get("installed_providers", [])
+        for provider in installed_providers:
+            table.add_row(
+                [
+                    provider["id"],
+                    provider["type"],
+                    provider["details"]["name"],
+                    provider["installed_by"],
+                    provider["installation_time"],
+                ]
+            )
     print(table)
+
+
+@provider.command()
+@click.option(
+    "--help",
+    "-h",
+    default=False,
+    is_flag=True,
+    help="Help on how to install this provider.",
+)
+@click.argument("provider_name")
+@pass_info
+def connect(info: Info, help: bool, provider_name):
+    resp = requests.get(
+        info.keep_api_url + "/providers",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting providers: {resp.text}")
+
+    if help:
+        available_providers = providers.get("providers", [])
+        table.field_names = [
+            "Provider",
+            "Config Param",
+            "Required",
+            "Description",
+            "Sensitive",
+        ]
+        for provider in available_providers:
+            provider_type = provider.get("type")
+            for param, details in provider["config"].items():
+                table.add_row(
+                    [
+                        provider_type,
+                        param,
+                        details.get("required", False),
+                        details.get("description", "no description"),
+                        details.get("sensitive", "N/A"),
+                    ]
+                )
+                # Reset the provider_type for subsequent rows of the same provider to avoid repetition
+                provider_type = ""
 
 
 @cli.group()

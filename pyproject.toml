@@ -60,6 +60,8 @@ opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
 opentelemetry-instrumentation-sqlalchemy = "^0.41b0"
 opentelemetry-instrumentation-requests = "^0.41b0"
 asteval = "^0.9.31"
+google-cloud-container = "^2.32.0"
+pympler = "^1.0.1"
 prettytable = "^3.9.0"
 
 

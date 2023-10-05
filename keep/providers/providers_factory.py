@@ -195,6 +195,7 @@ class ProvidersFactory:
                     "provider_description"
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
+                docs = provider_class.__doc__
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -207,6 +208,7 @@ class ProvidersFactory:
                         supports_webhook=supports_webhook,
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
+                        docs=docs,
                     )
                 )
             except ModuleNotFoundError:

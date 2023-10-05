@@ -22,3 +22,4 @@ class Provider(BaseModel):
     oauth2_url: str | None = None
     installed_by: str | None = None
     installation_time: datetime | None = None
+    docs: str | None = None

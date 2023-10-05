@@ -465,7 +465,7 @@ class Parser:
         providers = actions_providers + steps_providers
         providers = [
             {
-                "name": p.get("config", "NAME.NO_PROVIDER_NAME")
+                "name": p.get("config", f"NAME.{p.get('type')}")
                 .split(".")[1]
                 .replace("}}", "")
                 .strip(),

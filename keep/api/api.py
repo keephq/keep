@@ -31,6 +31,7 @@ from keep.api.routes import (
     providers,
     settings,
     tenant,
+    whoami,
     workflows,
 )
 from keep.contextmanager.contextmanager import ContextManager
@@ -126,6 +127,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
+    app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
 
     @app.on_event("startup")
     async def on_startup():
