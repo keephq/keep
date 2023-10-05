@@ -114,7 +114,6 @@ if __name__ == "__main__":
             authentication={"personal_access_token": github_personal_access_token}
         ),
     )
-    print(github_personal_access_token)
     result = github_workflows_provider.notify(
         github_url="https://api.github.com/repos/TakshPanchal/keep/actions/workflows",
         github_method="get",
