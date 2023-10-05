@@ -370,7 +370,7 @@ const ProviderForm = ({
             if (method.hidden) return null;
             return (
               <div className="mt-2.5" key={configKey}>
-                <label htmlFor={configKey} className="label-container mb-1">
+                <label htmlFor={configKey} className="flex items-center mb-1">
                   <Text className="capitalize">
                     {method.description}
                     {method.required === true ? (
@@ -412,7 +412,7 @@ const ProviderForm = ({
               />
               <label
                 htmlFor="install_webhook"
-                className="label-container w-full"
+                className="flex items-center w-full"
               >
                 <Text className="capitalize">Install Webhook</Text>
                 <Icon
