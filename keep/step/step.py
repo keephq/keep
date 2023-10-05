@@ -166,13 +166,30 @@ class Step:
 
         # Now check it
         if if_conf:
+            if_conf = self.io_handler.quote(if_conf)
             if_met = self.io_handler.render(if_conf)
             # Evaluate the condition string
-            if_met = eval(if_met)
-        else:
-            if_met = True
+            from asteval import Interpreter
 
-        if not if_met:
+            aeval = Interpreter()
+            evaluated_if_met = aeval(if_met)
+            # if the evaluation failed, raise an exception
+            if aeval.error_msg:
+                self.logger.error(
+                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}",
+                    extra={
+                        "condition": if_conf,
+                        "rendered": if_met,
+                    },
+                )
+                raise Exception(
+                    f"Failed to evaluate if condition, you probably used a variable that doesn't exist. Condition: {if_conf}, Rendered: {if_met}, Error: {aeval.error_msg}"
+                )
+
+        else:
+            evaluated_if_met = True
+
+        if not evaluated_if_met:
             self.logger.info(
                 "Action %s evaluated NOT to run, Reason: %s evaluated to false.",
                 self.config.get("name"),

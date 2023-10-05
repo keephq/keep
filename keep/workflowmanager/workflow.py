@@ -107,7 +107,6 @@ class Workflow:
             workflow_id=self.workflow_id,
             workflow_context={
                 "steps_context": self.context_manager.steps_context,
-                "actions_context": self.context_manager.actions_context,
             },
             workflow_status=workflow_status,
         )

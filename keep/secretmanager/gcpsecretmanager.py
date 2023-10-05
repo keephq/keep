@@ -67,7 +67,7 @@ class GcpSecretManager(BaseSecretManager):
             raise
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
-        self.logger.info("Getting secret", extra={"secret_name": secret_name})
+        self.logger.debug("Getting secret", extra={"secret_name": secret_name})
         resource_name = (
             f"projects/{self.project_id}/secrets/{secret_name}/versions/latest"
         )
@@ -75,7 +75,7 @@ class GcpSecretManager(BaseSecretManager):
         secret_value = response.payload.data.decode("UTF-8")
         if is_json:
             secret_value = json.loads(secret_value)
-        self.logger.info("Got secret successfully", extra={"secret_name": secret_name})
+        self.logger.debug("Got secret successfully", extra={"secret_name": secret_name})
         return secret_value
 
     def list_secrets(self, prefix) -> list:

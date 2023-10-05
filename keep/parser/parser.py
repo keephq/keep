@@ -196,7 +196,7 @@ class Parser:
             tenant_id=tenant_id, all_providers=all_providers
         )
         for provider in installed_providers:
-            self.logger.info(f"Loading provider", extra={"provider_id": provider.id})
+            self.logger.debug(f"Loading provider", extra={"provider_id": provider.id})
             try:
                 provider_name = provider.details.get("name")
                 context_manager.providers_context[provider.id] = provider.details
@@ -465,7 +465,7 @@ class Parser:
         providers = actions_providers + steps_providers
         providers = [
             {
-                "name": p.get("config", "NAME.NO_PROVIDER_NAME")
+                "name": p.get("config", f"NAME.{p.get('type')}")
                 .split(".")[1]
                 .replace("}}", "")
                 .strip(),

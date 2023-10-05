@@ -125,12 +125,15 @@ class WorkflowManager:
 
                     # if we got here, it means the event should trigger the workflow
                     if should_run:
+                        self.logger.info("Found a workflow to run")
                         event.trigger = "alert"
                         # prepare the alert with the enrichment
+                        self.logger.info("Enriching alert")
                         alert_enrichment = get_enrichment(tenant_id, event.fingerprint)
                         if alert_enrichment:
                             for k, v in alert_enrichment.enrichments.items():
                                 setattr(event, k, v)
+                        self.logger.info("Alert enriched")
                         self.scheduler.workflows_to_run.append(
                             {
                                 "workflow": workflow,
