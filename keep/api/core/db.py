@@ -382,7 +382,7 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     return workflow.workflow_raw
 
 
-def get_installed_providers(tenant_id: str) -> List[str]:
+def get_installed_providers(tenant_id: str) -> List[Provider]:
     with Session(engine) as session:
         providers = session.exec(
             select(Provider).where(Provider.tenant_id == tenant_id)

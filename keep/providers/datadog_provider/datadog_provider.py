@@ -11,12 +11,19 @@ import time
 
 import pydantic
 from datadog_api_client import ApiClient, Configuration
-from datadog_api_client.exceptions import NotFoundException
+from datadog_api_client.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+)
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
 from datadog_api_client.v1.api.webhooks_integration_api import WebhooksIntegrationApi
 from datadog_api_client.v1.model.monitor import Monitor
+from datadog_api_client.v1.model.monitor_options import MonitorOptions
+from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
+from datadog_api_client.v1.model.monitor_type import MonitorType
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -25,7 +32,7 @@ from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -58,6 +65,41 @@ class DatadogProviderAuthConfig:
 class DatadogProvider(BaseProvider):
     """Pull/push alerts from Datadog."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="monitors_read",
+            description="Read monitors",
+            mandatory=True,
+            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
+            alias="Monitors Read",
+        ),
+        ProviderScope(
+            name="monitors_write",
+            description="Write monitors",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
+            alias="Monitors Write",
+        ),
+        ProviderScope(
+            name="create_webhooks",
+            description="Create webhooks integrations",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            alias="Integrations Manage",
+        ),
+        ProviderScope(
+            name="metrics_read",
+            description="View custom metrics.",
+            mandatory=False,
+        ),
+        ProviderScope(
+            name="logs_read",
+            description="Read log data.",
+            mandatory=False,
+            alias="Logs Read Data",
+        ),
+    ]
     EVENT_NAME_PATTERN = r".*\] (.*)"
 
     def convert_to_seconds(s):
@@ -89,6 +131,77 @@ class DatadogProvider(BaseProvider):
         self.authentication_config = DatadogProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self):
+        scopes = {}
+        self.logger.info("Validating scopes")
+        with ApiClient(self.configuration) as api_client:
+            for scope in self.PROVIDER_SCOPES:
+                try:
+                    if scope.name == "monitors_read":
+                        api = MonitorsApi(api_client)
+                        api.list_monitors()
+                    elif scope.name == "monitors_write":
+                        api = MonitorsApi(api_client)
+                        body = Monitor(
+                            name="Example-Monitor",
+                            type=MonitorType.RUM_ALERT,
+                            query='formula("1 * 100").last("15m") >= 200',
+                            message="some message Notify: @hipchat-channel",
+                            tags=[
+                                "test:examplemonitor",
+                                "env:ci",
+                            ],
+                            priority=3,
+                            options=MonitorOptions(
+                                thresholds=MonitorThresholds(
+                                    critical=200,
+                                ),
+                                variables=[],
+                            ),
+                        )
+                        monitor = api.create_monitor(body)
+                        api.delete_monitor(monitor.id)
+                    elif scope.name == "create_webhooks":
+                        api = WebhooksIntegrationApi(api_client)
+                        # We check if we have permissions to query webhooks, this means we have the create_webhooks scope
+                        try:
+                            api.create_webhooks_integration(
+                                body={
+                                    "name": "keep-webhook-scope-validation",
+                                    "url": "https://example.com",
+                                }
+                            )
+                            # for some reason create_webhooks does not allow to delete: api.delete_webhooks_integration(webhook_name), no scope for deletion
+                        except ApiException as e:
+                            # If it's something different from 403 it means we have access! (for example, already exists because we created it once)
+                            if e.status == 403:
+                                raise e
+                    elif scope.name == "metrics_read":
+                        api = MetricsApi(api_client)
+                        api.query_metrics(
+                            query="system.cpu.idle{*}",
+                            _from=int((datetime.datetime.now()).timestamp()),
+                            to=int(datetime.datetime.now().timestamp()),
+                        )
+                    elif scope.name == "logs_read":
+                        self._query(
+                            query="*",
+                            timeframe="1h",
+                            query_type="logs",
+                        )
+                except ApiException as e:
+                    # API failed and it means we're probably lacking some permissions
+                    # perhaps we should check if status code is 403 and otherwise mark as valid?
+                    self.logger.warning(
+                        f"Failed to validate scope {scope.name}",
+                        extra={"reason": e.reason, "code": e.status},
+                    )
+                    scopes[scope.name] = str(e.reason)
+                    continue
+                scopes[scope.name] = True
+        self.logger.info("Scopes validated", extra=scopes)
+        return scopes
 
     def expose(self):
         return {
@@ -209,38 +322,44 @@ class DatadogProvider(BaseProvider):
                     self.logger.info(
                         "Webhook updated",
                     )
-            except NotFoundException:
-                webhook = api.create_webhooks_integration(
-                    body={
-                        "name": webhook_name,
-                        "url": keep_api_url,
-                        "custom_headers": json.dumps(
-                            {
-                                "Content-Type": "application/json",
-                                "X-API-KEY": api_key,
-                            }
-                        ),
-                        "encode_as": "json",
-                        "payload": json.dumps(
-                            {
-                                "body": "$EVENT_MSG",
-                                "last_updated": "$LAST_UPDATED",
-                                "event_type": "$EVENT_TYPE",
-                                "title": "$EVENT_TITLE",
-                                "severity": "$ALERT_PRIORITY",
-                                "alert_type": "$ALERT_TYPE",
-                                "alert_query": "$ALERT_QUERY",
-                                "alert_transition": "$ALERT_TRANSITION",
-                                "date": "$DATE",
-                                "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
-                                "url": "$LINK",
-                                "tags": "$TAGS",
-                                "id": "$ID",
-                            }
-                        ),
-                    }
-                )
-                self.logger.info("Webhook created")
+            except (NotFoundException, ForbiddenException):
+                try:
+                    webhook = api.create_webhooks_integration(
+                        body={
+                            "name": webhook_name,
+                            "url": keep_api_url,
+                            "custom_headers": json.dumps(
+                                {
+                                    "Content-Type": "application/json",
+                                    "X-API-KEY": api_key,
+                                }
+                            ),
+                            "encode_as": "json",
+                            "payload": json.dumps(
+                                {
+                                    "body": "$EVENT_MSG",
+                                    "last_updated": "$LAST_UPDATED",
+                                    "event_type": "$EVENT_TYPE",
+                                    "title": "$EVENT_TITLE",
+                                    "severity": "$ALERT_PRIORITY",
+                                    "alert_type": "$ALERT_TYPE",
+                                    "alert_query": "$ALERT_QUERY",
+                                    "alert_transition": "$ALERT_TRANSITION",
+                                    "date": "$DATE",
+                                    "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
+                                    "url": "$LINK",
+                                    "tags": "$TAGS",
+                                    "id": "$ID",
+                                }
+                            ),
+                        }
+                    )
+                    self.logger.info("Webhook created")
+                except ApiException as exc:
+                    if "Webhook already exists" in exc.body.get("errors"):
+                        self.logger.info("Webhook already exists when trying to add")
+                    else:
+                        raise
             self.logger.info("Webhook created or updated")
             if setup_alerts:
                 self.logger.info("Updating monitors")
@@ -357,5 +476,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    results = provider.setup_webhook("http://localhost:8000", "1234", True)
-    print(results)
+    result = provider.validate_scopes()
+    print(result)

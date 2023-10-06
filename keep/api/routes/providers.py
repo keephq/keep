@@ -4,8 +4,7 @@ import time
 import uuid
 from typing import Optional
 
-import jwt
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
@@ -21,6 +20,7 @@ from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
+from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -38,7 +38,7 @@ def get_providers(
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
     installed_providers = ProvidersFactory.get_installed_providers(
-        tenant_id, providers, include_details=False
+        tenant_id, providers, include_details=True
     )
 
     try:
@@ -255,6 +255,117 @@ def delete_provider(
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
 
+def validate_scopes(
+    provider: BaseProvider, validate_mandatory=True
+) -> dict[str, bool | str]:
+    validated_scopes = provider.validate_scopes()
+    if validate_mandatory:
+        mandatory_scopes_validated = True
+        if provider.PROVIDER_SCOPES and validated_scopes:
+            # All of the mandatory scopes must be validated
+            for scope in provider.PROVIDER_SCOPES:
+                if scope.mandatory and (
+                    scope.name not in validated_scopes
+                    or validated_scopes[scope.name] != True
+                ):
+                    mandatory_scopes_validated = False
+                    break
+        # Otherwise we fail the installation
+        if not mandatory_scopes_validated:
+            raise HTTPException(
+                status_code=412,
+                detail=validated_scopes,
+            )
+    return validated_scopes
+
+
+@router.post(
+    "/{provider_id}/scopes",
+    description="Validate provider scopes",
+    status_code=200,
+    response_model=dict[str, bool | str],
+)
+def validate_provider_scopes(
+    provider_id: str,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    logger.info("Validating provider scopes", extra={"provider_id": provider_id})
+    provider = session.exec(
+        select(Provider).where(
+            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        )
+    ).one()
+
+    if not provider:
+        raise HTTPException(404, detail="Provider not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider_config = secret_manager.read_secret(
+        provider.configuration_key, is_json=True
+    )
+    provider_instance = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider.type, provider_config
+    )
+    validated_scopes = provider_instance.validate_scopes()
+    if validated_scopes != provider.validatedScopes:
+        provider.validatedScopes = validated_scopes
+        session.commit()
+    logger.info(
+        "Validated provider scopes",
+        extra={"provider_id": provider_id, "validated_scopes": validate_scopes},
+    )
+    return validated_scopes
+
+
+@router.put("/{provider_id}", description="Update provider", status_code=200)
+def update_provider(
+    provider_id: str,
+    provider_info: dict = Body(...),
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+    updated_by: str = Depends(get_user_email),
+):
+    logger.info(
+        "Updating provider",
+        extra={
+            "provider_id": provider_id,
+        },
+    )
+
+    provider = session.exec(
+        select(Provider).where(
+            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        )
+    ).one()
+
+    if not provider:
+        raise HTTPException(404, detail="Provider not found")
+
+    provider_config = {
+        "authentication": provider_info,
+        "name": provider.name,
+    }
+    context_manager = ContextManager(tenant_id=tenant_id)
+    provider_instance = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider.type, provider_config
+    )
+    validated_scopes = validate_scopes(provider_instance)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_manager.write_secret(
+        secret_name=provider.configuration_key, secret_value=json.dumps(provider_config)
+    )
+    provider.installed_by = updated_by
+    provider.validatedScopes = validated_scopes
+    session.commit()
+    logger.info("Updated provider", extra={"provider_id": provider_id})
+    return {
+        "details": provider_config,
+        "validatedScopes": validated_scopes,
+    }
+
+
 @router.post("/install")
 async def install_provider(
     provider_info: dict = Body(...),
@@ -285,44 +396,43 @@ async def install_provider(
         "authentication": provider_info,
         "name": provider_name,
     }
-    try:
-        # Instantiate the provider object and perform installation process
-        context_manager = ContextManager(tenant_id=tenant_id)
-        provider = ProvidersFactory.get_provider(
-            context_manager, provider_id, provider_type, provider_config
-        )
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
-        secret_manager.write_secret(
-            secret_name=secret_name,
-            secret_value=json.dumps(provider_config),
-        )
-        # add the provider to the db
-        provider = Provider(
-            id=provider_unique_id,
-            tenant_id=tenant_id,
-            name=provider_name,
-            type=provider_type,
-            installed_by=installed_by,
-            installation_time=time.time(),
-            configuration_key=secret_name,
-        )
-        session.add(provider)
-        session.commit()
-        return JSONResponse(
-            status_code=200,
-            content={
-                "type": provider_type,
-                "id": provider_unique_id,
-                "details": provider_config,
-            },
-        )
 
-    except GetAlertException as e:
-        raise HTTPException(status_code=403, detail=e.message)
+    # Instantiate the provider object and perform installation process
+    context_manager = ContextManager(tenant_id=tenant_id)
+    provider = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider_type, provider_config
+    )
 
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    validated_scopes = validate_scopes(provider)
+
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
+    secret_manager.write_secret(
+        secret_name=secret_name,
+        secret_value=json.dumps(provider_config),
+    )
+    # add the provider to the db
+    provider = Provider(
+        id=provider_unique_id,
+        tenant_id=tenant_id,
+        name=provider_name,
+        type=provider_type,
+        installed_by=installed_by,
+        installation_time=time.time(),
+        configuration_key=secret_name,
+        validatedScopes=validated_scopes,
+    )
+    session.add(provider)
+    session.commit()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "type": provider_type,
+            "id": provider_unique_id,
+            "details": provider_config,
+            "validatedScopes": validated_scopes,
+        },
+    )
 
 
 @router.post("/install/oauth2/{provider_type}")
@@ -388,9 +498,7 @@ async def install_provider_oauth2(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# Webhook related
-
-
+# Webhook related endpoints
 @router.post("/install/webhook/{provider_type}/{provider_id}")
 def install_provider_webhook(
     provider_type: str,
@@ -418,7 +526,12 @@ def install_provider_webhook(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
-    provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
+
+    try:
+        provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 

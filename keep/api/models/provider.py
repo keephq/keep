@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from keep.providers.models.provider_config import ProviderScope
+
 
 class Provider(BaseModel):
     id: str | None = None
@@ -20,6 +22,8 @@ class Provider(BaseModel):
     can_setup_webhook: bool = False
     provider_description: str | None = None
     oauth2_url: str | None = None
+    scopes: list[ProviderScope] = []
+    validatedScopes: dict[str, bool | str] | None = {}
     installed_by: str | None = None
     installation_time: datetime | None = None
     docs: str | None = None

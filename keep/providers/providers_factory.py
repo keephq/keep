@@ -144,6 +144,11 @@ class ProvidersFactory:
                 )
                 provider_type = provider_directory.replace("_provider", "")
                 provider_class = ProvidersFactory.get_provider_class(provider_type)
+                scopes = (
+                    provider_class.PROVIDER_SCOPES
+                    if issubclass(provider_class, BaseProvider)
+                    else []
+                )
                 can_setup_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
@@ -208,6 +213,7 @@ class ProvidersFactory:
                         supports_webhook=supports_webhook,
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
+                        scopes=scopes,
                         docs=docs,
                     )
                 )
@@ -230,7 +236,7 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider = next(
+            provider: Provider = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
@@ -245,13 +251,13 @@ class ProvidersFactory:
             provider_copy.installed_by = p.installed_by
             provider_copy.installation_time = p.installation_time
             try:
-                provider_auth = (
-                    secret_manager.read_secret(
-                        secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+                provider_auth = {"name": p.name}
+                if include_details:
+                    provider_auth.update(
+                        secret_manager.read_secret(
+                            secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
+                        )
                     )
-                    if include_details
-                    else {"name": p.name}
-                )
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
@@ -260,5 +266,6 @@ class ProvidersFactory:
                 )
                 continue
             provider_copy.details = provider_auth
+            provider_copy.validatedScopes = p.validatedScopes
             providers.append(provider_copy)
         return providers
