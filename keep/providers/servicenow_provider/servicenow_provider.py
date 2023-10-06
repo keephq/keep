@@ -45,6 +45,8 @@ class ServicenowProviderAuthConfig:
 
 
 class ServicenowProvider(BaseProvider):
+    """Manage ServiceNow tickets."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

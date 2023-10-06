@@ -38,6 +38,8 @@ class PagerdutyProviderAuthConfig:
 
 
 class PagerdutyProvider(BaseProvider):
+    """Pull alerts and query incidents from PagerDuty."""
+
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
 
     def __init__(

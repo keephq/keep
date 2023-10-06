@@ -27,6 +27,7 @@ class SlackProviderAuthConfig:
     )
     access_token: str = dataclasses.field(
         metadata={
+            "description": "For access token installation flow, use Keep UI",
             "required": False,
             "sensitive": True,
             "hidden": True,
@@ -36,6 +37,8 @@ class SlackProviderAuthConfig:
 
 
 class SlackProvider(BaseProvider):
+    """Send alert message to Slack."""
+
     OAUTH2_URL = os.environ.get("SLACK_OAUTH2_URL")
     SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
     SLACK_CLIENT_SECRET = os.environ.get("SLACK_CLIENT_SECRET")

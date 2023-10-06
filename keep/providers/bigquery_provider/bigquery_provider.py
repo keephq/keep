@@ -40,6 +40,8 @@ class BigqueryProviderAuthConfig:
 
 
 class BigqueryProvider(BaseProvider):
+    """Enrich alerts with data from BigQuery."""
+
     provider_id: str
     config: ProviderConfig
 

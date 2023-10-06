@@ -26,6 +26,8 @@ class JiraProviderAuthConfig:
 
 
 class JiraProvider(BaseProvider):
+    """Enrich alerts with Jira tickets."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

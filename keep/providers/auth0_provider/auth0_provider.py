@@ -39,6 +39,8 @@ class Auth0ProviderAuthConfig:
 
 
 class Auth0Provider(BaseProvider):
+    """Enrich alerts with data from Auth0."""
+
     provider_id: str
     config: ProviderConfig
 

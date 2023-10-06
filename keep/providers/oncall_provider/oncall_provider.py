@@ -38,7 +38,7 @@ class OncallProviderAuthConfig:
 
 class OncallProvider(BaseProvider):
     """
-    Grafana On-Call provider class.
+    Create incidents with Grafana On-Call.
     """
 
     API_URI = "api/plugins/grafana-incident-app/resources/api"

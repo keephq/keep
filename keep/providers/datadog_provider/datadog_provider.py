@@ -56,9 +56,7 @@ class DatadogProviderAuthConfig:
 
 
 class DatadogProvider(BaseProvider):
-    """
-    Datadog provider class.
-    """
+    """Pull/push alerts from Datadog."""
 
     EVENT_NAME_PATTERN = r".*\] (.*)"
 

@@ -8,6 +8,8 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 class ConsoleProvider(BaseProvider):
+    """Send alerts data to the console (debugging purposes)."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

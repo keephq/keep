@@ -1,4 +1,5 @@
 import dataclasses
+
 import pydantic
 import requests
 
@@ -6,6 +7,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
 
 @pydantic.dataclasses.dataclass
 class LinearProviderAuthConfig:
@@ -25,7 +27,10 @@ class LinearProviderAuthConfig:
         }
     )
 
+
 class LinearProvider(BaseProvider):
+    """Enrich alerts with Linear tickets."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -73,6 +78,7 @@ class LinearProvider(BaseProvider):
         linear_data = response.json()
         return {"linear_data": linear_data}
 
+
 if __name__ == "__main__":
     # Output debug messages
     import logging
@@ -97,4 +103,4 @@ if __name__ == "__main__":
         },
     )
     provider = LinearProvider(context_manager, provider_id="linear", config=config)
-    provider.query()  
+    provider.query()

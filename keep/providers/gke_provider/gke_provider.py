@@ -35,6 +35,8 @@ class GkeProviderAuthConfig:
 
 
 class GkeProvider(BaseProvider):
+    """Enrich alerts with data from GKE."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

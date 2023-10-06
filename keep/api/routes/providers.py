@@ -258,14 +258,19 @@ def delete_provider(
 @router.post("/install")
 async def install_provider(
     provider_info: dict = Body(...),
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):
     # Extract parameters from the provider_info dictionary
-    provider_id = provider_info.pop("provider_id")
-    provider_name = provider_info.pop("provider_name")
-    provider_type = provider_info.pop("provider_type", None) or provider_id
+    try:
+        provider_id = provider_info.pop("provider_id")
+        provider_name = provider_info.pop("provider_name")
+        provider_type = provider_info.pop("provider_type", None) or provider_id
+    except KeyError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Missing required field: {e.args[0]}"
+        )
 
     provider_unique_id = uuid.uuid4().hex
     logger.info(

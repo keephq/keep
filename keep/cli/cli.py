@@ -392,6 +392,8 @@ def list(info: Info, available: bool):
     # Add column headers
     if available:
         available_providers = providers.get("providers", [])
+        # sort alphabetically by type
+        available_providers.sort(key=lambda x: x.get("type"))
         table.field_names = ["Provider", "Description"]
         for provider in available_providers:
             provider_type = provider.get("type")
@@ -409,6 +411,7 @@ def list(info: Info, available: bool):
     else:
         table.field_names = ["ID", "Type", "Name", "Installed by", "Installation time"]
         installed_providers = providers.get("installed_providers", [])
+        installed_providers.sort(key=lambda x: x.get("type"))
         for provider in installed_providers:
             table.add_row(
                 [
@@ -422,7 +425,7 @@ def list(info: Info, available: bool):
     print(table)
 
 
-@provider.command()
+@provider.command(context_settings=dict(ignore_unknown_options=True))
 @click.option(
     "--help",
     "-h",
@@ -430,9 +433,17 @@ def list(info: Info, available: bool):
     is_flag=True,
     help="Help on how to install this provider.",
 )
-@click.argument("provider_name")
-@pass_info
-def connect(info: Info, help: bool, provider_name):
+@click.option(
+    "--provider-name",
+    "-n",
+    required=False,
+    help="Every provider shuold have a name.",
+)
+@click.argument("provider_type")
+@click.argument("params", nargs=-1, type=click.UNPROCESSED)
+@click.pass_context
+def connect(ctx, help: bool, provider_name, provider_type, params):
+    info = ctx.ensure_object(Info)
     resp = requests.get(
         info.keep_api_url + "/providers",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
@@ -440,29 +451,85 @@ def connect(info: Info, help: bool, provider_name):
     if not resp.ok:
         raise Exception(f"Error getting providers: {resp.text}")
 
+    available_providers = providers = resp.json().get("providers")
+
+    provider = [p for p in available_providers if p.get("type") == provider_type]
+    if not provider:
+        click.echo(
+            click.style(
+                f"Provider {provider_type} not found, you can open an issue and we will create it within a blink of an eye https://github.com/keephq/keep",
+                bold=True,
+            )
+        )
+    provider = provider[0]
     if help:
-        available_providers = providers.get("providers", [])
+        table = PrettyTable()
         table.field_names = [
             "Provider",
             "Config Param",
             "Required",
             "Description",
-            "Sensitive",
         ]
-        for provider in available_providers:
-            provider_type = provider.get("type")
-            for param, details in provider["config"].items():
-                table.add_row(
-                    [
-                        provider_type,
-                        param,
-                        details.get("required", False),
-                        details.get("description", "no description"),
-                        details.get("sensitive", "N/A"),
-                    ]
-                )
-                # Reset the provider_type for subsequent rows of the same provider to avoid repetition
-                provider_type = ""
+        provider_type = provider.get("type")
+        for param, details in provider["config"].items():
+            table.add_row(
+                [
+                    provider_type,
+                    param,
+                    details.get("required", False),
+                    details.get("description", "no description"),
+                ]
+            )
+            # Reset the provider_type for subsequent rows of the same provider to avoid repetition
+            provider_type = ""
+        print(table)
+        return
+
+    if not provider_name:
+        # exit with error
+        raise click.BadOptionUsage(
+            "--provider-name",
+            f"Required option --provider-name not provided for provider {provider_type}",
+        )
+
+    # Connect the provider
+    raw_opts = ctx.args
+    options_dict = {params[i]: params[i + 1] for i in range(0, len(params), 2)}
+    # Verify the provided options against the expected ones for the provider
+
+    provider_install_payload = {
+        "provider_id": provider["type"],
+        "provider_name": provider_name,
+    }
+    for config in provider["config"]:
+        config_as_flag = f"--{config.replace('_', '-')}"
+        if config_as_flag not in options_dict and provider["config"][config].get(
+            "required", True
+        ):
+            raise click.BadOptionUsage(
+                config_as_flag,
+                f"Required option --{config} not provided for provider {provider_name}",
+            )
+        if config_as_flag in options_dict:
+            provider_install_payload[config] = options_dict[config_as_flag]
+    # Install the provider
+    resp = requests.post(
+        info.keep_api_url + "/providers/install",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json=provider_install_payload,
+    )
+    if not resp.ok:
+        click.echo(
+            click.style(
+                f"Error installing provider {provider_name}: {resp.text}", bold=True
+            )
+        )
+    else:
+        resp = resp.json()
+        click.echo(
+            click.style(f"Provider {provider_name} installed successfully", bold=True)
+        )
+        click.echo(click.style(f"Provider id: {resp.get('id')}", bold=True))
 
 
 @cli.group()

@@ -26,6 +26,8 @@ class SentryProviderAuthConfig:
 
 
 class SentryProvider(BaseProvider):
+    """Enrich alerts with data from Sentry."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

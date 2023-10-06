@@ -11,6 +11,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class PythonProvider(BaseProvider):
+    """Python provider eval python code to get results"""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

@@ -44,9 +44,17 @@ def get_user_email_single_tenant() -> str:
 
 
 def get_user_email(request: Request) -> str | None:
-    token = request.headers.get("Authorization").split(" ")[1]
-    decoded_token = jwt.decode(token, options={"verify_signature": False})
-    return decoded_token.get("email")
+    token = request.headers.get("Authorization")
+    if token:
+        token = token.split(" ")[1]
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        return decoded_token.get("email")
+    elif "x-api-key" in request.headers:
+        return "apikey@keephq.dev"
+    else:
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
 
 
 def verify_api_key(

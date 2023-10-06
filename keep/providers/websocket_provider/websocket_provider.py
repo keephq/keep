@@ -17,6 +17,8 @@ class WebsocketProviderAuthConfig:
 
 
 class WebsocketProvider(BaseProvider):
+    """Enrich alerts with data from a websocket."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

@@ -30,6 +30,8 @@ class MysqlProviderAuthConfig:
 
 
 class MysqlProvider(BaseProvider):
+    """Enrich alerts with data from MySQL."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
