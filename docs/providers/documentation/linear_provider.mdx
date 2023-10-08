@@ -1,38 +1,40 @@
 ---
 title: "Linear Provider"
 sidebarTitle: "Linear Provider"
-description: "Linear Provider is a provider for fetching data from the Linear API."
+description: "Linear Provider is a provider for fetching data and creating issues in Linear app."
 ---
 
-## Configuration
+## Inputs
 
-Before using the Linear Provider, you need to configure it by providing the following parameters:
+- **team_name** (required): The team name associated with the issue.
+- **project_name** (required): The project name associated with the issue.
+- **title** (required): The title of the incident.
+- **description** (optional): Additional details of the incident.
+- **priority** (optional): The priority for the incident in linear issue (numeric value within 0 to 4).
 
-### Authentication Parameters
+## Outputs
 
-#### `api_token` (string, required)
+Linear Provider supports both `query` and `notify` methods.
 
-- Description: The Linear API Token.
-- How to Obtain:
-  1. Visit the Linear app or website.
-  2. Log in to your Linear account.
-  3. Navigate to your account settings.
-  4. Locate the API Token section and generate a new token.
-  5. Copy the generated API token.
- 
-  
+## Authentication Parameters
 
-#### `project_id` (string, required)
+The Linear Provider uses `api_token` for request authorization. You need to provider the following:
 
-- Description: The Linear Project ID.
-- How to Obtain:
-  1. Log in to your Linear account.
-  2. Navigate to the project you want to access.
-  3. In the project details, you will find the Project ID.
+- **api_token** (requires): The personal api key for your linear app.
+  - How to obtain:
+    1. Visit the Linear app or website.
+    2. Log in to your Linear account.
+    3. Navigate to your account settings -.
+    4. Navigate to the API page.
+    5. Under Personal API keys section generate the key.
+    6. Copy the generated API token.
 
+## Notes
 
+- This provider allows you to query projects for the given Linear team.
+- This provider allows you to notify (create issue) inside Linear app for given project and team.
 
 ## Useful Links
 
-- [Linear](https://linear.app/)
-- [Linear-Projects](https://linear.app/docs/projects)
+- [Linear](https://linear.app)
+- [Linear Docs](https://developers.linear.app/docs/graphql/working-with-the-graphql-api)
