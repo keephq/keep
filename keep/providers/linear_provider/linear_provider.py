@@ -137,7 +137,7 @@ class LinearProvider(BaseProvider):
             project_node = project_nodes[0] if len(project_nodes) > 0 else {}
             project_id = project_node.get("id", "")
 
-            if project_id is "" or team_id is "":
+            if project_id == "" or team_id == "":
                 raise ProviderException(
                     f"Linear team:{team_name} or project:{project_name}, doesn't exists"
                 )
