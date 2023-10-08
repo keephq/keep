@@ -22,7 +22,12 @@ interface Props {
   workflows?: any[];
 }
 
-export function AlertTable({ data, groupBy, pushed = false, workflows }: Props) {
+export function AlertTable({
+  data,
+  groupBy,
+  pushed = false,
+  workflows,
+}: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -44,6 +49,11 @@ export function AlertTable({ data, groupBy, pushed = false, workflows }: Props) 
       (key) => groupedByData[key][0]
     );
   }
+  // Sort by last received
+  aggregatedData = aggregatedData.sort(
+    (a, b) =>
+      new Date(a.lastReceived).getTime() - new Date(b.lastReceived).getTime()
+  );
 
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {

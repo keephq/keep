@@ -5,17 +5,21 @@ import { useEffect, useState } from "react";
 import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
-import "./providers-available.css";
+import "./providers-tiles.css";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { hideOrShowIntercom } from "@/components/ui/Intercom";
 
-const ProvidersConnect = ({
+const ProvidersTiles = ({
   providers,
   addProvider,
+  onDelete,
+  installedProvidersMode = false,
 }: {
   providers: Providers;
   addProvider: (provider: Provider) => void;
+  onDelete: (provider: Provider) => void;
+  installedProvidersMode?: boolean;
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
@@ -56,6 +60,12 @@ const ProvidersConnect = ({
   const handleConnectProvider = (provider: Provider) => {
     hideOrShowIntercom(true);
     setSelectedProvider(provider);
+    if (installedProvidersMode) {
+      setFormValues({
+        provider_name: provider.details.name!,
+        ...provider.details?.authentication,
+      });
+    }
     setOpenPanel(true);
   };
 
@@ -86,7 +96,9 @@ const ProvidersConnect = ({
 
   return (
     <div>
-      <Text className="ml-2.5 mt-5">Available Providers</Text>
+      <Text className="ml-2.5 mt-5">
+        {installedProvidersMode ? "Installed Providers" : "Available Providers"}
+      </Text>
       <div className="provider-tiles">
         {providersWithConfig.map((provider, index) => (
           <ProviderTile
@@ -112,6 +124,9 @@ const ProvidersConnect = ({
             onConnectChange={handleConnecting}
             onAddProvider={addProvider}
             closeModal={handleCloseModal}
+            installedProvidersMode={installedProvidersMode}
+            isProviderNameDisabled={installedProvidersMode}
+            onDelete={onDelete}
           />
         )}
       </SlidingPanel>
@@ -119,4 +134,4 @@ const ProvidersConnect = ({
   );
 };
 
-export default ProvidersConnect;
+export default ProvidersTiles;

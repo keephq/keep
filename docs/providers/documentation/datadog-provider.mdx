@@ -38,28 +38,21 @@ To obtain the Datadog App Key, follow these steps:
 3. Click on the "API" tab.
 4. Generate a new App Key or use an existing one.
 
-### Scopes
-Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use-cases:
+## Scopes
+Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use cases:
 
-### Monitors
-#### `Monitors Read` (Required)
-
-
-### Webhook Integration
-<Info>Required for installing the Datadog Webhook Integration so all monitors will be pushed to Keep.</Info>
-#### `Monitors Write` (Required)
-#### `Integrations Manage` (Required)
-
-
-### Querying Data
-#### Metrics
-#### `Metrics Read` (Optional - required for querying any metric data.)
-
-#### Logs
-#### `Logs Read` (Optional - required for querying any log data.)
-
-#### Traces
-#### `Traces Read` (Optional - required for querying any trace data.)
+ - monitors_read (Monitors Read)
+	Required: True
+	Description: View monitors.
+- monitors_write (Monitors Write)
+	Required: False
+	Description: Write monitors. (**Required for auto-webhook integration*)
+- create_webhooks (Integrations Manage)
+	Required: False
+	Description: Create webhooks integrations. (**Required for auto-webhook integration*)
+ - metrics_read
+	Required: False
+	Description: View metrics.
 
 ## Notes
 
