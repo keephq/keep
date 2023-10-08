@@ -12,11 +12,12 @@ from pydantic.dataclasses import dataclass
 from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
+    PROVIDER_SCOPES: list[ProviderScope] = []
 
     def __init__(
         self,
@@ -75,6 +76,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Validate provider configuration.
         """
         raise NotImplementedError("validate_config() method not implemented")
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        """
+        Validate provider scopes.
+
+        Returns:
+            dict: where key is the scope name and value is whether the scope is valid (True boolean) or string with error message.
+        """
+        return {}
 
     def notify(self, **kwargs):
         """
@@ -172,7 +182,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
-        raise NotImplementedError("format_alerts() method not implemented")
+        raise NotImplementedError("format_alert() method not implemented")
 
     def get_alerts_configuration(self, alert_id: Optional[str] = None):
         """

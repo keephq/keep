@@ -285,7 +285,7 @@
     "picomatch": "^2.3.1",
     "pify": "^2.3.0",
     "pirates": "^4.0.5",
-    "postcss": "^8.4.23",
+    "postcss": "^8.4.31",
     "postcss-import": "^15.1.0",
     "postcss-js": "^4.0.1",
     "postcss-nested": "^6.0.1",
@@ -398,7 +398,7 @@
     "yallist": "^4.0.0",
     "yaml": "^2.2.2",
     "yocto-queue": "^0.1.0",
-    "zod": "^3.21.4"
+    "zod": "^3.22.3"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.3",
