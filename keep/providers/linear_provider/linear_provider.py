@@ -20,16 +20,12 @@ class LinearProviderAuthConfig:
             "sensitive": True,
         }
     )
-    project_id: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Linear Project ID",
-        }
-    )
 
 
 class LinearProvider(BaseProvider):
     """Enrich alerts with Linear tickets."""
+
+    LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -103,4 +99,11 @@ if __name__ == "__main__":
         },
     )
     provider = LinearProvider(context_manager, provider_id="linear", config=config)
-    provider.query()
+    provider.query(team_name="Keep")
+    provider.notify(
+        team_name="Keep",
+        project_name="keep",
+        title="ISSUE1",
+        description="some description",
+        priority=2,
+    )
