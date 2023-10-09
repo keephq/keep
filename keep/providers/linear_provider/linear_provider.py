@@ -213,7 +213,15 @@ class LinearProvider(BaseProvider):
         except Exception as e:
             raise ProviderException(f"Failed to create an issue in linear: {e}")
 
-    def _notify(self, **kwargs: dict):
+    def _notify(
+        self,
+        team_name: str,
+        project_name: str,
+        title: str,
+        description="",
+        priority=0,
+        **kwargs: dict,
+    ):
         """
         Notify linear by creating an issue.
         """
@@ -221,11 +229,11 @@ class LinearProvider(BaseProvider):
             self.logger.info("Notifying linear...")
 
             result = self.__create_issue(
-                team_name=kwargs["team_name"],
-                project_name=kwargs["project_name"],
-                title=kwargs["title"],
-                description=kwargs["description"],
-                priority=kwargs["priority"],
+                team_name=team_name,
+                project_name=project_name,
+                title=title,
+                description=description,
+                priority=priority,
             )
 
             self.logger.info("Notified linear!")
@@ -234,14 +242,14 @@ class LinearProvider(BaseProvider):
         except Exception as e:
             raise ProviderException(f"Failed to notify linear: {e}")
 
-    def _query(self, **kwargs: dict):
+    def _query(self, team_name: str, **kwargs: dict):
         """
         Query linear data for given team.
         """
         try:
             self.logger.info("Querying from linear...")
 
-            result = self.__query_linear_projects(team_name=kwargs["team_name"])
+            result = self.__query_linear_projects(team_name=team_name)
 
             self.logger.info("Queried from linear!")
 
