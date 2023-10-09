@@ -188,7 +188,7 @@ class SentryProvider(BaseProvider):
         all_issues = []
         if self.authentication_config.project_slug or project_slug:
             response = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/issues/",
+                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/issues/?query=*",
                 headers={
                     "Authorization": f"Bearer {self.authentication_config.api_key}"
                 },
