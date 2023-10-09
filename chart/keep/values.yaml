@@ -63,6 +63,8 @@ frontend:
       value: development
     - name: NODE_ENV
       value: development
+    - name: HOSTNAME
+      value: 0.0.0.0
   replicaCount: 1
   image:
     repository: us-central1-docker.pkg.dev/keephq/keep/keep-ui

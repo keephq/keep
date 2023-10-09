@@ -1,10 +1,11 @@
+// TODO: refactor this file and separate in to smaller components
+//  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import "./provider-form.css";
 import {
   Title,
   Text,
@@ -13,6 +14,7 @@ import {
   Icon,
   Subtitle,
   Divider,
+  TextInput,
 } from "@tremor/react";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
@@ -20,9 +22,11 @@ import {
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
+import ProviderFormScopes from "./provider-form-scopes";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -36,6 +40,8 @@ type ProviderFormProps = {
   closeModal: () => void;
   onAddProvider?: (provider: Provider) => void;
   isProviderNameDisabled?: boolean;
+  installedProvidersMode: boolean;
+  onDelete?: (provider: Provider) => void;
 };
 
 const ProviderForm = ({
@@ -47,6 +53,8 @@ const ProviderForm = ({
   onAddProvider,
   closeModal,
   isProviderNameDisabled,
+  installedProvidersMode,
+  onDelete,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const initialData = {
@@ -59,15 +67,68 @@ const ProviderForm = ({
   const [formValues, setFormValues] = useState<{
     [key: string]: string | boolean;
   }>(initialData);
-  const [formErrors, setFormErrors] = useState<{
-    [key: string]: string;
-  } | null>(null);
+  const [formErrors, setFormErrors] = useState<string>(null);
+  const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+
+  // Related to scopes
+  const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
+    [key: string]: boolean | string;
+  }>(provider.validatedScopes);
+  const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const { data: session, status, update } = useSession();
 
-  const [hoveredLabel, setHoveredLabel] = useState(null);
-
   const accessToken = session?.accessToken;
+
+  const callInstallWebhook = async (e: Event) => {
+    await installWebhook(provider, accessToken!);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (triggerRevalidateScope !== 0) {
+      setRefreshLoading(true);
+      fetch(`${getApiURL()}/providers/${provider.id}/scopes`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }).then((response) => {
+        if (response.ok) {
+          response.json().then((newValidatedScopes) => {
+            setProviderValidatedScopes(newValidatedScopes);
+            setRefreshLoading(false);
+          });
+        } else {
+          setRefreshLoading(false);
+        }
+      });
+    }
+  }, [triggerRevalidateScope, accessToken, provider.id]);
+
+  async function deleteProvider() {
+    if (confirm("Are you sure you want to delete this provider?")) {
+      const response = await fetch(
+        `${getApiURL()}/providers/${provider.type}/${provider.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken!}`,
+          },
+        }
+      );
+      if (response.ok) {
+        onDelete!(provider);
+        closeModal();
+      } else {
+        toast.error(`Failed to delete ${provider.type} 😢`);
+      }
+    }
+  }
 
   const validateForm = (updatedFormValues) => {
     const errors = {};
@@ -86,7 +147,7 @@ const ProviderForm = ({
         errors["provider_name"] = true;
       }
     }
-    markErrors(errors);
+    setInputErrors(errors);
     return errors;
   };
 
@@ -94,7 +155,13 @@ const ProviderForm = ({
     const { name, value } = event.target;
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     const updatedFormValues = { ...formValues, [name]: value };
-    validateForm(updatedFormValues);
+
+    if (Object.keys(inputErrors).includes(name) && value !== "") {
+      const updatedInputErrors = { ...inputErrors };
+      delete updatedInputErrors[name];
+      setInputErrors(updatedInputErrors);
+    }
+
     onFormChange(updatedFormValues, formErrors);
   };
 
@@ -106,34 +173,28 @@ const ProviderForm = ({
     }));
   };
 
-  const markErrors = (errors: Record<string, boolean>) => {
-    const inputElements = document.querySelectorAll(".form-group input");
-    inputElements.forEach((input) => {
-      const name = input.getAttribute("name");
-      // @ts-ignore
-      if (errors[name]) {
-        input.classList.add("error");
-      } else {
-        input.classList.remove("error");
-      }
-    });
-  };
-
   const validate = () => {
     const errors = validateForm(formValues);
     if (Object.keys(errors).length === 0) {
-      markErrors(errors);
       return true;
     } else {
-      setFormErrors(errors);
-      markErrors(errors);
+      setFormErrors(
+        `Missing required fields: ${JSON.stringify(
+          Object.keys(errors),
+          null,
+          4
+        )}`
+      );
       return false;
     }
   };
 
-  const submit = (requestUrl: string): Promise<any> => {
+  const submit = (
+    requestUrl: string,
+    method: string = "POST"
+  ): Promise<any> => {
     return fetch(requestUrl, {
-      method: "POST",
+      method: method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -141,56 +202,78 @@ const ProviderForm = ({
       body: JSON.stringify(formValues),
     })
       .then((response) => {
+        const response_json = response.json();
         if (!response.ok) {
           // If the response is not okay, throw the error message
-          return response.json().then((errorData) => {
-            throw new Error(
-              `Error: ${response.status}, ${JSON.stringify(errorData)}`
-            );
+          return response_json.then((errorData) => {
+            const errorDetail = errorData.detail;
+            if (response.status === 412) {
+              setProviderValidatedScopes(errorDetail);
+            }
+            throw `Scopes are invalid for ${provider.type}: ${JSON.stringify(
+              errorDetail,
+              null,
+              4
+            )}`;
           });
         }
-        const response_json = response.json();
         return response_json;
       })
       .then((data) => {
-        setFormErrors({});
+        setFormErrors("");
         return data;
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        throw error;
       });
+  };
+
+  const handleUpdateClick = (e: any) => {
+    e.preventDefault();
+    if (validate()) {
+      setIsLoading(true);
+      submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
+        .then((data) => {
+          setIsLoading(false);
+          onAddProvider({ ...provider, ...data } as Provider);
+        })
+        .catch((error) => {
+          const updatedFormErrors = error.toString();
+          setFormErrors(updatedFormErrors);
+          onFormChange(formValues, updatedFormErrors);
+          setIsLoading(false);
+        });
+    }
   };
 
   const handleConnectClick = () => {
-    if (!validate()) {
-      return;
+    if (validate()) {
+      setIsLoading(true);
+      onConnectChange(true, false);
+      submit(`${getApiURL()}/providers/install`)
+        .then((data) => {
+          console.log("Connect Result:", data);
+          setIsLoading(false);
+          onConnectChange(false, true);
+          if (formValues.install_webhook && provider.can_setup_webhook) {
+            installWebhook(data as Provider, accessToken);
+          }
+          onAddProvider({ ...provider, ...data } as Provider);
+        })
+        .catch((error) => {
+          const updatedFormErrors = error.toString();
+          setFormErrors(updatedFormErrors);
+          onFormChange(formValues, updatedFormErrors);
+          setIsLoading(false);
+          onConnectChange(false, false);
+        });
     }
-    setIsLoading(true);
-    onConnectChange(true, false);
-    submit(`${getApiURL()}/providers/install`)
-      .then((data) => {
-        console.log("Connect Result:", data);
-        setIsLoading(false);
-        onConnectChange(false, true);
-        if (formValues.install_webhook && provider.can_setup_webhook) {
-          installWebhook(data as Provider, accessToken);
-        }
-        onAddProvider(data as Provider);
-      })
-      .catch((error) => {
-        console.error("Connect failed:", error);
-        const updatedFormErrors = { error: error.toString() };
-        setFormErrors(updatedFormErrors);
-        onFormChange(formValues, updatedFormErrors);
-        setIsLoading(false);
-        onConnectChange(false, false);
-      });
   };
+
+  const installOrUpdateWebhookEnabled = provider.scopes
+    ?.filter((scope) => scope.mandatory_for_webhook)
+    .every((scope) => providerValidatedScopes[scope.name] === true);
 
   console.log("ProviderForm component loaded");
   return (
-    <div className="flex flex-col h-screen justify-between p-7">
+    <div className="flex flex-col h-full justify-between p-5">
       <div>
         <Title>
           Connect to{" "}
@@ -229,6 +312,15 @@ const ProviderForm = ({
             className="mt-5 mb-9 ml-2.5"
           />
         </div>
+        {provider.scopes?.length > 0 && (
+          <ProviderFormScopes
+            provider={provider}
+            validatedScopes={providerValidatedScopes}
+            installedProvidersMode={installedProvidersMode}
+            triggerRevalidateScope={setTriggerRevalidateScope}
+            refreshLoading={refreshLoading}
+          />
+        )}
         <form>
           <div className="form-group">
             {provider.oauth2_url ? (
@@ -250,9 +342,12 @@ const ProviderForm = ({
               </>
             ) : null}
             <label htmlFor="provider_name" className="label-container mb-1">
-              <Text>Provider Name</Text>
+              <Text>
+                Provider Name
+                <span className="text-red-400">*</span>
+              </Text>
             </label>
-            <input
+            <TextInput
               type="text"
               id="provider_name"
               name="provider_name"
@@ -262,11 +357,7 @@ const ProviderForm = ({
               color="orange"
               autoComplete="off"
               disabled={isProviderNameDisabled}
-              className={
-                isProviderNameDisabled
-                  ? "disabled-input text-slate-400 bg-slate-100"
-                  : ""
-              }
+              error={Object.keys(inputErrors).includes("provider_name")}
               title={
                 isProviderNameDisabled
                   ? "This field is disabled because it is pre-filled from the workflow."
@@ -278,11 +369,13 @@ const ProviderForm = ({
             const method = provider.config[configKey];
             if (method.hidden) return null;
             return (
-              <div className="form-group" key={configKey}>
-                <label htmlFor={configKey} className="label-container mb-1">
+              <div className="mt-2.5" key={configKey}>
+                <label htmlFor={configKey} className="flex items-center mb-1">
                   <Text className="capitalize">
                     {method.description}
-                    {method.required !== false ? "" : " (optional)"}
+                    {method.required === true ? (
+                      <span className="text-red-400">*</span>
+                    ) : null}
                   </Text>
                   {method.hint && (
                     <Icon
@@ -294,19 +387,20 @@ const ProviderForm = ({
                     />
                   )}
                 </label>
-                <input
+                <TextInput
                   type={method.type}
                   id={configKey}
                   name={configKey}
                   value={formValues[configKey] || ""}
                   onChange={handleInputChange}
                   autoComplete="off"
+                  error={Object.keys(inputErrors).includes(configKey)}
                   placeholder={method.placeholder || "Enter " + configKey}
                 />
               </div>
             );
           })}
-          {provider.can_setup_webhook && (
+          {provider.can_setup_webhook && !installedProvidersMode && (
             <div className="flex items-center w-full" key="install_webhook">
               <input
                 type="checkbox"
@@ -318,7 +412,7 @@ const ProviderForm = ({
               />
               <label
                 htmlFor="install_webhook"
-                className="label-container w-full"
+                className="flex items-center w-full"
               >
                 <Text className="capitalize">Install Webhook</Text>
                 <Icon
@@ -334,28 +428,45 @@ const ProviderForm = ({
               </label>
             </div>
           )}
+          {provider.can_setup_webhook && installedProvidersMode && (
+            <Button
+              icon={GlobeAltIcon}
+              onClick={callInstallWebhook}
+              variant="secondary"
+              color="orange"
+              className="mt-2.5"
+              disabled={!installOrUpdateWebhookEnabled}
+              tooltip={
+                !installOrUpdateWebhookEnabled
+                  ? "Fix required webhook scopes and refresh scopes to enable"
+                  : "This uses server saved credentials. If needed, please use the `Update` button first"
+              }
+            >
+              Install/Update Webhook
+            </Button>
+          )}
           {provider.supports_webhook && (
             <ProviderSemiAutomated
               provider={provider}
               accessToken={accessToken}
             />
           )}
+          {formErrors && (
+            <Callout
+              title="Connection Problem"
+              icon={ExclamationCircleIcon}
+              className="my-5"
+              color="rose"
+            >
+              {formErrors}
+            </Callout>
+          )}
           {/* Hidden input for provider ID */}
           <input type="hidden" name="providerId" value={provider.id} />
         </form>
       </div>
-      <div>
-        {formErrors && (
-          <Callout
-            title="Connection Problem"
-            icon={ExclamationCircleIcon}
-            color="rose"
-          >
-            {JSON.stringify(formErrors, null, 2)}
-          </Callout>
-        )}
-      </div>
-      <div className="flex justify-end">
+
+      <div className="flex justify-end mt-5">
         <Button
           variant="secondary"
           color="orange"
@@ -365,9 +476,29 @@ const ProviderForm = ({
         >
           Cancel
         </Button>
-        <Button loading={isLoading} onClick={handleConnectClick} color="orange">
-          Connect
-        </Button>
+        {installedProvidersMode && (
+          <>
+            <Button onClick={deleteProvider} color="red" className="mr-2.5">
+              Delete
+            </Button>
+            <Button
+              loading={isLoading}
+              onClick={handleUpdateClick}
+              color="orange"
+            >
+              Update
+            </Button>
+          </>
+        )}
+        {!installedProvidersMode && (
+          <Button
+            loading={isLoading}
+            onClick={handleConnectClick}
+            color="orange"
+          >
+            Connect
+          </Button>
+        )}
       </div>
     </div>
   );

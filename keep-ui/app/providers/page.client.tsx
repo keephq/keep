@@ -5,12 +5,11 @@ import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
-import ProvidersAvailable from "./providers-available";
+import ProvidersTiles from "./providers-tiles";
 import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
 import Image from "next/image";
-import ProvidersInstalled from "./providers-installed";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
@@ -34,7 +33,12 @@ export const useFetchProviders = () => {
     const fetchedInstalledProviders = (
       data["installed_providers"] as Providers
     ).map((provider) => {
-      return { ...provider, installed: true } as Provider;
+      const validatedScopes = provider.validatedScopes ?? {};
+      return {
+        ...provider,
+        installed: true,
+        validatedScopes: validatedScopes,
+      } as Provider;
     });
     // TODO: refactor this to be more readable and move to backend(?)
     const fetchedProviders = data.providers.map((provider: Provider) => {
@@ -57,6 +61,8 @@ export const useFetchProviders = () => {
         supports_webhook: provider.supports_webhook,
         provider_description: provider.provider_description,
         oauth2_url: provider.oauth2_url,
+        scopes: provider.scopes,
+        validatedScopes: provider.validatedScopes,
       };
       return updatedProvider;
     }) as Providers;
@@ -111,10 +117,15 @@ export default function ProvidersPage({
   if (error) throw new KeepApiError(error.message, `${getApiURL()}/providers`);
 
   const addProvider = (provider: Provider) => {
-    setInstalledProviders((prevProviders) => [
-      ...prevProviders,
-      { ...provider, installed: true } as Provider,
-    ]);
+    setInstalledProviders((prevProviders) => {
+      const existingProvider = prevProviders.findIndex(
+        (p) => p.id === provider.id
+      );
+      if (existingProvider > -1) {
+        prevProviders.splice(existingProvider, 1);
+      }
+      return [...prevProviders, { ...provider, installed: true } as Provider];
+    });
   };
 
   const deleteProvider = (provider: Provider) => {
@@ -126,7 +137,7 @@ export default function ProvidersPage({
   const searchProviders = (provider: Provider) => {
     return (
       !searchProviderString ||
-      provider.type?.toLowerCase().includes(searchProviderString)
+      provider.type?.toLowerCase().includes(searchProviderString.toLowerCase())
     );
   };
 
@@ -149,13 +160,18 @@ export default function ProvidersPage({
           return true;
         }}
       />
-      <ProvidersInstalled
-        providers={installedProviders}
-        onDelete={deleteProvider}
-      />
-      <ProvidersAvailable
+      {installedProviders.length > 0 && (
+        <ProvidersTiles
+          providers={installedProviders}
+          addProvider={addProvider}
+          onDelete={deleteProvider}
+          installedProvidersMode={true}
+        />
+      )}
+      <ProvidersTiles
         providers={providers.filter(searchProviders)}
         addProvider={addProvider}
+        onDelete={deleteProvider}
       />
     </Suspense>
   );

@@ -1,37 +1,10 @@
-import { Button, Icon, Subtitle, Text } from "@tremor/react";
+import { Button, Icon, Text } from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
-import { Bars3Icon } from "@heroicons/react/20/solid";
-import { useSession } from "../../utils/customAuth";
-import { getApiURL } from "../../utils/apiUrl";
-import ProviderMenu from "./provider-menu";
-import { toast } from "react-toastify";
-import { installWebhook } from "../../utils/helpers";
-import { GlobeAltIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   provider: Provider;
   onClick: () => void;
-  onDelete?: (provider: Provider) => void;
-}
-
-function InstalledSection(
-  onDelete?: () => Promise<void>,
-  onInstallWebhook?: () => Promise<void>,
-  provider?: Provider
-) {
-  return (
-    <div className="flex w-full items-center justify-between">
-      <Text color="green" className="ml-2.5 text-xs">
-        Connected
-      </Text>
-      <ProviderMenu
-        onDelete={onDelete}
-        onInstallWebhook={onInstallWebhook}
-        provider={provider!}
-      />
-    </div>
-  );
 }
 
 const WebhookIcon = (props: any) => (
@@ -77,30 +50,7 @@ const OAuthIcon = (props: any) => (
   </svg>
 );
 
-export default function ProviderTile({ provider, onClick, onDelete }: Props) {
-  const { data: session, status, update } = useSession();
-
-  async function deleteProvider() {
-    if (confirm("Are you sure you want to delete this provider?")) {
-      const response = await fetch(
-        `${getApiURL()}/providers/${provider.type}/${provider.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken!}`,
-          },
-        }
-      );
-      if (response.ok) {
-        onDelete!(provider);
-      } else {
-        toast.error(`Failed to delete ${provider.type} 😢`);
-      }
-    }
-  }
-
-  const callInstallWebhook = async () =>
-    installWebhook(provider, session?.accessToken!);
+export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
       className={`relative group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 h-44 m-2.5 hover:shadow-xl hover:grayscale-0`}
@@ -130,7 +80,9 @@ export default function ProviderTile({ provider, onClick, onDelete }: Props) {
         />
       )}
       {provider.installed ? (
-        InstalledSection(deleteProvider, callInstallWebhook, provider)
+        <Text color={"green"} className="ml-2.5 text-xs">
+          Connected
+        </Text>
       ) : (
         <div></div>
       )}
