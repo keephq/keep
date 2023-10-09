@@ -1,0 +1,49 @@
+---
+title: "Github Workflows"
+sidebarTitle: "Github Workflows Provider"
+description: "GithubWorkflowProvider is a provider that interacts with Github Workflows API."
+---
+
+## Configuration
+
+The `kwargs` of the `notify` function in **GithubWorkflowProvider** contains the following Parameters
+```python
+kwargs(dict):
+  github_url(str): API endpoint to send the request to. (Required*)
+  github_method(str): GET | POST | DELETE | PUT
+```
+Basically the kwargs will be automatically populated by the variables passed under `with` in the workflow file.
+
+## Outputs
+
+It returns the the response of the query.
+
+### Authentication Parameters
+
+A Github Personal Access Token `GITHUB_PAT` associated with the github account is required to perform the required action.
+
+## Connecting with the Provider
+
+Create your personal access token (classic) in github 
+- In the upper-right corner of any page, click your profile photo, then click **Settings**.
+- In the left sidebar, click **Developer settings**.
+- In the left sidebar, under  Personal access tokens, click **Tokens (classic)**.
+- Select Generate new token, then click Generate new **token (classic)**.
+- In the "Note" field, give your token a descriptive name.
+- To give your token an expiration, select **Expiration**, then choose a default option or click **Custom** to enter a date.
+- Select the scopes you'd like to grant this token.
+- Click **Generate token**.
+- Optionally, to copy the new token to your clipboard, click copy button.
+
+See bellow for more info.
+
+## Notes
+
+_No information yet, feel free to contribute it using the "Edit this page" link the bottom of the page_
+
+## Useful Links
+
+- [Workflows](https://docs.github.com/en/rest/actions/workflows)
+- [Workflows runs](https://docs.github.com/en/rest/actions/workflow-runs)
+- [Workflows jobs](https://docs.github.com/en/rest/actions/workflow-jobs)
+- [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
