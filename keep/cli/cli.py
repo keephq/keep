@@ -2,6 +2,7 @@ import json
 import logging
 import logging.config
 import sys
+import typing
 from dataclasses import fields
 from importlib import metadata
 
@@ -546,8 +547,18 @@ def config():
 
 
 @alert.command()
+@click.option(
+    "--filter",
+    "-f",
+    type=str,
+    multiple=True,
+    help="Filter alerts based on specific attributes. E.g., --filter source=datadog",
+)
+@click.option(
+    "--export", type=click.Path(), help="Export alerts to a specified JSON file."
+)
 @pass_info
-def list(info: Info):
+def list(info: Info, filter: typing.List[str], export: bool):
     """List alerts."""
     resp = requests.get(
         info.keep_api_url + "/alerts",
@@ -557,10 +568,24 @@ def list(info: Info):
         raise Exception(f"Error getting providers: {resp.text}")
 
     alerts = resp.json()
+
+    # Apply all provided filters
+    for filt in filter:
+        key, value = filt.split("=")
+        alerts = [alert for alert in alerts if alert.get(key) == value]
+
+    # If --export option is provided
+    if export:
+        with open(export, "w") as outfile:
+            json.dump(alerts, outfile, indent=4)
+        click.echo(f"Alerts exported to {export}")
+        return
+
     # Create a new table
     table = PrettyTable()
     table.field_names = [
         "ID",
+        "Fingerprint",
         "Name",
         "Status",
         "Environment",
@@ -568,10 +593,18 @@ def list(info: Info):
         "Source",
         "Last Received",
     ]
+    table.max_width["ID"] = 20
+    table.max_width["Name"] = 30
+    table.max_width["Status"] = 10
+    table.max_width["Environment"] = 15
+    table.max_width["Service"] = 15
+    table.max_width["Source"] = 15
+    table.max_width["Last Received"] = 30
     for alert in alerts:
         table.add_row(
             [
                 alert["id"],
+                alert["fingerprint"],
                 alert["name"],
                 alert["status"],
                 alert["environment"],
@@ -581,6 +614,35 @@ def list(info: Info):
             ]
         )
     print(table)
+
+
+@alert.command()
+@click.option("--alert-id", required=True, help="ID of the alert to enrich.")
+@click.argument("params", nargs=-1, type=click.UNPROCESSED)
+@pass_info
+def enrich(info: Info, alert_id, params):
+    """Enrich an alert."""
+
+    # Convert arguments to dictionary
+    if len(params) % 2 != 0:
+        raise click.BadArgumentUsage("Parameters must be given in key=value pairs")
+
+    params_dict = {params[i]: params[i + 1] for i in range(0, len(params), 2)}
+
+    # Make the API request
+    resp = requests.post(
+        f"{info.keep_api_url}/alerts/{alert_id}/enrich",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json=params_dict,
+    )
+
+    # Check the response
+    if not resp.ok:
+        click.echo(
+            click.style(f"Error enriching alert {alert_id}: {resp.text}", bold=True)
+        )
+    else:
+        click.echo(click.style(f"Alert {alert_id} enriched successfully", bold=True))
 
 
 @config.command()

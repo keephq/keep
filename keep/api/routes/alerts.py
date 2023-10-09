@@ -11,7 +11,7 @@ from keep.api.core.dependencies import (
     verify_bearer_token,
     verify_token_or_key,
 )
-from keep.api.models.alert import AlertDto, DeleteRequestBody
+from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -328,4 +328,51 @@ async def receive_event(
         return {"status": "ok"}
     except Exception as e:
         logger.warn("Failed to handle event", extra={"error": str(e)})
+        return {"status": "failed"}
+
+
+@router.post(
+    "/enrich",
+    description="Enrich an alert",
+)
+def enrich_alert(
+    enrich_data: EnrichAlertRequestBody,
+    tenant_id: str = Depends(verify_token_or_key),
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    logger.info(
+        "Enriching alert",
+        extra={
+            "alert_id": enrich_data.alert_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        # Query the alert from the database using the given alert_id and tenant_id
+        alert = (
+            session.query(Alert)
+            .filter_by(id=enrich_data.alert_id, tenant_id=tenant_id)
+            .first()
+        )
+
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alert not found")
+
+        # Add the enrichment data to the alert's event (assuming the event field is a dict)
+        if not alert.event.get("enrichments"):
+            alert.event["enrichments"] = {}
+
+        alert.event["enrichments"].update(enrich_data.enrichments)
+
+        session.commit()
+
+        logger.info(
+            "Alert enriched successfully",
+            extra={"alert_id": enrich_data.alert_id, "tenant_id": tenant_id},
+        )
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.exception("Failed to enrich alert", extra={"error": str(e)})
         return {"status": "failed"}
