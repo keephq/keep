@@ -3,10 +3,12 @@ Base class for all providers.
 """
 import abc
 import logging
+import os
 import re
 from dataclasses import field
 from typing import Optional
 
+import requests
 from pydantic.dataclasses import dataclass
 
 from keep.api.core.db import enrich_alert
@@ -290,3 +292,35 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # TODO - implement dynamically using decorators and
         return {}
+
+    def get_consumer(self):
+        """Get the consumer for the provider.
+
+        should be implemented by the provider if it has a consumer.
+
+        Returns:
+            Consumer: The consumer for the provider.
+        """
+        return
+
+    def _push_alert(self, alert: dict):
+        """
+        Push an alert to the provider.
+
+        Args:
+            alert (dict): The alert to push.
+        """
+        # push the alert to the provider
+        url = f'{os.environ["KEEP_API_URL"]}/alerts/event/{self.provider_type}'
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-API-KEY": self.context_manager.api_key,
+        }
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 200:
+            self.logger.info(f"Alert pushed to {self.provider_id}")
+        else:
+            self.logger.error(
+                f"Failed to push alert to {self.provider_id}: {response.content}"
+            )
