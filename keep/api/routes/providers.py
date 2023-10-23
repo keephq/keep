@@ -251,6 +251,15 @@ def delete_provider(
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")
         pass
+
+    if provider.consumer:
+        # Unregister the provider as a consumer
+        try:
+            event_subscriber = EventSubscriber.get_instance()
+            event_subscriber.remove_consumer(provider)
+        except Exception as e:
+            logger.exception("Failed to unregister provider as a consumer")
+            # return 200 as the next time Keep will start, it will try to unregister again
     logger.info("Deleted provider", extra={"provider_id": provider_id})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 

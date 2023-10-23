@@ -1,5 +1,5 @@
 import logging
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
@@ -15,7 +15,7 @@ class EventSubscriber:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.consumers = []
-        self.consumer_threads = []
+        self.executor = ThreadPoolExecutor()
 
     def add_consumer(self, consumer_provider: BaseProvider):
         """Add a consumer (on installation)
@@ -24,14 +24,9 @@ class EventSubscriber:
             consumer_provider (_type_): _description_
         """
         self.logger.info("Adding consumer %s", consumer_provider)
-        # start the consumer in a separate thread
-        thread = threading.Thread(
-            target=consumer.start_consume,
-            name=f"consumer-{consumer_provider}",
-        )
-        thread.start()
+        # submit the consumer to the executor
+        self.executor.submit(consumer_provider.start_consume)
         self.consumers.append(consumer_provider)
-        self.consumer_threads.append(thread)
         self.logger.info(
             "Started consumer thread for event provider %s", consumer_provider
         )
@@ -44,17 +39,25 @@ class EventSubscriber:
             self.logger.info(
                 "Getting consumer for event provider %s", consumer_provider
             )
-            # start the consumer in a separate thread
-            thread = threading.Thread(
-                target=consumer_provider.start_consume,
-                name=f"consumer-{consumer_provider}",
-            )
-            thread.start()
+            # submit the consumer to the executor
+            self.executor.submit(consumer_provider.start_consume)
             self.consumers.append(consumer_provider)
-            self.consumer_threads.append(thread)
             self.logger.info(
                 "Started consumer thread for event provider %s", consumer_provider
             )
+
+    def remove_consumer(self, consumer_provider: BaseProvider):
+        """Remove a consumer (on uninstallation)
+
+        Args:
+            consumer_provider (_type_): _description_
+        """
+        self.logger.info("Removing consumer %s", consumer_provider)
+        for cp in self.consumers:
+            if cp.provider_id == consumer_provider.provider_id:
+                cp.stop_consume()
+                break
+        self.logger.info("Removed consumer %s", consumer_provider)
 
     def stop(self):
         """Stops the consumers"""
@@ -63,8 +66,7 @@ class EventSubscriber:
             consumer.stop_consume()
             self.logger.info("Stopped consumer %s", consumer)
 
-        # Join the threads
-        self.logger.info("Joining consumer threads")
-        for thread in self.consumer_threads:
-            thread.join()
-        self.logger.info("Joined consumer threads")
+        # Shutdown the executor
+        self.logger.info("Shutting down the executor")
+        self.executor.shutdown()
+        self.logger.info("Executor shutdown complete")

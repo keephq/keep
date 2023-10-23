@@ -144,7 +144,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         from keep.event_subscriber.event_subscriber import EventSubscriber
 
         event_subscriber = EventSubscriber.get_instance()
-        asyncio.create_task(event_subscriber.start())
+        await asyncio.create_task(event_subscriber.start())
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):

@@ -8,7 +8,7 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -53,12 +53,74 @@ class KafkaProvider(BaseProvider):
     Kafka provider class.
     """
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="topic_read",
+            description="The kafka user that have permissions to read the topic.",
+            mandatory=True,
+            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
+            alias="Topic Read",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.consume = False
         self.consumer = None
+
+    def validate_scopes(self):
+        scopes = {"topic_read": False}
+        self.err = ""
+        self.logger.info("Validating kafka scopes")
+        conf = self._get_conf()
+
+        def validate_read_topic(err):
+            self.logger.info("Validating kafka topic read scope")
+            self.err += str(err)
+
+        conf["error_cb"] = validate_read_topic
+
+        consumer = Consumer(conf)
+        try:
+            # try subscribe and see what happens
+            consumer.subscribe([self.authentication_config.topic])
+            event = consumer.poll(3.0)
+            if event and event.error():
+                self.err += str(event.error())
+        except KafkaException as e:
+            self.logger.warning(f"No scopes: {e}")
+            scopes["topic_read"] = self.err or f"Could not authenticate to Kafka"
+            return scopes
+        except Exception as e:
+            self.logger.warning(f"Unknown error while connecting to Kafka")
+            scopes["topic_read"] = self.err or str(e)
+            return scopes
+
+        # specific problems we already know
+        if "Connection refused" in self.err:
+            scopes[
+                "topic_read"
+            ] = f"Connection refused: could not connect to Kafka at {self.authentication_config.host}"
+            return scopes
+        elif "Authentication failed" in self.err:
+            scopes[
+                "topic_read"
+            ] = f"Authentication failed: could not authenticate to Kafka at {self.authentication_config.host}"
+            return scopes
+        elif "Unknown topic" in self.err:
+            scopes[
+                "topic_read"
+            ] = f"Unknown topic: could not find topic {self.authentication_config.topic} at {self.authentication_config.host}"
+            return scopes
+
+        # generic problem we don't know about yet:
+        if self.err:
+            scopes["topic_read"] = self.err
+        else:
+            scopes["topic_read"] = True
+        return scopes
 
     def dispose(self):
         """
@@ -90,18 +152,29 @@ class KafkaProvider(BaseProvider):
             self.consumer.subscribe([self.authentication_config.topic])
             # the consumer will be reconsumed in  the mainloop
             self.logger.info("Reconsumed")
+        else:
+            self.logger.warning(f"Unknown error, stopping to listen: {err}")
+            self.consumer.close()
 
     def _get_conf(self):
-        return {
+        basic_conf = {
             "bootstrap.servers": self.authentication_config.host,
             "group.id": "keephq-group",
             "error_cb": self._error_callback,
             "auto.offset.reset": "earliest",
-            "security.protocol": "SASL_PLAINTEXT",
-            "sasl.mechanisms": "PLAIN",
-            "sasl.username": self.authentication_config.username,
-            "sasl.password": self.authentication_config.password,
+            "debug": "all",
         }
+
+        if self.authentication_config.username and self.authentication_config.password:
+            basic_conf.update(
+                {
+                    "security.protocol": "SASL_PLAINTEXT",
+                    "sasl.mechanisms": "PLAIN",
+                    "sasl.username": self.authentication_config.username,
+                    "sasl.password": self.authentication_config.password,
+                }
+            )
+        return basic_conf
 
     def start_consume(self):
         """
@@ -131,7 +204,13 @@ class KafkaProvider(BaseProvider):
 
     def stop_consume(self):
         self.consume = False
-        self.consumer.close()
+        # dispose
+        if self.consumer:
+            try:
+                self.consumer.close()
+            except Exception as e:
+                self.logger.exception("Error closing Kafka connection")
+            self.consumer = None
 
 
 if __name__ == "__main__":
