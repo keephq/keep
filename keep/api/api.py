@@ -141,7 +141,10 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         wf_manager = WorkflowManager.get_instance()
         asyncio.create_task(wf_manager.start())
         # initialize the event subscriber
-        asyncio.create_task()
+        from keep.event_subscriber.event_subscriber import EventSubscriber
+
+        event_subscriber = EventSubscriber.get_instance()
+        asyncio.create_task(event_subscriber.start())
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):

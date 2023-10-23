@@ -293,3 +293,4 @@ class ProvidersFactory:
                     f"Could not get provider {provider.id} auth config from secret manager"
                 )
                 continue
+        return initialized_consumer_providers

@@ -36,14 +36,14 @@ class KafkaProviderAuthConfig:
         metadata={
             "required": False,
             "description": "Username",
-            "hint": "Kafka username",
+            "hint": "Kafka username (Optional for SASL authentication)",
         },
     )
     password: str = dataclasses.field(
         metadata={
             "required": False,
             "description": "Password",
-            "hint": "Kafka password",
+            "hint": "Kafka password (Optional for SASL authentication)",
         },
     )
 
@@ -58,6 +58,7 @@ class KafkaProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
         self.consume = False
+        self.consumer = None
 
     def dispose(self):
         """
@@ -82,16 +83,16 @@ class KafkaProvider(BaseProvider):
         # if the topic does not exist, raise an exception
         elif err.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
             raise Exception("Topic {} does not exist".format(err))
+        elif err.code() == KafkaError._MAX_POLL_EXCEEDED:
+            self.logger.warning("Max poll exceeded, reconsuming")
+            conf = self._get_conf()
+            self.consumer = Consumer(conf)
+            self.consumer.subscribe([self.authentication_config.topic])
+            # the consumer will be reconsumed in  the mainloop
+            self.logger.info("Reconsumed")
 
-    def start_consume(self):
-        """
-        Get the Kafka consumer.
-
-        Returns:
-            kafka.KafkaConsumer: Kafka consumer
-        """
-        self.consume = True
-        conf = {
+    def _get_conf(self):
+        return {
             "bootstrap.servers": self.authentication_config.host,
             "group.id": "keephq-group",
             "error_cb": self._error_callback,
@@ -102,10 +103,19 @@ class KafkaProvider(BaseProvider):
             "sasl.password": self.authentication_config.password,
         }
 
-        consumer = Consumer(conf)
-        consumer.subscribe([self.authentication_config.topic])
+    def start_consume(self):
+        """
+        Get the Kafka consumer.
+
+        Returns:
+            kafka.KafkaConsumer: Kafka consumer
+        """
+        self.consume = True
+        conf = self._get_conf()
+        self.consumer = Consumer(conf)
+        self.consumer.subscribe([self.authentication_config.topic])
         while self.consume:
-            event = consumer.poll(1.0)
+            event = self.consumer.poll(1.0)
             if event:
                 if event.error():
                     self.logger.error("Error: {}".format(event.error()))
@@ -121,6 +131,7 @@ class KafkaProvider(BaseProvider):
 
     def stop_consume(self):
         self.consume = False
+        self.consumer.close()
 
 
 if __name__ == "__main__":

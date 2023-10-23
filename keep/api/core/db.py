@@ -393,7 +393,7 @@ def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
     with Session(engine) as session:
         providers = session.exec(
-            select(Provider).where(Provider.is_consumer == True)
+            select(Provider).where(Provider.consumer == True)
         ).all()
     return providers
 

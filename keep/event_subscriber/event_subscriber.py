@@ -1,5 +1,7 @@
 import logging
+import threading
 
+from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -15,10 +17,29 @@ class EventSubscriber:
         self.consumers = []
         self.consumer_threads = []
 
+    def add_consumer(self, consumer_provider: BaseProvider):
+        """Add a consumer (on installation)
+
+        Args:
+            consumer_provider (_type_): _description_
+        """
+        self.logger.info("Adding consumer %s", consumer_provider)
+        # start the consumer in a separate thread
+        thread = threading.Thread(
+            target=consumer.start_consume,
+            name=f"consumer-{consumer_provider}",
+        )
+        thread.start()
+        self.consumers.append(consumer_provider)
+        self.consumer_threads.append(thread)
+        self.logger.info(
+            "Started consumer thread for event provider %s", consumer_provider
+        )
+
     async def start(self):
         """Runs the event subscriber in server mode"""
         consumer_providers = ProvidersFactory.get_consumer_providers()
-        for consumer_provider in event_providers:
+        for consumer_provider in consumer_providers:
             # get the consumer for the event provider
             self.logger.info(
                 "Getting consumer for event provider %s", consumer_provider
@@ -30,7 +51,7 @@ class EventSubscriber:
             )
             thread.start()
             self.consumers.append(consumer_provider)
-            self.consumer_threads.append(thread)  # Append thread to the list
+            self.consumer_threads.append(thread)
             self.logger.info(
                 "Started consumer thread for event provider %s", consumer_provider
             )
