@@ -189,14 +189,16 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
 def run_services_after_app_is_up():
     # wait for the server
+    logger.info("Waiting for the server to be ready")
     wait_for_server_to_be_ready()
+    logger.info("Server is ready, starting the internal services")
     # start the internal services
     try:
         response = requests.post(f"{os.environ['KEEP_API_URL']}/start-services")
         response.raise_for_status()
-        print("Services started")
+        logger.info("Internal services started successfully")
     except Exception as e:
-        print("Failed to start services after multiple retries!")
+        logger.info("Failed to start internal services")
         raise e
 
 
@@ -222,8 +224,10 @@ def wait_for_server_to_be_ready():
 
 
 def run(app: FastAPI):
+    logger.info("Starting the run services thread")
     thread = threading.Thread(target=run_services_after_app_is_up)
     thread.start()
+    logger.info("Starting the uvicorn server")
     uvicorn.run(
         app,
         host=HOST,
