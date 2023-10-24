@@ -38,6 +38,7 @@ class EventSubscriber:
 
     async def start(self):
         """Runs the event subscriber in server mode"""
+        self.logger.info("Starting event subscriber")
         consumer_providers = ProvidersFactory.get_consumer_providers()
         for consumer_provider in consumer_providers:
             # get the consumer for the event provider

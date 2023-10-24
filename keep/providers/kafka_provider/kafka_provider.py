@@ -2,6 +2,7 @@
 Kafka Provider is a class that allows to ingest/digest data from Grafana.
 """
 import dataclasses
+import inspect
 import logging
 
 import pydantic
@@ -62,15 +63,33 @@ class ClientIdInjector(logging.Filter):
         # For this example, let's pretend we can obtain the client_id
         # by inspecting the caller or some context. Replace the next line
         # with the actual logic to get the client_id.
-        client_id = self.get_client_id_from_caller()
-        record.client_id = client_id
+        client_id, provider_id = self.get_client_id_from_caller()
+        if not hasattr(record, "extra"):
+            record.extra = {
+                "client_id": client_id,
+                "provider_id": provider_id,
+            }
         return True
 
     def get_client_id_from_caller(self):
         # Here, you should implement the logic to extract client_id based on the caller.
         # This can be tricky and might require you to traverse the call stack.
         # Return a default or None if you can't find it.
-        return "some-client-id"
+        import copy
+
+        frame = inspect.currentframe()
+        client_id = None
+        while frame:
+            local_vars = copy.copy(frame.f_locals)
+            for var_name, var_value in local_vars.items():
+                if isinstance(var_value, KafkaProvider):
+                    client_id = var_value.context_manager.tenant_id
+                    provider_id = var_value.provider_id
+                    break
+            if client_id:
+                return client_id, provider_id
+            frame = frame.f_back
+        return None, None
 
 
 class KafkaProvider(BaseProvider):
@@ -99,6 +118,7 @@ class KafkaProvider(BaseProvider):
             if logger_name.startswith("kafka"):
                 logger = logging.getLogger(logger_name)
                 if not any(isinstance(f, ClientIdInjector) for f in logger.filters):
+                    self.logger.info(f"Patching kafka logger {logger_name}")
                     logger.addFilter(ClientIdInjector())
 
     def validate_scopes(self):
@@ -120,8 +140,15 @@ class KafkaProvider(BaseProvider):
             scopes["topic_read"] = self.err or f"Could not connect to Kafka "
             return scopes
 
-        scopes["topic_read"] = True
-        return scopes
+        if self.authentication_config.topic in consumer.topics():
+            self.logger.info(f"Topic {self.authentication_config.topic} exists")
+            scopes["topic_read"] = True
+            return scopes
+        else:
+            self.err = f"The user have permission to Kafka, but topic '{self.authentication_config.topic}' does not exist or the user does not have permissions to read it - available topics: {consumer.topics()}"
+            self.logger.warning(self.err)
+            scopes["topic_read"] = self.err
+            return scopes
 
     def dispose(self):
         """

@@ -3,6 +3,7 @@ import inspect
 import json
 import logging
 import logging.config
+import os
 
 from keep.api.core.db import push_logs_to_db
 
@@ -60,6 +61,8 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         self.logger.info("Workflow logs dumped")
 
 
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
 CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -83,7 +86,7 @@ CONFIG = {
         },
     },
     "loggers": {
-        "": {"handlers": ["default", "context"], "level": "INFO", "propagate": False}
+        "": {"handlers": ["default", "context"], "level": LOG_LEVEL, "propagate": False}
     },
 }
 
