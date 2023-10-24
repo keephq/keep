@@ -308,6 +308,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         return
 
+    def status(self) -> bool:
+        """Return the status of the provider.
+
+        Returns:
+            bool: The status of the provider.
+        """
+        return {
+            "status": "should be implemented by the provider if it has a consumer",
+            "error": "",
+        }
+
     @property
     def is_consumer(self) -> bool:
         """Return consumer if the inherited class has a start_consume method.

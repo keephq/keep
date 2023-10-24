@@ -17,6 +17,18 @@ class EventSubscriber:
         self.consumers = []
         self.consumer_threads = []
 
+    def status(self):
+        """Returns the status of the consumers"""
+        return {
+            "consumers": [
+                {
+                    "provider_id": cp.provider_id,
+                    "status": cp.status(),
+                }
+                for cp in self.consumers
+            ]
+        }
+
     def add_consumer(self, consumer_provider: BaseProvider):
         """Add a consumer (on installation)
 

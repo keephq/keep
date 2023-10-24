@@ -34,6 +34,7 @@ from keep.api.routes import (
     healthcheck,
     providers,
     settings,
+    status,
     tenant,
     workflows,
 )
@@ -134,6 +135,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
+    app.include_router(status.router, prefix="/status", tags=["status"])
     from fastapi import BackgroundTasks
 
     @app.post("/start-services")
@@ -152,10 +154,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             logger.info("Consumer started successfully")
 
         return {"status": "Services are starting in the background"}
-
-    @app.get("/health")
-    def read_health():
-        return {"status": "UP"}
 
     @app.on_event("startup")
     async def on_startup():
@@ -201,7 +199,7 @@ def run_services_after_app_is_up():
     # start the internal services
     try:
         # the internal services are always on localhost
-        response = requests.post(f"http://localhost:8080/start-services")
+        response = requests.post(f"http://localhost:{PORT}/start-services")
         response.raise_for_status()
         logger.info("Internal services started successfully")
     except Exception as e:
@@ -211,7 +209,7 @@ def run_services_after_app_is_up():
 
 def is_server_ready() -> bool:
     try:
-        response = requests.get(f"{os.environ['KEEP_API_URL']}/health", timeout=1)
+        response = requests.get(f"http://localhost:{PORT}/healthcheck", timeout=1)
         response.raise_for_status()
         return True
     except Exception:

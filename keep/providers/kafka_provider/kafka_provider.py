@@ -115,6 +115,7 @@ class KafkaProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.consume = False
         self.consumer = None
+        self.err = ""
         # patch all Kafka loggers to contain the tenant_id
         for logger_name in logging.Logger.manager.loggerDict:
             if logger_name.startswith("kafka"):
@@ -125,7 +126,6 @@ class KafkaProvider(BaseProvider):
 
     def validate_scopes(self):
         scopes = {"topic_read": False}
-        self.err = ""
         self.logger.info("Validating kafka scopes")
         conf = self._get_conf()
 
@@ -197,6 +197,29 @@ class KafkaProvider(BaseProvider):
                 }
             )
         return basic_conf
+
+    def status(self):
+        """
+        Get the status of the provider.
+
+        Returns:
+            dict: The status of the provider.
+        """
+        if not self.consumer:
+            status = "not-initialized"
+        else:
+            try:
+                status = {
+                    str(conn_id): conn.state
+                    for conn_id, conn in self.consumer._client._conns.items()
+                }
+            except Exception as e:
+                status = str(e)
+
+        return {
+            "status": status,
+            "error": self.err,
+        }
 
     def start_consume(self):
         self.consume = True
