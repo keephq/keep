@@ -110,6 +110,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
+        logger.info(f"KEEP_API_URL is {os.environ['KEEP_API_URL']}")
     app = FastAPI()
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
@@ -137,13 +138,18 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
     @app.post("/start-services")
     async def start_services(background_tasks: BackgroundTasks):
+        logger.info("Starting the internal services")
         if SCHEDULER:
+            logger.info("Starting the scheduler")
             wf_manager = WorkflowManager.get_instance()
             background_tasks.add_task(wf_manager.start)
+            logger.info("Scheduler started successfully")
 
         if CONSUMER:
+            logger.info("Starting the consumer")
             event_subscriber = EventSubscriber.get_instance()
             background_tasks.add_task(event_subscriber.start)
+            logger.info("Consumer started successfully")
 
         return {"status": "Services are starting in the background"}
 
@@ -194,7 +200,8 @@ def run_services_after_app_is_up():
     logger.info("Server is ready, starting the internal services")
     # start the internal services
     try:
-        response = requests.post(f"{os.environ['KEEP_API_URL']}/start-services")
+        # the internal services are always on localhost
+        response = requests.post(f"http://localhost:8080/start-services")
         response.raise_for_status()
         logger.info("Internal services started successfully")
     except Exception as e:
