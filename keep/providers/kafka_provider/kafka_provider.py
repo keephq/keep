@@ -43,6 +43,7 @@ class KafkaProviderAuthConfig:
         },
     )
     username: str = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "Username",
@@ -50,6 +51,7 @@ class KafkaProviderAuthConfig:
         },
     )
     password: str = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "Password",
@@ -128,19 +130,27 @@ class KafkaProvider(BaseProvider):
         conf = self._get_conf()
 
         try:
+            self.logger.info("Trying to connect to Kafka with SASL_SSL")
             consumer = KafkaConsumer(self.authentication_config.topic, **conf)
         except NoBrokersAvailable:
-            self.err = f"Auth/Network problem: could not connect to Kafka at {self.authentication_config.host}"
-            self.logger.warning(self.err)
-            scopes["topic_read"] = self.err
-            return scopes
+            # retry with SASL_PLAINTEXT
+            try:
+                conf["security_protocol"] = "SASL_PLAINTEXT"
+                self.logger.info("Trying to connect to Kafka with SASL_PLAINTEXT")
+                consumer = KafkaConsumer(self.authentication_config.topic, **conf)
+            except NoBrokersAvailable:
+                self.err = f"Auth/Network problem: could not connect to Kafka at {self.authentication_config.host}"
+                self.logger.warning(self.err)
+                scopes["topic_read"] = self.err
+                return scopes
         except KafkaError as e:
             self.err = str(e)
             self.logger.warning(f"Error connecting to Kafka: {e}")
             scopes["topic_read"] = self.err or f"Could not connect to Kafka "
             return scopes
 
-        if self.authentication_config.topic in consumer.topics():
+        topics = consumer.topics()
+        if self.authentication_config.topic in topics:
             self.logger.info(f"Topic {self.authentication_config.topic} exists")
             scopes["topic_read"] = True
             return scopes
@@ -178,7 +188,9 @@ class KafkaProvider(BaseProvider):
         if self.authentication_config.username and self.authentication_config.password:
             basic_conf.update(
                 {
-                    "security_protocol": "SASL_PLAINTEXT",
+                    "security_protocol": "SASL_SSL"
+                    if self.authentication_config.username
+                    else "PLAINTEXT",
                     "sasl_mechanism": "PLAIN",
                     "sasl_plain_username": self.authentication_config.username,
                     "sasl_plain_password": self.authentication_config.password,
@@ -192,10 +204,15 @@ class KafkaProvider(BaseProvider):
         try:
             self.consumer = KafkaConsumer(self.authentication_config.topic, **conf)
         except NoBrokersAvailable:
-            self.logger.exception(
-                f"Could not connect to Kafka at {self.authentication_config.host}"
-            )
-            return
+            # retry with SASL_PLAINTEXT
+            try:
+                conf["security_protocol"] = "SASL_PLAINTEXT"
+                self.consumer = KafkaConsumer(self.authentication_config.topic, **conf)
+            except NoBrokersAvailable:
+                self.logger.exception(
+                    f"Could not connect to Kafka at {self.authentication_config.host}"
+                )
+                return
 
         while self.consume:
             try:
