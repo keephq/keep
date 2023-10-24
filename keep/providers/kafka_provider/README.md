@@ -9,7 +9,7 @@ docker-compose exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic alert 
 
 # Publish event
 ```bash
-echo "This is an test alert" | kafkacat -v -b kafka:9092 -t alert -P  -X security.protocol=SASL_PLAINTEXT  -X sasl.mechanisms=PLAIN -X sasl.username=admin -X sasl.password=admin-secret
+echo '{"id": "1234","name": "Alert name","status": "firing", "lastReceived": "2023-10-23T09:56:44.950Z","environment": "production","isDuplicate": false,  "duplicateReason": null,  "service": "backend","message": "Alert from Kafka", "description": "Alert kafka description", "severity": "critical",  "fatigueMeter": 0,  "pushed": true,  "event_id": "1234",  "url": "https://www.google.com/search?q=open+source+alert+management"}' | kafkacat -v -b kafka:9092 -t alert -P  -X security.protocol=SASL_PLAINTEXT  -X sasl.mechanisms=PLAIN -X sasl.username=admin -X sasl.password=admin-secret
 ```
 
 # Consume event

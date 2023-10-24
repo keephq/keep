@@ -329,7 +329,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             try:
                 alert_data = json.loads(alert)
             except:
-                pass
+                alert_data = alert_data
         else:
             alert_data = alert
 

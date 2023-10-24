@@ -2,9 +2,18 @@
 Kafka Provider is a class that allows to ingest/digest data from Grafana.
 """
 import dataclasses
+import logging
 
 import pydantic
-from confluent_kafka import Consumer, KafkaError, KafkaException
+
+# from confluent_kafka import Consumer, KafkaError, KafkaException
+from kafka import KafkaConsumer
+from kafka.errors import (
+    KafkaError,
+    KafkaTimeoutError,
+    NoBrokersAvailable,
+    TopicAuthorizationFailedError,
+)
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -48,6 +57,22 @@ class KafkaProviderAuthConfig:
     )
 
 
+class ClientIdInjector(logging.Filter):
+    def filter(self, record):
+        # For this example, let's pretend we can obtain the client_id
+        # by inspecting the caller or some context. Replace the next line
+        # with the actual logic to get the client_id.
+        client_id = self.get_client_id_from_caller()
+        record.client_id = client_id
+        return True
+
+    def get_client_id_from_caller(self):
+        # Here, you should implement the logic to extract client_id based on the caller.
+        # This can be tricky and might require you to traverse the call stack.
+        # Return a default or None if you can't find it.
+        return "some-client-id"
+
+
 class KafkaProvider(BaseProvider):
     """
     Kafka provider class.
@@ -69,6 +94,12 @@ class KafkaProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.consume = False
         self.consumer = None
+        # patch all Kafka loggers to contain the tenant_id
+        for logger_name in logging.Logger.manager.loggerDict:
+            if logger_name.startswith("kafka"):
+                logger = logging.getLogger(logger_name)
+                if not any(isinstance(f, ClientIdInjector) for f in logger.filters):
+                    logger.addFilter(ClientIdInjector())
 
     def validate_scopes(self):
         scopes = {"topic_read": False}
@@ -76,50 +107,20 @@ class KafkaProvider(BaseProvider):
         self.logger.info("Validating kafka scopes")
         conf = self._get_conf()
 
-        def validate_read_topic(err):
-            self.logger.info("Validating kafka topic read scope")
-            self.err += str(err)
-
-        conf["error_cb"] = validate_read_topic
-
-        consumer = Consumer(conf)
         try:
-            # try subscribe and see what happens
-            consumer.subscribe([self.authentication_config.topic])
-            event = consumer.poll(3.0)
-            if event and event.error():
-                self.err += str(event.error())
-        except KafkaException as e:
-            self.logger.warning(f"No scopes: {e}")
-            scopes["topic_read"] = self.err or f"Could not authenticate to Kafka"
-            return scopes
-        except Exception as e:
-            self.logger.warning(f"Unknown error while connecting to Kafka")
-            scopes["topic_read"] = self.err or str(e)
-            return scopes
-
-        # specific problems we already know
-        if "Connection refused" in self.err:
-            scopes[
-                "topic_read"
-            ] = f"Connection refused: could not connect to Kafka at {self.authentication_config.host}"
-            return scopes
-        elif "Authentication failed" in self.err:
-            scopes[
-                "topic_read"
-            ] = f"Authentication failed: could not authenticate to Kafka at {self.authentication_config.host}"
-            return scopes
-        elif "Unknown topic" in self.err:
-            scopes[
-                "topic_read"
-            ] = f"Unknown topic: could not find topic {self.authentication_config.topic} at {self.authentication_config.host}"
-            return scopes
-
-        # generic problem we don't know about yet:
-        if self.err:
+            consumer = KafkaConsumer(self.authentication_config.topic, **conf)
+        except NoBrokersAvailable:
+            self.err = f"Auth/Network problem: could not connect to Kafka at {self.authentication_config.host}"
+            self.logger.warning(self.err)
             scopes["topic_read"] = self.err
-        else:
-            scopes["topic_read"] = True
+            return scopes
+        except KafkaError as e:
+            self.err = str(e)
+            self.logger.warning(f"Error connecting to Kafka: {e}")
+            scopes["topic_read"] = self.err or f"Could not connect to Kafka "
+            return scopes
+
+        scopes["topic_read"] = True
         return scopes
 
     def dispose(self):
@@ -137,91 +138,81 @@ class KafkaProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _error_callback(self, err):
-        self.logger.error("Error: {}".format(err))
-        # if the authentication fails, raise an exception
-        if err.code() == KafkaError._AUTHENTICATION:
-            raise Exception("Authentication error: {}".format(err))
-        # if the topic does not exist, raise an exception
-        elif err.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
-            raise Exception("Topic {} does not exist".format(err))
-        elif err.code() == KafkaError._MAX_POLL_EXCEEDED:
-            self.logger.warning("Max poll exceeded, reconsuming")
-            conf = self._get_conf()
-            self.consumer = Consumer(conf)
-            self.consumer.subscribe([self.authentication_config.topic])
-            # the consumer will be reconsumed in  the mainloop
-            self.logger.info("Reconsumed")
-        else:
-            self.logger.warning(f"Unknown error, stopping to listen: {err}")
-            self.consumer.close()
-
     def _get_conf(self):
         basic_conf = {
-            "bootstrap.servers": self.authentication_config.host,
-            "group.id": "keephq-group",
-            "error_cb": self._error_callback,
-            "auto.offset.reset": "earliest",
-            "debug": "all",
+            "bootstrap_servers": self.authentication_config.host,
+            "group_id": "keephq-group",
+            "auto_offset_reset": "earliest",
+            "enable_auto_commit": True,  # this is typically needed
+            "reconnect_backoff_max_ms": 30000,  # 30 seconds
+            "client_id": self.context_manager.tenant_id,  # add tenant id to the logs
         }
 
         if self.authentication_config.username and self.authentication_config.password:
             basic_conf.update(
                 {
-                    "security.protocol": "SASL_PLAINTEXT",
-                    "sasl.mechanisms": "PLAIN",
-                    "sasl.username": self.authentication_config.username,
-                    "sasl.password": self.authentication_config.password,
+                    "security_protocol": "SASL_PLAINTEXT",
+                    "sasl_mechanism": "PLAIN",
+                    "sasl_plain_username": self.authentication_config.username,
+                    "sasl_plain_password": self.authentication_config.password,
                 }
             )
         return basic_conf
 
     def start_consume(self):
-        """
-        Get the Kafka consumer.
-
-        Returns:
-            kafka.KafkaConsumer: Kafka consumer
-        """
         self.consume = True
         conf = self._get_conf()
-        self.consumer = Consumer(conf)
-        self.consumer.subscribe([self.authentication_config.topic])
-        while self.consume:
-            event = self.consumer.poll(1.0)
-            if event:
-                if event.error():
-                    self.logger.error("Error: {}".format(event.error()))
-                    self._error_callback(event.error())
-                if event:
-                    self.logger.info("Got event: {}".format(event.value()))
-                    # now push it via the alerts API
-                    # note that in the future pulling from topics will probably will be in another service
-                    self._push_alert(event.value())
-            else:
-                self.logger.debug("No message in the queue")
-        self.logger.info("Consuming stopped")
+        try:
+            self.consumer = KafkaConsumer(self.authentication_config.topic, **conf)
+        except NoBrokersAvailable:
+            self.logger.exception(
+                f"Could not connect to Kafka at {self.authentication_config.host}"
+            )
+            return
 
-    def stop_consume(self):
-        self.consume = False
-        # dispose
+        while self.consume:
+            try:
+                topics = self.consumer.poll(timeout_ms=1000)
+                if not topics:
+                    continue
+
+                for tp, records in topics.items():
+                    for record in records:
+                        self.logger.info(
+                            f"Received message {record.value} from topic {tp.topic} partition {tp.partition}"
+                        )
+                        try:
+                            self._push_alert(record.value)
+                        except Exception as e:
+                            self.logger.warning("Error pushing alert to API")
+                            pass
+            except Exception as e:
+                self.logger.exception("Error consuming message from Kafka")
+                break
+
+        # finally, dispose
         if self.consumer:
             try:
                 self.consumer.close()
             except Exception as e:
                 self.logger.exception("Error closing Kafka connection")
             self.consumer = None
+        self.logger.info("Consuming stopped")
+
+    def stop_consume(self):
+        self.consume = False
 
 
 if __name__ == "__main__":
     # Output debug messages
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
 
     # Load environment variables
     import os
 
+    os.environ["KEEP_API_URL"] = "http://localhost:8080"
     # Before the provider can be run, we need to docker-compose up the kafka container
     # check the docker-compose in this folder
     # Now start the container
@@ -229,10 +220,9 @@ if __name__ == "__main__":
     topic = "alert"
     username = "admin"
     password = "admin-secret"
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-    )
+    context_manager = ContextManager(tenant_id=SINGLE_TENANT_UUID)
     config = {
         "authentication": {
             "host": host,
@@ -247,6 +237,4 @@ if __name__ == "__main__":
         provider_type="kafka",
         provider_config=config,
     )
-    consumer = provider.get_consumer()
-    consumer.start()
-    print(alerts)
+    provider.start_consume()

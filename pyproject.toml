@@ -63,6 +63,7 @@ asteval = "^0.9.31"
 google-cloud-container = "^2.32.0"
 pympler = "^1.0.1"
 confluent-kafka = "^2.2.0"
+kafka-python = "^2.0.2"
 
 
 [tool.poetry.group.dev.dependencies]
