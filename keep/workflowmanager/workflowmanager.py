@@ -28,14 +28,20 @@ class WorkflowManager:
         self.logger = logging.getLogger(__name__)
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
+        self.started = False
 
     async def start(self):
         """Runs the workflow manager in server mode"""
+        if self.started:
+            self.logger.info("Workflow manager already started")
+            return
         await self.scheduler.start()
+        self.started = True
 
     def stop(self):
         """Stops the workflow manager"""
         self.scheduler.stop()
+        self.started = False
 
     def _apply_filter(self, filter_val, value):
         # if its a regex, apply it

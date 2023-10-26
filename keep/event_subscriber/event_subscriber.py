@@ -16,6 +16,7 @@ class EventSubscriber:
         self.logger = logging.getLogger(__name__)
         self.consumers = []
         self.consumer_threads = []
+        self.started = False
 
     def status(self):
         """Returns the status of the consumers"""
@@ -50,6 +51,9 @@ class EventSubscriber:
 
     async def start(self):
         """Runs the event subscriber in server mode"""
+        if self.started:
+            self.logger.info("Event subscriber already started")
+            return
         self.logger.info("Starting event subscriber")
         consumer_providers = ProvidersFactory.get_consumer_providers()
         for consumer_provider in consumer_providers:
@@ -68,6 +72,7 @@ class EventSubscriber:
             self.logger.info(
                 "Started consumer thread for event provider %s", consumer_provider
             )
+        self.started = True
 
     def remove_consumer(self, provider_id: str):
         """Remove a consumer (on uninstallation)
@@ -93,4 +98,5 @@ class EventSubscriber:
         self.logger.info("Joining consumer threads")
         for thread in self.consumer_threads:
             thread.join()
+        self.started = False
         self.logger.info("Joined consumer threads")

@@ -104,7 +104,6 @@ class KafkaProvider(BaseProvider):
             name="topic_read",
             description="The kafka user that have permissions to read the topic.",
             mandatory=True,
-            documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
             alias="Topic Read",
         )
     ]

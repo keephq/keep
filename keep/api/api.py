@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import signal
 import threading
 import time
 
@@ -111,7 +110,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
-        logger.info(f"KEEP_API_URL is {os.environ['KEEP_API_URL']}")
+        logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
     app = FastAPI()
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
@@ -192,9 +191,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
 
 def run_services_after_app_is_up():
-    # wait for the server
+    """Waits until the server is up and than invoking the 'start-services' endpoint to start the internal services"""
     logger.info("Waiting for the server to be ready")
-    wait_for_server_to_be_ready()
+    _wait_for_server_to_be_ready()
     logger.info("Server is ready, starting the internal services")
     # start the internal services
     try:
@@ -207,8 +206,10 @@ def run_services_after_app_is_up():
         raise e
 
 
-def is_server_ready() -> bool:
+def _is_server_ready() -> bool:
+    # poll localhost to see if the server is up
     try:
+        # we are using hardcoded "localhost" to avoid problems where we start Keep on platform such as CloudRun where we have more than one instance
         response = requests.get(f"http://localhost:{PORT}/healthcheck", timeout=1)
         response.raise_for_status()
         return True
@@ -216,10 +217,11 @@ def is_server_ready() -> bool:
         return False
 
 
-def wait_for_server_to_be_ready():
+def _wait_for_server_to_be_ready():
+    """Wait until the server is up by polling localhost"""
     start_time = time.time()
     while True:
-        if is_server_ready():
+        if _is_server_ready():
             return True
         if time.time() - start_time >= 60:
             raise TimeoutError(f"Server is not ready after 60 seconds.")
@@ -229,10 +231,13 @@ def wait_for_server_to_be_ready():
 
 
 def run(app: FastAPI):
+    # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
+    # so we init a thread that will wait for the server to be up and then start the internal services
     logger.info("Starting the run services thread")
     thread = threading.Thread(target=run_services_after_app_is_up)
     thread.start()
     logger.info("Starting the uvicorn server")
+    # run the server
     uvicorn.run(
         app,
         host=HOST,
