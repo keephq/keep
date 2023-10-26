@@ -83,12 +83,9 @@ class SentryProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, query: str, **kwargs: dict):
+    def _query(self, project: str, time: str = "14d", **kwargs: dict):
         """
         Query Sentry using the given query
-
-        Args:
-            query (str): query to execute
 
         Returns:
             list[tuple] | list[dict]: results of the query
@@ -96,8 +93,6 @@ class SentryProvider(BaseProvider):
         headers = {
             "Authorization": f"Bearer {self.config.authentication['api_token']}",
         }
-        time = kwargs.get("time", "14d")
-        project = kwargs.get("project")
 
         params = {"limit": 100}
         response = requests.get(
