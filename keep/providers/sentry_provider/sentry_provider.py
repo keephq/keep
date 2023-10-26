@@ -238,7 +238,7 @@ class SentryProvider(BaseProvider):
                     ]
                 )
             )
-            existing_webhooks_value: str = config.get("value", "")
+            existing_webhooks_value: str = config.get("value", "") or ""
             existing_webhooks = existing_webhooks_value.split("\n")
             # This means we already installed in that project
             if f"{keep_api_url}?api_key={api_key}" in existing_webhooks:
