@@ -176,6 +176,14 @@ const ProviderForm = ({
     onFormChange(updatedFormValues, formErrors);
   };
 
+  const handleWebhookChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      install_webhook: checked,
+    }));
+  };
+
   const validate = () => {
     const errors = validateForm(formValues);
     if (Object.keys(errors).length === 0) {
