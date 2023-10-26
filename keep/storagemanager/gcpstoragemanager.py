@@ -31,7 +31,18 @@ class GcpStorageManager(BaseStorageManager):
             str: The content of the file.
         """
         bucket = self.create_bucket_if_not_exists(tenant_id)
-        blob = bucket.blob(filename)
+        try:
+            blob = bucket.blob(filename)
+        except Exception as exc:
+            self.logger.warning("Failed to get file %s", filename)
+            if create_if_not_exist:
+                self.logger.warning("Creating file %s", filename)
+                blob = bucket.blob(filename)
+                blob.upload_from_string(json.dumps({}))
+                self.logger.warning("File %s created successfully", filename)
+            else:
+                self.logger.warning(f"Reason: {exc}")
+                raise exc
         f = blob.download_as_string()
         return f
 
