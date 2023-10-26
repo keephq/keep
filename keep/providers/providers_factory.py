@@ -122,7 +122,12 @@ class ProvidersFactory:
             list: All the providers.
         """
         providers = []
-        blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
+        blacklisted_providers = [
+            "base_provider",
+            "mock_provider",
+            "file_provider",
+            "github_workflows_provider",
+        ]
 
         for provider_directory in os.listdir(
             os.path.dirname(os.path.abspath(__file__))
