@@ -68,6 +68,7 @@ def verify_api_key(
     Returns:
         str: The tenant id.
     """
+    api_key = api_key or request.query_params.get("api_key", None)
     if not api_key:
         # if its from Amazon SNS and we don't have any bearer - force basic auth
         if (
