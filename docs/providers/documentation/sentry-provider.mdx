@@ -5,9 +5,9 @@ description: "Sentry provider allows you to query Sentry events and to pull/push
 ---
 
 ## Inputs
+
 - `time: str = "14d"`: The time range for the query (e.g., `1d`)
 - `project: str`: The project to query on.
-
 
 ## Authentication Parameters
 
@@ -29,7 +29,7 @@ To obtain the Sentry API key, follow these steps ([Docs](https://docs.sentry.io/
 6. Give the integration an indicative name, e.g. `Keep Integration`
 7. From the permission section, select the required scopes as defined at the bottom of this page.
 8. Click `Save Changes`
-7. Scroll down to the bottom of the screen to the `TOKENS` section and copy the generated token -- This is the API key you will be using in Keep.
+9. Scroll down to the bottom of the screen to the `TOKENS` section and copy the generated token -- This is the API key you will be using in Keep.
 
 ### Organization Slug
 
@@ -42,23 +42,28 @@ To obtain the Organization Slug from the settings page:
 2. Navigate `Settings` -> `General Settings`.
 3. Copy the Organization Slug from the Organization Slug input.
 
-
 ## Scopes
+
 Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use cases:
 
- - `event:read`
-	| Required: `True`
-	| Description: `Read events and issues.`
+- `event:read`
+  | Required: `True`
+  | Description: `Read events and issues.`
 - `project:read`
-	| Required: `True`
-	| Description: `Read projects in organization`
+  | Required: `True`
+  | Description: `Read projects in organization`
 - `project:write`
-	| Required: `False`
-	| Description: `Write permission for projects in an organization.` (**Required for auto-webhook integration*)
+  | Required: `False`
+  | Description: `Write permission for projects in an organization.` (\*_Required for auto-webhook integration_)
 
 ## Notes
 
-_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+<Note>
+When installing Sentry webhook integration, Keep enables built-in Webhook integration to all accessible projects and adds a new Alert that has an `Action` to send a notification via Webhooks to all accessible projects.
+
+You can achieve alerts pushing from Sentry to Keep using an `Internal Integration` which is not automated via the platform. [Contact us](mailto:founder@keephq.dev) to set it up.
+
+</Note>
 
 ## Useful Links
 
