@@ -44,17 +44,17 @@ export function AlertTable({
       }
       return acc;
     }, groupedByData);
+    // Sort by last received
     // Only the last state of each alert is shown if we group by something
     aggregatedData = Object.keys(groupedByData).map(
-      (key) => groupedByData[key][0]
+      (key) =>
+        groupedByData[key].sort(
+          (a, b) =>
+            new Date(b.lastReceived).getTime() -
+            new Date(a.lastReceived).getTime()
+        )[0]
     );
   }
-  // Sort by last received
-  aggregatedData = aggregatedData.sort(
-    (a, b) =>
-      new Date(a.lastReceived).getTime() - new Date(b.lastReceived).getTime()
-  );
-
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {
     setSelectedAlertHistory(groupedByData[(alert as any)[groupBy!]]);
