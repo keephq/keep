@@ -30,7 +30,12 @@ class GrafanaProviderAuthConfig:
     """
 
     token: str = dataclasses.field(
-        metadata={"required": True, "description": "Token", "hint": "Grafana Token"},
+        metadata={
+            "required": True,
+            "description": "Token",
+            "hint": "Grafana Token",
+            "sensitive": True,
+        },
     )
     host: str = dataclasses.field(
         metadata={
