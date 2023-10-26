@@ -7,6 +7,7 @@ import click
 from pympler.asizeof import asizeof
 from starlette_context import context
 
+from keep.api.core.db import get_session
 from keep.api.logging import WorkflowLoggerAdapter
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 
@@ -45,6 +46,28 @@ class ContextManager:
         if load_state:
             self.__load_state()
         self.workflow_execution_id = None
+        self._api_key = None
+
+    @property
+    def api_key(self):
+        # avoid circular import
+        from keep.api.utils.tenant_utils import get_or_create_api_key
+
+        if self._api_key is None:
+            session = next(get_session())
+            self._api_key = get_or_create_api_key(
+                session=session,
+                tenant_id=self.tenant_id,
+                unique_api_key_id="webhook",
+            )
+            session.close()
+        return self._api_key
+
+    def __get_api_key(self):
+        try:
+            return get_api_key()
+        except KeyError:
+            return None
 
     def set_execution_context(self, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id

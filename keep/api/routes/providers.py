@@ -19,6 +19,7 @@ from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
+from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
@@ -250,6 +251,15 @@ def delete_provider(
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")
         pass
+
+    if provider.consumer:
+        # Unregister the provider as a consumer
+        try:
+            event_subscriber = EventSubscriber.get_instance()
+            event_subscriber.remove_consumer(provider)
+        except Exception as e:
+            logger.exception("Failed to unregister provider as a consumer")
+            # return 200 as the next time Keep will start, it will try to unregister again
     logger.info("Deleted provider", extra={"provider_id": provider_id})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
@@ -406,7 +416,7 @@ async def install_provider(
         secret_value=json.dumps(provider_config),
     )
     # add the provider to the db
-    provider = Provider(
+    provider_model = Provider(
         id=provider_unique_id,
         tenant_id=tenant_id,
         name=provider_name,
@@ -415,9 +425,27 @@ async def install_provider(
         installation_time=time.time(),
         configuration_key=secret_name,
         validatedScopes=validated_scopes,
+        consumer=provider.is_consumer,
     )
-    session.add(provider)
-    session.commit()
+    try:
+        session.add(provider_model)
+        session.commit()
+    except Exception as e:
+        logger.exception("Failed to add provider to db")
+        return JSONResponse(
+            status_code=400,
+            content={"message": "Failed to install provider", "error": str(e)},
+        )
+
+    if provider_model.consumer:
+        # Register the provider as a consumer
+        try:
+            event_subscriber = EventSubscriber.get_instance()
+            event_subscriber.add_consumer(provider)
+        except Exception as e:
+            logger.exception("Failed to register provider as a consumer")
+            # return 200 as the next time Keep will start, it will try to register again
+
     return JSONResponse(
         status_code=200,
         content={
