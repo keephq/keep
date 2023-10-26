@@ -317,7 +317,10 @@ class Parser:
 
     def _get_step_provider(self, context_manager: ContextManager, _step: dict) -> dict:
         step_provider = _step.get("provider")
-        step_provider_type = step_provider.pop("type")
+        try:
+            step_provider_type = step_provider.pop("type")
+        except AttributeError:
+            raise ValueError("Step provider type is required")
         try:
             step_provider_config = step_provider.pop("config")
         except KeyError:
