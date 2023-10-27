@@ -4,6 +4,18 @@
     gap: 20px;
   }
 
+  @media only screen and (max-width: 600px) {
+    /* For mobile phones: */
+    .provider-tiles {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media only screen and (min-width: 600px) and (max-width: 1300px){
+    /* For mobile phones: */
+    .provider-tiles {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
   .provider-tiles .card {
     grid-column: span 1;
     display: flex;
