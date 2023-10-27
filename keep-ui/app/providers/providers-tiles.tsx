@@ -107,7 +107,7 @@ const ProvidersTiles = ({
 
   return (
     <div>
-      <Text className="ml-2.5 mt-5">
+      <Text className="ml-2.5 mt-5 text-[15px]">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
       </Text>
       <div className="provider-tiles">
