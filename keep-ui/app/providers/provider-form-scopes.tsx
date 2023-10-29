@@ -84,11 +84,6 @@ const ProviderFormScopes = ({
                             : "red" // scope was tested and is a string, meaning it has an error
                         }
                         className="truncate max-w-xs"
-                        tooltip={
-                          typeof validatedScopes[scope.name] === "string"
-                            ? (validatedScopes[scope.name] as string)
-                            : undefined
-                        }
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
