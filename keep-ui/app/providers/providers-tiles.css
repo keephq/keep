@@ -1,6 +1,6 @@
 .provider-tiles {
     display: flex;
-    gap: 35px;
+    gap: 25px;
     flex-wrap: wrap;
     justify-content:first baseline;
   }
