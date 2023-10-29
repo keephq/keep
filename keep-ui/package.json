@@ -250,7 +250,7 @@
     "nanoid": "^3.3.6",
     "natural-compare": "^1.4.0",
     "next": "^14.0.0",
-    "next-auth": "^4.22.1",
+    "next-auth": "^4.24.4",
     "node-releases": "^2.0.10",
     "normalize-path": "^3.0.0",
     "normalize-range": "^0.1.2",
