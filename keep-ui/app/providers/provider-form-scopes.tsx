@@ -74,7 +74,7 @@ const ProviderFormScopes = ({
                         <span className="text-orange-300">*</span>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell id="scope-badge">
                       <Badge
                         color={
                           validatedScopes[scope.name] === true // scope is tested and valid
