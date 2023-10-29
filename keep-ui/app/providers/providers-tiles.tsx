@@ -23,6 +23,7 @@ const ProvidersTiles = ({
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
+  const [panelSize, setPanelSize] = useState<number>(50);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
@@ -48,6 +49,16 @@ const ProvidersTiles = ({
       }
     }
   }, [providerType, providerName, providers]);
+
+  useEffect(() => {
+    const pageWidth = window.innerWidth;
+
+    if(pageWidth < 640){
+      setPanelSize(100)
+    } else {
+      setPanelSize(30)
+    }
+  }, [openPanel])
 
   const handleFormChange = (
     updatedFormValues: Record<string, string>,
@@ -96,7 +107,7 @@ const ProvidersTiles = ({
 
   return (
     <div>
-      <Text className="ml-2.5 mt-5">
+      <Text className="ml-2.5 mt-5 text-[15px]">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
       </Text>
       <div className="provider-tiles">
@@ -111,7 +122,7 @@ const ProvidersTiles = ({
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}
-        size={30}
+        size={panelSize}
         backdropClicked={handleCloseModal}
         panelContainerClassName="bg-white z-[2000]"
       >
