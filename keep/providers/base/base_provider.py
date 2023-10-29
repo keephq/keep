@@ -2,11 +2,16 @@
 Base class for all providers.
 """
 import abc
+import datetime
+import json
 import logging
+import os
 import re
+import uuid
 from dataclasses import field
 from typing import Optional
 
+import requests
 from pydantic.dataclasses import dataclass
 
 from keep.api.core.db import enrich_alert
@@ -290,3 +295,96 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # TODO - implement dynamically using decorators and
         return {}
+
+    def start_consume(self):
+        """Get the consumer for the provider.
+
+        should be implemented by the provider if it has a consumer.
+
+        for an example, see Kafka Provider
+
+        Returns:
+            Consumer: The consumer for the provider.
+        """
+        return
+
+    def status(self) -> bool:
+        """Return the status of the provider.
+
+        Returns:
+            bool: The status of the provider.
+        """
+        return {
+            "status": "should be implemented by the provider if it has a consumer",
+            "error": "",
+        }
+
+    @property
+    def is_consumer(self) -> bool:
+        """Return consumer if the inherited class has a start_consume method.
+
+        Returns:
+            bool: _description_
+        """
+        return self.start_consume.__qualname__ != "BaseProvider.start_consume"
+
+    def _push_alert(self, alert: dict):
+        """
+        Push an alert to the provider.
+
+        Args:
+            alert (dict): The alert to push.
+        """
+        # if this is not a dict, try to convert it to a dict
+        if not type(alert) == dict:
+            try:
+                alert_data = json.loads(alert)
+            except:
+                alert_data = alert_data
+        else:
+            alert_data = alert
+
+        # if this is still not a dict, we can't push it
+        if not type(alert_data) == dict:
+            self.logger.warning(
+                "We currently support only alert represented as a dict, dismissing alert",
+                extra={"alert": alert},
+            )
+            return
+        # now try to build the alert model
+        # we will have a lot of default values here to support all providers and all cases, the
+        # way to fine tune those would be to use the provider specific model or enforce that the event from the queue will be casted into the fields
+        alert_model = AlertDto(
+            id=alert_data.get("id", str(uuid.uuid4())),
+            name=alert_data.get("name", "alert-from-event-queue"),
+            status=alert_data.get("status", "alert-from-event-queue"),
+            lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
+            environment=alert_data.get("environment", "alert-from-event-queue"),
+            isDuplicate=alert_data.get("isDuplicate", False),
+            duplicateReason=alert_data.get("duplicateReason", None),
+            service=alert_data.get("service", "alert-from-event-queue"),
+            source=alert_data.get("source", [self.provider_type]),
+            message=alert_data.get("message", "alert-from-event-queue"),
+            description=alert_data.get("description", "alert-from-event-queue"),
+            severity=alert_data.get("severity", "alert-from-event-queue"),
+            fatigueMeter=alert_data.get("fatigueMeter", 0),
+            pushed=alert_data.get("pushed", False),
+            event_id=alert_data.get("event_id", str(uuid.uuid4())),
+            url=alert_data.get("url", None),
+            fingerprint=alert_data.get("fingerprint", None),
+        )
+        # push the alert to the provider
+        url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-API-KEY": self.context_manager.api_key,
+        }
+        response = requests.post(url, json=alert_model.dict(), headers=headers)
+        try:
+            response.raise_for_status()
+            self.logger.info(f"Alert pushed successfully")
+        except:
+            self.logger.error(
+                f"Failed to push alert to {self.provider_id}: {response.content}"
+            )

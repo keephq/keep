@@ -19,7 +19,7 @@ import requests
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -64,6 +64,76 @@ class CloudwatchProviderAuthConfig:
 class CloudwatchProvider(BaseProvider):
     """Push alarms from AWS Cloudwatch to Keep."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="cloudwatch:DescribeAlarms",
+            description="Required to retrieve information about alarms.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_DescribeAlarms.html",
+            mandatory=True,
+            alias="Describe Alarms",
+        ),
+        ProviderScope(
+            name="cloudwatch:PutMetricAlarm",
+            description="Required to update information about alarms. This mainly use to add Keep as an SNS action to the alarm.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html",
+            mandatory=False,
+            alias="Update Alarms",
+        ),
+        ProviderScope(
+            name="sns:ListSubscriptionsByTopic",
+            description="Required to list all subscriptions of a topic, so Keep will be able to add itself as a subscription.",
+            documentation_url="https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html",
+            mandatory=False,
+            alias="List Subscriptions",
+        ),
+        ProviderScope(
+            name="logs:GetQueryResults",
+            description="Part of CloudWatchLogsReadOnlyAccess role. Required to retrieve the results of CloudWatch Logs Insights queries.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetQueryResults.html",
+            mandatory=False,
+            alias="Read Query results",
+        ),
+        ProviderScope(
+            name="logs:StartQuery",
+            description="Part of CloudWatchLogsReadOnlyAccess role. Required to start CloudWatch Logs Insights queries.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartQuery.html",
+            mandatory=False,
+            alias="Start Logs Query",
+        ),
+        ProviderScope(
+            name="iam:SimulatePrincipalPolicy",
+            description="Allow Keep to test the scopes of the current user/role without modifying any resource.",
+            documentation_url="https://docs.aws.amazon.com/IAM/latest/APIReference/API_SimulatePrincipalPolicy.html",
+            mandatory=False,
+            alias="Simulate IAM Policy",
+        ),
+    ]
+
+    VALID_ALARM_KEYS = {
+        "AlarmName",
+        "AlarmDescription",
+        "ActionsEnabled",
+        "OKActions",
+        "AlarmActions",
+        "InsufficientDataActions",
+        "MetricName",
+        "Namespace",
+        "Statistic",
+        "ExtendedStatistic",
+        "Dimensions",
+        "Period",
+        "Unit",
+        "EvaluationPeriods",
+        "DatapointsToAlarm",
+        "Threshold",
+        "ComparisonOperator",
+        "TreatMissingData",
+        "EvaluateLowSampleCountPercentile",
+        "Metrics",
+        "Tags",
+        "ThresholdMetricId",
+    }
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -71,11 +141,182 @@ class CloudwatchProvider(BaseProvider):
         self.aws_client_type = None
         self._client = None
 
+    def validate_scopes(self):
+        # init the scopes as False
+        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
+        # the scope name is the action
+        actions = scopes.keys()
+        # fetch the results
+        try:
+            sts_client = self.__generate_client("sts")
+            identity = sts_client.get_caller_identity()["Arn"]
+            iam_client = self.__generate_client("iam")
+        except Exception as e:
+            self.logger.exception("Error validating AWS IAM scopes")
+            scopes = {s: str(e) for s in scopes.keys()}
+            return scopes
+        # 0. try to validate all scopes using simulate_principal_policy
+        #    if the user/role have permissions to simulate_principal_policy, we can validate the scopes easily
+        try:
+            iam_resp = iam_client.simulate_principal_policy(
+                PolicySourceArn=identity, ActionNames=list(actions)
+            )
+            scopes = {
+                res.get("EvalActionName"): res.get("EvalDecision") == "allowed"
+                for res in iam_resp.get("EvaluationResults")
+            }
+            scopes["iam:SimulatePrincipalPolicy"] = True
+            return scopes
+        # otherwise, we need to test them one by one
+        except Exception:
+            self.logger.info("Error validating AWS IAM scopes")
+            scopes[
+                "iam:SimulatePrincipalPolicy"
+            ] = "No permissions to simulate_principal_policy (but its cool, its not a must)"
+
+        self.logger.info("Validating aws cloudwatch scopes")
+        # 1. validate describe alarms
+        cloudwatch_client = self.__generate_client("cloudwatch")
+        resp = None
+        try:
+            resp = cloudwatch_client.describe_alarms()
+            scopes["cloudwatch:DescribeAlarms"] = True
+        except Exception as e:
+            self.logger.exception(
+                "Error validating AWS cloudwatch:DescribeAlarms scope"
+            )
+            scopes["cloudwatch:DescribeAlarms"] = str(e)
+        # if we got the response, we can validate the other scopes
+        if resp:
+            # 2. validate put metric alarm
+            try:
+                alarms = resp.get("MetricAlarms", [])
+                alarm = alarms[0]
+                filtered_alarm = {
+                    k: v
+                    for k, v in alarm.items()
+                    if k in CloudwatchProvider.VALID_ALARM_KEYS
+                }
+                cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                scopes["cloudwatch:PutMetricAlarm"] = True
+            except Exception:
+                self.logger.exception(
+                    "Error validating AWS cloudwatch:PutMetricAlarm scope"
+                )
+                scopes["cloudwatch:PutMetricAlarm"] = str(e)
+        else:
+            scopes[
+                "cloudwatch:PutMetricAlarm"
+            ] = "cloudwatch:DescribeAlarms scope is not granted, so we cannot validate cloudwatch:PutMetricAlarm scope"
+        # 3. validate list subscriptions by topic
+        if self.authentication_config.cloudwatch_sns_topic:
+            try:
+                sns_client = self.__generate_client("sns")
+                sns_topic = self.authentication_config.cloudwatch_sns_topic
+                if not sns_topic.startswith("arn:aws:sns"):
+                    account_id = self._get_account_id()
+                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.cloudwatch_sns_topic}"
+                sns_client.list_subscriptions_by_topic(TopicArn=sns_topic)
+                scopes["sns:ListSubscriptionsByTopic"] = True
+            except Exception:
+                self.logger.exception(
+                    "Error validating AWS sns:ListSubscriptionsByTopic scope"
+                )
+                scopes["sns:ListSubscriptionsByTopic"] = str(e)
+        else:
+            scopes[
+                "sns:ListSubscriptionsByTopic"
+            ] = "cloudwatch_sns_topic is not set, so we cannot validate sns:ListSubscriptionsByTopic scope"
+
+        # 4. validate start query
+        logs_client = self.__generate_client("logs")
+        try:
+            start_query_response = logs_client.start_query(
+                logGroupName="keepTest",
+                queryString="keepTest",
+                startTime=int(
+                    (
+                        datetime.datetime.today() - datetime.timedelta(hours=24)
+                    ).timestamp()
+                ),
+                endTime=int(datetime.datetime.now().timestamp()),
+            )
+        except Exception as e:
+            # that means that the user/role have the permissions but we've just made up the logGroupName which make sense
+            if "ResourceNotFoundException" in str(e):
+                self.logger.info("AWS logs:StartQuery scope is not required")
+                scopes["logs:StartQuery"] = True
+            # other/wise the scope is false
+            else:
+                self.logger.info("Error validating AWS logs:StartQuery scope")
+                scopes["logs:StartQuery"] = str(e)
+
+        # 5. validate get query results
+        try:
+            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+        except Exception as e:
+            self.logger.exception("Error validating AWS logs:DescribeQueries scope")
+            scopes[
+                "logs:GetQueryResults"
+            ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+
+        if query_id:
+            try:
+                logs_client.get_query_results(queryId=query_id)
+                scopes["logs:GetQueryResults"] = True
+            except Exception as e:
+                self.logger.exception("Error validating AWS logs:GetQueryResults scope")
+                scopes["logs:GetQueryResults"] = str(e)
+        # Finally
+        return scopes
+
     @property
     def client(self):
         if self._client is None:
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
+
+    def _query(self, **kwargs: dict) -> dict:
+        log_group = kwargs.get("log_group")
+        query = kwargs.get("query")
+        hours = kwargs.get("hours", 24)
+        logs_client = self.__generate_client("logs")
+        try:
+            start_query_response = logs_client.start_query(
+                logGroupName=log_group,
+                queryString=query,
+                startTime=int(
+                    (
+                        datetime.datetime.today() - datetime.timedelta(hours=hours)
+                    ).timestamp()
+                ),
+                endTime=int(datetime.datetime.now().timestamp()),
+            )
+        except Exception:
+            self.logger.exception(
+                "Error starting AWS cloudwatch query - add logs:StartQuery permissions",
+                extra={"kwargs": kwargs},
+            )
+            raise
+
+        query_id = start_query_response["queryId"]
+        response = None
+
+        while response is None or response["status"] == "Running":
+            self.logger.debug("Waiting for AWS cloudwatch query to complete...")
+            time.sleep(1)
+            try:
+                response = logs_client.get_query_results(queryId=query_id)
+            except Exception:
+                # probably no permissions
+                self.logger.exception(
+                    "Error getting AWS cloudwatch query results - add logs:GetQueryResults permissions",
+                    extra={"kwargs": kwargs},
+                )
+                raise
+
+        results = response.get("results")
+        return results
 
     def _get_account_id(self):
         sts_client = self.__generate_client("sts")
@@ -145,31 +386,11 @@ class CloudwatchProvider(BaseProvider):
                 try:
                     alarm["AlarmActions"] = actions
                     # filter out irrelevant files
-                    valid_keys = {
-                        "AlarmName",
-                        "AlarmDescription",
-                        "ActionsEnabled",
-                        "OKActions",
-                        "AlarmActions",
-                        "InsufficientDataActions",
-                        "MetricName",
-                        "Namespace",
-                        "Statistic",
-                        "ExtendedStatistic",
-                        "Dimensions",
-                        "Period",
-                        "Unit",
-                        "EvaluationPeriods",
-                        "DatapointsToAlarm",
-                        "Threshold",
-                        "ComparisonOperator",
-                        "TreatMissingData",
-                        "EvaluateLowSampleCountPercentile",
-                        "Metrics",
-                        "Tags",
-                        "ThresholdMetricId",
+                    filtered_alarm = {
+                        k: v
+                        for k, v in alarm.items()
+                        if k in CloudwatchProvider.VALID_ALARM_KEYS
                     }
-                    filtered_alarm = {k: v for k, v in alarm.items() if k in valid_keys}
                     cloudwatch_client.put_metric_alarm(**filtered_alarm)
                     # now it should contain the SNS topic
                     topics = [sns_topic]
@@ -261,73 +482,24 @@ class CloudwatchProvider(BaseProvider):
         )
 
 
-class CloudwatchLogsProvider(CloudwatchProvider):
-    """
-    CloudwatchLogsProvider is a class that provides a way to read data from AWS Cloudwatch Logs.
-    """
-
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
-        self.aws_client_type = "logs"
-
-    def _query(self, **kwargs: dict) -> dict:
-        log_group = kwargs.get("log_group")
-        query = kwargs.get("query")
-        hours = kwargs.get("hours", 24)
-        start_query_response = self.client.start_query(
-            logGroupName=log_group,
-            queryString=query,
-            startTime=int(
-                (
-                    datetime.datetime.today() - datetime.timedelta(hours=hours)
-                ).timestamp()
-            ),
-            endTime=int(datetime.datetime.now().timestamp()),
-        )
-
-        query_id = start_query_response["queryId"]
-
-        response = None
-
-        while response is None or response["status"] == "Running":
-            self.logger.debug("Waiting for AWS cloudwatch query to complete...")
-            time.sleep(1)
-            response = self.client.get_query_results(queryId=query_id)
-
-        return results
-
-
-class CloudwatchMetricsProvider(CloudwatchProvider):
-    """
-    CloudwatchMetricsProvider is a class that provides a way to read data from AWS Cloudwatch Metrics.
-    """
-
-    def __init__(self, provider_id: str, config: ProviderConfig):
-        super().__init__(provider_id, config)
-        self.aws_client_type = "cloudwatch"
-
-    def query(self, **kwargs: dict) -> None:
-        raise NotImplementedError(
-            'CloudwatchMetricsProvider does not support "query" method yet.'
-        )
-
-
 if __name__ == "__main__":
     config = ProviderConfig(
         authentication={
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            "region": os.environ.get("AWS_REGION"),
         }
     )
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
-    cloudwatch_provider = CloudwatchMetricsProvider(
-        context_manager, "cloudwatch-prod", config
-    )
+    cloudwatch_provider = CloudwatchProvider(context_manager, "cloudwatch", config)
+
+    scopes = cloudwatch_provider.validate_scopes()
+    print(scopes)
     results = cloudwatch_provider.query(
         query="fields @timestamp, @message, @logStream, @log | sort @timestamp desc | limit 20",
-        log_group="Test",
+        log_group="/aws/lambda/helloWorld",
     )
     print(results)

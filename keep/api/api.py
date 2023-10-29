@@ -1,8 +1,11 @@
 import asyncio
 import logging
 import os
+import threading
+import time
 
 import jwt
+import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, FastAPI, Request, Response
@@ -30,11 +33,13 @@ from keep.api.routes import (
     healthcheck,
     providers,
     settings,
+    status,
     tenant,
     whoami,
     workflows,
 )
 from keep.contextmanager.contextmanager import ContextManager
+from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -44,6 +49,8 @@ logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
+SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
+CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -104,6 +111,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
+        logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
     app = FastAPI()
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
@@ -128,6 +136,25 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
+    app.include_router(status.router, prefix="/status", tags=["status"])
+    from fastapi import BackgroundTasks
+
+    @app.post("/start-services")
+    async def start_services(background_tasks: BackgroundTasks):
+        logger.info("Starting the internal services")
+        if SCHEDULER:
+            logger.info("Starting the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            background_tasks.add_task(wf_manager.start)
+            logger.info("Scheduler started successfully")
+
+        if CONSUMER:
+            logger.info("Starting the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            background_tasks.add_task(event_subscriber.start)
+            logger.info("Consumer started successfully")
+
+        return {"status": "Services are starting in the background"}
 
     @app.on_event("startup")
     async def on_startup():
@@ -138,10 +165,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             app.dependency_overrides[verify_bearer_token] = verify_single_tenant
             app.dependency_overrides[get_user_email] = get_user_email_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
-
-        # initialize a workflow manager
-        wf_manager = WorkflowManager.get_instance()
-        asyncio.create_task(wf_manager.start())
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
@@ -169,12 +192,54 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     return app
 
 
-def run(app: FastAPI):
-    # https://stackoverflow.com/questions/46827007/runtimeerror-this-event-loop-is-already-running-in-python
-    # Shahar: I hate it but that's seem the only workaround..
-    import nest_asyncio
+def run_services_after_app_is_up():
+    """Waits until the server is up and than invoking the 'start-services' endpoint to start the internal services"""
+    logger.info("Waiting for the server to be ready")
+    _wait_for_server_to_be_ready()
+    logger.info("Server is ready, starting the internal services")
+    # start the internal services
+    try:
+        # the internal services are always on localhost
+        response = requests.post(f"http://localhost:{PORT}/start-services")
+        response.raise_for_status()
+        logger.info("Internal services started successfully")
+    except Exception as e:
+        logger.info("Failed to start internal services")
+        raise e
 
-    nest_asyncio.apply()
+
+def _is_server_ready() -> bool:
+    # poll localhost to see if the server is up
+    try:
+        # we are using hardcoded "localhost" to avoid problems where we start Keep on platform such as CloudRun where we have more than one instance
+        response = requests.get(f"http://localhost:{PORT}/healthcheck", timeout=1)
+        response.raise_for_status()
+        return True
+    except Exception:
+        return False
+
+
+def _wait_for_server_to_be_ready():
+    """Wait until the server is up by polling localhost"""
+    start_time = time.time()
+    while True:
+        if _is_server_ready():
+            return True
+        if time.time() - start_time >= 60:
+            raise TimeoutError(f"Server is not ready after 60 seconds.")
+        else:
+            logger.warning("Server is not ready yet, retrying in 1 second...")
+        time.sleep(1)
+
+
+def run(app: FastAPI):
+    # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
+    # so we init a thread that will wait for the server to be up and then start the internal services
+    logger.info("Starting the run services thread")
+    thread = threading.Thread(target=run_services_after_app_is_up)
+    thread.start()
+    logger.info("Starting the uvicorn server")
+    # run the server
     uvicorn.run(
         app,
         host=HOST,

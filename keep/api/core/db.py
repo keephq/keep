@@ -390,6 +390,15 @@ def get_installed_providers(tenant_id: str) -> List[Provider]:
     return providers
 
 
+def get_consumer_providers() -> List[Provider]:
+    # get all the providers that installed as consumers
+    with Session(engine) as session:
+        providers = session.exec(
+            select(Provider).where(Provider.consumer == True)
+        ).all()
+    return providers
+
+
 def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     with Session(engine) as session:
         workflow_execution = session.exec(
