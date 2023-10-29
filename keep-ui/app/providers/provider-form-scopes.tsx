@@ -17,8 +17,7 @@ import {
   ArrowPathIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
-import { getApiURL } from "utils/apiUrl";
+import "./provider-form-scopes.css";
 
 const ProviderFormScopes = ({
   provider,
@@ -36,7 +35,7 @@ const ProviderFormScopes = ({
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
-      <AccordionBody>
+      <AccordionBody className="overflow-hidden">
         {installedProvidersMode && (
           <Button
             color="gray"
@@ -84,6 +83,12 @@ const ProviderFormScopes = ({
                             ? "gray"
                             : "red" // scope was tested and is a string, meaning it has an error
                         }
+                        className="truncate max-w-xs"
+                        tooltip={
+                          typeof validatedScopes[scope.name] === "string"
+                            ? (validatedScopes[scope.name] as string)
+                            : undefined
+                        }
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
@@ -92,11 +97,8 @@ const ProviderFormScopes = ({
                           : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
-                    <TableCell
-                      title={scope.description}
-                      className="max-w-xs truncate"
-                    >
-                      <div className="flex items-center">
+                    <TableCell title={scope.description} className="max-w-xs">
+                      <div className="flex items-center break-words whitespace-normal">
                         {scope.description}
                         {scope.mandatory_for_webhook ? (
                           <Icon
