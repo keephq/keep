@@ -16,7 +16,7 @@ import {
   Divider,
   TextInput,
 } from "@tremor/react";
-import { ExclamationCircleIcon, EyeIcon } from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
   ArrowLongRightIcon,
@@ -47,7 +47,6 @@ type ProviderFormProps = {
 const ProviderForm = ({
   provider,
   formData,
-  formErrorsData,
   onFormChange,
   onConnectChange,
   onAddProvider,
@@ -79,19 +78,8 @@ const ProviderForm = ({
   const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
-  const [userWantSensitiveDict, setUserWantSensitiveDict] = useState<{
-    [key: string]: boolean;
-  }>({});
-
-  const handleToggleSensitive = (fieldName: string) => {
-    setUserWantSensitiveDict((prevDict) => ({
-      ...prevDict,
-      [fieldName]: !prevDict[fieldName], // Toggle the value for the field
-    }));
-  };
-
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session, status, update } = useSession();
+  const { data: session } = useSession();
 
   const accessToken = session?.accessToken;
 
@@ -399,27 +387,16 @@ const ProviderForm = ({
                     />
                   )}
                 </label>
-                <div className="flex">
-                  <TextInput
-                    type={isSensitive && !userWantSensitiveDict[configKey] ? "password" : method.type} // Display as password if sensitive
-                    id={configKey}
-                    name={configKey}
-                    value={formValues[configKey] || ""}
-                    onChange={handleInputChange}
-                    autoComplete="off"
-                    error={Object.keys(inputErrors).includes(configKey)}
-                    placeholder={method.placeholder || "Enter " + configKey}
-                  />
-                  {isSensitive && (
-                    <button
-                      type="button"
-                      className="ml-2.5"
-                      onClick={() => handleToggleSensitive(configKey)}
-                    >
-                      <EyeIcon className="w-6 h-6 text-gray-400"/>
-                    </button>
-                  )}
-                  </div>
+                <TextInput
+                  type={isSensitive ? "password" : method.type} // Display as password if sensitive
+                  id={configKey}
+                  name={configKey}
+                  value={formValues[configKey] || ""}
+                  onChange={handleInputChange}
+                  autoComplete="off"
+                  error={Object.keys(inputErrors).includes(configKey)}
+                  placeholder={method.placeholder || "Enter " + configKey}
+                />
               </div>
             );
           })}
