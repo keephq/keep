@@ -1,22 +1,22 @@
+import logging
 import os
 
 from fastapi import FastAPI, Request
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+
+# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.propagators.cloud_trace_propagator import CloudTraceFormatPropagator
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry import metrics
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-
-import logging
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
 def setup(app: FastAPI):
@@ -29,7 +29,9 @@ def setup(app: FastAPI):
     provider = TracerProvider(resource=resource)
     if otlp_collector_endpoint:
         logger.info(f"OTLP endpoint set to {otlp_collector_endpoint}")
-        processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=otlp_collector_endpoint))
+        processor = BatchSpanProcessor(
+            OTLPSpanExporter(endpoint=otlp_collector_endpoint)
+        )
         provider.add_span_processor(processor)
         if metrics_enabled.lower() == "true":
             logger.info("Metrics enabled.")

@@ -154,9 +154,14 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
         return {"status": "Services are starting in the background"}
 
+    @app.get("/error-dummy")
+    async def error():
+        a = 0 / 0
+
     @app.on_event("startup")
     async def on_startup():
-        create_db_and_tables()
+        if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
+            create_db_and_tables()
         if not multi_tenant or multi_tenant == "false":
             # When running in single tenant mode, we want to override the secured endpoints
             app.dependency_overrides[verify_api_key] = verify_single_tenant
