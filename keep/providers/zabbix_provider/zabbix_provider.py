@@ -3,7 +3,6 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
 import dataclasses
 import datetime
-import json
 import os
 import random
 
