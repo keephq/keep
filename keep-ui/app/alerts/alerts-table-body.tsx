@@ -91,7 +91,11 @@ export function AlertsTableBody({
     let lastReceived = "unknown";
     if (alert.lastReceived) {
       try {
-        lastReceived = new Date(alert.lastReceived).toISOString();
+        lastReceived = new Date(alert.lastReceived).toLocaleString(undefined, {
+          dateStyle: "short",
+          hourCycle: "h24",
+          timeStyle: "short",
+        });
       } catch {}
     }
     return lastReceived;
@@ -107,7 +111,7 @@ export function AlertsTableBody({
 
   return (
     <TableBody>
-      {data.map((alert) => {
+      {data.reverse().map((alert) => {
         const extraPayloadNoKnownKeys = Object.keys(alert)
           .filter((key) => !AlertKnownKeys.includes(key))
           .reduce((obj, key) => {
