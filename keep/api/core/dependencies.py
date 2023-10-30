@@ -84,7 +84,10 @@ def verify_api_key(
             )
 
         auth_header = request.headers.get("Authorization")
-        scheme, _, credentials = auth_header.partition(" ")
+        try:
+            scheme, _, credentials = auth_header.partition(" ")
+        except:
+            raise HTTPException(status_code=401, detail="Missing API Key")
         # support basic auth (e.g. AWS SNS)
         if scheme.lower() == "basic":
             api_key = authorization.password
