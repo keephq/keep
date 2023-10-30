@@ -154,10 +154,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
         return {"status": "Services are starting in the background"}
 
-    @app.get("/error-dummy")
-    async def error():
-        a = 0 / 0
-
     @app.on_event("startup")
     async def on_startup():
         if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
