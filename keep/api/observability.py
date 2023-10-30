@@ -4,9 +4,12 @@ import os
 from fastapi import FastAPI, Request
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter as GRPCOTLPSpanExporter,
+)
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter as HTTPOTLPSpanExporter,
+)
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -25,6 +28,13 @@ def setup(app: FastAPI):
     service_name = os.environ.get("SERVICE_NAME", "keep-api")
     otlp_collector_endpoint = os.environ.get("OTLP_ENDPOINT", False)
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
+    # to support both grpc and http - for example dynatrace doesn't support grpc
+    http_or_grpc = os.environ.get("OTLP_SPAN_EXPORTER", "grpc")
+    if http_or_grpc == "grpc":
+        OTLPSpanExporter = GRPCOTLPSpanExporter
+    else:
+        OTLPSpanExporter = HTTPOTLPSpanExporter
+
     resource = Resource.create({"service.name": service_name})
     provider = TracerProvider(resource=resource)
     if otlp_collector_endpoint:
