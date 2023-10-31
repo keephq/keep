@@ -17,8 +17,7 @@ import {
   ArrowPathIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
-import { getApiURL } from "utils/apiUrl";
+import "./provider-form-scopes.css";
 
 const ProviderFormScopes = ({
   provider,
@@ -36,7 +35,7 @@ const ProviderFormScopes = ({
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
-      <AccordionBody>
+      <AccordionBody className="overflow-hidden">
         {installedProvidersMode && (
           <Button
             color="gray"
@@ -75,7 +74,7 @@ const ProviderFormScopes = ({
                         <span className="text-orange-300">*</span>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell id="scope-badge">
                       <Badge
                         color={
                           validatedScopes[scope.name] === true // scope is tested and valid
@@ -84,6 +83,7 @@ const ProviderFormScopes = ({
                             ? "gray"
                             : "red" // scope was tested and is a string, meaning it has an error
                         }
+                        className="truncate max-w-xs"
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
@@ -92,11 +92,8 @@ const ProviderFormScopes = ({
                           : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
-                    <TableCell
-                      title={scope.description}
-                      className="max-w-xs truncate"
-                    >
-                      <div className="flex items-center">
+                    <TableCell title={scope.description} className="max-w-xs">
+                      <div className="flex items-center break-words whitespace-normal">
                         {scope.description}
                         {scope.mandatory_for_webhook ? (
                           <Icon
