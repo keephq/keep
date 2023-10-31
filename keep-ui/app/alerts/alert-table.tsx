@@ -21,11 +21,7 @@ interface Props {
   workflows?: any[];
 }
 
-export function AlertTable({
-  data,
-  groupBy,
-  workflows,
-}: Props) {
+export function AlertTable({ data, groupBy, workflows }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -43,14 +39,14 @@ export function AlertTable({
       return acc;
     }, groupedByData);
     // Sort by last received
+    Object.keys(groupedByData).forEach((key) =>
+      groupedByData[key].sort(
+        (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+      )
+    );
     // Only the last state of each alert is shown if we group by something
     aggregatedData = Object.keys(groupedByData).map(
-      (key) =>
-        groupedByData[key].sort(
-          (a, b) =>
-            new Date(b.lastReceived).getTime() -
-            new Date(a.lastReceived).getTime()
-        )[0]
+      (key) => groupedByData[key][0]
     );
   }
   const closeModal = (): any => setIsOpen(false);

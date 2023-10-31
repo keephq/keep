@@ -19,8 +19,8 @@ import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useState } from "react";
 import Loading from "app/loading";
-import "./alerts.client.css";
 import { Workflow } from "app/workflows/models";
+import "./alerts.client.css";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -34,11 +34,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken)
   );
-  const {
-    data: workflows,
-    error: workflowsError,
-    isLoading: workflowsLoading,
-  } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
+  const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
 
@@ -133,12 +129,17 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
         </Button> */}
       </Flex>
       <AlertTable
-        data={data.filter(
-          (alert) =>
-            environmentIsSeleected(alert) &&
-            statusIsSeleected(alert) &&
-            searchAlert(alert)
-        )}
+        data={data
+          .map((alert) => {
+            alert.lastReceived = new Date(alert.lastReceived);
+            return alert;
+          })
+          .filter(
+            (alert) =>
+              environmentIsSeleected(alert) &&
+              statusIsSeleected(alert) &&
+              searchAlert(alert)
+          )}
         groupBy="name"
         workflows={workflows}
       />
