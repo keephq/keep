@@ -37,6 +37,7 @@ class DynatraceProviderAuthConfig:
             "required": True,
             "description": "Dynatrace's API token",
             "hint": "e.g. dt0c01.abcde...",
+            "sensitive": True,
         },
     )
     alerting_profile: str = dataclasses.field(
@@ -344,7 +345,7 @@ class DynatraceProvider(BaseProvider):
                 == "The environment does not allow for site-local URLs"
             ):
                 raise Exception(
-                    f"Failed to setup Dynatrace webhook: Cannot use localhost as a webhook URL, please use a public URL when installing dynatrace webhook (you can use Keep with ngrok or similar)"
+                    f"Dynatrace doesn't support use localhost as a webhook URL, use a public URL when installing dynatrace webhook."
                 )
             else:
                 raise Exception(
