@@ -18,16 +18,10 @@ import {
 interface Props {
   data: Alert[];
   groupBy?: string;
-  pushed?: boolean;
   workflows?: any[];
 }
 
-export function AlertTable({
-  data,
-  groupBy,
-  pushed = false,
-  workflows,
-}: Props) {
+export function AlertTable({ data, groupBy, workflows }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -44,17 +38,17 @@ export function AlertTable({
       }
       return acc;
     }, groupedByData);
+    // Sort by last received
+    Object.keys(groupedByData).forEach((key) =>
+      groupedByData[key].sort(
+        (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+      )
+    );
     // Only the last state of each alert is shown if we group by something
     aggregatedData = Object.keys(groupedByData).map(
       (key) => groupedByData[key][0]
     );
   }
-  // Sort by last received
-  aggregatedData = aggregatedData.sort(
-    (a, b) =>
-      new Date(a.lastReceived).getTime() - new Date(b.lastReceived).getTime()
-  );
-
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {
     setSelectedAlertHistory(groupedByData[(alert as any)[groupBy!]]);
@@ -68,9 +62,7 @@ export function AlertTable({
       color="yellow"
       className="mt-5"
     >
-      {pushed
-        ? "Install webhook integration in supported providers to see pushed alerts"
-        : "Please connect supported providers to see pulled alerts"}
+      Please connect supported providers to see alerts
     </Callout>
   ) : (
     <>
@@ -100,7 +92,6 @@ export function AlertTable({
           groupBy={groupBy}
           groupedByData={groupedByData}
           openModal={openModal}
-          pushed={pushed}
           workflows={workflows}
         />
       </Table>

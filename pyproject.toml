@@ -39,7 +39,7 @@ pymysql = "^1.0.3"
 google-cloud-secret-manager = "^2.16.1"
 python-jose = "^3.3.0"
 jwcrypto = "^1.4.2"
-langchain = "^0.0.312"
+langchain = "^0.0.325"
 sqlalchemy = "1.4.41"
 snowflake-connector-python = "3.1.0"
 openai = "^0.27.7"
@@ -62,6 +62,8 @@ opentelemetry-instrumentation-requests = "^0.41b0"
 asteval = "^0.9.31"
 google-cloud-container = "^2.32.0"
 pympler = "^1.0.1"
+kafka-python = "^2.0.2"
+opentelemetry-exporter-otlp-proto-http = "^1.20.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -3,19 +3,12 @@ import {
   MagnifyingGlassIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ExclamationCircleIcon,
-} from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   MultiSelect,
   MultiSelectItem,
   Flex,
   Callout,
-  TabGroup,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
   TextInput,
 } from "@tremor/react";
 import useSWR from "swr";
@@ -26,8 +19,8 @@ import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useState } from "react";
 import Loading from "app/loading";
-import "./alerts.client.css";
 import { Workflow } from "app/workflows/models";
+import "./alerts.client.css";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -41,11 +34,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken)
   );
-  const {
-    data: workflows,
-    error: workflowsError,
-    isLoading: workflowsLoading,
-  } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
+  const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
 
@@ -64,12 +53,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   if (isLoading || !data) return <Loading />;
 
   const environments = data
-    .map((alert) => alert.environment)
+    .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
   function environmentIsSeleected(alert: Alert): boolean {
     return (
-      selectedEnvironments.includes(alert.environment) ||
+      selectedEnvironments.includes(alert.environment.toLowerCase()) ||
       selectedEnvironments.length === 0
     );
   }
@@ -79,8 +68,10 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       alertNameSearchString === "" ||
       alertNameSearchString === undefined ||
       alertNameSearchString === null ||
-      alert.name.includes(alertNameSearchString) ||
-      alert.description?.includes(alertNameSearchString) ||
+      alert.name.toLowerCase().includes(alertNameSearchString.toLowerCase()) ||
+      alert.description
+        ?.toLowerCase()
+        .includes(alertNameSearchString.toLowerCase()) ||
       false
     );
   }
@@ -137,42 +128,21 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           Export
         </Button> */}
       </Flex>
-      <TabGroup>
-        <TabList color="orange">
-          <Tab>Pushed to Keep</Tab>
-          <Tab>Pulled from Providers</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={true}
-              workflows={workflows}
-            />
-          </TabPanel>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  !alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={false}
-              workflows={workflows}
-            />
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+      <AlertTable
+        data={data
+          .map((alert) => {
+            alert.lastReceived = new Date(alert.lastReceived);
+            return alert;
+          })
+          .filter(
+            (alert) =>
+              environmentIsSeleected(alert) &&
+              statusIsSeleected(alert) &&
+              searchAlert(alert)
+          )}
+        groupBy="name"
+        workflows={workflows}
+      />
     </>
   );
 }

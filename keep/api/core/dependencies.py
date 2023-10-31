@@ -68,6 +68,7 @@ def verify_api_key(
     Returns:
         str: The tenant id.
     """
+    api_key = api_key or request.query_params.get("api_key", None)
     if not api_key:
         # if its from Amazon SNS and we don't have any bearer - force basic auth
         if (
@@ -83,7 +84,10 @@ def verify_api_key(
             )
 
         auth_header = request.headers.get("Authorization")
-        scheme, _, credentials = auth_header.partition(" ")
+        try:
+            scheme, _, credentials = auth_header.partition(" ")
+        except:
+            raise HTTPException(status_code=401, detail="Missing API Key")
         # support basic auth (e.g. AWS SNS)
         if scheme.lower() == "basic":
             api_key = authorization.password

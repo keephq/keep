@@ -4,9 +4,10 @@ import time
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
+from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
@@ -19,6 +20,7 @@ from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
+from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.providers_factory import ProvidersFactory
@@ -250,6 +252,15 @@ def delete_provider(
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")
         pass
+
+    if provider.consumer:
+        # Unregister the provider as a consumer
+        try:
+            event_subscriber = EventSubscriber.get_instance()
+            event_subscriber.remove_consumer(provider)
+        except Exception as e:
+            logger.exception("Failed to unregister provider as a consumer")
+            # return 200 as the next time Keep will start, it will try to unregister again
     logger.info("Deleted provider", extra={"provider_id": provider_id})
     return JSONResponse(status_code=200, content={"message": "deleted"})
 
@@ -367,11 +378,22 @@ def update_provider(
 
 @router.post("/install")
 async def install_provider(
-    provider_info: dict = Body(...),
+    request: Request,
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):
+    # Try to parse as JSON first
+    try:
+        provider_info = await request.json()
+    except ValueError:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
+
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
     provider_name = provider_info.pop("provider_name")
@@ -390,6 +412,13 @@ async def install_provider(
         "authentication": provider_info,
         "name": provider_name,
     }
+    # we support files as well
+    for key, value in provider_config.get("authentication", {}).items():
+        if isinstance(value, UploadFile):
+            provider_config["authentication"][key] = await value.read()
+            provider_config["authentication"][key] = provider_config["authentication"][
+                key
+            ].decode()
 
     # Instantiate the provider object and perform installation process
     context_manager = ContextManager(tenant_id=tenant_id)
@@ -406,7 +435,7 @@ async def install_provider(
         secret_value=json.dumps(provider_config),
     )
     # add the provider to the db
-    provider = Provider(
+    provider_model = Provider(
         id=provider_unique_id,
         tenant_id=tenant_id,
         name=provider_name,
@@ -415,9 +444,27 @@ async def install_provider(
         installation_time=time.time(),
         configuration_key=secret_name,
         validatedScopes=validated_scopes,
+        consumer=provider.is_consumer,
     )
-    session.add(provider)
-    session.commit()
+    try:
+        session.add(provider_model)
+        session.commit()
+    except Exception as e:
+        logger.exception("Failed to add provider to db")
+        return JSONResponse(
+            status_code=400,
+            content={"message": "Failed to install provider", "error": str(e)},
+        )
+
+    if provider_model.consumer:
+        # Register the provider as a consumer
+        try:
+            event_subscriber = EventSubscriber.get_instance()
+            event_subscriber.add_consumer(provider)
+        except Exception as e:
+            logger.exception("Failed to register provider as a consumer")
+            # return 200 as the next time Keep will start, it will try to register again
+
     return JSONResponse(
         status_code=200,
         content={

@@ -16,6 +16,7 @@ class Provider(SQLModel, table=True):
     validatedScopes: dict = Field(
         sa_column=Column(JSON)
     )  # scope name is key and value is either True if validated or string with error message, e.g: {"read": True, "write": "error message"}
+    consumer: bool = False
 
     class Config:
         orm_mode = True

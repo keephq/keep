@@ -8,9 +8,7 @@ import random
 
 import pydantic
 import requests
-from grafana_api.alerting import Alerting
-from grafana_api.alerting_provisioning import AlertingProvisioning
-from grafana_api.model import APIEndpoints, APIModel
+from grafana_api.model import APIEndpoints
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -19,7 +17,7 @@ from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
     GrafanaAlertFormatDescription,
 )
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -30,7 +28,12 @@ class GrafanaProviderAuthConfig:
     """
 
     token: str = dataclasses.field(
-        metadata={"required": True, "description": "Token", "hint": "Grafana Token"},
+        metadata={
+            "required": True,
+            "description": "Token",
+            "hint": "Grafana Token",
+            "sensitive": True,
+        },
     )
     host: str = dataclasses.field(
         metadata={
@@ -47,6 +50,32 @@ class GrafanaProvider(BaseProvider):
     """
 
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="alert.rules:read",
+            description="Read Grafana alert rules in a folder and its subfolders.",
+            mandatory=True,
+            mandatory_for_webhook=False,
+            documentation_url="https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/",
+            alias="Rules Reader",
+        ),
+        ProviderScope(
+            name="alert.provisioning:read",
+            description="Read all Grafana alert rules, notification policies, etc via provisioning API.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/",
+            alias="Access to alert rules provisioning API",
+        ),
+        ProviderScope(
+            name="alert.provisioning:write",
+            description="Update all Grafana alert rules, notification policies, etc via provisioning API.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/",
+            alias="Access to alert rules provisioning API",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -73,6 +102,20 @@ class GrafanaProvider(BaseProvider):
             self.authentication_config.host = (
                 f"https://{self.authentication_config.host}"
             )
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
+        permissions_api = (
+            f"{self.authentication_config.host}/api/access-control/user/permissions"
+        )
+        response = requests.get(permissions_api, headers=headers).json()
+        validated_scopes = {}
+        for scope in self.PROVIDER_SCOPES:
+            if scope.name in response:
+                validated_scopes[scope.name] = True
+            else:
+                validated_scopes[scope.name] = "Missing scope"
+        return validated_scopes
 
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
@@ -139,7 +182,9 @@ class GrafanaProvider(BaseProvider):
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
-        all_contact_points = requests.get(contacts_api, headers=headers).json()
+        all_contact_points = requests.get(contacts_api, headers=headers)
+        all_contact_points.raise_for_status()
+        all_contact_points = all_contact_points.json()
         webhook_exists = [
             webhook_exists
             for webhook_exists in all_contact_points
@@ -167,7 +212,11 @@ class GrafanaProvider(BaseProvider):
                     "authorization_credentials": api_key,
                 },
             }
-            response = requests.post(contacts_api, json=webhook, headers=headers)
+            response = requests.post(
+                contacts_api,
+                json=webhook,
+                headers={**headers, "X-Disable-Provenance": "true"},
+            )
             if not response.ok:
                 raise Exception(response.json())
             self.logger.info(f"Created webhook {webhook_name}")

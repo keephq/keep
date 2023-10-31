@@ -239,7 +239,7 @@ async def receive_generic_event(
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        "generic",
+        alert.source[0] or "generic",
         session,
         alert,
     )

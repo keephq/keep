@@ -3,7 +3,6 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
 import dataclasses
 import datetime
-import json
 import os
 import random
 
@@ -13,7 +12,7 @@ import requests
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -51,6 +50,50 @@ class ZabbixProvider(BaseProvider):
         "zabbix_provider_script.js"  # zabbix mediatype script file
     )
     KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE = 4
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="problem.get",
+            description="The method allows to retrieve problems.",
+            mandatory=True,
+            mandatory_for_webhook=False,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get",
+        ),
+        ProviderScope(
+            name="mediatype.get",
+            description="The method allows to retrieve media types.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/get",
+        ),
+        ProviderScope(
+            name="mediatype.update",
+            description="This method allows to update existing media types.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/update",
+        ),
+        ProviderScope(
+            name="mediatype.create",
+            description="This method allows to create new media types.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/mediatype/create",
+        ),
+        ProviderScope(
+            name="user.get",
+            description="The method allows to retrieve users.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/get",
+        ),
+        ProviderScope(
+            name="user.update",
+            description="This method allows to update existing users.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/update",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -71,6 +114,19 @@ class ZabbixProvider(BaseProvider):
         self.authentication_config = ZabbixProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {}
+        for scope in self.PROVIDER_SCOPES:
+            try:
+                self.__send_request(scope.name)
+            except Exception as e:
+                error = e.args[0]["data"]
+                if "permission" in error:
+                    validated_scopes[scope.name] = e.args[0]["data"]
+                    continue
+            validated_scopes[scope.name] = True
+        return validated_scopes
 
     def __send_request(self, method: str, params: dict = None):
         """
@@ -108,7 +164,28 @@ class ZabbixProvider(BaseProvider):
         return response_json
 
     def get_alerts(self) -> list[AlertDto]:
+        # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
+        problems = self.__send_request("problem.get")
         formatted_alerts = []
+        for problem in problems.get("result", []):
+            name = problem.pop("name")
+            problem.pop("source")
+            formatted_alerts.append(
+                AlertDto(
+                    id=problem.pop("eventid"),
+                    name=name,
+                    status="active"
+                    if problem.pop("acknowledged") == "0"
+                    else "acknowledged",
+                    lastReceived=datetime.datetime.fromtimestamp(
+                        int(problem.get("clock"))
+                    ).isoformat(),
+                    source=["zabbix"],
+                    message=name,
+                    severity=self.__get_severity(problem.pop("severity")),
+                    **problem,
+                )
+            )
         return formatted_alerts
 
     def setup_webhook(
@@ -141,7 +218,7 @@ class ZabbixProvider(BaseProvider):
             },
         )
 
-        mediatype_description = "Please refer to https://docs.keephq.dev/platform/core/providers/documentation/zabbix-provider or https://platform.keephq.dev/."
+        mediatype_description = "Please refer to https://docs.keephq.dev/providers/documentation/zabbix-provider or https://platform.keephq.dev/."
 
         self.logger.info("Got existing media types")
         mediatype_list = [
@@ -153,6 +230,7 @@ class ZabbixProvider(BaseProvider):
         if mediatype_list:
             existing_mediatype = mediatype_list[0]
             self.logger.info("Updating existing media type")
+            media_type_id = str(existing_mediatype["mediatypeid"])
             self.__send_request(
                 "mediatype.update",
                 {
@@ -215,24 +293,83 @@ class ZabbixProvider(BaseProvider):
                 ],
             }
             response_json = self.__send_request("mediatype.create", params)
+            media_type_id = str(
+                response_json.get("result", {}).get("mediatypeids", [])[0]
+            )
             self.__send_request(
                 "mediatype.update",
                 {
-                    "mediatypeid": str(
-                        response_json.get("result", {}).get("mediatypeids", [])[0]
-                    ),
+                    "mediatypeid": media_type_id,
                     "status": "0",
                 },
             )
             self.logger.info("Created media type")
+        self.logger.info(
+            "Updating users to include new created media type",
+            extra={"media_type_id": media_type_id},
+        )
+        users = self.__send_request("user.get", {"selectMedias": "extend"}).get(
+            "result", []
+        )
+        user_update_params = []
+        for user in users:
+            username = user.get("username")
+            if username == "guest":
+                self.logger.debug("skipping guest user")
+                continue
+            media_exists = next(
+                iter(
+                    [
+                        m
+                        for m in user.get("medias", [])
+                        if m["mediatypeid"] == media_type_id
+                    ]
+                ),
+                None,
+            )
+            if media_exists:
+                self.logger.info(f"skipping user {username} because media exists")
+            else:
+                current_user_medias = user.get("medias", [])
+                # We need to clean irrelevant data or the request will fail
+                # https://www.zabbix.com/documentation/current/en/manual/api/reference/user/object#media
+                current_user_medias = [
+                    {
+                        "mediatypeid": media["mediatypeid"],
+                        "sendto": media["sendto"],
+                        "active": media["active"],
+                        "severity": media["severity"],
+                        "period": media["period"],
+                    }
+                    for media in current_user_medias
+                ]
+                current_user_medias.append(
+                    {
+                        "mediatypeid": media_type_id,
+                        "sendto": "KEEP",
+                        "active": "0",
+                    }
+                )
+                user_update_params.append(
+                    {"userid": user["userid"], "medias": current_user_medias}
+                )
+        if user_update_params:
+            self.logger.info(
+                "Updating users", extra={"user_update_params": user_update_params}
+            )
+            self.__send_request("user.update", user_update_params)
+            self.logger.info("Updated users")
+        else:
+            self.logger.info("No users to update")
+        self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def __get_priorty(priority):
-        if priority == "disaster":
+    def __get_severity(priority: str):
+        if priority == "disaster" or priority == "5":
             return "critical"
-        elif priority == "high":
+        elif priority == "high" or priority == "4":
             return "high"
-        elif priority == "average":
+        elif priority == "average" or priority == "3":
             return "medium"
         else:
             return "low"
@@ -243,7 +380,7 @@ class ZabbixProvider(BaseProvider):
         tags = event.get("tags", {})
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
-        severity = ZabbixProvider.__get_priorty(event.pop("severity", "").lower())
+        severity = ZabbixProvider.__get_severity(event.pop("severity", "").lower())
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("ZABBIX.URL", None)

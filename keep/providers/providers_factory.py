@@ -7,7 +7,7 @@ import logging
 import os
 from dataclasses import fields
 
-from keep.api.core.db import get_installed_providers
+from keep.api.core.db import get_consumer_providers, get_installed_providers
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -122,7 +122,12 @@ class ProvidersFactory:
             list: All the providers.
         """
         providers = []
-        blacklisted_providers = ["base_provider", "mock_provider", "file_provider"]
+        blacklisted_providers = [
+            "base_provider",
+            "mock_provider",
+            "file_provider",
+            "github_workflows_provider",
+        ]
 
         for provider_directory in os.listdir(
             os.path.dirname(os.path.abspath(__file__))
@@ -265,3 +270,32 @@ class ProvidersFactory:
             provider_copy.validatedScopes = p.validatedScopes
             providers.append(provider_copy)
         return providers
+
+    @staticmethod
+    def get_consumer_providers() -> list[Provider]:
+        # get the list of all providers that consume events
+        installed_consumer_providers = get_consumer_providers()
+        initialized_consumer_providers = []
+        for provider in installed_consumer_providers:
+            try:
+                context_manager = ContextManager(tenant_id=provider.tenant_id)
+                secret_manager = SecretManagerFactory.get_secret_manager(
+                    context_manager
+                )
+                provider_config = secret_manager.read_secret(
+                    secret_name=f"{provider.tenant_id}_{provider.type}_{provider.id}",
+                    is_json=True,
+                )
+                provider_class = ProvidersFactory.get_provider(
+                    context_manager=context_manager,
+                    provider_id=provider.id,
+                    provider_type=provider.type,
+                    provider_config=provider_config,
+                )
+                initialized_consumer_providers.append(provider_class)
+            except Exception:
+                logger.exception(
+                    f"Could not get provider {provider.id} auth config from secret manager"
+                )
+                continue
+        return initialized_consumer_providers

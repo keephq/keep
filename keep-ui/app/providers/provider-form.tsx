@@ -1,7 +1,7 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef} from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -22,8 +22,10 @@ import {
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
+  ArrowDownOnSquareIcon,
   GlobeAltIcon,
 } from "@heroicons/react/24/outline";
+import { Dialog } from '@headlessui/react';
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
@@ -47,7 +49,6 @@ type ProviderFormProps = {
 const ProviderForm = ({
   provider,
   formData,
-  formErrorsData,
   onFormChange,
   onConnectChange,
   onAddProvider,
@@ -71,7 +72,7 @@ const ProviderForm = ({
   const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
     {}
   );
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
   // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
@@ -80,7 +81,11 @@ const ProviderForm = ({
   const [refreshLoading, setRefreshLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session, status, update } = useSession();
+  const inputFileRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+
+  const { data: session } = useSession();
 
   const accessToken = session?.accessToken;
 
@@ -152,7 +157,16 @@ const ProviderForm = ({
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
+    const { name, type } = event.target;
+    let value;
+
+    // If the input is a file, retrieve the file object, otherwise retrieve the value
+    if (type === "file") {
+      value = event.target.files?.[0];  // Assumes single file upload
+    } else {
+      value = event.target.value;
+    }
+
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     const updatedFormValues = { ...formValues, [name]: value };
 
@@ -193,13 +207,29 @@ const ProviderForm = ({
     requestUrl: string,
     method: string = "POST"
   ): Promise<any> => {
+    let headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    let body;
+
+    if (Object.values(formValues).some(value => value instanceof File)) {
+      // FormData for file uploads
+      let formData = new FormData();
+      for (let key in formValues) {
+        formData.append(key, formValues[key]);
+      }
+      body = formData;
+    } else {
+      // Standard JSON for non-file submissions
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(formValues);
+    }
+
     return fetch(requestUrl, {
       method: method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(formValues),
+      headers: headers,
+      body: body,
     })
       .then((response) => {
         const response_json = response.json();
@@ -368,6 +398,7 @@ const ProviderForm = ({
           {Object.keys(provider.config).map((configKey) => {
             const method = provider.config[configKey];
             if (method.hidden) return null;
+            const isSensitive = method.sensitive;
             return (
               <div className="mt-2.5" key={configKey}>
                 <label htmlFor={configKey} className="flex items-center mb-1">
@@ -387,16 +418,50 @@ const ProviderForm = ({
                     />
                   )}
                 </label>
-                <TextInput
-                  type={method.type}
+
+                {method.type === "file" ? (
+                  <>
+                  <Button
+                    color="orange"
+                    size="md"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      inputFileRef.current.click();  // this line triggers the file input
+                    }}
+                    icon={ArrowDownOnSquareIcon}
+                  >
+                      {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
+                  </Button>
+
+                  <input
+                  ref={inputFileRef}
+                  type="file"
                   id={configKey}
                   name={configKey}
-                  value={formValues[configKey] || ""}
-                  onChange={handleInputChange}
-                  autoComplete="off"
-                  error={Object.keys(inputErrors).includes(configKey)}
-                  placeholder={method.placeholder || "Enter " + configKey}
+                  accept={method.file_type}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0].name);
+                    }
+                    handleInputChange(e);
+                  }}
                 />
+                </>
+                ) : (
+                  <TextInput
+                    type={isSensitive ? "password" : method.type} // Display as password if sensitive
+                    id={configKey}
+                    name={configKey}
+                    value={formValues[configKey] || ""}
+                    onChange={handleInputChange}
+                    autoComplete="off"
+                    error={Object.keys(inputErrors).includes(configKey)}
+                    placeholder={method.placeholder || "Enter " + configKey}
+                  />
+                )}
+
               </div>
             );
           })}
