@@ -8,6 +8,8 @@ export interface ProviderAuthConfig {
   value?: string;
   sensitive?: boolean;
   hidden?: boolean;
+  type?: string;
+  file_type?: string;
 }
 
 export interface ProviderScope {
