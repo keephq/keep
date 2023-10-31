@@ -18,14 +18,12 @@ import {
 interface Props {
   data: Alert[];
   groupBy?: string;
-  pushed?: boolean;
   workflows?: any[];
 }
 
 export function AlertTable({
   data,
   groupBy,
-  pushed = false,
   workflows,
 }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
@@ -68,9 +66,7 @@ export function AlertTable({
       color="yellow"
       className="mt-5"
     >
-      {pushed
-        ? "Install webhook integration in supported providers to see pushed alerts"
-        : "Please connect supported providers to see pulled alerts"}
+      Please connect supported providers to see alerts
     </Callout>
   ) : (
     <>
@@ -100,7 +96,6 @@ export function AlertTable({
           groupBy={groupBy}
           groupedByData={groupedByData}
           openModal={openModal}
-          pushed={pushed}
           workflows={workflows}
         />
       </Table>

@@ -3,19 +3,12 @@ import {
   MagnifyingGlassIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ExclamationCircleIcon,
-} from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   MultiSelect,
   MultiSelectItem,
   Flex,
   Callout,
-  TabGroup,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
   TextInput,
 } from "@tremor/react";
 import useSWR from "swr";
@@ -64,12 +57,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   if (isLoading || !data) return <Loading />;
 
   const environments = data
-    .map((alert) => alert.environment)
+    .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
   function environmentIsSeleected(alert: Alert): boolean {
     return (
-      selectedEnvironments.includes(alert.environment) ||
+      selectedEnvironments.includes(alert.environment.toLowerCase()) ||
       selectedEnvironments.length === 0
     );
   }
@@ -79,8 +72,10 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       alertNameSearchString === "" ||
       alertNameSearchString === undefined ||
       alertNameSearchString === null ||
-      alert.name.includes(alertNameSearchString) ||
-      alert.description?.includes(alertNameSearchString) ||
+      alert.name.toLowerCase().includes(alertNameSearchString.toLowerCase()) ||
+      alert.description
+        ?.toLowerCase()
+        .includes(alertNameSearchString.toLowerCase()) ||
       false
     );
   }
@@ -137,42 +132,16 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           Export
         </Button> */}
       </Flex>
-      <TabGroup>
-        <TabList color="orange">
-          <Tab>Pushed to Keep</Tab>
-          <Tab>Pulled from Providers</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={true}
-              workflows={workflows}
-            />
-          </TabPanel>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  !alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={false}
-              workflows={workflows}
-            />
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+      <AlertTable
+        data={data.filter(
+          (alert) =>
+            environmentIsSeleected(alert) &&
+            statusIsSeleected(alert) &&
+            searchAlert(alert)
+        )}
+        groupBy="name"
+        workflows={workflows}
+      />
     </>
   );
 }

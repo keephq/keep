@@ -17,7 +17,6 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
-  Badge,
 } from "@tremor/react";
 import { Alert, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
@@ -25,13 +24,14 @@ import "./alerts-table-body.css";
 import AlertMenu from "./alert-menu";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
+import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
+import moment from "moment";
 
 interface Props {
   data: Alert[];
   groupBy?: string;
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
-  pushed?: boolean;
   workflows?: Workflow[];
 }
 
@@ -67,14 +67,14 @@ const getSeverity = (severity: Severity | undefined) => {
       break;
   }
   return (
-    <Badge
+    <Icon
       //deltaType={deltaType as DeltaType}
       color={color}
       icon={icon}
       tooltip={severityText}
-      size="xs"
+      size="sm"
       className="ml-2.5"
-    ></Badge>
+    ></Icon>
   );
 };
 
@@ -83,19 +83,15 @@ export function AlertsTableBody({
   groupBy,
   groupedByData,
   openModal,
-  pushed,
   workflows,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
     let lastReceived = "unknown";
     if (alert.lastReceived) {
+      lastReceived = alert.lastReceived.toString();
       try {
-        lastReceived = new Date(alert.lastReceived).toLocaleString(undefined, {
-          dateStyle: "short",
-          hourCycle: "h24",
-          timeStyle: "short",
-        });
+        lastReceived = moment(new Date(alert.lastReceived)).fromNow();
       } catch {}
     }
     return lastReceived;
@@ -232,6 +228,9 @@ export function AlertsTableBody({
             </TableCell>
             <TableCell className="max-w-[340px]">
               <div className="truncate">{alert.description}</div>
+            </TableCell>
+            <TableCell>
+              <PushPullBadge pushed={alert.pushed} />
             </TableCell>
             <TableCell>{alert.status}</TableCell>
             <TableCell>{getAlertLastReceieved(alert)}</TableCell>
