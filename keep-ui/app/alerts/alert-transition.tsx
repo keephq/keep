@@ -2,7 +2,14 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Alert } from "./models";
 import { AlertTable } from "./alert-table";
-import { Button, Flex, LineChart, Subtitle, Title, Divider } from "@tremor/react";
+import {
+  Button,
+  Flex,
+  LineChart,
+  Subtitle,
+  Title,
+  Divider,
+} from "@tremor/react";
 
 interface Props {
   isOpen: boolean;
@@ -15,7 +22,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
     return <></>;
   }
   const categoriesByStatus: string[] = [];
-  const lastReceivedData = data.map((alert) => new Date(alert.lastReceived));
+  const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
   );
@@ -33,12 +40,9 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
     timeUnit = "Hours";
   }
   const rawChartData = data
-    .sort(
-      (a, b) =>
-        new Date(a.lastReceived).getTime() - new Date(b.lastReceived).getTime()
-    )
+    .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
     .reduce((prev, curr) => {
-      const date = new Date(curr.lastReceived);
+      const date = curr.lastReceived;
       let dateKey: string;
       if (timeUnit === "Minutes") {
         dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
