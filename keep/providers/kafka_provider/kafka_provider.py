@@ -48,7 +48,7 @@ class KafkaProviderAuthConfig:
             "required": False,
             "description": "Username",
             "hint": "Kafka username (Optional for SASL authentication)",
-            "senstive": True,
+            "sensitive": True,
         },
     )
     password: str = dataclasses.field(
@@ -57,7 +57,7 @@ class KafkaProviderAuthConfig:
             "required": False,
             "description": "Password",
             "hint": "Kafka password (Optional for SASL authentication)",
-            "senstive": True,
+            "sensitive": True,
         },
     )
 

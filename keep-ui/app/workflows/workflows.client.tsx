@@ -214,12 +214,6 @@ export default function WorkflowsPage() {
           </div>
         </div>
       </Card>
-      <input
-        type="file"
-        id="workflowFile"
-        style={{ display: "none" }}
-        onChange={onDrop}
-      />
     </main>
   );
 }

@@ -4,9 +4,10 @@ import time
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
+from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
@@ -377,11 +378,22 @@ def update_provider(
 
 @router.post("/install")
 async def install_provider(
-    provider_info: dict = Body(...),
+    request: Request,
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):
+    # Try to parse as JSON first
+    try:
+        provider_info = await request.json()
+    except ValueError:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
+
     # Extract parameters from the provider_info dictionary
     provider_id = provider_info.pop("provider_id")
     provider_name = provider_info.pop("provider_name")
@@ -400,6 +412,13 @@ async def install_provider(
         "authentication": provider_info,
         "name": provider_name,
     }
+    # we support files as well
+    for key, value in provider_config.get("authentication", {}).items():
+        if isinstance(value, UploadFile):
+            provider_config["authentication"][key] = await value.read()
+            provider_config["authentication"][key] = provider_config["authentication"][
+                key
+            ].decode()
 
     # Instantiate the provider object and perform installation process
     context_manager = ContextManager(tenant_id=tenant_id)
