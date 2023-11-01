@@ -5,7 +5,7 @@ import time
 import typing
 import uuid
 
-from keep.api.core.db import get_enrichment
+from keep.api.core.db import get_enrichment, save_workflow_results
 from keep.api.models.alert import AlertDto
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderConfigurationException
@@ -223,12 +223,41 @@ class WorkflowManager:
         finally:
             # todo - state should be saved in db
             workflow.context_manager.dump()
+
+        self._save_workflow_results(workflow, workflow_execution_id)
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
         return errors
+
+    def _save_workflow_results(self, workflow: Workflow, workflow_execution_id: str):
+        """
+        Save the results of the workflow to the DB.
+
+        Args:
+            workflow (Workflow): The workflow to save.
+            workflow_execution_id (str): The workflow execution ID.
+        """
+        self.logger.info(f"Saving workflow {workflow.workflow_id} results")
+        workflow_results = {
+            action.name: action.provider.results for action in workflow.workflow_actions
+        }
+        try:
+            save_workflow_results(
+                tenant_id=workflow.context_manager.tenant_id,
+                workflow_id=workflow.context_manager.workflow_id,
+                workflow_execution_id=workflow_execution_id,
+                workflow_results=workflow_results,
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Error saving workflow {workflow.workflow_id} results",
+                extra={"exception": e},
+            )
+            raise
+        self.logger.info(f"Workflow {workflow.workflow_id} results saved")
 
     def _run_workflows_from_cli(self, workflows: typing.List[Workflow]):
         workflows_errors = []
