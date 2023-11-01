@@ -87,6 +87,7 @@ class WorkflowExecutionDTO(BaseModel):
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
     execution_time: Optional[int]
+    results: Optional[dict]
 
 
 class WorkflowCreateOrUpdateDTO(BaseModel):

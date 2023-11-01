@@ -228,8 +228,7 @@ class Step:
                                 self.step_id, results=step_output, foreach=self.foreach
                             )
                         else:
-                            self.provider.notify(**rendered_value)
-
+                            results = self.provider.notify(**rendered_value)
                         # exiting the loop as step/action execution was successful
                         break
                     except Exception as e:
