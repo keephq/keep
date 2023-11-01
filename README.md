@@ -105,7 +105,7 @@ workflow:
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ## Supported Providers
-> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=new_provider.md&title=) and we will add it in the blink of an eye.
+> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we will add it in the blink of an eye.
 
 <h3 align="center">Observability tools</h3>
 <p align="center">
