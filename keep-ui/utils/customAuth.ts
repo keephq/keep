@@ -92,7 +92,7 @@ export function useSession<R extends boolean>(
 }
 
 export function getSession(params?: any) {
-  if (isSingleTenant) {
+  if (isSingleTenant && !useAuthentication) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return Promise.resolve(useCustomSession());
   }

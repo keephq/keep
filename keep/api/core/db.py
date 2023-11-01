@@ -598,7 +598,7 @@ def get_user(username, password, update_sign_in=True):
     from keep.api.models.db.user import User
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         user = session.exec(
             select(User)
             .where(User.tenant_id == SINGLE_TENANT_UUID)
@@ -607,7 +607,7 @@ def get_user(username, password, update_sign_in=True):
         ).first()
         if user and update_sign_in:
             user.last_sign_in = datetime.utcnow()
-            session.update(user)
+            session.add(user)
             session.commit()
     return user
 

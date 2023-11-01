@@ -75,7 +75,7 @@ def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
     if os.environ.get("KEEP_MULTI_TENANT", "true") == "true":
         return _delete_user_auth0(tenant_id)
 
-    return _delete_user_db(tenant_id)
+    return _delete_user_db(user_email, tenant_id)
 
 
 def _delete_user_auth0(user_email: str, tenant_id: str) -> dict:
