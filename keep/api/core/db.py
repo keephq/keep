@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -124,6 +125,9 @@ def get_session() -> Session:
 
 def try_create_single_tenant(tenant_id: str) -> None:
     try:
+        # if Keep is not multitenant, let's import the User table too:
+        from keep.api.models.db.user import User
+
         create_db_and_tables()
     except:
         pass
@@ -131,9 +135,19 @@ def try_create_single_tenant(tenant_id: str) -> None:
         try:
             # Do everything related with single tenant creation in here
             session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+            default_password = hashlib.sha256(
+                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+            ).hexdigest()
+            default_user = User(
+                username=default_username, password_hash=default_password
+            )
+            session.add(default_user)
             session.commit()
         except IntegrityError:
             # Tenant already exists
+            pass
+        except Exception as e:
             pass
 
 
@@ -576,3 +590,66 @@ def get_alerts(tenant_id, provider_id=None):
         alerts = query.all()
 
     return alerts
+
+
+# this is only for single tenant
+def get_user(username, password, update_sign_in=True):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.username == username)
+            .where(User.password_hash == password_hash)
+        ).first()
+        if user and update_sign_in:
+            user.last_sign_in = datetime.utcnow()
+            session.update(user)
+            session.commit()
+    return user
+
+
+def get_users():
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        users = session.exec(
+            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
+        ).all()
+    return users
+
+
+def delete_user(username):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.username == username)
+        ).first()
+        if user:
+            session.delete(user)
+            session.commit()
+
+
+def create_user(username, password):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    with Session(engine) as session:
+        user = User(
+            tenant_id=SINGLE_TENANT_UUID,
+            username=username,
+            password_hash=password_hash,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user

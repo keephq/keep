@@ -26,6 +26,9 @@ interface Props {
   currentUser?: AuthUser;
 }
 
+const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
+const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
+
 export default function UsersSettings({ accessToken, currentUser }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<User[]>(
@@ -36,7 +39,16 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
   if (!data || isLoading) return <Loading />;
 
   async function addUser() {
-    const email = prompt("Enter the user email");
+    let email;
+    let password;
+    if(isSingleTenant && useAuthentication){
+      email = prompt("Enter the user name");
+      password = prompt("Enter the user password");
+    }
+    else{
+      email = prompt("Enter the user email");
+      password = "";
+    }
     console.log(email);
     if (email) {
       const response = await fetch(`${apiUrl}/settings/users/${email}`, {
@@ -44,6 +56,7 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+        body: JSON.stringify({ password }),
       });
       if (response.ok) {
         mutate(`${apiUrl}/settings/users`);
