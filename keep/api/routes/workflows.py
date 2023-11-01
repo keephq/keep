@@ -311,7 +311,7 @@ def get_workflow_execution_status(
                 id=log.id,
                 timestamp=log.timestamp,
                 message=log.message,
-                context=log.context,
+                context=log.context if log.context else {},
             )
             for log in workflow_execution.logs
         ],
