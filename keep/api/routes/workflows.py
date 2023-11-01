@@ -145,10 +145,11 @@ def run_workflow(
         )
     logger.info(
         "Workflow ran successfully",
-        extra={"workflow_id": workflow_id},
+        extra={
+            "workflow_id": workflow_id,
+            "workflow_execution_id": workflow_execution_id,
+        },
     )
-    # TODO - add some workflow_execution id to track the execution
-    # TODO - add workflow execution_id
     return {
         "workflow_id": workflow_id,
         "workflow_execution_id": workflow_execution_id,

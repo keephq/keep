@@ -54,13 +54,13 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
       setRefreshInterval(0);
     }
     // if there's an error - show it
-    if(executionData?.error){
+    if(executionData.error){
       setError(executionData?.error);
       console.log("Stopping refresh interval");
       setRefreshInterval(0);
     }
-    else {
-      setError(executionData?.error);
+    else if (executionData?.status === 'success') {
+      setError(executionData?.error); // should be null
       setRefreshInterval(0); // Disable refresh interval when execution is complete
     }
   }, [executionData]);
