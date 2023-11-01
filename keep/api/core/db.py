@@ -460,7 +460,7 @@ def push_logs_to_db(log_entries):
             timestamp=datetime.strptime(log_entry["asctime"], "%Y-%m-%d %H:%M:%S,%f"),
             message=log_entry["message"][0:255],  # limit the message to 255 chars
             context=json.loads(
-                json.dumps(log_entry["context"], default=str)
+                json.dumps(log_entry.get("context", {}), default=str)
             ),  # workaround to serialize any object
         )
         for log_entry in log_entries
@@ -576,3 +576,18 @@ def get_alerts(tenant_id, provider_id=None):
         alerts = query.all()
 
     return alerts
+
+
+def save_workflow_results(
+    tenant_id, workflow_id, workflow_execution_id, workflow_results
+):
+    with Session(engine) as session:
+        workflow_execution = session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.id == workflow_execution_id)
+        ).first()
+
+        workflow_execution.results = workflow_results
+        session.commit()
