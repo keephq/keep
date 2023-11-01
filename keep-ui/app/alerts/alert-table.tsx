@@ -14,14 +14,16 @@ import {
   CircleStackIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
+import { Provider } from "app/providers/providers";
 
 interface Props {
   data: Alert[];
   groupBy?: string;
   workflows?: any[];
+  providers?: Provider[];
 }
 
-export function AlertTable({ data, groupBy, workflows }: Props) {
+export function AlertTable({ data, groupBy, workflows, providers }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -93,6 +95,7 @@ export function AlertTable({ data, groupBy, workflows }: Props) {
           groupedByData={groupedByData}
           openModal={openModal}
           workflows={workflows}
+          providers={providers}
         />
       </Table>
       <AlertTransition
