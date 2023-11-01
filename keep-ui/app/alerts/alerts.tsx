@@ -21,7 +21,7 @@ import { useState } from "react";
 import Loading from "app/loading";
 import { Workflow } from "app/workflows/models";
 import "./alerts.client.css";
-import { Provider } from "app/providers/providers";
+import { ProvidersResponse } from "app/providers/providers";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -38,8 +38,9 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
-  const { data: providers } = useSWR<Provider[]>(`${apiUrl}/providers`, (url) =>
-    fetcher(url, accessToken)
+  const { data: providers } = useSWR<ProvidersResponse>(
+    `${apiUrl}/providers`,
+    (url) => fetcher(url, accessToken)
   );
 
   if (error) {
@@ -146,7 +147,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           )}
         groupBy="name"
         workflows={workflows}
-        providers={providers}
+        providers={providers?.installed_providers}
       />
     </>
   );

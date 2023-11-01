@@ -13,6 +13,7 @@ from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -93,6 +94,19 @@ class ZabbixProvider(BaseProvider):
             mandatory_for_webhook=True,
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/update",
         ),
+        ProviderScope(
+            name="event.acknowledge",
+            description="This method allows to update events.",
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge",
+        ),
+    ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Close Problem",
+            func_name="close_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        )
     ]
 
     def __init__(
@@ -105,6 +119,17 @@ class ZabbixProvider(BaseProvider):
         Dispose the provider.
         """
         pass
+
+    def close_problem(self, id: str):
+        """
+        Close a problem.
+
+        https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge
+
+        Args:
+            id (str): The problem id.
+        """
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 0})
 
     def validate_config(self):
         """
@@ -122,7 +147,7 @@ class ZabbixProvider(BaseProvider):
                 self.__send_request(scope.name)
             except Exception as e:
                 error = e.args[0]["data"]
-                if "permission" in error:
+                if "permission" in error or "not authorized" in error.lower():
                     validated_scopes[scope.name] = e.args[0]["data"]
                     continue
             validated_scopes[scope.name] = True

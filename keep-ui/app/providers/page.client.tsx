@@ -1,6 +1,11 @@
 "use client";
 import { FrigadeAnnouncement } from "@frigade/react";
-import { Providers, defaultProvider, Provider } from "./providers";
+import {
+  Providers,
+  defaultProvider,
+  Provider,
+  ProvidersResponse,
+} from "./providers";
 import { useSession } from "../../utils/customAuth";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
@@ -20,7 +25,7 @@ export const useFetchProviders = () => {
   const { data: session, status } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
 
-  const { data, error } = useSWR(
+  const { data, error } = useSWR<ProvidersResponse>(
     shouldFetch ? `${getApiURL()}/providers` : null,
     (url) => {
       return fetcher(url, session?.accessToken!);
@@ -30,16 +35,16 @@ export const useFetchProviders = () => {
   // process data here if it's available
   if (data && providers.length === 0 && installedProviders.length === 0) {
     // TODO: need to refactor the backend response
-    const fetchedInstalledProviders = (
-      data["installed_providers"] as Providers
-    ).map((provider) => {
-      const validatedScopes = provider.validatedScopes ?? {};
-      return {
-        ...provider,
-        installed: true,
-        validatedScopes: validatedScopes,
-      } as Provider;
-    });
+    const fetchedInstalledProviders = data.installed_providers.map(
+      (provider) => {
+        const validatedScopes = provider.validatedScopes ?? {};
+        return {
+          ...provider,
+          installed: true,
+          validatedScopes: validatedScopes,
+        } as Provider;
+      }
+    );
     // TODO: refactor this to be more readable and move to backend(?)
     const fetchedProviders = data.providers.map((provider: Provider) => {
       const updatedProvider: Provider = {

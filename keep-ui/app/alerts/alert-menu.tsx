@@ -6,6 +6,7 @@ import { TrashIcon } from "@radix-ui/react-icons";
 import {
   ArchiveBoxIcon,
   BellSlashIcon,
+  PaperAirplaneIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
@@ -66,7 +67,7 @@ export default function AlertMenu({
       // If the bottom of the menu goes beyond the container's viewport, adjust the container's height
       if (relativeMenuBottomPosition > containerHeight) {
         const extraHeightNeeded = relativeMenuBottomPosition - containerHeight;
-        container.style.height = `${containerHeight + extraHeightNeeded}px`;
+        container.style.height = `${containerHeight + extraHeightNeeded + 10}px`;
       }
     } else if (originalContainerHeight) {
       // If menu is closed, reset the container's height
@@ -181,6 +182,29 @@ export default function AlertMenu({
                 )}
               </Menu.Item>
             </div>
+            {provider?.methods && provider?.methods?.length > 0 && (
+              <div className="px-1 py-1">
+                {provider.methods.map((method) => {
+                  return (
+                    <Menu.Item key={method.name}>
+                      {({ active }) => (
+                        <button
+                          className={`${
+                            active ? "bg-slate-200" : "text-gray-900"
+                          } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                        >
+                          <PaperAirplaneIcon
+                            className="mr-2 h-4 w-4"
+                            aria-hidden="true"
+                          />
+                          {method.name}
+                        </button>
+                      )}
+                    </Menu.Item>
+                  );
+                })}
+              </div>
+            )}
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
