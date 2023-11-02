@@ -212,11 +212,11 @@ class ZabbixProvider(BaseProvider):
             name = problem.pop("name")
             problem.pop("source")
             status = (
-                "Problem"
+                "PROBLEM"
                 if problem.pop("acknowledged") == "0"
-                else "Acked"
+                else "ACKED"
                 if problem.pop("suppressed") == "0"
-                else "Surpressed"
+                else "SURPRESSED"
             )
             formatted_alerts.append(
                 AlertDto(
@@ -273,6 +273,28 @@ class ZabbixProvider(BaseProvider):
             if mt["name"] == mediatype_name
         ]
 
+        parameters = [
+            {"name": "keepApiKey", "value": api_key},
+            {"name": "keepApiUrl", "value": keep_api_url},
+            {"name": "id", "value": "{EVENT.ID}"},
+            {"name": "triggerId", "value": "{TRIGGER.ID}"},
+            {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
+            {"name": "message", "value": "{ALERT.MESSAGE}"},
+            {"name": "name", "value": "{EVENT.NAME}"},
+            {"name": "service", "value": "{HOST.HOST}"},
+            {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
+            {"name": "status", "value": "{TRIGGER.STATUS}"},
+            {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
+            {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
+            {"name": "EVENT.TAGS", "value": "{EVENT.TAGS}"},
+            {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
+            {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
+            {"name": "HOST.IP", "value": "{HOST.IP}"},
+            {"name": "HOST.NAME", "value": "{HOST.NAME}"},
+            {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
+            {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
+        ]
+
         if mediatype_list:
             existing_mediatype = mediatype_list[0]
             self.logger.info("Updating existing media type")
@@ -283,6 +305,7 @@ class ZabbixProvider(BaseProvider):
                     "mediatypeid": str(existing_mediatype["mediatypeid"]),
                     "script": script,
                     "status": "0",
+                    "parameters": parameters,
                     "description": mediatype_description,
                 },
             )
@@ -292,27 +315,7 @@ class ZabbixProvider(BaseProvider):
             params = {
                 "name": mediatype_name,
                 "type": f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE}",  # webhook
-                "parameters": [
-                    {"name": "keepApiKey", "value": api_key},
-                    {"name": "keepApiUrl", "value": keep_api_url},
-                    {"name": "id", "value": "{EVENT.ID}"},
-                    {"name": "triggerId", "value": "{TRIGGER.ID}"},
-                    {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
-                    {"name": "message", "value": "{ALERT.MESSAGE}"},
-                    {"name": "name", "value": "{EVENT.NAME}"},
-                    {"name": "service", "value": "{HOST.HOST}"},
-                    {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
-                    {"name": "status", "value": "{TRIGGER.STATUS}"},
-                    {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
-                    {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
-                    {"name": "EVENT.TAGS", "value": "{EVENT.TAGS}"},
-                    {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
-                    {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
-                    {"name": "HOST.IP", "value": "{HOST.IP}"},
-                    {"name": "HOST.NAME", "value": "{HOST.NAME}"},
-                    {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
-                    {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
-                ],
+                "parameters": parameters,
                 "script": script,
                 "process_tags": 1,
                 "show_event_menu": 0,

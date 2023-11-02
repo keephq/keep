@@ -149,7 +149,7 @@ export function AlertsTableBody({
           return (
             <TableRow key={alert.id}>
               {
-                <TableCell>
+                <TableCell className="pb-9">
                   <AlertMenu
                     alert={alert}
                     canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}

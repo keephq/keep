@@ -13,12 +13,14 @@ import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";
 import { Alert } from "./models";
+import { toast } from "react-toastify";
 
 interface Props {
   alert: Alert;
   canOpenHistory: boolean;
   openHistory: () => void;
   provider?: Provider;
+  mutate: () => void;
 }
 
 export default function AlertMenu({
@@ -26,6 +28,7 @@ export default function AlertMenu({
   provider,
   canOpenHistory,
   openHistory,
+  mutate,
 }: Props) {
   const alertName = alert.name;
   const alertSource = alert.source![0];
@@ -68,6 +71,38 @@ export default function AlertMenu({
         ] as string;
       }
     });
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/providers/${provider.id}/invoke/${method.func_name}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(methodParams),
+        }
+      );
+      const response_object = await response.json();
+      if (response.ok) {
+        mutate();
+        return response_object;
+      }
+      toast.error(
+        `Failed to invoke "${method.name}" on ${
+          provider.details.name ?? provider.id
+        } due to ${response_object.detail}`,
+        { position: toast.POSITION.TOP_LEFT }
+      );
+    } catch (e: any) {
+      toast.error(
+        `Failed to invoke "${method.name}" on ${
+          provider.details.name ?? provider.id
+        } due to ${e.message}`,
+        { position: toast.POSITION.TOP_LEFT }
+      );
+    }
   };
 
   return (
@@ -160,6 +195,7 @@ export default function AlertMenu({
                   className={`${active ? "bg-slate-200" : "text-gray-900"} ${
                     !alert.pushed ? "text-slate-300 cursor-not-allowed" : ""
                   } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                  disabled={!alert.pushed}
                 >
                   <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                   Delete
