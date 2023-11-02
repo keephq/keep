@@ -194,7 +194,6 @@ class ZabbixProvider(BaseProvider):
 
         # zabbix < 6.4 compatibility
         data["auth"] = f"{self.authentication_config.auth_token}"
-        self.logger.info(f"Sending data: {data}")
 
         response = requests.post(url, json=data, headers=headers)
 
