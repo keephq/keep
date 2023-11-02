@@ -21,9 +21,10 @@ interface Props {
   groupBy?: string;
   workflows?: any[];
   providers?: Provider[];
+  mutate: () => void;
 }
 
-export function AlertTable({ data, groupBy, workflows, providers }: Props) {
+export function AlertTable({ data, groupBy, workflows, providers, mutate }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -96,6 +97,7 @@ export function AlertTable({ data, groupBy, workflows, providers }: Props) {
           openModal={openModal}
           workflows={workflows}
           providers={providers}
+          mutate={mutate}
         />
       </Table>
       <AlertTransition

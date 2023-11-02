@@ -12,6 +12,7 @@ import requests
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -106,7 +107,13 @@ class ZabbixProvider(BaseProvider):
             func_name="close_problem",
             scopes=["event.acknowledge"],
             type="action",
-        )
+        ),
+        ProviderMethod(
+            name="Unsuppress Problem",
+            func_name="unsurrpress_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
     ]
 
     def __init__(
@@ -129,7 +136,16 @@ class ZabbixProvider(BaseProvider):
         Args:
             id (str): The problem id.
         """
-        self.__send_request("event.acknowledge", {"eventids": id, "action": 0})
+        try:
+            self.__send_request("event.acknowledge", {"eventids": id, "action": 1})
+        except Exception as e:
+            raise ProviderMethodException(e.args[0].get("data"))
+
+    def unsurrpress_problem(self, id: str):
+        try:
+            self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
+        except Exception as e:
+            raise ProviderMethodException(e.args[0].get("data"))
 
     def validate_config(self):
         """
@@ -190,18 +206,23 @@ class ZabbixProvider(BaseProvider):
 
     def get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
-        problems = self.__send_request("problem.get")
+        problems = self.__send_request("problem.get", {"recent": False})
         formatted_alerts = []
         for problem in problems.get("result", []):
             name = problem.pop("name")
             problem.pop("source")
+            status = (
+                "Problem"
+                if problem.pop("acknowledged") == "0"
+                else "Acked"
+                if problem.pop("suppressed") == "0"
+                else "Surpressed"
+            )
             formatted_alerts.append(
                 AlertDto(
                     id=problem.pop("eventid"),
                     name=name,
-                    status="active"
-                    if problem.pop("acknowledged") == "0"
-                    else "acknowledged",
+                    status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
                         int(problem.get("clock"))
                     ).isoformat(),

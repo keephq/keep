@@ -5,37 +5,40 @@ import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
 import {
   ArchiveBoxIcon,
-  BellSlashIcon,
   PaperAirplaneIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
-import { Provider } from "app/providers/providers";
+import { Provider, ProviderMethod } from "app/providers/providers";
+import { toast } from "react-toastify";
+import { Alert } from "./models";
 
 interface Props {
-  alertName: string;
-  alertSource?: string;
+  alert: Alert;
   canOpenHistory: boolean;
   openHistory: () => void;
-  pushed: boolean;
   provider?: Provider;
+  mutate: () => void;
 }
 
 export default function AlertMenu({
-  alertName,
-  alertSource,
+  alert,
   canOpenHistory,
   openHistory,
-  pushed,
   provider,
+  mutate,
 }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [originalContainerHeight, setOriginalContainerHeight] = useState<
     string | null
   >(null);
+
+  const alertName = alert.name;
+  const alertSource = alert.source![0];
+  const pushed = alert.pushed;
 
   const handleMenuFocus = () => {
     setIsMenuOpen(true);
@@ -67,7 +70,9 @@ export default function AlertMenu({
       // If the bottom of the menu goes beyond the container's viewport, adjust the container's height
       if (relativeMenuBottomPosition > containerHeight) {
         const extraHeightNeeded = relativeMenuBottomPosition - containerHeight;
-        container.style.height = `${containerHeight + extraHeightNeeded + 10}px`;
+        container.style.height = `${
+          containerHeight + extraHeightNeeded + 10
+        }px`;
       }
     } else if (originalContainerHeight) {
       // If menu is closed, reset the container's height
@@ -97,6 +102,56 @@ export default function AlertMenu({
         // TODO: Think about something else but this is an easy way to refresh the page
         window.location.reload();
       }
+    }
+  };
+
+  const invokeMethod = async (
+    provider: Provider,
+    method: ProviderMethod,
+    methodParams: { [key: string]: string }
+  ) => {
+    const session = await getSession();
+    const apiUrl = getApiURL();
+
+    // Auto populate params from the alert itself
+    method.func_params?.forEach((param) => {
+      if (Object.keys(alert).includes(param.name)) {
+        methodParams[param.name] = alert[
+          param.name as keyof typeof alert
+        ] as string;
+      }
+    });
+
+    try {
+      const response = await fetch(
+        `${apiUrl}/providers/${provider.id}/invoke/${method.func_name}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(methodParams),
+        }
+      );
+      const response_object = await response.json();
+      if (response.ok) {
+        mutate();
+        return response_object;
+      }
+      toast.error(
+        `Failed to invoke "${method.name}" on ${
+          provider.details.name ?? provider.id
+        } due to ${response_object.detail}`,
+        { position: toast.POSITION.TOP_LEFT }
+      );
+    } catch (e: any) {
+      toast.error(
+        `Failed to invoke "${method.name}" on ${
+          provider.details.name ?? provider.id
+        } due to ${e.message}`,
+        { position: toast.POSITION.TOP_LEFT }
+      );
     }
   };
 
@@ -148,22 +203,6 @@ export default function AlertMenu({
                   </Link>
                 )}
               </Menu.Item>
-              {/* <Menu.Item>
-                {({ active }) => (
-                  <button
-                    disabled={true}
-                    className={`${
-                      active ? "bg-slate-200" : "text-gray-900"
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs text-slate-300 cursor-not-allowed`}
-                  >
-                    <BellSlashIcon
-                      className="mr-2 h-4 w-4"
-                      aria-hidden="true"
-                    />
-                    Silence
-                  </button>
-                )}
-              </Menu.Item> */}
               <Menu.Item>
                 {({ active }) => (
                   <button
@@ -192,7 +231,11 @@ export default function AlertMenu({
                           className={`${
                             active ? "bg-slate-200" : "text-gray-900"
                           } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                          onClick={async () =>
+                            await invokeMethod(provider, method, {})
+                          }
                         >
+                          {/* TODO: We can probably make this icon come from the server as well */}
                           <PaperAirplaneIcon
                             className="mr-2 h-4 w-4"
                             aria-hidden="true"

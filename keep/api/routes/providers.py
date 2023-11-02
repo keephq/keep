@@ -2,7 +2,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Callable, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -22,7 +22,10 @@ from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.base.provider_exceptions import GetAlertException
+from keep.providers.base.provider_exceptions import (
+    GetAlertException,
+    ProviderMethodException,
+)
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -537,6 +540,59 @@ async def install_provider_oauth2(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/{provider_id}/invoke/{method}",
+    description="Invoke provider special method",
+    status_code=200,
+)
+def invoke_provider_method(
+    provider_id: str,
+    method: str,
+    method_params: dict,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    logger.info(
+        "Invoking provider method", extra={"provider_id": provider_id, "method": method}
+    )
+    provider = session.exec(
+        select(Provider).where(
+            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        )
+    ).one()
+
+    if not provider:
+        raise HTTPException(404, detail="Provider not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider_config = secret_manager.read_secret(
+        provider.configuration_key, is_json=True
+    )
+    provider_instance = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider.type, provider_config
+    )
+
+    func: Callable = getattr(provider_instance, method, None)
+    if not func:
+        raise HTTPException(400, detail="Method not found")
+
+    try:
+        response = func(**method_params)
+    except ProviderMethodException as e:
+        logger.exception(
+            "Failed to invoke method",
+            extra={"provider_id": provider_id, "method": method},
+        )
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+    logger.info(
+        "Successfully invoked provider method",
+        extra={"provider_id": provider_id, "method": method},
+    )
+    return response
 
 
 # Webhook related endpoints

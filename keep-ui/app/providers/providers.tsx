@@ -21,6 +21,7 @@ export interface ProviderMethodParam {
 export interface ProviderMethod {
   name: string;
   scopes: string[];
+  func_name: string;
   description: string;
   category: string;
   type: "view" | "action";

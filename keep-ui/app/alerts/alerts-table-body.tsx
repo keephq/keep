@@ -35,6 +35,7 @@ interface Props {
   openModal?: (alert: Alert) => void;
   workflows?: Workflow[];
   providers?: Provider[];
+  mutate: () => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -87,6 +88,7 @@ export function AlertsTableBody({
   openModal,
   workflows,
   providers,
+  mutate
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
@@ -149,14 +151,13 @@ export function AlertsTableBody({
               {
                 <TableCell>
                   <AlertMenu
-                    alertName={alert.name}
-                    alertSource={alert.source![0]}
+                    alert={alert}
                     canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}
                     openHistory={() => openModal!(alert)}
-                    pushed={alert.pushed}
                     provider={providers?.find(
                       (p) => p.type === alert.source![0]
                     )}
+                    mutate={mutate}
                   />
                 </TableCell>
               }
