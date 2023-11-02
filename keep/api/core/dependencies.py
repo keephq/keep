@@ -165,5 +165,15 @@ def verify_api_key_single_tenant(
     authorization: HTTPAuthorizationCredentials = Security(http_basic),
     session: Session = Depends(get_session),
 ) -> str:
-    # TODO
-    return SINGLE_TENANT_UUID
+    # if we don't want to use authentication, return the single tenant id
+    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+        return SINGLE_TENANT_UUID
+
+    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
+    statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+    tenant_api_key = session.exec(statement).first()
+    if not tenant_api_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    request.state.tenant_id = tenant_api_key.tenant_id
+    return tenant_api_key.tenant_id

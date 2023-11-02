@@ -43,7 +43,7 @@ export const singleTenantAuthOptions = {
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text", placeholder: "keep" },
-        password: {  label: "Password", type: "password" }
+        password: {  label: "Password", type: "password", placeholder: "keep" }
       },
       async authorize(credentials, req) {
         const apiUrl = getApiURL();
@@ -65,21 +65,30 @@ export const singleTenantAuthOptions = {
           // Assuming the response contains the user's data if authentication was successful
           if (user && user.accessToken) {
               return {
-                ...credentials,
-                accessToken
+                  ...user,
+                  accessToken
               }
           } else {
               return null;
           }
         }
         catch (error) {
-          console.error('Authentication error:', error.message);
-          return null;
-        }
+          if (error instanceof Error) {
+              console.error('Authentication error:', error.message);
+          } else {
+              console.error('Unknown authentication error:', error);
+          }
+      }
       },
 
     })
   ],
+  theme: {
+      colorScheme: "auto", // "auto" | "dark" | "light"
+      brandColor: "#000000", // Hex color code
+      logo: "/keep_big.svg", // Absolute URL to image
+      buttonText: "#000000" // Hex color code
+  },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days

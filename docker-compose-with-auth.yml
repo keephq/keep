@@ -29,6 +29,8 @@ services:
       - KEEP_USE_AUTHENTICATION=true
       - KEEP_JWT_SECRET=keepjwtsecret
       - KEEP_MULTI_TENANT=false
+      - KEEP_DEFAULT_USERNAME=admin
+      - KEEP_DEFAULT_PASSWORD=keep
     volumes:
       - ./state:/state
     # command: --multi-tenant

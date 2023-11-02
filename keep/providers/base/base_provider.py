@@ -53,6 +53,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             "Base provider initalized", extra={"provider": self.__class__.__name__}
         )
         self.provider_type = self._extract_type()
+        self.results = []
 
     def _extract_type(self):
         """
@@ -100,6 +101,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         # trigger the provider
         results = self._notify(**kwargs)
+        self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_alert = kwargs.get("enrich_alert", [])
         if not enrich_alert:

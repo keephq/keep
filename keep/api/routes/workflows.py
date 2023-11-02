@@ -145,10 +145,11 @@ def run_workflow(
         )
     logger.info(
         "Workflow ran successfully",
-        extra={"workflow_id": workflow_id},
+        extra={
+            "workflow_id": workflow_id,
+            "workflow_execution_id": workflow_execution_id,
+        },
     )
-    # TODO - add some workflow_execution id to track the execution
-    # TODO - add workflow execution_id
     return {
         "workflow_id": workflow_id,
         "workflow_execution_id": workflow_execution_id,
@@ -267,6 +268,7 @@ def get_workflow_by_id(
             triggered_by=workflow_execution.triggered_by,
             error=workflow_execution.error,
             execution_time=workflow_execution.execution_time,
+            results=workflow_execution.results,
         )
         workflow_executions_dtos.append(workflow_execution_dto)
 
@@ -315,5 +317,6 @@ def get_workflow_execution_status(
             )
             for log in workflow_execution.logs
         ],
+        results=workflow_execution.results,
     )
     return workflow_execution_dto

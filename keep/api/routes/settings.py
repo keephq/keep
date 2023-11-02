@@ -62,7 +62,7 @@ def _get_users_db(tenant_id: str) -> list[User]:
         User(
             email=f"{user.username}",
             name=user.username,
-            last_sign_in=user.last_sign_in,
+            last_login=str(user.last_sign_in),
             created_at=str(user.created_at),
         )
         for user in users
