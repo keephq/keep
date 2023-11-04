@@ -139,8 +139,10 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     )
     app.include_router(status.router, prefix="/status", tags=["status"])
 
-    # if its single tenant, add signin endpoint
-    if not multi_tenant or multi_tenant == "false":
+    # if its single tenant with authentication, add the signin endpoint
+    if (not multi_tenant or multi_tenant == "false") and os.environ.get(
+        "KEEP_USE_AUTHENTICATION", "false"
+    ) == "true":
 
         @app.post("/signin")
         def signin(body: dict):
