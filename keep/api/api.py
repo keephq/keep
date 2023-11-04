@@ -17,14 +17,15 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
-from keep.api.core.db import create_db_and_tables, try_create_single_tenant
+from keep.api.core.db import create_db_and_tables, get_user, try_create_single_tenant
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
     get_user_email,
     get_user_email_single_tenant,
     verify_api_key,
+    verify_api_key_single_tenant,
     verify_bearer_token,
-    verify_single_tenant,
+    verify_bearer_token_single_tenant,
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -124,6 +125,8 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     multi_tenant = (
         multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
     )
+    # assign it to the environment variable so we can use it in settings route
+    os.environ["KEEP_MULTI_TENANT"] = multi_tenant
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
@@ -135,6 +138,35 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
     app.include_router(status.router, prefix="/status", tags=["status"])
+
+    # if its single tenant, add signin endpoint
+    if not multi_tenant or multi_tenant == "false":
+
+        @app.post("/signin")
+        def signin(body: dict):
+            # validate the user/password
+            user = get_user(body.get("username"), body.get("password"))
+
+            if not user:
+                return JSONResponse(
+                    status_code=401,
+                    content={"message": "Invalid username or password"},
+                )
+            # generate a JWT secret
+            jwt_secret = os.environ.get("KEEP_JWT_SECRET")
+            if not jwt_secret:
+                raise HTTPException(status_code=401, detail="Missing JWT secret")
+            token = jwt.encode(
+                {
+                    "email": f"{user.username}@keephq.com",
+                    "tenant_id": SINGLE_TENANT_UUID,
+                },
+                jwt_secret,
+                algorithm="HS256",
+            )
+            # return the token
+            return {"accessToken": token}
+
     from fastapi import BackgroundTasks
 
     @app.post("/start-services")
@@ -160,8 +192,10 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
             create_db_and_tables()
         if not multi_tenant or multi_tenant == "false":
             # When running in single tenant mode, we want to override the secured endpoints
-            app.dependency_overrides[verify_api_key] = verify_single_tenant
-            app.dependency_overrides[verify_bearer_token] = verify_single_tenant
+            app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
+            app.dependency_overrides[
+                verify_bearer_token
+            ] = verify_bearer_token_single_tenant
             app.dependency_overrides[get_user_email] = get_user_email_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 

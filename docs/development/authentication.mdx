@@ -1,0 +1,88 @@
+---
+title: "Authentication"
+sidebarTitle: Authentication
+---
+
+## Overview
+
+<Tip>Authentication is crucial for securing your application. Different modes can be set up depending on the deployment type. Our system supports three primary authentication strategies.</Tip>
+
+Understanding and configuring the appropriate authentication method is essential for protecting your resources and data. Choose the one that aligns with your deployment strategy and security requirements.
+
+## Multi-tenant authentication
+To run Keep's managed platform, we use multi tenant authentication, meaning that different tenants can work separately on Keep's platform. As Keep is fully open source, you can also use it.
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/multitenant.png" />
+</Frame>
+
+### When to use?
+<Info>If you run Keep in multi tenant mode, join our slack at https://slack.keephq.dev, ping us and we will be more than happy to help you spin it up.</Info>
+When you run Keep for more than one tenant  with clear separation between tenants.
+
+
+### Supported providers
+For multi-tenant authentication, we currently use Auth0, but additional providers could be added (just submit a GitHub issue with the required provider).
+
+### Setup instructions
+To spin up Keep with Auth0 as a provider, set up the following environment variables:
+#### Backend
+```
+KEEP_MULTI_TENANT=true
+AUTH0_MANAGEMENT_DOMAIN=
+AUTH0_CLIENT_ID=
+AUTH0_CLIENT_SECRET=
+AUTH0_AUDIENCE=
+```
+#### Frontend
+```
+NEXT_PUBLIC_AUTH_ENABLED=true
+AUTH0_CLIENT_ID=
+AUTH0_CLIENT_SECRET=
+AUTH0_ISSUER=
+```
+
+## Single tenant authentication
+Deploy self-hosted Keep with users management and authentication.
+<Frame
+    width="100"
+  height="200">
+  <img height="10" src="/images/singletenant.png" />
+</Frame>
+
+### When to use
+When you self-deploy Keep but still need user management and authentication.
+
+### Supported providers
+Username/Password, but additional providers could be added (just submit a GitHub issue with the required provider).
+
+
+### Setup instructions
+The easiest way would be to use [docker-compose-with-auth.yml](https://github.com/keephq/keep/blob/main/docker-compose-with-auth.yaml) which populates the following environment variables:
+
+#### Backend
+```
+- KEEP_MULTI_TENANT=false
+- KEEP_USE_AUTHENTICATION=true
+- KEEP_JWT_SECRET=keepjwtsecret # should be replaced
+- KEEP_DEFAULT_USERNAME=admin # should be replaced
+- KEEP_DEFAULT_PASSWORD=keep # should be replaced
+```
+#### Frontend
+```
+- NEXT_PUBLIC_AUTH_ENABLED=false
+- NEXT_PUBLIC_USE_AUTHENTICATION=true
+```
+
+## Single tenant - no authentication
+Deploy self-hosted Keep without authentication.
+
+### When to use
+When you want to try Keep as quick as possible. For example spinning it up on your localhost. For production usages, you should use authentication.
+
+### Supported providers
+N/A
+
+### Setup instructions
+The default [docker-compose.yml](https://github.com/keephq/keep/blob/main/docker-compose.yaml) file demonstrates how to start Keep without authentication.

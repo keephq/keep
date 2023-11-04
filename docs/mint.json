@@ -214,6 +214,7 @@
       "group": "Development",
       "pages": [
         "development/getting-started",
+        "development/authentication",
         "development/adding-a-new-provider"
       ]
     }

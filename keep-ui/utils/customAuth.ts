@@ -12,7 +12,10 @@ import {
   NextApiResponse,
 } from "next";
 
+// Set to true if you want to use "single tenant" mode
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
+// Set to true if you want to use "username/password" authentication
+const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
 
 type UpdateSession = (data?: any) => Promise<Session | null>;
 
@@ -50,7 +53,7 @@ export async function getServerSession<
     ? U
     : Session
 >(...args: GetServerSessionParams<O>): Promise<R | null> {
-  if (isSingleTenant) {
+  if (isSingleTenant && !useAuthentication) {
     // Return a modified session object or perform any additional logic
     // specific to "single tenant" mode
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -64,7 +67,7 @@ export async function getServerSession<
 export function useSession<R extends boolean>(
   options?: UseSessionOptions<R>
 ): SessionContextValue {
-  if (isSingleTenant) {
+  if (isSingleTenant && !useAuthentication) {
     // Return a modified session object or perform any additional logic
     // specific to "single tenant" mode
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -89,7 +92,7 @@ export function useSession<R extends boolean>(
 }
 
 export function getSession(params?: any) {
-  if (isSingleTenant) {
+  if (isSingleTenant && !useAuthentication) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     return Promise.resolve(useCustomSession());
   }

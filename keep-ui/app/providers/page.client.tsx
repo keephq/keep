@@ -114,7 +114,9 @@ export default function ProvidersPage({
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") return <div>Unauthenticated</div>;
   if (!providers || !installedProviders) return <Loading />;
-  if (error) throw new KeepApiError(error.message, `${getApiURL()}/providers`);
+  if (error) {
+    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
+  }
 
   const addProvider = (provider: Provider) => {
     setInstalledProviders((prevProviders) => {
