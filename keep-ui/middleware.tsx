@@ -4,7 +4,6 @@ const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
 
 
-
 export default (isSingleTenant && !useAuthentication)
   ? () => {}
   : withAuth({
@@ -21,10 +20,10 @@ export default (isSingleTenant && !useAuthentication)
           return true;
         }
 
-        return false;
+          return false;
+        },
       },
-  },
-  pages: {
-    signIn: "/signin",
-  },
-});
+      pages: {
+        signIn: "/signin",
+      },
+    });

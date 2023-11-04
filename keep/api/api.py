@@ -138,37 +138,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
     app.include_router(status.router, prefix="/status", tags=["status"])
-
-    # if its single tenant with authentication, add the signin endpoint
-    if (not multi_tenant or multi_tenant == "false") and os.environ.get(
-        "KEEP_USE_AUTHENTICATION", "false"
-    ) == "true":
-
-        @app.post("/signin")
-        def signin(body: dict):
-            # validate the user/password
-            user = get_user(body.get("username"), body.get("password"))
-
-            if not user:
-                return JSONResponse(
-                    status_code=401,
-                    content={"message": "Invalid username or password"},
-                )
-            # generate a JWT secret
-            jwt_secret = os.environ.get("KEEP_JWT_SECRET")
-            if not jwt_secret:
-                raise HTTPException(status_code=401, detail="Missing JWT secret")
-            token = jwt.encode(
-                {
-                    "email": f"{user.username}@keephq.com",
-                    "tenant_id": SINGLE_TENANT_UUID,
-                },
-                jwt_secret,
-                algorithm="HS256",
-            )
-            # return the token
-            return {"accessToken": token}
-
     from fastapi import BackgroundTasks
 
     @app.post("/start-services")
