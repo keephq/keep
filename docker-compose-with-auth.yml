@@ -1,0 +1,36 @@
+services:
+  keep-frontend:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_AUTH_ENABLED=false
+      - NEXTAUTH_SECRET=secret
+      - NEXTAUTH_URL=http://localhost:3000
+      - API_URL=http://keep-backend:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
+      - NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+      - NEXT_PUBLIC_USE_AUTHENTICATION=true
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+  keep-backend:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    ports:
+      - '8080:8080'
+    environment:
+      - PORT=8080
+      - SECRET_MANAGER_TYPE=FILE
+      - SECRET_MANAGER_DIRECTORY=/state
+      - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+      - KEEP_USE_AUTHENTICATION=true
+      - KEEP_JWT_SECRET=keepjwtsecret
+      - KEEP_MULTI_TENANT=false
+      - KEEP_DEFAULT_USERNAME=admin
+      - KEEP_DEFAULT_PASSWORD=keep
+    volumes:
+      - ./state:/state
+    # command: --multi-tenant
