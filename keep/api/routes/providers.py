@@ -333,9 +333,9 @@ def validate_provider_scopes(
 
 
 @router.put("/{provider_id}", description="Update provider", status_code=200)
-def update_provider(
+async def update_provider(
     provider_id: str,
-    provider_info: dict = Body(...),
+    request: Request,
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
     updated_by: str = Depends(get_user_email),
@@ -346,6 +346,16 @@ def update_provider(
             "provider_id": provider_id,
         },
     )
+    # Try to parse as JSON first
+    try:
+        provider_info = await request.json()
+    except ValueError:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
 
     provider = session.exec(
         select(Provider).where(
@@ -360,6 +370,15 @@ def update_provider(
         "authentication": provider_info,
         "name": provider.name,
     }
+
+    # we support files as well
+    for key, value in provider_config.get("authentication", {}).items():
+        if isinstance(value, UploadFile):
+            provider_config["authentication"][key] = await value.read()
+            provider_config["authentication"][key] = provider_config["authentication"][
+                key
+            ].decode()
+
     context_manager = ContextManager(tenant_id=tenant_id)
     provider_instance = ProvidersFactory.get_provider(
         context_manager, provider_id, provider.type, provider_config

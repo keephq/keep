@@ -197,7 +197,11 @@ class Step:
             )
             return
 
-        self.logger.info("Action %s evaluated to run!", self.config.get("name"))
+        self.logger.info(
+            "Action %s evaluated to run! Reason: %s evaluated to true.",
+            self.config.get("name"),
+            if_conf,
+        )
 
         # Third, check throttling
         # Now check if throttling is enabled
@@ -228,8 +232,7 @@ class Step:
                                 self.step_id, results=step_output, foreach=self.foreach
                             )
                         else:
-                            self.provider.notify(**rendered_value)
-
+                            results = self.provider.notify(**rendered_value)
                         # exiting the loop as step/action execution was successful
                         break
                     except Exception as e:

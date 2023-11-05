@@ -5,7 +5,6 @@ import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
 import {
   ArchiveBoxIcon,
-  CloudArrowUpIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
@@ -53,6 +52,7 @@ export default function AlertMenu({
       />
     </svg>
   );
+
 
   const onDelete = async () => {
     const confirmed = confirm(
@@ -176,8 +176,8 @@ export default function AlertMenu({
                     disabled={!alert.pushed}
                     title={!alert.pushed ? "Cannot delete a pulled alert" : ""}
                   >
-                    <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Delete
+                    <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Create Workflow
                   </button>
                 )}
               </Menu.Item>
