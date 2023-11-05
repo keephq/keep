@@ -197,7 +197,11 @@ class Step:
             )
             return
 
-        self.logger.info("Action %s evaluated to run!", self.config.get("name"))
+        self.logger.info(
+            "Action %s evaluated to run! Reason: %s evaluated to true.",
+            self.config.get("name"),
+            if_conf,
+        )
 
         # Third, check throttling
         # Now check if throttling is enabled
