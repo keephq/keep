@@ -13,11 +13,7 @@ from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
-from keep.providers.models.provider_method import (
-    ProviderMethod,
-    ProviderMethodDTO,
-    ProviderMethodParam,
-)
+from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
@@ -135,7 +131,7 @@ class ProvidersFactory:
                 default = None
                 if getattr(params[param].default, "__name__", None) != "_empty":
                     mandatory = False
-                    default = params[param].default
+                    default = str(params[param].default)
                 func_params.append(
                     ProviderMethodParam(
                         name=param,

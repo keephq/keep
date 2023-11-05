@@ -111,14 +111,20 @@ class ZabbixProvider(BaseProvider):
             type="action",
         ),
         ProviderMethod(
-            name="Unsuppress Problem",
-            func_name="unsurrpress_problem",
+            name="Change Severity",
+            func_name="change_severity",
             scopes=["event.acknowledge"],
             type="action",
         ),
         ProviderMethod(
             name="Suppress Problem",
             func_name="surrpress_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Unsuppress Problem",
+            func_name="unsurrpress_problem",
             scopes=["event.acknowledge"],
             type="action",
         ),
@@ -145,12 +151,6 @@ class ZabbixProvider(BaseProvider):
             func_name="get_problem_messages",
             scopes=["problem.get"],
             type="view",
-        ),
-        ProviderMethod(
-            name="Change Severity",
-            func_name="change_severity",
-            scopes=["event.acknowledge"],
-            type="action",
         ),
     ]
 
@@ -183,22 +183,33 @@ class ZabbixProvider(BaseProvider):
         self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
         self.logger.info(f"Unsuppressed problem {id}")
 
-    def surrpress_problem(self, id: str, suppress_until: str = "now+1d"):
+    def surrpress_problem(
+        self,
+        id: str,
+        suppress_until: datetime.datetime = datetime.datetime.now()
+        + datetime.timedelta(days=1),
+    ):
         self.logger.info(f"Suppressing problem {id} until {suppress_until}")
+        if isinstance(suppress_until, str):
+            suppress_until = datetime.datetime.fromisoformat(suppress_until)
         self.__send_request(
             "event.acknowledge",
-            {"eventids": id, "action": "4", "suppress_until": suppress_until},
+            {
+                "eventids": id,
+                "action": 32,
+                "suppress_until": int(suppress_until.timestamp()),
+            },
         )
         self.logger.info(f"Suppressed problem {id} until {suppress_until}")
 
     def acknowledge_problem(self, id: str):
         self.logger.info(f"Acknowledging problem {id}")
-        self.__send_request("event.acknowledge", {"eventids": id, "action": "2"})
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 2})
         self.logger.info(f"Acknowledged problem {id}")
 
     def unacknowledge_problem(self, id: str):
         self.logger.info(f"Unacknowledging problem {id}")
-        self.__send_request("event.acknowledge", {"eventids": id, "action": "16"})
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 16})
         self.logger.info(f"Unacknowledged problem {id}")
 
     def add_message_to_problem(self, id: str, message_text: str):
@@ -207,7 +218,7 @@ class ZabbixProvider(BaseProvider):
         )
         self.__send_request(
             "event.acknowledge",
-            {"eventids": id, "message": message_text, "action": "4"},
+            {"eventids": id, "message": message_text, "action": 4},
         )
         self.logger.info(
             f"Added message to problem {id}", extra={"zabbix_message": message_text}
@@ -304,7 +315,9 @@ class ZabbixProvider(BaseProvider):
 
     def get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
-        problems = self.__send_request("problem.get", {"recent": False})
+        problems = self.__send_request(
+            "problem.get", {"recent": False, "selectSuppressionData": "extend"}
+        )
         formatted_alerts = []
         for problem in problems.get("result", []):
             name = problem.pop("name")

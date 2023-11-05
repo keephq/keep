@@ -22,6 +22,7 @@ import {
   TableHeaderCell,
   TableBody,
   TableCell,
+  DatePicker,
 } from "@tremor/react";
 
 interface Props {
@@ -95,6 +96,22 @@ export function AlertMethodTransition({
             onValueChange={(value: string) =>
               validateAndSetUserParams(param.name, value, param.mandatory)
             }
+          />
+        )}
+        {param.type.toLowerCase() === "datetime" && (
+          <DatePicker
+            minDate={new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)}
+            defaultValue={new Date(param.default as string)}
+            displayFormat="yyyy-MM-dd HH:mm:ss"
+            onValueChange={(value) => {
+              if (value) {
+                validateAndSetUserParams(
+                  param.name,
+                  value.toISOString(),
+                  param.mandatory
+                );
+              }
+            }}
           />
         )}
       </div>

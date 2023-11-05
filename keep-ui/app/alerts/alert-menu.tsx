@@ -35,6 +35,25 @@ export default function AlertMenu({
   const alertName = alert.name;
   const alertSource = alert.source![0];
 
+  const DynamicIcon = (props: any) => (
+    <svg
+      width="24px"
+      height="24px"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      {...props}
+    >
+      {" "}
+      <image
+        id="image0"
+        width={"24"}
+        height={"24"}
+        href={`/icons/${alert.source![0]}-icon.png`}
+      />
+    </svg>
+  );
+
   const onDelete = async () => {
     const confirmed = confirm(
       "Are you sure you want to delete this alert? This is irreversible."
@@ -134,7 +153,7 @@ export default function AlertMenu({
                           onClick={() => openMethodTransition(method)}
                         >
                           {/* TODO: We can probably make this icon come from the server as well */}
-                          <CloudArrowUpIcon
+                          <DynamicIcon
                             className="mr-2 h-4 w-4"
                             aria-hidden="true"
                           />
