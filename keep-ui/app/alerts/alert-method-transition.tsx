@@ -193,7 +193,7 @@ export function AlertMethodTransition({
         )
       ) {
         // This means all method params are auto populated
-        invokeMethod(provider!, method!, newAutoParams, {}, mutate, closeModal);
+        invokeMethod(provider!, method!, newAutoParams, {}, closeModal, mutate);
       } else {
         setIsLoading(false);
       }
