@@ -26,6 +26,7 @@ import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
+import { Provider } from "app/providers/providers";
 
 interface Props {
   data: Alert[];
@@ -33,6 +34,8 @@ interface Props {
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
   workflows?: Workflow[];
+  providers?: Provider[];
+  mutate?: () => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -84,6 +87,8 @@ export function AlertsTableBody({
   groupedByData,
   openModal,
   workflows,
+  providers,
+  mutate
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
@@ -144,12 +149,15 @@ export function AlertsTableBody({
           return (
             <TableRow key={alert.id}>
               {
-                <TableCell>
+                <TableCell className="pb-9">
                   <AlertMenu
-                    alertName={alert.name}
-                    alertSource={alert.source![0]}
+                    alert={alert}
                     canOpenHistory={!groupedByData![(alert as any)[groupBy!]]}
                     openHistory={() => openModal!(alert)}
+                    provider={providers?.find(
+                      (p) => p.type === alert.source![0]
+                    )}
+                    mutate={mutate}
                   />
                 </TableCell>
               }
@@ -242,9 +250,7 @@ export function AlertsTableBody({
                 {alert.source?.map((source, index) => {
                   return (
                     <Image
-                      className={`inline-block rounded-full ${
-                        index == 0 ? "" : "-ml-2"
-                      }`}
+                      className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
                       key={source}
                       alt={source}
                       height={24}
