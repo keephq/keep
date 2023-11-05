@@ -1,7 +1,10 @@
 import os
 import secrets
+import smtplib
+from email.mime.text import MIMEText
+from typing import Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlmodel import Session
 
 from keep.api.core.config import config
@@ -11,6 +14,7 @@ from keep.api.core.db import get_session
 from keep.api.core.db import get_users as get_users_from_db
 from keep.api.core.dependencies import verify_bearer_token
 from keep.api.models.alert import AlertDto
+from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
@@ -138,3 +142,65 @@ def _create_user_db(user_email: str, password: str, tenant_id: str) -> dict:
         return {"status": "OK"}
     except:
         raise HTTPException(status_code=409, detail="User already exists")
+
+
+@router.post("/smtp", description="Install or update SMTP settings")
+async def update_smtp_settings(
+    smtp_settings: SMTPSettings = Body(...),
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    # Logic to update SMTP settings in the database
+    # For example, you might want to save these settings associated with the tenant_id
+    update_smtp_settings_in_db(tenant_id, smtp_settings, session)
+    return {"status": "SMTP settings updated successfully"}
+
+
+@router.post("/smtp/test", description="Test SMTP settings")
+async def test_smtp_settings(
+    smtp_settings: SMTPSettings = Body(...),
+    tenant_id: str = Depends(verify_bearer_token),
+):
+    # Logic to test SMTP settings, perhaps by sending a test email
+    # You would use the provided SMTP settings to try and send an email
+    success, message, logs = test_smtp_connection(smtp_settings)
+    if success:
+        return {"status": True, "message": message, "logs": logs}
+    else:
+        {"status": False, "message": message, "logs": logs}
+
+
+def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
+    try:
+        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+
+        # Capture the SMTP session output
+        log_stream = io.StringIO()
+        server.set_debuglevel(1)  # Set debug level to capture SMTP session
+        server._print_debug = lambda *args: log_stream.write(
+            " ".join(str(arg) for arg in args) + "\n"
+        )
+
+        if settings.use_tls:
+            server.starttls()
+
+        server.login(settings.smtp_user, settings.smtp_password.get_secret_value())
+
+        # Send a test email to the user's email to ensure it works
+        message = MIMEText("This is a test message from the SMTP settings test.")
+        message["From"] = settings.sender_email
+        message["To"] = settings.smtp_user
+        message["Subject"] = "Test SMTP Settings"
+
+        server.sendmail(
+            settings.sender_email, [settings.smtp_user], message.as_string()
+        )
+        server.quit()
+
+        # Get the SMTP session log
+        smtp_log = log_stream.getvalue()
+        log_stream.close()
+
+        return True, "SMTP settings are correct and an email has been sent.", smtp_log
+    except Exception as e:
+        return False, str(e), log_stream.getvalue()
