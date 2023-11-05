@@ -123,7 +123,7 @@ export function AlertMethodTransition({
     method: ProviderMethod,
     methodParams: { [key: string]: string },
     userParams: { [key: string]: string },
-    mutate: () => void,
+    mutate?: () => void,
     closeModal: () => void
   ) => {
     const session = await getSession();

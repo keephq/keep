@@ -1,4 +1,5 @@
 import {
+  ArrowPathIcon,
   BellAlertIcon,
   MagnifyingGlassIcon,
   ServerStackIcon,
@@ -10,6 +11,7 @@ import {
   Flex,
   Callout,
   TextInput,
+  Button,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -123,15 +125,13 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
             onChange={(e) => setAlertNameSearchString(e.target.value)}
           />
         </div>
-        {/* <Button
-          icon={ArchiveBoxIcon}
+        <Button
+          icon={ArrowPathIcon}
           color="orange"
           size="xs"
-          disabled={true}
-          title="Coming Soon"
-        >
-          Export
-        </Button> */}
+          onClick={() => mutate()}
+          title="Refresh"
+        ></Button>
       </Flex>
       <AlertTable
         data={data
