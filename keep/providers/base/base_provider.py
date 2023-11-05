@@ -2,6 +2,7 @@
 Base class for all providers.
 """
 import abc
+import copy
 import datetime
 import json
 import logging
@@ -135,7 +136,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
             try:
                 if enrichment["value"].startswith("results."):
                     val = enrichment["value"].replace("results.", "")
-                    _enrichments[enrichment["key"]] = results[val]
+                    parts = val.split(".")
+                    r = copy.copy(results)
+                    for part in parts:
+                        r = r[part]
+                    _enrichments[enrichment["key"]] = r
                 else:
                     _enrichments[enrichment["key"]] = enrichment["value"]
             except Exception as e:

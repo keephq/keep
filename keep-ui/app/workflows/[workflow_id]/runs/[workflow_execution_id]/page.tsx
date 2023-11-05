@@ -89,7 +89,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
         {Object.keys(results).length > 0 && (
           <Card>
             <Title>Workflow Results</Title>
-            <Table className="w-full mb-8">
+            <Table className="w-full">
               <TableHead>
                 <TableRow>
                   <TableCell className="w-1/4 break-words whitespace-normal">Action ID</TableCell>
@@ -102,8 +102,16 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
                     <TableCell className="w-1/4 break-words whitespace-normal">{stepId}</TableCell>
                     <TableCell className="w-3/4 break-words whitespace-normal">
                       {Array.isArray(stepResults) ? stepResults.map((item, idx) => (
-                          <div key={idx}>{item}</div>
-                      )) : JSON.stringify(stepResults, null, 2)}
+                          <div key={idx}>
+                              {typeof item === 'object' && item !== null ? (
+                                  <pre>{JSON.stringify(item, null, 2)}</pre> // Use <pre> for formatted JSON
+                              ) : (
+                                  item // If it's not an object, render it as is
+                              )}
+                          </div>
+                      )) : (
+                          <pre>{JSON.stringify(stepResults, null, 2)}</pre> // Non-array `stepResults`, rendered as JSON
+                      )}
                   </TableCell>
                   </TableRow>
                 ))}
