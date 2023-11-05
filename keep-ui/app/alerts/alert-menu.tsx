@@ -2,7 +2,11 @@ import { Menu, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
-import { ArchiveBoxIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  ArchiveBoxIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
@@ -65,8 +69,7 @@ export default function AlertMenu({
         body: JSON.stringify({ alert_name: alertName }),
       });
       if (res.ok) {
-        // TODO: Think about something else but this is an easy way to refresh the page
-        window.location.reload();
+        mutate!();
       }
     }
   };
@@ -171,8 +174,8 @@ export default function AlertMenu({
                     disabled={!alert.pushed}
                     title={!alert.pushed ? "Cannot delete a pulled alert" : ""}
                   >
-                    <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Create Workflow
+                    <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Delete
                   </button>
                 )}
               </Menu.Item>
