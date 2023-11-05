@@ -6,12 +6,14 @@ import inspect
 import logging
 import os
 from dataclasses import fields
+from typing import get_args
 
 from keep.api.core.db import get_consumer_providers, get_installed_providers
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,35 @@ class ProvidersFactory:
             )
             return {}
 
+    def __get_methods(provider_class: BaseProvider) -> list[ProviderMethodDTO]:
+        methods = []
+        for method in provider_class.PROVIDER_METHODS:
+            params = dict(
+                inspect.signature(
+                    provider_class.__dict__.get(method.func_name)
+                ).parameters
+            )
+            func_params = []
+            for param in params:
+                if param == "self":
+                    continue
+                mandatory = True
+                default = None
+                if getattr(params[param].default, "__name__", None) != "_empty":
+                    mandatory = False
+                    default = str(params[param].default)
+                func_params.append(
+                    ProviderMethodParam(
+                        name=param,
+                        type=params[param].annotation.__name__,
+                        mandatory=mandatory,
+                        default=default,
+                        expected_values=list(get_args(params[param].annotation)),
+                    )
+                )
+            methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
+        return methods
+
     @staticmethod
     def get_all_providers() -> list[Provider]:
         """
@@ -205,6 +236,7 @@ class ProvidersFactory:
                     "provider_description"
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
+                provider_methods = ProvidersFactory.__get_methods(provider_class)
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -218,6 +250,7 @@ class ProvidersFactory:
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
                         scopes=scopes,
+                        methods=provider_methods,
                     )
                 )
             except ModuleNotFoundError:
