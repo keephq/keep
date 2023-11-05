@@ -333,6 +333,10 @@ class ZabbixProvider(BaseProvider):
             elif problem.pop("suppressed") != "0":
                 status = "SURPRESSED"
 
+            environment = problem.pop("environment", None)
+            if environment is None:
+                environment = "unknown"
+
             formatted_alerts.append(
                 AlertDto(
                     id=problem.pop("eventid"),
@@ -344,6 +348,7 @@ class ZabbixProvider(BaseProvider):
                     source=["zabbix"],
                     message=name,
                     severity=self.__get_severity(problem.pop("severity")),
+                    environment=environment,
                     **problem,
                 )
             )
