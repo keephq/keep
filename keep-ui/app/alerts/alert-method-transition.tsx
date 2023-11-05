@@ -123,8 +123,8 @@ export function AlertMethodTransition({
     method: ProviderMethod,
     methodParams: { [key: string]: string },
     userParams: { [key: string]: string },
-    mutate?: () => void,
-    closeModal: () => void
+    closeModal: () => void,
+    mutate?: () => void
   ) => {
     const session = await getSession();
     const apiUrl = getApiURL();
@@ -143,7 +143,7 @@ export function AlertMethodTransition({
       );
       const response_object = await response.json();
       if (response.ok) {
-        mutate();
+        mutate!();
         toast.success(`Successfully called "${method.name}"`, {
           position: toast.POSITION.TOP_LEFT,
         });
@@ -277,8 +277,8 @@ export function AlertMethodTransition({
                           method!,
                           autoParams,
                           userParams,
-                          mutate,
-                          closeModal
+                          closeModal,
+                          mutate
                         )
                       }
                       disabled={!buttonEnabled()}

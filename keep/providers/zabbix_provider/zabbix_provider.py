@@ -229,6 +229,11 @@ class ZabbixProvider(BaseProvider):
             "problem.get", {"eventids": id, "selectAcknowledges": "extend"}
         )
         messages = []
+
+        problems = problem.get("result", [])
+        if not problems:
+            return messages
+
         for acknowledge in problem.get("result", [])[0].get("acknowledges", []):
             if acknowledge.get("action") == "4":
                 time = datetime.datetime.fromtimestamp(int(acknowledge.get("clock")))
