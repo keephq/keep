@@ -43,6 +43,8 @@ from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
+from a2wsgi import ASGIMiddleware
+
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
 logger = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-
+NO_OF_WORKERS = int(os.environ.get("NO_OF_WORKERS",1))
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
@@ -274,10 +276,12 @@ def run(app: FastAPI):
     thread = threading.Thread(target=run_services_after_app_is_up)
     thread.start()
     logger.info("Starting the uvicorn server")
+    app = ASGIMiddleware(app)
     # run the server
     uvicorn.run(
         app,
         host=HOST,
         port=PORT,
         log_config=logging_config,
+        interface="wsgi"
     )

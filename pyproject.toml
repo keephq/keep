@@ -64,6 +64,7 @@ google-cloud-container = "^2.32.0"
 pympler = "^1.0.1"
 kafka-python = "^2.0.2"
 opentelemetry-exporter-otlp-proto-http = "^1.20.0"
+a2wsgi = "^1.8.0"
 
 
 [tool.poetry.group.dev.dependencies]
