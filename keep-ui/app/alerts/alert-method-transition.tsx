@@ -31,7 +31,7 @@ interface Props {
   method: ProviderMethod | null;
   alert: Alert;
   provider?: Provider;
-  mutate: () => void;
+  mutate?: () => void;
 }
 
 export function AlertMethodTransition({

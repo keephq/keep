@@ -2,11 +2,7 @@ import { Menu, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
-import { TrashIcon } from "@radix-ui/react-icons";
-import {
-  ArchiveBoxIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline";
+import { ArchiveBoxIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { getSession } from "utils/customAuth";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
@@ -19,7 +15,7 @@ interface Props {
   canOpenHistory: boolean;
   openHistory: () => void;
   provider?: Provider;
-  mutate: () => void;
+  mutate?: () => void;
 }
 
 export default function AlertMenu({
@@ -52,7 +48,6 @@ export default function AlertMenu({
       />
     </svg>
   );
-
 
   const onDelete = async () => {
     const confirmed = confirm(

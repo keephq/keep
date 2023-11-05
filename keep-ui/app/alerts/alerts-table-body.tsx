@@ -35,7 +35,7 @@ interface Props {
   openModal?: (alert: Alert) => void;
   workflows?: Workflow[];
   providers?: Provider[];
-  mutate: () => void;
+  mutate?: () => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {

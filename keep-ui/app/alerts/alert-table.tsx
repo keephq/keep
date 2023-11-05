@@ -21,7 +21,7 @@ interface Props {
   groupBy?: string;
   workflows?: any[];
   providers?: Provider[];
-  mutate: () => void;
+  mutate?: () => void;
 }
 
 export function AlertTable({ data, groupBy, workflows, providers, mutate }: Props) {
