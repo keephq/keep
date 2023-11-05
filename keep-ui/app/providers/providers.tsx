@@ -15,6 +15,8 @@ export interface ProviderAuthConfig {
 export interface ProviderMethodParam {
   name: string;
   type: string;
+  mandatory: boolean;
+  default?: string;
   expected_values?: string[];
 }
 

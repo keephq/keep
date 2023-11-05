@@ -6,6 +6,7 @@ import inspect
 import logging
 import os
 from dataclasses import fields
+from typing import get_args
 
 from keep.api.core.db import get_consumer_providers, get_installed_providers
 from keep.api.models.provider import Provider
@@ -130,9 +131,18 @@ class ProvidersFactory:
             for param in params:
                 if param == "self":
                     continue
+                mandatory = True
+                default = None
+                if getattr(params[param].default, "__name__", None) != "_empty":
+                    mandatory = False
+                    default = params[param].default
                 func_params.append(
                     ProviderMethodParam(
-                        name=param, type=params[param].annotation.__name__
+                        name=param,
+                        type=params[param].annotation.__name__,
+                        mandatory=mandatory,
+                        default=default,
+                        expected_values=list(get_args(params[param].annotation)),
                     )
                 )
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))

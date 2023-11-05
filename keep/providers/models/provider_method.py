@@ -10,6 +10,8 @@ class ProviderMethodParam(BaseModel):
 
     name: str
     type: str
+    mandatory: bool = True
+    default: str | None = None
     expected_values: list[
         str
     ] | None = None  # for example if type is Literal or something

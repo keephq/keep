@@ -3,8 +3,10 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
 import dataclasses
 import datetime
+import json
 import os
 import random
+from typing import Literal
 
 import pydantic
 import requests
@@ -114,6 +116,42 @@ class ZabbixProvider(BaseProvider):
             scopes=["event.acknowledge"],
             type="action",
         ),
+        ProviderMethod(
+            name="Suppress Problem",
+            func_name="surrpress_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Acknowledge Problem",
+            func_name="acknowledge_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Unacknowledge Problem",
+            func_name="unacknowledge_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Add Message to Problem",
+            func_name="add_message_to_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Get Problem Messages",
+            func_name="get_problem_messages",
+            scopes=["problem.get"],
+            type="view",
+        ),
+        ProviderMethod(
+            name="Change Severity",
+            func_name="change_severity",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
     ]
 
     def __init__(
@@ -136,16 +174,77 @@ class ZabbixProvider(BaseProvider):
         Args:
             id (str): The problem id.
         """
-        try:
-            self.__send_request("event.acknowledge", {"eventids": id, "action": 1})
-        except Exception as e:
-            raise ProviderMethodException(e.args[0].get("data"))
+        self.logger.info(f"Closing problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 1})
+        self.logger.info(f"Closed problem {id}")
 
     def unsurrpress_problem(self, id: str):
-        try:
-            self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
-        except Exception as e:
-            raise ProviderMethodException(e.args[0].get("data"))
+        self.logger.info(f"Unsuppressing problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
+        self.logger.info(f"Unsuppressed problem {id}")
+
+    def surrpress_problem(self, id: str, suppress_until: str = "now+1d"):
+        self.logger.info(f"Suppressing problem {id} until {suppress_until}")
+        self.__send_request(
+            "event.acknowledge",
+            {"eventids": id, "action": "4", "suppress_until": suppress_until},
+        )
+        self.logger.info(f"Suppressed problem {id} until {suppress_until}")
+
+    def acknowledge_problem(self, id: str):
+        self.logger.info(f"Acknowledging problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": "2"})
+        self.logger.info(f"Acknowledged problem {id}")
+
+    def unacknowledge_problem(self, id: str):
+        self.logger.info(f"Unacknowledging problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": "16"})
+        self.logger.info(f"Unacknowledged problem {id}")
+
+    def add_message_to_problem(self, id: str, message_text: str):
+        self.logger.info(
+            f"Adding message to problem {id}", extra={"zabbix_message": message_text}
+        )
+        self.__send_request(
+            "event.acknowledge",
+            {"eventids": id, "message": message_text, "action": "4"},
+        )
+        self.logger.info(
+            f"Added message to problem {id}", extra={"zabbix_message": message_text}
+        )
+
+    def get_problem_messages(self, id: str):
+        problem = self.__send_request(
+            "problem.get", {"eventids": id, "selectAcknowledges": "extend"}
+        )
+        messages = []
+        for acknowledge in problem.get("result", [])[0].get("acknowledges", []):
+            if acknowledge.get("action") == "4":
+                time = datetime.datetime.fromtimestamp(int(acknowledge.get("clock")))
+                messages.append(f'{time}: {acknowledge.get("message")}')
+        return messages
+
+    def change_severity(
+        self,
+        id: str,
+        new_severity: Literal[
+            "Not classified", "Information", "Warning", "Average", "High", "Disaster"
+        ],
+    ):
+        severity = 0
+        if new_severity.lower() == "information":
+            severity = 1
+        elif new_severity.lower() == "warning":
+            severity = 2
+        elif new_severity.lower() == "average":
+            severity = 3
+        elif new_severity.lower() == "high":
+            severity = 4
+        elif new_severity.lower() == "disaster":
+            severity = 5
+        self.__send_request(
+            "event.acknowledge", {"eventids": id, "severity": severity, "action": 8}
+        )
 
     def validate_config(self):
         """
@@ -200,7 +299,7 @@ class ZabbixProvider(BaseProvider):
         response.raise_for_status()
         response_json = response.json()
         if "error" in response_json:
-            raise Exception(response_json["error"])
+            raise ProviderMethodException(response_json.get("error", {}).get("data"))
         return response_json
 
     def get_alerts(self) -> list[AlertDto]:
@@ -210,20 +309,19 @@ class ZabbixProvider(BaseProvider):
         for problem in problems.get("result", []):
             name = problem.pop("name")
             problem.pop("source")
-            status = (
-                "PROBLEM"
-                if problem.pop("acknowledged") == "0"
-                else "ACKED"
-                if problem.pop("suppressed") == "0"
-                else "SURPRESSED"
-            )
+            status = "PROBLEM"
+            if problem.pop("acknowledged") != "0":
+                status = "ACKED"
+            elif problem.pop("suppressed") != "0":
+                status = "SURPRESSED"
+
             formatted_alerts.append(
                 AlertDto(
                     id=problem.pop("eventid"),
                     name=name,
                     status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
-                        int(problem.get("clock"))
+                        int(problem.get("clock")) + 10
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
@@ -277,20 +375,20 @@ class ZabbixProvider(BaseProvider):
             {"name": "keepApiUrl", "value": keep_api_url},
             {"name": "id", "value": "{EVENT.ID}"},
             {"name": "triggerId", "value": "{TRIGGER.ID}"},
-            {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
+            {"name": "lastReceived", "value": "{DATE} {TIME}"},
             {"name": "message", "value": "{ALERT.MESSAGE}"},
             {"name": "name", "value": "{EVENT.NAME}"},
             {"name": "service", "value": "{HOST.HOST}"},
             {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
             {"name": "status", "value": "{TRIGGER.STATUS}"},
+            {"name": "tags", "value": "{EVENT.TAGSJSON}"},
+            {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
             {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
             {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
-            {"name": "EVENT.TAGS", "value": "{EVENT.TAGS}"},
             {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
             {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
             {"name": "HOST.IP", "value": "{HOST.IP}"},
             {"name": "HOST.NAME", "value": "{HOST.NAME}"},
-            {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
             {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
         ]
 
@@ -425,9 +523,15 @@ class ZabbixProvider(BaseProvider):
     @staticmethod
     def format_alert(event: dict) -> AlertDto:
         environment = "unknown"
-        tags = event.get("tags", {})
+        tags = {
+            tag.get("tag"): tag.get("value")
+            for tag in json.loads(event.get("tags", "[]"))
+        }
         if isinstance(tags, dict):
-            environment = tags.get("environment", "unknown")
+            environment = tags.pop("environment", "unknown")
+            # environment exists in tags but is None
+            if environment == None:
+                environment = "unknown"
         severity = ZabbixProvider.__get_severity(event.pop("severity", "").lower())
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
@@ -444,6 +548,7 @@ class ZabbixProvider(BaseProvider):
             source=["zabbix"],
             severity=severity,
             url=url,
+            **tags,
         )
 
 
