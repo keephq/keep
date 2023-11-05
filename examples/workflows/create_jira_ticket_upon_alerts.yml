@@ -1,33 +1,40 @@
 workflow:
-  id: servicenow
-  description: create a ticket in servicenow when an alert is triggered
+  id: column
+  description: handle column alerts
   triggers:
     - type: alert
-      # create ticket for grafana/prometheus alerts
+      # we want to run this workflow only for Sentry alerts with high severity
       filters:
         - key: source
-          value: r"(grafana|prometheus)"
+          value: sentry
+        - key: severity
+          value: critical
+        - key: service
+          value: r"(payments|ftp)"
   actions:
-    - name: create-service-now-ticket
-      # if the ticket id is not present in the alert, create a ticket
-      if: "not '{{ alert.ticket_id }}' and {{ alert.annotations.ticket_type }}"
+    - name: send-slack-message-team-payments
+      # if the alert is on the payments service, slack the payments team
+      if: "'{{ alert.service }}' == 'payments'"
       provider:
-        type: servicenow
-        config: " {{ providers.servicenow }} "
+        type: slack
+        config: " {{ providers.team-payments-slack }} "
         with:
-          table_name: "{{ alert.annotations.ticket_type }}"
-          payload:
-            short_description: "{{ alert.name }} - {{ alert.description }} [created by Keep][fingerprint: {{alert.fingerprint}}]"
-            description: "{{ alert.description }}"
-          # enrich the alert with the ticket number and other details returned from servicenow
+          message: "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }} \n {{ alert}}"
+    - name: create-jira-ticket-oncall-board
+      if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
+      provider:
+        type: jira
+        config: " {{ providers.jira }} "
+        with:
+          board_name: "Oncall Board"
+          issuetype: "Task"
+          summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
+          description: "This ticket was created by Keep. \n\n Please check the alert details below: \n {{ alert }}"
+          # enrich the alerts
           enrich_alert:
             - key: ticket_type
-              value: servicenow
+              value: jira
             - key: ticket_id
-              value: results.sys_id
+              value: results.issue.key
             - key: ticket_url
-              value: results.link
-            - key: ticket_status
-              value: results.stage
-            - key: table_name
-              value: "{{ alert.annotations.ticket_type }}"
+              value: results.ticket_url
