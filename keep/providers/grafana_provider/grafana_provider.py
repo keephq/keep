@@ -286,18 +286,28 @@ class GrafanaProvider(BaseProvider):
                     annotations = {
                         k.lower(): v for k, v in alert.get("annotations", {}).items()
                     }
-                    alert_dto = AlertDto(
-                        id=alert_id,
-                        name=rule.get("name"),
-                        description=description,
-                        status=alert.get("state", rule.get("state")),
-                        lastReceived=alert.get("activeAt"),
-                        source=source,
-                        **labels,
-                        **annotations,
-                    )
-                    alert_ids.append(alert_id)
-                    alert_dtos.append(alert_dto)
+                    try:
+                        alert_dto = AlertDto(
+                            id=alert_id,
+                            name=rule.get("name"),
+                            description=description,
+                            status=alert.get("state", rule.get("state")),
+                            lastReceived=alert.get("activeAt"),
+                            source=source,
+                            **labels,
+                            **annotations,
+                        )
+                        alert_ids.append(alert_id)
+                        alert_dtos.append(alert_dto)
+                    except Exception:
+                        self.logger.warning(
+                            "Failed to parse alert",
+                            extra={
+                                "alert_id": alert_id,
+                                "alert_name": rule.get("name"),
+                            },
+                        )
+                        continue
         return alert_dtos
 
     def get_alerts(self) -> list[AlertDto]:
