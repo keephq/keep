@@ -9,7 +9,7 @@ from twilio.rest import Client
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -45,10 +45,44 @@ class TwilioProviderAuthConfig:
 
 
 class TwilioProvider(BaseProvider):
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="send_sms",
+            description="The API token has permission to send the SMS",
+            mandatory=True,
+            alias="Send SMS",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {}
+        for scope in self.PROVIDER_SCOPES:
+            if scope.name == "send_sms":
+                twilio_client = Client(
+                    self.authentication_config.account_sid,
+                    self.authentication_config.api_token,
+                )
+                try:
+                    # from: 15005550006 is a magic number according to https://www.twilio.com/docs/messaging/tutorials/automate-testing
+                    twilio_client.messages.create(
+                        from_="+15005550006",
+                        to="+5571981265131",
+                        body="scope test",
+                    )
+                    validated_scopes[scope.name] = True
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to validate scope {scope.name}",
+                        extra={"reason": str(e)},
+                    )
+                    validated_scopes[scope.name] = False
+
+        return validated_scopes
 
     def validate_config(self):
         self.authentication_config = TwilioProviderAuthConfig(
@@ -105,7 +139,7 @@ if __name__ == "__main__":
     twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
     twilio_from_phone_number = os.environ.get("TWILIO_FROM_PHONE_NUMBER")
     twilio_to_phone_number = os.environ.get("TWILIO_TO_PHONE_NUMBER")
-    # Initalize the provider and provider config
+    # Initialize the provider and provider config
     config = ProviderConfig(
         description="Twilio Input Provider",
         authentication={
@@ -115,6 +149,7 @@ if __name__ == "__main__":
         },
     )
     provider = TwilioProvider(context_manager, provider_id="twilio", config=config)
+    provider.validate_scopes()
     # Send SMS
     provider.notify(
         message_body="Keep Alert",
