@@ -139,7 +139,7 @@ function Builder({
         wrapDefinition(
           generateWorkflow(
             alertUuid,
-            "New Workflow Description",
+            "",
             [],
             [],
             triggers
