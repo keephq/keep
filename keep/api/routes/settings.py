@@ -53,7 +53,7 @@ def webhook_settings(
 
 @router.get("/users", description="Get all users")
 def get_users(tenant_id: str = Depends(verify_bearer_token)) -> list[User]:
-    if os.environ.get("KEEP_MULTI_TENANT", "true") == "true":
+    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
         return _get_users_auth0(tenant_id)
 
     return _get_users_db(tenant_id)
@@ -81,7 +81,7 @@ def _get_users_db(tenant_id: str) -> list[User]:
 
 @router.delete("/users/{user_email}", description="Delete a user")
 def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
-    if os.environ.get("KEEP_MULTI_TENANT", "true") == "true":
+    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
         return _delete_user_auth0(tenant_id)
 
     return _delete_user_db(user_email, tenant_id)
@@ -111,7 +111,7 @@ async def create_user(
     request: Request = None,
     tenant_id: str = Depends(verify_bearer_token),
 ):
-    if os.environ.get("KEEP_MULTI_TENANT", "true") == "true":
+    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
         return _create_user_auth0(user_email, tenant_id)
 
     data = await request.json()

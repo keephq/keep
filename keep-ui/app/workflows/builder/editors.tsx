@@ -38,8 +38,10 @@ export function GlobalEditor() {
       </Text>
       <Text className="mt-5">
         Use the toolbox to add steps, conditions and actions to your workflow
-        and click the `Generate` button to compile the workflow / `Deploy` button to deploy the workflow to Keep.
+        and click the `Generate` button to compile the workflow / `Deploy`
+        button to deploy the workflow to Keep.
       </Text>
+      {WorkflowEditor(properties, setProperty)}
     </EditorLayout>
   );
 }
@@ -71,7 +73,7 @@ function KeepStepEditor({
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
-  const providerConfig = properties.config as string;
+  const providerConfig = (properties.config as string).trim();
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
@@ -127,29 +129,53 @@ function KeepStepEditor({
         onChange={(e: any) => updateProperty("config", e.target.value)}
         className="my-2.5"
         value={providerConfig}
-        error={providerConfig !== "" && providerConfig !== undefined && installedProviderByType?.find(p => p.details?.name === providerConfig) === undefined}
-        errorMessage={`${providerConfig && installedProviderByType?.find(p => p.details?.name === providerConfig) === undefined ? "Please note this provider is not installed and you'll need to install it before executing this workflow." : ""}`}
+        error={
+          providerConfig !== "" &&
+          providerConfig !== undefined &&
+          installedProviderByType?.find(
+            (p) => p.details?.name === providerConfig
+          ) === undefined
+        }
+        errorMessage={`${
+          providerConfig &&
+          installedProviderByType?.find(
+            (p) => p.details?.name === providerConfig
+          ) === undefined
+            ? "Please note this provider is not installed and you'll need to install it before executing this workflow."
+            : ""
+        }`}
       />
       <Text className="my-2.5">Provider Parameters</Text>
-      {uniqueParams?.filter((key) => key !== 'kwargs').map((key) => {
-        let currentPropertyValue = ((properties.with as any) ?? {})[key];
-        if (typeof currentPropertyValue === "object") {
-          currentPropertyValue = JSON.stringify(currentPropertyValue);
-        }
-        return (
-          <>
-            <Text key={key}>{key}</Text>
-            <TextInput
-              id={`${key}`}
-              key={`${key}`}
-              placeholder={key}
-              onChange={propertyChanged}
-              className="mb-2.5"
-              value={currentPropertyValue}
-            />
-          </>
-        );
-      })}
+      <div>
+        <Text>If</Text>
+        <TextInput
+          id="if"
+          placeholder="If Condition"
+          onValueChange={(value) => updateProperty("if", value)}
+          className="mb-2.5"
+          value={properties?.if as string}
+        />
+      </div>
+      {uniqueParams
+        ?.filter((key) => key !== "kwargs")
+        .map((key, index) => {
+          let currentPropertyValue = ((properties.with as any) ?? {})[key];
+          if (typeof currentPropertyValue === "object") {
+            currentPropertyValue = JSON.stringify(currentPropertyValue);
+          }
+          return (
+            <div key={index}>
+              <Text>{key}</Text>
+              <TextInput
+                id={`${key}`}
+                placeholder={key}
+                onChange={propertyChanged}
+                className="mb-2.5"
+                value={currentPropertyValue}
+              />
+            </div>
+          );
+        })}
     </>
   );
 }
@@ -250,8 +276,8 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   };
 
   return (
-    <EditorLayout>
-      <Title>Workflow Editor</Title>
+    <>
+      <Title className="mt-2.5">Workflow Settings</Title>
       <div className="w-1/2">
         {Object.keys(properties).includes("manual") ? null : (
           <Button
@@ -290,9 +316,9 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
           </Button>
         )}
       </div>
-      {propertyKeys.map((key) => {
+      {propertyKeys.map((key, index) => {
         return (
-          <>
+          <div key={index}>
             <Text className="capitalize mt-2.5">{key}</Text>
             {key === "manual" ? (
               <div key={key}>
@@ -345,16 +371,15 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
               </>
             ) : (
               <TextInput
-                key={key}
                 placeholder={`Set the ${key}`}
                 onChange={(e: any) => updateProperty(key, e.target.value)}
                 value={properties[key] as string}
               />
             )}
-          </>
+          </div>
         );
       })}
-    </EditorLayout>
+    </>
   );
 }
 
@@ -365,11 +390,6 @@ export default function StepEditor({
 }) {
   const { type, componentType, name, setName, properties, setProperty } =
     useStepEditor();
-
-  // Type should be changed to workflow
-  if (type === "alert") {
-    return WorkflowEditor(properties, setProperty);
-  }
 
   function onNameChanged(e: any) {
     setName(e.target.value);
