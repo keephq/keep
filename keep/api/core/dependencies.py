@@ -27,7 +27,7 @@ http_digest = HTTPDigest(
 )  # hack for grafana, they don't support api key header
 http_basic = HTTPBasic(auto_error=False)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
