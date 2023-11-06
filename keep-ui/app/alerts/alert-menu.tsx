@@ -74,6 +74,13 @@ export default function AlertMenu({
     }
   };
 
+  const isMethodEnabled = (method: ProviderMethod) => {
+    return method.scopes.every(
+      (scope) =>
+        provider?.validatedScopes && provider.validatedScopes[scope] === true
+    );
+  };
+
   const openMethodTransition = (method: ProviderMethod) => {
     setMethod(method);
     setIsOpen(true);
@@ -141,13 +148,22 @@ export default function AlertMenu({
             {provider?.methods && provider?.methods?.length > 0 && (
               <div className="px-1 py-1">
                 {provider.methods.map((method) => {
+                  const methodEnabled = isMethodEnabled(method);
                   return (
                     <Menu.Item key={method.name}>
                       {({ active }) => (
                         <button
                           className={`${
                             active ? "bg-slate-200" : "text-gray-900"
+                          } ${
+                            !methodEnabled
+                              ? "text-slate-300 cursor-not-allowed"
+                              : ""
                           } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                          disabled={!methodEnabled}
+                          title={
+                            !methodEnabled ? "Missing required scopes" : ""
+                          }
                           onClick={() => openMethodTransition(method)}
                         >
                           {/* TODO: We can probably make this icon come from the server as well */}
