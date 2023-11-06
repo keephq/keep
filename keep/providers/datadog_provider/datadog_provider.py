@@ -11,6 +11,7 @@ import time
 
 import pydantic
 from datadog_api_client import ApiClient, Configuration
+from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
     ApiException,
     ForbiddenException,
@@ -33,6 +34,7 @@ from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -102,6 +104,22 @@ class DatadogProvider(BaseProvider):
             alias="Logs Read Data",
         ),
     ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Mute a Monitor",
+            func_name="mute_monitor",
+            scopes=["monitors_write"],
+            description="Mute a monitor",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Unmute a Monitor",
+            func_name="unmute_monitor",
+            scopes=["monitors_write"],
+            description="Unmute a monitor",
+            type="action",
+        ),
+    ]
     EVENT_NAME_PATTERN = r".*\] (.*)"
 
     def convert_to_seconds(s):
@@ -118,6 +136,79 @@ class DatadogProvider(BaseProvider):
         # to be exposed
         self.to = None
         self._from = None
+
+    def mute_monitor(
+        self,
+        id: str,
+        end: datetime.datetime = datetime.datetime.now() + datetime.timedelta(days=1),
+    ):
+        if isinstance(end, str):
+            end = datetime.datetime.fromisoformat(end)
+        with ApiClient(self.configuration) as api_client:
+            endpoint = Endpoint(
+                settings={
+                    "auth": ["apiKeyAuth", "appKeyAuth", "AuthZ"],
+                    "endpoint_path": "/api/v1/monitor/{monitor_id}/mute",
+                    "response_type": (dict,),
+                    "operation_id": "mute_monitor",
+                    "http_method": "POST",
+                    "version": "v1",
+                },
+                params_map={
+                    "monitor_id": {
+                        "required": True,
+                        "openapi_types": (int,),
+                        "attribute": "monitor_id",
+                        "location": "path",
+                    },
+                    "end": {
+                        "openapi_types": (int,),
+                        "attribute": "end",
+                        "location": "query",
+                    },
+                },
+                headers_map={
+                    "accept": ["application/json"],
+                    "content_type": ["application/json"],
+                },
+                api_client=api_client,
+            )
+            endpoint.call_with_http_info(
+                monitor_id=int(id),
+                end=int(end.timestamp()),
+            )
+
+    def unmute_monitor(
+        self,
+        id: str,
+    ):
+        with ApiClient(self.configuration) as api_client:
+            endpoint = Endpoint(
+                settings={
+                    "auth": ["apiKeyAuth", "appKeyAuth", "AuthZ"],
+                    "endpoint_path": "/api/v1/monitor/{monitor_id}/unmute",
+                    "response_type": (dict,),
+                    "operation_id": "mute_monitor",
+                    "http_method": "POST",
+                    "version": "v1",
+                },
+                params_map={
+                    "monitor_id": {
+                        "required": True,
+                        "openapi_types": (int,),
+                        "attribute": "monitor_id",
+                        "location": "path",
+                    },
+                },
+                headers_map={
+                    "accept": ["application/json"],
+                    "content_type": ["application/json"],
+                },
+                api_client=api_client,
+            )
+            endpoint.call_with_http_info(
+                monitor_id=int(id),
+            )
 
     def dispose(self):
         """
@@ -271,7 +362,7 @@ class DatadogProvider(BaseProvider):
         with ApiClient(self.configuration) as api_client:
             api = MonitorsApi(api_client)
 
-            monitors = api.list_monitors()
+            monitors = api.list_monitors(with_downtimes=True)
 
             for monitor in monitors:
                 try:
@@ -279,10 +370,13 @@ class DatadogProvider(BaseProvider):
                         k: v for k, v in map(lambda tag: tag.split(":"), monitor.tags)
                     }
                     severity = DatadogProvider.__get_priorty(f"P{monitor.priority}")
+                    muted = False
+                    if monitor.matching_downtimes:
+                        muted = True
                     alert = AlertDto(
                         id=monitor.id,
                         name=monitor.name,
-                        status=str(monitor.overall_state),
+                        status=str(monitor.overall_state) if not muted else "Muted",
                         lastReceived=monitor.overall_state_modified,
                         severity=severity,
                         message=monitor.message,
@@ -478,5 +572,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.validate_scopes()
+    result = provider.get_alerts()
     print(result)
