@@ -33,7 +33,7 @@ interface Props {
   accessToken: string;
 }
 
-const isValidPort = (port) => {
+const isValidPort = (port: number) => {
   return !isNaN(port) && port > 0 && port <= 65535;
 }
 
