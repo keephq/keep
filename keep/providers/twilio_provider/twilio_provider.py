@@ -1,0 +1,122 @@
+"""
+TwilioProvider is a class that implements the BaseProvider interface for Twilio updates.
+"""
+import dataclasses
+
+import pydantic
+from twilio.rest import Client
+
+from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
+from keep.providers.base.base_provider import BaseProvider
+from keep.providers.models.provider_config import ProviderConfig
+
+
+@pydantic.dataclasses.dataclass
+class TwilioProviderAuthConfig:
+    """Twilio authentication configuration."""
+
+    account_sid: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Twilio Account SID",
+            "sensitive": False,
+            "documentation_url": "https://support.twilio.com/hc/en-us/articles/223136027-Auth-Tokens-and-How-to-Change-Them",
+        }
+    )
+
+    api_token: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Twilio API Token",
+            "sensitive": True,
+            "documentation_url": "https://support.twilio.com/hc/en-us/articles/223136027-Auth-Tokens-and-How-to-Change-Them",
+        }
+    )
+
+    from_phone_number: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Twilio Phone Number",
+            "sensitive": False,
+            "documentation_url": "https://www.twilio.com/en-us/guidelines/regulatory",
+        }
+    )
+
+
+class TwilioProvider(BaseProvider):
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
+
+    def validate_config(self):
+        self.authentication_config = TwilioProviderAuthConfig(
+            **self.config.authentication
+        )
+
+    def dispose(self):
+        """
+        No need to dispose of anything, so just do nothing.
+        """
+        pass
+
+    def _notify(self, **kwargs: dict):
+        """
+        Notify alert with twilio SMS
+        """
+        # extract the required params
+        self.logger.debug("Notifying alert SMS via Twilio")
+        message_body = kwargs.get("message_body", "")
+        to_phone_number = kwargs.get("to_phone_number", "")
+
+        if not to_phone_number:
+            raise ProviderException(
+                f"{self.__class__.__name__} failed to notify alert SMS via Twilio: to_phone_number is required"
+            )
+        twilio_client = Client(
+            self.authentication_config.account_sid, self.authentication_config.api_token
+        )
+        try:
+            twilio_client.messages.create(
+                from_=self.authentication_config.from_phone_number,
+                to=to_phone_number,
+                body=message_body,
+            )
+        except Exception as e:
+            raise ProviderException(
+                f"{self.__class__.__name__} failed to notify alert SMS via Twilio: {e}"
+            )
+
+
+if __name__ == "__main__":
+    # Output debug messages
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+    # Load environment variables
+    import os
+
+    twilio_api_token = os.environ.get("TWILIO_API_TOKEN")
+    twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_from_phone_number = os.environ.get("TWILIO_FROM_PHONE_NUMBER")
+    twilio_to_phone_number = os.environ.get("TWILIO_TO_PHONE_NUMBER")
+    # Initalize the provider and provider config
+    config = ProviderConfig(
+        description="Twilio Input Provider",
+        authentication={
+            "api_token": twilio_api_token,
+            "account_sid": twilio_account_sid,
+            "from_phone_number": twilio_from_phone_number,
+        },
+    )
+    provider = TwilioProvider(context_manager, provider_id="twilio", config=config)
+    # Send SMS
+    provider.notify(
+        message_body="Keep Alert",
+        to_phone_number=twilio_to_phone_number,
+    )
