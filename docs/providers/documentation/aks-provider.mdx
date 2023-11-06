@@ -1,0 +1,49 @@
+---
+title: "Azure AKS"
+description: "Azure AKS provider to view kubernetes resources."
+---
+
+## Inputs
+
+- **command_type** (required): The command type to operate on the k8s cluster (`get_pods`, `get_pvc`, `get_node_pressure`).
+
+## Outputs
+
+Azure AKS Provider currently support the `query` function.
+
+## Authentication Parameters
+
+The Azure AKS Provider uses subscription_id, resource_name, resource_group_name, client_id, client_secret and tenant_id to allow you to query your cluster resources. You need to provide the following authentication parameters to connect:
+
+- **subscription_id** (required): The subscription id of your azure account.
+- **client_id** (required): The client id from your rbac config generated in azure.
+- **client_secret** (required): The client secret from your rbac config generated in azure.
+- **tenant_id** (required): The tenant id from your rbac config generated in azure.
+- **resource_group_name** (required): The resource group name where your aks is created.
+- **resource_name** (required): The cluster name of your aks.
+
+## Connecting with the Provider
+
+To connect to Azure AKS, follow below steps:
+
+1. Log in to your [Azure](https://azure.microsoft.com/) account.
+2. Go to your kubernetes service page and click on `Connect` button and then click on `Open Cloud Shell`.
+3. Run `az ad sp create-for-rbac --role owner --scopes /subscriptions/8d7964b8-cdf5-4f9b-aa49-adf9b4cebfec` in the cloud shell, you will get response similar to:
+   ```
+    {
+      "appId": "xxxxxx-xxxxx-xxxxxx-xxxx",
+      "displayName": "azure-cli-2023-11-06-13-00-52",
+      "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "tenant": "xxxxx-xxxxx-xxxx-xxxxx"
+    }
+   ```
+   In above JSON object, the `appId` is `client_id`, `password` is `client_secret` and `tenant` is `tenant_id`
+
+## Notes
+
+- This provider allows you to interact with Azure AKS to query resources in kubernetes cluster.
+
+## Useful Links
+
+- [Azure AKS List Cluster User Creds](https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/list-cluster-user-credentials?view=rest-aks-2023-08-01&tabs=HTTP)
+- [Azure AKS Doc](https://learn.microsoft.com/en-us/azure/aks/)
