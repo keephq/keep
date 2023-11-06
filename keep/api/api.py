@@ -114,7 +114,11 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
-    app = FastAPI()
+    app = FastAPI(
+        title="Keep API",
+        description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
+        version="0.1.0",
+    )
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         CORSMiddleware,
@@ -124,8 +128,8 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(EventCaptureMiddleware)
-    multi_tenant = (
-        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
+    multi_tenant = str(
+        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", "false")
     )
     # assign it to the environment variable so we can use it in settings route
     os.environ["KEEP_MULTI_TENANT"] = multi_tenant
@@ -142,7 +146,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint
-    if (not multi_tenant or multi_tenant == "false") and os.environ.get(
+    if (not multi_tenant or multi_tenant.lower() == "false") and os.environ.get(
         "KEEP_USE_AUTHENTICATION", "false"
     ) == "true":
 

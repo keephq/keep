@@ -205,6 +205,17 @@ class SentryProvider(BaseProvider):
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         self.logger.info("Setting up Sentry webhook")
+        # cannot install webhook with localhost
+        if (
+            "0.0.0.0" in keep_api_url
+            or "127.0.0.1" in keep_api_url
+            or "localhost" in keep_api_url
+        ):
+            raise ProviderConfigException(
+                provider_id=self.provider_id,
+                message="Cannot setup webhook with localhost, please use a public url",
+            )
+
         headers = {"Authorization": f"Bearer {self.authentication_config.api_key}"}
         if self.project_slug:
             project_slugs = [self.project_slug]

@@ -9,7 +9,7 @@ from uuid import uuid4
 import pymysql
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased, joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -461,6 +461,7 @@ def get_workflow_id(tenant_id, workflow_name):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
+            .where(Workflow.is_deleted == False)
         ).first()
 
         if workflow:
@@ -509,17 +510,28 @@ def enrich_alert(tenant_id, fingerprint, enrichments):
     with Session(engine) as session:
         enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
         if enrichment:
-            enrichment.enrichments.update(enrichments)
+            # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
+            # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
+            new_enrichment_data = {**enrichment.enrichment_data, **enrichments}
+            stmt = (
+                update(Enrichment)
+                .where(Enrichment.id == enrichment.id)
+                .values(enrichment_data=new_enrichment_data)
+            )
+            session.execute(stmt)
             session.commit()
+            # Refresh the instance to get updated data from the database
+            session.refresh(enrichment)
             return enrichment
-        alert_enrichment = AlertEnrichment(
-            tenant_id=tenant_id,
-            alert_fingerprint=fingerprint,
-            enrichments=enrichments,
-        )
-        session.add(alert_enrichment)
-        session.commit()
-    return alert_enrichment
+        else:
+            alert_enrichment = AlertEnrichment(
+                tenant_id=tenant_id,
+                alert_fingerprint=fingerprint,
+                enrichments=enrichments,
+            )
+            session.add(alert_enrichment)
+            session.commit()
+            return alert_enrichment
 
 
 def get_enrichment(tenant_id, fingerprint):
