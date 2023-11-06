@@ -1,16 +1,19 @@
+from typing import Optional
+
 from pydantic import BaseModel, SecretStr, validator
 
 
 class SMTPSettings(BaseModel):
     host: str
     port: int
-    user: str
-    password: SecretStr
-    use_tls: bool
-    use_ssl: bool
-    sender_email: str
+    from_email: str
+    username: Optional[str] = None
+    password: Optional[SecretStr] = None
+    secure: bool = True
+    # Only for testing
+    to_email: Optional[str] = "keep@example.com"
 
-    @validator("user", "sender_email")
+    @validator("from_email", "to_email")
     def email_validator(cls, v):
         if "@" not in v or "." not in v:
             raise ValueError("Invalid email address")
@@ -21,10 +24,10 @@ class SMTPSettings(BaseModel):
             "example": {
                 "host": "smtp.example.com",
                 "port": 587,
-                "user": "user@example.com",
+                "username": "user@example.com",
                 "password": "password",
-                "use_tls": True,
-                "use_ssl": False,
-                "email": "noreply@example.com",
+                "secure": True,
+                "from_email": "noreply@example.com",
+                "to_email": "",
             }
         }

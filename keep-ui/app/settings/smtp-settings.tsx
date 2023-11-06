@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { Card, Button, Title, Subtitle, TextInput } from '@tremor/react';
+import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
+import { fetcher } from "utils/fetcher";
 
 interface SMTPSettings {
   host: string;
   port: number;
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
   secure: boolean;
+  from_email: string;
+  to_email?: string;
+}
+
+interface SMTPSettingsErrors {
+  host?: string;
+  port?: string;
+  username?: string;
+  password?: string;
+  from_email?: string;
+  to_email?: string;
 }
 
 interface TestResult {
@@ -20,23 +33,133 @@ interface Props {
   accessToken: string;
 }
 
+const isValidPort = (port) => {
+  return !isNaN(port) && port > 0 && port <= 65535;
+}
+
 export default function SMTPSettingsForm({ accessToken }: Props) {
   const [settings, setSettings] = useState<SMTPSettings>({
     host: '',
-    port: 587,
+    port: 25,
     username: '',
     password: '',
     secure: false,
+    from_email: '',
+    to_email: '',
   });
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [errors, setErrors] = useState<SMTPSettingsErrors>({});
+  const [isSaveSuccessful, setSaveSuccessful] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [shouldFetch, setShouldFetch] = useState(true);
+  const [smtpInstalled, setSmtpInstalled] = useState(false);
+  const [deleteSuccessful, setDeleteSuccessful] = useState(false);
+
+  const validateSaveFields = () => {
+    const newErrors: SMTPSettingsErrors = {};
+    if (!settings.host) newErrors.host = 'Host is required';
+    if (!isValidPort(settings.port)) newErrors.port = 'Port is invalid';
+    if (!settings.from_email) newErrors.from_email = 'From is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateTestFields = () => {
+    const validSave = validateSaveFields();
+    if (!settings.to_email) setErrors(errors => ({ ...errors, to_email: 'To is required for testing' }));
+    return validSave && settings.to_email;
+  };
 
   const apiUrl = getApiURL();
+  const shouldFetchUrl = shouldFetch ? `${apiUrl}/settings/smtp` : null;
+
+   // Use the useSWR hook to fetch the settings
+   const { data: smtpSettings, error, isValidating: isLoading } = useSWR(
+    shouldFetchUrl, // Update with your actual endpoint
+    url => fetcher(url, accessToken) // Ensure you have an accessToken variable available
+  );
+
+  // Show loading state or error messages if needed
+  if (isLoading) return <div>Loading...</div>; // Loading state
+  if (error) return <div>Error: {error.message}</div>;
+
+  // if no errors and we have data, set the settings
+  if(smtpSettings){
+    // if the SMTP is not installed yet
+    if (Object.keys(smtpSettings).length === 0) {
+      // smtpSettings is an empty object, assign default values
+      setSettings(previousSettings => ({
+        ...previousSettings, // keep other settings if they exist
+        port: 25 // replace with your actual default port value
+      }));
+    } else {
+      // smtp is installed
+      setSettings(smtpSettings);
+      setSmtpInstalled(true);
+    }
+    setShouldFetch(false);
+  }
+
+
+  const onDelete = async () => {
+    const response = await fetch(`${apiUrl}/settings/smtp`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+    if (response.ok) {
+      // If the delete was successful
+      setDeleteSuccessful(true);
+      setSettings({
+        host: '',
+        port: 25,
+        username: '',
+        password: '',
+        secure: false,
+        from_email: '',
+        to_email: '',
+      });
+    } else {
+      // If the delete failed
+      setDeleteSuccessful(false);
+      const errorData = await response.json(); // assuming the server sends JSON with an error message
+      setErrorMessage(errorData.message || 'An error occurred while deleting.');
+    }
+  }
+
   const onSave = async () => {
-    // Logic to save the SMTP settings
+    if (!validateSaveFields()) return;
+
+    const payload = { ...settings }
+    // Remove 'to_email' if it's empty
+    if (!payload.to_email) {
+      delete payload.to_email; // Remove 'to_email' if it's empty
+    }
+    const response = await fetch(`${apiUrl}/settings/smtp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (response.ok) {
+      // If the save was successful
+      setSaveSuccessful(true);
+      setSmtpInstalled(true);
+    } else {
+      // If the save failed
+      setSaveSuccessful(false);
+      const errorData = await response.json(); // assuming the server sends JSON with an error message
+      setErrorMessage(errorData.message || 'An error occurred while saving.');
+    }
   };
 
   const onTest = async () => {
     try {
+      if (!validateTestFields()) return;
       const response = await fetch(`${apiUrl}/settings/smtp/test`, {
         method: 'POST',
         headers: {
@@ -46,17 +169,36 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
         body: JSON.stringify(settings),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.status === 200) {
+        // If status is 200, show success
+        const result = await response.json();
+        setTestResult({
+          status: true,
+          message: 'Success!',
+          logs: result.logs || [],
+        });
+      } else if (response.status === 400) {
+        // If status is 400, show message/logs from the response
+        const result = await response.json();
+        setTestResult({
+          status: false,
+          message: result.message || 'Error occurred.',
+          logs: result.logs || [],
+        });
+      } else {
+        // For any other status, show a static message
+        setTestResult({
+          status: false,
+          message: 'Failed to connect to server or process the request.',
+          logs: [],
+        });
       }
-
-      const result = await response.json();
-      setTestResult(result);
     } catch (error) {
+      // If the request fails to reach the server or there's a network error
       setTestResult({
         status: false,
         message: 'Failed to connect to server or process the request.',
-        logs: ['No logs to display.']
+        logs: [],
       });
     }
   };
@@ -67,6 +209,11 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
       ...settings,
       [name]: type === 'checkbox' ? checked : value,
     });
+    // Also clear errors for that field
+    setErrors(prevErrors => ({
+      ...prevErrors,
+      [name as keyof SMTPSettingsErrors]: undefined,
+    }));
   };
 
   return (
@@ -84,7 +231,12 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
             onChange={handleChange}
             placeholder='smtp.example.com'
             color="orange"
+            error={!!errors.host}
           />
+          <label className="block text-sm font-medium mb-1 text-gray-500">The SMTP host name of your mail server.</label>
+          {errors.host && (
+            <p className="mt-1 text-sm text-red-500">{errors.host}</p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -96,7 +248,30 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
             value={settings.port.toString()}
             onChange={handleChange}
             color="orange"
+            error={!!errors.port}
           />
+          <label className="block text-sm font-medium mb-1 text-gray-500">SMTP port number to use. Default is 25.</label>
+          {errors.port && (
+            <p className="mt-1 text-sm text-red-500">{errors.port}</p>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="from_email" className="block text-sm font-medium mb-1">From address</label>
+          <TextInput
+            type="text"
+            id="from_email"
+            name="from_email"
+            value={settings.from_email}
+            onChange={handleChange}
+            color="orange"
+            error={!!errors.from_email}
+            placeholder='keepserver@example.com'
+          />
+          <label className="block text-sm font-medium mb-1 text-gray-500">The default address this server will use to send the emails from.</label>
+          {errors.from_email && (
+            <p className="mt-1 text-sm text-red-500">{errors.from_email}</p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -108,7 +283,9 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
             value={settings.username}
             onChange={handleChange}
             color="orange"
+            error={!!errors.username}
           />
+          <label className="block text-sm font-medium mb-1 text-gray-500">Optional - if you use authenticated SMTP, enter your username.</label>
         </div>
 
         <div className="mb-4">
@@ -120,7 +297,9 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
             value={settings.password}
             onChange={handleChange}
             color="orange"
+            error={!!errors.password}
           />
+          <label className="block text-sm font-medium mb-1 text-gray-500">Optional - if you use authenticated SMTP, enter your password.</label>
         </div>
 
         <div className="mb-4">
@@ -133,30 +312,73 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
               checked={settings.secure}
               onChange={handleChange}
             />
-            <span className="ml-2 text-sm font-medium">Use SSL/TLS</span>
+            <span className="ml-2 text-sm font-medium">Use TLS</span>
           </label>
         </div>
 
-        <div className='flex justify-end space-x-2 mt-6'>
-          <Button onClick={onTest} color="orange">
-            Test
-          </Button>
-          <Button onClick={onSave} color="orange">
-            Update
-          </Button>
-        </div>
-      </Card>
+        <div className='flex flex-col justify-end space-y-2 mt-6'>
+    <div className='flex justify-end space-x-2'>
+      <Button onClick={onSave} color="orange" className="px-4 py-2">
+        Save
+      </Button>
+      <Button onClick={onDelete} color="orange" className="px-4 py-2" disabled={!smtpInstalled}>
+        Delete
+      </Button>
+    </div>
+    {(isSaveSuccessful === false || deleteSuccessful === false) && (
+      <div className="text-red-500 text-sm mt-2">
+        {errorMessage}
+      </div>
+    )}
+    {isSaveSuccessful === true && (
+      <div className="text-green-500 text-sm mt-2">
+        SMTP settings saved successfully.
+      </div>
+    )}
+    {deleteSuccessful === true && (
+      <div className="text-green-500 text-sm mt-2">
+        SMTP settings deleted successfully.
+      </div>
+    )}
+  </div>
+</Card>
+
+<Card className="mt-8 p-4">
+  <div className="mb-4">
+    <label htmlFor="to_email" className="block text-sm font-medium mb-1">To:</label>
+    <TextInput
+      type="text"
+      id="to_email"
+      name="to_email"
+      value={settings.to_email}
+      onChange={handleChange}
+      placeholder='recipient@example.com'
+      color="orange"
+      error={!!errors.to_email}
+    />
+    <label className="block text-sm font-medium mb-1 text-gray-500">A test mail address. Keep will try to send email to this address.</label>
+    {errors.to_email && (
+      <p className="mt-1 text-sm text-red-500">{errors.to_email}</p>
+    )}
+  </div>
+  <div className='flex justify-end space-x-2 mt-6'>
+    <Button onClick={onTest} color="orange" className="px-4 py-2">
+      Test
+    </Button>
+  </div>
+</Card>
       {testResult && (
-        <Card className={`mt-4 p-4 ${testResult.status ? 'bg-green-100' : 'bg-red-100'}`}>
-          <Title>{testResult.status ? 'Success' : 'Failure'}</Title>
-          <div className="mt-2 whitespace-pre-wrap">
-            <strong>Message:</strong> {testResult.message}
-            <br />
-            <strong>Logs:</strong>
-            <pre>{testResult.logs ? testResult.logs.join('\n') : 'No logs available.'}</pre>
-          </div>
-        </Card>
-      )}
+  <Card className={`mt-4 p-4 ${testResult.status ? 'bg-green-100' : 'bg-red-100'}`}>
+    <Title>{testResult.status ? 'Success' : 'Failure'}</Title>
+    <div className="mt-2 whitespace-pre-wrap" style={{ overflowX: 'auto' }}>
+      <strong>Message:</strong><br />{testResult.message}
+      <br />
+      <strong>Logs:</strong>
+      <pre style={{ overflowX: 'auto' }}>{testResult.logs ? testResult.logs.join('\n') : 'No logs available.'}</pre>
+    </div>
+  </Card>
+)}
+
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import io
+import json
 import os
 import secrets
 import smtplib
@@ -5,6 +7,7 @@ from email.mime.text import MIMEText
 from typing import Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from keep.api.core.config import config
@@ -19,6 +22,8 @@ from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
 from keep.api.utils.tenant_utils import get_or_create_api_key
+from keep.contextmanager.contextmanager import ContextManager
+from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
 
@@ -148,12 +153,45 @@ def _create_user_db(user_email: str, password: str, tenant_id: str) -> dict:
 async def update_smtp_settings(
     smtp_settings: SMTPSettings = Body(...),
     tenant_id: str = Depends(verify_bearer_token),
+):
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    # Save the SMTP settings in the secret manager
+    smtp_settings = smtp_settings.dict()
+    smtp_settings["password"] = smtp_settings["password"].get_secret_value()
+    secret_manager.write_secret(
+        secret_name="smtp", secret_value=json.dumps(smtp_settings)
+    )
+    return {"status": "SMTP settings updated successfully"}
+
+
+@router.get("/smtp", description="Get SMTP settings")
+async def get_smtp_settings(
+    tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ):
-    # Logic to update SMTP settings in the database
-    # For example, you might want to save these settings associated with the tenant_id
-    update_smtp_settings_in_db(tenant_id, smtp_settings, session)
-    return {"status": "SMTP settings updated successfully"}
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    # Read the SMTP settings from the secret manager
+    try:
+        smtp_settings = secret_manager.read_secret(secret_name="smtp")
+        smtp_settings = json.loads(smtp_settings)
+        return JSONResponse(status_code=200, content=smtp_settings)
+    except:
+        # everything ok but no smtp settings
+        return JSONResponse(status_code=200, content={})
+
+
+@router.delete("/smtp", description="Delete SMTP settings")
+async def delete_smtp_settings(
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    # Read the SMTP settings from the secret manager
+    secret_manager.delete_secret(secret_name="smtp")
+    return JSONResponse(status_code=200, content={})
 
 
 @router.post("/smtp/test", description="Test SMTP settings")
@@ -165,42 +203,60 @@ async def test_smtp_settings(
     # You would use the provided SMTP settings to try and send an email
     success, message, logs = test_smtp_connection(smtp_settings)
     if success:
-        return {"status": True, "message": message, "logs": logs}
+        return JSONResponse(status_code=200, content={"message": message, "logs": logs})
     else:
-        {"status": False, "message": message, "logs": logs}
+        return JSONResponse(status_code=400, content={"message": message, "logs": logs})
 
 
 def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
+    # Capture the SMTP session output
+    log_stream = io.StringIO()
     try:
-        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
-
-        # Capture the SMTP session output
-        log_stream = io.StringIO()
-        server.set_debuglevel(1)  # Set debug level to capture SMTP session
-        server._print_debug = lambda *args: log_stream.write(
-            " ".join(str(arg) for arg in args) + "\n"
+        # A patched version of smtplib.SMTP that captures the SMTP session output
+        server = PatchedSMTP(
+            settings.host, settings.port, timeout=10, log_stream=log_stream
         )
-
-        if settings.use_tls:
+        if settings.secure:
             server.starttls()
 
-        server.login(settings.smtp_user, settings.smtp_password.get_secret_value())
+        if settings.username and settings.password:
+            server.login(settings.username, settings.password.get_secret_value())
 
         # Send a test email to the user's email to ensure it works
         message = MIMEText("This is a test message from the SMTP settings test.")
-        message["From"] = settings.sender_email
-        message["To"] = settings.smtp_user
+        message["From"] = settings.from_email
+        message["To"] = settings.to_email
         message["Subject"] = "Test SMTP Settings"
 
-        server.sendmail(
-            settings.sender_email, [settings.smtp_user], message.as_string()
-        )
+        server.sendmail(settings.from_email, [settings.to_email], message.as_string())
         server.quit()
-
         # Get the SMTP session log
-        smtp_log = log_stream.getvalue()
+        smtp_log = log_stream.getvalue().splitlines()
         log_stream.close()
 
         return True, "SMTP settings are correct and an email has been sent.", smtp_log
     except Exception as e:
-        return False, str(e), log_stream.getvalue()
+        return False, str(e), log_stream.getvalue().splitlines()
+
+
+class PatchedSMTP(smtplib.SMTP):
+    debuglevel = 1
+
+    def __init__(
+        self,
+        host="",
+        port=0,
+        local_hostname=None,
+        timeout=...,
+        source_address=None,
+        log_stream=None,
+    ):
+        self.log_stream = log_stream
+        super().__init__(host, port, local_hostname, timeout, source_address)
+
+    def _print_debug(self, *args):
+        if self.log_stream is not None:
+            # Write debug info to the StringIO stream
+            self.log_stream.write(" ".join(str(arg) for arg in args) + "\n")
+        else:
+            super()._print_debug(*args)
