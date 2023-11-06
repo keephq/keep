@@ -127,7 +127,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     )
     app.add_middleware(EventCaptureMiddleware)
     multi_tenant = str(
-        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", False)
+        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", "false")
     )
     # assign it to the environment variable so we can use it in settings route
     os.environ["KEEP_MULTI_TENANT"] = multi_tenant
@@ -144,7 +144,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint
-    if (not multi_tenant or multi_tenant == "false") and os.environ.get(
+    if (not multi_tenant or multi_tenant.lower() == "false") and os.environ.get(
         "KEEP_USE_AUTHENTICATION", "false"
     ) == "true":
 
