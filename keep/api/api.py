@@ -53,7 +53,6 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-NO_OF_WORKERS = int(os.environ.get("NO_OF_WORKERS",1))
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
