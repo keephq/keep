@@ -51,6 +51,7 @@
         {
           "group": "Supported providers",
           "pages": [
+            "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/cloudwatch-logs",
             "providers/documentation/cloudwatch-metrics",
