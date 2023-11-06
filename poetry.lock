@@ -351,22 +351,6 @@ files = [
 azure-core = ">=1.26.2,<2.0.0"
 
 [[package]]
-name = "azure-mgmt-kubernetesconfiguration"
-version = "3.1.0"
-description = "Microsoft Azure Kubernetes Configuration Management Client Library for Python"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "azure-mgmt-kubernetesconfiguration-3.1.0.tar.gz", hash = "sha256:d5d6af51f795730cbe144f5368d88760d99d0b31e01cbd3ccf99723db43a14aa"},
-    {file = "azure_mgmt_kubernetesconfiguration-3.1.0-py3-none-any.whl", hash = "sha256:9c63ef6cf37c48b2a8af7fa992de35dcd6d39f353d7e3d1f099f39e8420718f8"},
-]
-
-[package.dependencies]
-azure-common = ">=1.1,<2.0"
-azure-mgmt-core = ">=1.3.2,<2.0.0"
-isodate = ">=0.6.1,<1.0.0"
-
-[[package]]
 name = "backoff"
 version = "2.2.1"
 description = "Function decoration for backoff and retry"
@@ -4145,4 +4129,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "68f6e32f4d53a300a0f8093fbe9b6b7cc7359d30e4cfd43fc3473b40e523c7cf"
+content-hash = "98067919ae62d6f8a2039525239445a5eed81ef9b61b3543fd33f4e95a975c9a"
