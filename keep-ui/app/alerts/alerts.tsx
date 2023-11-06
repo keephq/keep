@@ -91,12 +91,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
 
   return (
     <>
-      <Flex justifyContent="between">
+      <Flex justifyContent="between" alignItems="center">
         <div className="flex w-full">
           <MultiSelect
             onValueChange={setSelectedEnvironments}
             placeholder="Select Environment..."
-            className="max-w-xs mb-5"
+            className="max-w-xs"
             icon={ServerStackIcon}
           >
             {environments!.map((item) => (
@@ -108,7 +108,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           <MultiSelect
             onValueChange={setSelectedStatus}
             placeholder="Select Status..."
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={BellAlertIcon}
           >
             {statuses!.map((item) => (
@@ -118,7 +118,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
             ))}
           </MultiSelect>
           <TextInput
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={MagnifyingGlassIcon}
             placeholder="Search Alert..."
             value={alertNameSearchString}
