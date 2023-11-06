@@ -1,22 +1,17 @@
 import {
+  ArrowPathIcon,
   BellAlertIcon,
   MagnifyingGlassIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ExclamationCircleIcon,
-} from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   MultiSelect,
   MultiSelectItem,
   Flex,
   Callout,
-  TabGroup,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
   TextInput,
+  Button,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -26,8 +21,9 @@ import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useState } from "react";
 import Loading from "app/loading";
-import "./alerts.client.css";
 import { Workflow } from "app/workflows/models";
+import "./alerts.client.css";
+import { ProvidersResponse } from "app/providers/providers";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -37,16 +33,16 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const { data, error, isLoading } = useSWR<Alert[]>(
+  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken)
   );
-  const {
-    data: workflows,
-    error: workflowsError,
-    isLoading: workflowsLoading,
-  } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
+  const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
+  );
+  const { data: providers } = useSWR<ProvidersResponse>(
+    `${apiUrl}/providers`,
+    (url) => fetcher(url, accessToken)
   );
 
   if (error) {
@@ -64,12 +60,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   if (isLoading || !data) return <Loading />;
 
   const environments = data
-    .map((alert) => alert.environment)
+    .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
   function environmentIsSeleected(alert: Alert): boolean {
     return (
-      selectedEnvironments.includes(alert.environment) ||
+      selectedEnvironments.includes(alert.environment.toLowerCase()) ||
       selectedEnvironments.length === 0
     );
   }
@@ -79,8 +75,10 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       alertNameSearchString === "" ||
       alertNameSearchString === undefined ||
       alertNameSearchString === null ||
-      alert.name.includes(alertNameSearchString) ||
-      alert.description?.includes(alertNameSearchString) ||
+      alert.name.toLowerCase().includes(alertNameSearchString.toLowerCase()) ||
+      alert.description
+        ?.toLowerCase()
+        .includes(alertNameSearchString.toLowerCase()) ||
       false
     );
   }
@@ -93,12 +91,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
 
   return (
     <>
-      <Flex justifyContent="between">
+      <Flex justifyContent="between" alignItems="center">
         <div className="flex w-full">
           <MultiSelect
             onValueChange={setSelectedEnvironments}
             placeholder="Select Environment..."
-            className="max-w-xs mb-5"
+            className="max-w-xs"
             icon={ServerStackIcon}
           >
             {environments!.map((item) => (
@@ -110,7 +108,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           <MultiSelect
             onValueChange={setSelectedStatus}
             placeholder="Select Status..."
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={BellAlertIcon}
           >
             {statuses!.map((item) => (
@@ -120,59 +118,38 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
             ))}
           </MultiSelect>
           <TextInput
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={MagnifyingGlassIcon}
             placeholder="Search Alert..."
             value={alertNameSearchString}
             onChange={(e) => setAlertNameSearchString(e.target.value)}
           />
         </div>
-        {/* <Button
-          icon={ArchiveBoxIcon}
+        <Button
+          icon={ArrowPathIcon}
           color="orange"
           size="xs"
-          disabled={true}
-          title="Coming Soon"
-        >
-          Export
-        </Button> */}
+          onClick={() => mutate()}
+          title="Refresh"
+        ></Button>
       </Flex>
-      <TabGroup>
-        <TabList color="orange">
-          <Tab>Pushed to Keep</Tab>
-          <Tab>Pulled from Providers</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={true}
-              workflows={workflows}
-            />
-          </TabPanel>
-          <TabPanel>
-            <AlertTable
-              data={data.filter(
-                (alert) =>
-                  !alert.pushed &&
-                  environmentIsSeleected(alert) &&
-                  statusIsSeleected(alert) &&
-                  searchAlert(alert)
-              )}
-              groupBy="name"
-              pushed={false}
-              workflows={workflows}
-            />
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
+      <AlertTable
+        data={data
+          .map((alert) => {
+            alert.lastReceived = new Date(alert.lastReceived);
+            return alert;
+          })
+          .filter(
+            (alert) =>
+              environmentIsSeleected(alert) &&
+              statusIsSeleected(alert) &&
+              searchAlert(alert)
+          )}
+        groupBy="name"
+        workflows={workflows}
+        providers={providers?.installed_providers}
+        mutate={mutate}
+      />
     </>
   );
 }

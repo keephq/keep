@@ -8,6 +8,26 @@ export interface ProviderAuthConfig {
   value?: string;
   sensitive?: boolean;
   hidden?: boolean;
+  type?: string;
+  file_type?: string;
+}
+
+export interface ProviderMethodParam {
+  name: string;
+  type: string;
+  mandatory: boolean;
+  default?: string;
+  expected_values?: string[];
+}
+
+export interface ProviderMethod {
+  name: string;
+  scopes: string[];
+  func_name: string;
+  description: string;
+  category: string;
+  type: "view" | "action";
+  func_params?: ProviderMethodParam[];
 }
 
 export interface ProviderScope {
@@ -17,6 +37,11 @@ export interface ProviderScope {
   documentation_url?: string;
   alias?: string;
   mandatory_for_webhook: boolean;
+}
+
+export interface ProvidersResponse {
+  providers: Provider[];
+  installed_providers: Provider[];
 }
 
 export interface Provider {
@@ -49,6 +74,7 @@ export interface Provider {
   oauth2_url?: string;
   scopes?: ProviderScope[];
   validatedScopes?: { [scopeName: string]: boolean | string };
+  methods?: ProviderMethod[];
 }
 
 export type Providers = Provider[];

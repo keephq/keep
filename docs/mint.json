@@ -21,12 +21,17 @@
       "url": "https://platform.keephq.dev/"
     }
   ],
-  "anchors": [
-  ],
+  "anchors": [],
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["overview/introduction", "overview/keyconcepts", "overview/usecases", "overview/examples", "overview/alternatives"]
+      "pages": [
+        "overview/introduction",
+        "overview/keyconcepts",
+        "overview/usecases",
+        "overview/examples",
+        "overview/alternatives"
+      ]
     },
     {
       "group": "Platform",
@@ -46,6 +51,7 @@
         {
           "group": "Supported providers",
           "pages": [
+            "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/cloudwatch-logs",
             "providers/documentation/cloudwatch-metrics",
@@ -65,6 +71,7 @@
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/sentry-provider",
+            "providers/documentation/zabbix-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/ssh-provider",
@@ -82,55 +89,57 @@
       "group": "Workflows",
       "pages": [
         "workflows/overview",
-            {
-              "group": "Syntax",
-              "pages": [
-                "workflows/syntax/basic-syntax",
-                "workflows/syntax/foreach-syntax",
-                "workflows/syntax/context-syntax"
-              ]
-            },
-            {
-              "group": "Providers",
-              "pages": [
-                "workflows/providers/getting-started",
-                "workflows/providers/what-is-a-provider"
-              ]
-            },
-            {
-              "group": "Conditions",
-              "pages": [
-                "workflows/conditions/what-is-a-condition",
-                "workflows/conditions/threshold",
-                "workflows/conditions/assert",
-                "workflows/conditions/stddev"
-              ]
-            },
-            {
-              "group": "Functions",
-              "pages": [
-                "workflows/functions/what-is-a-function",
-                "workflows/functions/all",
-                "workflows/functions/diff",
-                "workflows/functions/len",
-                "workflows/functions/split",
-                "workflows/functions/first",
-                "workflows/functions/utcnow",
-                "workflows/functions/to-utc",
-                "workflows/functions/datetime-compare",
-                "workflows/functions/encode"
-              ]
-            },{
-              "group": "Throttles",
-              "pages": [
-                "workflows/throttles/what-is-a-throttle",
-                "workflows/throttles/one-until-resolved"
-              ]
-            },
-            {
-              "group": "Examples",
-              "pages": ["workflows/examples/multi-step-alert"]
-            },"workflows/state"
+        {
+          "group": "Syntax",
+          "pages": [
+            "workflows/syntax/basic-syntax",
+            "workflows/syntax/foreach-syntax",
+            "workflows/syntax/context-syntax"
+          ]
+        },
+        {
+          "group": "Providers",
+          "pages": [
+            "workflows/providers/getting-started",
+            "workflows/providers/what-is-a-provider"
+          ]
+        },
+        {
+          "group": "Conditions",
+          "pages": [
+            "workflows/conditions/what-is-a-condition",
+            "workflows/conditions/threshold",
+            "workflows/conditions/assert",
+            "workflows/conditions/stddev"
+          ]
+        },
+        {
+          "group": "Functions",
+          "pages": [
+            "workflows/functions/what-is-a-function",
+            "workflows/functions/all",
+            "workflows/functions/diff",
+            "workflows/functions/len",
+            "workflows/functions/split",
+            "workflows/functions/first",
+            "workflows/functions/utcnow",
+            "workflows/functions/to-utc",
+            "workflows/functions/datetime-compare",
+            "workflows/functions/encode"
+          ]
+        },
+        {
+          "group": "Throttles",
+          "pages": [
+            "workflows/throttles/what-is-a-throttle",
+            "workflows/throttles/one-until-resolved"
+          ]
+        },
+        {
+          "group": "Examples",
+          "pages": ["workflows/examples/multi-step-alert"]
+        },
+        "workflows/state"
       ]
     },
     {
@@ -153,9 +162,7 @@
         },
         {
           "group": "Healthcheck",
-          "pages": [
-            "api-ref/healthcheck/healthcheck"
-          ]
+          "pages": ["api-ref/healthcheck/healthcheck"]
         },
         {
           "group": "Tenant",
@@ -166,16 +173,11 @@
         },
         {
           "group": "Alerts",
-          "pages": [
-            "api-ref/alerts/get-alerts",
-            "api-ref/alerts/receive-event"
-          ]
+          "pages": ["api-ref/alerts/get-alerts", "api-ref/alerts/receive-event"]
         },
         {
           "group": "Webhook settings",
-          "pages": [
-            "api-ref/settings/webhook-settings"
-          ]
+          "pages": ["api-ref/settings/webhook-settings"]
         },
         {
           "group": "Workflows",
@@ -208,11 +210,15 @@
           ]
         }
       ]
-      },
-      {
-        "group": "Development",
-        "pages": ["development/getting-started", "development/adding-a-new-provider"]
-      }
+    },
+    {
+      "group": "Development",
+      "pages": [
+        "development/getting-started",
+        "development/authentication",
+        "development/adding-a-new-provider"
+      ]
+    }
   ],
   "footerSocials": {
     "github": "https://github.com/keephq/keep"

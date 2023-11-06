@@ -1,7 +1,7 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef} from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -16,12 +16,13 @@ import {
   Divider,
   TextInput,
 } from "@tremor/react";
-import { ExclamationCircleIcon, EyeIcon } from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
+  ArrowDownOnSquareIcon,
   GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
@@ -47,7 +48,6 @@ type ProviderFormProps = {
 const ProviderForm = ({
   provider,
   formData,
-  formErrorsData,
   onFormChange,
   onConnectChange,
   onAddProvider,
@@ -71,7 +71,7 @@ const ProviderForm = ({
   const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
     {}
   );
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
   // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
@@ -79,19 +79,12 @@ const ProviderForm = ({
   const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
-  const [userWantSensitiveDict, setUserWantSensitiveDict] = useState<{
-    [key: string]: boolean;
-  }>({});
-
-  const handleToggleSensitive = (fieldName: string) => {
-    setUserWantSensitiveDict((prevDict) => ({
-      ...prevDict,
-      [fieldName]: !prevDict[fieldName], // Toggle the value for the field
-    }));
-  };
-
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session, status, update } = useSession();
+  const inputFileRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+
+  const { data: session } = useSession();
 
   const accessToken = session?.accessToken;
 
@@ -163,7 +156,16 @@ const ProviderForm = ({
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
+    const { name, type } = event.target;
+    let value;
+
+    // If the input is a file, retrieve the file object, otherwise retrieve the value
+    if (type === "file") {
+      value = event.target.files?.[0];  // Assumes single file upload
+    } else {
+      value = event.target.value;
+    }
+
     setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
     const updatedFormValues = { ...formValues, [name]: value };
 
@@ -204,13 +206,29 @@ const ProviderForm = ({
     requestUrl: string,
     method: string = "POST"
   ): Promise<any> => {
+    let headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    let body;
+
+    if (Object.values(formValues).some(value => value instanceof File)) {
+      // FormData for file uploads
+      let formData = new FormData();
+      for (let key in formValues) {
+        formData.append(key, formValues[key]);
+      }
+      body = formData;
+    } else {
+      // Standard JSON for non-file submissions
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(formValues);
+    }
+
     return fetch(requestUrl, {
       method: method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(formValues),
+      headers: headers,
+      body: body,
     })
       .then((response) => {
         const response_json = response.json();
@@ -399,9 +417,40 @@ const ProviderForm = ({
                     />
                   )}
                 </label>
-                <div className="flex">
+
+                {method.type === "file" ? (
+                  <>
+                  <Button
+                    color="orange"
+                    size="md"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      inputFileRef.current.click();  // this line triggers the file input
+                    }}
+                    icon={ArrowDownOnSquareIcon}
+                  >
+                      {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
+                  </Button>
+
+                  <input
+                  ref={inputFileRef}
+                  type="file"
+                  id={configKey}
+                  name={configKey}
+                  accept={method.file_type}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0].name);
+                    }
+                    handleInputChange(e);
+                  }}
+                />
+                </>
+                ) : (
                   <TextInput
-                    type={isSensitive && !userWantSensitiveDict[configKey] ? "password" : method.type} // Display as password if sensitive
+                    type={isSensitive ? "password" : method.type} // Display as password if sensitive
                     id={configKey}
                     name={configKey}
                     value={formValues[configKey] || ""}
@@ -410,16 +459,8 @@ const ProviderForm = ({
                     error={Object.keys(inputErrors).includes(configKey)}
                     placeholder={method.placeholder || "Enter " + configKey}
                   />
-                  {isSensitive && (
-                    <button
-                      type="button"
-                      className="ml-2.5"
-                      onClick={() => handleToggleSensitive(configKey)}
-                    >
-                      <EyeIcon className="w-6 h-6 text-gray-400"/>
-                    </button>
-                  )}
-                  </div>
+                )}
+
               </div>
             );
           })}

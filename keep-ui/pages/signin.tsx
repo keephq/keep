@@ -7,5 +7,5 @@ export default function Signin() {
     void signIn("auth0", { callbackUrl: "/" });
   });
 
-  return <div></div>;
+return <div></div>;
 }

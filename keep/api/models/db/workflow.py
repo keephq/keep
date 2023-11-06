@@ -41,6 +41,7 @@ class WorkflowExecution(SQLModel, table=True):
     logs: Optional[str]
     error: Optional[str] = Field(sa_column=String(length=10240))
     execution_time: Optional[int]
+    results: dict = Field(sa_column=Column(JSON), default={})
 
     logs: List["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"

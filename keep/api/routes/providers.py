@@ -2,11 +2,12 @@ import json
 import logging
 import time
 import uuid
-from typing import Optional
+from typing import Callable, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
+from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
@@ -22,7 +23,10 @@ from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.base.provider_exceptions import GetAlertException
+from keep.providers.base.provider_exceptions import (
+    GetAlertException,
+    ProviderMethodException,
+)
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -330,9 +334,9 @@ def validate_provider_scopes(
 
 
 @router.put("/{provider_id}", description="Update provider", status_code=200)
-def update_provider(
+async def update_provider(
     provider_id: str,
-    provider_info: dict = Body(...),
+    request: Request,
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
     updated_by: str = Depends(get_user_email),
@@ -343,6 +347,16 @@ def update_provider(
             "provider_id": provider_id,
         },
     )
+    # Try to parse as JSON first
+    try:
+        provider_info = await request.json()
+    except ValueError:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
 
     provider = session.exec(
         select(Provider).where(
@@ -357,6 +371,15 @@ def update_provider(
         "authentication": provider_info,
         "name": provider.name,
     }
+
+    # we support files as well
+    for key, value in provider_config.get("authentication", {}).items():
+        if isinstance(value, UploadFile):
+            provider_config["authentication"][key] = await value.read()
+            provider_config["authentication"][key] = provider_config["authentication"][
+                key
+            ].decode()
+
     context_manager = ContextManager(tenant_id=tenant_id)
     provider_instance = ProvidersFactory.get_provider(
         context_manager, provider_id, provider.type, provider_config
@@ -378,11 +401,22 @@ def update_provider(
 
 @router.post("/install")
 async def install_provider(
-    provider_info: dict = Body(...),
-    tenant_id: str = Depends(verify_token_or_key),
+    request: Request,
+    tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):
+    # Try to parse as JSON first
+    try:
+        provider_info = await request.json()
+    except ValueError:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
+
+    if not provider_info:
+        raise HTTPException(status_code=400, detail="No valid data provided")
+
     # Extract parameters from the provider_info dictionary
     try:
         provider_id = provider_info.pop("provider_id")
@@ -406,6 +440,13 @@ async def install_provider(
         "authentication": provider_info,
         "name": provider_name,
     }
+    # we support files as well
+    for key, value in provider_config.get("authentication", {}).items():
+        if isinstance(value, UploadFile):
+            provider_config["authentication"][key] = await value.read()
+            provider_config["authentication"][key] = provider_config["authentication"][
+                key
+            ].decode()
 
     # Instantiate the provider object and perform installation process
     context_manager = ContextManager(tenant_id=tenant_id)
@@ -524,6 +565,59 @@ async def install_provider_oauth2(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/{provider_id}/invoke/{method}",
+    description="Invoke provider special method",
+    status_code=200,
+)
+def invoke_provider_method(
+    provider_id: str,
+    method: str,
+    method_params: dict,
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    logger.info(
+        "Invoking provider method", extra={"provider_id": provider_id, "method": method}
+    )
+    provider = session.exec(
+        select(Provider).where(
+            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
+        )
+    ).one()
+
+    if not provider:
+        raise HTTPException(404, detail="Provider not found")
+
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider_config = secret_manager.read_secret(
+        provider.configuration_key, is_json=True
+    )
+    provider_instance = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider.type, provider_config
+    )
+
+    func: Callable = getattr(provider_instance, method, None)
+    if not func:
+        raise HTTPException(400, detail="Method not found")
+
+    try:
+        response = func(**method_params)
+    except ProviderMethodException as e:
+        logger.exception(
+            "Failed to invoke method",
+            extra={"provider_id": provider_id, "method": method},
+        )
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+    logger.info(
+        "Successfully invoked provider method",
+        extra={"provider_id": provider_id, "method": method},
+    )
+    return response
 
 
 # Webhook related endpoints

@@ -10,7 +10,7 @@
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
         <img src="https://img.shields.io/github/license/keephq/keep" />
     </a>
-    <a href="https://keephq.dev/slack">
+    <a href="https://slack.keephq.dev">
         <img src="https://img.shields.io/badge/Chat-on%20Slack-blueviolet" alt="Slack community channel" />
     </a>
     <a href="https://codecov.io/gh/keephq/keep" >
@@ -32,7 +32,7 @@
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
-    <a href="https://keephq.dev/slack">Slack Community</a>
+    <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
 <h3 align="center">
 Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate workflows to automate your end-to-end processes. <br /><br /> Enrich any tool with <a href="https://docs.datadoghq.com/service_management/workflows/">Datadog Workflow Automation</a> like capabilities.
@@ -105,7 +105,7 @@ workflow:
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ## Supported Providers
-> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=&projects=&template=new_provider.md&title=) and we will add it in the blink of an eye.
+> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we will add it in the blink of an eye.
 
 <h3 align="center">Observability tools</h3>
 <p align="center">
