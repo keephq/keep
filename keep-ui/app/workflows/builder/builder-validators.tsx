@@ -11,14 +11,11 @@ export function globalValidator(
   definition: Definition,
   setGlobalValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
-  const onlyOneAlert = definition.sequence.length === 1;
-  if (!onlyOneAlert) setGlobalValidationError("Please place the steps/actions within the workflow container.");
-  const workflow = (
-    definition.sequence[0] as SequentialStep
-  )
-  const anyStepOrAction = workflow?.sequence?.length > 0;
-  if (onlyOneAlert && !anyStepOrAction) {
-    setGlobalValidationError("At least 1 step/action is required within the workflow container.");
+  const anyStepOrAction = definition?.sequence?.length > 0;
+  if (!anyStepOrAction) {
+    setGlobalValidationError(
+      "At least 1 step/action is required."
+    );
   }
   const anyActionsInMainSequence = (
     definition.sequence[0] as SequentialStep
@@ -38,12 +35,12 @@ export function globalValidator(
           "step-"
         )
       ) {
-        setGlobalValidationError("Cannot have steps after actions.");
+        setGlobalValidationError("Steps cannot be placed after actions.");
         return false;
       }
     }
   }
-  const valid = onlyOneAlert && anyStepOrAction;
+  const valid = anyStepOrAction;
   if (valid) setGlobalValidationError(null);
   return valid;
 }
@@ -82,7 +79,10 @@ export function stepValidator(
   if (step.componentType === "task") {
     const valid = step.name !== "";
     if (!valid) setStepValidationError("Step name cannot be empty.");
-    if (!step.properties.with) setStepValidationError("A step/action must have at least 1 parameters configured");
+    if (!step.properties.with)
+      setStepValidationError(
+        "There is step/action with no parameters configured!"
+      );
     if (valid && step.properties.with) setStepValidationError(null);
     return valid;
   }

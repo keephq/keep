@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -8,7 +9,7 @@ from uuid import uuid4
 import pymysql
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased, joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -124,6 +125,9 @@ def get_session() -> Session:
 
 def try_create_single_tenant(tenant_id: str) -> None:
     try:
+        # if Keep is not multitenant, let's import the User table too:
+        from keep.api.models.db.user import User
+
         create_db_and_tables()
     except:
         pass
@@ -131,9 +135,19 @@ def try_create_single_tenant(tenant_id: str) -> None:
         try:
             # Do everything related with single tenant creation in here
             session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+            default_password = hashlib.sha256(
+                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+            ).hexdigest()
+            default_user = User(
+                username=default_username, password_hash=default_password
+            )
+            session.add(default_user)
             session.commit()
         except IntegrityError:
             # Tenant already exists
+            pass
+        except Exception as e:
             pass
 
 
@@ -447,6 +461,7 @@ def get_workflow_id(tenant_id, workflow_name):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
+            .where(Workflow.is_deleted == False)
         ).first()
 
         if workflow:
@@ -495,17 +510,28 @@ def enrich_alert(tenant_id, fingerprint, enrichments):
     with Session(engine) as session:
         enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
         if enrichment:
-            enrichment.enrichments.update(enrichments)
+            # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
+            # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
+            new_enrichment_data = {**enrichment.enrichment_data, **enrichments}
+            stmt = (
+                update(Enrichment)
+                .where(Enrichment.id == enrichment.id)
+                .values(enrichment_data=new_enrichment_data)
+            )
+            session.execute(stmt)
             session.commit()
+            # Refresh the instance to get updated data from the database
+            session.refresh(enrichment)
             return enrichment
-        alert_enrichment = AlertEnrichment(
-            tenant_id=tenant_id,
-            alert_fingerprint=fingerprint,
-            enrichments=enrichments,
-        )
-        session.add(alert_enrichment)
-        session.commit()
-    return alert_enrichment
+        else:
+            alert_enrichment = AlertEnrichment(
+                tenant_id=tenant_id,
+                alert_fingerprint=fingerprint,
+                enrichments=enrichments,
+            )
+            session.add(alert_enrichment)
+            session.commit()
+            return alert_enrichment
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -576,6 +602,69 @@ def get_alerts(tenant_id, provider_id=None):
         alerts = query.all()
 
     return alerts
+
+
+# this is only for single tenant
+def get_user(username, password, update_sign_in=True):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    with Session(engine, expire_on_commit=False) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.username == username)
+            .where(User.password_hash == password_hash)
+        ).first()
+        if user and update_sign_in:
+            user.last_sign_in = datetime.utcnow()
+            session.add(user)
+            session.commit()
+    return user
+
+
+def get_users():
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        users = session.exec(
+            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
+        ).all()
+    return users
+
+
+def delete_user(username):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == SINGLE_TENANT_UUID)
+            .where(User.username == username)
+        ).first()
+        if user:
+            session.delete(user)
+            session.commit()
+
+
+def create_user(username, password):
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.db.user import User
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    with Session(engine) as session:
+        user = User(
+            tenant_id=SINGLE_TENANT_UUID,
+            username=username,
+            password_hash=password_hash,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user
 
 
 def save_workflow_results(

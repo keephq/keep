@@ -27,20 +27,11 @@ http_digest = HTTPDigest(
 )  # hack for grafana, they don't support api key header
 http_basic = HTTPBasic(auto_error=False)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
-
-
-def verify_single_tenant() -> str:
-    context.data["tenant_id"] = SINGLE_TENANT_UUID
-    return SINGLE_TENANT_UUID
-
-
-def get_user_email_single_tenant() -> str:
-    return SINGLE_TENANT_EMAIL
 
 
 def get_user_email(request: Request) -> str | None:
@@ -110,8 +101,6 @@ def verify_api_key(
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    # keep it in the context for later use
-    context.data["tenant_id"] = tenant_api_key.tenant_id
     request.state.tenant_id = tenant_api_key.tenant_id
     return tenant_api_key.tenant_id
 
@@ -134,9 +123,57 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
             issuer=issuer,
         )
         tenant_id = payload.get("keep_tenant_id")
-        # keep it in the context for later use
-        context.data["tenant_id"] = tenant_id
         return tenant_id
     except Exception as e:
         logger.exception("Failed to validate token")
         raise HTTPException(status_code=401, detail=str(e))
+
+
+def get_user_email_single_tenant(request: Request) -> str:
+    # if we don't want to use authentication, return the single tenant id
+    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+        return SINGLE_TENANT_UUID
+
+    return get_user_email(request)
+
+
+def verify_bearer_token_single_tenant(token: str = Depends(oauth2_scheme)) -> str:
+    # if we don't want to use authentication, return the single tenant id
+    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+        return SINGLE_TENANT_UUID
+
+    # else, validate the token
+    jwt_secret = os.environ.get("KEEP_JWT_SECRET")
+    if not jwt_secret:
+        raise HTTPException(status_code=401, detail="Missing JWT secret")
+
+    try:
+        payload = jwt.decode(
+            token,
+            jwt_secret,
+            algorithms="HS256",
+        )
+        tenant_id = payload.get("tenant_id")
+        return tenant_id
+    except:
+        raise HTTPException(status_code=401, detail="Invalid JWT token")
+
+
+def verify_api_key_single_tenant(
+    request: Request,
+    api_key: str = Security(auth_header),
+    authorization: HTTPAuthorizationCredentials = Security(http_basic),
+    session: Session = Depends(get_session),
+) -> str:
+    # if we don't want to use authentication, return the single tenant id
+    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+        return SINGLE_TENANT_UUID
+
+    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
+    statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
+    tenant_api_key = session.exec(statement).first()
+    if not tenant_api_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    request.state.tenant_id = tenant_api_key.tenant_id
+    return tenant_api_key.tenant_id

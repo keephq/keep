@@ -25,7 +25,6 @@ import {
   ArrowDownOnSquareIcon,
   GlobeAltIcon,
 } from "@heroicons/react/24/outline";
-import { Dialog } from '@headlessui/react';
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";

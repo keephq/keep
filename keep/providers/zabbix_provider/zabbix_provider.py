@@ -3,8 +3,10 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
 import dataclasses
 import datetime
+import json
 import os
 import random
+from typing import Literal
 
 import pydantic
 import requests
@@ -12,7 +14,9 @@ import requests
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -93,6 +97,61 @@ class ZabbixProvider(BaseProvider):
             mandatory_for_webhook=True,
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/update",
         ),
+        ProviderScope(
+            name="event.acknowledge",
+            description="This method allows to update events.",
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge",
+        ),
+    ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Close Problem",
+            func_name="close_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Change Severity",
+            func_name="change_severity",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Suppress Problem",
+            func_name="surrpress_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Unsuppress Problem",
+            func_name="unsurrpress_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Acknowledge Problem",
+            func_name="acknowledge_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Unacknowledge Problem",
+            func_name="unacknowledge_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Add Message to Problem",
+            func_name="add_message_to_problem",
+            scopes=["event.acknowledge"],
+            type="action",
+        ),
+        ProviderMethod(
+            name="Get Problem Messages",
+            func_name="get_problem_messages",
+            scopes=["problem.get"],
+            type="view",
+        ),
     ]
 
     def __init__(
@@ -105,6 +164,103 @@ class ZabbixProvider(BaseProvider):
         Dispose the provider.
         """
         pass
+
+    def close_problem(self, id: str):
+        """
+        Close a problem.
+
+        https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge
+
+        Args:
+            id (str): The problem id.
+        """
+        self.logger.info(f"Closing problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 1})
+        self.logger.info(f"Closed problem {id}")
+
+    def unsurrpress_problem(self, id: str):
+        self.logger.info(f"Unsuppressing problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 64})
+        self.logger.info(f"Unsuppressed problem {id}")
+
+    def surrpress_problem(
+        self,
+        id: str,
+        suppress_until: datetime.datetime = datetime.datetime.now()
+        + datetime.timedelta(days=1),
+    ):
+        self.logger.info(f"Suppressing problem {id} until {suppress_until}")
+        if isinstance(suppress_until, str):
+            suppress_until = datetime.datetime.fromisoformat(suppress_until)
+        self.__send_request(
+            "event.acknowledge",
+            {
+                "eventids": id,
+                "action": 32,
+                "suppress_until": int(suppress_until.timestamp()),
+            },
+        )
+        self.logger.info(f"Suppressed problem {id} until {suppress_until}")
+
+    def acknowledge_problem(self, id: str):
+        self.logger.info(f"Acknowledging problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 2})
+        self.logger.info(f"Acknowledged problem {id}")
+
+    def unacknowledge_problem(self, id: str):
+        self.logger.info(f"Unacknowledging problem {id}")
+        self.__send_request("event.acknowledge", {"eventids": id, "action": 16})
+        self.logger.info(f"Unacknowledged problem {id}")
+
+    def add_message_to_problem(self, id: str, message_text: str):
+        self.logger.info(
+            f"Adding message to problem {id}", extra={"zabbix_message": message_text}
+        )
+        self.__send_request(
+            "event.acknowledge",
+            {"eventids": id, "message": message_text, "action": 4},
+        )
+        self.logger.info(
+            f"Added message to problem {id}", extra={"zabbix_message": message_text}
+        )
+
+    def get_problem_messages(self, id: str):
+        problem = self.__send_request(
+            "problem.get", {"eventids": id, "selectAcknowledges": "extend"}
+        )
+        messages = []
+
+        problems = problem.get("result", [])
+        if not problems:
+            return messages
+
+        for acknowledge in problem.get("result", [])[0].get("acknowledges", []):
+            if acknowledge.get("action") == "4":
+                time = datetime.datetime.fromtimestamp(int(acknowledge.get("clock")))
+                messages.append(f'{time}: {acknowledge.get("message")}')
+        return messages
+
+    def change_severity(
+        self,
+        id: str,
+        new_severity: Literal[
+            "Not classified", "Information", "Warning", "Average", "High", "Disaster"
+        ],
+    ):
+        severity = 0
+        if new_severity.lower() == "information":
+            severity = 1
+        elif new_severity.lower() == "warning":
+            severity = 2
+        elif new_severity.lower() == "average":
+            severity = 3
+        elif new_severity.lower() == "high":
+            severity = 4
+        elif new_severity.lower() == "disaster":
+            severity = 5
+        self.__send_request(
+            "event.acknowledge", {"eventids": id, "severity": severity, "action": 8}
+        )
 
     def validate_config(self):
         """
@@ -122,7 +278,7 @@ class ZabbixProvider(BaseProvider):
                 self.__send_request(scope.name)
             except Exception as e:
                 error = e.args[0]["data"]
-                if "permission" in error:
+                if "permission" in error or "not authorized" in error.lower():
                     validated_scopes[scope.name] = e.args[0]["data"]
                     continue
             validated_scopes[scope.name] = True
@@ -153,36 +309,46 @@ class ZabbixProvider(BaseProvider):
 
         # zabbix < 6.4 compatibility
         data["auth"] = f"{self.authentication_config.auth_token}"
-        self.logger.info(f"Sending data: {data}")
 
         response = requests.post(url, json=data, headers=headers)
 
         response.raise_for_status()
         response_json = response.json()
         if "error" in response_json:
-            raise Exception(response_json["error"])
+            raise ProviderMethodException(response_json.get("error", {}).get("data"))
         return response_json
 
     def get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
-        problems = self.__send_request("problem.get")
+        problems = self.__send_request(
+            "problem.get", {"recent": False, "selectSuppressionData": "extend"}
+        )
         formatted_alerts = []
         for problem in problems.get("result", []):
             name = problem.pop("name")
             problem.pop("source")
+            status = "PROBLEM"
+            if problem.pop("acknowledged") != "0":
+                status = "ACKED"
+            elif problem.pop("suppressed") != "0":
+                status = "SURPRESSED"
+
+            environment = problem.pop("environment", None)
+            if environment is None:
+                environment = "unknown"
+
             formatted_alerts.append(
                 AlertDto(
                     id=problem.pop("eventid"),
                     name=name,
-                    status="active"
-                    if problem.pop("acknowledged") == "0"
-                    else "acknowledged",
+                    status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
-                        int(problem.get("clock"))
+                        int(problem.get("clock")) + 10
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
                     severity=self.__get_severity(problem.pop("severity")),
+                    environment=environment,
                     **problem,
                 )
             )
@@ -227,6 +393,28 @@ class ZabbixProvider(BaseProvider):
             if mt["name"] == mediatype_name
         ]
 
+        parameters = [
+            {"name": "keepApiKey", "value": api_key},
+            {"name": "keepApiUrl", "value": keep_api_url},
+            {"name": "id", "value": "{EVENT.ID}"},
+            {"name": "triggerId", "value": "{TRIGGER.ID}"},
+            {"name": "lastReceived", "value": "{DATE} {TIME}"},
+            {"name": "message", "value": "{ALERT.MESSAGE}"},
+            {"name": "name", "value": "{EVENT.NAME}"},
+            {"name": "service", "value": "{HOST.HOST}"},
+            {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
+            {"name": "status", "value": "{TRIGGER.STATUS}"},
+            {"name": "tags", "value": "{EVENT.TAGSJSON}"},
+            {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
+            {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
+            {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
+            {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
+            {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
+            {"name": "HOST.IP", "value": "{HOST.IP}"},
+            {"name": "HOST.NAME", "value": "{HOST.NAME}"},
+            {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
+        ]
+
         if mediatype_list:
             existing_mediatype = mediatype_list[0]
             self.logger.info("Updating existing media type")
@@ -237,6 +425,7 @@ class ZabbixProvider(BaseProvider):
                     "mediatypeid": str(existing_mediatype["mediatypeid"]),
                     "script": script,
                     "status": "0",
+                    "parameters": parameters,
                     "description": mediatype_description,
                 },
             )
@@ -246,27 +435,7 @@ class ZabbixProvider(BaseProvider):
             params = {
                 "name": mediatype_name,
                 "type": f"{ZabbixProvider.KEEP_ZABBIX_WEBHOOK_MEDIATYPE_TYPE}",  # webhook
-                "parameters": [
-                    {"name": "keepApiKey", "value": api_key},
-                    {"name": "keepApiUrl", "value": keep_api_url},
-                    {"name": "id", "value": "{EVENT.ID}"},
-                    {"name": "triggerId", "value": "{TRIGGER.ID}"},
-                    {"name": "lastReceived", "value": "{EVENT.DATE} {EVENT.TIME}"},
-                    {"name": "message", "value": "{ALERT.MESSAGE}"},
-                    {"name": "name", "value": "{EVENT.NAME}"},
-                    {"name": "service", "value": "{HOST.HOST}"},
-                    {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
-                    {"name": "status", "value": "{TRIGGER.STATUS}"},
-                    {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
-                    {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
-                    {"name": "EVENT.TAGS", "value": "{EVENT.TAGS}"},
-                    {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
-                    {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
-                    {"name": "HOST.IP", "value": "{HOST.IP}"},
-                    {"name": "HOST.NAME", "value": "{HOST.NAME}"},
-                    {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
-                    {"name": "ZABBIX.URL", "value": "{$ZABBIX.URL}"},
-                ],
+                "parameters": parameters,
                 "script": script,
                 "process_tags": 1,
                 "show_event_menu": 0,
@@ -377,9 +546,15 @@ class ZabbixProvider(BaseProvider):
     @staticmethod
     def format_alert(event: dict) -> AlertDto:
         environment = "unknown"
-        tags = event.get("tags", {})
+        tags = {
+            tag.get("tag"): tag.get("value")
+            for tag in json.loads(event.get("tags", "[]"))
+        }
         if isinstance(tags, dict):
-            environment = tags.get("environment", "unknown")
+            environment = tags.pop("environment", "unknown")
+            # environment exists in tags but is None
+            if environment == None:
+                environment = "unknown"
         severity = ZabbixProvider.__get_severity(event.pop("severity", "").lower())
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
@@ -396,6 +571,7 @@ class ZabbixProvider(BaseProvider):
             source=["zabbix"],
             severity=severity,
             url=url,
+            **tags,
         )
 
 
