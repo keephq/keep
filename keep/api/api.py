@@ -232,6 +232,8 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
     return app
 
+def get_wsgi_app(multi_tenant: bool = False):
+    return ASGIMiddleware(get_app(multi_tenant=multi_tenant))
 
 def run_services_after_app_is_up():
     """Waits until the server is up and than invoking the 'start-services' endpoint to start the internal services"""
@@ -280,12 +282,10 @@ def run(app: FastAPI):
     thread = threading.Thread(target=run_services_after_app_is_up)
     thread.start()
     logger.info("Starting the uvicorn server")
-    app = ASGIMiddleware(app)
     # run the server
     uvicorn.run(
         app,
         host=HOST,
         port=PORT,
         log_config=logging_config,
-        interface="wsgi"
     )
