@@ -29,7 +29,7 @@ workflow:
           board_name: "Oncall Board"
           issuetype: "Task"
           summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
-          description: "This ticket was created by Keep. \n\n Please check the alert details below: \n {{ alert }}"
+          description: "This ticket was created by Keep. \n\n Please check the alert details below: \n {code:json} {{ alert }} {code}"
           # enrich the alerts
           enrich_alert:
             - key: ticket_type

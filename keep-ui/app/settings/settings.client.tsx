@@ -1,10 +1,11 @@
 "use client";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
-import { GlobeAltIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { GlobeAltIcon, UserGroupIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import UsersSettings from "./users-settings";
 import WebhookSettings from "./webhook-settings";
 import { useSession } from "utils/customAuth";
 import Loading from "app/loading";
+import SmtpSettings from "./smtp-settings";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -22,6 +23,7 @@ export default function SettingsPage() {
       <TabList color="orange">
         <Tab icon={UserGroupIcon}>Users</Tab>
         <Tab icon={GlobeAltIcon}>Webhook</Tab>
+        <Tab icon={EnvelopeIcon}>SMTP</Tab>
       </TabList>
       <TabPanels>
         <TabPanel>
@@ -29,6 +31,9 @@ export default function SettingsPage() {
         </TabPanel>
         <TabPanel>
           <WebhookSettings accessToken={session?.accessToken!} />
+        </TabPanel>
+        <TabPanel>
+          <SmtpSettings accessToken={session?.accessToken!} />
         </TabPanel>
       </TabPanels>
     </TabGroup>
