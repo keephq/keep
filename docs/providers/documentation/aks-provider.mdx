@@ -28,7 +28,7 @@ To connect to Azure AKS, follow below steps:
 
 1. Log in to your [Azure](https://azure.microsoft.com/) account.
 2. Go to your kubernetes service page and click on `Connect` button and then click on `Open Cloud Shell`.
-3. Run `az ad sp create-for-rbac --role owner --scopes /subscriptions/8d7964b8-cdf5-4f9b-aa49-adf9b4cebfec` in the cloud shell, you will get response similar to:
+3. Run `az ad sp create-for-rbac --role owner --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID>` in the cloud shell, you will get response similar to:
    ```
     {
       "appId": "xxxxxx-xxxxx-xxxxxx-xxxx",
