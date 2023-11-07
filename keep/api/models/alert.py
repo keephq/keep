@@ -60,5 +60,4 @@ class DeleteRequestBody(BaseModel):
 
 
 class EnrichAlertRequestBody(BaseModel):
-    alert_id: int
     enrichments: dict[str, str]

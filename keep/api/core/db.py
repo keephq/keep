@@ -512,11 +512,11 @@ def enrich_alert(tenant_id, fingerprint, enrichments):
         if enrichment:
             # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
             # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-            new_enrichment_data = {**enrichment.enrichment_data, **enrichments}
+            new_enrichment_data = {**enrichment.enrichments, **enrichments}
             stmt = (
-                update(Enrichment)
-                .where(Enrichment.id == enrichment.id)
-                .values(enrichment_data=new_enrichment_data)
+                update(AlertEnrichment)
+                .where(AlertEnrichment.id == enrichment.id)
+                .values(enrichments=new_enrichment_data)
             )
             session.execute(stmt)
             session.commit()
@@ -542,6 +542,25 @@ def get_enrichment(tenant_id, fingerprint):
             .where(AlertEnrichment.alert_fingerprint == fingerprint)
         ).first()
     return alert_enrichment
+
+
+def get_enrichments(
+    tenant_id: int, fingerprints: List[str]
+) -> List[Optional[AlertEnrichment]]:
+    """
+    Get a list of alert enrichments for a list of fingerprints using a single DB query.
+
+    :param tenant_id: The tenant ID to filter the alert enrichments by.
+    :param fingerprints: A list of fingerprints to get the alert enrichments for.
+    :return: A list of AlertEnrichment objects or None for each fingerprint.
+    """
+    with Session(engine) as session:
+        result = session.exec(
+            select(AlertEnrichment)
+            .where(AlertEnrichment.tenant_id == tenant_id)
+            .where(AlertEnrichment.alert_fingerprint.in_(fingerprints))
+        ).all()
+    return result
 
 
 def get_enrichment_with_session(session, tenant_id, fingerprint):

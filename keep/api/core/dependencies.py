@@ -207,3 +207,30 @@ def verify_token_or_key(
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
             )
+
+
+def verify_token_or_key_single_tenant(
+    request: Request,
+    api_key: Optional[str] = Security(auth_header),
+    authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
+    token: Optional[str] = Depends(oauth2_scheme),
+) -> str:
+    logger.info("Authenticating")
+    # Attempt to verify API Key first
+    if api_key:
+        try:
+            return verify_api_key_single_tenant(request, api_key, authorization)
+        except Exception as e:
+            logger.exception("Failed to validate API Key")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )
+    # If API Key is not present or not valid, attempt to verify the token
+    if token:
+        try:
+            return verify_bearer_token_single_tenant(token)
+        except Exception as e:
+            logger.exception("Failed to validate token")
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )

@@ -4,8 +4,8 @@ TwilioProvider is a class that implements the BaseProvider interface for Twilio 
 import dataclasses
 
 import pydantic
-from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
+from twilio.rest import Client
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -46,6 +46,8 @@ class TwilioProviderAuthConfig:
 
 
 class TwilioProvider(BaseProvider):
+    """Send SMS via Twilio."""
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="send_sms",
@@ -78,7 +80,9 @@ class TwilioProvider(BaseProvider):
             # unfortunately, there is no API to get the enabled region, so we just try US and if it fails on "enabled for the region"
             # we assume the creds are valid but the region is not enabled (and that's ok)
             if "SMS has not been enabled for the region" in str(e):
-                self.logger.debug("Twilio SMS is not enabled for the region, but that's ok")
+                self.logger.debug(
+                    "Twilio SMS is not enabled for the region, but that's ok"
+                )
                 validated_scopes["send_sms"] = True
             else:
                 self.logger.warning(
@@ -132,7 +136,9 @@ class TwilioProvider(BaseProvider):
             )
             self.logger.debug("SMS sent via Twilio")
         except Exception as e:
-            self.logger.warning("Failed to send SMS via Twilio", extra={"reason": str(e)})
+            self.logger.warning(
+                "Failed to send SMS via Twilio", extra={"reason": str(e)}
+            )
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert SMS via Twilio: {e}"
             )

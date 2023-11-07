@@ -26,6 +26,8 @@ from keep.api.core.dependencies import (
     verify_api_key_single_tenant,
     verify_bearer_token,
     verify_bearer_token_single_tenant,
+    verify_token_or_key,
+    verify_token_or_key_single_tenant,
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -205,6 +207,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
                 verify_bearer_token
             ] = verify_bearer_token_single_tenant
             app.dependency_overrides[get_user_email] = get_user_email_single_tenant
+            app.dependency_overrides[
+                verify_token_or_key
+            ] = verify_token_or_key_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
     @app.exception_handler(Exception)

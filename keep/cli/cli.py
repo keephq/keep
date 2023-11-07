@@ -143,10 +143,14 @@ def version():
 @pass_info
 def whoami(info: Info):
     """Verify the api key auth."""
-    resp = requests.get(
-        info.keep_api_url + "/whoami",
-        headers={"x-api-key": info.api_key, "accept": "application/json"},
-    )
+    try:
+        resp = requests.get(
+            info.keep_api_url + "/whoami",
+            headers={"x-api-key": info.api_key, "accept": "application/json"},
+        )
+    except requests.exceptions.ConnectionError as e:
+        click.echo(click.style(f"Timeout connecting to {info.keep_api_url}"))
+        sys.exit(1)
 
     if resp.status_code == 401:
         click.echo(click.style("Api key invalid"))
@@ -304,9 +308,9 @@ def workflow(info: Info):
     pass
 
 
-@workflow.command()
+@workflow.command(name="list")
 @pass_info
-def list(info: Info):
+def list_workflows(info: Info):
     """List workflows."""
     resp = requests.get(
         info.keep_api_url + "/workflows",
@@ -369,7 +373,7 @@ def provider(info: Info):
     pass
 
 
-@provider.command()
+@provider.command(name="list")
 @click.option(
     "--available",
     "-a",
@@ -378,7 +382,7 @@ def provider(info: Info):
     help="List provider that you can install.",
 )
 @pass_info
-def list(info: Info, available: bool):
+def list_providers(info: Info, available: bool):
     """List providers."""
     resp = requests.get(
         info.keep_api_url + "/providers",
@@ -520,11 +524,22 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         json=provider_install_payload,
     )
     if not resp.ok:
-        click.echo(
-            click.style(
-                f"Error installing provider {provider_name}: {resp.text}", bold=True
+        # installation failed because the credentials are invalid
+        if resp.status_code == 412:
+            click.echo(
+                click.style(f"Failed to install provider: invalid scopes", bold=True)
             )
-        )
+            table = PrettyTable()
+            table.field_names = ["Scope Name", "Status"]
+            for scope, value in resp.json().get("detail").items():
+                table.add_row([scope, value])
+            print(table)
+        else:
+            click.echo(
+                click.style(
+                    f"Error installing provider {provider_name}: {resp.text}", bold=True
+                )
+            )
     else:
         resp = resp.json()
         click.echo(
@@ -546,7 +561,7 @@ def config():
     pass
 
 
-@alert.command()
+@alert.command(name="list")
 @click.option(
     "--filter",
     "-f",
@@ -558,7 +573,7 @@ def config():
     "--export", type=click.Path(), help="Export alerts to a specified JSON file."
 )
 @pass_info
-def list(info: Info, filter: typing.List[str], export: bool):
+def list_alerts(info: Info, filter: typing.List[str], export: bool):
     """List alerts."""
     resp = requests.get(
         info.keep_api_url + "/alerts",
@@ -572,7 +587,16 @@ def list(info: Info, filter: typing.List[str], export: bool):
     # Apply all provided filters
     for filt in filter:
         key, value = filt.split("=")
-        alerts = [alert for alert in alerts if alert.get(key) == value]
+        _alerts = []
+        for alert in alerts:
+            val = alert.get(key)
+            if isinstance(val, list):
+                if value in val:
+                    _alerts.append(alert)
+            else:
+                if val == value:
+                    _alerts.append(alert)
+        alerts = _alerts
 
     # If --export option is provided
     if export:
@@ -617,32 +641,36 @@ def list(info: Info, filter: typing.List[str], export: bool):
 
 
 @alert.command()
-@click.option("--alert-id", required=True, help="ID of the alert to enrich.")
+@click.option(
+    "--fingerprint", required=True, help="The fingerprint of the alert to enrich."
+)
 @click.argument("params", nargs=-1, type=click.UNPROCESSED)
 @pass_info
-def enrich(info: Info, alert_id, params):
+def enrich(info: Info, fingerprint, params):
     """Enrich an alert."""
 
     # Convert arguments to dictionary
-    if len(params) % 2 != 0:
-        raise click.BadArgumentUsage("Parameters must be given in key=value pairs")
+    for param in params:
+        # validate the all params are key/value pairs
+        if len(param.split("=")) != 2:
+            raise click.BadArgumentUsage("Parameters must be given in key=value pairs")
 
-    params_dict = {params[i]: params[i + 1] for i in range(0, len(params), 2)}
+    params_dict = {param.split("=")[0]: param.split("=")[1] for param in params}
 
     # Make the API request
     resp = requests.post(
-        f"{info.keep_api_url}/alerts/{alert_id}/enrich",
+        f"{info.keep_api_url}/alerts/{fingerprint}/enrich",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
-        json=params_dict,
+        json={"enrichments": params_dict},
     )
 
     # Check the response
     if not resp.ok:
         click.echo(
-            click.style(f"Error enriching alert {alert_id}: {resp.text}", bold=True)
+            click.style(f"Error enriching alert {fingerprint}: {resp.text}", bold=True)
         )
     else:
-        click.echo(click.style(f"Alert {alert_id} enriched successfully", bold=True))
+        click.echo(click.style(f"Alert {fingerprint} enriched successfully", bold=True))
 
 
 @config.command()
