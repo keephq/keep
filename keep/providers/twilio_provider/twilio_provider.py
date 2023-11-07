@@ -5,6 +5,7 @@ import dataclasses
 
 import pydantic
 from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -61,26 +62,37 @@ class TwilioProvider(BaseProvider):
 
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
-        for scope in self.PROVIDER_SCOPES:
-            if scope.name == "send_sms":
-                twilio_client = Client(
-                    self.authentication_config.account_sid,
-                    self.authentication_config.api_token,
+        twilio_client = Client(
+            self.authentication_config.account_sid,
+            self.authentication_config.api_token,
+        )
+        try:
+            # from: 15005550006 is a magic number according to https://www.twilio.com/docs/messaging/tutorials/automate-testing
+            twilio_client.messages.create(
+                from_="+15005550006",
+                to="+5571981265131",
+                body="scope test",
+            )
+            validated_scopes["send_sms"] = True
+        except TwilioRestException as e:
+            # unfortunately, there is no API to get the enabled region, so we just try US and if it fails on "enabled for the region"
+            # we assume the creds are valid but the region is not enabled (and that's ok)
+            if "SMS has not been enabled for the region" in str(e):
+                self.logger.debug("Twilio SMS is not enabled for the region, but that's ok")
+                validated_scopes["send_sms"] = True
+            else:
+                self.logger.warning(
+                    f"Failed to validate scope send_sms",
+                    extra={"reason": str(e)},
                 )
-                try:
-                    # from: 15005550006 is a magic number according to https://www.twilio.com/docs/messaging/tutorials/automate-testing
-                    twilio_client.messages.create(
-                        from_="+15005550006",
-                        to="+5571981265131",
-                        body="scope test",
-                    )
-                    validated_scopes[scope.name] = True
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to validate scope {scope.name}",
-                        extra={"reason": str(e)},
-                    )
-                    validated_scopes[scope.name] = False
+                validated_scopes["send_sms"] = str(e)
+        # other unknown exception
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to validate scope send_sms",
+                extra={"reason": str(e)},
+            )
+            validated_scopes["send_sms"] = str(e)
 
         return validated_scopes
 
@@ -112,12 +124,15 @@ class TwilioProvider(BaseProvider):
             self.authentication_config.account_sid, self.authentication_config.api_token
         )
         try:
+            self.logger.debug("Sending SMS via Twilio")
             twilio_client.messages.create(
                 from_=self.authentication_config.from_phone_number,
                 to=to_phone_number,
                 body=message_body,
             )
+            self.logger.debug("SMS sent via Twilio")
         except Exception as e:
+            self.logger.warning("Failed to send SMS via Twilio", extra={"reason": str(e)})
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert SMS via Twilio: {e}"
             )
