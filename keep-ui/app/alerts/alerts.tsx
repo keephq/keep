@@ -1,4 +1,5 @@
 import {
+  ArrowPathIcon,
   BellAlertIcon,
   MagnifyingGlassIcon,
   ServerStackIcon,
@@ -10,6 +11,7 @@ import {
   Flex,
   Callout,
   TextInput,
+  Button,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -21,6 +23,7 @@ import { useState } from "react";
 import Loading from "app/loading";
 import { Workflow } from "app/workflows/models";
 import "./alerts.client.css";
+import { ProvidersResponse } from "app/providers/providers";
 
 export default function Alerts({ accessToken }: { accessToken: string }) {
   const apiUrl = getApiURL();
@@ -30,12 +33,16 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const { data, error, isLoading } = useSWR<Alert[]>(
+  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken)
   );
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
+  );
+  const { data: providers } = useSWR<ProvidersResponse>(
+    `${apiUrl}/providers`,
+    (url) => fetcher(url, accessToken)
   );
 
   if (error) {
@@ -84,12 +91,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
 
   return (
     <>
-      <Flex justifyContent="between">
+      <Flex justifyContent="between" alignItems="center">
         <div className="flex w-full">
           <MultiSelect
             onValueChange={setSelectedEnvironments}
             placeholder="Select Environment..."
-            className="max-w-xs mb-5"
+            className="max-w-xs"
             icon={ServerStackIcon}
           >
             {environments!.map((item) => (
@@ -101,7 +108,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           <MultiSelect
             onValueChange={setSelectedStatus}
             placeholder="Select Status..."
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={BellAlertIcon}
           >
             {statuses!.map((item) => (
@@ -111,22 +118,20 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
             ))}
           </MultiSelect>
           <TextInput
-            className="max-w-xs mb-5 ml-2.5"
+            className="max-w-xs ml-2.5"
             icon={MagnifyingGlassIcon}
             placeholder="Search Alert..."
             value={alertNameSearchString}
             onChange={(e) => setAlertNameSearchString(e.target.value)}
           />
         </div>
-        {/* <Button
-          icon={ArchiveBoxIcon}
+        <Button
+          icon={ArrowPathIcon}
           color="orange"
           size="xs"
-          disabled={true}
-          title="Coming Soon"
-        >
-          Export
-        </Button> */}
+          onClick={() => mutate()}
+          title="Refresh"
+        ></Button>
       </Flex>
       <AlertTable
         data={data
@@ -142,6 +147,8 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           )}
         groupBy="name"
         workflows={workflows}
+        providers={providers?.installed_providers}
+        mutate={mutate}
       />
     </>
   );

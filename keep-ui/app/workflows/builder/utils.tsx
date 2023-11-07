@@ -122,11 +122,16 @@ export function getActionOrStepObj(
       with: actionOrStep.provider?.with,
       stepParams: provider?.query_params!,
       actionParams: provider?.notify_params!,
+      if: actionOrStep.if,
     },
   };
 }
 
-export function generateCondition(condition: any, action: any, providers?: Provider[]): any {
+export function generateCondition(
+  condition: any,
+  action: any,
+  providers?: Provider[]
+): any {
   const generatedCondition = {
     id: Uid.next(),
     name: condition.name,
@@ -172,20 +177,16 @@ export function generateWorkflow(
   /**
    * Generate the workflow definition
    */
-  const alert = {
-    id: Uid.next(),
-    name: "Workflow",
-    componentType: "container",
-    type: "alert",
+
+  return {
+    sequence: [...steps, ...conditions],
     properties: {
       id: workflowId,
       description: description,
       isLocked: true,
       ...triggers,
     },
-    sequence: [...steps, ...conditions],
   };
-  return { sequence: [alert], properties: {} };
 }
 
 export function parseWorkflow(
@@ -218,9 +219,13 @@ export function parseWorkflow(
       const existingCondition = conditions.find(
         (a: any) => a.alias === cleanIf
       );
-      existingCondition?.branches.true.push(
-        getActionOrStepObj(action, "action", providers)
-      );
+      if (existingCondition) {
+        existingCondition.branches.true.push(
+          getActionOrStepObj(action, "action", providers)
+        );
+      } else {
+        steps.push(getActionOrStepObj(action, "action", providers));
+      }
     } else {
       action.condition.forEach((condition: any) => {
         conditions.push(generateCondition(condition, action, providers));
@@ -317,8 +322,8 @@ export function downloadFileFromString(data: string, filename: string) {
 }
 
 export function buildAlert(definition: Definition): Alert {
-  const alert = definition.sequence[0] as SequentialStep;
-  const alertId = (alert.properties.id as string) ?? alert.name;
+  const alert = definition;
+  const alertId = alert.properties.id as string;
   const description = (alert.properties.description as string) ?? "";
   const owners = (alert.properties.owners as string[]) ?? [];
   const services = (alert.properties.services as string[]) ?? [];
@@ -346,13 +351,17 @@ export function buildAlert(definition: Definition): Alert {
     .map((s) => {
       const withParams = getWithParams(s);
       const providerType = s.type.replace("action-", "");
+      const ifParam = s.properties.if;
       const providerName =
         (s.properties.config as string)?.trim() || `default-${providerType}`;
-      const provider = {
+      const provider: any = {
         type: s.type.replace("action-", ""),
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
+      if (ifParam) {
+        provider["if"] = ifParam;
+      }
       return {
         name: s.name,
         provider: provider,
