@@ -13,7 +13,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -21,7 +21,7 @@ class NewrelicProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "New Relic API key",
+            "description": "New Relic API key (Use admin Admin API Key for auto webhook integration)",
             "sensitive": True,
         }
     )
@@ -38,6 +38,49 @@ class NewrelicProviderAuthConfig:
 
 
 class NewrelicProvider(BaseProvider):
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="ai.issues:read",
+            description="Requried to read issues and related information",
+            mandatory=True,
+            mandatory_for_webhook=False,
+            documentation_url="https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/",
+            alias="Rules Reader",
+        ),
+        ProviderScope(
+            name="ai.destinations:read",
+            description="Required to read whether keep webhooks are registered",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/",
+            alias="Rules Reader",
+        ),
+        ProviderScope(
+            name="ai.destinations:write",
+            description="Required to register keep webhooks",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/",
+            alias="Rules Reader",
+        ),
+        ProviderScope(
+            name="ai.channels:read",
+            description="Required to know informations about notification channels.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/",
+            alias="Rules Reader",
+        ),
+        ProviderScope(
+            name="ai.channels:write",
+            description="Required to create notification channel",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            documentation_url="https://docs.newrelic.com/docs/accounts/accounts-billing/new-relic-one-user-management/user-management-concepts/",
+            alias="Rules Reader",
+        ),
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -58,6 +101,153 @@ class NewrelicProvider(BaseProvider):
             ProviderConfigException: private key
         """
         self.newrelic_config = NewrelicProviderAuthConfig(**self.config.authentication)
+
+    def __make_add_webhook_destination_query(self, url: str, name: str) -> dict:
+        query = f"""mutation {{
+                        aiNotificationsCreateDestination(
+                            accountId: {self.newrelic_config.account_id}
+                            destination: {{
+                                type: WEBHOOK, 
+                                name: "{name}",
+                                properties: [{{key: "url", value:"{url}"}}]}}
+                        ) {{
+                            destination {{
+                                id
+                                name
+                            }}
+                        }}
+ 
+                    }}"""
+
+        return {
+            "query": query,
+        }
+    def __make_delete_webhook_destination_query(self,destination_id:str): 
+        query = f"""mutation {{
+                        aiNotificationsDeleteDestination(
+                            accountId: {self.newrelic_config.account_id}
+                            destinationId: "{destination_id}"
+                        ) {{
+                            ids
+                        }}
+ 
+                    }}"""
+
+        return {
+            "query": query,
+        }   
+    
+    def validate_scopes(self) -> dict[str, bool | str]:
+        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
+        read_scopes = [key for key in scopes.keys() if "read" in key]
+
+        try:
+            """
+            try to check all read scopes
+            """
+            query = {
+                "query": f"""
+                    {{
+                        actor {{
+                            account(id: {self.newrelic_config.account_id}) {{
+                            aiIssues {{
+                                issues {{
+                                issues {{
+                                    acknowledgedAt
+                                    acknowledgedBy
+                                    activatedAt
+                                    closedAt
+                                    closedBy
+                                    mergeReason
+                                    mutingState
+                                    parentMergeId
+                                    unAcknowledgedAt
+                                    unAcknowledgedBy
+                                }}
+                                }}
+                            }}
+                            aiNotifications {{
+                                destinations {{
+                                    entities {{name}}
+                                }}
+                                channels {{
+                                    entities {{name}}
+                                }}
+                            }}
+                            }}
+                        }}
+                        }}
+               """
+            }
+
+            response = requests.post(
+                self.new_relic_graphql_url,
+                headers={"Api-Key": self.newrelic_config.api_key},
+                json=query,
+            )
+            content = response.content.decode("utf-8")
+            if "errors" in content:
+                raise
+
+            for read_scope in read_scopes:
+                scopes[read_scope] = True
+        except Exception as e:
+            self.logger.exception(
+                "Error while trying to validate read scopes from new relic"
+            )
+            return scopes
+
+        write_scopes = [key for key in scopes.keys() if "write" in key]
+        try:
+            """
+            Checking if destination can be created
+            Delete at the end if created
+
+            Destinations can be only be created through ADMIN User key,
+            this means if this succeeds any write will succeed, including channels.
+
+            
+            reference: https://api.newrelic.com/docs/#/Deprecation%20Notice%20-%20Alerts%20Channels/post_alerts_channels_json
+            not mentioned in GraphQL docs though
+            """
+            
+            query = self.__make_add_webhook_destination_query(
+                url="https://api.localhost.com", name="keep-webhook-test"
+            ) # tried to do with localhost and port, didn't worked
+            response = requests.post(
+                self.new_relic_graphql_url,
+                headers={"Api-Key": self.newrelic_config.api_key},
+                json=query,
+            )
+            content = response.content.decode("utf-8")
+            
+            
+            # delete created destination
+            id = response.json()['data']['aiNotificationsCreateDestination']['destination']['id']
+            query = self.__make_delete_webhook_destination_query(id)
+            response = requests.post(
+                self.new_relic_graphql_url,
+                headers={"Api-Key": self.newrelic_config.api_key},
+                json=query,
+            )
+            content = response.content.decode("utf-8")
+            
+            if 'errors' in content:
+                raise 
+            
+            for write_scope in write_scopes:
+                scopes[write_scope] = True
+        except Exception as e:
+            self.logger.exception(
+                "Error while trying to validate write scopes from new relic"
+            )
+
+        return scopes
+
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        return super().setup_webhook(tenant_id, keep_api_url, api_key, setup_alerts)
 
     @property
     def new_relic_graphql_url(self):
@@ -110,7 +300,7 @@ class NewrelicProvider(BaseProvider):
             "query": f"""
                 {{
                     actor {{
-                        account(id: 3810236) {{
+                        account(id: {self.newrelic_config.account_id}) {{
                         aiIssues {{
                             issues {{
                             issues {{
@@ -219,7 +409,7 @@ if __name__ == "__main__":
 
     api_key = os.environ.get("NEWRELIC_API_KEY")
     account_id = os.environ.get("NEWRELIC_ACCOUNT_ID")
-
+    print(api_key, account_id)
     provider_config = {
         "authentication": {"api_key": api_key, "account_id": account_id},
     }
@@ -231,6 +421,9 @@ if __name__ == "__main__":
         provider_type="newrelic",
         provider_config=provider_config,
     )
+    
+    scopes = provider.validate_scopes()
+    print(scopes)
 
     alerts = provider.get_alerts()
     print(alerts)
