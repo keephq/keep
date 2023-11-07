@@ -25,6 +25,7 @@ export const authOptions = {
       if (account) {
         token.accessToken = account.id_token;
       }
+
       return token;
     },
     async session({ session, token }) {

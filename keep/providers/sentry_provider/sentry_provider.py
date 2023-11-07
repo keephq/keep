@@ -251,15 +251,19 @@ class SentryProvider(BaseProvider):
             )
             existing_webhooks_value: str = config.get("value", "") or ""
             existing_webhooks = existing_webhooks_value.split("\n")
-            # This means we already installed in that project
+            # tb: this is a resolution to a bug i pushed somewhere in the beginning of sentry provider
+            #   TODO: remove this in the future
             if f"{keep_api_url}?api_key={api_key}" in existing_webhooks:
+                existing_webhooks.remove(f"{keep_api_url}?api_key={api_key}")
+            # This means we already installed in that project
+            if f"{keep_api_url}&api_key={api_key}" in existing_webhooks:
                 # TODO: we might got here but did not create the alert, we should fix that in the future
                 #   e.g. make sure the alert exists and if not create it.
                 self.logger.info(
                     f"Keep webhook already exists for project {project_slug}"
                 )
                 continue
-            existing_webhooks.append(f"{keep_api_url}?api_key={api_key}")
+            existing_webhooks.append(f"{keep_api_url}&api_key={api_key}")
             # Update the webhooks urls
             update_response = requests.put(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
