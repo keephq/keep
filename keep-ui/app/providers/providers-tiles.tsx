@@ -23,7 +23,7 @@ const ProvidersTiles = ({
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
-  const [panelSize, setPanelSize] = useState<number>(50);
+  const [panelSize, setPanelSize] = useState<number>(40);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
@@ -56,7 +56,7 @@ const ProvidersTiles = ({
     if(pageWidth < 640){
       setPanelSize(100)
     } else {
-      setPanelSize(30)
+      setPanelSize(40)
     }
   }, [openPanel])
 
