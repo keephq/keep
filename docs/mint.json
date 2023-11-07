@@ -78,6 +78,7 @@
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/trello-provider",
+            "providers/documentation/twilio-provider",
             "providers/documentation/zenduty-provider",
             "providers/documentation/resend-provider",
             "providers/documentation/websocket-provider"
