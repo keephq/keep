@@ -73,7 +73,7 @@ function KeepStepEditor({
     updateProperty("with", { ...currentWith, [e.target.id]: e.target.value });
   }
 
-  const providerConfig = (properties.config as string).trim();
+  const providerConfig = (properties.config as string)?.trim();
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
