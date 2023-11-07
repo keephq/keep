@@ -16,14 +16,9 @@ import {
   Text,
   Select,
   SelectItem,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
   DatePicker,
 } from "@tremor/react";
+import AlertMethodResultsTable from "./alert-method-results-table";
 
 interface Props {
   isOpen: boolean;
@@ -45,7 +40,7 @@ export function AlertMethodTransition({
   const [isLoading, setIsLoading] = useState(true);
   const [autoParams, setAutoParams] = useState<{ [key: string]: string }>({});
   const [userParams, setUserParams] = useState<{ [key: string]: string }>({});
-  const [results, setResults] = useState<string[] | null>(null);
+  const [results, setResults] = useState<string[] | object[] | null>(null);
 
   const validateAndSetUserParams = (
     key: string,
@@ -227,7 +222,7 @@ export function AlertMethodTransition({
           <div className="fixed inset-0 bg-gray-900 bg-opacity-25" />
         </Transition.Child>
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex h-full items-center justify-center p-4 text-center">
+          <div className="flex items-center justify-center p-4 text-center  h-full">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -238,28 +233,13 @@ export function AlertMethodTransition({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className="w-full max-w-lg transform bg-white
+                className="w-full max-w-lg max-h-96 transform overflow-scroll bg-white
                                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
               >
                 {isLoading ? (
                   <Loading includeMinHeight={false} />
                 ) : results ? (
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableHeaderCell>Results</TableHeaderCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {results.map((result, index) => {
-                        return (
-                          <TableRow key={index}>
-                            <TableCell>{result}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  <AlertMethodResultsTable results={results} />
                 ) : (
                   <div>
                     {method.func_params?.map((param) => {
