@@ -196,7 +196,7 @@ class SentryProvider(BaseProvider):
             description=event_data.get("metadata", {}).get("value"),
             pushed=True,
             severity=event.pop("level", "high"),
-            url=event_data.pop("url"),
+            url=event_data.pop("url", None),
             fingerprint=hashes[0] if len(hashes) > 0 else None,
             **event_data,
         )
@@ -369,7 +369,7 @@ class SentryProvider(BaseProvider):
                     name=issue.pop("title"),
                     status=issue.pop("status"),
                     lastReceived=issue.pop("lastSeen"),
-                    environment=issue.get("metadata", {}).get("filename"),
+                    environment=issue.get("metadata", {}).get("filename", "unknown"),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
                     url=issue.pop("permalink"),
