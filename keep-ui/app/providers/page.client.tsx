@@ -118,7 +118,7 @@ export default function ProvidersPage({
   }, [session?.user]);
 
   if (status === "loading") return <Loading />;
-  if (status === "unauthenticated") router.push("/sign");
+  if (status === "unauthenticated") router.push("/signin");
   if (!providers || !installedProviders) return <Loading />;
   if (error) {
     throw new KeepApiError(error.message, `${getApiURL()}/providers`);

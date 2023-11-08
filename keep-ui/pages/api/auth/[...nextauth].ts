@@ -106,8 +106,12 @@ export const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
+export const noAuthOptions = {
+  providers: [],
+} as AuthOptions;
+
 export default isSingleTenant && !useAuthentication
-  ? null
+  ? NextAuth(noAuthOptions)
   : isSingleTenant
   ? NextAuth(singleTenantAuthOptions)
   : NextAuth(authOptions);
