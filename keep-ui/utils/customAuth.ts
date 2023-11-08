@@ -98,5 +98,6 @@ export function getSession(params?: any) {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useGetSession(params);
+  const session = useGetSession(params);
+  return session;
 }
