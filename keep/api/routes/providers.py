@@ -402,7 +402,7 @@ async def update_provider(
 @router.post("/install")
 async def install_provider(
     request: Request,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):

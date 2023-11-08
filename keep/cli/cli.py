@@ -1,6 +1,7 @@
 import json
 import logging
 import logging.config
+import os
 import sys
 import typing
 from dataclasses import fields
@@ -137,6 +138,18 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 def version():
     """Get the library version."""
     click.echo(click.style(f"{metadata.version('keep')}", bold=True))
+
+
+@cli.command()
+@pass_info
+def config(info: Info):
+    """Get the config."""
+    api_key = click.prompt("Enter your api key", hide_input=True)
+    keep_url = click.prompt("Enter your keep url", default="https://api.keephq.dev")
+    with open("keep.yaml", "w") as f:
+        f.write(f"api_key: {api_key}\n")
+        f.write(f"keep_api_url: {keep_url}\n")
+    click.echo(click.style(f"Config file created at keep.yaml", bold=True))
 
 
 @cli.command()
@@ -555,10 +568,20 @@ def alert(info: Info):
     pass
 
 
-@cli.group()
-def config():
-    """Set keep configuration."""
-    pass
+@alert.command(name="get")
+@click.argument(
+    "fingerprint",
+    required=True,
+    type=str,
+)
+@pass_info
+def get_alert(info: Info, fingerprint: str):
+    resp = requests.get(
+        info.keep_api_url + f"/alerts/{fingerprint}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting alert: {resp.text}")
 
 
 @alert.command(name="list")
@@ -611,6 +634,7 @@ def list_alerts(info: Info, filter: typing.List[str], export: bool):
         "ID",
         "Fingerprint",
         "Name",
+        "Severity",
         "Status",
         "Environment",
         "Service",
@@ -630,6 +654,7 @@ def list_alerts(info: Info, filter: typing.List[str], export: bool):
                 alert["id"],
                 alert["fingerprint"],
                 alert["name"],
+                alert["severity"],
                 alert["status"],
                 alert["environment"],
                 alert["service"],
@@ -671,71 +696,6 @@ def enrich(info: Info, fingerprint, params):
         )
     else:
         click.echo(click.style(f"Alert {fingerprint} enriched successfully", bold=True))
-
-
-@config.command()
-@click.option(
-    "--provider-type",
-    "-p",
-    help="The provider to configure [e.g. elastic]",
-    required=True,
-)
-@click.option(
-    "--provider-id",
-    "-i",
-    help="The provider unique identifier [e.g. elastic-prod]",
-    required=True,
-)
-@click.option(
-    "--provider-config-file",
-    "-c",
-    help="The provider config",
-    required=False,
-    default="providers.yaml",
-)
-@pass_info
-def provider(info: Info, provider_type, provider_id, provider_config_file):
-    """Set the provider configuration."""
-    click.echo(click.style(f"Config file: {provider_config_file}", bold=True))
-    # create the file if it doesn't exist
-    with open(provider_config_file, "a+") as f:
-        pass
-    # read the appropriate provider config
-    config_class = ProvidersFactory.get_provider_required_config(provider_type)
-    provider_config = {"authentication": {}}
-    config = None
-    while not config:
-        # iterate necessary config and prompt for values
-        for field in fields(config_class):
-            is_sensitive = field.metadata.get("sensitive", False)
-            optional = not field.metadata.get("required")
-            if optional:
-                default = field.default or ""
-                config_value = click.prompt(
-                    f"{field.metadata.get('description')}",
-                    default=default,
-                    hide_input=is_sensitive,
-                )
-            else:
-                config_value = click.prompt(
-                    f"{field.metadata.get('description')}", hide_input=is_sensitive
-                )
-            provider_config["authentication"][field.name] = config_value
-
-        try:
-            config = config_class(**provider_config["authentication"])
-        # If the validation failed, we need to reprompt the provider config
-        except Exception as e:
-            print(" -- Validation failed -- ")
-            print(str(e))
-            print(" -- Reconfiguring provider -- ")
-    # Finally, let's keep the provider config
-    with open(provider_config_file, "r") as f:
-        providers = yaml.safe_load(f) or {}
-    with open(provider_config_file, "w") as f:
-        providers[provider_id] = provider_config
-        yaml.dump(providers, f)
-    click.echo(click.style(f"Config file created at {provider_config_file}", bold=True))
 
 
 if __name__ == "__main__":

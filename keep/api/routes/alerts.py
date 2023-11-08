@@ -348,6 +348,28 @@ async def receive_event(
         return {"status": "failed"}
 
 
+@router.get(
+    "/{fingerprint}",
+    description="Get alert by fingerprint",
+)
+def get_alert(
+    fingerprint: str,
+    tenant_id: str = Depends(verify_token_or_key),
+    session: Session = Depends(get_session),
+) -> AlertDto:
+    logger.info(
+        "Fetching alert",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+    # TODO: once pulled alerts will be in the db too, this should be changed
+    all_alerts = get_alerts(tenant_id=tenant_id)
+    alert = filter(lambda alert: alert.fingerprint == fingerprint, all_alerts)
+    return AlertDto(**alert.event)
+
+
 @router.post(
     "/{fingerprint}/enrich",
     description="Enrich an alert",
