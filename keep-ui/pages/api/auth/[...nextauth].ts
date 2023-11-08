@@ -6,6 +6,8 @@ import { getApiURL } from "utils/apiUrl";
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
 
+console.log(process.env.AUTH0_DOMAIN);
+
 export const authOptions = {
   providers: [
     Auth0Provider({
@@ -25,7 +27,6 @@ export const authOptions = {
       if (account) {
         token.accessToken = account.id_token;
       }
-
       return token;
     },
     async session({ session, token }) {
@@ -36,7 +37,6 @@ export const authOptions = {
   },
 } as AuthOptions;
 
-
 // for single tenant, we will user username/password authentication
 export const singleTenantAuthOptions = {
   providers: [
@@ -44,51 +44,49 @@ export const singleTenantAuthOptions = {
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text", placeholder: "keep" },
-        password: {  label: "Password", type: "password", placeholder: "keep" }
+        password: { label: "Password", type: "password", placeholder: "keep" },
       },
       async authorize(credentials, req) {
         const apiUrl = getApiURL();
         try {
           const response = await fetch(`${apiUrl}/signin`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(credentials)
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(credentials),
           });
 
           if (!response.ok) {
-              throw new Error('Failed to authenticate user');
+            throw new Error("Failed to authenticate user");
           }
 
           const user = await response.json();
           const accessToken = user.accessToken;
           // Assuming the response contains the user's data if authentication was successful
           if (user && user.accessToken) {
-              return {
-                  ...user,
-                  accessToken
-              }
+            return {
+              ...user,
+              accessToken,
+            };
           } else {
-              return null;
+            return null;
+          }
+        } catch (error) {
+          if (error instanceof Error) {
+            console.error("Authentication error:", error.message);
+          } else {
+            console.error("Unknown authentication error:", error);
           }
         }
-        catch (error) {
-          if (error instanceof Error) {
-              console.error('Authentication error:', error.message);
-          } else {
-              console.error('Unknown authentication error:', error);
-          }
-      }
       },
-
-    })
+    }),
   ],
   theme: {
-      colorScheme: "auto", // "auto" | "dark" | "light"
-      brandColor: "#000000", // Hex color code
-      logo: "/keep_big.svg", // Absolute URL to image
-      buttonText: "#000000" // Hex color code
+    colorScheme: "auto", // "auto" | "dark" | "light"
+    brandColor: "#000000", // Hex color code
+    logo: "/keep_big.svg", // Absolute URL to image
+    buttonText: "#000000", // Hex color code
   },
   session: {
     strategy: "jwt",
@@ -110,8 +108,8 @@ export const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
-export default (isSingleTenant && !useAuthentication)
+export default isSingleTenant && !useAuthentication
   ? null
-  : (isSingleTenant
-      ? NextAuth(singleTenantAuthOptions)
-      : NextAuth(authOptions));
+  : isSingleTenant
+  ? NextAuth(singleTenantAuthOptions)
+  : NextAuth(authOptions);
