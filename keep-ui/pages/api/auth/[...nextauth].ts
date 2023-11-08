@@ -6,8 +6,6 @@ import { getApiURL } from "utils/apiUrl";
 const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
 const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
 
-console.log(process.env.AUTH0_DOMAIN);
-
 export const authOptions = {
   providers: [
     Auth0Provider({
