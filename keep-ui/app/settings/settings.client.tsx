@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const router = useRouter();
 
   if (status === "loading") return <Loading />;
-  if (status === "unauthenticated") router.push("/sign");
+  if (status === "unauthenticated") router.push("/signin");
 
   /**
    * TODO: Refactor this page to use pages

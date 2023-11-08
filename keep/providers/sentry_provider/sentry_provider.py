@@ -179,7 +179,6 @@ class SentryProvider(BaseProvider):
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
         event_data = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
-        hashes = event_data.get("hashes", [])
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("metadata", {}).get(
@@ -197,8 +196,8 @@ class SentryProvider(BaseProvider):
             pushed=True,
             severity=event.pop("level", "high"),
             url=event_data.pop("url", None),
-            fingerprint=hashes[0] if len(hashes) > 0 else None,
             **event_data,
+            **tags_as_dict,
         )
 
     def setup_webhook(
@@ -363,18 +362,37 @@ class SentryProvider(BaseProvider):
         # format issues
         formatted_issues = []
         for issue in all_issues:
+            issue_id = issue.pop("id")
+
+            tags_request = projects_response = requests.get(
+                f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
+                headers={
+                    "Authorization": f"Bearer {self.authentication_config.api_key}"
+                },
+            )
+            tags = {}
+            issue.pop("stats", None)
+            if tags_request.ok:
+                tags = tags_request.json()
+                tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+                tags.pop("url")
+
+            lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+
             formatted_issues.append(
                 AlertDto(
-                    id=issue.pop("id"),
+                    id=issue_id,
                     name=issue.pop("title"),
                     status=issue.pop("status"),
-                    lastReceived=issue.pop("lastSeen"),
-                    environment=issue.get("metadata", {}).get("filename", "unknown"),
+                    lastReceived=lastReceived.isoformat(),
+                    environment=tags.pop("environment", "unknown"),
+                    severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
                     url=issue.pop("permalink"),
                     source=["sentry"],
                     **issue,
+                    **tags,
                 )
             )
         return formatted_issues
