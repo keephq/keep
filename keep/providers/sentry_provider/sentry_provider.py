@@ -372,17 +372,23 @@ class SentryProvider(BaseProvider):
         for issue in all_issues:
             issue_id = issue.pop("id")
 
-            tags_request = projects_response = requests.get(
-                f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
-            )
-            tags = {}
+            # redundant
             issue.pop("stats", None)
-            if tags_request.ok:
-                tags = tags_request.json()
-                tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+
+            tags = {}
+            try:
+                tags_request = projects_response = requests.get(
+                    f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
+                    headers={
+                        "Authorization": f"Bearer {self.authentication_config.api_key}"
+                    },
+                    timeout=1,
+                )
+                if tags_request.ok:
+                    tags = tags_request.json()
+                    tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+            except Exception:
+                self.logger.warning(f"Failed to get tags for issue {issue_id}")
 
             lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
 
