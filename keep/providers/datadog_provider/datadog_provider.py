@@ -288,7 +288,7 @@ class DatadogProvider(BaseProvider):
             results = [
                 event.to_dict()
                 for event in results.get("events", [])
-                if str(event.monitor_id) == monitor_id
+                if str(event.monitor_id) == str(monitor_id)
             ]
             self.logger.info(
                 "Monitor events retrieved", extra={"monitor_id": monitor_id}

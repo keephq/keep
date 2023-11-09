@@ -170,7 +170,7 @@ class GrafanaProvider(BaseProvider):
             fatigueMeter=random.randint(0, 100),
             description=alert.get("annotations", {}).get("summary", ""),
             source=["grafana"],
-            **alert.get("labels", {}),
+            labels=alert.get("labels", {}),
         )
 
     def setup_webhook(

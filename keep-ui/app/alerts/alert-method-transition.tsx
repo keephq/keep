@@ -138,7 +138,7 @@ export function AlertMethodTransition({
       );
       const response_object = await response.json();
       if (response.ok) {
-        mutate!();
+        if (method.type === "action") mutate!();
         toast.success(`Successfully called "${method.name}"`, {
           position: toast.POSITION.TOP_LEFT,
         });
