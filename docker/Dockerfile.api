@@ -22,5 +22,4 @@ FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 COPY --from=builder /venv /venv
-ENTRYPOINT ["uvicorn", "--factory", "keep.api.api:get_wsgi_app", "--interface", "wsgi", "--host" , "0.0.0.0" , "--port", "8080",  "--workers", "1" ]
-
+ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "1" , "-k" , "uvicorn.workers.UvicornWorker" ]

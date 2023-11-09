@@ -43,7 +43,6 @@ from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
-from a2wsgi import ASGIMiddleware
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -231,8 +230,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
 
     return app
 
-def get_wsgi_app(multi_tenant: bool = False):
-    return ASGIMiddleware(get_app(multi_tenant=multi_tenant))
 
 def run_services_after_app_is_up():
     """Waits until the server is up and than invoking the 'start-services' endpoint to start the internal services"""
