@@ -177,8 +177,13 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
-        event_data = event.get("event", {})
+        event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
+
+        # Remove duplicate keys
+        event_data.pop("id", None)
+        tags_as_dict.pop("id", None)
+
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("metadata", {}).get(
@@ -375,7 +380,6 @@ class SentryProvider(BaseProvider):
             if tags_request.ok:
                 tags = tags_request.json()
                 tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
-                tags.pop("url")
 
             lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
 
@@ -389,10 +393,10 @@ class SentryProvider(BaseProvider):
                     severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
-                    url=issue.pop("permalink"),
+                    url=issue.pop("permalink", None),
                     source=["sentry"],
-                    **issue,
-                    **tags,
+                    tags=tags,
+                    payload=issue,
                 )
             )
         return formatted_issues
