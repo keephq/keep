@@ -376,19 +376,20 @@ class SentryProvider(BaseProvider):
             issue.pop("stats", None)
 
             tags = {}
-            try:
-                tags_request = projects_response = requests.get(
-                    f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
-                    headers={
-                        "Authorization": f"Bearer {self.authentication_config.api_key}"
-                    },
-                    timeout=1,
-                )
-                if tags_request.ok:
-                    tags = tags_request.json()
-                    tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
-            except Exception:
-                self.logger.warning(f"Failed to get tags for issue {issue_id}")
+            # TODO: re-think this since it causes requests to hang for too long
+            # try:
+            #     tags_request = projects_response = requests.get(
+            #         f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
+            #         headers={
+            #             "Authorization": f"Bearer {self.authentication_config.api_key}"
+            #         },
+            #         timeout=1,
+            #     )
+            #     if tags_request.ok:
+            #         tags = tags_request.json()
+            #         tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+            # except Exception:
+            #     self.logger.warning(f"Failed to get tags for issue {issue_id}")
 
             lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
 
@@ -398,7 +399,9 @@ class SentryProvider(BaseProvider):
                     name=issue.pop("title"),
                     status=issue.pop("status"),
                     lastReceived=lastReceived.isoformat(),
-                    environment=tags.pop("environment", "unknown"),
+                    environment=tags.pop(
+                        "environment", issue.pop("environment", "unknown")
+                    ),
                     severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
