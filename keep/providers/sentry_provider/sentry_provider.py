@@ -196,13 +196,16 @@ class SentryProvider(BaseProvider):
             ),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
+            environment=event_data.pop(
+                "environment", tags_as_dict.pop("environment", "unknown")
+            ),
             message=event_data.get("metadata", {}).get("value"),
             description=event_data.get("metadata", {}).get("value"),
             pushed=True,
             severity=event.pop("level", "high"),
-            url=event_data.pop("url", None),
-            **event_data,
-            **tags_as_dict,
+            url=event_data.pop("url", tags_as_dict.pop("url", None)),
+            issue=event_data,
+            tags=tags_as_dict,
         )
 
     def setup_webhook(
