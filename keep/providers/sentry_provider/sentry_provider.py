@@ -186,9 +186,7 @@ class SentryProvider(BaseProvider):
 
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("metadata", {}).get(
-                "type", event_data.get("metadata", {}).get("title")
-            ),
+            name=event_data.get("title"),
             status=event.get("action", "triggered"),
             lastReceived=event_data.get(
                 "datetime",
