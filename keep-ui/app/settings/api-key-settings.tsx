@@ -25,10 +25,18 @@ export default function ApiKeySettings({ accessToken }: Props) {
   if (isLoading) return <Loading />;
   if (error) return <div>{error.message}</div>;
 
-  const copyBlockProps = {
+  const copyBlockApiKeyProps = {
     theme: { ...a11yLight },
     language: "text",
     text: data?.apiKey || '',
+    codeBlock: true,
+    showLineNumbers: false,
+  };
+
+  const copyBlockUrlProps = {
+    theme: { ...a11yLight },
+    language: "text",
+    text: process.env.NEXT_PUBLIC_API_URL || '',
     codeBlock: true,
     showLineNumbers: false,
   };
@@ -38,7 +46,12 @@ export default function ApiKeySettings({ accessToken }: Props) {
       <Title>API Key</Title>
       <Card className="mt-2.5">
         {/* Ensure CopyBlock is the only element within the card for proper spacing */}
-        <CopyBlock {...copyBlockProps} />
+        <CopyBlock {...copyBlockApiKeyProps} />
+      </Card>
+      <Title>URL</Title>
+      <Card className="mt-2.5">
+        {/* Ensure CopyBlock is the only element within the card for proper spacing */}
+        <CopyBlock {...copyBlockUrlProps} />
       </Card>
     </div>
   );

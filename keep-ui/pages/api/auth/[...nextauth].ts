@@ -109,6 +109,8 @@ export const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
+
+
 export default (isSingleTenant && !useAuthentication)
   ? null
   : (isSingleTenant
