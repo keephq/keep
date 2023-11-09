@@ -287,7 +287,7 @@ async def receive_event(
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
         logger.info(
-            "Formatting alerts from",
+            f"Trying to format alert with {provider_type}",
             extra={
                 "provider_type": provider_type,
                 "provider_id": provider_id,
@@ -296,7 +296,7 @@ async def receive_event(
         )
         formatted_events = provider_class.format_alert(event)
         logger.info(
-            "Formatted alerts",
+            f"Formatted alerts with {provider_type}",
             extra={
                 "provider_type": provider_type,
                 "provider_id": provider_id,
