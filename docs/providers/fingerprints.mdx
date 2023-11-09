@@ -36,6 +36,35 @@ When Keep receives/gets an alert, it calculates the fingerprint for each alert t
 In summary, Keep alert fingerprints are essential for managing and organizing alerts in every third-party system.
 They help prevent duplicates, group related alerts, enable silencing, and facilitate analysis and visualization of alert data, ultimately aiding in the effective operation and maintenance of monitored systems.
 
+### Examples
+
+This is the base provider class implementation for fingerprint fields:
+
+```python base_provider.py
+class BaseProvider(metaclass=abc.ABCMeta):
+    OAUTH2_URL = None
+    PROVIDER_SCOPES: list[ProviderScope] = []
+    PROVIDER_METHODS: list[ProviderMethod] = []
+    FINGERPRINT_FIELDS: list[str] = []
+```
+
+This is Datadog's provider implementation for fingerprint fields, where we calculate fingerprint based on the event groups and monitor id, as an example:
+
+```python datadog_provider.py
+class DatadogProvider(BaseProvider):
+    """
+    Datadog provider class.
+    """
+
+    PROVIDER_SCOPES = [
+      ...
+    ]
+    PROVIDER_METHODS = [
+      ...
+    ]
+    FINGERPRINT_FIELDS = ["groups", "monitor_id"]
+```
+
 <Card title="Customization" icon="lightbulb" iconType="duotone" color="#ca8b04">
   Keep allows for customization with everything related with fingerprints. If
   you want to change the way a specific provider calculates the fingerprint of
