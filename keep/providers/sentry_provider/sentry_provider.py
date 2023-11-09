@@ -177,8 +177,13 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
-        event_data = event.get("event", {})
+        event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
+
+        # Remove duplicate keys
+        event_data.pop("id", None)
+        tags_as_dict.pop("id", None)
+
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("metadata", {}).get(
@@ -191,13 +196,16 @@ class SentryProvider(BaseProvider):
             ),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
+            environment=event_data.pop(
+                "environment", tags_as_dict.pop("environment", "unknown")
+            ),
             message=event_data.get("metadata", {}).get("value"),
             description=event_data.get("metadata", {}).get("value"),
             pushed=True,
             severity=event.pop("level", "high"),
-            url=event_data.pop("url", None),
-            **event_data,
-            **tags_as_dict,
+            url=event_data.pop("url", tags_as_dict.pop("url", None)),
+            issue=event_data,
+            tags=tags_as_dict,
         )
 
     def setup_webhook(
@@ -375,7 +383,6 @@ class SentryProvider(BaseProvider):
             if tags_request.ok:
                 tags = tags_request.json()
                 tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
-                tags.pop("url")
 
             lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
 
@@ -389,10 +396,10 @@ class SentryProvider(BaseProvider):
                     severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
-                    url=issue.pop("permalink"),
+                    url=issue.pop("permalink", None),
                     source=["sentry"],
-                    **issue,
-                    **tags,
+                    tags=tags,
+                    payload=issue,
                 )
             )
         return formatted_issues
