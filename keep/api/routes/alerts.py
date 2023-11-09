@@ -324,5 +324,7 @@ async def receive_event(
         )
         return {"status": "ok"}
     except Exception as e:
-        logger.warn("Failed to handle event", extra={"error": str(e)})
-        return {"status": "failed"}
+        logger.exception(
+            "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
+        )
+        raise HTTPException(400, "Failed to handle event")
