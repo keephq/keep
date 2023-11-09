@@ -34,12 +34,10 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const {
-    data,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<Alert[]>(`${apiUrl}/alerts`, (url) => fetcher(url, accessToken));
+  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
+    `${apiUrl}/alerts`,
+    (url) => fetcher(url, accessToken)
+  );
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
