@@ -1,4 +1,4 @@
-from pydantic import AnyHttpUrl, BaseModel, Extra
+from pydantic import AnyHttpUrl, BaseModel, Extra, validator
 
 
 class AlertDto(BaseModel):
@@ -22,12 +22,11 @@ class AlertDto(BaseModel):
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # if no fingerprint was provided, use the alert name as fingerprint
-        # todo: this should be configurable
-        if self.fingerprint is None:
-            self.fingerprint = self.name
+    @validator("fingerprint", pre=True, always=True)
+    def assign_fingerprint_if_none(cls, fingerprint, values):
+        if fingerprint is None:
+            return values.get("name", "")
+        return fingerprint
 
     class Config:
         extra = Extra.allow

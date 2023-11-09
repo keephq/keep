@@ -145,7 +145,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
               statusIsSeleected(alert) &&
               searchAlert(alert)
           )}
-        groupBy="name"
+        groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
         mutate={mutate}

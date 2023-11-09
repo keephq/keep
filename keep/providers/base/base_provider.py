@@ -4,6 +4,7 @@ Base class for all providers.
 import abc
 import copy
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -26,6 +27,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
+    FINGERPRINT_FIELDS: list[str] = []
 
     def __init__(
         self,
@@ -57,6 +59,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         )
         self.provider_type = self._extract_type()
         self.results = []
+        # tb: we can have this overriden by customer configuration, when initializing the provider
+        self.fingerprint_fields = self.FINGERPRINT_FIELDS
 
     def _extract_type(self):
         """
@@ -197,6 +201,30 @@ class BaseProvider(metaclass=abc.ABCMeta):
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
+
+    @staticmethod
+    def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
+        """
+        Get the fingerprint of an alert.
+
+        Args:
+            event (AlertDto): The alert to get the fingerprint of.
+            fingerprint_fields (list, optional): The fields we calculate the fingerprint upon. Defaults to [].
+
+        Returns:
+            str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
+        """
+        if not fingerprint_fields:
+            return alert.name
+        fingerprint = hashlib.sha256()
+        event_dict = alert.dict()
+        for fingerprint_field in fingerprint_fields:
+            fingerprint_field_value = event_dict.get(fingerprint_field, None)
+            if isinstance(fingerprint_field_value, (list, dict)):
+                fingerprint_field_value = json.dumps(fingerprint_field_value)
+            if fingerprint_field_value:
+                fingerprint.update(str(fingerprint_field_value).encode())
+        return fingerprint.hexdigest()
 
     def get_alerts_configuration(self, alert_id: Optional[str] = None):
         """
