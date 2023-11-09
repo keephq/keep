@@ -307,7 +307,7 @@ async def receive_event(
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
         logger.info(
-            "Formatting alerts from",
+            f"Trying to format alert with {provider_type}",
             extra={
                 "provider_type": provider_type,
                 "provider_id": provider_id,
@@ -316,7 +316,7 @@ async def receive_event(
         )
         formatted_events = provider_class.format_alert(event)
         logger.info(
-            "Formatted alerts",
+            f"Formatted alerts with {provider_type}",
             extra={
                 "provider_type": provider_type,
                 "provider_id": provider_id,
@@ -344,8 +344,10 @@ async def receive_event(
         )
         return {"status": "ok"}
     except Exception as e:
-        logger.warn("Failed to handle event", extra={"error": str(e)})
-        return {"status": "failed"}
+        logger.exception(
+            "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
+        )
+        raise HTTPException(400, "Failed to handle event")
 
 
 @router.get(

@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -253,7 +254,14 @@ def get_raw_workflow_by_id(
     tenant_id: str = Depends(verify_bearer_token),
 ) -> str:
     workflowstore = WorkflowStore()
-    return workflowstore.get_raw_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "workflow_raw": workflowstore.get_raw_workflow(
+                tenant_id=tenant_id, workflow_id=workflow_id
+            )
+        },
+    )
 
 
 @router.get("/{workflow_id}", description="Get workflow executions by ID")

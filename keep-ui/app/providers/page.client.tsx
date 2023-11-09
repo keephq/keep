@@ -18,6 +18,7 @@ import Image from "next/image";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
+import { useRouter } from "next/navigation";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -99,7 +100,7 @@ export default function ProvidersPage({
     session,
   } = useFetchProviders();
   const { searchProviderString } = useContext(LayoutContext);
-
+  const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
       const reason = JSON.parse(searchParams.reason);
@@ -117,7 +118,7 @@ export default function ProvidersPage({
   }, [session?.user]);
 
   if (status === "loading") return <Loading />;
-  if (status === "unauthenticated") return <div>Unauthenticated</div>;
+  if (status === "unauthenticated") router.push("/signin");
   if (!providers || !installedProviders) return <Loading />;
   if (error) {
     throw new KeepApiError(error.message, `${getApiURL()}/providers`);
