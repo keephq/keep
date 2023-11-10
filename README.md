@@ -43,7 +43,7 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 ## How does it work?
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
 <div align="center">
-    
+
 | Connect providers | Receive alerts |
 |----------|----------|
 | <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
@@ -194,7 +194,7 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 
 #### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
-## 🫵 Keepers
+## 💪 Keepers
 
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
