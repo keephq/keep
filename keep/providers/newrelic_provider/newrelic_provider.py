@@ -15,10 +15,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from dotenv import load_dotenv, find_dotenv
 from pybars import Compiler
-
-load_dotenv(find_dotenv())
 
 
 @pydantic.dataclasses.dataclass
@@ -764,6 +761,6 @@ if __name__ == "__main__":
         tenant_id="test-v2",
         keep_api_url="https://6fd6-2401-4900-1cb0-3b5f-6d04-474-81c5-30c7.ngrok-free.app/alerts/event",
         setup_alerts=True,
-        api_key="21df6006-5c98-4798-9864-0bd8fdee8793",
+        
     )
     print(created)
