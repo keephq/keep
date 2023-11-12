@@ -97,7 +97,7 @@ class PagerdutyProvider(BaseProvider):
         """
         # If no dedup is given, use epoch timestamp
         if dedup is None:
-            dedup = str(datetime.datetime.utcnow().timestamp())
+            dedup = str(datetime.datetime.now().timestamp())
 
         url = "https://events.pagerduty.com//v2/enqueue"
 

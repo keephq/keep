@@ -18,6 +18,7 @@ class AlertDto(BaseModel):
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
+    labels: dict | None = {}
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )

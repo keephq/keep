@@ -139,7 +139,7 @@ receivers:
                 name=alert_id,
                 description=description,
                 status=alert.pop("state", None) or alert.pop("status", None),
-                lastReceived=datetime.utcnow().isoformat(),
+                lastReceived=datetime.now().isoformat(),
                 environment=labels.pop("environment", "unknown"),
                 severity=labels.get("severity", "info"),
                 source=["prometheus"],

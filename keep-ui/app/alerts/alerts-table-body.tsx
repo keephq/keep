@@ -88,7 +88,7 @@ export function AlertsTableBody({
   openModal,
   workflows,
   providers,
-  mutate
+  mutate,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {

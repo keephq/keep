@@ -123,9 +123,7 @@ class ParseableProvider(BaseProvider):
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")
         status = event.pop("status", "firing")
-        lastReceived = event.pop(
-            "last_received", datetime.datetime.utcnow().isoformat()
-        )
+        lastReceived = event.pop("last_received", datetime.datetime.now().isoformat())
         decription = event.pop("failing_condition", "")
         tags = event.get("tags", {})
         if isinstance(tags, dict):

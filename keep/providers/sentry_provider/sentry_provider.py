@@ -185,7 +185,7 @@ class SentryProvider(BaseProvider):
         tags_as_dict.pop("id", None)
 
         last_received = (
-            datetime.datetime.utcfromtimestamp(event_data.get("received"))
+            datetime.datetime.fromtimestamp(event_data.get("received"))
             if "received" in event_data
             else event_data.get("datetime")
         )
@@ -397,7 +397,7 @@ class SentryProvider(BaseProvider):
                     id=issue_id,
                     name=issue.pop("title"),
                     status=issue.pop("status"),
-                    lastReceived=datetime.datetime.utcnow().isoformat(),
+                    lastReceived=datetime.datetime.now().isoformat(),
                     environment=tags.pop(
                         "environment", issue.pop("environment", "unknown")
                     ),

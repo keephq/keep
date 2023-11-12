@@ -1,10 +1,12 @@
-import { Subtitle } from "@tremor/react";
+import { Subtitle, Title } from "@tremor/react";
 import Image from "next/image";
 
 export default function Loading({
   includeMinHeight = true,
+  slowLoading = false,
 }: {
   includeMinHeight?: boolean;
+  slowLoading?: boolean;
 }) {
   return (
     <main
@@ -12,13 +14,18 @@ export default function Loading({
         includeMinHeight ? "min-h-screen-minus-200" : ""
       }`}
     >
-        <Image
-          src="/keep_loading_new.gif"
-          alt="loading"
-          width={200}
-          height={200}
-        />
-        <Subtitle>Just a second, getting your data 🚨</Subtitle>
+      <Image
+        src="/keep_loading_new.gif"
+        alt="loading"
+        width={200}
+        height={200}
+      />
+      <Title>Just a second, getting your data 🚨</Title>
+      {slowLoading && (
+        <Subtitle>
+          This is taking a bit longer then usual, please wait...
+        </Subtitle>
+      )}
     </main>
   );
 }

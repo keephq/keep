@@ -653,7 +653,9 @@ class DatadogProvider(BaseProvider):
             source=["datadog"],
             message=event.get("body"),
             groups=groups,
-            severity=DatadogProvider.__get_parsed_severity(event.get("severity")),
+            severity=DatadogProvider.__get_parsed_severity(
+                event.get("severity", severity)
+            ),
             url=url,
             tags=tags,
             monitor_id=event.get("monitor_id"),
