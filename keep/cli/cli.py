@@ -144,8 +144,10 @@ def version():
 @pass_info
 def config(info: Info):
     """Get the config."""
-    api_key = click.prompt("Enter your api key", hide_input=True)
-    keep_url = click.prompt("Enter your keep url", default="https://api.keephq.dev")
+    keep_url = click.prompt("Enter your keep url", default="http://localhost:8080")
+    api_key = click.prompt(
+        "Enter your api key (leave blank for localhost)", hide_input=True, default=""
+    )
     with open("keep.yaml", "w") as f:
         f.write(f"api_key: {api_key}\n")
         f.write(f"keep_api_url: {keep_url}\n")
@@ -340,8 +342,10 @@ def list_workflows(info: Info):
         "ID",
         "Name",
         "Description",
+        "Revision",
         "Created By",
         "Creation Time",
+        "Update Time",
         "Last Execution Time",
         "Last Execution Status",
     ]
@@ -351,10 +355,12 @@ def list_workflows(info: Info):
         table.add_row(
             [
                 workflow["id"],
+                workflow["name"],
                 workflow["description"],
-                workflow["workflow_raw_id"],
+                workflow["revision"],
                 workflow["created_by"],
                 workflow["creation_time"],
+                workflow["last_updated"],
                 workflow["last_execution_time"],
                 workflow["last_execution_status"],
             ]
@@ -370,13 +376,169 @@ def list_workflows(info: Info):
     help="The workflow file",
     required=True,
 )
-def apply(file_path: str):
+@pass_info
+def apply(info: Info, file: str):
     """Apply a workflow."""
-    with open(file_path, "rb") as file:
+    with open(file, "rb") as f:
         files = {
-            "file": (file_path.split("/")[-1], file)
+            "file": (file.split("/")[-1], f)
         }  # The field 'file' should match the name in the API endpoint
-        response = requests.post(url, headers=headers, files=files)
+        workflow_endpoint = info.keep_api_url + "/workflows"
+        response = requests.post(
+            workflow_endpoint,
+            headers={"x-api-key": info.api_key, "accept": "application/json"},
+            files=files,
+        )
+        if response.ok:
+            click.echo(click.style(f"Workflow {file} applied successfully", bold=True))
+            response = response.json()
+            click.echo(
+                click.style(f"Workflow id: {response.get('workflow_id')}", bold=True)
+            )
+            click.echo(
+                click.style(f"Workflow revision: {response.get('revision')}", bold=True)
+            )
+        else:
+            click.echo(
+                click.style(
+                    f"Error applying workflow {file}: {response.text}", bold=True
+                )
+            )
+
+
+@workflow.command(name="run")
+@click.option(
+    "--workflow-id",
+    type=str,
+    help="The ID (UUID or name) of the workflow to run",
+    required=True,
+)
+@click.option(
+    "--fingerprint",
+    type=str,
+    help="The fingerprint to query the payload",
+    required=True,
+)
+@pass_info
+def run_workflow(info: Info, workflow_id: str, fingerprint: str):
+    """Run a workflow with a specified ID and fingerprint."""
+    # Query the server for payload based on the fingerprint
+    # Replace the following line with your actual logic to fetch the payload
+    payload = _get_alert_by_fingerprint(info.keep_api_url, info.api_key, fingerprint)
+
+    if not payload.ok:
+        click.echo(click.style("Error: Failed to fetch alert payload", bold=True))
+        return
+
+    payload = payload.json()
+
+    # Run the workflow with the fetched payload as the request body
+    workflow_endpoint = info.keep_api_url + f"/workflows/{workflow_id}/run"
+    response = requests.post(
+        workflow_endpoint,
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json=payload,
+    )
+    # Check the response
+    if response.ok:
+        response = response.json()
+        click.echo(click.style(f"Workflow {workflow_id} run successfully", bold=True))
+        click.echo(
+            click.style(
+                f"Workflow Run ID {response.get('workflow_execution_id')}", bold=True
+            )
+        )
+    else:
+        click.echo(
+            click.style(
+                f"Error running workflow {workflow_id}: {response.text}", bold=True
+            )
+        )
+
+
+@workflow.group(name="runs")
+@pass_info
+def workflow_executions(info: Info):
+    """Manage workflows executions."""
+    pass
+
+
+@workflow_executions.command(name="list")
+@pass_info
+def list_workflow_executions(info: Info):
+    """List workflow executions."""
+    resp = requests.get(
+        info.keep_api_url + "/workflows/executions/list",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting workflow executions: {resp.text}")
+
+    workflow_executions = resp.json()
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = [
+        "ID",
+        "Workflow ID",
+        "Start Time",
+        "Triggered By",
+        "Status",
+        "Error",
+        "Execution Time",
+    ]
+    table.max_width["Error"] = 50
+    table.align["Error"] = "l"
+    # Add rows for each workflow execution
+    for workflow_execution in workflow_executions:
+        table.add_row(
+            [
+                workflow_execution["id"],
+                workflow_execution["workflow_id"],
+                workflow_execution["started"],
+                workflow_execution["triggered_by"],
+                workflow_execution["status"],
+                workflow_execution.get("error", "N/A"),
+                workflow_execution["execution_time"],
+            ]
+        )
+    print(table)
+
+
+@workflow_executions.command(name="logs")
+@click.argument(
+    "workflow_execution_id",
+    required=True,
+    type=str,
+)
+@pass_info
+def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
+    """Get workflow execution logs."""
+    resp = requests.get(
+        info.keep_api_url
+        + "/workflows/executions/list?workflow_execution_id="
+        + workflow_execution_id,
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting workflow executions: {resp.text}")
+
+    workflow_executions = resp.json()
+
+    workflow_execution_logs = workflow_executions[0].get("logs", [])
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = [
+        "ID",
+        "Timestamp",
+        "Message",
+    ]
+    table.align["Message"] = "l"
+    # Add rows for each workflow execution
+    for log in workflow_execution_logs:
+        table.add_row([log["id"], log["timestamp"], log["message"]])
+    print(table)
 
 
 @cli.group()
@@ -561,6 +723,36 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         click.echo(click.style(f"Provider id: {resp.get('id')}", bold=True))
 
 
+@provider.command()
+@click.argument(
+    "provider_id",
+    required=False,
+)
+@click.pass_context
+def delete(ctx, provider_id):
+    info = ctx.ensure_object(Info)
+    dummy_provider_type = "dummy"
+    resp = requests.delete(
+        info.keep_api_url + f"/providers/{dummy_provider_type}/{provider_id}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error deleting provider: {resp.text}")
+    else:
+        click.echo(
+            click.style(f"Provider {provider_id} deleted successfully", bold=True)
+        )
+
+
+def _get_alert_by_fingerprint(keep_url, api_key, fingerprint: str):
+    """Get an alert by fingerprint."""
+    resp = requests.get(
+        keep_url + f"/alerts/{fingerprint}",
+        headers={"x-api-key": api_key, "accept": "application/json"},
+    )
+    return resp
+
+
 @cli.group()
 @pass_info
 def alert(info: Info):
@@ -576,12 +768,12 @@ def alert(info: Info):
 )
 @pass_info
 def get_alert(info: Info, fingerprint: str):
-    resp = requests.get(
-        info.keep_api_url + f"/alerts/{fingerprint}",
-        headers={"x-api-key": info.api_key, "accept": "application/json"},
-    )
+    resp = _get_alert_by_fingerprint(info.keep_api_url, info.api_key, fingerprint)
     if not resp.ok:
         raise Exception(f"Error getting alert: {resp.text}")
+    else:
+        alert = resp.json()
+        print(json.dumps(alert, indent=4))
 
 
 @alert.command(name="list")
@@ -681,10 +873,13 @@ def enrich(info: Info, fingerprint, params):
             raise click.BadArgumentUsage("Parameters must be given in key=value pairs")
 
     params_dict = {param.split("=")[0]: param.split("=")[1] for param in params}
-
+    params_dict = {
+        "fingerprint": fingerprint,
+        "enrichments": params_dict,
+    }
     # Make the API request
     resp = requests.post(
-        f"{info.keep_api_url}/alerts/{fingerprint}/enrich",
+        f"{info.keep_api_url}/alerts/enrich",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
         json={"enrichments": params_dict},
     )

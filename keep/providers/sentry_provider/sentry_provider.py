@@ -188,9 +188,7 @@ class SentryProvider(BaseProvider):
 
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("metadata", {}).get(
-                "type", event_data.get("metadata", {}).get("title")
-            ),
+            name=event_data.get("title"),
             status=event.get("action", "triggered"),
             lastReceived=event_data.get(
                 "datetime",
@@ -374,17 +372,24 @@ class SentryProvider(BaseProvider):
         for issue in all_issues:
             issue_id = issue.pop("id")
 
-            tags_request = projects_response = requests.get(
-                f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
-            )
-            tags = {}
+            # redundant
             issue.pop("stats", None)
-            if tags_request.ok:
-                tags = tags_request.json()
-                tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+
+            tags = {}
+            # TODO: re-think this since it causes requests to hang for too long
+            # try:
+            #     tags_request = projects_response = requests.get(
+            #         f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
+            #         headers={
+            #             "Authorization": f"Bearer {self.authentication_config.api_key}"
+            #         },
+            #         timeout=1,
+            #     )
+            #     if tags_request.ok:
+            #         tags = tags_request.json()
+            #         tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+            # except Exception:
+            #     self.logger.warning(f"Failed to get tags for issue {issue_id}")
 
             lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
 
@@ -394,7 +399,9 @@ class SentryProvider(BaseProvider):
                     name=issue.pop("title"),
                     status=issue.pop("status"),
                     lastReceived=lastReceived.isoformat(),
-                    environment=tags.pop("environment", "unknown"),
+                    environment=tags.pop(
+                        "environment", issue.pop("environment", "unknown")
+                    ),
                     severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),

@@ -368,16 +368,18 @@ def get_alert(
     )
     # TODO: once pulled alerts will be in the db too, this should be changed
     all_alerts = get_alerts(tenant_id=tenant_id)
-    alert = filter(lambda alert: alert.fingerprint == fingerprint, all_alerts)
-    return AlertDto(**alert.event)
+    alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
+    if alert:
+        return alert[0]
+    else:
+        return HTTPException(status_code=404, detail="Alert not found")
 
 
 @router.post(
-    "/{fingerprint}/enrich",
+    "/enrich",
     description="Enrich an alert",
 )
 def enrich_alert(
-    fingerprint: str,
     enrich_data: EnrichAlertRequestBody,
     tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
@@ -385,7 +387,7 @@ def enrich_alert(
     logger.info(
         "Enriching alert",
         extra={
-            "fingerprint": fingerprint,
+            "fingerprint": enrich_data.fingerprint,
             "tenant_id": tenant_id,
         },
     )
@@ -393,13 +395,13 @@ def enrich_alert(
     try:
         enrich_alert_db(
             tenant_id=tenant_id,
-            fingerprint=fingerprint,
+            fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
         )
 
         logger.info(
             "Alert enriched successfully",
-            extra={"fingerprint": fingerprint, "tenant_id": tenant_id},
+            extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
         )
         return {"status": "ok"}
 

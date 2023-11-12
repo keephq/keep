@@ -61,3 +61,4 @@ class DeleteRequestBody(BaseModel):
 
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
+    fingerprint: str

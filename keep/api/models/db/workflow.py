@@ -5,8 +5,10 @@ from sqlalchemy import String
 from sqlmodel import (
     JSON,
     Column,
+    DateTime,
     Field,
     ForeignKey,
+    Integer,
     Relationship,
     SQLModel,
     UniqueConstraint,
@@ -19,10 +21,13 @@ class Workflow(SQLModel, table=True):
     name: str
     description: Optional[str]
     created_by: str
+    updated_by: str
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
     workflow_raw: str = Field(sa_column=String(length=65535))
     is_deleted: bool = Field(default=False)
+    revision: int = Field(default=1, nullable=False)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         orm_mode = True

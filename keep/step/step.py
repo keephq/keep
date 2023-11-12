@@ -62,6 +62,9 @@ class Step:
                 did_action_run = self._run_single()
             return did_action_run
         except Exception as e:
+            self.logger.error(
+                "Failed to run step %s with error %s", self.step_id, e, exc_info=True
+            )
             raise ActionError(e)
 
     def _check_throttling(self, action_name):
@@ -197,11 +200,17 @@ class Step:
             )
             return
 
-        self.logger.info(
-            "Action %s evaluated to run! Reason: %s evaluated to true.",
-            self.config.get("name"),
-            if_conf,
-        )
+        if if_conf:
+            self.logger.info(
+                "Action %s evaluated to run! Reason: %s evaluated to true.",
+                self.config.get("name"),
+                if_conf,
+            )
+        else:
+            self.logger.info(
+                "Action %s evaluated to run! Reason: no condition, hence true.",
+                self.config.get("name"),
+            )
 
         # Third, check throttling
         # Now check if throttling is enabled

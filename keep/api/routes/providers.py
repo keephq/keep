@@ -224,7 +224,7 @@ def test_provider(
 def delete_provider(
     provider_type: str,
     provider_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
 ):
     logger.info(

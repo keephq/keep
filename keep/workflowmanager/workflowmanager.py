@@ -207,7 +207,8 @@ class WorkflowManager:
             errors = workflow.run(workflow_execution_id)
         except Exception as e:
             self.logger.error(
-                f"Error running workflow {workflow.workflow_id}", extra={"exception": e}
+                f"Error running workflow {workflow.workflow_id}",
+                extra={"exception": e, "workflow_execution_id": workflow_execution_id},
             )
             if workflow.on_failure:
                 self.logger.info(

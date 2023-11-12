@@ -128,6 +128,9 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
         )
         tenant_id = payload.get("keep_tenant_id")
         return tenant_id
+    except jwt.exceptions.DecodeError as e:
+        logger.exception("Failed to decode token")
+        raise HTTPException(status_code=401, detail="Token is not a valid JWT")
     except Exception as e:
         logger.exception("Failed to validate token")
         raise HTTPException(status_code=401, detail=str(e))
@@ -173,9 +176,7 @@ def verify_api_key_single_tenant(
     if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
         return SINGLE_TENANT_UUID
 
-    api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
-    statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
-    tenant_api_key = session.exec(statement).first()
+    tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
@@ -208,6 +209,7 @@ def verify_token_or_key(
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
             )
+    raise HTTPException(status_code=401, detail="Missing authentication credentials")
 
 
 def verify_token_or_key_single_tenant(
