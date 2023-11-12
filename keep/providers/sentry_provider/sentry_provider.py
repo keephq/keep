@@ -70,6 +70,10 @@ class SentryProvider(BaseProvider):
         self.sentry_org_slug = self.config.authentication.get("organization_slug")
         self.project_slug = self.config.authentication.get("project_slug")
 
+    @property
+    def __headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.authentication_config.api_key}"}
+
     def get_events_url(self, project, date="14d"):
         return f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
                                   &query={project}&referrer=api.discover.query-table&sort=-timestamp&statsPeriod={date}"
@@ -117,9 +121,7 @@ class SentryProvider(BaseProvider):
                 if self.project_slug:
                     response = requests.get(
                         f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/issues/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not response.ok:
                         response_json = response.json()
@@ -128,9 +130,7 @@ class SentryProvider(BaseProvider):
                 else:
                     projects_response = requests.get(
                         f"{self.SENTRY_API}/projects/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not projects_response.ok:
                         response_json = projects_response.json()
@@ -140,9 +140,7 @@ class SentryProvider(BaseProvider):
                     project_slug = projects[0].get("slug")
                     response = requests.get(
                         f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not response.ok:
                         response_json = response.json()
@@ -152,9 +150,7 @@ class SentryProvider(BaseProvider):
             elif scope.name == "project:read":
                 response = requests.get(
                     f"{self.SENTRY_API}/projects/",
-                    headers={
-                        "Authorization": f"Bearer {self.authentication_config.api_key}"
-                    },
+                    headers=self.__headers,
                 )
                 if not response.ok:
                     response_json = response.json()
@@ -164,9 +160,7 @@ class SentryProvider(BaseProvider):
             elif scope.name == "project:write":
                 response = requests.post(
                     f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/plugins/webhooks/",
-                    headers={
-                        "Authorization": f"Bearer {self.authentication_config.api_key}"
-                    },
+                    headers=self.__headers,
                 )
                 if not response.ok:
                     response_json = response.json()
@@ -201,11 +195,11 @@ class SentryProvider(BaseProvider):
                 "environment", tags_as_dict.pop("environment", "unknown")
             ),
             message=event_data.get("metadata", {}).get("value"),
-            description=event_data.get("metadata", {}).get("value"),
+            description=event.get("culprit", ""),
             pushed=True,
-            severity=event.pop("level", "high"),
+            severity=event.pop("level", tags_as_dict.get("level", "high")),
             url=event_data.pop("url", tags_as_dict.pop("url", None)),
-            issue=event_data,
+            fingerprint=event.get("id"),
             tags=tags_as_dict,
         )
 
@@ -224,14 +218,13 @@ class SentryProvider(BaseProvider):
                 message="Cannot setup webhook with localhost, please use a public url",
             )
 
-        headers = {"Authorization": f"Bearer {self.authentication_config.api_key}"}
         if self.project_slug:
             project_slugs = [self.project_slug]
         else:
             # Get all projects if no project slug was given
             projects_response = requests.get(
                 f"{self.SENTRY_API}/projects/",
-                headers=headers,
+                headers=self.__headers,
             )
             if not projects_response.ok:
                 raise Exception("Failed to get projects")
@@ -243,7 +236,7 @@ class SentryProvider(BaseProvider):
             self.logger.info(f"Setting up webhook for project {project_slug}")
             webhooks_request = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
             )
             webhooks_request.raise_for_status()
             webhooks_response = webhooks_request.json()
@@ -275,20 +268,20 @@ class SentryProvider(BaseProvider):
             # Update the webhooks urls
             update_response = requests.put(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
                 json={"urls": "\n".join(existing_webhooks)},
             )
             update_response.raise_for_status()
             # Enable webhooks plugin for project
             requests.post(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
             ).raise_for_status()
             # TODO: make sure keep alert does not exist and if it doesnt create it.
             alert_name = f"Keep Alert Rule - {project_slug}"
             alert_rules_response = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                headers=headers,
+                headers=self.__headers,
             ).json()
             alert_exists = next(
                 iter(
@@ -332,7 +325,7 @@ class SentryProvider(BaseProvider):
 
                 requests.post(
                     f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                    headers=headers,
+                    headers=self.__headers,
                     json=alert_payload,
                 ).raise_for_status()
                 self.logger.info(f"Sentry webhook setup complete for {project_slug}")
@@ -340,76 +333,103 @@ class SentryProvider(BaseProvider):
                 self.logger.info(f"Sentry webhook already exists for {project_slug}")
         self.logger.info("Sentry webhook setup complete")
 
-    def get_alerts(self, project_slug: str = None) -> list[AlertDto]:
-        # get issues
-        all_issues = []
-        if self.authentication_config.project_slug or project_slug:
+    def __get_issues(self, project_slug: str) -> dict:
+        """
+        Get all issues for a project
+
+        Args:
+            project_slug (str): project slug
+
+        Raises:
+            Exception: if failed to get issues
+
+        Returns:
+            dict: issues by id
+        """
+        issues_response = requests.get(
+            f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*",
+            headers=self.__headers,
+        )
+        if not issues_response.ok:
+            raise Exception(issues_response.json())
+        return {issue["id"]: issue for issue in issues_response.json()}
+
+    def get_alerts(self) -> list[AlertDto]:
+        all_events_by_project = {}
+        all_issues_by_project = {}
+        if self.authentication_config.project_slug:
             response = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/issues/?query=*",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
+                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
+                headers=self.__headers,
             )
             if not response.ok:
                 raise Exception(response.json())
-            all_issues = response.json()
-            if project_slug:
-                return all_issues
+            all_events_by_project[self.project_slug] = response.json()
+            all_issues_by_project[self.project_slug] = self.__get_issues(
+                self.project_slug
+            )
         else:
             projects_response = requests.get(
                 f"{self.SENTRY_API}/projects/",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
+                headers=self.__headers,
             )
             if not projects_response.ok:
                 raise Exception("Failed to get projects")
             projects = projects_response.json()
             for project in projects:
-                all_issues.extend(self.get_alerts(project.get("slug")))
+                project_slug = project.get("slug")
+                response = requests.get(
+                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/events/",
+                    headers=self.__headers,
+                )
+                if not response.ok:
+                    error = response.json()
+                    self.logger.warning(
+                        "Failed to get events for project",
+                        extra={"project_slug": project_slug, **error},
+                    )
+                    continue
+                all_events_by_project[project_slug] = response.json()
+                all_issues_by_project[project_slug] = self.__get_issues(project_slug)
+
+        if not all_events_by_project:
+            # We didn't manage to get any events for some reason
+            self.logger.warning("Failed to get events from all projects")
+            return []
 
         # format issues
         formatted_issues = []
-        for issue in all_issues:
-            issue_id = issue.pop("id")
-
-            # redundant
-            issue.pop("stats", None)
-
-            tags = {}
-            # TODO: re-think this since it causes requests to hang for too long
-            # try:
-            #     tags_request = projects_response = requests.get(
-            #         f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
-            #         headers={
-            #             "Authorization": f"Bearer {self.authentication_config.api_key}"
-            #         },
-            #         timeout=1,
-            #     )
-            #     if tags_request.ok:
-            #         tags = tags_request.json()
-            #         tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
-            # except Exception:
-            #     self.logger.warning(f"Failed to get tags for issue {issue_id}")
-
-            formatted_issues.append(
-                AlertDto(
-                    id=issue_id,
-                    name=issue.pop("title"),
-                    status=issue.pop("status"),
-                    lastReceived=datetime.datetime.now().isoformat(),
-                    environment=tags.pop(
-                        "environment", issue.pop("environment", "unknown")
-                    ),
-                    severity=issue.pop("level", None),
-                    service=issue.get("metadata", {}).get("function"),
-                    description=issue.pop("metadata", {}).get("value"),
-                    url=issue.pop("permalink", None),
-                    source=["sentry"],
-                    tags=tags,
-                    payload=issue,
+        for project in all_events_by_project:
+            for event in all_events_by_project[project]:
+                id = event.pop("id")
+                fingerprint = event.get("groupID")
+                related_issue = all_issues_by_project.get(project, {}).get(
+                    fingerprint, {}
                 )
-            )
+                tags = {tag["key"]: tag["value"] for tag in event.pop("tags", [])}
+                last_received = datetime.datetime.fromisoformat(
+                    event.get("dateCreated")
+                ) + datetime.timedelta(minutes=1)
+                formatted_issues.append(
+                    AlertDto(
+                        id=id,
+                        name=event.pop("title"),
+                        description=event.pop("culprit", ""),
+                        message=event.get("message", ""),
+                        status=related_issue.get(
+                            "status", event.get("event.type", "unknown")
+                        ),
+                        lastReceived=last_received.isoformat(),
+                        environment=tags.get("environment", "unknown"),
+                        severity=tags.get("level", None),
+                        url=event.pop("permalink", None),
+                        project=project,
+                        source=["sentry"],
+                        fingerprint=fingerprint,
+                        tags=tags,
+                        payload=event,
+                    )
+                )
         return formatted_issues
 
 

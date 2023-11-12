@@ -50,6 +50,7 @@ class AlertDto(BaseModel):
                     "pushed": True,
                     "event_id": "1234",
                     "url": "https://www.google.com/search?q=open+source+alert+management",
+                    "fingerprint": "Alert name",
                 }
             ]
         }
