@@ -15,7 +15,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from pybars import Compiler
+
 
 
 @pydantic.dataclasses.dataclass
@@ -155,7 +155,6 @@ class NewrelicProvider(BaseProvider):
             """
             try to check all read scopes
             """
-            self.logger.info(f"************** URL {self.new_relic_graphql_url}")
             query = {
                 "query": f"""
                     {{
@@ -197,7 +196,6 @@ class NewrelicProvider(BaseProvider):
                 json=query,
             )
             content = response.content.decode("utf-8")
-            self.logger.info(content)
             if "errors" in content:
                 raise
 
