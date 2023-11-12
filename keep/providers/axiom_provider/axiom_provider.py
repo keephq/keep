@@ -85,9 +85,9 @@ class AxiomProvider(BaseProvider):
         }
 
         # Todo: support easier syntax (e.g. 1d, 1h, 1m, 1s, etc)
-        startTime = kwargs.get("startTime", datetime.datetime.utcnow().isoformat())
+        startTime = kwargs.get("startTime", datetime.datetime.now().isoformat())
         endTime = kwargs.get(
-            "endTime", datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            "endTime", datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         )
         body = {"startTime": startTime, "endTime": endTime}
 

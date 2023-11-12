@@ -53,7 +53,7 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-44 max-w-[187px] h-44 m-2.5 hover:shadow-xl hover:grayscale-0"
+      className="relative flex-grow group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-[187px] max-w-[187px] h-44 m-2.5 hover:shadow-xl hover:grayscale-0"
       onClick={onClick}
     >
       {(provider.can_setup_webhook || provider.supports_webhook) &&

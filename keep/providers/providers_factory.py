@@ -132,13 +132,14 @@ class ProvidersFactory:
                 if getattr(params[param].default, "__name__", None) != "_empty":
                     mandatory = False
                     default = str(params[param].default)
+                expected_values = list(get_args(params[param].annotation))
                 func_params.append(
                     ProviderMethodParam(
                         name=param,
                         type=params[param].annotation.__name__,
                         mandatory=mandatory,
                         default=default,
-                        expected_values=list(get_args(params[param].annotation)),
+                        expected_values=expected_values,
                     )
                 )
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))

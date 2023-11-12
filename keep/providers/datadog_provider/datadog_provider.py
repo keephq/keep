@@ -72,9 +72,16 @@ class DatadogProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
+            name="events_read",
+            description="Read events data.",
+            mandatory=True,
+            alias="Events Data Read",
+        ),
+        ProviderScope(
             name="monitors_read",
             description="Read monitors",
             mandatory=True,
+            mandatory_for_webhook=True,
             documentation_url="https://docs.datadoghq.com/account_management/rbac/permissions/#monitors",
             alias="Monitors Read",
         ),
@@ -104,12 +111,6 @@ class DatadogProvider(BaseProvider):
             mandatory=False,
             alias="Logs Read Data",
         ),
-        ProviderScope(
-            name="events_read",
-            description="Read events data.",
-            mandatory=False,
-            alias="Events Data Read",
-        ),
     ]
     PROVIDER_METHODS = [
         ProviderMethod(
@@ -134,7 +135,26 @@ class DatadogProvider(BaseProvider):
             type="view",
         ),
     ]
-    EVENT_NAME_PATTERN = r".*\] (.*)"
+    FINGERPRINT_FIELDS = ["groups", "monitor_id"]
+    WEBHOOK_PAYLOAD = json.dumps(
+        {
+            "body": "$EVENT_MSG",
+            "last_updated": "$LAST_UPDATED",
+            "event_type": "$EVENT_TYPE",
+            "title": "$EVENT_TITLE",
+            "severity": "$ALERT_PRIORITY",
+            "alert_type": "$ALERT_TYPE",
+            "alert_query": "$ALERT_QUERY",
+            "alert_transition": "$ALERT_TRANSITION",
+            "date": "$DATE",
+            "scopes": "$ALERT_SCOPE",
+            "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
+            "url": "$LINK",
+            "tags": "$TAGS",
+            "id": "$ID",
+            "monitor_id": "$ALERT_ID",
+        }
+    )
 
     def convert_to_seconds(s):
         seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
@@ -153,12 +173,18 @@ class DatadogProvider(BaseProvider):
 
     def mute_monitor(
         self,
-        id: str,
+        monitor_id: str,
+        groups: list = [],
         end: datetime.datetime = datetime.datetime.now() + datetime.timedelta(days=1),
     ):
-        self.logger.info("Muting monitor", extra={"monitor_id": id, "end": end})
+        self.logger.info("Muting monitor", extra={"monitor_id": monitor_id, "end": end})
         if isinstance(end, str):
             end = datetime.datetime.fromisoformat(end)
+
+        groups = ",".join(groups)
+        if groups == "*":
+            groups = ""
+
         with ApiClient(self.configuration) as api_client:
             endpoint = Endpoint(
                 settings={
@@ -176,6 +202,11 @@ class DatadogProvider(BaseProvider):
                         "attribute": "monitor_id",
                         "location": "path",
                     },
+                    "scope": {
+                        "openapi_types": (str,),
+                        "attribute": "scope",
+                        "location": "query",
+                    },
                     "end": {
                         "openapi_types": (int,),
                         "attribute": "end",
@@ -189,16 +220,21 @@ class DatadogProvider(BaseProvider):
                 api_client=api_client,
             )
             endpoint.call_with_http_info(
-                monitor_id=int(id),
+                monitor_id=int(monitor_id),
                 end=int(end.timestamp()),
+                scope=groups,
             )
-        self.logger.info("Monitor muted", extra={"monitor_id": id})
+        self.logger.info("Monitor muted", extra={"monitor_id": monitor_id})
 
     def unmute_monitor(
         self,
-        id: str,
+        monitor_id: str,
+        groups: list = [],
     ):
-        self.logger.info("Unmuting monitor", extra={"monitor_id": id})
+        self.logger.info("Unmuting monitor", extra={"monitor_id": monitor_id})
+
+        groups = ",".join(groups)
+
         with ApiClient(self.configuration) as api_client:
             endpoint = Endpoint(
                 settings={
@@ -216,6 +252,11 @@ class DatadogProvider(BaseProvider):
                         "attribute": "monitor_id",
                         "location": "path",
                     },
+                    "scope": {
+                        "openapi_types": (str,),
+                        "attribute": "scope",
+                        "location": "query",
+                    },
                 },
                 headers_map={
                     "accept": ["application/json"],
@@ -224,13 +265,15 @@ class DatadogProvider(BaseProvider):
                 api_client=api_client,
             )
             endpoint.call_with_http_info(
-                monitor_id=int(id),
+                monitor_id=int(monitor_id),
+                scope=groups,
             )
-        self.logger.info("Monitor unmuted", extra={"monitor_id": id})
+        self.logger.info("Monitor unmuted", extra={"monitor_id": monitor_id})
 
-    def get_monitor_events(self, id: str):
-        self.logger.info("Getting monitor events", extra={"monitor_id": id})
+    def get_monitor_events(self, monitor_id: str):
+        self.logger.info("Getting monitor events", extra={"monitor_id": monitor_id})
         with ApiClient(self.configuration) as api_client:
+            # tb: when it's out of beta, we should move to api v2
             api = EventsApi(api_client)
             end = datetime.datetime.now()
             # tb: we can make timedelta configurable by the user if we want
@@ -245,9 +288,11 @@ class DatadogProvider(BaseProvider):
             results = [
                 event.to_dict()
                 for event in results.get("events", [])
-                if str(event.monitor_id) == id
+                if str(event.monitor_id) == str(monitor_id)
             ]
-            self.logger.info("Monitor events retrieved", extra={"monitor_id": id})
+            self.logger.info(
+                "Monitor events retrieved", extra={"monitor_id": monitor_id}
+            )
             return results
 
     def dispose(self):
@@ -394,7 +439,7 @@ class DatadogProvider(BaseProvider):
         return monitors
 
     @staticmethod
-    def __get_priorty(priority):
+    def __get_parsed_severity(priority):
         if priority == "P1":
             return "critical"
         elif priority == "P2":
@@ -407,35 +452,73 @@ class DatadogProvider(BaseProvider):
     def get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
         with ApiClient(self.configuration) as api_client:
-            api = MonitorsApi(api_client)
-
-            monitors = api.list_monitors(with_downtimes=True)
-
-            for monitor in monitors:
+            # tb: when it's out of beta, we should move to api v2
+            # https://docs.datadoghq.com/api/latest/events/
+            monitors_api = MonitorsApi(api_client)
+            all_monitors = {
+                monitor.id: monitor
+                for monitor in monitors_api.list_monitors(with_downtimes=True)
+            }
+            api = EventsApi(api_client)
+            end = datetime.datetime.now()
+            # tb: we can make timedelta configurable by the user if we want
+            start = datetime.datetime.now() - datetime.timedelta(days=30)
+            results = api.list_events(
+                start=int(start.timestamp()),
+                end=int(end.timestamp()),
+                tags="source:alert",
+            )
+            events = results.get("events", [])
+            for event in events:
                 try:
                     tags = {
-                        k: v for k, v in map(lambda tag: tag.split(":"), monitor.tags)
+                        k: v
+                        for k, v in map(
+                            lambda tag: tag.split(":", 1),
+                            [tag for tag in event.tags if ":" in tag],
+                        )
                     }
-                    severity = DatadogProvider.__get_priorty(f"P{monitor.priority}")
-                    muted = False
-                    if monitor.matching_downtimes:
-                        muted = True
+                    severity, status, title = event.title.split(" ", 2)
+                    severity = self.__get_parsed_severity(
+                        severity.lstrip("[").rstrip("]")
+                    )
+                    status = status.lstrip("[").rstrip("]")
+                    received = datetime.datetime.fromtimestamp(
+                        event.get("date_happened")
+                    )
+                    monitor = all_monitors.get(event.monitor_id)
+                    is_muted = any(
+                        [
+                            downtime
+                            for downtime in monitor.matching_downtimes
+                            if downtime.groups == event.monitor_groups
+                            or downtime.scope == ["*"]
+                        ]
+                    )
                     alert = AlertDto(
-                        id=monitor.id,
-                        name=monitor.name,
-                        status=str(monitor.overall_state) if not muted else "Muted",
-                        lastReceived=monitor.overall_state_modified,
+                        id=event.id,
+                        name=title,
+                        status=status if not is_muted else "Muted",
+                        lastReceived=received.isoformat(),
                         severity=severity,
-                        message=monitor.message,
-                        description=monitor.name,
+                        message=event.text,
+                        monitor_id=event.monitor_id,
+                        # tb: sometimes referred as scopes
+                        groups=event.monitor_groups,
                         source=["datadog"],
-                        **tags,
+                        tags=tags,
+                        created_by=monitor.creator.email
+                        if monitor and monitor.creator
+                        else None,
+                    )
+                    alert.fingerprint = self.get_alert_fingerprint(
+                        alert, self.fingerprint_fields
                     )
                     formatted_alerts.append(alert)
                 except Exception as e:
                     self.logger.exception(
-                        "Could not get alert",
-                        extra={"monitor_id": monitor.id, "monitor_name": monitor.name},
+                        "Could not parse alert event",
+                        extra={"event_id": event.id, "monitor_id": event.monitor_id},
                     )
                     continue
         return formatted_alerts
@@ -460,6 +543,7 @@ class DatadogProvider(BaseProvider):
                                     "X-API-KEY": api_key,
                                 }
                             ),
+                            "payload": DatadogProvider.WEBHOOK_PAYLOAD,
                         },
                     )
                     self.logger.info(
@@ -478,29 +562,31 @@ class DatadogProvider(BaseProvider):
                                 }
                             ),
                             "encode_as": "json",
-                            "payload": json.dumps(
-                                {
-                                    "body": "$EVENT_MSG",
-                                    "last_updated": "$LAST_UPDATED",
-                                    "event_type": "$EVENT_TYPE",
-                                    "title": "$EVENT_TITLE",
-                                    "severity": "$ALERT_PRIORITY",
-                                    "alert_type": "$ALERT_TYPE",
-                                    "alert_query": "$ALERT_QUERY",
-                                    "alert_transition": "$ALERT_TRANSITION",
-                                    "date": "$DATE",
-                                    "org": {"id": "$ORG_ID", "name": "$ORG_NAME"},
-                                    "url": "$LINK",
-                                    "tags": "$TAGS",
-                                    "id": "$ID",
-                                }
-                            ),
+                            "payload": DatadogProvider.WEBHOOK_PAYLOAD,
                         }
                     )
                     self.logger.info("Webhook created")
                 except ApiException as exc:
                     if "Webhook already exists" in exc.body.get("errors"):
-                        self.logger.info("Webhook already exists when trying to add")
+                        self.logger.info(
+                            "Webhook already exists when trying to add, updating"
+                        )
+                        try:
+                            api.update_webhooks_integration(
+                                webhook_name,
+                                body={
+                                    "url": keep_api_url,
+                                    "custom_headers": json.dumps(
+                                        {
+                                            "Content-Type": "application/json",
+                                            "X-API-KEY": api_key,
+                                        }
+                                    ),
+                                    "payload": DatadogProvider.WEBHOOK_PAYLOAD,
+                                },
+                            )
+                        except ApiException:
+                            self.logger.exception("Failed to update webhook")
                     else:
                         raise
             self.logger.info("Webhook created or updated")
@@ -549,24 +635,35 @@ class DatadogProvider(BaseProvider):
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000
         )
-        event_name = event.get("title")
-        match = re.match(DatadogProvider.EVENT_NAME_PATTERN, event_name)
+        severity, status, title = event.get("title").split(" ", 2)
         url = event.pop("url", None)
-        if match:
-            event_name = match.group(1)
-        return AlertDto(
+
+        # https://docs.datadoghq.com/integrations/webhooks/#variables
+        groups = event.get("scopes", "")
+        if not groups:
+            groups = ["*"]
+        else:
+            groups = groups.split(",")
+
+        alert = AlertDto(
             id=event.get("id"),
-            name=event_name,
-            status=event.get("alert_transition"),
+            name=title,
+            status=status.lstrip("[").rstrip("]"),
             lastReceived=str(event_time),
             source=["datadog"],
             message=event.get("body"),
-            description=event_name,
-            severity=DatadogProvider.__get_priorty(event.get("severity")),
-            fatigueMeter=random.randint(0, 100),
+            groups=groups,
+            severity=DatadogProvider.__get_parsed_severity(
+                event.get("severity", severity)
+            ),
             url=url,
-            **tags,
+            tags=tags,
+            monitor_id=event.get("monitor_id"),
         )
+        alert.fingerprint = DatadogProvider.get_alert_fingerprint(
+            alert, DatadogProvider.FINGERPRINT_FIELDS
+        )
+        return alert
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
         body = Monitor(**alert)
