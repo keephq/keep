@@ -155,6 +155,7 @@ class NewrelicProvider(BaseProvider):
             """
             try to check all read scopes
             """
+            self.logger.info(f"************** URL {self.new_relic_graphql_url}")
             query = {
                 "query": f"""
                     {{
@@ -196,6 +197,7 @@ class NewrelicProvider(BaseProvider):
                 json=query,
             )
             content = response.content.decode("utf-8")
+            self.logger.info(content)
             if "errors" in content:
                 raise
 
@@ -375,37 +377,48 @@ class NewrelicProvider(BaseProvider):
         formatted_alerts = []
 
         for issue in issues_data:
-            alert = NewrelicProvider.format_alert(event=issue)
+            lastReceived = issue["updatedAt"] if "updatedAt" in issue else None
+            # convert to date
+            if lastReceived:
+                lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            alert = AlertDto(
+                id=issue["issueId"],
+                name=issue["title"][0]
+                if issue["title"]
+                else None,  # Assuming the first title in the list
+                status=issue["state"],
+                lastReceived=lastReceived,
+                severity=issue["priority"],
+                message=None,  # New Relic doesn't provide a direct "message" field
+                description=issue["description"][0] if issue["description"] else None,
+                source=["newrelic"],
+                acknowledgedAt=issue["acknowledgedAt"],
+                acknowledgedBy=issue["acknowledgedBy"],
+                activatedAt=issue["activatedAt"],
+                closedAt=issue["closedAt"],
+                closedBy=issue["closedBy"],
+                createdAt=issue["createdAt"],
+            )
             formatted_alerts.append(alert)
+
 
         return formatted_alerts
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto:        
-        lastReceived = event["updatedAt"] if "updatedAt" in event else None
+        '''We are already registering template same as generic AlertDTO'''
+        lastReceived = event["lastReceived"] if "lastReceived" in event else None
         if lastReceived:
             lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                    "%Y-%m-%d %H:%M:%S"
             )
+            event["lastReceived"] = lastReceived
         return AlertDto(
-            id=event["issueId"],
-            name=event["title"][0]
-            if event["title"]
-            else None,  # Assuming the first title in the list
-            status=event["state"],
-            lastReceived=lastReceived,
-            severity=event["priority"],
-            message=None,  # New Relic doesn't provide a direct "message" field
-            description=event["description"][0] if event["description"] else None,
-            source=["newrelic"],
-            acknowledgedAt=event["acknowledgedAt"],
-            acknowledgedBy=event["acknowledgedBy"],
-            activatedAt=event["activatedAt"],
-            closedAt=event["closedAt"],
-            closedBy=event["closedBy"],
-            createdAt=event["createdAt"],
-        )
-
+                **event
+            )
+            
     def __get_all_policy_ids(
         self,
     ) -> list[str]:
