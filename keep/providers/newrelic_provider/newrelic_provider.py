@@ -29,7 +29,7 @@ class NewrelicProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "New Relic User key. To receive webhook user User key from admin account",
+            "description": "New Relic User key. To receive webhooks, use `User key` of an admin account",
             "sensitive": True,
         }
     )
@@ -575,9 +575,9 @@ class NewrelicProvider(BaseProvider):
             query = {
                 "query": mutation_query
             }
-            print(query)
+            #print(query)
             response = requests.post(self.new_relic_graphql_url,headers=self.__headers,json=query)
-            print(response.json())
+            #print(response.json())
             new_id = response.json()["data"]["aiNotificationsCreateChannel"]["channel"][
                 "id"
             ]
@@ -615,7 +615,7 @@ class NewrelicProvider(BaseProvider):
             id_list = response.json()["data"]["actor"]["account"]["aiWorkflows"][
                 "workflows"
             ]["entities"]
-            print(id_list)
+            #print(id_list)
             return id_list[0]["id"]
         except Exception as e:
             self.logger.error("Error getting workflow by name and channel")
@@ -661,7 +661,7 @@ class NewrelicProvider(BaseProvider):
             response = requests.post(
                 self.new_relic_graphql_url, headers=self.__headers, json=query
             )
-            print(response.content.decode("utf-8"))
+           #print(response.content.decode("utf-8"))
             return response.json()["data"]["aiWorkflowsCreateWorkflow"]["workflow"][
                 "id"
             ]
@@ -752,10 +752,10 @@ if __name__ == "__main__":
     )
 
     scopes = provider.validate_scopes()
-    print(scopes)
+    #print(scopes)
 
     alerts = provider.get_alerts()
-    print(alerts)
+    #print(alerts)
 
     created = provider.setup_webhook(
         tenant_id="test-v2",
@@ -763,4 +763,4 @@ if __name__ == "__main__":
         setup_alerts=True,
         
     )
-    print(created)
+    #print(created)
