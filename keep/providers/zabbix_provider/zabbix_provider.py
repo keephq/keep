@@ -343,7 +343,8 @@ class ZabbixProvider(BaseProvider):
                     name=name,
                     status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
-                        int(problem.get("clock")) + 10
+                        int(problem.get("clock"))
+                        + 10  # to override pushed problems, 10 is just random, could probably be 1
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
