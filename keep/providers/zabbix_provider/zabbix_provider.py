@@ -350,7 +350,7 @@ class ZabbixProvider(BaseProvider):
                     message=name,
                     severity=self.__get_severity(problem.pop("severity")),
                     environment=environment,
-                    **problem,
+                    problem=problem,
                 )
             )
         return formatted_alerts
@@ -572,7 +572,7 @@ class ZabbixProvider(BaseProvider):
             source=["zabbix"],
             severity=severity,
             url=url,
-            **tags,
+            tags=tags,
         )
 
 
