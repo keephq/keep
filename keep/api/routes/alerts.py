@@ -294,6 +294,8 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
+        # tb: if we want to have fingerprint_fields configured by the user, format_alert
+        #   needs to be called from an initalized provider instance instead of a static method.
         formatted_events = provider_class.format_alert(event)
         logger.info(
             f"Formatted alerts with {provider_type}",

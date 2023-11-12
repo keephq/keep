@@ -38,21 +38,26 @@ To obtain the Datadog App Key, follow these steps:
 3. Click on the "API" tab.
 4. Generate a new App Key or use an existing one.
 
+## Fingerprinting
+
+Fingerprints in Datadog are calculated based on the `groups` and `monitor_id` fields of an incoming/pulled event.
+
 ## Scopes
+
 Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use cases:
 
- - monitors_read (Monitors Read)
-	Required: True
-	Description: View monitors.
+- monitors_read (Monitors Read)
+  Required: True
+  Description: View monitors.
 - monitors_write (Monitors Write)
-	Required: False
-	Description: Write monitors. (**Required for auto-webhook integration*)
+  Required: False
+  Description: Write monitors. (\*_Required for auto-webhook integration_)
 - create_webhooks (Integrations Manage)
-	Required: False
-	Description: Create webhooks integrations. (**Required for auto-webhook integration*)
- - metrics_read
-	Required: False
-	Description: View metrics.
+  Required: False
+  Description: Create webhooks integrations. (\*_Required for auto-webhook integration_)
+- metrics_read
+  Required: False
+  Description: View metrics.
 
 ## Notes
 
