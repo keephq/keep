@@ -4,6 +4,11 @@ sidebarTitle: "Fingerprints"
 description: "Fingerprints are unique identifiers associated with alert instances in Keep. Every provider declares the fields fingerprints are calculated upon"
 ---
 
+<Warning>
+  Fingerprints defaults to Alert Name if the provider does not declare
+  fingerprint fields.
+</Warning>
+
 Fingerprints serve several important purposes in the context of alerting within Keep:
 
 ### De-Duplication
@@ -66,7 +71,7 @@ class DatadogProvider(BaseProvider):
 ```
 
 <Card title="Customization" icon="lightbulb" iconType="duotone" color="#ca8b04">
-  Keep allows for customization with everything related with fingerprints. If
-  you want to change the way a specific provider calculates the fingerprint of
-  an alert, you can simply configure the fields you require.
+  Keep allows for customization in anything related with fingerprints. If you
+  want to change the way a specific provider calculates the fingerprint of an
+  alert, you can simply configure the fields you require.
 </Card>
