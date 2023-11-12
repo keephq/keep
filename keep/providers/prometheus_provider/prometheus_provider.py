@@ -143,6 +143,7 @@ receivers:
                     "activeAt", alert.pop("startsAt", datetime.utcnow())
                 ),
                 environment=labels.pop("environment", "unknown"),
+                severity=labels.get("severity", "info"),
                 source=["prometheus"],
                 labels=labels,
                 annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
