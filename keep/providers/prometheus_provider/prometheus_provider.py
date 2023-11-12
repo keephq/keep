@@ -4,6 +4,7 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 
 import dataclasses
 import os
+from datetime import datetime
 
 import pydantic
 import requests
@@ -138,7 +139,9 @@ receivers:
                 name=alert_id,
                 description=description,
                 status=alert.pop("state", None) or alert.pop("status", None),
-                lastReceived=alert.pop("activeAt", None) or alert.pop("startsAt", None),
+                lastReceived=alert.pop(
+                    "activeAt", alert.pop("startsAt", datetime.utcnow())
+                ),
                 environment=labels.pop("environment", "unknown"),
                 source=["prometheus"],
                 labels=labels,
