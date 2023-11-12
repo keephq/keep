@@ -1,7 +1,7 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useEffect, useState, useRef} from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSession } from "../../utils/customAuth";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -83,7 +83,6 @@ const ProviderForm = ({
   const inputFileRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
-
   const { data: session } = useSession();
 
   const accessToken = session?.accessToken;
@@ -105,6 +104,8 @@ const ProviderForm = ({
         if (response.ok) {
           response.json().then((newValidatedScopes) => {
             setProviderValidatedScopes(newValidatedScopes);
+            provider.validatedScopes = newValidatedScopes;
+            onAddProvider(provider);
             setRefreshLoading(false);
           });
         } else {
@@ -161,7 +162,7 @@ const ProviderForm = ({
 
     // If the input is a file, retrieve the file object, otherwise retrieve the value
     if (type === "file") {
-      value = event.target.files?.[0];  // Assumes single file upload
+      value = event.target.files?.[0]; // Assumes single file upload
     } else {
       value = event.target.value;
     }
@@ -212,7 +213,7 @@ const ProviderForm = ({
 
     let body;
 
-    if (Object.values(formValues).some(value => value instanceof File)) {
+    if (Object.values(formValues).some((value) => value instanceof File)) {
       // FormData for file uploads
       let formData = new FormData();
       for (let key in formValues) {
@@ -420,34 +421,36 @@ const ProviderForm = ({
 
                 {method.type === "file" ? (
                   <>
-                  <Button
-                    color="orange"
-                    size="md"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      inputFileRef.current.click();  // this line triggers the file input
-                    }}
-                    icon={ArrowDownOnSquareIcon}
-                  >
-                      {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
-                  </Button>
+                    <Button
+                      color="orange"
+                      size="md"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        inputFileRef.current.click(); // this line triggers the file input
+                      }}
+                      icon={ArrowDownOnSquareIcon}
+                    >
+                      {selectedFile
+                        ? `File Chosen: ${selectedFile}`
+                        : `Upload a ${method.name}`}
+                    </Button>
 
-                  <input
-                  ref={inputFileRef}
-                  type="file"
-                  id={configKey}
-                  name={configKey}
-                  accept={method.file_type}
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setSelectedFile(e.target.files[0].name);
-                    }
-                    handleInputChange(e);
-                  }}
-                />
-                </>
+                    <input
+                      ref={inputFileRef}
+                      type="file"
+                      id={configKey}
+                      name={configKey}
+                      accept={method.file_type}
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setSelectedFile(e.target.files[0].name);
+                        }
+                        handleInputChange(e);
+                      }}
+                    />
+                  </>
                 ) : (
                   <TextInput
                     type={isSensitive ? "password" : method.type} // Display as password if sensitive
@@ -460,7 +463,6 @@ const ProviderForm = ({
                     placeholder={method.placeholder || "Enter " + configKey}
                   />
                 )}
-
               </div>
             );
           })}
