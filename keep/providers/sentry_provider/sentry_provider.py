@@ -177,14 +177,16 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
-        event_data = event.get("event", {})
+        event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
-        hashes = event_data.get("hashes", [])
+
+        # Remove duplicate keys
+        event_data.pop("id", None)
+        tags_as_dict.pop("id", None)
+
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("metadata", {}).get(
-                "type", event_data.get("metadata", {}).get("title")
-            ),
+            name=event_data.get("title"),
             status=event.get("action", "triggered"),
             lastReceived=event_data.get(
                 "datetime",
@@ -192,13 +194,16 @@ class SentryProvider(BaseProvider):
             ),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
+            environment=event_data.pop(
+                "environment", tags_as_dict.pop("environment", "unknown")
+            ),
             message=event_data.get("metadata", {}).get("value"),
             description=event_data.get("metadata", {}).get("value"),
             pushed=True,
             severity=event.pop("level", "high"),
-            url=event_data.pop("url"),
-            fingerprint=hashes[0] if len(hashes) > 0 else None,
-            **event_data,
+            url=event_data.pop("url", tags_as_dict.pop("url", None)),
+            issue=event_data,
+            tags=tags_as_dict,
         )
 
     def setup_webhook(
@@ -251,15 +256,19 @@ class SentryProvider(BaseProvider):
             )
             existing_webhooks_value: str = config.get("value", "") or ""
             existing_webhooks = existing_webhooks_value.split("\n")
-            # This means we already installed in that project
+            # tb: this is a resolution to a bug i pushed somewhere in the beginning of sentry provider
+            #   TODO: remove this in the future
             if f"{keep_api_url}?api_key={api_key}" in existing_webhooks:
+                existing_webhooks.remove(f"{keep_api_url}?api_key={api_key}")
+            # This means we already installed in that project
+            if f"{keep_api_url}&api_key={api_key}" in existing_webhooks:
                 # TODO: we might got here but did not create the alert, we should fix that in the future
                 #   e.g. make sure the alert exists and if not create it.
                 self.logger.info(
                     f"Keep webhook already exists for project {project_slug}"
                 )
                 continue
-            existing_webhooks.append(f"{keep_api_url}?api_key={api_key}")
+            existing_webhooks.append(f"{keep_api_url}&api_key={api_key}")
             # Update the webhooks urls
             update_response = requests.put(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
@@ -359,18 +368,45 @@ class SentryProvider(BaseProvider):
         # format issues
         formatted_issues = []
         for issue in all_issues:
+            issue_id = issue.pop("id")
+
+            # redundant
+            issue.pop("stats", None)
+
+            tags = {}
+            # TODO: re-think this since it causes requests to hang for too long
+            # try:
+            #     tags_request = projects_response = requests.get(
+            #         f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/issues/{issue_id}/tags/",
+            #         headers={
+            #             "Authorization": f"Bearer {self.authentication_config.api_key}"
+            #         },
+            #         timeout=1,
+            #     )
+            #     if tags_request.ok:
+            #         tags = tags_request.json()
+            #         tags = {tag["key"]: tag["topValues"][0]["value"] for tag in tags}
+            # except Exception:
+            #     self.logger.warning(f"Failed to get tags for issue {issue_id}")
+
+            lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
+
             formatted_issues.append(
                 AlertDto(
-                    id=issue.pop("id"),
+                    id=issue_id,
                     name=issue.pop("title"),
                     status=issue.pop("status"),
-                    lastReceived=issue.pop("lastSeen"),
-                    environment=issue.get("metadata", {}).get("filename"),
+                    lastReceived=lastReceived.isoformat(),
+                    environment=tags.pop(
+                        "environment", issue.pop("environment", "unknown")
+                    ),
+                    severity=issue.pop("level", None),
                     service=issue.get("metadata", {}).get("function"),
                     description=issue.pop("metadata", {}).get("value"),
-                    url=issue.pop("permalink"),
+                    url=issue.pop("permalink", None),
                     source=["sentry"],
-                    **issue,
+                    tags=tags,
+                    payload=issue,
                 )
             )
         return formatted_issues

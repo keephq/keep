@@ -121,6 +121,7 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
             algorithms="RS256",
             audience=auth_audience,
             issuer=issuer,
+            leeway=60,
         )
         tenant_id = payload.get("keep_tenant_id")
         return tenant_id

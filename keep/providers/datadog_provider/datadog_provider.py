@@ -17,6 +17,7 @@ from datadog_api_client.exceptions import (
     ForbiddenException,
     NotFoundException,
 )
+from datadog_api_client.v1.api.events_api import EventsApi
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
@@ -103,6 +104,12 @@ class DatadogProvider(BaseProvider):
             mandatory=False,
             alias="Logs Read Data",
         ),
+        ProviderScope(
+            name="events_read",
+            description="Read events data.",
+            mandatory=False,
+            alias="Events Data Read",
+        ),
     ]
     PROVIDER_METHODS = [
         ProviderMethod(
@@ -118,6 +125,13 @@ class DatadogProvider(BaseProvider):
             scopes=["monitors_write"],
             description="Unmute a monitor",
             type="action",
+        ),
+        ProviderMethod(
+            name="Get Monitor Events",
+            func_name="get_monitor_events",
+            scopes=["events_read"],
+            description="Get all events related to this monitor",
+            type="view",
         ),
     ]
     EVENT_NAME_PATTERN = r".*\] (.*)"
@@ -142,6 +156,7 @@ class DatadogProvider(BaseProvider):
         id: str,
         end: datetime.datetime = datetime.datetime.now() + datetime.timedelta(days=1),
     ):
+        self.logger.info("Muting monitor", extra={"monitor_id": id, "end": end})
         if isinstance(end, str):
             end = datetime.datetime.fromisoformat(end)
         with ApiClient(self.configuration) as api_client:
@@ -177,11 +192,13 @@ class DatadogProvider(BaseProvider):
                 monitor_id=int(id),
                 end=int(end.timestamp()),
             )
+        self.logger.info("Monitor muted", extra={"monitor_id": id})
 
     def unmute_monitor(
         self,
         id: str,
     ):
+        self.logger.info("Unmuting monitor", extra={"monitor_id": id})
         with ApiClient(self.configuration) as api_client:
             endpoint = Endpoint(
                 settings={
@@ -209,6 +226,29 @@ class DatadogProvider(BaseProvider):
             endpoint.call_with_http_info(
                 monitor_id=int(id),
             )
+        self.logger.info("Monitor unmuted", extra={"monitor_id": id})
+
+    def get_monitor_events(self, id: str):
+        self.logger.info("Getting monitor events", extra={"monitor_id": id})
+        with ApiClient(self.configuration) as api_client:
+            api = EventsApi(api_client)
+            end = datetime.datetime.now()
+            # tb: we can make timedelta configurable by the user if we want
+            start = datetime.datetime.now() - datetime.timedelta(days=1)
+            results = api.list_events(
+                start=int(start.timestamp()),
+                end=int(end.timestamp()),
+                tags="source:alert",
+            )
+            # Filter out events that are related to this monitor only
+            # tb: We might want to exclude some fields from event.to_dict() but let's wait for user feedback
+            results = [
+                event.to_dict()
+                for event in results.get("events", [])
+                if str(event.monitor_id) == id
+            ]
+            self.logger.info("Monitor events retrieved", extra={"monitor_id": id})
+            return results
 
     def dispose(self):
         """
@@ -282,6 +322,13 @@ class DatadogProvider(BaseProvider):
                             query="*",
                             timeframe="1h",
                             query_type="logs",
+                        )
+                    elif scope.name == "events_read":
+                        api = EventsApi(api_client)
+                        end = datetime.datetime.now()
+                        start = datetime.datetime.now() - datetime.timedelta(hours=1)
+                        api.list_events(
+                            start=int(start.timestamp()), end=int(end.timestamp())
                         )
                 except ApiException as e:
                     # API failed and it means we're probably lacking some permissions
