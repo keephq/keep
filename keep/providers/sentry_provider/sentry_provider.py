@@ -184,14 +184,17 @@ class SentryProvider(BaseProvider):
         event_data.pop("id", None)
         tags_as_dict.pop("id", None)
 
+        last_received = (
+            datetime.datetime.utcfromtimestamp(event_data.get("received"))
+            if "received" in event_data
+            else event_data.get("datetime")
+        )
+
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("title"),
             status=event.get("action", "triggered"),
-            lastReceived=event_data.get(
-                "datetime",
-                str(datetime.datetime.fromtimestamp(event_data.get("received"))),
-            ),
+            lastReceived=str(last_received),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
             environment=event_data.pop(
@@ -389,14 +392,12 @@ class SentryProvider(BaseProvider):
             # except Exception:
             #     self.logger.warning(f"Failed to get tags for issue {issue_id}")
 
-            lastReceived = datetime.datetime.utcnow() - datetime.timedelta(minutes=1)
-
             formatted_issues.append(
                 AlertDto(
                     id=issue_id,
                     name=issue.pop("title"),
                     status=issue.pop("status"),
-                    lastReceived=lastReceived.isoformat(),
+                    lastReceived=datetime.datetime.utcnow().isoformat(),
                     environment=tags.pop(
                         "environment", issue.pop("environment", "unknown")
                     ),
