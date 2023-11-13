@@ -24,7 +24,7 @@ workflow:
             value: results.tier
   actions:
     - name: create-service-now-ticket
-      if: "not '{{ alert.ticket_id }}'"
+      # if: "not '{{ alert.ticket_id }}'"
       provider:
         type: servicenow
         config: " {{ providers.servicenow-prod }} "
@@ -44,3 +44,5 @@ workflow:
               value: results.stage
             - key: table_name
               value: "{{ alert.annotations.ticket_type }}"
+            - key: ticket_number
+              value: results.number

@@ -4,6 +4,7 @@ import logging.config
 import os
 import sys
 import typing
+from collections import OrderedDict
 from dataclasses import fields
 from importlib import metadata
 
@@ -641,6 +642,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
                 bold=True,
             )
         )
+        return
     provider = provider[0]
     if help:
         table = PrettyTable()
@@ -808,6 +810,13 @@ def list_alerts(info: Info, filter: typing.List[str], export: bool):
 
     alerts = resp.json()
 
+    # aggregate by fingerprint
+    aggregated_alerts = OrderedDict()
+    for alert in sorted(alerts, key=lambda x: x["lastReceived"]):
+        if alert["fingerprint"] not in aggregated_alerts:
+            aggregated_alerts[alert["fingerprint"]] = alert
+
+    alerts = aggregated_alerts.values()
     # Apply all provided filters
     for filt in filter:
         key, value = filt.split("=")

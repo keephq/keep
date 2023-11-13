@@ -136,8 +136,9 @@ class ServicenowProvider(BaseProvider):
             data=json.dumps(payload),
         )
 
-        if response.status_code == 201:  # HTTP status code for "Created"
-            resp = response.json()
+        if (
+            response.status_code == 201
+        ):  # HTTP status code for "Created"            resp = response.json()
             self.logger.info(f"Created ticket: {resp}")
             result = resp.get("result")
             # Add link to ticket
