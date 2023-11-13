@@ -41,6 +41,8 @@ class SentryProviderAuthConfig:
 
 
 class SentryProvider(BaseProvider):
+    """Enrich alerts with data from Sentry."""
+
     SENTRY_API = "https://sentry.io/api/0"
     PROVIDER_SCOPES = [
         ProviderScope(

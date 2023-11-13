@@ -26,6 +26,8 @@ class DiscordProviderAuthConfig:
 
 
 class DiscordProvider(BaseProvider):
+    """Send alert message to Discord."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

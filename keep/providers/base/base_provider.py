@@ -125,8 +125,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
             fingerprint = results["fingerprint"]
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
-            fingerprint = self.context_manager.event_context.fingerprint
+            fingerprint = self.context_manager.event_context.get("fingerprint")
         else:
+            fingerprint = None
+
+        if not fingerprint:
             raise Exception(
                 "No fingerprint found for alert enrichment",
                 extra={"provider": self.provider_id},
@@ -154,7 +157,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     _enrichments[enrichment["key"]] = enrichment["value"]
             except Exception as e:
                 self.logger.error(
-                    "Failed to enrich alert",
+                    f"Failed to enrich alert - enrichment: {enrichment}",
                     extra={"fingerprint": fingerprint, "provider": self.provider_id},
                 )
                 continue
@@ -163,7 +166,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
         except Exception as e:
             self.logger.error(
-                "Failed to enrich alert",
+                "Failed to enrich alert in db",
                 extra={"fingerprint": fingerprint, "provider": self.provider_id},
             )
             raise e

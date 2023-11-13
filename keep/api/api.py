@@ -27,6 +27,8 @@ from keep.api.core.dependencies import (
     verify_api_key_single_tenant,
     verify_bearer_token,
     verify_bearer_token_single_tenant,
+    verify_token_or_key,
+    verify_token_or_key_single_tenant,
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -37,6 +39,7 @@ from keep.api.routes import (
     settings,
     status,
     tenant,
+    whoami,
     workflows,
 )
 from keep.contextmanager.contextmanager import ContextManager
@@ -144,6 +147,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
+    app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint
@@ -206,6 +210,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
                 verify_bearer_token
             ] = verify_bearer_token_single_tenant
             app.dependency_overrides[get_user_email] = get_user_email_single_tenant
+            app.dependency_overrides[
+                verify_token_or_key
+            ] = verify_token_or_key_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
     @app.exception_handler(Exception)

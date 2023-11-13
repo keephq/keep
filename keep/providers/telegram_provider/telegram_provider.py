@@ -26,6 +26,8 @@ class TelegramProviderAuthConfig:
 
 
 class TelegramProvider(BaseProvider):
+    """Send alert message to Telegram."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

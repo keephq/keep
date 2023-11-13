@@ -34,9 +34,7 @@ class AxiomProviderAuthConfig:
 
 
 class AxiomProvider(BaseProvider):
-    """
-    Axiom provider class.
-    """
+    """Enrich alerts with data from Axiom."""
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
