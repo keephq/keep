@@ -449,7 +449,7 @@ class DatadogProvider(BaseProvider):
         elif priority == "P4":
             return "low"
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
         with ApiClient(self.configuration) as api_client:
             # tb: when it's out of beta, we should move to api v2
@@ -716,5 +716,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.get_alerts()
+    result = provider._get_alerts()
     print(result)

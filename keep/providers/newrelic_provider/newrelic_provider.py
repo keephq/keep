@@ -101,7 +101,7 @@ class NewrelicProvider(BaseProvider):
         # results are in response.json()['data']['actor']['account']['nrql']['results'], should we return this?
         return response.json()
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
 
         headers = {"Api-Key": self.newrelic_config.api_key}
@@ -232,5 +232,5 @@ if __name__ == "__main__":
         provider_config=provider_config,
     )
 
-    alerts = provider.get_alerts()
+    alerts = provider._get_alerts()
     print(alerts)

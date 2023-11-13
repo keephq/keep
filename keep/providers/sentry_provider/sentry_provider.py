@@ -354,7 +354,7 @@ class SentryProvider(BaseProvider):
             raise Exception(issues_response.json())
         return {issue["id"]: issue for issue in issues_response.json()}
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         all_events_by_project = {}
         all_issues_by_project = {}
         if self.authentication_config.project_slug:

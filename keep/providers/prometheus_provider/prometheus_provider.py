@@ -103,7 +103,7 @@ receivers:
 
         return response.json()
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         auth = None
         if self.authentication_config.username and self.authentication_config.password:
             auth = HTTPBasicAuth(

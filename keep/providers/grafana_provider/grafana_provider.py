@@ -317,7 +317,7 @@ class GrafanaProvider(BaseProvider):
                         continue
         return alert_dtos
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         month_ago = int(
             (datetime.datetime.now() - datetime.timedelta(days=30)).timestamp()
         )
