@@ -29,6 +29,8 @@ class TrelloProviderAuthConfig:
 
 
 class TrelloProvider(BaseProvider):
+    """Enrich alerts with data from Trello."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

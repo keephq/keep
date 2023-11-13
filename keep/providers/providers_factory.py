@@ -237,6 +237,7 @@ class ProvidersFactory:
                     "provider_description"
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
+                docs = provider_class.__doc__
                 provider_methods = ProvidersFactory.__get_methods(provider_class)
                 providers.append(
                     Provider(
@@ -251,6 +252,7 @@ class ProvidersFactory:
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
                         scopes=scopes,
+                        docs=docs,
                         methods=provider_methods,
                     )
                 )
@@ -285,6 +287,8 @@ class ProvidersFactory:
                 continue
             provider_copy = provider.copy()
             provider_copy.id = p.id
+            provider_copy.installed_by = p.installed_by
+            provider_copy.installation_time = p.installation_time
             try:
                 provider_auth = {"name": p.name}
                 if include_details:

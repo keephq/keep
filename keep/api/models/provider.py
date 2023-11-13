@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from keep.providers.models.provider_config import ProviderScope
@@ -24,3 +26,6 @@ class Provider(BaseModel):
     scopes: list[ProviderScope] = []
     validatedScopes: dict[str, bool | str] | None = {}
     methods: list[ProviderMethod] = []
+    installed_by: str | None = None
+    installation_time: datetime | None = None
+    docs: str | None = None

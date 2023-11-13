@@ -137,6 +137,9 @@ class WorkflowScheduler:
                     "trigger": "manual",
                     "time": time.time(),
                 }
+            else:
+                # so unique_execution_number will be different
+                event["time"] = time.time()
             unique_execution_number = self._get_unique_execution_number(
                 json.dumps(event).encode()
             )
@@ -149,7 +152,7 @@ class WorkflowScheduler:
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
-            return None
+            raise e
         self.workflows_to_run.append(
             {
                 "workflow_id": workflow_id,
@@ -262,8 +265,14 @@ class WorkflowScheduler:
         while not self._stop:
             # get all workflows that should run now
             self.logger.debug("Getting workflows that should run...")
-            self._handle_interval_workflows()
-            self._handle_event_workflows()
+            try:
+                self._handle_interval_workflows()
+                self._handle_event_workflows()
+            except Exception as e:
+                # This is the "mainloop" of the scheduler, we don't want to crash it
+                # But any exception here should be investigated
+                self.logger.error(f"Error getting workflows that should run: {e}")
+                pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)
         self.logger.info("Workflows scheduler stopped")

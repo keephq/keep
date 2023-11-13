@@ -38,6 +38,8 @@ class NewrelicProviderAuthConfig:
 
 
 class NewrelicProvider(BaseProvider):
+    """Pull alerts from New Relic into Keep."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

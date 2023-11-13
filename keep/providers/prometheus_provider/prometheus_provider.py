@@ -42,6 +42,8 @@ class PrometheusProviderAuthConfig:
 
 
 class PrometheusProvider(BaseProvider):
+    """Get alerts from Prometheus into Keep."""
+
     webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
     webhook_template = """route:
   receiver: "keep"

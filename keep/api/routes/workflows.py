@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import jwt
+import validators
 import yaml
 from fastapi import (
     APIRouter,
@@ -9,6 +10,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
@@ -18,11 +20,17 @@ from sqlmodel import Session
 
 from keep.api.core.db import (
     get_installed_providers,
+    get_last_workflow_executions,
     get_session,
     get_workflow,
-    get_workflow_executions,
 )
-from keep.api.core.dependencies import get_user_email, verify_bearer_token
+from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.db import get_workflow_id_by_name
+from keep.api.core.dependencies import (
+    get_user_email,
+    verify_bearer_token,
+    verify_token_or_key,
+)
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -44,7 +52,7 @@ logger = logging.getLogger(__name__)
     description="Get workflows",
 )
 def get_workflows(
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
 ) -> list[WorkflowDTO]:
     workflowstore = WorkflowStore()
     parser = Parser()
@@ -96,6 +104,7 @@ def get_workflows(
         # create the workflow DTO
         workflow_dto = WorkflowDTO(
             id=workflow.id,
+            name=workflow.name,
             description=workflow.description or "[This workflow has no description]",
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
@@ -105,6 +114,8 @@ def get_workflows(
             providers=providers_dto,
             triggers=triggers,
             workflow_raw=workflow.workflow_raw,
+            revision=workflow.revision,
+            last_updated=workflow.last_updated,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
@@ -117,13 +128,15 @@ def get_workflows(
 def run_workflow(
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     created_by: str = Depends(get_user_email),
 ) -> dict:
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
-    workflowstore = WorkflowStore()
+    # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
+    if not validators.uuid(workflow_id):
+        logger.info("Workflow ID is not a UUID, trying to get the ID by name")
+        workflow_id = get_workflow_id_by_name(tenant_id, workflow_id)
     workflowmanager = WorkflowManager.get_instance()
-    # workflow = workflowstore.get_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=workflow_id,
@@ -148,13 +161,12 @@ def run_workflow(
         "Workflow ran successfully",
         extra={
             "workflow_id": workflow_id,
-            "workflow_execution_id": workflow_execution_id,
         },
     )
     return {
         "workflow_id": workflow_id,
         "workflow_execution_id": workflow_execution_id,
-        "status": "sucess",
+        "status": "success",
     }
 
 
@@ -184,7 +196,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
 async def create_workflow(
     request: Request,
     file: UploadFile = None,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     created_by: str = Depends(get_user_email),
 ) -> WorkflowCreateOrUpdateDTO:
     workflow = await __get_workflow_raw_data(request, file)
@@ -193,7 +205,14 @@ async def create_workflow(
     workflow = workflowstore.create_workflow(
         tenant_id=tenant_id, created_by=created_by, workflow=workflow
     )
-    return WorkflowCreateOrUpdateDTO(workflow_id=workflow.id, status="created")
+    if workflow.revision == 1:
+        return WorkflowCreateOrUpdateDTO(
+            workflow_id=workflow.id, status="created", revision=workflow.revision
+        )
+    else:
+        return WorkflowCreateOrUpdateDTO(
+            workflow_id=workflow.id, status="updated", revision=workflow.revision
+        )
 
 
 @router.put(
@@ -265,7 +284,7 @@ def get_workflow_by_id(
     workflow_id: str,
     tenant_id: str = Depends(verify_bearer_token),
 ) -> List[WorkflowExecutionDTO]:
-    workflow_executions = get_workflow_executions(tenant_id, workflow_id)
+    workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
     workflow_executions_dtos = []
     for workflow_execution in workflow_executions:
         workflow_execution_dto = WorkflowExecutionDTO(
@@ -304,7 +323,6 @@ def get_workflow_execution_status(
 ) -> WorkflowExecutionDTO:
     workflowstore = WorkflowStore()
     workflow_execution = workflowstore.get_workflow_execution(
-        workflow_id=workflow_id,
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
@@ -328,3 +346,51 @@ def get_workflow_execution_status(
         results=workflow_execution.results,
     )
     return workflow_execution_dto
+
+
+# todo: move to better URL
+# I can't use "/executions" since we already have "/{workflow_id}" endpoint
+@router.get(
+    "/executions/list",
+    description="List last workflow executions",
+)
+def get_workflow_executions(
+    tenant_id: str = Depends(verify_token_or_key),
+    workflow_execution_id: Optional[str] = Query(
+        None, description="Workflow execution ID"
+    ),
+) -> List[WorkflowExecutionDTO]:
+    # if specific execution
+    if workflow_execution_id:
+        workflowstore = WorkflowStore()
+        workflow_executions = [
+            workflowstore.get_workflow_execution(
+                workflow_execution_id=workflow_execution_id,
+                tenant_id=tenant_id,
+            )
+        ]
+    else:
+        workflow_executions = get_last_workflow_executions(tenant_id=tenant_id)
+    workflow_executions_dtos = []
+    for workflow_execution in workflow_executions:
+        workflow_execution_dto = WorkflowExecutionDTO(
+            id=workflow_execution.id,
+            workflow_id=workflow_execution.workflow_id,
+            status=workflow_execution.status,
+            started=workflow_execution.started,
+            triggered_by=workflow_execution.triggered_by,
+            error=workflow_execution.error,
+            execution_time=workflow_execution.execution_time,
+            logs=[
+                WorkflowExecutionLogsDTO(
+                    id=log.id,
+                    timestamp=log.timestamp,
+                    message=log.message,
+                    context=log.context if log.context else {},
+                )
+                for log in workflow_execution.logs
+            ],
+            results=workflow_execution.results,
+        )
+        workflow_executions_dtos.append(workflow_execution_dto)
+    return workflow_executions_dtos

@@ -10,7 +10,7 @@ import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -30,11 +30,39 @@ class MysqlProviderAuthConfig:
 
 
 class MysqlProvider(BaseProvider):
+    """Enrich alerts with data from MySQL."""
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="connect_to_server",
+            description="The user can connect to the server",
+            mandatory=True,
+            alias="Connect to the server",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.client = None
+
+    def validate_scopes(self):
+        """
+        Validates that the user has the required scopes to use the provider.
+        """
+        try:
+            client = self.__generate_client()
+            client.close()
+            scopes = {
+                "connect_to_server": True,
+            }
+        except Exception as e:
+            self.logger.exception("Error validating scopes")
+            scopes = {
+                "connect_to_server": str(e),
+            }
+        return scopes
 
     def __generate_client(self):
         """
@@ -65,7 +93,9 @@ class MysqlProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, query="", **kwargs: dict) -> list | tuple:
+    def _query(
+        self, query="", as_dict=False, single_row=False, **kwargs: dict
+    ) -> list | tuple:
         """
         Executes a query against the MySQL database.
 
@@ -73,7 +103,7 @@ class MysqlProvider(BaseProvider):
             list | tuple: list of results or single result if single_row is True
         """
         client = self.__generate_client()
-        cursor = client.cursor()
+        cursor = client.cursor(dictionary=as_dict)
 
         if kwargs:
             query = query.format(**kwargs)
@@ -81,10 +111,10 @@ class MysqlProvider(BaseProvider):
         cursor.execute(query)
         results = cursor.fetchall()
 
-        if kwargs and kwargs.get("single_row"):
+        cursor.close()
+        if single_row:
             return results[0]
 
-        cursor.close()
         return results
 
 

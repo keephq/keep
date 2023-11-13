@@ -66,9 +66,7 @@ class DatadogProviderAuthConfig:
 
 
 class DatadogProvider(BaseProvider):
-    """
-    Datadog provider class.
-    """
+    """Pull/push alerts from Datadog."""
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -507,6 +505,8 @@ class DatadogProvider(BaseProvider):
                         groups=event.monitor_groups,
                         source=["datadog"],
                         tags=tags,
+                        environment=tags.get("environment"),
+                        service=tags.get("service"),
                         created_by=monitor.creator.email
                         if monitor and monitor.creator
                         else None,

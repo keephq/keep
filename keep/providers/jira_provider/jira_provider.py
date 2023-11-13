@@ -48,6 +48,8 @@ class JiraProviderAuthConfig:
 
 
 class JiraProvider(BaseProvider):
+    """Enrich alerts with Jira tickets."""
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="BROWSE_PROJECTS",
