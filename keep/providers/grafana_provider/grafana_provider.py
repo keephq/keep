@@ -12,7 +12,6 @@ from grafana_api.model import APIEndpoints
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
@@ -161,24 +160,18 @@ class GrafanaProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto:
-        alerts = event.get("alerts", [])
-        formatted_alerts = []
-        for alert in alerts:
-            formatted_alerts.append(
-                AlertDto(
-                    id=alert.get("fingerprint"),
-                    fingerprint=alert.get("fingerprint"),
-                    name=event.get("title"),
-                    status=event.get("status"),
-                    severity=alert.get("severity", None),
-                    lastReceived=datetime.datetime.now().isoformat(),
-                    fatigueMeter=random.randint(0, 100),
-                    description=alert.get("annotations", {}).get("summary", ""),
-                    source=["grafana"],
-                    labels=alert.get("labels", {}),
-                )
-            )
-        return formatted_alerts
+        alert = event.get("alerts", [{}])[0]
+        return AlertDto(
+            id=alert.get("fingerprint"),
+            name=event.get("title"),
+            status=event.get("status"),
+            severity=alert.get("severity", None),
+            lastReceived=datetime.datetime.utcnow().isoformat(),
+            fatigueMeter=random.randint(0, 100),
+            description=alert.get("annotations", {}).get("summary", ""),
+            source=["grafana"],
+            **alert.get("labels", {}),
+        )
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -317,56 +310,28 @@ class GrafanaProvider(BaseProvider):
                         continue
         return alert_dtos
 
-    def _get_alerts(self) -> list[AlertDto]:
-        month_ago = int(
-            (datetime.datetime.now() - datetime.timedelta(days=30)).timestamp()
-        )
-        now = int(datetime.datetime.now().timestamp())
-        api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={month_ago}&to={now}&limit=0"
+    def get_alerts(self) -> list[AlertDto]:
+        source_by_api_url = {
+            f"{self.authentication_config.host}/api/prometheus/grafana/api/v1/rules": [
+                "grafana"
+            ],
+            f"{self.authentication_config.host}/api/prometheus/grafanacloud-prom/api/v1/rules": [
+                "grafana",
+                "prometheus",
+            ],
+        }
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = response = requests.get(api_endpoint, headers=headers)
-        if not response.ok:
-            raise ProviderException("Failed to get alerts from Grafana")
-        events_history = response.json()
-        events_data = events_history.get("data", [])
-        if events_data:
-            events_data_values = events_data.get("values")
-            if events_data_values:
-                events = events_data_values[1]
-                events_time = events_data_values[0]
-                alerts = []
-                for i in range(0, len(events)):
-                    event = events[i]
-                    event_labels = event.get("labels", {})
-                    alert_name = event_labels.get("alertname")
-                    alert_status = event_labels.get("alertstate", event.get("current"))
-                    alert_severity = event_labels.get("severity", "info")
-                    environment = event_labels.get("environment", "unknown")
-                    fingerprint = event_labels.get("fingerprint")
-                    description = event.get("error", "")
-                    rule_id = event.get("ruleUID")
-                    condition = event.get("condition")
-                    timestamp = datetime.datetime.fromtimestamp(
-                        events_time[i] / 1000
-                    ).isoformat()
-                    alerts.append(
-                        AlertDto(
-                            id=str(i),
-                            fingerprint=fingerprint,
-                            name=alert_name,
-                            status=alert_status,
-                            severity=alert_severity,
-                            environment=environment,
-                            description=description,
-                            lastReceived=timestamp,
-                            rule_id=rule_id,
-                            condition=condition,
-                            labels=event_labels,
-                            source=["grafana"],
-                        )
-                    )
-                return alerts
-        return []
+        alert_dtos = []
+        for url in source_by_api_url:
+            try:
+                response = requests.get(url, headers=headers)
+                if not response.ok:
+                    continue
+                rules = response.json()
+                alert_dtos.extend(self.__extract_rules(rules, source_by_api_url[url]))
+            except Exception:
+                self.logger.exception("Could not get alerts", extra={"api": url})
+        return alert_dtos
 
 
 if __name__ == "__main__":
