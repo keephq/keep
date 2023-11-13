@@ -343,13 +343,14 @@ class ZabbixProvider(BaseProvider):
                     name=name,
                     status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
-                        int(problem.get("clock")) + 10
+                        int(problem.get("clock"))
+                        + 10  # to override pushed problems, 10 is just random, could probably be 1
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
                     severity=self.__get_severity(problem.pop("severity")),
                     environment=environment,
-                    **problem,
+                    problem=problem,
                 )
             )
         return formatted_alerts
@@ -571,7 +572,7 @@ class ZabbixProvider(BaseProvider):
             source=["zabbix"],
             severity=severity,
             url=url,
-            **tags,
+            tags=tags,
         )
 
 

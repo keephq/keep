@@ -4,6 +4,7 @@ export enum Severity {
   Medium = "medium",
   Low = "low",
   Info = "info",
+  Error = "error",
 }
 
 export interface Alert {

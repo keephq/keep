@@ -12,6 +12,7 @@ import {
   Callout,
   TextInput,
   Button,
+  Card,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -30,12 +31,14 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
-    (url) => fetcher(url, accessToken)
+    (url) => fetcher(url, accessToken),
+    { onLoadingSlow: () => setIsSlowLoading(true) }
   );
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
@@ -57,7 +60,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       </Callout>
     );
   }
-  if (isLoading || !data) return <Loading />;
+  if (isLoading || !data) return <Loading slowLoading={isSlowLoading} />;
 
   const environments = data
     .map((alert) => alert.environment.toLowerCase())
@@ -90,7 +93,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   }
 
   return (
-    <>
+    <Card className="mt-10 p-4 md:p-10 mx-auto">
       <Flex justifyContent="between" alignItems="center">
         <div className="flex w-full">
           <MultiSelect
@@ -145,11 +148,11 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
               statusIsSeleected(alert) &&
               searchAlert(alert)
           )}
-        groupBy="name"
+        groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
-        mutate={mutate}
+        mutate={() => mutate(null, { optimisticData: [] })}
       />
-    </>
+    </Card>
   );
 }

@@ -111,6 +111,8 @@ def verify_api_key(
 def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
     # Took the implementation from here:
     #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
+    if not token:
+        raise HTTPException(status_code=401, detail="No token provided 👈")
     try:
         auth_domain = os.environ.get("AUTH0_DOMAIN")
         auth_audience = os.environ.get("AUTH0_AUDIENCE")
