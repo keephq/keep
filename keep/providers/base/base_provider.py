@@ -13,6 +13,7 @@ import uuid
 from dataclasses import field
 from typing import Optional
 
+import opentelemetry.trace as trace
 import requests
 from pydantic.dataclasses import dataclass
 
@@ -21,6 +22,8 @@ from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
+
+tracer = trace.get_tracer(__name__)
 
 
 class BaseProvider(metaclass=abc.ABCMeta):
@@ -249,11 +252,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("deploy_alert() method not implemented")
 
-    def get_alerts(self):
+    def _get_alerts(self):
         """
         Get alerts from the provider.
         """
         raise NotImplementedError("get_alerts() method not implemented")
+
+    def get_alerts(self):
+        """
+        Get alerts from the provider.
+        """
+        with tracer.start_as_current_span(f"{self.__class__.__name__}-get_alerts"):
+            return self._get_alerts()
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True

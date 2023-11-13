@@ -216,7 +216,7 @@ class PagerdutyProvider(BaseProvider):
             raise Exception("Could not create webhook")
         self.logger.info("Webhook created")
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         request = requests.get(
             "https://api.pagerduty.com/incidents",
             headers={
