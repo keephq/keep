@@ -81,7 +81,7 @@ class DynatraceProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from Dynatrace.
 
@@ -113,7 +113,7 @@ class DynatraceProvider(BaseProvider):
         self.logger.info("Validating dynatrace scopes")
         scopes = {}
         try:
-            self.get_alerts()
+            self._get_alerts()
         except Exception as e:
             # wrong environment
             if "Not Found" in str(e):
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         provider_type="dynatrace",
         provider_config=config,
     )
-    problems = provider.get_alerts()
+    problems = provider._get_alerts()
     provider.setup_webhook(
         tenant_id=SINGLE_TENANT_UUID,
         keep_api_url=os.environ.get("KEEP_API_URL"),
