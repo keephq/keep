@@ -21,7 +21,7 @@ class Workflow(SQLModel, table=True):
     name: str
     description: Optional[str]
     created_by: str
-    updated_by: str
+    updated_by: Optional[str] = None
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
     workflow_raw: str = Field(sa_column=String(length=65535))
