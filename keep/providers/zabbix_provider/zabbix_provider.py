@@ -46,7 +46,7 @@ class ZabbixProviderAuthConfig:
 
 class ZabbixProvider(BaseProvider):
     """
-    Zabbix provider class.
+    Pull/Push alerts from Zabbix into Keep.
     """
 
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix

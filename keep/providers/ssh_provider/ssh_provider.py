@@ -55,6 +55,8 @@ class SshProviderAuthConfig:
 
 
 class SshProvider(BaseProvider):
+    """Enrich alerts with data from SSH."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

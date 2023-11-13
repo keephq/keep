@@ -207,7 +207,8 @@ class WorkflowManager:
             errors = workflow.run(workflow_execution_id)
         except Exception as e:
             self.logger.error(
-                f"Error running workflow {workflow.workflow_id}", extra={"exception": e}
+                f"Error running workflow {workflow.workflow_id}",
+                extra={"exception": e, "workflow_execution_id": workflow_execution_id},
             )
             if workflow.on_failure:
                 self.logger.info(
@@ -247,7 +248,6 @@ class WorkflowManager:
         try:
             save_workflow_results(
                 tenant_id=workflow.context_manager.tenant_id,
-                workflow_id=workflow.context_manager.workflow_id,
                 workflow_execution_id=workflow_execution_id,
                 workflow_results=workflow_results,
             )

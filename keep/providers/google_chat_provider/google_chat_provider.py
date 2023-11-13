@@ -9,6 +9,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class GoogleChatProvider(BaseProvider):
+    """Send alert message to Google Chat."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

@@ -32,6 +32,8 @@ class OpsGenieRecipient(pydantic.BaseModel):
 
 
 class OpsgenieProvider(BaseProvider):
+    """Create incidents in OpsGenie."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

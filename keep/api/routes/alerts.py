@@ -4,11 +4,17 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session
 
+from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import get_alerts as get_alerts_from_db
+from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_api_key, verify_bearer_token
-from keep.api.models.alert import AlertDto, DeleteRequestBody
-from keep.api.models.db.alert import Alert
+from keep.api.core.dependencies import (
+    verify_api_key,
+    verify_bearer_token,
+    verify_token_or_key,
+)
+from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
+from keep.api.models.db.alert import Alert, AlertEnrichment
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -24,8 +30,7 @@ logger = logging.getLogger(__name__)
 def get_alerts(
     provider_type: str = None,
     provider_id: str = None,
-    tenant_id: str = Depends(verify_bearer_token),
-    session: Session = Depends(get_session),
+    tenant_id: str = Depends(verify_token_or_key),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching all alerts",
@@ -82,6 +87,19 @@ def get_alerts(
             )
             pass
 
+    # enrich also the pulled alerts:
+    pulled_alerts_fingerprints = [alert.fingerprint for alert in alerts]
+    pulled_alerts_enrichments = get_enrichments_from_db(
+        tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
+    )
+    for alert_enrichment in pulled_alerts_enrichments:
+        for alert in alerts:
+            if alert_enrichment.alert_fingerprint == alert.fingerprint:
+                # enrich
+                for enrichment in alert_enrichment.enrichments:
+                    # set the enrichment
+                    setattr(alert, enrichment, alert_enrichment.enrichments[enrichment])
+
     # Alerts pushed to keep
     try:
         logger.info(
@@ -95,7 +113,9 @@ def get_alerts(
         for alert in db_alerts:
             if alert.alert_enrichment:
                 alert.event.update(alert.alert_enrichment.enrichments)
+
         db_alerts_dto = [AlertDto(**alert.event) for alert in db_alerts]
+
         alerts.extend(db_alerts_dto)
         logger.info(
             "Fetched alerts DB",
@@ -330,3 +350,63 @@ async def receive_event(
             "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
         )
         raise HTTPException(400, "Failed to handle event")
+
+
+@router.get(
+    "/{fingerprint}",
+    description="Get alert by fingerprint",
+)
+def get_alert(
+    fingerprint: str,
+    tenant_id: str = Depends(verify_token_or_key),
+    session: Session = Depends(get_session),
+) -> AlertDto:
+    logger.info(
+        "Fetching alert",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+    # TODO: once pulled alerts will be in the db too, this should be changed
+    all_alerts = get_alerts(tenant_id=tenant_id)
+    alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
+    if alert:
+        return alert[0]
+    else:
+        return HTTPException(status_code=404, detail="Alert not found")
+
+
+@router.post(
+    "/enrich",
+    description="Enrich an alert",
+)
+def enrich_alert(
+    enrich_data: EnrichAlertRequestBody,
+    tenant_id: str = Depends(verify_token_or_key),
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    logger.info(
+        "Enriching alert",
+        extra={
+            "fingerprint": enrich_data.fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        enrich_alert_db(
+            tenant_id=tenant_id,
+            fingerprint=enrich_data.fingerprint,
+            enrichments=enrich_data.enrichments,
+        )
+
+        logger.info(
+            "Alert enriched successfully",
+            extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
+        )
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.exception("Failed to enrich alert", extra={"error": str(e)})
+        return {"status": "failed"}

@@ -1,18 +1,18 @@
 import dataclasses
-import logging
 import json
-import yaml
+import logging
 
 import pydantic
+import yaml
 from azure.identity import ClientSecretCredential
 from azure.mgmt.containerservice import ContainerServiceClient
 from kubernetes import client, config
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
-from keep.exceptions.provider_exception import ProviderException
 
 
 @pydantic.dataclasses.dataclass
@@ -70,6 +70,8 @@ class AksProviderAuthConfig:
 
 
 class AksProvider(BaseProvider):
+    """Enrich alerts using data from AKS."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

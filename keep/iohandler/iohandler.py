@@ -3,9 +3,11 @@ import copy
 
 # TODO: fix this! It screws up the eval statement if these are not imported
 import datetime
+import io
 import json
 import logging
 import re
+import sys
 from decimal import Decimal
 
 import astunparse
@@ -14,6 +16,10 @@ import requests
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
+
+
+class RenderException(Exception):
+    pass
 
 
 class IOHandler:
@@ -30,7 +36,7 @@ class IOHandler:
         ):
             self.shorten_urls = True
 
-    def render(self, template):
+    def render(self, template, safe=False):
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
@@ -44,7 +50,7 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of ( and ) does not match {template}"
             )
-        val = self.parse(template)
+        val = self.parse(template, safe)
         return val
 
     def quote(self, template):
@@ -60,7 +66,7 @@ class IOHandler:
         replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
-    def parse(self, string):
+    def parse(self, string, safe=False):
         """Use AST module to parse 'call stack'-like string and return the result
 
         Example -
@@ -85,7 +91,7 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string)
+        string = self._render(string, safe)
 
         # Now, extract the token if exists -
         pattern = (
@@ -176,13 +182,22 @@ class IOHandler:
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key):
+    def _render(self, key, safe=False):
         # change [] to . for the key because thats what chevron uses
         _key = key.replace("[", ".").replace("]", "")
 
         context = self.context_manager.get_full_context()
-        rendered = chevron.render(_key, context)
-
+        # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
+        original_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        rendered = chevron.render(_key, context, warn=True)
+        stderr_output = sys.stderr.getvalue()
+        sys.stderr = original_stderr
+        # If render should failed if value does not exists
+        if safe and "Could not find key" in stderr_output:
+            raise RenderException(
+                f"Could not find key {key} in context - {stderr_output}"
+            )
         return rendered
 
     def render_context(self, context_to_render: dict):
