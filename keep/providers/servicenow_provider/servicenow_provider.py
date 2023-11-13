@@ -6,12 +6,13 @@ import json
 
 import pydantic
 import requests
+from requests.auth import HTTPBasicAuth
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -47,10 +48,53 @@ class ServicenowProviderAuthConfig:
 class ServicenowProvider(BaseProvider):
     """Manage ServiceNow tickets."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="itil",
+            description="The user can read/write tickets from the table",
+            documentation_url="https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html",
+            mandatory=True,
+            alias="Read from datahase",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    def validate_scopes(self):
+        """
+        Validates that the user has the required scopes to use the provider.
+        """
+        try:
+            url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_user_role?sysparm_query=user_name={self.authentication_config.username}"
+            response = requests.get(
+                url,
+                auth=HTTPBasicAuth(
+                    self.authentication_config.username,
+                    self.authentication_config.password,
+                ),
+            )
+            if response.status_code == 200:
+                roles = response.json()
+                roles_names = [role.get("name") for role in roles.get("result")]
+                if "itil" in roles_names:
+                    scopes = {
+                        "itil": True,
+                    }
+                else:
+                    scopes = {
+                        "itil": "This user does not have the ITIL role",
+                    }
+            else:
+                scopes["itil"] = "Failed to get roles from ServiceNow"
+        except Exception as e:
+            self.logger.exception("Error validating scopes")
+            scopes = {
+                "itil": str(e),
+            }
+        return scopes
 
     def validate_config(self):
         self.authentication_config = ServicenowProviderAuthConfig(
@@ -76,6 +120,9 @@ class ServicenowProvider(BaseProvider):
             ticket_id = kwargs.pop("ticket_id")
             fingerprint = kwargs.pop("fingerprint")
             return self._notify_update(table_name, ticket_id, fingerprint)
+
+        # In ServiceNow tables are lower case
+        table_name = table_name.lower()
 
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
         # HTTP request
@@ -106,7 +153,7 @@ class ServicenowProvider(BaseProvider):
 
         else:
             self.logger.info(f"Failed to create ticket: {response.text}")
-            resp.raise_for_status()
+            response.raise_for_status()
 
     def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"

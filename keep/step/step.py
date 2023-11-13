@@ -170,7 +170,7 @@ class Step:
         # Now check it
         if if_conf:
             if_conf = self.io_handler.quote(if_conf)
-            if_met = self.io_handler.render(if_conf)
+            if_met = self.io_handler.render(if_conf, safe=False)
             # Evaluate the condition string
             from asteval import Interpreter
 
@@ -230,7 +230,7 @@ class Step:
                 rendered_providers_parameters = {}
                 for parameter in self.provider_parameters:
                     rendered_providers_parameters[parameter] = self.io_handler.render(
-                        self.provider_parameters[parameter]
+                        self.provider_parameters[parameter], safe=True
                     )
 
                 for curr_retry_count in range(self.__retry_count + 1):

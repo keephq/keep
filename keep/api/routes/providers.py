@@ -4,6 +4,7 @@ import time
 import uuid
 from typing import Callable, Optional
 
+import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
@@ -252,6 +253,8 @@ def delete_provider(
         # delete the provider anyway
         session.delete(provider)
         session.commit()
+    except sqlalchemy.orm.exc.NoResultFound:
+        raise HTTPException(404, detail="Provider not found")
     except Exception as exc:
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")

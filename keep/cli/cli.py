@@ -737,7 +737,16 @@ def delete(ctx, provider_id):
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
     if not resp.ok:
-        raise Exception(f"Error deleting provider: {resp.text}")
+        if resp.status_code == 404:
+            click.echo(
+                click.style(f"Provider {provider_id} not found", bold=True, fg="red")
+            )
+        else:
+            click.echo(
+                click.style(
+                    f"Error deleting provider {provider_id}: {resp.text}", bold=True
+                )
+            )
     else:
         click.echo(
             click.style(f"Provider {provider_id} deleted successfully", bold=True)
@@ -881,7 +890,7 @@ def enrich(info: Info, fingerprint, params):
     resp = requests.post(
         f"{info.keep_api_url}/alerts/enrich",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
-        json={"enrichments": params_dict},
+        json=params_dict,
     )
 
     # Check the response

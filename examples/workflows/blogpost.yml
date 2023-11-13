@@ -12,14 +12,16 @@ workflow:
         type: mysql
         config: " {{ providers.mysql-prod }} "
         with:
-          query: "select * from customers where customer_id = {{ alert.customer_id }}"
+          query: "select * from blogpostdb.customer where customer_id = '{{ alert.customer_id }}'"
+          single_row: true
+          as_dict: true
         enrich_alert:
           - key: customer_name
-            value: results[0].name
+            value: results.name
           - key: customer_email
-            value: results[0].email
+            value: results.email
           - key: customer_tier
-            value: results[0].tier
+            value: results.tier
   actions:
     - name: create-service-now-ticket
       if: "not '{{ alert.ticket_id }}'"

@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import jwt
+import validators
 import yaml
 from fastapi import (
     APIRouter,
@@ -24,6 +25,7 @@ from keep.api.core.db import (
     get_workflow,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.db import get_workflow_id_by_name
 from keep.api.core.dependencies import (
     get_user_email,
     verify_bearer_token,
@@ -130,6 +132,10 @@ def run_workflow(
     created_by: str = Depends(get_user_email),
 ) -> dict:
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
+    # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
+    if not validators.uuid(workflow_id):
+        logger.info("Workflow ID is not a UUID, trying to get the ID by name")
+        workflow_id = get_workflow_id_by_name(tenant_id, workflow_id)
     workflowmanager = WorkflowManager.get_instance()
     context_manager = ContextManager(
         tenant_id=tenant_id,

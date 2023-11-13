@@ -119,9 +119,7 @@ class Workflow:
             },
             workflow_status=workflow_status,
         )
-        self.logger.info(
-            f"Finish to run workflow {self.workflow_id} | Status: {workflow_status}"
-        )
+        self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
     def _handle_actions(self):
