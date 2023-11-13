@@ -2,11 +2,13 @@ workflow:
   id: blogpost-workflow
   description: Enrich the alerts and open ticket
   triggers:
+    # filter on critical alerts
     - type: alert
       filters:
         - key: severity
           value: critical
   steps:
+    # get the customer details
     - name: get-more-details
       provider:
         type: mysql
@@ -23,8 +25,10 @@ workflow:
           - key: customer_tier
             value: results.tier
   actions:
+    # Create service now incident ticket
     - name: create-service-now-ticket
-      # if: "not '{{ alert.ticket_id }}'"
+      # if the alert already assigned a ticket, skip it
+      if: "not '{{ alert.ticket_id }}'"
       provider:
         type: servicenow
         config: " {{ providers.servicenow-prod }} "
