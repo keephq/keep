@@ -318,7 +318,7 @@ class ZabbixProvider(BaseProvider):
             raise ProviderMethodException(response_json.get("error", {}).get("data"))
         return response_json
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
         problems = self.__send_request(
             "problem.get", {"recent": False, "selectSuppressionData": "extend"}
