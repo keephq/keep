@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException
 from pusher import Pusher
 
 from keep.api.core.dependencies import get_pusher_client, verify_bearer_token
@@ -10,7 +10,8 @@ router = APIRouter()
 
 @router.post("/auth", status_code=200)
 def pusher_authentication(
-    request: Request,
+    channel_name=Form(...),
+    socket_id=Form(...),
     tenant_id: str = Depends(verify_bearer_token),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict:
@@ -28,10 +29,7 @@ def pusher_authentication(
     Returns:
         dict: The authentication response.
     """
-    channel_name = request.form["channel_name"]
     if channel_name == f"private-{tenant_id}":
-        auth = pusher_client.authenticate(
-            channel=channel_name, socket_id=request.form["socket_id"]
-        )
-        return json.dumps(auth)
+        auth = pusher_client.authenticate(channel=channel_name, socket_id=socket_id)
+        return auth
     raise HTTPException(status_code=403, detail="Forbidden")

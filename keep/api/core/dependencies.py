@@ -244,8 +244,10 @@ def verify_token_or_key_single_tenant(
 
 def get_pusher_client() -> Pusher:
     return Pusher(
+        host=os.environ.get("PUSHER_HOST", "localhost"),
+        port=os.environ.get("PUSHER_PORT", 6001),
         app_id=os.environ.get("PUSHER_APP_ID"),
-        key=os.environ.get("PUSHER_KEY"),
-        secret=os.environ.get("PUSHER_SECRET"),
+        key=os.environ.get("PUSHER_APP_KEY"),
+        secret=os.environ.get("PUSHER_APP_SECRET"),
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
     )

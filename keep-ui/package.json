@@ -301,7 +301,6 @@
     "pretty-format": "^3.8.0",
     "prop-types": "^15.8.1",
     "proxy-from-env": "^1.1.0",
-    "punycode": "^2.3.0",
     "pusher-js": "^8.3.0",
     "queue-microtask": "^1.2.3",
     "react": "^18.2.0",

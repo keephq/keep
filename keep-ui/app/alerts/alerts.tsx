@@ -34,7 +34,6 @@ export default function Alerts({
   accessToken: string;
   tenantId: string;
 }) {
-  alert(tenantId);
   const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
@@ -50,6 +49,7 @@ export default function Alerts({
     mutate,
   } = useSWR<Alert[]>(`${apiUrl}/alerts`, (url) => fetcher(url, accessToken), {
     onLoadingSlow: () => setIsSlowLoading(true),
+    loadingTimeout: 5000,
   });
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
@@ -60,25 +60,29 @@ export default function Alerts({
   );
 
   useEffect(() => {
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-      wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST!,
-      wsPort: parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT!),
-      forceTLS: false,
-      disableStats: true,
-      enabledTransports: ["ws", "wss"],
-      cluster: "local",
-    });
+    if (tenantId) {
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
+        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST!,
+        wsPort: parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT!),
+        forceTLS: false,
+        disableStats: true,
+        enabledTransports: ["ws", "wss"],
+        cluster: "local",
+        authEndpoint: `${apiUrl}/pusher/auth`,
+      });
 
-    const channel = pusher.subscribe("chat");
+      const channelName = `private-${tenantId}`;
+      const channel = pusher.subscribe(channelName);
 
-    channel.bind("chat-event", function (data: any) {
-      console.log(data);
-    });
+      channel.bind("alert-event", function (data: any) {
+        console.log(data);
+      });
 
-    return () => {
-      pusher.unsubscribe("chat");
-    };
-  }, []);
+      return () => {
+        pusher.unsubscribe(channelName);
+      };
+    }
+  }, [tenantId, apiUrl]);
 
   if (error) {
     return (
