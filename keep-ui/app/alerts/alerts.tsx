@@ -78,7 +78,13 @@ export default function Alerts({
         disableStats: true,
         enabledTransports: ["ws", "wss"],
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
-        authEndpoint: `${apiUrl}/pusher/auth`,
+        channelAuthorization: {
+          transport: "ajax",
+          endpoint: `${apiUrl}/pusher/auth`,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
       });
 
       const channelName = `private-${tenantId}`;
