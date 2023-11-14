@@ -1,7 +1,9 @@
+import gzip
 import json
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from pusher import Pusher
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
@@ -9,6 +11,7 @@ from keep.api.core.db import get_alerts as get_alerts_from_db
 from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import (
+    get_pusher_client,
     verify_api_key,
     verify_bearer_token,
     verify_token_or_key,
@@ -23,122 +26,127 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
+    all_providers = ProvidersFactory.get_all_providers()
+    context_manager = ContextManager(
+        tenant_id=tenant_id,
+        workflow_id=None,
+    )
+    installed_providers = ProvidersFactory.get_installed_providers(
+        tenant_id=tenant_id, all_providers=all_providers
+    )
+    for provider in installed_providers:
+        provider_class = ProvidersFactory.get_provider(
+            context_manager=context_manager,
+            provider_id=provider.id,
+            provider_type=provider.type,
+            provider_config=provider.details,
+        )
+        try:
+            logger.info(
+                "Fetching alerts from installed provider",
+                extra={
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+            alerts = provider_class.get_alerts()
+            # enrich also the pulled alerts:
+            pulled_alerts_fingerprints = list(
+                set([alert.fingerprint for alert in alerts])
+            )
+            pulled_alerts_enrichments = get_enrichments_from_db(
+                tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
+            )
+            logger.info(
+                "Enriching pulled alerts",
+                extra={
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+            for alert_enrichment in pulled_alerts_enrichments:
+                for alert in alerts:
+                    if alert_enrichment.alert_fingerprint == alert.fingerprint:
+                        # enrich
+                        for enrichment in alert_enrichment.enrichments:
+                            # set the enrichment
+                            setattr(
+                                alert,
+                                enrichment,
+                                alert_enrichment.enrichments[enrichment],
+                            )
+
+            # chunks of 10
+            logger.info("Batch sending alerts via pusher")
+            for i in range(0, len(alerts), 10):
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-alerts",
+                    [alert.dict() for alert in alerts][i : i + 10],
+                )
+            logger.info("Sent batch of alerts via pusher")
+
+            logger.info(
+                "Enriched pulled alerts",
+                extra={
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+            logger.info(
+                "Fetched alerts from installed provider",
+                extra={
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+        except Exception as e:
+            logger.warn(
+                f"Could not fetch alerts from provider due to {e}",
+                extra={
+                    "provider_id": provider.id,
+                    "provider_type": provider.type,
+                    "tenant_id": tenant_id,
+                },
+            )
+            pass
+
+
 @router.get(
     "",
     description="Get alerts",
 )
-def get_alerts(
-    provider_type: str = None,
-    provider_id: str = None,
+def get_all_alerts(
+    background_tasks: BackgroundTasks,
     tenant_id: str = Depends(verify_token_or_key),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> list[AlertDto]:
     logger.info(
-        "Fetching all alerts",
+        "Fetching alerts DB",
         extra={
-            "provider_type": provider_type,
-            "provider_id": provider_id,
             "tenant_id": tenant_id,
         },
     )
-    alerts = []
-
-    # Alerts fetched from providers (by Keep)
-    # TODO: This is going to be some kind of async task
-    # all_providers = ProvidersFactory.get_all_providers()
-    # context_manager = ContextManager(
-    #     tenant_id=tenant_id,
-    #     workflow_id=None,
-    # )
-    # installed_providers = ProvidersFactory.get_installed_providers(
-    #     tenant_id=tenant_id, all_providers=all_providers
-    # )
-
-    # for provider in installed_providers:
-    #     provider_class = ProvidersFactory.get_provider(
-    #         context_manager=context_manager,
-    #         provider_id=provider.id,
-    #         provider_type=provider.type,
-    #         provider_config=provider.details,
-    #     )
-    #     try:
-    #         logger.info(
-    #             "Fetching alerts from installed provider",
-    #             extra={
-    #                 "provider_type": provider.type,
-    #                 "provider_id": provider.id,
-    #                 "tenant_id": tenant_id,
-    #             },
-    #         )
-    #         alerts.extend(provider_class.get_alerts())
-    #         logger.info(
-    #             "Fetched alerts from installed provider",
-    #             extra={
-    #                 "provider_type": provider.type,
-    #                 "provider_id": provider.id,
-    #                 "tenant_id": tenant_id,
-    #             },
-    #         )
-    #     except Exception as e:
-    #         logger.warn(
-    #             f"Could not fetch alerts from provider due to {e}",
-    #             extra={
-    #                 "provider_id": provider.id,
-    #                 "provider_type": provider.type,
-    #                 "tenant_id": tenant_id,
-    #             },
-    #         )
-    #         pass
-    # # enrich also the pulled alerts:
-    # pulled_alerts_fingerprints = [alert.fingerprint for alert in alerts]
-    # pulled_alerts_enrichments = get_enrichments_from_db(
-    #     tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
-    # )
-    # for alert_enrichment in pulled_alerts_enrichments:
-    #     for alert in alerts:
-    #         if alert_enrichment.alert_fingerprint == alert.fingerprint:
-    #             # enrich
-    #             for enrichment in alert_enrichment.enrichments:
-    #                 # set the enrichment
-    #                 setattr(alert, enrichment, alert_enrichment.enrichments[enrichment])
-
-    # Alerts pushed to keep
-    try:
-        logger.info(
-            "Fetching alerts DB",
-            extra={
-                "tenant_id": tenant_id,
-            },
-        )
-        db_alerts = get_alerts_from_db(tenant_id=tenant_id)
-        # enrich the alerts with the enrichment data
-        for alert in db_alerts:
-            if alert.alert_enrichment:
-                alert.event.update(alert.alert_enrichment.enrichments)
-
-        db_alerts_dto = [AlertDto(**alert.event) for alert in db_alerts]
-
-        alerts.extend(db_alerts_dto)
-        logger.info(
-            "Fetched alerts DB",
-            extra={
-                "tenant_id": tenant_id,
-            },
-        )
-    except Exception as e:
-        logger.exception(
-            "Could not fetch alerts from provider",
-            extra={
-                "provider_id": provider_id,
-                "provider_type": provider_type,
-                "tenant_id": tenant_id,
-            },
-        )
-        pass
-
+    db_alerts = get_alerts_from_db(tenant_id=tenant_id)
+    # enrich the alerts with the enrichment data
+    for alert in db_alerts:
+        if alert.alert_enrichment:
+            alert.event.update(alert.alert_enrichment.enrichments)
+    alerts = [AlertDto(**alert.event) for alert in db_alerts]
     logger.info(
-        "All alerts fetched",
-        extra={"provider_type": provider_type, "provider_id": provider_id},
+        "Fetched alerts DB",
+        extra={
+            "tenant_id": tenant_id,
+        },
     )
+    logger.info("Adding task to fetch alerts from providers async")
+    background_tasks.add_task(get_alerts_from_providers_async, tenant_id, pusher_client)
+    logger.info("Added task to fetch alerts from providers async")
     return alerts
 
 
@@ -370,7 +378,7 @@ def get_alert(
         },
     )
     # TODO: once pulled alerts will be in the db too, this should be changed
-    all_alerts = get_alerts(tenant_id=tenant_id)
+    all_alerts = get_all_alerts(tenant_id=tenant_id)
     alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
     if alert:
         return alert[0]

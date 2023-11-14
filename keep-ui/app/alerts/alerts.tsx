@@ -38,19 +38,20 @@ export default function Alerts({
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  // const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const {
-    data: alerts,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<Alert[]>(`${apiUrl}/alerts`, (url) => fetcher(url, accessToken), {
-    onLoadingSlow: () => setIsSlowLoading(true),
-    loadingTimeout: 5000,
-  });
+  const [reloadLoading, setReloadLoading] = useState<boolean>(false);
+  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
+    `${apiUrl}/alerts`,
+    (url) => fetcher(url, accessToken)
+    // {
+    //   onLoadingSlow: () => setIsSlowLoading(true),
+    //   loadingTimeout: 5000,
+    // }
+  );
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
@@ -58,6 +59,11 @@ export default function Alerts({
     `${apiUrl}/providers`,
     (url) => fetcher(url, accessToken)
   );
+
+  useEffect(() => {
+    if (data)
+      setAlerts((prevAlerts) => Array.from(new Set([...data, ...prevAlerts])));
+  }, [data]);
 
   useEffect(() => {
     if (tenantId) {
@@ -74,8 +80,11 @@ export default function Alerts({
       const channelName = `private-${tenantId}`;
       const channel = pusher.subscribe(channelName);
 
-      channel.bind("alert-event", function (data: any) {
-        console.log(data);
+      channel.bind("async-alerts", function (newAlerts: Alert[]) {
+        setAlerts((prevAlerts) =>
+          Array.from(new Set([...prevAlerts, ...newAlerts]))
+        );
+        console.log(newAlerts);
       });
 
       return () => {
@@ -84,19 +93,19 @@ export default function Alerts({
     }
   }, [tenantId, apiUrl]);
 
-  if (error) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load alerts
-      </Callout>
-    );
-  }
-  if (isLoading || !alerts) return <Loading slowLoading={isSlowLoading} />;
+  // if (error) {
+  //   return (
+  //     <Callout
+  //       className="mt-4"
+  //       title="Error"
+  //       icon={ExclamationCircleIcon}
+  //       color="rose"
+  //     >
+  //       Failed to load alerts
+  //     </Callout>
+  //   );
+  // }
+  // if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
   const environments = alerts
     .map((alert) => alert.environment.toLowerCase())
@@ -168,7 +177,13 @@ export default function Alerts({
           icon={ArrowPathIcon}
           color="orange"
           size="xs"
-          onClick={() => mutate()}
+          disabled={reloadLoading}
+          loading={reloadLoading}
+          onClick={async () => {
+            setReloadLoading(true);
+            await mutate();
+            setReloadLoading(false);
+          }}
           title="Refresh"
         ></Button>
       </Flex>
