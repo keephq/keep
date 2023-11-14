@@ -8,7 +8,7 @@ import jwt
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -129,7 +129,8 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(EventCaptureMiddleware)
+    if not os.getenv("DISABLE_POSTHOG", "false") == "true":
+        app.add_middleware(EventCaptureMiddleware)
     app.add_middleware(GZipMiddleware)
 
     multi_tenant = str(
