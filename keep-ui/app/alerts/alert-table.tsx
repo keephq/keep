@@ -75,7 +75,7 @@ export function AlertTable({
           color="gray"
           className="mt-5"
         >
-          Alerts will show in this page as they are added to Keep
+          Alerts will show up in this page as they are added to Keep
         </Callout>
       )}
       <Table>

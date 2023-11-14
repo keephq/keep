@@ -130,7 +130,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     )
     if not os.getenv("DISABLE_POSTHOG", "false") == "true":
         app.add_middleware(EventCaptureMiddleware)
-    app.add_middleware(GZipMiddleware)
+    # app.add_middleware(GZipMiddleware)
 
     multi_tenant = str(
         multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", "false")
