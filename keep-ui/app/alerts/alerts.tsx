@@ -20,13 +20,21 @@ import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
 import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Loading from "app/loading";
+import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
-import "./alerts.client.css";
 import { ProvidersResponse } from "app/providers/providers";
+import "./alerts.client.css";
 
-export default function Alerts({ accessToken }: { accessToken: string }) {
+export default function Alerts({
+  accessToken,
+  tenantId,
+}: {
+  accessToken: string;
+  tenantId: string;
+}) {
+  alert(tenantId);
   const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
@@ -35,11 +43,14 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
-    `${apiUrl}/alerts`,
-    (url) => fetcher(url, accessToken),
-    { onLoadingSlow: () => setIsSlowLoading(true) }
-  );
+  const {
+    data: alerts,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<Alert[]>(`${apiUrl}/alerts`, (url) => fetcher(url, accessToken), {
+    onLoadingSlow: () => setIsSlowLoading(true),
+  });
   const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
     fetcher(url, accessToken)
   );
@@ -47,6 +58,27 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     `${apiUrl}/providers`,
     (url) => fetcher(url, accessToken)
   );
+
+  useEffect(() => {
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
+      wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST!,
+      wsPort: parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT!),
+      forceTLS: false,
+      disableStats: true,
+      enabledTransports: ["ws", "wss"],
+      cluster: "local",
+    });
+
+    const channel = pusher.subscribe("chat");
+
+    channel.bind("chat-event", function (data: any) {
+      console.log(data);
+    });
+
+    return () => {
+      pusher.unsubscribe("chat");
+    };
+  }, []);
 
   if (error) {
     return (
@@ -60,9 +92,9 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       </Callout>
     );
   }
-  if (isLoading || !data) return <Loading slowLoading={isSlowLoading} />;
+  if (isLoading || !alerts) return <Loading slowLoading={isSlowLoading} />;
 
-  const environments = data
+  const environments = alerts
     .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
@@ -86,7 +118,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     );
   }
 
-  const statuses = data.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = alerts.map((alert) => alert.status).filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
@@ -137,7 +169,7 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
         ></Button>
       </Flex>
       <AlertTable
-        data={data
+        data={alerts
           .map((alert) => {
             alert.lastReceived = new Date(alert.lastReceived);
             return alert;

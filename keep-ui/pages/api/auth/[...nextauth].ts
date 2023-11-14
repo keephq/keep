@@ -20,16 +20,22 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile, user }) {
       // https://next-auth.js.org/configuration/callbacks#jwt-callback
       if (account) {
         token.accessToken = account.id_token;
       }
+
+      if ((profile as any)?.keep_tenant_id) {
+        token.keep_tenant_id = (profile as any).keep_tenant_id;
+      }
+
       return token;
     },
     async session({ session, token }) {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
+      session.tenantId = token.keep_tenant_id as string;
       return session;
     },
   },

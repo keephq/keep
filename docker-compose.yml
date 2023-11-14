@@ -2,7 +2,7 @@ services:
   keep-frontend:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
     ports:
-      - '3000:3000'
+      - "3000:3000"
     environment:
       - NEXT_PUBLIC_AUTH_ENABLED=false
       - NEXTAUTH_SECRET=secret
@@ -18,7 +18,7 @@ services:
   keep-backend:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
@@ -28,3 +28,10 @@ services:
     volumes:
       - ./state:/state
     # command: --multi-tenant
+  keep-websocket-server:
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    environment:
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000

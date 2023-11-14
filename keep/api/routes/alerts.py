@@ -43,62 +43,63 @@ def get_alerts(
     alerts = []
 
     # Alerts fetched from providers (by Keep)
-    all_providers = ProvidersFactory.get_all_providers()
-    context_manager = ContextManager(
-        tenant_id=tenant_id,
-        workflow_id=None,
-    )
-    installed_providers = ProvidersFactory.get_installed_providers(
-        tenant_id=tenant_id, all_providers=all_providers
-    )
-    for provider in installed_providers:
-        provider_class = ProvidersFactory.get_provider(
-            context_manager=context_manager,
-            provider_id=provider.id,
-            provider_type=provider.type,
-            provider_config=provider.details,
-        )
-        try:
-            logger.info(
-                "Fetching alerts from installed provider",
-                extra={
-                    "provider_type": provider.type,
-                    "provider_id": provider.id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            alerts.extend(provider_class.get_alerts())
-            logger.info(
-                "Fetched alerts from installed provider",
-                extra={
-                    "provider_type": provider.type,
-                    "provider_id": provider.id,
-                    "tenant_id": tenant_id,
-                },
-            )
-        except Exception as e:
-            logger.warn(
-                f"Could not fetch alerts from provider due to {e}",
-                extra={
-                    "provider_id": provider.id,
-                    "provider_type": provider.type,
-                    "tenant_id": tenant_id,
-                },
-            )
-            pass
+    # TODO: This is going to be some kind of async task
+    # all_providers = ProvidersFactory.get_all_providers()
+    # context_manager = ContextManager(
+    #     tenant_id=tenant_id,
+    #     workflow_id=None,
+    # )
+    # installed_providers = ProvidersFactory.get_installed_providers(
+    #     tenant_id=tenant_id, all_providers=all_providers
+    # )
 
-    # enrich also the pulled alerts:
-    pulled_alerts_fingerprints = [alert.fingerprint for alert in alerts]
-    pulled_alerts_enrichments = get_enrichments_from_db(
-        tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
-    )
-    for alert_enrichment in pulled_alerts_enrichments:
-        for alert in alerts:
-            if alert_enrichment.alert_fingerprint == alert.fingerprint:
-                # enrich
-                for enrichment in alert_enrichment.enrichments:
-                    # set the enrichment
-                    setattr(alert, enrichment, alert_enrichment.enrichments[enrichment])
+    # for provider in installed_providers:
+    #     provider_class = ProvidersFactory.get_provider(
+    #         context_manager=context_manager,
+    #         provider_id=provider.id,
+    #         provider_type=provider.type,
+    #         provider_config=provider.details,
+    #     )
+    #     try:
+    #         logger.info(
+    #             "Fetching alerts from installed provider",
+    #             extra={
+    #                 "provider_type": provider.type,
+    #                 "provider_id": provider.id,
+    #                 "tenant_id": tenant_id,
+    #             },
+    #         )
+    #         alerts.extend(provider_class.get_alerts())
+    #         logger.info(
+    #             "Fetched alerts from installed provider",
+    #             extra={
+    #                 "provider_type": provider.type,
+    #                 "provider_id": provider.id,
+    #                 "tenant_id": tenant_id,
+    #             },
+    #         )
+    #     except Exception as e:
+    #         logger.warn(
+    #             f"Could not fetch alerts from provider due to {e}",
+    #             extra={
+    #                 "provider_id": provider.id,
+    #                 "provider_type": provider.type,
+    #                 "tenant_id": tenant_id,
+    #             },
+    #         )
+    #         pass
+    # # enrich also the pulled alerts:
+    # pulled_alerts_fingerprints = [alert.fingerprint for alert in alerts]
+    # pulled_alerts_enrichments = get_enrichments_from_db(
+    #     tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
+    # )
+    # for alert_enrichment in pulled_alerts_enrichments:
+    #     for alert in alerts:
+    #         if alert_enrichment.alert_fingerprint == alert.fingerprint:
+    #             # enrich
+    #             for enrichment in alert_enrichment.enrichments:
+    #                 # set the enrichment
+    #                 setattr(alert, enrichment, alert_enrichment.enrichments[enrichment])
 
     # Alerts pushed to keep
     try:

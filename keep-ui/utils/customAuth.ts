@@ -37,6 +37,7 @@ function useCustomSession() {
   const modifiedSession = {
     data: {
       accessToken: "123",
+      tenantId: "keep",
     } as Session,
     status: "authenticated" as "authenticated",
     update: null as unknown as UpdateSession,

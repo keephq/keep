@@ -12,5 +12,7 @@ export default function AlertsPage() {
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
 
-  return <Alerts accessToken={session?.accessToken!} />;
+  return (
+    <Alerts accessToken={session?.accessToken!} tenantId={session?.tenantId!} />
+  );
 }
