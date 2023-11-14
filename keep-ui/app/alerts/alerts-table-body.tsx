@@ -53,6 +53,11 @@ const getSeverity = (severity: Severity | undefined) => {
       color = "orange";
       severityText = Severity.High.toString();
       break;
+    case "error":
+      icon = ArrowUpRightIcon;
+      color = "orange";
+      severityText = Severity.High.toString();
+      break;
     case "medium":
       color = "yellow";
       icon = ArrowRightIcon;
@@ -88,7 +93,7 @@ export function AlertsTableBody({
   openModal,
   workflows,
   providers,
-  mutate
+  mutate,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {

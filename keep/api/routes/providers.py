@@ -4,6 +4,7 @@ import time
 import uuid
 from typing import Callable, Optional
 
+import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
@@ -15,6 +16,7 @@ from keep.api.core.dependencies import (
     get_user_email,
     verify_api_key,
     verify_bearer_token,
+    verify_token_or_key,
 )
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
@@ -37,7 +39,7 @@ logger = logging.getLogger(__name__)
     "",
 )
 def get_providers(
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
 ):
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
@@ -223,7 +225,7 @@ def test_provider(
 def delete_provider(
     provider_type: str,
     provider_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
 ):
     logger.info(
@@ -251,6 +253,8 @@ def delete_provider(
         # delete the provider anyway
         session.delete(provider)
         session.commit()
+    except sqlalchemy.orm.exc.NoResultFound:
+        raise HTTPException(404, detail="Provider not found")
     except Exception as exc:
         # TODO: handle it better
         logger.exception("Failed to delete the provider secret")
@@ -401,7 +405,7 @@ async def update_provider(
 @router.post("/install")
 async def install_provider(
     request: Request,
-    tenant_id: str = Depends(verify_bearer_token),
+    tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
     installed_by: str = Depends(get_user_email),
 ):
@@ -417,9 +421,14 @@ async def install_provider(
         raise HTTPException(status_code=400, detail="No valid data provided")
 
     # Extract parameters from the provider_info dictionary
-    provider_id = provider_info.pop("provider_id")
-    provider_name = provider_info.pop("provider_name")
-    provider_type = provider_info.pop("provider_type", None) or provider_id
+    try:
+        provider_id = provider_info.pop("provider_id")
+        provider_name = provider_info.pop("provider_name")
+        provider_type = provider_info.pop("provider_type", None) or provider_id
+    except KeyError as e:
+        raise HTTPException(
+            status_code=400, detail=f"Missing required field: {e.args[0]}"
+        )
 
     provider_unique_id = uuid.uuid4().hex
     logger.info(

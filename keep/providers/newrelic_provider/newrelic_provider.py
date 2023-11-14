@@ -378,7 +378,7 @@ class NewrelicProvider(BaseProvider):
             lastReceived = issue["updatedAt"] if "updatedAt" in issue else None
             # convert to date
             if lastReceived:
-                lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
+                lastReceived = datetime.fromtimestamp(lastReceived / 1000).strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
             alert = AlertDto(

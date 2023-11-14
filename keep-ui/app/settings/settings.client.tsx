@@ -4,9 +4,11 @@ import {
   GlobeAltIcon,
   UserGroupIcon,
   EnvelopeIcon,
+  KeyIcon
 } from "@heroicons/react/24/outline";
 import UsersSettings from "./users-settings";
 import WebhookSettings from "./webhook-settings";
+import APIKeySettings from "./api-key-settings";
 import { useSession } from "utils/customAuth";
 import Loading from "app/loading";
 import SmtpSettings from "./smtp-settings";
@@ -31,6 +33,7 @@ export default function SettingsPage() {
         <Tab icon={UserGroupIcon}>Users</Tab>
         <Tab icon={GlobeAltIcon}>Webhook</Tab>
         <Tab icon={EnvelopeIcon}>SMTP</Tab>
+        <Tab icon={KeyIcon}>Api Key</Tab>
       </TabList>
       <TabPanels>
         <TabPanel>
@@ -44,6 +47,9 @@ export default function SettingsPage() {
         </TabPanel>
         <TabPanel>
           <SmtpSettings accessToken={session?.accessToken!} />
+        </TabPanel>
+        <TabPanel>
+          <APIKeySettings accessToken={session?.accessToken!} />
         </TabPanel>
       </TabPanels>
     </TabGroup>

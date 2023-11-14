@@ -7,6 +7,9 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      minHeight: {
+        "screen-minus-200": "calc(100vh - 200px)",
+      },
       colors: {
         // light mode
         tremor: {

@@ -22,7 +22,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 class KeepProvider(BaseProvider):
     """
-    Keep provider class.
+    Automation on your alerts with Keep.
     """
 
     def __init__(

@@ -4,6 +4,7 @@ Base class for all providers.
 import abc
 import copy
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ import uuid
 from dataclasses import field
 from typing import Optional
 
+import opentelemetry.trace as trace
 import requests
 from pydantic.dataclasses import dataclass
 
@@ -21,11 +23,14 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
+tracer = trace.get_tracer(__name__)
+
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
+    FINGERPRINT_FIELDS: list[str] = []
 
     def __init__(
         self,
@@ -57,6 +62,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         )
         self.provider_type = self._extract_type()
         self.results = []
+        # tb: we can have this overriden by customer configuration, when initializing the provider
+        self.fingerprint_fields = self.FINGERPRINT_FIELDS
 
     def _extract_type(self):
         """
@@ -118,8 +125,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
             fingerprint = results["fingerprint"]
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
-            fingerprint = self.context_manager.event_context.fingerprint
+            fingerprint = self.context_manager.event_context.get("fingerprint")
         else:
+            fingerprint = None
+
+        if not fingerprint:
             raise Exception(
                 "No fingerprint found for alert enrichment",
                 extra={"provider": self.provider_id},
@@ -147,7 +157,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     _enrichments[enrichment["key"]] = enrichment["value"]
             except Exception as e:
                 self.logger.error(
-                    "Failed to enrich alert",
+                    f"Failed to enrich alert - enrichment: {enrichment}",
                     extra={"fingerprint": fingerprint, "provider": self.provider_id},
                 )
                 continue
@@ -156,7 +166,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
         except Exception as e:
             self.logger.error(
-                "Failed to enrich alert",
+                "Failed to enrich alert in db",
                 extra={"fingerprint": fingerprint, "provider": self.provider_id},
             )
             raise e
@@ -198,6 +208,30 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
 
+    @staticmethod
+    def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
+        """
+        Get the fingerprint of an alert.
+
+        Args:
+            event (AlertDto): The alert to get the fingerprint of.
+            fingerprint_fields (list, optional): The fields we calculate the fingerprint upon. Defaults to [].
+
+        Returns:
+            str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
+        """
+        if not fingerprint_fields:
+            return alert.name
+        fingerprint = hashlib.sha256()
+        event_dict = alert.dict()
+        for fingerprint_field in fingerprint_fields:
+            fingerprint_field_value = event_dict.get(fingerprint_field, None)
+            if isinstance(fingerprint_field_value, (list, dict)):
+                fingerprint_field_value = json.dumps(fingerprint_field_value)
+            if fingerprint_field_value:
+                fingerprint.update(str(fingerprint_field_value).encode())
+        return fingerprint.hexdigest()
+
     def get_alerts_configuration(self, alert_id: Optional[str] = None):
         """
         Get configuration of alerts from the provider.
@@ -218,11 +252,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("deploy_alert() method not implemented")
 
-    def get_alerts(self):
+    def _get_alerts(self):
         """
         Get alerts from the provider.
         """
         raise NotImplementedError("get_alerts() method not implemented")
+
+    def get_alerts(self):
+        """
+        Get alerts from the provider.
+        """
+        with tracer.start_as_current_span(f"{self.__class__.__name__}-get_alerts"):
+            return self._get_alerts()
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True

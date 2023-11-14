@@ -466,16 +466,23 @@ class Parser:
         ]
         steps_providers = [step.get("provider") for step in workflow.get("steps", [])]
         providers = actions_providers + steps_providers
-        providers = [
-            {
-                "name": p.get("config", f"NAME.{p.get('type')}")
-                .split(".")[1]
-                .replace("}}", "")
-                .strip(),
-                "type": p.get("type"),
-            }
-            for p in providers
-        ]
+        try:
+            providers = [
+                {
+                    "name": p.get("config", f"NAME.{p.get('type')}")
+                    .split(".")[1]
+                    .replace("}}", "")
+                    .strip(),
+                    "type": p.get("type"),
+                }
+                for p in providers
+            ]
+        except:
+            self.logger.error(
+                "Failed to extract providers from workflow",
+                extra={"workflow": workflow},
+            )
+            raise
         return providers
 
     def get_triggers_from_workflow(self, workflow: dict):

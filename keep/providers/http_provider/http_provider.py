@@ -13,6 +13,8 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class HttpProvider(BaseProvider):
+    """Enrich alerts with data from HTTP."""
+
     BLACKLISTED_ENDPOINTS = [
         "metadata.google.internal",
         "metadata.internal",

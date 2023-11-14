@@ -38,6 +38,8 @@ class PostgresProviderAuthConfig:
 
 
 class PostgresProvider(BaseProvider):
+    """Enrich alerts with data from Postgres."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

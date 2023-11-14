@@ -38,6 +38,8 @@ class PagerdutyProviderAuthConfig:
 
 
 class PagerdutyProvider(BaseProvider):
+    """Pull alerts and query incidents from PagerDuty."""
+
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
 
     def __init__(
@@ -97,7 +99,7 @@ class PagerdutyProvider(BaseProvider):
         """
         # If no dedup is given, use epoch timestamp
         if dedup is None:
-            dedup = str(datetime.datetime.utcnow().timestamp())
+            dedup = str(datetime.datetime.now().timestamp())
 
         url = "https://events.pagerduty.com//v2/enqueue"
 
@@ -214,7 +216,7 @@ class PagerdutyProvider(BaseProvider):
             raise Exception("Could not create webhook")
         self.logger.info("Webhook created")
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         request = requests.get(
             "https://api.pagerduty.com/incidents",
             headers={

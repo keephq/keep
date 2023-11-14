@@ -10,7 +10,7 @@ import yaml
 from fastapi import HTTPException
 
 from keep.api.core.db import (
-    add_workflow,
+    add_or_update_workflow,
     delete_workflow,
     get_all_workflows,
     get_raw_workflow,
@@ -29,19 +29,15 @@ class WorkflowStore:
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
 
-    def get_workflow_execution(
-        self, tenant_id: str, workflow_id: str, workflow_execution_id: str
-    ):
-        workflow_execution = get_workflow_execution(
-            tenant_id, workflow_id, workflow_execution_id
-        )
+    def get_workflow_execution(self, tenant_id: str, workflow_execution_id: str):
+        workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
         return workflow_execution
 
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
-        workflow = add_workflow(
+        workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
             name=workflow_id,
             tenant_id=tenant_id,
