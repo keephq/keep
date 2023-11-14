@@ -1,0 +1,49 @@
+
+# workflow run
+
+Run a workflow with a specified ID and fingerprint.
+
+## Usage
+
+```
+Usage: cli workflow run [OPTIONS]
+```
+
+## Options
+* `workflow_id` (REQUIRED):
+  * Type: STRING
+  * Default: `none`
+  * Usage: `--workflow-id`
+
+  The ID (UUID or name) of the workflow to run
+
+
+* `fingerprint` (REQUIRED):
+  * Type: STRING
+  * Default: `none`
+  * Usage: `--fingerprint`
+
+  The fingerprint to query the payload
+
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+
+## CLI Help
+
+```
+Usage: cli workflow run [OPTIONS]
+
+  Run a workflow with a specified ID and fingerprint.
+
+Options:
+  --workflow-id TEXT  The ID (UUID or name) of the workflow to run  [required]
+  --fingerprint TEXT  The fingerprint to query the payload  [required]
+  --help              Show this message and exit.
+```

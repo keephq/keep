@@ -100,7 +100,7 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.option(
     "--keep-config",
     "-c",
-    help="The path to the keep config file",
+    help="The path to the keep config file (default keep.yaml)",
     required=False,
     default="keep.yaml",
 )
@@ -248,7 +248,7 @@ def run(
     api_key,
     api_url,
 ):
-    """Run the alert."""
+    """Run a workflow."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
     posthog_client.capture(
         RANDOM_USER_ID,
@@ -299,22 +299,6 @@ def run(
         },
     )
     logger.debug(f"Alert in {alerts_directory or alert_url} ran successfully")
-
-
-@cli.command()
-@click.option(
-    "--keep-config-file",
-    type=click.Path(exists=False),
-    help="The path to keeps config file [default: keep.yaml]",
-    required=False,
-    default="keep.yaml",
-)
-@pass_info
-def init(info: Info, keep_config_file):
-    """Set the config."""
-    with open(keep_config_file, "w") as f:
-        f.write("api_key: " + click.prompt("Enter your api key", hide_input=True))
-    click.echo(click.style(f"Config file created at {keep_config_file}", bold=True))
 
 
 @cli.group()
