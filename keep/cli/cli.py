@@ -72,7 +72,7 @@ class Info:
         try:
             with open(file=keep_config, mode="r") as f:
                 self.logger.debug("Loading configuration file.")
-                self.config = yaml.safe_load(f)
+                self.config = yaml.safe_load(f) or {}
                 self.api_key = (
                     self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
                 )
