@@ -3,7 +3,7 @@ import os
 import posthog
 from posthog import Posthog
 
-if not os.getenv("DISABLE_POSTHOG"):
+if os.getenv("DISABLE_POSTHOG", "false") == "true":
     posthog.disabled = True
 
 
