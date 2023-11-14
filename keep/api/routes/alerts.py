@@ -35,6 +35,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id=tenant_id, all_providers=all_providers
     )
+    logger.info("Asyncronusly fetching alerts from installed providers")
     for provider in installed_providers:
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
@@ -115,6 +116,8 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             pass
+    pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
+    logger.info("Asyncronusly fetched alerts from installed providers")
 
 
 @router.get(
@@ -177,12 +180,10 @@ def handle_formatted_events(
     tenant_id,
     provider_type,
     session: Session,
-    formatted_events: AlertDto | list[AlertDto],
+    formatted_events: list[AlertDto],
+    pusher_client: Pusher,
     provider_id: str | None = None,
 ):
-    if isinstance(formatted_events, AlertDto):
-        formatted_events = [formatted_events]
-
     logger.info(
         "Asyncronusly adding new alerts to the DB",
         extra={
@@ -204,6 +205,11 @@ def handle_formatted_events(
             )
             session.add(alert)
             formatted_event.event_id = alert.id
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "async-alerts",
+                [alert.event],
+            )
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -285,6 +291,7 @@ async def receive_event(
     provider_id: str | None = None,
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     # if this request is just to confirm the sns subscription, return ok
@@ -326,6 +333,10 @@ async def receive_event(
         # tb: if we want to have fingerprint_fields configured by the user, format_alert
         #   needs to be called from an initalized provider instance instead of a static method.
         formatted_events = provider_class.format_alert(event)
+
+        if isinstance(formatted_events, AlertDto):
+            formatted_events = [formatted_events]
+
         logger.info(
             f"Formatted alerts with {provider_type}",
             extra={
@@ -343,6 +354,7 @@ async def receive_event(
                 provider_type,
                 session,
                 formatted_events,
+                pusher_client,
                 provider_id,
             )
         logger.info(

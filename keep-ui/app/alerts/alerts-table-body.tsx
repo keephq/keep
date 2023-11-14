@@ -27,6 +27,8 @@ import { useRouter } from "next/navigation";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
 import { Provider } from "app/providers/providers";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface Props {
   data: Alert[];
@@ -36,6 +38,7 @@ interface Props {
   workflows?: Workflow[];
   providers?: Provider[];
   mutate?: () => void;
+  showSkeleton?: boolean;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -94,6 +97,7 @@ export function AlertsTableBody({
   workflows,
   providers,
   mutate,
+  showSkeleton = true,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
@@ -294,6 +298,38 @@ export function AlertsTableBody({
             </TableRow>
           );
         })}
+      {showSkeleton && (
+        <TableRow>
+          <TableCell></TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+        </TableRow>
+      )}
     </TableBody>
   );
 }

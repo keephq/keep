@@ -44,9 +44,11 @@ export default function Alerts({
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
+  const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
-    (url) => fetcher(url, accessToken)
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
     // {
     //   onLoadingSlow: () => setIsSlowLoading(true),
     //   loadingTimeout: 5000,
@@ -84,7 +86,10 @@ export default function Alerts({
         setAlerts((prevAlerts) =>
           Array.from(new Set([...prevAlerts, ...newAlerts]))
         );
-        console.log(newAlerts);
+      });
+
+      channel.bind("async-done", function (data: any) {
+        setIsAsyncLoading(false);
       });
 
       return () => {
@@ -203,6 +208,7 @@ export default function Alerts({
         workflows={workflows}
         providers={providers?.installed_providers}
         mutate={() => mutate(null, { optimisticData: [] })}
+        isAsyncLoading={isAsyncLoading}
       />
     </Card>
   );

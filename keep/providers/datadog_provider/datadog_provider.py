@@ -460,7 +460,7 @@ class DatadogProvider(BaseProvider):
             api = EventsApi(api_client)
             end = datetime.datetime.now()
             # tb: we can make timedelta configurable by the user if we want
-            start = datetime.datetime.now() - datetime.timedelta(days=30)
+            start = datetime.datetime.now() - datetime.timedelta(days=14)
             results = api.list_events(
                 start=int(start.timestamp()),
                 end=int(end.timestamp()),
