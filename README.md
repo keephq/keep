@@ -43,7 +43,7 @@ Keep makes it easy to consolidate all your alerts into a single pane of glass an
 ## How does it work?
 1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
 <div align="center">
-    
+
 | Connect providers | Receive alerts |
 |----------|----------|
 | <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
@@ -181,7 +181,7 @@ Keep composed of three main components:
 3. [Keep CLI](https://github.com/keephq/keep/blob/main/keep/cli/cli.py) - A CLI that lets you control and manage Keep via CLI.
 
 >**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for CLI commands)
-To turn PostHog off, set the `DISABLE_POSTHOG` environment variable.
+To turn PostHog off, set the `DISABLE_POSTHOG=true` environment variable and remove the `NEXT_PUBLIC_POSTHOG_KEY` environment variable.
 
 ### Quickstart
 #### Spinning up Keep with docker-compose
