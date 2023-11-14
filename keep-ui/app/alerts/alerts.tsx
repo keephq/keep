@@ -70,12 +70,14 @@ export default function Alerts({
   useEffect(() => {
     if (tenantId) {
       const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST!,
-        wsPort: parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT!),
+        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
+        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
+          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
+          : undefined,
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
-        cluster: "local",
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
         authEndpoint: `${apiUrl}/pusher/auth`,
       });
 

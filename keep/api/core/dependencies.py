@@ -250,4 +250,5 @@ def get_pusher_client() -> Pusher:
         key=os.environ.get("PUSHER_APP_KEY"),
         secret=os.environ.get("PUSHER_APP_SECRET"),
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+        cluster=os.environ.get("PUSHER_CLUSTER"),
     )
