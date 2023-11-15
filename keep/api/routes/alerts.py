@@ -1,6 +1,7 @@
 import gzip
 import json
 import logging
+import sys
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
@@ -82,13 +83,22 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
 
             # chunks of 10
             logger.info("Batch sending alerts via pusher")
-            max_alerts_per_trigger = 5
-            for i in range(0, len(alerts), max_alerts_per_trigger):
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-alerts",
-                    [alert.dict() for alert in alerts][i : i + max_alerts_per_trigger],
-                )
+            batch_send = []
+            batch_length = 0
+            for alert in alerts:
+                alert_dict = alert.dict()
+                alert_size_in_kb = sys.getsizeof(alert_dict)
+                if batch_length + alert_size_in_kb <= 10240:
+                    batch_send.append(alert_dict)
+                    batch_length += alert_size_in_kb
+                else:
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
+                        batch_send,
+                    )
+                    batch_send = [alert_dict]
+                    batch_length = alert_size_in_kb
             logger.info("Sent batch of alerts via pusher")
 
             logger.info(
@@ -117,8 +127,9 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             pass
-    pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
-    logger.info("Asyncronusly fetched alerts from installed providers")
+        finally:
+            pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
+            logger.info("Asyncronusly fetched alerts from installed providers")
 
 
 @router.get(

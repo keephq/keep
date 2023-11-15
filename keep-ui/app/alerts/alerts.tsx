@@ -4,12 +4,10 @@ import {
   MagnifyingGlassIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
-import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   MultiSelect,
   MultiSelectItem,
   Flex,
-  Callout,
   TextInput,
   Button,
   Card,
@@ -38,7 +36,7 @@ export default function Alerts({
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  // const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
@@ -48,18 +46,21 @@ export default function Alerts({
   const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken),
-    { revalidateOnFocus: false }
-    // {
-    //   onLoadingSlow: () => setIsSlowLoading(true),
-    //   loadingTimeout: 5000,
-    // }
+    {
+      revalidateOnFocus: false,
+      onLoadingSlow: () => setIsSlowLoading(true),
+      loadingTimeout: 5000,
+    }
   );
-  const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
-    fetcher(url, accessToken)
+  const { data: workflows } = useSWR<Workflow[]>(
+    `${apiUrl}/workflows`,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
   const { data: providers } = useSWR<ProvidersResponse>(
     `${apiUrl}/providers`,
-    (url) => fetcher(url, accessToken)
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function Alerts({
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
         channelAuthorization: {
           transport: "ajax",
-          endpoint: `${apiUrl}/pusher/auth`,
+          endpoint: `${getApiURL()}/pusher/auth`,
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -104,21 +105,9 @@ export default function Alerts({
         pusher.unsubscribe(channelName);
       };
     }
-  }, [tenantId, apiUrl]);
+  }, [tenantId, accessToken]);
 
-  // if (error) {
-  //   return (
-  //     <Callout
-  //       className="mt-4"
-  //       title="Error"
-  //       icon={ExclamationCircleIcon}
-  //       color="rose"
-  //     >
-  //       Failed to load alerts
-  //     </Callout>
-  //   );
-  // }
-  // if (isLoading) return <Loading slowLoading={isSlowLoading} />;
+  if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
   const environments = alerts
     .map((alert) => alert.environment.toLowerCase())
