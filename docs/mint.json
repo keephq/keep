@@ -203,13 +203,42 @@
         {
           "group": "Commands",
           "pages": [
-            "cli/commands/cli",
+            {
+              "group": "keep alert",
+              "pages": [
+                "cli/commands/alert-enrich",
+                "cli/commands/alert-get",
+                "cli/commands/alert-list"
+              ]
+            },
+            {
+              "group": "keep provider",
+              "pages": [
+                "cli/commands/provider-connect",
+                "cli/commands/provider-delete",
+                "cli/commands/provider-list"
+              ]
+            },
+            {
+              "group": "keep workflow",
+              "pages": [
+                "cli/commands/workflow-apply",
+                "cli/commands/workflow-list",
+                "cli/commands/workflow-run",
+                {
+                  "group": "keep workflow runs",
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
+                }
+              ]
+            },
             "cli/commands/cli-api",
             "cli/commands/cli-config",
-            "cli/commands/cli-init",
-            "cli/commands/cli-run",
             "cli/commands/cli-version",
-            "cli/commands/cli-config-provider"
+            "cli/commands/cli-whoami"
+
           ]
         }
       ]

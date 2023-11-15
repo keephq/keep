@@ -1,15 +1,12 @@
----
-title: "keep"
-sidebarTitle: "keep"
----
 
+# cli
 
 Run Keep CLI.
 
 ## Usage
 
 ```
-Usage: keep [OPTIONS] COMMAND [ARGS]...
+Usage: cli [OPTIONS] COMMAND [ARGS]...
 ```
 
 ## Options
@@ -37,7 +34,7 @@ Usage: keep [OPTIONS] COMMAND [ARGS]...
   * Usage: `--keep-config
 -c`
 
-  The path to the keep config file
+  The path to the keep config file (default keep.yaml)
 
 
 * `help`:
@@ -52,20 +49,23 @@ Usage: keep [OPTIONS] COMMAND [ARGS]...
 ## CLI Help
 
 ```
-Usage: keep [OPTIONS] COMMAND [ARGS]...
+Usage: cli [OPTIONS] COMMAND [ARGS]...
 
   Run Keep CLI.
 
 Options:
   -v, --verbose           Enable verbose output.
   -j, --json              Enable json output.
-  -c, --keep-config TEXT  The path to the keep config file
+  -c, --keep-config TEXT  The path to the keep config file (default keep.yaml)
   --help                  Show this message and exit.
 
 Commands:
-  api      Start the API.
-  config   Set keep configuration.
-  init     Set the config.
-  run      Run the alert.
-  version  Get the library version.
+  alert     Manage alerts.
+  api       Start the API.
+  config    Get the config.
+  provider  Manage providers.
+  run       Run a workflow.
+  version   Get the library version.
+  whoami    Verify the api key auth.
+  workflow  Manage workflows.
 ```
