@@ -36,7 +36,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id=tenant_id, all_providers=all_providers
     )
-    logger.info("Asyncronusly fetching alerts from installed providers")
+    logger.info("Asyncronusly pulling alerts from installed providers")
     for provider in installed_providers:
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
@@ -46,7 +46,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
         )
         try:
             logger.info(
-                "Fetching alerts from installed provider",
+                f"Pulling alerts from provider {provider.type} ({provider.id})",
                 extra={
                     "provider_type": provider.type,
                     "provider_id": provider.id,
@@ -54,6 +54,15 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             alerts = provider_class.get_alerts()
+            logger.info(
+                f"Pulled alerts from provider {provider.type} ({provider.id})",
+                extra={
+                    "provider_type": provider.type,
+                    "provider_id": provider.id,
+                    "tenant_id": tenant_id,
+                    "num_of_alerts": len(alerts),
+                },
+            )
             # enrich also the pulled alerts:
             pulled_alerts_fingerprints = list(
                 set([alert.fingerprint for alert in alerts])
@@ -82,7 +91,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                             )
 
             # chunks of 10
-            logger.info("Batch sending alerts via pusher")
+            logger.info("Batch sending pulled alerts via pusher")
             batch_send = []
             batch_length = 0
             for alert in alerts:
@@ -91,7 +100,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     zlib.compress(alert_json.encode("utf-8"), level=9)
                 ).decode()
                 len_compressed_alert = len(compressed_alert)
-                if batch_length + len_compressed_alert <= 10240:
+                if batch_length + len_compressed_alert <= 30720:
                     batch_send.append(compressed_alert)
                     batch_length += len_compressed_alert
                 else:
@@ -102,7 +111,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     )
                     batch_send = [compressed_alert]
                     batch_length = len_compressed_alert
-            logger.info("Sent batch of alerts via pusher")
+            logger.info("Sent batch of pulled alerts via pusher")
 
             logger.info(
                 "Enriched pulled alerts",
@@ -130,8 +139,8 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             pass
-        pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
-        logger.info("Asyncronusly fetched alerts from installed providers")
+    pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
+    logger.info("Asyncronusly fetched alerts from installed providers")
 
 
 @router.get(
@@ -144,7 +153,7 @@ def get_all_alerts(
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> list[AlertDto]:
     logger.info(
-        "Fetching alerts DB",
+        "Fetching alerts from DB",
         extra={
             "tenant_id": tenant_id,
         },
@@ -156,14 +165,14 @@ def get_all_alerts(
             alert.event.update(alert.alert_enrichment.enrichments)
     alerts = [AlertDto(**alert.event) for alert in db_alerts]
     logger.info(
-        "Fetched alerts DB",
+        "Fetched alerts from DB",
         extra={
             "tenant_id": tenant_id,
         },
     )
-    logger.info("Adding task to fetch alerts from providers async")
+    logger.info("Adding task to fetch async alerts from providers")
     background_tasks.add_task(get_alerts_from_providers_async, tenant_id, pusher_client)
-    logger.info("Added task to fetch alerts from providers async")
+    logger.info("Added task to async fetch alerts from providers")
     return alerts
 
 
