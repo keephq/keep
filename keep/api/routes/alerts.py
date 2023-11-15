@@ -93,18 +93,20 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
             # chunks of 10
             logger.info("Batch sending pulled alerts via pusher")
             batch_send = []
+            previous_compressed_batch = ""
             number_of_alerts_in_batch = 0
             for alert in alerts:
                 alert_dict = alert.dict()
                 batch_send.append(alert_dict)
-                compressed_batch = base64.b64encode(
+                new_compressed_batch = base64.b64encode(
                     zlib.compress(json.dumps(batch_send).encode(), level=9)
                 ).decode()
-                if len(compressed_batch) <= 10240:
+                if len(new_compressed_batch) <= 10240:
                     number_of_alerts_in_batch += 1
+                    previous_compressed_batch = new_compressed_batch
                 else:
                     logger.info(
-                        "Sending batch of pulled alerts via pusher",
+                        f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
                         extra={
                             "number_of_alerts": number_of_alerts_in_batch,
                         },
@@ -112,9 +114,9 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        compressed_batch,
+                        previous_compressed_batch,
                     )
-                    batch_send = [alert]
+                    batch_send = [alert_dict]
                     number_of_alerts_in_batch = 1
             logger.info("Sent batch of pulled alerts via pusher")
 
