@@ -27,6 +27,34 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def __send_compressed_alerts(
+    compressed_alerts_data: str,
+    number_of_alerts_in_batch: int,
+    tenant_id: str,
+    pusher_client: Pusher,
+):
+    """
+    Sends a batch of pulled alerts via pusher.
+
+    Args:
+        compressed_alerts_data (str): The compressed data to send.
+        number_of_alerts_in_batch (int): The number of alerts in the batch.
+        tenant_id (str): The tenant id.
+        pusher_client (Pusher): The pusher client.
+    """
+    logger.info(
+        f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
+        extra={
+            "number_of_alerts": number_of_alerts_in_batch,
+        },
+    )
+    pusher_client.trigger(
+        f"private-{tenant_id}",
+        "async-alerts",
+        compressed_alerts_data,
+    )
+
+
 def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
     all_providers = ProvidersFactory.get_all_providers()
     context_manager = ContextManager(
@@ -104,32 +132,23 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     number_of_alerts_in_batch += 1
                     previous_compressed_batch = new_compressed_batch
                 else:
-                    logger.info(
-                        f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
-                        extra={
-                            "number_of_alerts": number_of_alerts_in_batch,
-                        },
-                    )
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
+                    __send_compressed_alerts(
                         previous_compressed_batch,
+                        number_of_alerts_in_batch,
+                        tenant_id,
+                        pusher_client,
                     )
                     batch_send = [alert_dict]
                     number_of_alerts_in_batch = 1
 
             # this means we didn't get to this ^ else statement and loop ended
-            if len(new_compressed_batch <= 10240):
-                logger.info(
-                    f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
-                    extra={
-                        "number_of_alerts": number_of_alerts_in_batch,
-                    },
-                )
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-alerts",
+            #   so we need to send the rest of the alerts
+            if len(new_compressed_batch) < 10240:
+                __send_compressed_alerts(
                     new_compressed_batch,
+                    number_of_alerts_in_batch,
+                    tenant_id,
+                    pusher_client,
                 )
 
             logger.info("Sent batch of pulled alerts via pusher")
