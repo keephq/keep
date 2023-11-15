@@ -91,78 +91,81 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     "num_of_alerts": len(alerts),
                 },
             )
-            # enrich also the pulled alerts:
-            pulled_alerts_fingerprints = list(
-                set([alert.fingerprint for alert in alerts])
-            )
-            pulled_alerts_enrichments = get_enrichments_from_db(
-                tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
-            )
-            logger.info(
-                "Enriching pulled alerts",
-                extra={
-                    "provider_type": provider.type,
-                    "provider_id": provider.id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            for alert_enrichment in pulled_alerts_enrichments:
-                for alert in alerts:
-                    if alert_enrichment.alert_fingerprint == alert.fingerprint:
-                        # enrich
-                        for enrichment in alert_enrichment.enrichments:
-                            # set the enrichment
-                            setattr(
-                                alert,
-                                enrichment,
-                                alert_enrichment.enrichments[enrichment],
-                            )
 
-            logger.info("Batch sending pulled alerts via pusher")
-            batch_send = []
-            previous_compressed_batch = ""
-            number_of_alerts_in_batch = 0
-            for alert in alerts:
-                alert_dict = alert.dict()
-                batch_send.append(alert_dict)
-                new_compressed_batch = base64.b64encode(
-                    zlib.compress(json.dumps(batch_send).encode(), level=9)
-                ).decode()
-                if len(new_compressed_batch) <= 10240:
-                    number_of_alerts_in_batch += 1
-                    previous_compressed_batch = new_compressed_batch
-                else:
+            if alerts:
+                # enrich also the pulled alerts:
+                pulled_alerts_fingerprints = list(
+                    set([alert.fingerprint for alert in alerts])
+                )
+                pulled_alerts_enrichments = get_enrichments_from_db(
+                    tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
+                )
+                logger.info(
+                    "Enriching pulled alerts",
+                    extra={
+                        "provider_type": provider.type,
+                        "provider_id": provider.id,
+                        "tenant_id": tenant_id,
+                    },
+                )
+                for alert_enrichment in pulled_alerts_enrichments:
+                    for alert in alerts:
+                        if alert_enrichment.alert_fingerprint == alert.fingerprint:
+                            # enrich
+                            for enrichment in alert_enrichment.enrichments:
+                                # set the enrichment
+                                setattr(
+                                    alert,
+                                    enrichment,
+                                    alert_enrichment.enrichments[enrichment],
+                                )
+                logger.info(
+                    "Enriched pulled alerts",
+                    extra={
+                        "provider_type": provider.type,
+                        "provider_id": provider.id,
+                        "tenant_id": tenant_id,
+                    },
+                )
+
+                logger.info("Batch sending pulled alerts via pusher")
+                batch_send = []
+                previous_compressed_batch = ""
+                new_compressed_batch = ""
+                number_of_alerts_in_batch = 0
+                for alert in alerts:
+                    alert_dict = alert.dict()
+                    batch_send.append(alert_dict)
+                    new_compressed_batch = base64.b64encode(
+                        zlib.compress(json.dumps(batch_send).encode(), level=9)
+                    ).decode()
+                    if len(new_compressed_batch) <= 10240:
+                        number_of_alerts_in_batch += 1
+                        previous_compressed_batch = new_compressed_batch
+                    else:
+                        __send_compressed_alerts(
+                            previous_compressed_batch,
+                            number_of_alerts_in_batch,
+                            tenant_id,
+                            pusher_client,
+                        )
+                        batch_send = [alert_dict]
+                        new_compressed_batch = ""
+                        number_of_alerts_in_batch = 1
+
+                # this means we didn't get to this ^ else statement and loop ended
+                #   so we need to send the rest of the alerts
+                if new_compressed_batch and len(new_compressed_batch) < 10240:
                     __send_compressed_alerts(
-                        previous_compressed_batch,
+                        new_compressed_batch,
                         number_of_alerts_in_batch,
                         tenant_id,
                         pusher_client,
                     )
-                    batch_send = [alert_dict]
-                    number_of_alerts_in_batch = 1
 
-            # this means we didn't get to this ^ else statement and loop ended
-            #   so we need to send the rest of the alerts
-            if len(new_compressed_batch) < 10240:
-                __send_compressed_alerts(
-                    new_compressed_batch,
-                    number_of_alerts_in_batch,
-                    tenant_id,
-                    pusher_client,
-                )
-
-            logger.info("Sent batch of pulled alerts via pusher")
-
+                logger.info("Sent batch of pulled alerts via pusher")
             logger.info(
-                "Enriched pulled alerts",
-                extra={
-                    "provider_type": provider.type,
-                    "provider_id": provider.id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            logger.info(
-                "Fetched alerts from installed provider",
+                f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(alerts)})",
                 extra={
                     "provider_type": provider.type,
                     "provider_id": provider.id,
