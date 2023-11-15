@@ -40,6 +40,9 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
     codeBlock: true,
   };
 
+  const isMultiline = data!.webhookDescription.includes('\n');
+  const descriptionLines = data!.webhookDescription.split('\n');
+  const settingsNotEmpty = settings.text.trim().length > 0;
   return (
     <div className="my-2.5">
       <Title>
@@ -66,8 +69,16 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
       <Subtitle>
         Seamlessly push alerts without actively connecting {provider.type}
       </Subtitle>
+      {isMultiline ? (
+      descriptionLines.map((line, index) => (
+        <Text key={index} className="my-2.5 whitespace-pre-wrap">
+          {line}
+        </Text>
+      ))
+    ) : (
       <Text className="my-2.5">{data!.webhookDescription}</Text>
-      <CopyBlock {...settings} />
+    )}
+     {settingsNotEmpty && <CopyBlock {...settings} />}
     </div>
   );
 };
