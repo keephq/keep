@@ -2,7 +2,7 @@
 name = "keep"
 version = "0.2.1"
 description = "Alerting. for developers, by developers."
-authors = ["KeepHQ inc."]
+authors = ["Keep Alerting LTD"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
