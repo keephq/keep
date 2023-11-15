@@ -23,6 +23,7 @@ import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
+import zlib from "zlib";
 import "./alerts.client.css";
 
 export default function Alerts({
@@ -91,7 +92,15 @@ export default function Alerts({
       const channelName = `private-${tenantId}`;
       const channel = pusher.subscribe(channelName);
 
-      channel.bind("async-alerts", function (newAlerts: Alert[]) {
+      channel.bind("async-alerts", function (data: string[]) {
+        const newAlerts = data.map((base64CompressedAlert) => {
+          const decompressedAlert = zlib.inflateSync(
+            Buffer.from(base64CompressedAlert, "base64")
+          );
+          return JSON.parse(
+            new TextDecoder().decode(decompressedAlert)
+          ) as Alert;
+        });
         setAlerts((prevAlerts) =>
           Array.from(new Set([...prevAlerts, ...newAlerts]))
         );

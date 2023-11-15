@@ -1,7 +1,7 @@
-import gzip
+import base64
 import json
 import logging
-import sys
+import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
@@ -86,19 +86,22 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
             batch_send = []
             batch_length = 0
             for alert in alerts:
-                alert_dict = alert.dict()
-                alert_size_in_kb = sys.getsizeof(alert_dict)
-                if batch_length + alert_size_in_kb <= 10240:
-                    batch_send.append(alert_dict)
-                    batch_length += alert_size_in_kb
+                alert_json = alert.json()
+                compressed_alert = base64.b64encode(
+                    zlib.compress(alert_json.encode("utf-8"), level=9)
+                ).decode()
+                len_compressed_alert = len(compressed_alert)
+                if batch_length + len_compressed_alert <= 10240:
+                    batch_send.append(compressed_alert)
+                    batch_length += len_compressed_alert
                 else:
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
                         batch_send,
                     )
-                    batch_send = [alert_dict]
-                    batch_length = alert_size_in_kb
+                    batch_send = [compressed_alert]
+                    batch_length = len_compressed_alert
             logger.info("Sent batch of alerts via pusher")
 
             logger.info(
@@ -127,9 +130,8 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             pass
-        finally:
-            pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
-            logger.info("Asyncronusly fetched alerts from installed providers")
+        pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
+        logger.info("Asyncronusly fetched alerts from installed providers")
 
 
 @router.get(
