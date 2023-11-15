@@ -93,33 +93,29 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
             # chunks of 10
             logger.info("Batch sending pulled alerts via pusher")
             batch_send = []
-            batch_length = 0
-            batch_number_of_alerts = 0
+            number_of_alerts_in_batch = 0
             for alert in alerts:
-                alert_json = alert.json()
-                compressed_alert = base64.b64encode(
-                    zlib.compress(alert_json.encode("utf-8"), level=9)
+                alert_dict = alert.dict()
+                batch_send.append(alert_dict)
+                compressed_batch = base64.b64encode(
+                    zlib.compress(json.dumps(batch_send).encode(), level=9)
                 ).decode()
-                len_compressed_alert = len(compressed_alert)
-                if batch_length + len_compressed_alert <= 10240:
-                    batch_send.append(compressed_alert)
-                    batch_length += len_compressed_alert
-                    batch_number_of_alerts += 1
+                if len(compressed_batch) <= 10240:
+                    number_of_alerts_in_batch += 1
                 else:
                     logger.info(
                         "Sending batch of pulled alerts via pusher",
                         extra={
-                            "number_of_alerts": batch_number_of_alerts,
+                            "number_of_alerts": number_of_alerts_in_batch,
                         },
                     )
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        batch_send,
+                        compressed_batch,
                     )
-                    batch_send = [compressed_alert]
-                    batch_length = len_compressed_alert
-                    batch_number_of_alerts = 1
+                    batch_send = [alert]
+                    number_of_alerts_in_batch = 1
             logger.info("Sent batch of pulled alerts via pusher")
 
             logger.info(

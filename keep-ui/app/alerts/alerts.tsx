@@ -92,15 +92,13 @@ export default function Alerts({
       const channelName = `private-${tenantId}`;
       const channel = pusher.subscribe(channelName);
 
-      channel.bind("async-alerts", function (data: string[]) {
-        const newAlerts = data.map((base64CompressedAlert) => {
-          const decompressedAlert = zlib.inflateSync(
-            Buffer.from(base64CompressedAlert, "base64")
-          );
-          return JSON.parse(
-            new TextDecoder().decode(decompressedAlert)
-          ) as Alert;
-        });
+      channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        const decompressedAlert = zlib.inflateSync(
+          Buffer.from(base64CompressedAlert, "base64")
+        );
+        const newAlerts = JSON.parse(
+          new TextDecoder().decode(decompressedAlert)
+        ) as Alert[];
         setAlerts((prevAlerts) =>
           Array.from(new Set([...prevAlerts, ...newAlerts]))
         );
