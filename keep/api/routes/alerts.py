@@ -3,6 +3,7 @@ import json
 import logging
 import zlib
 
+import opentelemetry.trace as trace
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
 from sqlmodel import Session
@@ -25,6 +26,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
@@ -96,10 +98,11 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
             batch_length = 0
             batch_number_of_alerts = 0
             for alert in alerts:
-                alert_json = alert.json()
-                compressed_alert = base64.b64encode(
-                    zlib.compress(alert_json.encode("utf-8"), level=9)
-                ).decode()
+                with tracer.start_as_current_span("compress_alert"):
+                    alert_json = alert.json()
+                    compressed_alert = base64.b64encode(
+                        zlib.compress(alert_json.encode("utf-8"), level=9)
+                    ).decode()
                 len_compressed_alert = len(compressed_alert)
                 if batch_length + len_compressed_alert <= 10240:
                     batch_send.append(compressed_alert)

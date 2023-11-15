@@ -64,7 +64,7 @@ class SentryProvider(BaseProvider):
             mandatory_for_webhook=True,
         ),
     ]
-    DEFAULT_TIMEOUT = 10
+    DEFAULT_TIMEOUT = 30
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
