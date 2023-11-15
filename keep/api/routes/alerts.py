@@ -90,7 +90,6 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                                 alert_enrichment.enrichments[enrichment],
                             )
 
-            # chunks of 10
             logger.info("Batch sending pulled alerts via pusher")
             batch_send = []
             previous_compressed_batch = ""
@@ -118,6 +117,21 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                     )
                     batch_send = [alert_dict]
                     number_of_alerts_in_batch = 1
+
+            # this means we didn't get to this ^ else statement and loop ended
+            if len(new_compressed_batch <= 10240):
+                logger.info(
+                    f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
+                    extra={
+                        "number_of_alerts": number_of_alerts_in_batch,
+                    },
+                )
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-alerts",
+                    new_compressed_batch,
+                )
+
             logger.info("Sent batch of pulled alerts via pusher")
 
             logger.info(
