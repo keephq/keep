@@ -676,10 +676,21 @@ def get_webhook_settings(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
+    # for cases where we need webhook with auth
+    keep_webhook_api_url_with_auth = keep_webhook_api_url.replace(
+        "https://", f"https://keep:{webhook_api_key}@"
+    )
+
     logger.info("Got webhook settings", extra={"provider_type": provider_type})
     return ProviderWebhookSettings(
-        webhookDescription=provider_class.webhook_description,
+        webhookDescription=provider_class.webhook_description.format(
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
+        ),
         webhookTemplate=provider_class.webhook_template.format(
-            keep_webhook_api_url=keep_webhook_api_url, api_key=webhook_api_key
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
         ),
     )

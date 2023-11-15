@@ -69,6 +69,7 @@
             "providers/documentation/new-relic-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
+            "providers/documentation/pingdom-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/sentry-provider",
