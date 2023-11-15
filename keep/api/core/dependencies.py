@@ -193,7 +193,6 @@ def verify_token_or_key(
     authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> str:
-    logger.info("Authenticating")
     # Attempt to verify API Key first
     if api_key:
         try:
@@ -221,7 +220,6 @@ def verify_token_or_key_single_tenant(
     authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> str:
-    logger.info("Authenticating")
     # Attempt to verify API Key first
     if api_key:
         try:
