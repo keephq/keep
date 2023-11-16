@@ -96,4 +96,4 @@ class WorkflowExecutionDTO(BaseModel):
 class WorkflowCreateOrUpdateDTO(BaseModel):
     workflow_id: str
     status: Literal["created", "updated"]
-    revision: int
+    revision: int = 1
