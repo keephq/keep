@@ -66,12 +66,14 @@ export const singleTenantAuthOptions = {
           }
 
           const user = await response.json();
-          const accessToken = user.accessToken;
+          const accessToken = user.accessToken as string;
+          const tenantId = user.tenantId as string;
           // Assuming the response contains the user's data if authentication was successful
           if (user && user.accessToken) {
             return {
               ...user,
               accessToken,
+              tenantId,
             };
           } else {
             return null;
@@ -101,12 +103,14 @@ export const singleTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#jwt-callback
       if (user) {
         token.accessToken = user.accessToken;
+        token.tenantId = user.tenantId;
       }
       return token;
     },
     async session({ session, token, user }) {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
+      session.tenantId = token.tenantId as string;
       return session;
     },
   },
