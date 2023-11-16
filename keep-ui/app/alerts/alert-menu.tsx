@@ -20,6 +20,7 @@ interface Props {
   openHistory: () => void;
   provider?: Provider;
   mutate?: () => void;
+  callDelete?: (fingerprint: string) => void;
 }
 
 export default function AlertMenu({
@@ -28,10 +29,12 @@ export default function AlertMenu({
   canOpenHistory,
   openHistory,
   mutate,
+  callDelete,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
   const alertName = alert.name;
+  const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
 
   const DynamicIcon = (props: any) => (
@@ -66,10 +69,10 @@ export default function AlertMenu({
           Authorization: `Bearer ${session!.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ alert_name: alertName }),
+        body: JSON.stringify({ fingerprint: fingerprint }),
       });
       if (res.ok) {
-        mutate!();
+        callDelete!(fingerprint);
       }
     }
   };

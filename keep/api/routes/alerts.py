@@ -229,17 +229,24 @@ def delete_alert(
     logger.info(
         "Deleting alert",
         extra={
-            "alert_name": delete_alert.alert_name,
+            "fingerprint": delete_alert.fingerprint,
             "tenant_id": tenant_id,
         },
     )
-    delete_query = f"""
-    DELETE FROM {Alert.__tablename__}
-    WHERE alert.tenant_id = :tenant_id AND JSON_EXTRACT(alert.event, '$.name') = :alert_name
-"""
-    alert_name = delete_alert.alert_name.strip("'").strip('"')
-    session.execute(delete_query, {"tenant_id": tenant_id, "alert_name": alert_name})
+
+    alerts = (
+        session.query(Alert).filter(Alert.fingerprint == delete_alert.fingerprint).all()
+    )
+
+    if not alerts:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    # TODO: is_deleted=true instead of deleting it from the DB
+    for alert in alerts:
+        session.delete(alert)
+
     session.commit()
+
     return {"status": "ok"}
 
 
@@ -272,11 +279,16 @@ def handle_formatted_events(
             )
             session.add(alert)
             formatted_event.event_id = alert.id
-            pusher_client.trigger(
-                f"private-{tenant_id}",
-                "async-alerts",
-                [alert.event],
-            )
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-alerts",
+                    base64.b64encode(
+                        zlib.compress(json.dumps([alert.event]).encode(), level=9)
+                    ).decode(),
+                )
+            except:
+                logger.exception("Failed to push alert to the client")
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -328,6 +340,7 @@ async def receive_generic_event(
     bg_tasks: BackgroundTasks,
     tenant_id: str = Depends(verify_api_key),
     session: Session = Depends(get_session),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -338,12 +351,15 @@ async def receive_generic_event(
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
         session (Session, optional): Defaults to Depends(get_session).
     """
+    if isinstance(alert, AlertDto):
+        alert = [alert]
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert.source[0] or "generic",
+        alert[0].source[0] or "keep",
         session,
         alert,
+        pusher_client,
     )
     return alert
 
