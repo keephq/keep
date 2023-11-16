@@ -133,6 +133,7 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 previous_compressed_batch = ""
                 new_compressed_batch = ""
                 number_of_alerts_in_batch = 0
+                # tb: this might be too slow in the future and we might need to refactor
                 for alert in alerts:
                     alert_dict = alert.dict()
                     batch_send.append(alert_dict)
