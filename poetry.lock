@@ -472,18 +472,18 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.28.84"
+version = "1.29.1"
 description = "The AWS SDK for Python"
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.28.84-py3-none-any.whl", hash = "sha256:98b01bbea27740720a06f7c7bc0132ae4ce902e640aab090cfb99ad3278449c3"},
-    {file = "boto3-1.28.84.tar.gz", hash = "sha256:adfb915958d7b54d876891ea1599dd83189e35a2442eb41ca52b04ea716180b6"},
+    {file = "boto3-1.29.1-py3-none-any.whl", hash = "sha256:192695305fa65012d21f78ee852b91cb56dd571e84d51fb71f756302bf19d23f"},
+    {file = "boto3-1.29.1.tar.gz", hash = "sha256:20285ebf4e98b2905a88aeb162b4f77ff908b2e3e31038b3223e593789290aa3"},
 ]
 
 [package.dependencies]
-botocore = ">=1.31.84,<1.32.0"
+botocore = ">=1.32.1,<1.33.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.7.0,<0.8.0"
 
@@ -492,14 +492,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.31.84"
+version = "1.32.1"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.31.84-py3-none-any.whl", hash = "sha256:d65bc05793d1a8a8c191a739f742876b4b403c5c713dc76beef262d18f7984a2"},
-    {file = "botocore-1.31.84.tar.gz", hash = "sha256:8913bedb96ad0427660dee083aeaa675466eb662bbf1a47781956b5882aadcc5"},
+    {file = "botocore-1.32.1-py3-none-any.whl", hash = "sha256:1d9c0ff3eb7828a8bd8c5c7f12cd9d8c05c6fe4c616ef963fdaab538a0da3809"},
+    {file = "botocore-1.32.1.tar.gz", hash = "sha256:fcf3cc2913afba8e5f7ebcc15e8f6bfae844ab64bf983bf5a6fe3bb54cce239d"},
 ]
 
 [package.dependencies]
@@ -508,7 +508,7 @@ python-dateutil = ">=2.1,<3.0.0"
 urllib3 = {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""}
 
 [package.extras]
-crt = ["awscrt (==0.19.10)"]
+crt = ["awscrt (==0.19.12)"]
 
 [[package]]
 name = "cachetools"
@@ -740,14 +740,14 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cloud-sql-python-connector"
-version = "1.4.2"
+version = "1.4.3"
 description = "The Cloud SQL Python Connector is a library that can be used alongside a database driver to allow users with sufficient permissions to connect to a Cloud SQL database without having to manually allowlist IPs or manage SSL certificates."
 category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "cloud-sql-python-connector-1.4.2.tar.gz", hash = "sha256:e708b935dc0b52e330cd6c71cd8f17e171a30090fe93e6dbfc1b4a87da10e1e8"},
-    {file = "cloud_sql_python_connector-1.4.2-py2.py3-none-any.whl", hash = "sha256:1de4189480861c96edbd4fe66775dac27f140f5ef3b588d920492e77135e306e"},
+    {file = "cloud-sql-python-connector-1.4.3.tar.gz", hash = "sha256:231c1f017e7df468a1af3b1b2eb585882a503b346e908a0c4a4fa6bbfc660aa3"},
+    {file = "cloud_sql_python_connector-1.4.3-py2.py3-none-any.whl", hash = "sha256:042dcf504d6d36007f772a0657749c5447969f22146ce22ea29b9044cb9c926a"},
 ]
 
 [package.dependencies]
@@ -757,8 +757,8 @@ google-auth = "*"
 Requests = "*"
 
 [package.extras]
-asyncpg = ["asyncpg (==0.28.0)"]
-pg8000 = ["pg8000 (==1.30.2)"]
+asyncpg = ["asyncpg (==0.29.0)"]
+pg8000 = ["pg8000 (==1.30.3)"]
 pymysql = ["PyMySQL (==1.1.0)"]
 pytds = ["python-tds (==1.13.0)"]
 
@@ -903,20 +903,20 @@ typing-inspect = ">=0.4.0,<1"
 
 [[package]]
 name = "datadog-api-client"
-version = "2.18.0"
+version = "2.19.0"
 description = "Collection of all Datadog Public endpoints"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "datadog-api-client-2.18.0.tar.gz", hash = "sha256:bd4bd7512c99747545a9b6d6bf1155050f5544884968a90a4176c167f4917fe5"},
-    {file = "datadog_api_client-2.18.0-py3-none-any.whl", hash = "sha256:e6231ab2d26e3e231731f91be9061d03634670e90a9cb3cd5844d939078f1c9a"},
+    {file = "datadog-api-client-2.19.0.tar.gz", hash = "sha256:f7a7d9d3a8a061a029b711e6afa0657612f939f79ea0597e8b55a30ccab3d371"},
+    {file = "datadog_api_client-2.19.0-py3-none-any.whl", hash = "sha256:0291c5c337f8d310f304723197e6ed1c268d2d3cb55694a48edc77c3f76a2c92"},
 ]
 
 [package.dependencies]
 certifi = "*"
 python-dateutil = "*"
-typing-extensions = "*"
+typing-extensions = ">=4.0.0"
 urllib3 = ">=1.15"
 
 [package.extras]
@@ -1948,14 +1948,14 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langsmith"
-version = "0.0.63"
+version = "0.0.64"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langsmith-0.0.63-py3-none-any.whl", hash = "sha256:43a521dd10d8405ac21a0b959e3de33e2270e4abe6c73cc4036232a6990a0793"},
-    {file = "langsmith-0.0.63.tar.gz", hash = "sha256:ddb2dfadfad3e05151ed8ba1643d1c516024b80fbd0c6263024400ced06a3768"},
+    {file = "langsmith-0.0.64-py3-none-any.whl", hash = "sha256:461acdcd8332d1325c16dc57e8a2d5ec9d1578490a4eaabe14db74db74ceaf21"},
+    {file = "langsmith-0.0.64.tar.gz", hash = "sha256:e78c02501c2cff24fff7bd2d28ff3765b21675c7f0fcf6a09932bc218603c36e"},
 ]
 
 [package.dependencies]
@@ -4001,14 +4001,14 @@ sqlcipher = ["sqlcipher3-binary"]
 
 [[package]]
 name = "sqlalchemy2-stubs"
-version = "0.0.2a36"
+version = "0.0.2a37"
 description = "Typing Stubs for SQLAlchemy 1.4"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sqlalchemy2-stubs-0.0.2a36.tar.gz", hash = "sha256:1c820c176a50401b7b3fc1e25019703b2c0753fe99a79d7e19305146baf1f60f"},
-    {file = "sqlalchemy2_stubs-0.0.2a36-py3-none-any.whl", hash = "sha256:9b5b3eb263cdc649b6a5619d2c089b98290406027a01e1de171eeb98c38ce678"},
+    {file = "sqlalchemy2-stubs-0.0.2a37.tar.gz", hash = "sha256:619bd131f8ad7eeb88af8dfabb0e6ba07593db91868cdc49674d2cd4ca61e986"},
+    {file = "sqlalchemy2_stubs-0.0.2a37-py3-none-any.whl", hash = "sha256:43067e3f67bd16a7fb2b574ee696f7ed53bf60f3e73329cf234a7b4dd4d3816a"},
 ]
 
 [package.dependencies]
@@ -4081,14 +4081,14 @@ doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "tomlkit"
-version = "0.12.2"
+version = "0.12.3"
 description = "Style preserving TOML library"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "tomlkit-0.12.2-py3-none-any.whl", hash = "sha256:eeea7ac7563faeab0a1ed8fe12c2e5a51c61f933f2502f7e9db0241a65163ad0"},
-    {file = "tomlkit-0.12.2.tar.gz", hash = "sha256:df32fab589a81f0d7dc525a4267b6d7a64ee99619cbd1eeb0fae32c1dd426977"},
+    {file = "tomlkit-0.12.3-py3-none-any.whl", hash = "sha256:b0a645a9156dc7cb5d3a1f0d4bab66db287fcb8e0430bdd4664a095ea16414ba"},
+    {file = "tomlkit-0.12.3.tar.gz", hash = "sha256:75baf5012d06501f07bee5bf8e801b9f343e7aac5a92581f20f80ce632e6b5a4"},
 ]
 
 [[package]]
@@ -4234,14 +4234,14 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 
 [[package]]
 name = "wcwidth"
-version = "0.2.9"
+version = "0.2.10"
 description = "Measures the displayed width of unicode strings in a terminal"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "wcwidth-0.2.9-py2.py3-none-any.whl", hash = "sha256:9a929bd8380f6cd9571a968a9c8f4353ca58d7cd812a4822bba831f8d685b223"},
-    {file = "wcwidth-0.2.9.tar.gz", hash = "sha256:a675d1a4a2d24ef67096a04b85b02deeecd8e226f57b5e3a72dbb9ed99d27da8"},
+    {file = "wcwidth-0.2.10-py2.py3-none-any.whl", hash = "sha256:aec5179002dd0f0d40c456026e74a729661c9d468e1ed64405e3a6c2176ca36f"},
+    {file = "wcwidth-0.2.10.tar.gz", hash = "sha256:390c7454101092a6a5e43baad8f83de615463af459201709556b6e4b1c861f97"},
 ]
 
 [[package]]
@@ -4481,5 +4481,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.11"
-content-hash = "e18b68649487d2ff9469b93634175dbfb4641db6beefaf4a742d448bc28920ae"
+python-versions = ">=3.11,<3.12"
+content-hash = "bea9963330dd649c0f29028c3f14b109e9f3968275dc1b837bf00a41291f1f39"

@@ -11,7 +11,6 @@ The easiest way to install Keep with Helm is with the following command:
 # Configuration
 Keep's Helm Chart supports the following `values.yaml`:
 - backend.image: the backend image (default: us-central1-docker.pkg.dev/keephq/keep/keep-api)
-- backend.apiKey: your OpenAI Key. needed only for the alerts auto generation (the GitHub app)
 - frontend.image: the frontend image (default: us-central1-docker.pkg.dev/keephq/keep/keep-ui)
 - frontend.publicApiUrl: the frontend will use this URL as a backend from your browser ("client components"). default: http://localhost:8080. for production environment this should be the backend DNS/external IP.
 - frontend.internalApiUrl: the frontend will use this URL as a backend from the container ("server components") default: http://keep-backend:8080
@@ -21,5 +20,7 @@ Keep's Helm Chart supports the following `values.yaml`:
 For local kubernetes without external IP (such as NodePort or LoadBalancer), you'll need to run port forwarding:
 
 ## Port forward
-`kubectl port-forward svc/keep-frontend 3000:3000`
-
+```bash
+kubectl port-forward svc/keep-frontend 3000:3000 & \
+kubectl port-forward svc/keep-websocket-server 6001:6001 &
+```
