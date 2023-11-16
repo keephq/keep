@@ -121,6 +121,38 @@ export function AlertsTableBody({
 
   return (
     <TableBody>
+      {showSkeleton && (
+        <TableRow>
+          <TableCell></TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+        </TableRow>
+      )}
       {data
         .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
         .map((alert) => {
@@ -298,38 +330,6 @@ export function AlertsTableBody({
             </TableRow>
           );
         })}
-      {showSkeleton && (
-        <TableRow>
-          <TableCell></TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-        </TableRow>
-      )}
     </TableBody>
   );
 }
