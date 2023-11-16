@@ -22,14 +22,23 @@ interface Props {
   workflows?: any[];
   providers?: Provider[];
   mutate?: () => void;
+  isAsyncLoading?: boolean;
 }
 
-export function AlertTable({ data, groupBy, workflows, providers, mutate }: Props) {
+export function AlertTable({
+  data,
+  groupBy,
+  workflows,
+  providers,
+  mutate,
+  isAsyncLoading = false,
+}: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   let groupedByData = {} as { [key: string]: Alert[] };
   let aggregatedData = data;
+
   if (groupBy) {
     // Group alerts by the groupBy key
     groupedByData = data.reduce((acc, alert) => {
@@ -58,17 +67,18 @@ export function AlertTable({ data, groupBy, workflows, providers, mutate }: Prop
     setIsOpen(true);
   };
 
-  return data.length === 0 ? (
-    <Callout
-      title="No Data"
-      icon={CircleStackIcon}
-      color="yellow"
-      className="mt-5"
-    >
-      Please connect supported providers to see alerts
-    </Callout>
-  ) : (
+  return (
     <>
+      {isAsyncLoading && (
+        <Callout
+          title="Getting your alerts..."
+          icon={CircleStackIcon}
+          color="gray"
+          className="mt-5"
+        >
+          Alerts will show up in this table as they are added to Keep...
+        </Callout>
+      )}
       <Table>
         <TableHead>
           <TableRow>
@@ -98,6 +108,7 @@ export function AlertTable({ data, groupBy, workflows, providers, mutate }: Prop
           workflows={workflows}
           providers={providers}
           mutate={mutate}
+          showSkeleton={isAsyncLoading}
         />
       </Table>
       <AlertTransition

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import threading
@@ -8,7 +7,7 @@ import jwt
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -36,13 +35,13 @@ from keep.api.routes import (
     alerts,
     healthcheck,
     providers,
+    pusher,
     settings,
     status,
     tenant,
     whoami,
     workflows,
 )
-from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -131,7 +130,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     )
     if not os.getenv("DISABLE_POSTHOG", "false") == "true":
         app.add_middleware(EventCaptureMiddleware)
-    app.add_middleware(GZipMiddleware)
+    # app.add_middleware(GZipMiddleware)
 
     multi_tenant = str(
         multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", "false")
@@ -149,6 +148,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
     )
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
+    app.include_router(pusher.router, prefix="/pusher", tags=["pusher"])
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint

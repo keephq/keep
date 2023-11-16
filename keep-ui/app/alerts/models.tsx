@@ -24,6 +24,7 @@ export interface Alert {
   url?: string;
   pushed: boolean;
   generatorURL?: string;
+  fingerprint: string;
 }
 
 export const AlertKnownKeys = [
