@@ -23,6 +23,7 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   isAsyncLoading?: boolean;
+  onDelete?: (fingerprint: string) => void;
 }
 
 export function AlertTable({
@@ -32,6 +33,7 @@ export function AlertTable({
   providers,
   mutate,
   isAsyncLoading = false,
+  onDelete,
 }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -61,6 +63,7 @@ export function AlertTable({
       (key) => groupedByData[key][0]
     );
   }
+
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {
     setSelectedAlertHistory(groupedByData[(alert as any)[groupBy!]]);
@@ -109,6 +112,7 @@ export function AlertTable({
           providers={providers}
           mutate={mutate}
           showSkeleton={isAsyncLoading}
+          onDelete={onDelete}
         />
       </Table>
       <AlertTransition
