@@ -6,8 +6,7 @@ ENV PYTHONFAULTHANDLER=1 \
 
 WORKDIR /app
 
-FROM base as builder
-
+# Creating a virtual environment and installing dependencies
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -15,11 +14,11 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
-COPY . .
-RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
+COPY poetry.lock pyproject.toml ./
+RUN . /venv/bin/activate && poetry install
 
-FROM base as final
+# Setting the virtual environment path
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
-COPY --from=builder /venv /venv
+
 CMD ["uvicorn", "keep.api.api:get_app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

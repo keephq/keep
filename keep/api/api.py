@@ -152,6 +152,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint
+    logger.info(f"Multi tenant: {multi_tenant}")
+    logger.info(f"Use authentication: {os.environ.get('KEEP_USE_AUTHENTICATION')}")
+
     if (not multi_tenant or multi_tenant.lower() == "false") and os.environ.get(
         "KEEP_USE_AUTHENTICATION", "false"
     ) == "true":
@@ -179,7 +182,7 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
                 algorithm="HS256",
             )
             # return the token
-            return {"accessToken": token}
+            return {"accessToken": token, "tenantId": SINGLE_TENANT_UUID}
 
     from fastapi import BackgroundTasks
 

@@ -24,7 +24,7 @@ backend:
     - name: PUSHER_APP_SECRET
       value: keepappsecret
     - name: PUSHER_HOST
-      value: localhost
+      value: keep-websocket
     - name: PUSHER_PORT
       value: 6001
   openAiApi:
