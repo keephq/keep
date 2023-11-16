@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # This allows us to dynamically set the API_URL and NEXT_PUBLIC_API_URL based on the branch name
 # This is useful for testing PRs on Vercel
 if [ -n "$VERCEL_GIT_COMMIT_REF" ]; then
