@@ -117,7 +117,7 @@ frontend:
   tolerations: []
   affinity: {}
 
-websocket-server:
+websocket:
   enabled: true
   env:
     - name: SOKETI_USER_AUTHENTICATION_TIMEOUT

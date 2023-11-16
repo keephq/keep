@@ -22,5 +22,5 @@ For local kubernetes without external IP (such as NodePort or LoadBalancer), you
 ## Port forward
 ```bash
 kubectl port-forward svc/keep-frontend 3000:3000 & \
-kubectl port-forward svc/keep-websocket-server 6001:6001 &
+kubectl port-forward svc/keep-websocket 6001:6001 &
 ```

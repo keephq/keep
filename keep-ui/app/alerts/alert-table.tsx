@@ -38,6 +38,7 @@ export function AlertTable({
 
   let groupedByData = {} as { [key: string]: Alert[] };
   let aggregatedData = data;
+
   if (groupBy) {
     // Group alerts by the groupBy key
     groupedByData = data.reduce((acc, alert) => {
