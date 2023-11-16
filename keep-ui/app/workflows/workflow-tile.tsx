@@ -367,31 +367,28 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 const alertSource = workflow.triggers
                   .find((w) => w.type === "alert")
                   ?.filters?.find((f) => f.key === "source")?.value;
-                const DynamicIcon = (props: any) =>
-                  !imageError ? (
-                    <svg
-                      width="24px"
-                      height="24px"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      {...props}
-                    >
-                      {" "}
-                      <image
-                        id="image0"
-                        width={"24"}
-                        height={"24"}
-                        href={`/icons/${alertSource}-icon.png`}
-                        onError={handleImageError}
-                      />
-                    </svg>
-                  ) : (
-                    <QuestionMarkCircleIcon />
-                  );
+                const DynamicIcon = (props: any) => (
+                  <svg
+                    width="24px"
+                    height="24px"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    {...props}
+                  >
+                    {" "}
+                    <image
+                      id="image0"
+                      width={"24"}
+                      height={"24"}
+                      href={`/icons/${alertSource}-icon.png`}
+                      onError={handleImageError}
+                    />
+                  </svg>
+                );
                 return (
                   <Badge
-                    icon={DynamicIcon}
+                    icon={!imageError ? DynamicIcon : QuestionMarkCircleIcon}
                     key={t}
                     size="xs"
                     color="orange"
