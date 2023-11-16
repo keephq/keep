@@ -361,7 +361,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             {triggerTypes.map((t) => {
               if (t === "alert") {
                 const handleImageError = (event: any) => {
-                  event.target.src = "/icons/keep-icon.png";
+                  event.target.href = "/icons/keep-icon.png";
                 };
                 const alertSource = workflow.triggers
                   .find((w) => w.type === "alert")
