@@ -39,6 +39,7 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   showSkeleton?: boolean;
+  onDelete?: (fingerprint: string) => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -98,6 +99,7 @@ export function AlertsTableBody({
   providers,
   mutate,
   showSkeleton = true,
+  onDelete,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
@@ -167,6 +169,7 @@ export function AlertsTableBody({
                       (p) => p.type === alert.source![0]
                     )}
                     mutate={mutate}
+                    callDelete={onDelete}
                   />
                 </TableCell>
               }

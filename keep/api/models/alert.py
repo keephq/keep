@@ -57,7 +57,7 @@ class AlertDto(BaseModel):
 
 
 class DeleteRequestBody(BaseModel):
-    alert_name: str
+    fingerprint: str
 
 
 class EnrichAlertRequestBody(BaseModel):

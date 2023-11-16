@@ -133,6 +133,12 @@ export default function Alerts({
     );
   }
 
+  const onDelete = (fingerprint: string) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.filter((alert) => alert.fingerprint !== fingerprint)
+    );
+  };
+
   function searchAlert(alert: Alert): boolean {
     return (
       alertNameSearchString === "" ||
@@ -219,6 +225,7 @@ export default function Alerts({
         providers={providers?.installed_providers}
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
+        onDelete={onDelete}
       />
     </Card>
   );
