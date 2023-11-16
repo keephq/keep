@@ -64,6 +64,7 @@ class SentryProvider(BaseProvider):
             mandatory_for_webhook=True,
         ),
     ]
+    DEFAULT_TIMEOUT = 600
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -363,6 +364,7 @@ class SentryProvider(BaseProvider):
             response = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
                 headers=self.__headers,
+                timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
             if not response.ok:
                 raise Exception(response.json())
@@ -374,6 +376,7 @@ class SentryProvider(BaseProvider):
             projects_response = requests.get(
                 f"{self.SENTRY_API}/projects/",
                 headers=self.__headers,
+                timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
             if not projects_response.ok:
                 raise Exception("Failed to get projects")
@@ -383,6 +386,7 @@ class SentryProvider(BaseProvider):
                 response = requests.get(
                     f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/events/",
                     headers=self.__headers,
+                    timeout=SentryProvider.DEFAULT_TIMEOUT,
                 )
                 if not response.ok:
                     error = response.json()

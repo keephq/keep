@@ -2,12 +2,6 @@
 const nextConfig = {
   reactStrictMode: false,
   images: {
-    domains: [
-      "avatars.githubusercontent.com",
-      "avatar.vercel.sh",
-      "lh3.googleusercontent.com",
-      "s.gravatar.com",
-    ],
     remotePatterns: [
       {
         protocol: "https",
@@ -17,6 +11,14 @@ const nextConfig = {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "s.gravatar.com"
+      },
+      {
+        protocol: "https",
+        hostname: "avatar.vercel.sh"
+      }
     ],
   },
   experimental: {

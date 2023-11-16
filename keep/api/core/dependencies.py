@@ -13,6 +13,7 @@ from fastapi.security import (
     HTTPDigest,
     OAuth2PasswordBearer,
 )
+from pusher import Pusher
 from sqlmodel import Session, select
 from starlette_context import context
 
@@ -192,7 +193,6 @@ def verify_token_or_key(
     authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> str:
-    logger.info("Authenticating")
     # Attempt to verify API Key first
     if api_key:
         try:
@@ -220,7 +220,6 @@ def verify_token_or_key_single_tenant(
     authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> str:
-    logger.info("Authenticating")
     # Attempt to verify API Key first
     if api_key:
         try:
@@ -239,3 +238,17 @@ def verify_token_or_key_single_tenant(
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
             )
+
+
+def get_pusher_client() -> Pusher:
+    return Pusher(
+        host=os.environ.get("PUSHER_HOST"),
+        port=int(os.environ.get("PUSHER_PORT"))
+        if os.environ.get("PUSHER_PORT")
+        else None,
+        app_id=os.environ.get("PUSHER_APP_ID"),
+        key=os.environ.get("PUSHER_APP_KEY"),
+        secret=os.environ.get("PUSHER_APP_SECRET"),
+        ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+        cluster=os.environ.get("PUSHER_CLUSTER"),
+    )

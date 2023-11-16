@@ -2,7 +2,7 @@ services:
   keep-frontend:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
     ports:
-      - '3000:3000'
+      - "3000:3000"
     environment:
       - NEXT_PUBLIC_AUTH_ENABLED=false
       - NEXTAUTH_SECRET=secret
@@ -12,6 +12,9 @@ services:
       - NEXT_PUBLIC_POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
       - NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
       - NEXT_PUBLIC_USE_AUTHENTICATION=true
+      - NEXT_PUBLIC_PUSHER_HOST=localhost
+      - NEXT_PUBLIC_PUSHER_PORT=6001
+      - NEXT_PUBLIC_PUSHER_APP_KEY=keepappkey
     volumes:
       - ./state:/state
     depends_on:
@@ -19,7 +22,7 @@ services:
   keep-backend:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
@@ -31,6 +34,21 @@ services:
       - KEEP_MULTI_TENANT=false
       - KEEP_DEFAULT_USERNAME=admin
       - KEEP_DEFAULT_PASSWORD=keep
+      - PUSHER_APP_ID=1
+      - PUSHER_APP_KEY=keepappkey
+      - PUSHER_APP_SECRET=keepappsecret
+      - PUSHER_HOST=localhost
+      - PUSHER_PORT=6001
     volumes:
       - ./state:/state
     # command: --multi-tenant
+  keep-websocket-server:
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    environment:
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
+      - SOKETI_DEFAULT_APP_ID=1
+      - SOKETI_DEFAULT_APP_KEY=keepappkey
+      - SOKETI_DEFAULT_APP_SECRET=keepappsecret

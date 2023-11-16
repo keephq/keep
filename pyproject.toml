@@ -69,6 +69,7 @@ twilio = "^8.10.0"
 azure-identity = "^1.15.0"
 azure-mgmt-containerservice = "^27.0.0"
 opentelemetry-exporter-gcp-trace = "^1.6.0"
+pusher = "^3.3.2"
 
 
 [tool.poetry.group.dev.dependencies]
