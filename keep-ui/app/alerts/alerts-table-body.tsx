@@ -123,7 +123,7 @@ export function AlertsTableBody({
     <TableBody>
       {data
         .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
-        .map((alert) => {
+        .map((alert, index) => {
           const extraPayloadNoKnownKeys = Object.keys(alert)
             .filter((key) => !AlertKnownKeys.includes(key))
             .reduce((obj, key) => {
@@ -156,7 +156,7 @@ export function AlertsTableBody({
               return workflowIsRelevant;
             }) ?? [];
           return (
-            <TableRow key={alert.fingerprint}>
+            <TableRow key={index}>
               {
                 <TableCell className="pb-9">
                   <AlertMenu
