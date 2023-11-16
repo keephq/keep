@@ -25,6 +25,7 @@ import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
 import "./alerts.client.css";
+import { useRouter } from "next/navigation";
 
 export default function Alerts({
   accessToken,
@@ -34,6 +35,7 @@ export default function Alerts({
   tenantId: string;
 }) {
   const apiUrl = getApiURL();
+  const router = useRouter();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
@@ -111,8 +113,12 @@ export default function Alerts({
       return () => {
         pusher.unsubscribe(channelName);
       };
+    } else {
+      // User doesn't have a tenant id, so they are not logged in
+      //  or they were logged in before we added the tenant id to the session.
+      router.push("/signin");
     }
-  }, [tenantId, accessToken]);
+  }, [tenantId, accessToken, router]);
 
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
