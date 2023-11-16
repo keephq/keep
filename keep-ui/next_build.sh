@@ -10,7 +10,8 @@ if [ -n "$VERCEL_GIT_COMMIT_REF" ]; then
 
         # Ensure the service_name is no longer than 63 characters
         if [ ${#service_name} -gt 63 ]; then
-            service_name=$(echo "$service_name" | cut -c 1-63)
+            # 49 because this is the max length of the URL in cloud run
+            service_name=$(echo "$service_name" | cut -c 1-49)
         fi
 
         # Check if the last character of service_name is a hyphen ("-")
