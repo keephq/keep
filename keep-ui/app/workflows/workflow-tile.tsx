@@ -360,9 +360,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             <span className="mr-1">Triggers:</span>
             {triggerTypes.map((t) => {
               if (t === "alert") {
-                let imageError = false;
-                const handleImageError = () => {
-                  imageError = true;
+                const handleImageError = (event: any) => {
+                  event.target.src = "/icons/keep-icon.png";
                 };
                 const alertSource = workflow.triggers
                   .find((w) => w.type === "alert")
@@ -388,7 +387,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 );
                 return (
                   <Badge
-                    icon={!imageError ? DynamicIcon : QuestionMarkCircleIcon}
+                    icon={DynamicIcon}
                     key={t}
                     size="xs"
                     color="orange"
