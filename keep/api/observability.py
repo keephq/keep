@@ -3,6 +3,7 @@ import os
 
 from fastapi import FastAPI, Request
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter as GRPCOTLPSpanExporter,
@@ -20,6 +21,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.sampling import ALWAYS_ON
 
 
 def setup(app: FastAPI):
@@ -27,6 +29,7 @@ def setup(app: FastAPI):
     # Configure the OpenTelemetry SDK
     service_name = os.environ.get("SERVICE_NAME", "keep-api")
     otlp_collector_endpoint = os.environ.get("OTLP_ENDPOINT", False)
+    enable_cloud_trace_exporeter = os.environ.get("CLOUD_TRACE_ENABLED", False)
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
     # to support both grpc and http - for example dynatrace doesn't support grpc
     http_or_grpc = os.environ.get("OTLP_SPAN_EXPORTER", "grpc")
@@ -36,7 +39,7 @@ def setup(app: FastAPI):
         OTLPSpanExporter = HTTPOTLPSpanExporter
 
     resource = Resource.create({"service.name": service_name})
-    provider = TracerProvider(resource=resource)
+    provider = TracerProvider(resource=resource, sampler=ALWAYS_ON)
     if otlp_collector_endpoint:
         logger.info(f"OTLP endpoint set to {otlp_collector_endpoint}")
         processor = BatchSpanProcessor(
@@ -50,6 +53,11 @@ def setup(app: FastAPI):
             )
             metric_provider = MeterProvider(resource=resource, metric_readers=[reader])
             metrics.set_meter_provider(metric_provider)
+
+    if enable_cloud_trace_exporeter:
+        logger.info("Cloud Trace exporter enabled.")
+        processor = BatchSpanProcessor(CloudTraceSpanExporter())
+        provider.add_span_processor(processor)
 
     trace.set_tracer_provider(provider)
     # Enable trace context propagation

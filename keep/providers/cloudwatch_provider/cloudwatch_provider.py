@@ -38,6 +38,7 @@ class CloudwatchProviderAuthConfig:
         metadata={
             "required": True,
             "description": "AWS region",
+            "senstive": False,
         },
     )
     session_token: str = dataclasses.field(
@@ -61,9 +62,7 @@ class CloudwatchProviderAuthConfig:
 
 
 class CloudwatchProvider(BaseProvider):
-    """
-    CloudwatchProvider is a class that provides a way to read data from AWS Cloudwatch.
-    """
+    """Push alarms from AWS Cloudwatch to Keep."""
 
     PROVIDER_SCOPES = [
         ProviderScope(

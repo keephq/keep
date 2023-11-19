@@ -1,0 +1,37 @@
+
+# cli workflow
+
+Manage workflows.
+
+## Usage
+
+```
+Usage: cli workflow [OPTIONS] COMMAND [ARGS]...
+```
+
+## Options
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+
+## CLI Help
+
+```
+Usage: cli workflow [OPTIONS] COMMAND [ARGS]...
+
+  Manage workflows.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  apply  Apply a workflow.
+  list   List workflows.
+  run    Run a workflow with a specified ID and fingerprint.
+  runs   Manage workflows executions.
+```

@@ -1,4 +1,5 @@
 import dataclasses
+
 import pydantic
 import requests
 
@@ -22,13 +23,14 @@ class LinearProviderAuthConfig:
 
 
 class LinearProvider(BaseProvider):
+    """Enrich alerts with Linear tickets."""
+
     LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self.__headers = {"Authorization": f"{self.authentication_config.api_token}"}
 
     def validate_config(self):
         self.authentication_config = LinearProviderAuthConfig(
@@ -271,12 +273,14 @@ if __name__ == "__main__":
     import os
 
     linear_api_token = os.environ.get("LINEAR_API_TOKEN")
+    linear_project_id = os.environ.get("LINEAR_PROJECT_ID")
 
     # Initialize the provider and provider config
     config = ProviderConfig(
         description="Linear Input Provider",
         authentication={
             "api_token": linear_api_token,
+            "project_id": linear_project_id,
         },
     )
     provider = LinearProvider(context_manager, provider_id="linear", config=config)

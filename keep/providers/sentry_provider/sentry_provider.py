@@ -41,6 +41,8 @@ class SentryProviderAuthConfig:
 
 
 class SentryProvider(BaseProvider):
+    """Enrich alerts with data from Sentry."""
+
     SENTRY_API = "https://sentry.io/api/0"
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -62,6 +64,7 @@ class SentryProvider(BaseProvider):
             mandatory_for_webhook=True,
         ),
     ]
+    DEFAULT_TIMEOUT = 600
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -69,6 +72,10 @@ class SentryProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("organization_slug")
         self.project_slug = self.config.authentication.get("project_slug")
+
+    @property
+    def __headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.authentication_config.api_key}"}
 
     def get_events_url(self, project, date="14d"):
         return f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
@@ -117,9 +124,7 @@ class SentryProvider(BaseProvider):
                 if self.project_slug:
                     response = requests.get(
                         f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/issues/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not response.ok:
                         response_json = response.json()
@@ -128,9 +133,7 @@ class SentryProvider(BaseProvider):
                 else:
                     projects_response = requests.get(
                         f"{self.SENTRY_API}/projects/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not projects_response.ok:
                         response_json = projects_response.json()
@@ -140,9 +143,7 @@ class SentryProvider(BaseProvider):
                     project_slug = projects[0].get("slug")
                     response = requests.get(
                         f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/",
-                        headers={
-                            "Authorization": f"Bearer {self.authentication_config.api_key}"
-                        },
+                        headers=self.__headers,
                     )
                     if not response.ok:
                         response_json = response.json()
@@ -152,9 +153,7 @@ class SentryProvider(BaseProvider):
             elif scope.name == "project:read":
                 response = requests.get(
                     f"{self.SENTRY_API}/projects/",
-                    headers={
-                        "Authorization": f"Bearer {self.authentication_config.api_key}"
-                    },
+                    headers=self.__headers,
                 )
                 if not response.ok:
                     response_json = response.json()
@@ -164,9 +163,7 @@ class SentryProvider(BaseProvider):
             elif scope.name == "project:write":
                 response = requests.post(
                     f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/plugins/webhooks/",
-                    headers={
-                        "Authorization": f"Bearer {self.authentication_config.api_key}"
-                    },
+                    headers=self.__headers,
                 )
                 if not response.ok:
                     response_json = response.json()
@@ -177,28 +174,36 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
-        event_data = event.get("event", {})
+        event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
-        hashes = event_data.get("hashes", [])
+
+        # Remove duplicate keys
+        event_data.pop("id", None)
+        tags_as_dict.pop("id", None)
+
+        last_received = (
+            datetime.datetime.fromtimestamp(event_data.get("received"))
+            if "received" in event_data
+            else event_data.get("datetime")
+        )
+
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("metadata", {}).get(
-                "type", event_data.get("metadata", {}).get("title")
-            ),
+            name=event_data.get("title"),
             status=event.get("action", "triggered"),
-            lastReceived=event_data.get(
-                "datetime",
-                str(datetime.datetime.fromtimestamp(event_data.get("received"))),
-            ),
+            lastReceived=str(last_received),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
+            environment=event_data.pop(
+                "environment", tags_as_dict.pop("environment", "unknown")
+            ),
             message=event_data.get("metadata", {}).get("value"),
-            description=event_data.get("metadata", {}).get("value"),
+            description=event.get("culprit", ""),
             pushed=True,
-            severity=event.pop("level", "high"),
-            url=event_data.pop("url"),
-            fingerprint=hashes[0] if len(hashes) > 0 else None,
-            **event_data,
+            severity=event.pop("level", tags_as_dict.get("level", "high")),
+            url=event_data.pop("url", tags_as_dict.pop("url", None)),
+            fingerprint=event.get("id"),
+            tags=tags_as_dict,
         )
 
     def setup_webhook(
@@ -216,14 +221,13 @@ class SentryProvider(BaseProvider):
                 message="Cannot setup webhook with localhost, please use a public url",
             )
 
-        headers = {"Authorization": f"Bearer {self.authentication_config.api_key}"}
         if self.project_slug:
             project_slugs = [self.project_slug]
         else:
             # Get all projects if no project slug was given
             projects_response = requests.get(
                 f"{self.SENTRY_API}/projects/",
-                headers=headers,
+                headers=self.__headers,
             )
             if not projects_response.ok:
                 raise Exception("Failed to get projects")
@@ -235,7 +239,7 @@ class SentryProvider(BaseProvider):
             self.logger.info(f"Setting up webhook for project {project_slug}")
             webhooks_request = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
             )
             webhooks_request.raise_for_status()
             webhooks_response = webhooks_request.json()
@@ -251,32 +255,36 @@ class SentryProvider(BaseProvider):
             )
             existing_webhooks_value: str = config.get("value", "") or ""
             existing_webhooks = existing_webhooks_value.split("\n")
-            # This means we already installed in that project
+            # tb: this is a resolution to a bug i pushed somewhere in the beginning of sentry provider
+            #   TODO: remove this in the future
             if f"{keep_api_url}?api_key={api_key}" in existing_webhooks:
+                existing_webhooks.remove(f"{keep_api_url}?api_key={api_key}")
+            # This means we already installed in that project
+            if f"{keep_api_url}&api_key={api_key}" in existing_webhooks:
                 # TODO: we might got here but did not create the alert, we should fix that in the future
                 #   e.g. make sure the alert exists and if not create it.
                 self.logger.info(
                     f"Keep webhook already exists for project {project_slug}"
                 )
                 continue
-            existing_webhooks.append(f"{keep_api_url}?api_key={api_key}")
+            existing_webhooks.append(f"{keep_api_url}&api_key={api_key}")
             # Update the webhooks urls
             update_response = requests.put(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
                 json={"urls": "\n".join(existing_webhooks)},
             )
             update_response.raise_for_status()
             # Enable webhooks plugin for project
             requests.post(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
-                headers=headers,
+                headers=self.__headers,
             ).raise_for_status()
             # TODO: make sure keep alert does not exist and if it doesnt create it.
             alert_name = f"Keep Alert Rule - {project_slug}"
             alert_rules_response = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                headers=headers,
+                headers=self.__headers,
             ).json()
             alert_exists = next(
                 iter(
@@ -320,7 +328,7 @@ class SentryProvider(BaseProvider):
 
                 requests.post(
                     f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                    headers=headers,
+                    headers=self.__headers,
                     json=alert_payload,
                 ).raise_for_status()
                 self.logger.info(f"Sentry webhook setup complete for {project_slug}")
@@ -328,51 +336,106 @@ class SentryProvider(BaseProvider):
                 self.logger.info(f"Sentry webhook already exists for {project_slug}")
         self.logger.info("Sentry webhook setup complete")
 
-    def get_alerts(self, project_slug: str = None) -> list[AlertDto]:
-        # get issues
-        all_issues = []
-        if self.authentication_config.project_slug or project_slug:
+    def __get_issues(self, project_slug: str) -> dict:
+        """
+        Get all issues for a project
+
+        Args:
+            project_slug (str): project slug
+
+        Raises:
+            Exception: if failed to get issues
+
+        Returns:
+            dict: issues by id
+        """
+        issues_response = requests.get(
+            f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*",
+            headers=self.__headers,
+        )
+        if not issues_response.ok:
+            raise Exception(issues_response.json())
+        return {issue["id"]: issue for issue in issues_response.json()}
+
+    def _get_alerts(self) -> list[AlertDto]:
+        all_events_by_project = {}
+        all_issues_by_project = {}
+        if self.authentication_config.project_slug:
             response = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/issues/?query=*",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
+                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
+                headers=self.__headers,
+                timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
             if not response.ok:
                 raise Exception(response.json())
-            all_issues = response.json()
-            if project_slug:
-                return all_issues
+            all_events_by_project[self.project_slug] = response.json()
+            all_issues_by_project[self.project_slug] = self.__get_issues(
+                self.project_slug
+            )
         else:
             projects_response = requests.get(
                 f"{self.SENTRY_API}/projects/",
-                headers={
-                    "Authorization": f"Bearer {self.authentication_config.api_key}"
-                },
+                headers=self.__headers,
+                timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
             if not projects_response.ok:
                 raise Exception("Failed to get projects")
             projects = projects_response.json()
             for project in projects:
-                all_issues.extend(self.get_alerts(project.get("slug")))
+                project_slug = project.get("slug")
+                response = requests.get(
+                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/events/",
+                    headers=self.__headers,
+                    timeout=SentryProvider.DEFAULT_TIMEOUT,
+                )
+                if not response.ok:
+                    error = response.json()
+                    self.logger.warning(
+                        "Failed to get events for project",
+                        extra={"project_slug": project_slug, **error},
+                    )
+                    continue
+                all_events_by_project[project_slug] = response.json()
+                all_issues_by_project[project_slug] = self.__get_issues(project_slug)
+
+        if not all_events_by_project:
+            # We didn't manage to get any events for some reason
+            self.logger.warning("Failed to get events from all projects")
+            return []
 
         # format issues
         formatted_issues = []
-        for issue in all_issues:
-            formatted_issues.append(
-                AlertDto(
-                    id=issue.pop("id"),
-                    name=issue.pop("title"),
-                    status=issue.pop("status"),
-                    lastReceived=issue.pop("lastSeen"),
-                    environment=issue.get("metadata", {}).get("filename"),
-                    service=issue.get("metadata", {}).get("function"),
-                    description=issue.pop("metadata", {}).get("value"),
-                    url=issue.pop("permalink"),
-                    source=["sentry"],
-                    **issue,
+        for project in all_events_by_project:
+            for event in all_events_by_project[project]:
+                id = event.pop("id")
+                fingerprint = event.get("groupID")
+                related_issue = all_issues_by_project.get(project, {}).get(
+                    fingerprint, {}
                 )
-            )
+                tags = {tag["key"]: tag["value"] for tag in event.pop("tags", [])}
+                last_received = datetime.datetime.fromisoformat(
+                    event.get("dateCreated")
+                ) + datetime.timedelta(minutes=1)
+                formatted_issues.append(
+                    AlertDto(
+                        id=id,
+                        name=event.pop("title"),
+                        description=event.pop("culprit", ""),
+                        message=event.get("message", ""),
+                        status=related_issue.get(
+                            "status", event.get("event.type", "unknown")
+                        ),
+                        lastReceived=last_received.isoformat(),
+                        environment=tags.get("environment", "unknown"),
+                        severity=tags.get("level", None),
+                        url=event.pop("permalink", None),
+                        project=project,
+                        source=["sentry"],
+                        fingerprint=fingerprint,
+                        tags=tags,
+                        payload=event,
+                    )
+                )
         return formatted_issues
 
 

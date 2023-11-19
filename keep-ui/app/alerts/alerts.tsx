@@ -4,14 +4,13 @@ import {
   MagnifyingGlassIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
-import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import {
   MultiSelect,
   MultiSelectItem,
   Flex,
-  Callout,
   TextInput,
   Button,
+  Card,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -19,47 +18,111 @@ import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
 import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Loading from "app/loading";
+import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
-import "./alerts.client.css";
 import { ProvidersResponse } from "app/providers/providers";
+import zlib from "zlib";
+import "./alerts.client.css";
+import { useRouter } from "next/navigation";
 
-export default function Alerts({ accessToken }: { accessToken: string }) {
+export default function Alerts({
+  accessToken,
+  tenantId,
+}: {
+  accessToken: string;
+  tenantId: string;
+}) {
   const apiUrl = getApiURL();
+  const router = useRouter();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [reloadLoading, setReloadLoading] = useState<boolean>(false);
+  const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, error, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
-    (url) => fetcher(url, accessToken)
+    (url) => fetcher(url, accessToken),
+    {
+      revalidateOnFocus: false,
+      onLoadingSlow: () => setIsSlowLoading(true),
+      loadingTimeout: 5000,
+    }
   );
-  const { data: workflows } = useSWR<Workflow[]>(`${apiUrl}/workflows`, (url) =>
-    fetcher(url, accessToken)
+  const { data: workflows } = useSWR<Workflow[]>(
+    `${apiUrl}/workflows`,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
   const { data: providers } = useSWR<ProvidersResponse>(
     `${apiUrl}/providers`,
-    (url) => fetcher(url, accessToken)
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
 
-  if (error) {
-    return (
-      <Callout
-        className="mt-4"
-        title="Error"
-        icon={ExclamationCircleIcon}
-        color="rose"
-      >
-        Failed to load alerts
-      </Callout>
-    );
-  }
-  if (isLoading || !data) return <Loading />;
+  useEffect(() => {
+    if (data)
+      setAlerts((prevAlerts) => Array.from(new Set([...data, ...prevAlerts])));
+  }, [data]);
 
-  const environments = data
+  useEffect(() => {
+    if (tenantId) {
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
+        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
+        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
+          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
+          : undefined,
+        forceTLS: false,
+        disableStats: true,
+        enabledTransports: ["ws", "wss"],
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
+        channelAuthorization: {
+          transport: "ajax",
+          endpoint: `${getApiURL()}/pusher/auth`,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      });
+
+      const channelName = `private-${tenantId}`;
+      const channel = pusher.subscribe(channelName);
+
+      channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        const decompressedAlert = zlib.inflateSync(
+          Buffer.from(base64CompressedAlert, "base64")
+        );
+        const newAlerts = JSON.parse(
+          new TextDecoder().decode(decompressedAlert)
+        ) as Alert[];
+        setAlerts((prevAlerts) =>
+          Array.from(new Set([...prevAlerts, ...newAlerts]))
+        );
+      });
+
+      channel.bind("async-done", function (data: any) {
+        setIsAsyncLoading(false);
+      });
+
+      return () => {
+        pusher.unsubscribe(channelName);
+      };
+    } else {
+      // User doesn't have a tenant id, so they are not logged in
+      //  or they were logged in before we added the tenant id to the session.
+      router.push("/signin");
+    }
+  }, [tenantId, accessToken, router]);
+
+  if (isLoading) return <Loading slowLoading={isSlowLoading} />;
+
+  const environments = alerts
     .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
@@ -69,6 +132,12 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
       selectedEnvironments.length === 0
     );
   }
+
+  const onDelete = (fingerprint: string) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.filter((alert) => alert.fingerprint !== fingerprint)
+    );
+  };
 
   function searchAlert(alert: Alert): boolean {
     return (
@@ -83,14 +152,14 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
     );
   }
 
-  const statuses = data.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = alerts.map((alert) => alert.status).filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
   }
 
   return (
-    <>
+    <Card className="mt-10 p-4 md:p-10 mx-auto">
       <Flex justifyContent="between" alignItems="center">
         <div className="flex w-full">
           <MultiSelect
@@ -129,12 +198,18 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
           icon={ArrowPathIcon}
           color="orange"
           size="xs"
-          onClick={() => mutate()}
+          disabled={reloadLoading}
+          loading={reloadLoading}
+          onClick={async () => {
+            setReloadLoading(true);
+            await mutate();
+            setReloadLoading(false);
+          }}
           title="Refresh"
         ></Button>
       </Flex>
       <AlertTable
-        data={data
+        data={alerts
           .map((alert) => {
             alert.lastReceived = new Date(alert.lastReceived);
             return alert;
@@ -145,11 +220,13 @@ export default function Alerts({ accessToken }: { accessToken: string }) {
               statusIsSeleected(alert) &&
               searchAlert(alert)
           )}
-        groupBy="name"
+        groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
-        mutate={mutate}
+        mutate={() => mutate(null, { optimisticData: [] })}
+        isAsyncLoading={isAsyncLoading}
+        onDelete={onDelete}
       />
-    </>
+    </Card>
   );
 }

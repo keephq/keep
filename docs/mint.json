@@ -48,6 +48,7 @@
       "group": "Providers",
       "pages": [
         "providers/overview",
+        "providers/fingerprints",
         {
           "group": "Supported providers",
           "pages": [
@@ -68,6 +69,7 @@
             "providers/documentation/new-relic-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
+            "providers/documentation/pingdom-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/sentry-provider",
@@ -78,6 +80,7 @@
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/trello-provider",
+            "providers/documentation/twilio-provider",
             "providers/documentation/zenduty-provider",
             "providers/documentation/resend-provider",
             "providers/documentation/websocket-provider"
@@ -200,13 +203,42 @@
         {
           "group": "Commands",
           "pages": [
-            "cli/commands/cli",
+            {
+              "group": "keep alert",
+              "pages": [
+                "cli/commands/alert-enrich",
+                "cli/commands/alert-get",
+                "cli/commands/alert-list"
+              ]
+            },
+            {
+              "group": "keep provider",
+              "pages": [
+                "cli/commands/provider-connect",
+                "cli/commands/provider-delete",
+                "cli/commands/provider-list"
+              ]
+            },
+            {
+              "group": "keep workflow",
+              "pages": [
+                "cli/commands/workflow-apply",
+                "cli/commands/workflow-list",
+                "cli/commands/workflow-run",
+                {
+                  "group": "keep workflow runs",
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
+                }
+              ]
+            },
             "cli/commands/cli-api",
             "cli/commands/cli-config",
-            "cli/commands/cli-init",
-            "cli/commands/cli-run",
             "cli/commands/cli-version",
-            "cli/commands/cli-config-provider"
+            "cli/commands/cli-whoami"
+
           ]
         }
       ]

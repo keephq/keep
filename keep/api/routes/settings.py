@@ -260,3 +260,18 @@ class PatchedSMTP(smtplib.SMTP):
             self.log_stream.write(" ".join(str(arg) for arg in args) + "\n")
         else:
             super()._print_debug(*args)
+
+
+@router.get("/apikey")
+def get_api_key(
+    tenant_id: str = Depends(verify_bearer_token),
+    session: Session = Depends(get_session),
+):
+    # get the api key for the CLI
+    api_key = get_or_create_api_key(
+        session=session,
+        tenant_id=tenant_id,
+        unique_api_key_id="cli",
+        system_description="API API key",
+    )
+    return {"apiKey": api_key}

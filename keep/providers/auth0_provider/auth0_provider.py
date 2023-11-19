@@ -39,6 +39,8 @@ class Auth0ProviderAuthConfig:
 
 
 class Auth0Provider(BaseProvider):
+    """Enrich alerts with data from Auth0."""
+
     provider_id: str
     config: ProviderConfig
 
@@ -86,7 +88,7 @@ class Auth0Provider(BaseProvider):
         if from_:
             params[
                 "q"
-            ] = f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.utcnow().isoformat()}])"
+            ] = f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         logs = response.json()

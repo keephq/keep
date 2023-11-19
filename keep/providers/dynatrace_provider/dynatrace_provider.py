@@ -81,7 +81,7 @@ class DynatraceProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    def get_alerts(self, **kwargs) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from Dynatrace.
 
@@ -113,7 +113,7 @@ class DynatraceProvider(BaseProvider):
         self.logger.info("Validating dynatrace scopes")
         scopes = {}
         try:
-            problems = self.get_alerts()
+            self._get_alerts()
         except Exception as e:
             # wrong environment
             if "Not Found" in str(e):
@@ -151,7 +151,7 @@ class DynatraceProvider(BaseProvider):
         # check webhook scopes:
         # settings.read:
         try:
-            alerting_profiles = self._get_alerting_profiles()
+            self._get_alerting_profiles()
             self.logger.info(f"Validated dynatrace scopes - settings.read")
             scopes["settings.read"] = True
         except Exception as e:
@@ -205,7 +205,7 @@ class DynatraceProvider(BaseProvider):
                 name=event.get("ProblemTitle") or event.get("display"),
                 status=event.get("State"),
                 severity=event.get("ProblemSeverity", None),
-                lastReceived=datetime.datetime.utcnow().isoformat(),
+                lastReceived=datetime.datetime.now().isoformat(),
                 fatigueMeter=random.randint(0, 100),
                 description=event.get("ProblemTitle"),
                 source=["dynatrace"],
@@ -221,7 +221,7 @@ class DynatraceProvider(BaseProvider):
                 name=event.get("displayId"),
                 status=event.get("status"),
                 severity=event.get("severityLevel", None),
-                lastReceived=datetime.datetime.utcnow().isoformat(),
+                lastReceived=datetime.datetime.now().isoformat(),
                 fatigueMeter=random.randint(0, 100),
                 description=event.get("title"),
                 source=["dynatrace"],
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         provider_type="dynatrace",
         provider_config=config,
     )
-    problems = provider.get_alerts()
+    problems = provider._get_alerts()
     provider.setup_webhook(
         tenant_id=SINGLE_TENANT_UUID,
         keep_api_url=os.environ.get("KEEP_API_URL"),

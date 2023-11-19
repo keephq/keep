@@ -1,5 +1,5 @@
-
 import dataclasses
+
 import pydantic
 import requests
 
@@ -7,6 +7,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
 
 @pydantic.dataclasses.dataclass
 class MattermostProviderAuthConfig:
@@ -20,7 +21,10 @@ class MattermostProviderAuthConfig:
         }
     )
 
+
 class MattermostProvider(BaseProvider):
+    """send alert message to Mattermost."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -51,10 +55,7 @@ class MattermostProvider(BaseProvider):
         if not message:
             message = blocks[0].get("text")
         webhook_url = self.authentication_config.webhook_url
-        payload = {
-            "text": message,
-            "blocks": blocks
-        }
+        payload = {"text": message, "blocks": blocks}
         if channel:
             payload["channel"] = channel
 
@@ -66,6 +67,7 @@ class MattermostProvider(BaseProvider):
             )
 
         self.logger.debug("Alert message notified to Mattermost")
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -87,5 +89,7 @@ if __name__ == "__main__":
         description="Mattermost Output Provider",
         authentication={"webhook_url": mattermost_webhook_url},
     )
-    provider = MattermostProvider(context_manager, provider_id="mattermost", config=config)
+    provider = MattermostProvider(
+        context_manager, provider_id="mattermost", config=config
+    )
     provider.notify(message="Simple alert showing context with name: John Doe")

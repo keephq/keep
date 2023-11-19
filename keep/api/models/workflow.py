@@ -23,6 +23,7 @@ class ProviderDTO(BaseModel):
 
 class WorkflowDTO(BaseModel):
     id: str
+    name: str
     description: Optional[str] = "Workflow file doesn't contain description"
     created_by: str
     creation_time: datetime
@@ -32,6 +33,8 @@ class WorkflowDTO(BaseModel):
     last_execution_status: str = None
     providers: List[ProviderDTO]
     workflow_raw: str
+    revision: int = 1
+    last_updated: datetime = None
 
     @property
     def workflow_raw_id(self):
@@ -93,3 +96,4 @@ class WorkflowExecutionDTO(BaseModel):
 class WorkflowCreateOrUpdateDTO(BaseModel):
     workflow_id: str
     status: Literal["created", "updated"]
+    revision: int = 1

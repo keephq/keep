@@ -18,10 +18,12 @@ import Image from "next/image";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
+import { useRouter } from "next/navigation";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
+  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const { data: session, status } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
 
@@ -29,6 +31,11 @@ export const useFetchProviders = () => {
     shouldFetch ? `${getApiURL()}/providers` : null,
     (url) => {
       return fetcher(url, session?.accessToken!);
+    },
+    {
+      onLoadingSlow: () => setIsSlowLoading(true),
+      loadingTimeout: 5000,
+      revalidateOnFocus: false,
     }
   );
 
@@ -82,6 +89,7 @@ export const useFetchProviders = () => {
     status,
     error,
     session,
+    isSlowLoading,
   };
 };
 
@@ -97,9 +105,10 @@ export default function ProvidersPage({
     status,
     error,
     session,
+    isSlowLoading,
   } = useFetchProviders();
   const { searchProviderString } = useContext(LayoutContext);
-
+  const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
       const reason = JSON.parse(searchParams.reason);
@@ -117,8 +126,9 @@ export default function ProvidersPage({
   }, [session?.user]);
 
   if (status === "loading") return <Loading />;
-  if (status === "unauthenticated") return <div>Unauthenticated</div>;
-  if (!providers || !installedProviders) return <Loading />;
+  if (status === "unauthenticated") router.push("/signin");
+  if (!providers || !installedProviders || providers.length <= 0)
+    return <Loading slowLoading={isSlowLoading} />;
   if (error) {
     throw new KeepApiError(error.message, `${getApiURL()}/providers`);
   }
@@ -149,11 +159,7 @@ export default function ProvidersPage({
   };
 
   return (
-    <Suspense
-      fallback={
-        <Image src="/keep.gif" width={200} height={200} alt="Loading" />
-      }
-    >
+    <>
       <FrigadeAnnouncement
         flowId="flow_VpefBUPWpliWceBm"
         modalPosition="center"
@@ -180,6 +186,6 @@ export default function ProvidersPage({
         addProvider={addProvider}
         onDelete={deleteProvider}
       />
-    </Suspense>
+    </>
   );
 }

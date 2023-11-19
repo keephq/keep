@@ -29,7 +29,7 @@ class GithubProviderAuthConfig:
 
 class GithubProvider(BaseProvider):
     """
-    GithubProvider is a class that provides a way to read data from AWS Cloudwatch.
+    Enrich alerts with data from GitHub.
     """
 
     def __init__(

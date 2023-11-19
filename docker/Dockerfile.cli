@@ -1,4 +1,4 @@
-FROM python:slim as base
+FROM python:3.11.6-slim as base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \

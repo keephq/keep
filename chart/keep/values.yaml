@@ -17,6 +17,16 @@ backend:
       value: /state
     - name: DATABASE_CONNECTION_STRING
       value: mysql+pymysql://root@keep-database:3306/keep
+    - name: PUSHER_APP_ID
+      value: 1
+    - name: PUSHER_APP_KEY
+      value: keepappkey
+    - name: PUSHER_APP_SECRET
+      value: keepappsecret
+    - name: PUSHER_HOST
+      value: keep-websocket
+    - name: PUSHER_PORT
+      value: 6001
   openAiApi:
     enabled: false
     openAiApiKey: ""
@@ -65,6 +75,12 @@ frontend:
       value: development
     - name: HOSTNAME
       value: 0.0.0.0
+    - name: NEXT_PUBLIC_PUSHER_HOST
+      value: localhost
+    - name: NEXT_PUBLIC_PUSHER_PORT
+      value: 6001
+    - name: NEXT_PUBLIC_PUSHER_APP_KEY
+      value: "keepappkey"
   replicaCount: 1
   image:
     repository: us-central1-docker.pkg.dev/keephq/keep/keep-ui
@@ -81,6 +97,53 @@ frontend:
   service:
     type: ClusterIP
     port: 3000
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+  resources: {}
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+websocket:
+  enabled: true
+  env:
+    - name: SOKETI_USER_AUTHENTICATION_TIMEOUT
+      value: 3000
+    - name: SOKETI_DEFAULT_APP_ID
+      value: 1
+    - name: SOKETI_DEFAULT_APP_KEY
+      value: keepappkey
+    - name: SOKETI_DEFAULT_APP_SECRET
+      value: keepappsecret
+  replicaCount: 1
+  image:
+    repository: quay.io/soketi/soketi:1.4-16-debian
+    pullPolicy: Always
+    tag: "latest"
+  imagePullSecrets: []
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 6001
   ingress:
     enabled: false
     className: ""

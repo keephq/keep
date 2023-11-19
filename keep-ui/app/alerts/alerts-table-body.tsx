@@ -27,6 +27,8 @@ import { useRouter } from "next/navigation";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
 import { Provider } from "app/providers/providers";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface Props {
   data: Alert[];
@@ -36,6 +38,8 @@ interface Props {
   workflows?: Workflow[];
   providers?: Provider[];
   mutate?: () => void;
+  showSkeleton?: boolean;
+  onDelete?: (fingerprint: string) => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -49,6 +53,11 @@ const getSeverity = (severity: Severity | undefined) => {
       severityText = Severity.Critical.toString();
       break;
     case "high":
+      icon = ArrowUpRightIcon;
+      color = "orange";
+      severityText = Severity.High.toString();
+      break;
+    case "error":
       icon = ArrowUpRightIcon;
       color = "orange";
       severityText = Severity.High.toString();
@@ -88,7 +97,9 @@ export function AlertsTableBody({
   openModal,
   workflows,
   providers,
-  mutate
+  mutate,
+  showSkeleton = true,
+  onDelete,
 }: Props) {
   const router = useRouter();
   const getAlertLastReceieved = (alert: Alert) => {
@@ -114,7 +125,7 @@ export function AlertsTableBody({
     <TableBody>
       {data
         .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
-        .map((alert) => {
+        .map((alert, index) => {
           const extraPayloadNoKnownKeys = Object.keys(alert)
             .filter((key) => !AlertKnownKeys.includes(key))
             .reduce((obj, key) => {
@@ -147,7 +158,7 @@ export function AlertsTableBody({
               return workflowIsRelevant;
             }) ?? [];
           return (
-            <TableRow key={alert.id}>
+            <TableRow key={index}>
               {
                 <TableCell className="pb-9">
                   <AlertMenu
@@ -158,6 +169,7 @@ export function AlertsTableBody({
                       (p) => p.type === alert.source![0]
                     )}
                     mutate={mutate}
+                    callDelete={onDelete}
                   />
                 </TableCell>
               }
@@ -289,6 +301,38 @@ export function AlertsTableBody({
             </TableRow>
           );
         })}
+      {showSkeleton && (
+        <TableRow>
+          <TableCell></TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+          <TableCell>
+            <Skeleton />
+          </TableCell>
+        </TableRow>
+      )}
     </TableBody>
   );
 }

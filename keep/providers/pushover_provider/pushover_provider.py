@@ -26,6 +26,8 @@ class PushoverProviderAuthConfig:
 
 
 class PushoverProvider(BaseProvider):
+    """Send alert message to Pushover."""
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

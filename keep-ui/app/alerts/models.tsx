@@ -4,6 +4,7 @@ export enum Severity {
   Medium = "medium",
   Low = "low",
   Info = "info",
+  Error = "error",
 }
 
 export interface Alert {
@@ -23,6 +24,7 @@ export interface Alert {
   url?: string;
   pushed: boolean;
   generatorURL?: string;
+  fingerprint: string;
 }
 
 export const AlertKnownKeys = [

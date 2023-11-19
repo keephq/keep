@@ -43,6 +43,8 @@ class GkeProviderAuthConfig:
 
 
 class GkeProvider(BaseProvider):
+    """Enrich alerts with data from GKE."""
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="roles/container.viewer",

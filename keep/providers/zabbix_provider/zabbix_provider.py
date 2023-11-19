@@ -46,7 +46,7 @@ class ZabbixProviderAuthConfig:
 
 class ZabbixProvider(BaseProvider):
     """
-    Zabbix provider class.
+    Pull/Push alerts from Zabbix into Keep.
     """
 
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
@@ -277,9 +277,17 @@ class ZabbixProvider(BaseProvider):
             try:
                 self.__send_request(scope.name)
             except Exception as e:
-                error = e.args[0]["data"]
-                if "permission" in error or "not authorized" in error.lower():
-                    validated_scopes[scope.name] = e.args[0]["data"]
+                try:
+                    # This is a hack to check if the error is related to permissions
+                    error = e.args[0]["data"]
+                    # If we got here, it means it's an exception from Zabbix
+                    if "permission" in error or "not authorized" in error.lower():
+                        validated_scopes[scope.name] = e.args[0]["data"]
+                        continue
+                except:
+                    # Not zabbix-realted exception
+                    self.logger.exception("Error while validating scopes")
+                    validated_scopes[scope.name] = str(e)
                     continue
             validated_scopes[scope.name] = True
         return validated_scopes
@@ -318,7 +326,7 @@ class ZabbixProvider(BaseProvider):
             raise ProviderMethodException(response_json.get("error", {}).get("data"))
         return response_json
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
         problems = self.__send_request(
             "problem.get", {"recent": False, "selectSuppressionData": "extend"}
@@ -343,13 +351,14 @@ class ZabbixProvider(BaseProvider):
                     name=name,
                     status=status,
                     lastReceived=datetime.datetime.fromtimestamp(
-                        int(problem.get("clock")) + 10
+                        int(problem.get("clock"))
+                        + 10  # to override pushed problems, 10 is just random, could probably be 1
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
                     severity=self.__get_severity(problem.pop("severity")),
                     environment=environment,
-                    **problem,
+                    problem=problem,
                 )
             )
         return formatted_alerts
@@ -571,7 +580,7 @@ class ZabbixProvider(BaseProvider):
             source=["zabbix"],
             severity=severity,
             url=url,
-            **tags,
+            tags=tags,
         )
 
 

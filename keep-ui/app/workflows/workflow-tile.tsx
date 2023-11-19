@@ -27,12 +27,8 @@ import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "app/providers/page.client";
 import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
-import {
-  CheckBadgeIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline";
-import yaml from "js-yaml";
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
 
 function WorkflowMenuSection({
   onDelete,
@@ -362,11 +358,51 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         <Accordion className="mt-2.5">
           <AccordionHeader>
             <span className="mr-1">Triggers:</span>
-            {triggerTypes.map((t) => (
-              <Badge key={t} size="xs" color="orange">
-                {t}
-              </Badge>
-            ))}
+            {triggerTypes.map((t) => {
+              if (t === "alert") {
+                const handleImageError = (event: any) => {
+                  event.target.href.baseVal = "/icons/keep-icon.png";
+                };
+                const alertSource = workflow.triggers
+                  .find((w) => w.type === "alert")
+                  ?.filters?.find((f) => f.key === "source")?.value;
+                const DynamicIcon = (props: any) => (
+                  <svg
+                    width="24px"
+                    height="24px"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    {...props}
+                  >
+                    {" "}
+                    <image
+                      id="image0"
+                      width={"24"}
+                      height={"24"}
+                      href={`/icons/${alertSource}-icon.png`}
+                      onError={handleImageError}
+                    />
+                  </svg>
+                );
+                return (
+                  <Badge
+                    icon={DynamicIcon}
+                    key={t}
+                    size="xs"
+                    color="orange"
+                    title={`Source: ${alertSource}`}
+                  >
+                    {t}
+                  </Badge>
+                );
+              }
+              return (
+                <Badge key={t} size="xs" color="orange">
+                  {t}
+                </Badge>
+              );
+            })}
           </AccordionHeader>
           <AccordionBody>
             {workflow.triggers.length > 0 ? (

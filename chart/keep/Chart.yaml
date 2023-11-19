@@ -4,7 +4,7 @@ version: 0.0.1
 description: Keep Helm Chart
 type: application
 icon: https://platform.keephq.dev/_next/image?url=%2Fkeep.png&w=48&q=75
-appVersion: 0.1.0
+appVersion: 0.2.1
 deprecated: false
 annotations:
   app: keep
@@ -22,3 +22,6 @@ maintainers:
   - name: Shahar Glazner
     email: shahar@keephq.dev
     url: https://github.com/shahargl
+  - name: Tal Borenstein
+    email: tal@keephq.dev
+    url: https://github.com/talboren

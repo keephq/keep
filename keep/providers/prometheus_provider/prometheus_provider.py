@@ -4,6 +4,7 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 
 import dataclasses
 import os
+from datetime import datetime
 
 import pydantic
 import requests
@@ -41,6 +42,8 @@ class PrometheusProviderAuthConfig:
 
 
 class PrometheusProvider(BaseProvider):
+    """Get alerts from Prometheus into Keep."""
+
     webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
     webhook_template = """route:
   receiver: "keep"
@@ -102,7 +105,7 @@ receivers:
 
         return response.json()
 
-    def get_alerts(self) -> list[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         auth = None
         if self.authentication_config.username and self.authentication_config.password:
             auth = HTTPBasicAuth(
@@ -138,12 +141,13 @@ receivers:
                 name=alert_id,
                 description=description,
                 status=alert.pop("state", None) or alert.pop("status", None),
-                lastReceived=alert.pop("activeAt", None) or alert.pop("startsAt", None),
+                lastReceived=datetime.now().isoformat(),
+                environment=labels.pop("environment", "unknown"),
+                severity=labels.get("severity", "info"),
                 source=["prometheus"],
                 labels=labels,
-                **annotations,
                 annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
-                **alert,
+                payload=alert,
             )
             alert_dtos.append(alert_dto)
         return alert_dtos
