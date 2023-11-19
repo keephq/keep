@@ -1,29 +1,24 @@
 ---
 title: "New Relic"
 sidebarTitle: "New Relic Provider"
-description: "Template Provider is a template for newly added provider's documentation"
+description: "New Relic Provider enables querying AI alerts and registering webhooks."
 ---
 
 ## Inputs
 
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
-
-## Outputs
-
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
+- `account_id` (required): Account id of the new relic account.
 
 ## Authentication Parameters
-
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
+- `account_id` (required): Account id of the new relic account.
+- `api_key` (required): New Relic User key. To receive webhooks, use `User key` of an admin account.
+- `api_url` (required): API url to query from NRQL either US or EU based.
 
 ## Connecting with the Provider
 
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
-
-## Notes
-
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
+1. Go to https://one.newrelic.com/admin-portal/api-keys/home to create User Key.
+2. Get `api_key` and `account_id` from the key created.
+3. Based on region get `api_url` from here https://docs.newrelic.com/docs/apis/rest-api-v2/get-started/introduction-new-relic-rest-api-v2 .
 
 ## Useful Links
 
-_No information yet, feel free to contribute it using the "Edit this page" link the buttom of the page_
+- https://docs.newrelic.com/docs/apis/rest-api-v2/get-started/introduction-new-relic-rest-api-v2
