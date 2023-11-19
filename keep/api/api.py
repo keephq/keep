@@ -17,6 +17,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
+from keep.api.core.config import AuthenticationType
 from keep.api.core.db import create_db_and_tables, get_user, try_create_single_tenant
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
@@ -54,6 +55,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
+AUTH_TYPE = os.environ.get("AUTH_TYPE", "NO_AUTH")
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -111,7 +113,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_app(multi_tenant: bool = False) -> FastAPI:
+def get_app(auth_type: AuthenticationType = "NO_AUTH") -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
@@ -132,12 +134,6 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
         app.add_middleware(EventCaptureMiddleware)
     # app.add_middleware(GZipMiddleware)
 
-    multi_tenant = str(
-        multi_tenant if multi_tenant else os.environ.get("KEEP_MULTI_TENANT", "false")
-    )
-    # assign it to the environment variable so we can use it in settings route
-    os.environ["KEEP_MULTI_TENANT"] = multi_tenant
-
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
@@ -152,12 +148,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     app.include_router(status.router, prefix="/status", tags=["status"])
 
     # if its single tenant with authentication, add signin endpoint
-    logger.info(f"Multi tenant: {multi_tenant}")
-    logger.info(f"Use authentication: {os.environ.get('KEEP_USE_AUTHENTICATION')}")
+    logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
 
-    if (not multi_tenant or multi_tenant.lower() == "false") and os.environ.get(
-        "KEEP_USE_AUTHENTICATION", "false"
-    ) == "true":
+    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
 
         @app.post("/signin")
         def signin(body: dict):
@@ -207,8 +200,9 @@ def get_app(multi_tenant: bool = False) -> FastAPI:
     async def on_startup():
         if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
             create_db_and_tables()
-        if not multi_tenant or multi_tenant == "false":
-            # When running in single tenant mode, we want to override the secured endpoints
+
+        # When running in single tenant mode, we want to override the secured endpoints
+        if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
             app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
             app.dependency_overrides[
                 verify_bearer_token

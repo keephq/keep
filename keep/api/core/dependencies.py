@@ -241,6 +241,7 @@ def verify_token_or_key_single_tenant(
 
 
 def get_pusher_client() -> Pusher:
+    # TODO: defaults on open source no docker
     return Pusher(
         host=os.environ.get("PUSHER_HOST"),
         port=int(os.environ.get("PUSHER_PORT"))

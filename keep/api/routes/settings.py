@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
-from keep.api.core.config import config
+from keep.api.core.config import AuthenticationType, config
 from keep.api.core.db import create_user as create_user_in_db
 from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_session
@@ -53,7 +53,10 @@ def webhook_settings(
 
 @router.get("/users", description="Get all users")
 def get_users(tenant_id: str = Depends(verify_bearer_token)) -> list[User]:
-    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+        == AuthenticationType.MULTI_TENANT.value
+    ):
         return _get_users_auth0(tenant_id)
 
     return _get_users_db(tenant_id)
@@ -81,7 +84,10 @@ def _get_users_db(tenant_id: str) -> list[User]:
 
 @router.delete("/users/{user_email}", description="Delete a user")
 def delete_user(user_email: str, tenant_id: str = Depends(verify_bearer_token)):
-    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+        == AuthenticationType.MULTI_TENANT.value
+    ):
         return _delete_user_auth0(tenant_id)
 
     return _delete_user_db(user_email, tenant_id)
@@ -111,7 +117,10 @@ async def create_user(
     request: Request = None,
     tenant_id: str = Depends(verify_bearer_token),
 ):
-    if os.environ.get("KEEP_MULTI_TENANT", "true").lower() == "true":
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+        == AuthenticationType.MULTI_TENANT.value
+    ):
         return _create_user_auth0(user_email, tenant_id)
 
     data = await request.json()

@@ -2,9 +2,9 @@ import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
+import { AuthenticationType } from "utils/authenticationType";
 
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
-const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
+const authType = process.env.AUTH_TYPE as AuthenticationType;
 
 export const authOptions = {
   providers: [
@@ -38,8 +38,23 @@ export const authOptions = {
       session.tenantId = token.keep_tenant_id as string;
       return session;
     },
-  },
-} as AuthOptions;
+    async authorize({  req, token  }) {
+      const pathname = req.nextUrl.pathname;
+          if (pathname.endsWith("svg")) {
+            return true;
+          }
+
+          if (
+            token &&
+            (token.exp as number) >= Math.floor(new Date().getTime() / 1000)
+          ) {
+            return true;
+          }
+
+          return false;
+        },
+    },
+  } as AuthOptions;
 
 // for single tenant, we will user username/password authentication
 export const singleTenantAuthOptions = {
@@ -113,6 +128,21 @@ export const singleTenantAuthOptions = {
       session.tenantId = token.tenantId as string;
       return session;
     },
+    async authorize({  req, token  }) {
+      const pathname = req.nextUrl.pathname;
+          if (pathname.endsWith("svg")) {
+            return true;
+          }
+
+          if (
+            token &&
+            (token.exp as number) >= Math.floor(new Date().getTime() / 1000)
+          ) {
+            return true;
+          }
+
+          return false;
+        },
   },
 } as AuthOptions;
 
@@ -120,8 +150,8 @@ export const noAuthOptions = {
   providers: [],
 } as AuthOptions;
 
-export default isSingleTenant && !useAuthentication
+export default (authType == AuthenticationType.NO_AUTH)
   ? NextAuth(noAuthOptions)
-  : isSingleTenant
+  : (authType == AuthenticationType.SINGLE_TENANT)
   ? NextAuth(singleTenantAuthOptions)
   : NextAuth(authOptions);

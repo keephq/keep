@@ -25,9 +25,10 @@ interface Props {
   accessToken: string;
   currentUser?: AuthUser;
 }
-
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
-const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
+interface Config {
+  AUTH_ENABLED: string;
+  USE_AUTHENTICATION: string;
+}
 
 export default function UsersSettings({ accessToken, currentUser }: Props) {
   const apiUrl = getApiURL();
@@ -35,6 +36,12 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
     `${apiUrl}/settings/users`,
     (url) => fetcher(url, accessToken)
   );
+
+  const { data: configData } = useSWR<Config>('/api/config', fetcher);
+
+  // Determine runtime configuration
+  const isSingleTenant = configData?.AUTH_ENABLED === 'false';
+  const useAuthentication = configData?.USE_AUTHENTICATION === 'true';
 
   if (!data || isLoading) return <Loading />;
 
