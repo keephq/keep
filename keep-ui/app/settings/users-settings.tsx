@@ -20,14 +20,14 @@ import { User } from "./models";
 import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
+import { AuthenticationType } from 'utils/authenticationType';
 
 interface Props {
   accessToken: string;
   currentUser?: AuthUser;
 }
 interface Config {
-  AUTH_ENABLED: string;
-  USE_AUTHENTICATION: string;
+  AUTH_TYPE: string;
 }
 
 export default function UsersSettings({ accessToken, currentUser }: Props) {
@@ -40,15 +40,14 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
   const { data: configData } = useSWR<Config>('/api/config', fetcher);
 
   // Determine runtime configuration
-  const isSingleTenant = configData?.AUTH_ENABLED === 'false';
-  const useAuthentication = configData?.USE_AUTHENTICATION === 'true';
+  const authType = configData?.AUTH_TYPE;
 
   if (!data || isLoading) return <Loading />;
 
   async function addUser() {
     let email;
     let password;
-    if(isSingleTenant && useAuthentication){
+    if(authType == AuthenticationType.SINGLE_TENANT ){
       email = prompt("Enter the user name");
       password = prompt("Enter the user password");
     }

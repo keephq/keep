@@ -29,7 +29,6 @@ services:
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
       - OPENAI_API_KEY=$OPENAI_API_KEY
-      - KEEP_USE_AUTHENTICATION=true
       - KEEP_JWT_SECRET=keepjwtsecret
       - KEEP_DEFAULT_USERNAME=admin
       - KEEP_DEFAULT_PASSWORD=keep

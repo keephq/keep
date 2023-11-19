@@ -6,7 +6,7 @@ import { AuthenticationType } from "utils/authenticationType";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 
-export const authOptions = {
+export const multiTenantAuthOptions = {
   providers: [
     Auth0Provider({
       clientId: process.env.AUTH0_CLIENT_ID!,
@@ -18,6 +18,9 @@ export const authOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: "/signin",
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -37,23 +40,8 @@ export const authOptions = {
       session.accessToken = token.accessToken as string;
       session.tenantId = token.keep_tenant_id as string;
       return session;
-    },
-    async authorize({  req, token  }) {
-      const pathname = req.nextUrl.pathname;
-          if (pathname.endsWith("svg")) {
-            return true;
-          }
-
-          if (
-            token &&
-            (token.exp as number) >= Math.floor(new Date().getTime() / 1000)
-          ) {
-            return true;
-          }
-
-          return false;
-        },
-    },
+     }
+    }
   } as AuthOptions;
 
 // for single tenant, we will user username/password authentication
@@ -147,11 +135,40 @@ export const singleTenantAuthOptions = {
 } as AuthOptions;
 
 export const noAuthOptions = {
-  providers: [],
+  providers: [
+    CredentialsProvider({
+      name: 'NoAuth',
+      credentials: {},
+      async authorize(credentials, req) {
+        // Return a static user object with a predefined token
+        console.log("MOCKING AUTHENTICATION");
+        return {
+          id: 'static-user',
+          name: 'Static User',
+          email: 'static@example.com',
+          accessToken: '123', // Static token
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      // If the user object exists, set the static token
+      if (user) {
+        token.accessToken = user.accessToken;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      return session;
+    },
+  },
 } as AuthOptions;
 
-export default (authType == AuthenticationType.NO_AUTH)
-  ? NextAuth(noAuthOptions)
+console.log("authType: ", authType);
+export default (authType == AuthenticationType.MULTI_TENANT)
+  ? NextAuth(multiTenantAuthOptions)
   : (authType == AuthenticationType.SINGLE_TENANT)
   ? NextAuth(singleTenantAuthOptions)
-  : NextAuth(authOptions);
+  : NextAuth(noAuthOptions);
