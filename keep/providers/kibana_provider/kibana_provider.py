@@ -81,6 +81,20 @@ class KibanaProvider(BaseProvider):
     def request(
         self, method: Literal["GET", "POST", "PUT", "DELETE"], uri: str, **kwargs
     ) -> dict:
+        """
+        Make a request to Kibana. Adds the API key to the headers.
+
+
+        Args:
+            method (POST|GET|PUT|DELETE): The HTTP method
+            uri (str): The URI to request. This is relative to the Kibana host. (e.g. api/actions/connector)
+
+        Raises:
+            HTTPException: If the request fails
+
+        Returns:
+            dict: The response JSON
+        """
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"ApiKey {self.authentication_config.api_key}"
         headers["kbn-xsrf"] = "reporting"
@@ -100,6 +114,15 @@ class KibanaProvider(BaseProvider):
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
+        """
+        Setup the webhook for Kibana.
+
+        Args:
+            tenant_id (str): The tenant ID
+            keep_api_url (str): The URL of the Keep API
+            api_key (str): The API key of the Keep API
+            setup_alerts (bool, optional): Whether to setup alerts or not. Defaults to True.
+        """
         self.logger.info("Setting up webhook")
         # First get all existing connectors and check if we're already installed:
         connectors = self.request("GET", "api/actions/connectors")
@@ -224,6 +247,15 @@ class KibanaProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+        """
+        Formats an alert from Kibana to a standard format.
+
+        Args:
+            event (dict): The event from Kibana
+
+        Returns:
+            AlertDto | list[AlertDto]: The alert in a standard format
+        """
         labels = {
             v.split("=", 1)[0]: v.split("=", 1)[1]
             for v in event.get("ruleTags", "").split(",")
