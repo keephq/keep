@@ -2,6 +2,7 @@
 Kibana provider.
 """
 import dataclasses
+import json
 import uuid
 from typing import Literal
 
@@ -43,32 +44,34 @@ class KibanaProvider(BaseProvider):
     """Enrich alerts with data from Kibana."""
 
     DEFAULT_TIMEOUT = 10
-    WEBHOOK_PAYLOAD = {
-        "actionGroup": "{{alert.actionGroup}}",
-        "status": "{{alert.actionGroupName}}",
-        "actionSubgroup": "{{alert.actionSubgroup}}",
-        "isFlapping": "{{alert.flapping}}",
-        "id": "{{alert.id}}",
-        "fingerprint": "{{alert.id}}",
-        "url": "{{context.alertDetailsUrl}}",
-        "context.cloud": "{{context.cloud}}",
-        "context.container": "{{context.container}}",
-        "context.group": "{{context.group}}",
-        "context.host": "{{context.host}}",
-        "context.labels": "{{context.labels}}",
-        "context.orchestrator": "{{context.orchestrator}}",
-        "description": "{{context.reason}}",
-        "contextTags": "{{context.tags}}",
-        "context.timestamp": "{{context.timestamp}}",
-        "context.value": "{{context.value}}",
-        "lastReceived": "{{date}}",
-        "ruleId": "{{rule.id}}",
-        "rule.spaceId": "{{rule.spaceId}}",
-        "ruleUrl": "{{rule.url}}",
-        "ruleTags": "{{rule.tags}}",
-        "name": "{{rule.name}}",
-        "rule.type": "{{rule.type}}",
-    }
+    WEBHOOK_PAYLOAD = json.dumps(
+        {
+            "actionGroup": "{{alert.actionGroup}}",
+            "status": "{{alert.actionGroupName}}",
+            "actionSubgroup": "{{alert.actionSubgroup}}",
+            "isFlapping": "{{alert.flapping}}",
+            "id": "{{alert.id}}",
+            "fingerprint": "{{alert.id}}",
+            "url": "{{context.alertDetailsUrl}}",
+            "context.cloud": "{{context.cloud}}",
+            "context.container": "{{context.container}}",
+            "context.group": "{{context.group}}",
+            "context.host": "{{context.host}}",
+            "context.labels": "{{context.labels}}",
+            "context.orchestrator": "{{context.orchestrator}}",
+            "description": "{{context.reason}}",
+            "contextTags": "{{context.tags}}",
+            "context.timestamp": "{{context.timestamp}}",
+            "context.value": "{{context.value}}",
+            "lastReceived": "{{date}}",
+            "ruleId": "{{rule.id}}",
+            "rule.spaceId": "{{rule.spaceId}}",
+            "ruleUrl": "{{rule.url}}",
+            "ruleTags": "{{rule.tags}}",
+            "name": "{{rule.name}}",
+            "rule.type": "{{rule.type}}",
+        }
+    )
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
