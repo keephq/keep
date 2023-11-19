@@ -1,5 +1,5 @@
 """
-Elasticsearch provider.
+Kibana provider.
 """
 import dataclasses
 import uuid
@@ -18,7 +18,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 @pydantic.dataclasses.dataclass
 class KibanaProviderAuthConfig:
-    """Elasticsearch authentication configuration."""
+    """Kibana authentication configuration."""
 
     api_key: str = dataclasses.field(
         metadata={
@@ -40,7 +40,7 @@ class KibanaProviderAuthConfig:
 
 
 class KibanaProvider(BaseProvider):
-    """Enrich alerts with data from Elasticsearch."""
+    """Enrich alerts with data from Kibana."""
 
     DEFAULT_TIMEOUT = 10
     WEBHOOK_PAYLOAD = {
@@ -233,7 +233,7 @@ class KibanaProvider(BaseProvider):
         )
         environment = labels.get("environment", "undefined")
         return AlertDto(
-            environment=environment, labels=labels, source=["elastic"], **event
+            environment=environment, labels=labels, source=["kibana"], **event
         )
 
 
