@@ -4,7 +4,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_AUTH_ENABLED=false
+      - AUTH_TYPE=NO_AUTH
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
       - API_URL=http://keep-backend:8080
@@ -24,6 +24,7 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
+      - AUTH_TYPE=NO_AUTH
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
       - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False

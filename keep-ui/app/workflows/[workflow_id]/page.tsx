@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import React, { useState } from "react";
 import { getApiURL } from "../../../utils/apiUrl";
-import { useSession } from "../../../utils/customAuth";
+import { useSession } from "next-auth/react";;
 import useSWR from "swr";
 import { fetcher } from "../../../utils/fetcher";
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react"
 import Loading from "../loading";
 import Alerts from "./alerts";
 

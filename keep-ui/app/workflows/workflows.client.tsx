@@ -8,7 +8,7 @@ import {
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react"
 import { fetcher } from "../../utils/fetcher";
 import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";

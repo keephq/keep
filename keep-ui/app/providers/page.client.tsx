@@ -6,7 +6,7 @@ import {
   Provider,
   ProvidersResponse,
 } from "./providers";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react"
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";

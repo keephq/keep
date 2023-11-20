@@ -5,7 +5,6 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - NEXT_PUBLIC_AUTH_ENABLED=false
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_API_URL=http://localhost:8080
