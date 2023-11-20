@@ -13,7 +13,7 @@ from fastapi import HTTPException
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -73,10 +73,96 @@ class KibanaProvider(BaseProvider):
         }
     )
 
+    # Mock payloads for validating scopes
+    MOCK_ALERT_PAYLOAD = {
+        "name": "keep-test-alert",
+        "schedule": {"interval": "1m"},
+        "rule_type_id": "observability.rules.custom_threshold",
+        "consumer": "logs",
+        "enabled": False,
+        "params": {
+            "criteria": [],
+            "searchConfiguration": {
+                "query": {"query": "*", "language": "kuery"},
+                "index": "",
+            },
+        },
+    }
+    MOCK_CONNECTOR_PAYLOAD = {
+        "name": "keep-test-connector",
+        "config": {
+            "hasAuth": False,
+            "method": "post",
+            "url": "https://api.keephq.dev",
+            "authType": False,
+            "headers": {},
+        },
+        "secrets": {},
+        "connector_type_id": ".webhook",
+    }
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="rulesSettings:read",
+            description="Read alerts",
+            mandatory=True,
+            alias="Read Alerts",
+        ),
+        ProviderScope(
+            name="rulesSettings:write",
+            description="Modify alerts",
+            mandatory=True,
+            alias="Modify Alerts",
+        ),
+        ProviderScope(
+            name="actions:read",
+            description="Read connectors",
+            mandatory=True,
+            alias="Read Connectors",
+        ),
+        ProviderScope(
+            name="actions:write",
+            description="Write connectors",
+            mandatory=True,
+            alias="Write Connectors",
+        ),
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {}
+        for scope in self.PROVIDER_SCOPES:
+            try:
+                if scope.name == "rulesSettings:read":
+                    self.request(
+                        "GET", "api/alerting/rules/_find", params={"per_page": 1}
+                    )
+                elif scope.name == "rulesSettings:write":
+                    alert = self.request(
+                        "POST", "api/alerting/rule", json=self.MOCK_ALERT_PAYLOAD
+                    )
+                    self.request("DELETE", f"api/alerting/rule/{alert['id']}")
+                elif scope.name == "actions:read":
+                    self.request("GET", "api/actions/connectors")
+                elif scope.name == "actions:write":
+                    connector = self.request(
+                        "POST",
+                        "api/actions/connector",
+                        json=self.MOCK_CONNECTOR_PAYLOAD,
+                    )
+                    self.request("DELETE", f"api/actions/connector/{connector['id']}")
+            except HTTPException as e:
+                if e.status_code == 403 or e.status_code == 401:
+                    validated_scopes[scope.name] = e.detail
+                pass
+            except Exception as e:
+                validated_scopes[scope.name] = str(e)
+            validated_scopes[scope.name] = True
+        return validated_scopes
 
     def request(
         self, method: Literal["GET", "POST", "PUT", "DELETE"], uri: str, **kwargs
@@ -109,7 +195,10 @@ class KibanaProvider(BaseProvider):
                 response_json.get("statusCode", 404),
                 detail=response_json.get("message"),
             )
-        return response.json()
+        try:
+            return response.json()
+        except requests.JSONDecodeError:
+            return {}
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -177,14 +266,14 @@ class KibanaProvider(BaseProvider):
 
         # Now we need to update all the alerts and add actions that use this connector
         self.logger.info("Updating alerts")
-        alerts = self.request(
+        alert_rules = self.request(
             "GET",
             "api/alerting/rules/_find",
             params={"per_page": 1000},  # TODO: pagination
         )
-        for alert in alerts.get("data", []):
-            self.logger.info(f"Updating alert {alert['id']}")
-            alert_actions = alert.get("actions") or []
+        for alert_rule in alert_rules.get("data", []):
+            self.logger.info(f"Updating alert {alert_rule['id']}")
+            alert_actions = alert_rule.get("actions") or []
             keep_action_exists = any(
                 iter(
                     [
@@ -196,7 +285,7 @@ class KibanaProvider(BaseProvider):
             )
             if keep_action_exists:
                 # This alert was already modified by us / manually added
-                self.logger.info(f"Alert {alert['id']} already updated, skipping")
+                self.logger.info(f"Alert {alert_rule['id']} already updated, skipping")
                 continue
             for status in ["Alert", "Recovered", "No Data"]:
                 alert_actions.append(
@@ -219,19 +308,20 @@ class KibanaProvider(BaseProvider):
             try:
                 self.request(
                     "PUT",
-                    f"api/alerting/rule/{alert['id']}",
+                    f"api/alerting/rule/{alert_rule['id']}",
                     json={
                         "actions": alert_actions,
-                        "name": alert["name"],
-                        "tags": alert["tags"],
-                        "schedule": alert["schedule"],
-                        "params": alert["params"],
+                        "name": alert_rule["name"],
+                        "tags": alert_rule["tags"],
+                        "schedule": alert_rule["schedule"],
+                        "params": alert_rule["params"],
                     },
                 )
-                self.logger.info(f"Updated alert {alert['id']}")
+                self.logger.info(f"Updated alert {alert_rule['id']}")
             except HTTPException as e:
                 self.logger.warning(
-                    f"Failed to update alert {alert['id']}", extra={"error": e.detail}
+                    f"Failed to update alert {alert_rule['id']}",
+                    extra={"error": e.detail},
                 )
         self.logger.info("Done updating alerts")
         self.logger.info("Done setting up webhook")
@@ -300,5 +390,5 @@ if __name__ == "__main__":
         provider_type="kibana",
         provider_config=config,
     )
-    result = provider.setup_webhook()
+    result = provider.validate_scopes()
     print(result)
