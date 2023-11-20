@@ -654,6 +654,8 @@ def install_provider_webhook(
 
     try:
         provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
