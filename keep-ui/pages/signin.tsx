@@ -7,16 +7,13 @@ interface Providers {
     name: string;
     type: string;
     signinUrl: string;
-    // ... other properties
   };
   credentials?: {
     // Similarly define for credentials provider
     name: string;
     type: string;
     signinUrl: string;
-    // ... other properties
   };
-  // ... define other providers as needed
 }
 
 export default function SignIn() {

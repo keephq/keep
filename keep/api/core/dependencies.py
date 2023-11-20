@@ -17,6 +17,7 @@ from pusher import Pusher
 from sqlmodel import Session, select
 from starlette_context import context
 
+from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_api_key, get_session
 from keep.api.models.db.tenant import TenantApiKey
 
@@ -154,7 +155,10 @@ def get_user_email_single_tenant(request: Request) -> str:
 
 def verify_bearer_token_single_tenant(token: str = Depends(oauth2_scheme)) -> str:
     # if we don't want to use authentication, return the single tenant id
-    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        == AuthenticationType.NO_AUTH.value
+    ):
         return SINGLE_TENANT_UUID
 
     # else, validate the token
@@ -181,7 +185,10 @@ def verify_api_key_single_tenant(
     session: Session = Depends(get_session),
 ) -> str:
     # if we don't want to use authentication, return the single tenant id
-    if os.environ.get("KEEP_USE_AUTHENTICATION", "false") == "false":
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        == AuthenticationType.NO_AUTH.value
+    ):
         return SINGLE_TENANT_UUID
 
     tenant_api_key = get_api_key(api_key)

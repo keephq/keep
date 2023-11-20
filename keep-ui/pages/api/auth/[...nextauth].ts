@@ -5,7 +5,20 @@ import { getApiURL } from "utils/apiUrl";
 import { AuthenticationType } from "utils/authenticationType";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
+/*
 
+This file implements three different authentication flows:
+1. Multi-tenant authentication using Auth0
+2. Single-tenant authentication using username/password
+3. No authentication
+
+Depends on authType which can be NO_AUTH, SINGLE_TENANT or MULTI_TENANT
+Note that the same environment variable should be set in the backend too.
+
+*/
+
+
+// multi tenant authentication using Auth0
 export const multiTenantAuthOptions = {
   providers: [
     Auth0Provider({
@@ -20,7 +33,7 @@ export const multiTenantAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: "/signin",
+    signIn: '/signin',
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -44,7 +57,7 @@ export const multiTenantAuthOptions = {
     }
   } as AuthOptions;
 
-// for single tenant, we will user username/password authentication
+// Single tenant authentication using username/password
 export const singleTenantAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -134,6 +147,8 @@ export const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
+
+// No authentication
 export const noAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -141,12 +156,11 @@ export const noAuthOptions = {
       credentials: {},
       async authorize(credentials, req) {
         // Return a static user object with a predefined token
-        console.log("MOCKING AUTHENTICATION");
         return {
-          id: 'static-user',
-          name: 'Static User',
-          email: 'static@example.com',
-          accessToken: '123', // Static token
+          id: 'keep-user-no-auth',
+          name: 'Keep',
+          email: 'keep@example.com',
+          accessToken: 'keeptoken', // Static token
         };
       },
     }),
@@ -164,9 +178,12 @@ export const noAuthOptions = {
       return session;
     },
   },
+  pages: {
+    signIn: '/signin',
+  },
 } as AuthOptions;
 
-console.log("authType: ", authType);
+console.log("Starting Keep frontend with auth type: ", authType);
 export default (authType == AuthenticationType.MULTI_TENANT)
   ? NextAuth(multiTenantAuthOptions)
   : (authType == AuthenticationType.SINGLE_TENANT)

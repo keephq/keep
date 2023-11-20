@@ -11,10 +11,6 @@ import {
   NextApiRequest,
   NextApiResponse,
 } from "next";
-import { AuthenticationType } from 'utils/authenticationType';
-
-// Set to true if you want to use "single tenant" mode
-const authType = process.env.AUTHENTICATION_TYPE as AuthenticationType;
 
 type UpdateSession = (data?: any) => Promise<Session | null>;
 
@@ -30,22 +26,6 @@ type GetServerSessionParams<O extends GetServerSessionOptions> =
   | [O]
   | [];
 
-function useCustomSession() {
-  // Modify the session object or perform additional logic specific to "single tenant" mode
-  // Here's an example where we add a custom property to the session object
-  const modifiedSession = {
-    data: {
-      accessToken: "123",
-      tenantId: "keep",
-    } as Session,
-    status: "authenticated" as "authenticated",
-    update: null as unknown as UpdateSession,
-    user: undefined,
-    accessToken: "123",
-  };
-
-  return modifiedSession;
-}
 
 export async function getServerSession<
   O extends GetServerSessionOptions,
@@ -53,13 +33,6 @@ export async function getServerSession<
     ? U
     : Session
 >(...args: GetServerSessionParams<O>): Promise<R | null> {
-  if (authType == AuthenticationType.NO_AUTH) {
-    // Return a modified session object or perform any additional logic
-    // specific to "single tenant" mode
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useCustomSession() as R;
-  }
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useNextGetServerSession(...args);
 }
@@ -67,13 +40,6 @@ export async function getServerSession<
 export function useSession<R extends boolean>(
   options?: UseSessionOptions<R>
 ): SessionContextValue {
-  if (authType == AuthenticationType.NO_AUTH) {
-    // Return a modified session object or perform any additional logic
-    // specific to "single tenant" mode
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useCustomSession();
-  }
-
   let session;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -86,17 +52,11 @@ export function useSession<R extends boolean>(
       data: null,
     };
   }
-
   // Return the original session object as is
   return session;
 }
 
 export function getSession(params?: any) {
-  if (authType == AuthenticationType.NO_AUTH) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return Promise.resolve(useCustomSession());
-  }
-
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const session = useGetSession(params);
   return session;

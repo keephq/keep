@@ -117,6 +117,7 @@ def get_app(auth_type: AuthenticationType = "NO_AUTH") -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
+
     app = FastAPI(
         title="Keep API",
         description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
@@ -149,7 +150,7 @@ def get_app(auth_type: AuthenticationType = "NO_AUTH") -> FastAPI:
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
-
+    # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
     if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
 
         @app.post("/signin")
@@ -201,7 +202,7 @@ def get_app(auth_type: AuthenticationType = "NO_AUTH") -> FastAPI:
         if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
             create_db_and_tables()
 
-        # When running in single tenant mode, we want to override the secured endpoints
+        # When running in mode other than multi tenant auth, we want to override the secured endpoints
         if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
             app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
             app.dependency_overrides[

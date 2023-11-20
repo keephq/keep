@@ -10,6 +10,6 @@ config = Config(BASE_DIR / ".env")
 
 
 class AuthenticationType(Enum):
-    MULTI_TENANT = ("MULTI_TENANT",)  # Default
-    SINGLE_TENANT = ("SINGLE_TENANT",)
+    MULTI_TENANT = "MULTI_TENANT"
+    SINGLE_TENANT = "SINGLE_TENANT"
     NO_AUTH = "NO_AUTH"
