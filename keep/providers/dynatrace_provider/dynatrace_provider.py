@@ -198,11 +198,19 @@ class DynatraceProvider(BaseProvider):
     def format_alert(event: dict) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
-            tags = event.get("tags", [])
+            tags = event.get("Tags", [])
             impacted_entities = event.get("ImpactedEntities", [])
+            problem_details_json = event.get("ProblemDetailsJSON", {})
+            problem_details_jsonv2 = event.get("ProblemDetailsJSONv2", {})
+            problem_details_text = event.get("ProblemDetailsText", "")
+            impacted_entity_names = event.get("ImpactedEntityNames", [])
+            impacted_entity = event.get("ImpactedEntity", "")
+            pid = event.get("PID", "")
+            names_of_impacted_entities = event.get("NamesOfImpactedEntities", "")
+
             alert_dto = AlertDto(
-                id=event.get("ProblemID") or event.get("problemId"),
-                name=event.get("ProblemTitle") or event.get("display"),
+                id=event.get("ProblemID"),
+                name=event.get("ProblemTitle"),
                 status=event.get("State"),
                 severity=event.get("ProblemSeverity", None),
                 lastReceived=datetime.datetime.now().isoformat(),
@@ -213,22 +221,39 @@ class DynatraceProvider(BaseProvider):
                 tags=tags,
                 impactedEntities=impacted_entities,
                 url=event.get("ProblemURL"),
+                problem_details_json=problem_details_json,
+                problem_details_jsonv2=problem_details_jsonv2,
+                problem_details_text=problem_details_text,
+                impacted_entity_names=impacted_entity_names,
+                impacted_entity=impacted_entity,
+                pid=pid,
+                names_of_impacted_entities=names_of_impacted_entities,
             )
         # else, problem from the problem API
         else:
+            alert_id = event.pop("problemId")
+            name = event.pop("displayId")
+            status = event.pop("status")
+            severity = event.pop("severityLevel", None)
+            description = event.pop("title")
+            impact = event.pop("impactLevel")
+            tags = event.pop("entityTags")
+            impacted_entities = event.pop("impactedEntities", [])
+            url = event.pop("ProblemURL")
             alert_dto = AlertDto(
-                id=event.get("problemId"),
-                name=event.get("displayId"),
-                status=event.get("status"),
-                severity=event.get("severityLevel", None),
+                id=id,
+                name=name,
+                status=status,
+                severity=severity,
                 lastReceived=datetime.datetime.now().isoformat(),
                 fatigueMeter=random.randint(0, 100),
-                description=event.get("title"),
+                description=description,
                 source=["dynatrace"],
-                impact=event.get("impactLevel"),
-                tags=event.get("entityTags"),
-                impactedEntities=event.get("impactedEntities", []),
-                url=event.get("ProblemURL"),
+                impact=impact,
+                tags=tags,
+                impactedEntities=impacted_entities,
+                url=url,
+                **event,  # any other field
             )
         return alert_dto
 
@@ -309,7 +334,7 @@ class DynatraceProvider(BaseProvider):
                 "notifyClosedProblems": True,
                 "notifyEventMergesEnabled": True,
                 # all the fields - https://docs.dynatrace.com/docs/observe-and-explore/notifications-and-alerting/problem-notifications/webhook-integration#example-json-with-placeholders
-                "payload": '{\n"State":"{State}",\n"ProblemID":"{ProblemID}",\n"ProblemTitle":"{ProblemTitle}",\n"ImpactedEntities": {ImpactedEntities},\n "PID": "{PID}",\n "ProblemDetailsJSON": {ProblemDetailsJSON},\n "ProblemImpact" : "{ProblemImpact}",\n"ProblemSeverity": "{ProblemSeverity}",\n "ProblemURL": "{ProblemURL}",\n"State": "{State}",\n"Tags": "{Tags}"\n\n}',
+                "payload": '{\n"State":"{State}",\n"ProblemID":"{ProblemID}",\n"ProblemTitle":"{ProblemTitle}",\n"ImpactedEntities": {ImpactedEntities},\n "PID": "{PID}",\n "ProblemDetailsJSON": {ProblemDetailsJSON},\n "ProblemImpact" : "{ProblemImpact}",\n"ProblemSeverity": "{ProblemSeverity}",\n "ProblemURL": "{ProblemURL}",\n"State": "{State}",\n"Tags": "{Tags}"\n"ProblemDetails": "{ProblemDetailsText}"\n"NamesOfImpactedEntities": "{NamesOfImpactedEntities}"\n"ImpactedEntity": "{ImpactedEntity}"\n"ImpactedEntityNames": "{ImpactedEntityNames}"\n"ProblemDetailsJSONv2": {ProblemDetailsJSONv2}\n\n}',
             },
         }
         actual_payload = [
