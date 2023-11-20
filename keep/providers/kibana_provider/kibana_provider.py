@@ -2,6 +2,7 @@
 Kibana provider.
 """
 import dataclasses
+import datetime
 import json
 import uuid
 from typing import Literal
@@ -132,6 +133,27 @@ class KibanaProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes) -> bytes:
+        """
+        Parse the raw body of an event from Kibana Watcher.
+        This method simply tries to remove the wrapping from the raw body, in case it is coming from Kibana Watcher
+
+        Args:
+            raw_body (bytes): The raw body as received from Kibana
+
+        Returns:
+            bytes: The parsed raw body
+        """
+        decoded_raw_body = raw_body.decode()
+        if not decoded_raw_body.startswith('{\n  "payload": '):
+            return raw_body
+        return (
+            decoded_raw_body.replace('"\n}', "")
+            .replace('{\n  "payload": "', "")
+            .encode()
+        )
 
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
@@ -336,6 +358,23 @@ class KibanaProvider(BaseProvider):
         pass
 
     @staticmethod
+    def format_alert_from_watcher(event: dict) -> AlertDto | list[AlertDto]:
+        alert_id = event.pop("id")
+        alert_name = event.get("metadata", {}).get("name")
+        last_received = event.get("trigger", {}).get(
+            "triggered_time", datetime.datetime.now().isoformat()
+        )
+        return AlertDto(
+            id=alert_id,
+            name=alert_name,
+            fingerprint=event.get("watch_id", alert_id),
+            status="Alert",
+            lastReceived=last_received,
+            source=["kibana"],
+            **event,
+        )
+
+    @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
         """
         Formats an alert from Kibana to a standard format.
@@ -346,6 +385,11 @@ class KibanaProvider(BaseProvider):
         Returns:
             AlertDto | list[AlertDto]: The alert in a standard format
         """
+
+        # If this is coming from Kibana Watcher
+        if "watch_id" in event:
+            return KibanaProvider.format_alert_from_watcher(event)
+
         labels = {
             v.split("=", 1)[0]: v.split("=", 1)[1]
             for v in event.get("ruleTags", "").split(",")
