@@ -4,6 +4,21 @@ sidebarTitle: "Kibana Provider"
 description: "Kibana provider allows you get alerts from Kibana Alerting via webhooks."
 ---
 
+<Card
+  title="Kibana Webhooks"
+  icon="lightbulb"
+  iconType="duotone"
+  color="#ca8b04"
+>
+  Please note that when installing Kibana with Webhook auto instrumentation,
+  Keep installs itself as a Connector, adds itself as an Action to all available
+  Kibana Alert Rules (For each alert, On status changes, when: Alert/No
+  Data/Recovered) and to all available Kibana Watcher rules as a Webhook action.
+
+For more information, feel free to reach out on our Slack Community.
+
+</Card>
+
 ## Inputs
 
 _No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
@@ -38,31 +53,8 @@ To obtain a Kibana API key, follow these steps:
 
 1. Click on the top right `Create API key` button
 2. Give the API key and indicative name (e.g. keep-api-key)
-3. Toggle `Restrict privileges`
-4. Delete the contents of the payload and paste the following:
-
-```json
-{
-  "keep_role": {
-    "cluster": [
-      "all"
-    ],
-    "applications": [
-      {
-        "application": "kibana-.kibana",
-        "privileges": [
-          "all"
-        ],
-        "resources": [
-          "*"
-        ]
-      }
-    ]
-  }
-}
-```
-
-5. On the bottom right corner, click on `Create API key`
+3. Make sure the `Restrict Permissions` toggle is not toggeled
+4. On the bottom right corner, click on `Create API key`
 
 <img src="/images/kibana/create-api-key.png" alt="Create Kibana API Key" />
 

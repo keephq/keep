@@ -6,6 +6,7 @@ import datetime
 import json
 import uuid
 from typing import Literal
+from urllib.parse import urlparse
 
 import pydantic
 import requests
@@ -134,28 +135,13 @@ class KibanaProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
-    @staticmethod
-    def parse_event_raw_body(raw_body: bytes) -> bytes:
+    def validate_scopes(self) -> dict[str, bool | str]:
         """
-        Parse the raw body of an event from Kibana Watcher.
-        This method simply tries to remove the wrapping from the raw body, in case it is coming from Kibana Watcher
-
-        Args:
-            raw_body (bytes): The raw body as received from Kibana
+        Validate the scopes of the provider.
 
         Returns:
-            bytes: The parsed raw body
+            dict[str, bool | str]: A dictionary of scopes and whether they are valid or not
         """
-        decoded_raw_body = raw_body.decode()
-        if not decoded_raw_body.startswith('{\n  "payload": '):
-            return raw_body
-        return (
-            decoded_raw_body.replace('"\n}', "")
-            .replace('{\n  "payload": "', "")
-            .encode()
-        )
-
-    def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
         for scope in self.PROVIDER_SCOPES:
             try:
@@ -222,19 +208,15 @@ class KibanaProvider(BaseProvider):
         except requests.JSONDecodeError:
             return {}
 
-    def setup_webhook(
-        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
-    ):
+    def __setup_webhook_alerts(self, tenant_id: str, keep_api_url: str, api_key: str):
         """
-        Setup the webhook for Kibana.
+        Setup the webhook alerts for Kibana Alerting.
 
         Args:
             tenant_id (str): The tenant ID
             keep_api_url (str): The URL of the Keep API
             api_key (str): The API key of the Keep API
-            setup_alerts (bool, optional): Whether to setup alerts or not. Defaults to True.
         """
-        self.logger.info("Setting up webhook")
         # First get all existing connectors and check if we're already installed:
         connectors = self.request("GET", "api/actions/connectors")
         connector_name = f"keep-{tenant_id}"
@@ -346,7 +328,81 @@ class KibanaProvider(BaseProvider):
                     extra={"error": e.detail},
                 )
         self.logger.info("Done updating alerts")
-        self.logger.info("Done setting up webhook")
+
+    def __setup_watcher_alerts(self, tenant_id: str, keep_api_url: str, api_key: str):
+        """
+        Setup the webhook alerts for Kibana Watcher.
+
+        Args:
+            tenant_id (str): The tenant ID
+            keep_api_url (str): The URL of the Keep API
+            api_key (str): The API key of the Keep API
+        """
+        parsed_keep_url = urlparse(keep_api_url)
+        keep_host = parsed_keep_url.netloc
+        keep_port = 80 if "localhost" in keep_host else 443
+        self.logger.info("Getting and updating all watches")
+        watches = self.request(
+            "POST", "api/console/proxy?path=%2F_watcher%2F_query%2Fwatches&method=GET"
+        )
+        for watch in watches.get("watches", []):
+            watch_id = watch.get("_id")
+            self.logger.info(f"Handling watch with id {watch_id}")
+            watch = self.request(
+                "POST",
+                f"api/console/proxy?path=%2F_watcher%2Fwatch%2F{watch_id}&method=GET",
+            ).get("watch")
+            actions = watch.get("actions", {})
+            actions[f"keep-{tenant_id}"] = {
+                "webhook": {
+                    "scheme": "https" if keep_port == 443 else "http",
+                    "host": keep_host,
+                    "port": keep_port,
+                    "method": "post",
+                    "path": f"{parsed_keep_url.path}",
+                    "params": {},
+                    "headers": {},
+                    "auth": {"basic": {"username": "keep", "password": api_key}},
+                    "body": '{"payload": {{#toJson}}ctx{{/toJson}}, "status": "Alert"}',
+                }
+            }
+            self.request(
+                "POST",
+                f"api/console/proxy?path=%2F_watcher%2Fwatch%2F{watch_id}&method=PUT",
+                json={**watch},
+            )
+            self.logger.info(f"Finished handling watch with id {watch_id}")
+        self.logger.info("Done getting and updating all watches")
+
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
+        """
+        Setup the webhook for Kibana.
+
+        Args:
+            tenant_id (str): The tenant ID
+            keep_api_url (str): The URL of the Keep API
+            api_key (str): The API key of the Keep API
+            setup_alerts (bool, optional): Whether to setup alerts or not. Defaults to True.
+        """
+        self.logger.info("Setting up webhooks")
+
+        self.logger.info("Setting up Kibana Alerting webhook alerts")
+        self.__setup_webhook_alerts(tenant_id, keep_api_url, api_key)
+        self.logger.info("Done setting up Kibana Alerting webhook alerts")
+
+        self.logger.info("Setting up Kibana Watcher webhook alerts")
+        try:
+            self.__setup_watcher_alerts(tenant_id, keep_api_url, api_key)
+            self.logger.info("Done setting up Kibana Watcher webhook alerts")
+        except Exception as e:
+            self.logger.warning(
+                "Failed to setup Kibana Watcher webhook alerts",
+                extra={"error": str(e)},
+            )
+
+        self.logger.info("Done setting up webhooks")
 
     def validate_config(self):
         self.authentication_config = KibanaProviderAuthConfig(
@@ -359,16 +415,19 @@ class KibanaProvider(BaseProvider):
 
     @staticmethod
     def format_alert_from_watcher(event: dict) -> AlertDto | list[AlertDto]:
-        alert_id = event.pop("id")
-        alert_name = event.get("metadata", {}).get("name")
-        last_received = event.get("trigger", {}).get(
-            "triggered_time", datetime.datetime.now().isoformat()
+        alert_id = event.get("payload", {}).pop("id")
+        alert_name = event.get("payload", {}).get("metadata", {}).get("name")
+        last_received = (
+            event.get("payload", {})
+            .get("trigger", {})
+            .get("triggered_time", datetime.datetime.now().isoformat())
         )
+        status = event.pop("status", "Alert")
         return AlertDto(
             id=alert_id,
             name=alert_name,
-            fingerprint=event.get("watch_id", alert_id),
-            status="Alert",
+            fingerprint=event.get("payload", {}).get("watch_id", alert_id),
+            status=status,
             lastReceived=last_received,
             source=["kibana"],
             **event,
@@ -387,7 +446,7 @@ class KibanaProvider(BaseProvider):
         """
 
         # If this is coming from Kibana Watcher
-        if "watch_id" in event:
+        if "payload" in event:
             return KibanaProvider.format_alert_from_watcher(event)
 
         labels = {
