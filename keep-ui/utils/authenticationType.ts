@@ -8,3 +8,4 @@ export enum AuthenticationType {
 }
 
 export const NoAuthUserEmail = "keep@example.com";
+export const NoAuthTenant = "keep";

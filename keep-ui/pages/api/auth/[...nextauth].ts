@@ -2,7 +2,7 @@ import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
-import { AuthenticationType, NoAuthUserEmail } from "utils/authenticationType";
+import { AuthenticationType, NoAuthUserEmail, NoAuthTenant } from "utils/authenticationType";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
@@ -145,6 +145,7 @@ const noAuthOptions = {
           id: 'keep-user-for-no-auth-purposes',
           name: 'Keep',
           email: NoAuthUserEmail,
+          tenantId: NoAuthTenant,
           accessToken: 'keep-token-for-no-auth-purposes', // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
         };
       },
@@ -155,11 +156,13 @@ const noAuthOptions = {
       // If the user object exists, set the static token
       if (user) {
         token.accessToken = user.accessToken;
+        token.tenantId = user.tenantId;
       }
       return token;
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
+      session.tenantId = token.tenantId as string;
       return session;
     },
   },
