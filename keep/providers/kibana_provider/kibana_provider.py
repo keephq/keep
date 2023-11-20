@@ -389,8 +389,14 @@ class KibanaProvider(BaseProvider):
         self.logger.info("Setting up webhooks")
 
         self.logger.info("Setting up Kibana Alerting webhook alerts")
-        self.__setup_webhook_alerts(tenant_id, keep_api_url, api_key)
-        self.logger.info("Done setting up Kibana Alerting webhook alerts")
+        try:
+            self.__setup_webhook_alerts(tenant_id, keep_api_url, api_key)
+            self.logger.info("Done setting up Kibana Alerting webhook alerts")
+        except Exception as e:
+            self.logger.warning(
+                "Failed to setup Kibana Alerting webhook alerts",
+                extra={"error": str(e)},
+            )
 
         self.logger.info("Setting up Kibana Watcher webhook alerts")
         try:
