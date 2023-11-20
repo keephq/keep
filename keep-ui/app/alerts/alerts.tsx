@@ -73,6 +73,7 @@ export default function Alerts({
 
   useEffect(() => {
     if (tenantId) {
+      console.log("Connecting to pusher")
       const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
         wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
         wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
@@ -109,7 +110,7 @@ export default function Alerts({
       channel.bind("async-done", function (data: any) {
         setIsAsyncLoading(false);
       });
-
+      console.log("Connected to pusher")
       return () => {
         pusher.unsubscribe(channelName);
       };
