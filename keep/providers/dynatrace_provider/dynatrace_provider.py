@@ -215,7 +215,7 @@ class DynatraceProvider(BaseProvider):
                 severity=event.get("ProblemSeverity", None),
                 lastReceived=datetime.datetime.now().isoformat(),
                 fatigueMeter=random.randint(0, 100),
-                description=event.get("ProblemTitle"),
+                description=event.get("ProblemDetails"),
                 source=["dynatrace"],
                 impact=event.get("ProblemImpact"),
                 tags=tags,
