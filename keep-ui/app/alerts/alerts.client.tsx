@@ -6,6 +6,7 @@ import Loading from "../loading";
 import Alerts from "./alerts";
 
 export default function AlertsPage() {
+  debugger;
   const { data: session, status } = useSession();
   const router = useRouter();
 

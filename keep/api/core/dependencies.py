@@ -143,10 +143,8 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
 def get_user_email_single_tenant(request: Request) -> str:
     # if we don't want to use authentication, return the single tenant id
     if (
-        os.environ.get(
-            "AUTH_TYPE",
-        )
-        == "false"
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        == AuthenticationType.NO_AUTH.value
     ):
         return SINGLE_TENANT_UUID
 
