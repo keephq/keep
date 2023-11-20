@@ -10,12 +10,19 @@ import {
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { Icon } from "@tremor/react";
+import { AuthenticationType } from 'utils/authenticationType';
+import useSWR from "swr";
+import { fetcher } from "utils/fetcher";
 
 const navigation = [
   { name: "Providers", href: "/providers" },
   { name: "Alerts", href: "/alerts" },
   { name: "Workflows", href: "/workflows" },
 ];
+
+interface Config {
+  AUTH_TYPE: string;
+}
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -67,6 +74,11 @@ const GnipLogo = (props: any) => (
 
 export default function NavbarInner({ user }: { user: any }) {
   const pathname = usePathname();
+  const { data: configData } = useSWR<Config>('/api/config', fetcher);
+
+  // Determine runtime configuration
+  const authType = configData?.AUTH_TYPE;
+
   return (
     <Disclosure as="nav" className="bg-white shadow-sm">
       {({ open }) => (
@@ -175,6 +187,7 @@ export default function NavbarInner({ user }: { user: any }) {
                               >
                                 Settings
                               </a>
+                              { authType != AuthenticationType.NO_AUTH ?(
                               <button
                                 className={classNames(
                                   "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -183,6 +196,7 @@ export default function NavbarInner({ user }: { user: any }) {
                               >
                                 Sign out
                               </button>
+                              ): null}
                             </>
                           )}
                         </Menu.Item>
@@ -254,12 +268,14 @@ export default function NavbarInner({ user }: { user: any }) {
                     >
                       Settings
                     </a>
+                    { authType != AuthenticationType.NO_AUTH ?(
                     <button
                       onClick={() => signOut()}
                       className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                     >
                       Sign out
                     </button>
+                    ): null}
                   </div>
                 </>
               ) : null}
