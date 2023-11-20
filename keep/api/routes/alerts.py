@@ -401,7 +401,6 @@ async def receive_event(
             "tenant_id": tenant_id,
         },
     )
-    provider_class = ProvidersFactory.get_provider_class(provider_type)
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.

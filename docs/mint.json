@@ -58,6 +58,7 @@
             "providers/documentation/cloudwatch-metrics",
             "providers/documentation/console-provider",
             "providers/documentation/datadog-provider",
+            "providers/documentation/kibana-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/grafana-provider",
