@@ -55,7 +55,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-AUTH_TYPE = os.environ.get("AUTH_TYPE", "NO_AUTH")
+AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
