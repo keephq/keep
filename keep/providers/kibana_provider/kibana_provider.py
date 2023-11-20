@@ -166,9 +166,11 @@ class KibanaProvider(BaseProvider):
             except HTTPException as e:
                 if e.status_code == 403 or e.status_code == 401:
                     validated_scopes[scope.name] = e.detail
+                # this means we faild on something else which is not permissions and it's probably ok.
                 pass
             except Exception as e:
                 validated_scopes[scope.name] = str(e)
+                continue
             validated_scopes[scope.name] = True
         return validated_scopes
 
