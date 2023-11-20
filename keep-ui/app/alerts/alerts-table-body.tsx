@@ -250,7 +250,7 @@ export function AlertsTableBody({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="max-w-[340px]">
+              <TableCell className="max-w-[340px]" title={alert.description}>
                 <div className="truncate">{alert.description}</div>
               </TableCell>
               <TableCell>
