@@ -142,10 +142,10 @@ const noAuthOptions = {
       async authorize(credentials, req) {
         // Return a static user object with a predefined token
         return {
-          id: 'keep-user-no-auth',
+          id: 'keep-user-for-no-auth-purposes',
           name: 'Keep',
           email: 'keep@example.com',
-          accessToken: 'keeptoken', // Static token
+          accessToken: 'keep-token-for-no-auth-purposes', // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
         };
       },
     }),
