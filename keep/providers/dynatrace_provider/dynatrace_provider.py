@@ -207,6 +207,7 @@ class DynatraceProvider(BaseProvider):
             impacted_entity = event.get("ImpactedEntity", "")
             pid = event.get("PID", "")
             names_of_impacted_entities = event.get("NamesOfImpactedEntities", "")
+            details = event.get("ProblemDetails", "")
 
             alert_dto = AlertDto(
                 id=event.get("ProblemID"),
@@ -215,7 +216,9 @@ class DynatraceProvider(BaseProvider):
                 severity=event.get("ProblemSeverity", None),
                 lastReceived=datetime.datetime.now().isoformat(),
                 fatigueMeter=random.randint(0, 100),
-                description=event.get("ProblemDetails"),
+                description=event.get(
+                    "ImpactedEntities"
+                ),  # was asked by a user (should be configurable)
                 source=["dynatrace"],
                 impact=event.get("ProblemImpact"),
                 tags=tags,
