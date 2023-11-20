@@ -113,7 +113,9 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_app(auth_type: AuthenticationType = "NO_AUTH") -> FastAPI:
+def get_app(
+    auth_type: AuthenticationType = AuthenticationType.NO_AUTH.value,
+) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
