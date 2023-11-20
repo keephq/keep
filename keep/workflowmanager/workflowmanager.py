@@ -191,8 +191,10 @@ class WorkflowManager:
         Raises:
             Exception: If the workflow uses premium providers in multi tenant mode.
         """
-        multi_tenant = os.environ.get("KEEP_MULTI_TENANT", False)
-        if multi_tenant and multi_tenant != "false":
+        if (
+            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+            == AuthenticationType.MULTI_TENANT.value
+        ):
             for provider in workflow.workflow_providers_type:
                 if provider in self.PREMIUM_PROVIDERS:
                     raise Exception(

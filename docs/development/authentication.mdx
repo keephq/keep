@@ -29,7 +29,7 @@ For multi-tenant authentication, we currently use Auth0, but additional provider
 To spin up Keep with Auth0 as a provider, set up the following environment variables:
 #### Backend
 ```
-KEEP_MULTI_TENANT=true
+AUTH_TYPE=MULTI_TENANT
 AUTH0_MANAGEMENT_DOMAIN=
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
@@ -37,7 +37,7 @@ AUTH0_AUDIENCE=
 ```
 #### Frontend
 ```
-NEXT_PUBLIC_AUTH_ENABLED=true
+AUTH_TYPE=MULTI_TENANT
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
 AUTH0_ISSUER=
@@ -63,16 +63,14 @@ The easiest way would be to use [docker-compose-with-auth.yml](https://github.co
 
 #### Backend
 ```
-- KEEP_MULTI_TENANT=false
-- KEEP_USE_AUTHENTICATION=true
+- AUTH_TYPE=SINGLE_TENANT
 - KEEP_JWT_SECRET=keepjwtsecret # should be replaced
 - KEEP_DEFAULT_USERNAME=admin # should be replaced
 - KEEP_DEFAULT_PASSWORD=keep # should be replaced
 ```
 #### Frontend
 ```
-- NEXT_PUBLIC_AUTH_ENABLED=false
-- NEXT_PUBLIC_USE_AUTHENTICATION=true
+- AUTH_TYPE=SINGLE_TENANT
 ```
 
 ## Single tenant - no authentication

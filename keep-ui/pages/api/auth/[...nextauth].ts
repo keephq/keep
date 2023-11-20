@@ -2,11 +2,24 @@ import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
+import { AuthenticationType, NoAuthUserEmail, NoAuthTenant } from "utils/authenticationType";
 
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
-const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
+const authType = process.env.AUTH_TYPE as AuthenticationType;
+/*
 
-export const authOptions = {
+This file implements three different authentication flows:
+1. Multi-tenant authentication using Auth0
+2. Single-tenant authentication using username/password
+3. No authentication
+
+Depends on authType which can be NO_AUTH, SINGLE_TENANT or MULTI_TENANT
+Note that the same environment variable should be set in the backend too.
+
+*/
+
+
+// multi tenant authentication using Auth0
+const multiTenantAuthOptions = {
   providers: [
     Auth0Provider({
       clientId: process.env.AUTH0_CLIENT_ID!,
@@ -18,6 +31,9 @@ export const authOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: '/signin',
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -37,12 +53,12 @@ export const authOptions = {
       session.accessToken = token.accessToken as string;
       session.tenantId = token.keep_tenant_id as string;
       return session;
-    },
-  },
-} as AuthOptions;
+     }
+    }
+  } as AuthOptions;
 
-// for single tenant, we will user username/password authentication
-export const singleTenantAuthOptions = {
+// Single tenant authentication using username/password
+const singleTenantAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -111,17 +127,55 @@ export const singleTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
       session.tenantId = token.tenantId as string;
-      return session;
-    },
+    return session;
+    }
   },
 } as AuthOptions;
 
-export const noAuthOptions = {
-  providers: [],
+
+// No authentication
+const noAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: 'NoAuth',
+      credentials: {},
+      async authorize(credentials, req) {
+        // Return a static user object with a predefined token
+        return {
+          id: 'keep-user-for-no-auth-purposes',
+          name: 'Keep',
+          email: NoAuthUserEmail,
+          tenantId: NoAuthTenant,
+          accessToken: 'keep-token-for-no-auth-purposes', // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      // If the user object exists, set the static token
+      if (user) {
+        token.accessToken = user.accessToken;
+        token.tenantId = user.tenantId;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      session.tenantId = token.tenantId as string;
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/signin',
+  },
 } as AuthOptions;
 
-export default isSingleTenant && !useAuthentication
-  ? NextAuth(noAuthOptions)
-  : isSingleTenant
-  ? NextAuth(singleTenantAuthOptions)
-  : NextAuth(authOptions);
+console.log("Starting Keep frontend with auth type: ", authType);
+export const authOptions = (authType === AuthenticationType.MULTI_TENANT)
+  ? multiTenantAuthOptions
+  : (authType === AuthenticationType.SINGLE_TENANT)
+    ? singleTenantAuthOptions
+    : noAuthOptions;
+
+export default NextAuth(authOptions);

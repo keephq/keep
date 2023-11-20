@@ -1,11 +1,44 @@
-import { signIn } from "next-auth/react";
-import { useEffect } from "react";
+import { signIn, getProviders } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
-export default function Signin() {
+interface Providers {
+  auth0?: {
+    // Define the properties that your auth0 provider has
+    name: string;
+    type: string;
+    signinUrl: string;
+  };
+  credentials?: {
+    // Similarly define for credentials provider
+    name: string;
+    type: string;
+    signinUrl: string;
+  };
+}
+
+export default function SignIn() {
+  const [providers, setProviders] = useState<Providers | null>(null);
 
   useEffect(() => {
-    void signIn("auth0", { callbackUrl: "/" });
-  });
+    async function fetchProviders() {
+      const response = await getProviders();
+      setProviders(response as Providers);
+    }
 
-return <div></div>;
+    fetchProviders();
+  }, []);
+
+  useEffect(() => {
+    if (providers) {
+      if (providers.auth0) {
+        console.log('Signing in with auth0 provider');
+        signIn('auth0', { callbackUrl: "/" });
+      } else if (providers.credentials) {
+        console.log('Signing in with credentials provider');
+        signIn('credentials', { callbackUrl: "/" });
+      }
+    }
+  }, [providers]);
+
+  return <div>Redirecting for authentication...</div>;
 }

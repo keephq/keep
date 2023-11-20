@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { getApiURL } from "../../utils/apiUrl";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react";
 
 const FileUpload: React.FC = () => {
   const apiUrl = getApiURL();

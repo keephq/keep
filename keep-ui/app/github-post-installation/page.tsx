@@ -1,4 +1,4 @@
-import { getServerSession } from "../../utils/customAuth";
+import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { getApiURL } from "../../utils/apiUrl";
 export default async function GithubPostInstallationPage({
