@@ -107,7 +107,20 @@ class GrafanaProvider(BaseProvider):
         permissions_api = (
             f"{self.authentication_config.host}/api/access-control/user/permissions"
         )
-        response = requests.get(permissions_api, headers=headers).json()
+        try:
+            response = requests.get(permissions_api, headers=headers).json()
+        except requests.exceptions.ConnectionError:
+            validated_scopes = {
+                scope.name: "Failed to connect to Grafana. Please check your host."
+                for scope in self.PROVIDER_SCOPES
+            }
+            return validated_scopes
+        except Exception as e:
+            validated_scopes = {
+                scope.name: "Failed to get permissions. Please check your token."
+                for scope in self.PROVIDER_SCOPES
+            }
+            return validated_scopes
         validated_scopes = {}
         for scope in self.PROVIDER_SCOPES:
             if scope.name in response:

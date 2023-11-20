@@ -18,7 +18,7 @@ interface Props {
 export default function UsersMenu({ user, currentUser }: Props) {
   const onDelete = async () => {
     const confirmed = confirm(
-      "Are you sure you want to delete this alert? This is irreversible."
+      "Are you sure you want to delete this user? This is irreversible."
     );
     if (confirmed) {
       const session = await getSession();
