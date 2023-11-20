@@ -117,7 +117,6 @@ export default function Alerts({
     } else {
       // User doesn't have a tenant id, so they are not logged in
       //  or they were logged in before we added the tenant id to the session.
-      debugger;
       router.push("/signin");
     }
   }, [tenantId, accessToken, router]);
