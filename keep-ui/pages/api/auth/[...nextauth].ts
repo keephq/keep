@@ -2,7 +2,7 @@ import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthenticationType, NoAuthUserEmail } from "utils/authenticationType";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
@@ -144,7 +144,7 @@ const noAuthOptions = {
         return {
           id: 'keep-user-for-no-auth-purposes',
           name: 'Keep',
-          email: 'keep@example.com',
+          email: NoAuthUserEmail,
           accessToken: 'keep-token-for-no-auth-purposes', // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
         };
       },

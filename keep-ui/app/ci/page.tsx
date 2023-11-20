@@ -1,7 +1,7 @@
 import GitHubPage from "../github/page";
-import { getServerSession } from "../../utils/customAuth";
+import { getServerSession } from "next-auth/next";
 import ErrorComponent from "../error";
-import PostHogClient from "../posthog-server";
+//import PostHogClient from "../posthog-client";
 import { getApiURL } from "../../utils/apiUrl";
 import  {authOptions} from "../../pages/api/auth/[...nextauth]";
 
@@ -26,7 +26,7 @@ export default async function CicdPage() {
     const apiUrl = getApiURL();
     const url = `${apiUrl}/tenant/onboarded`;
     // capture the event
-    PostHogClient().safeCapture("User started without keep api", accessToken);
+    // PostHogClient().safeCapture("User started without keep api", accessToken);
     if (err instanceof Error) {
       return (
         <ErrorComponent errorMessage={`Error: ${err.message}`} url={url} />

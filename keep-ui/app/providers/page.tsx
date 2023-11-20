@@ -1,5 +1,5 @@
 import { FrigadeProvider } from "@frigade/react";
-import { getServerSession } from "utils/customAuth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import ProvidersPage from "./page.client";
 import Cookies from "js-cookie";

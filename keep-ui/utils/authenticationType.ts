@@ -6,3 +6,5 @@ export enum AuthenticationType {
     SINGLE_TENANT = "SINGLE_TENANT",
     NO_AUTH = "NO_AUTH"  // Default
 }
+
+export const NoAuthUserEmail = "keep@example.com";

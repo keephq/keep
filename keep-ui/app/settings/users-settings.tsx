@@ -51,9 +51,12 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
       email = prompt("Enter the user name");
       password = prompt("Enter the user password");
     }
-    else{
+    else if (authType == AuthenticationType.MULTI_TENANT){
       email = prompt("Enter the user email");
       password = "";
+    }
+    else{
+      alert("Keep cannot add users on NO_AUTH mode. To add users, please set Keep AUTH_TYPE environment variable to either SINGLE_TENANT or MULTI_TENANT");
     }
     console.log(email);
     if (email) {
