@@ -37,6 +37,7 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
               const posthog_id = user?.email;
               console.log("PostHog ID: " + posthog_id);
               if(posthog_id && posthog_id !== NoAuthUserEmail) {
+                console.log("Identifying user in PostHog")
                 posthog.identify(posthog_id);
               }
               console.log("Sending pageview event to PostHog");
