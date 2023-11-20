@@ -1,4 +1,4 @@
-import { getServerSession } from "utils/customAuth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { getApiURL } from "utils/apiUrl";
 import { redirect } from "next/navigation";

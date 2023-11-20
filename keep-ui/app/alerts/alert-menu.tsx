@@ -7,7 +7,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { getSession } from "utils/customAuth";
+import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";

@@ -6,8 +6,8 @@ import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import Cookies from 'js-cookie';
-import { useSession } from '../utils/customAuth';
+import { useSession } from "next-auth/react"
+import { NoAuthUserEmail }  from "utils/authenticationType";
 
 
 
@@ -15,9 +15,6 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   });
-  // set anonymousId to cookie
-  const anonymousId = posthog.get_distinct_id()
-  Cookies.set('anonymousId', anonymousId);
 }
 
 interface PHProviderProps {
@@ -39,7 +36,7 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
               }
               const posthog_id = user?.email;
               console.log("PostHog ID: " + posthog_id);
-              if(posthog_id) {
+              if(posthog_id && posthog_id !== NoAuthUserEmail) {
                 posthog.identify(posthog_id);
               }
               console.log("Sending pageview event to PostHog");

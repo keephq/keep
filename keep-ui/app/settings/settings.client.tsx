@@ -9,7 +9,7 @@ import {
 import UsersSettings from "./users-settings";
 import WebhookSettings from "./webhook-settings";
 import APIKeySettings from "./api-key-settings";
-import { useSession } from "utils/customAuth";
+import { useSession } from "next-auth/react"
 import Loading from "app/loading";
 import SmtpSettings from "./smtp-settings";
 import { useRouter } from "next/navigation";

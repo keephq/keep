@@ -6,7 +6,7 @@ import {
   ProviderMethodParam,
 } from "app/providers/providers";
 import { Alert } from "./models";
-import { getSession } from "utils/customAuth";
+import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import Loading from "app/loading";

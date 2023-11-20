@@ -185,7 +185,11 @@ def api(multi_tenant: bool):
     from keep.api import api
 
     ctx = click.get_current_context()
-    app = api.get_app(multi_tenant=multi_tenant)
+    if multi_tenant:
+        auth_type = "MULTI_TENANT"
+    else:
+        auth_type = "NO_AUTH"
+    app = api.get_app(auth_type=auth_type)
     logger.info(f"App initialized, multi tenancy: {multi_tenant}")
     app.dependency_overrides[click.get_current_context] = lambda: ctx
     api.run(app)

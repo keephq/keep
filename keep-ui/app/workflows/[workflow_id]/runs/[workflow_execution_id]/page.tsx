@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, Title} from "@tremor/react";
-import { useSession } from '../../../../../utils/customAuth';
+import { useSession } from "next-auth/react";
 import { getApiURL } from '../../../../../utils/apiUrl';
 import Loading from '../../../../loading';
 import { ExclamationCircleIcon, DocumentTextIcon, ChevronDoubleDownIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/outline';

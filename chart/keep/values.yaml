@@ -55,8 +55,6 @@ backend:
 frontend:
   enabled: true
   env:
-    - name: NEXT_PUBLIC_AUTH_ENABLED
-      value: "false"
     - name: NEXTAUTH_SECRET
       value: secret
     - name: NEXTAUTH_URL

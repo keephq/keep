@@ -2,7 +2,7 @@
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
 import React, { useEffect, useState, useRef } from "react";
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";

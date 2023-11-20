@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "../../utils/customAuth";
+import { useSession } from "next-auth/react";;
 import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";

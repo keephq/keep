@@ -20,14 +20,15 @@ import { User } from "./models";
 import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
+import { AuthenticationType } from 'utils/authenticationType';
 
 interface Props {
   accessToken: string;
   currentUser?: AuthUser;
 }
-
-const isSingleTenant = process.env.NEXT_PUBLIC_AUTH_ENABLED == "false";
-const useAuthentication = process.env.NEXT_PUBLIC_USE_AUTHENTICATION == "true";
+interface Config {
+  AUTH_TYPE: string;
+}
 
 export default function UsersSettings({ accessToken, currentUser }: Props) {
   const apiUrl = getApiURL();
@@ -36,18 +37,26 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
     (url) => fetcher(url, accessToken)
   );
 
+  const { data: configData } = useSWR<Config>('/api/config', fetcher);
+
+  // Determine runtime configuration
+  const authType = configData?.AUTH_TYPE;
+
   if (!data || isLoading) return <Loading />;
 
   async function addUser() {
     let email;
     let password;
-    if(isSingleTenant && useAuthentication){
+    if(authType == AuthenticationType.SINGLE_TENANT ){
       email = prompt("Enter the user name");
       password = prompt("Enter the user password");
     }
-    else{
+    else if (authType == AuthenticationType.MULTI_TENANT){
       email = prompt("Enter the user email");
       password = "";
+    }
+    else{
+      alert("Keep cannot add users on NO_AUTH mode. To add users, please set Keep AUTH_TYPE environment variable to either SINGLE_TENANT or MULTI_TENANT");
     }
     console.log(email);
     if (email) {
