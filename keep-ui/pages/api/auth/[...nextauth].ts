@@ -19,7 +19,7 @@ Note that the same environment variable should be set in the backend too.
 
 
 // multi tenant authentication using Auth0
-export const multiTenantAuthOptions = {
+const multiTenantAuthOptions = {
   providers: [
     Auth0Provider({
       clientId: process.env.AUTH0_CLIENT_ID!,
@@ -58,7 +58,7 @@ export const multiTenantAuthOptions = {
   } as AuthOptions;
 
 // Single tenant authentication using username/password
-export const singleTenantAuthOptions = {
+const singleTenantAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -127,29 +127,14 @@ export const singleTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
       session.tenantId = token.tenantId as string;
-      return session;
-    },
-    async authorize({  req, token  }) {
-      const pathname = req.nextUrl.pathname;
-          if (pathname.endsWith("svg")) {
-            return true;
-          }
-
-          if (
-            token &&
-            (token.exp as number) >= Math.floor(new Date().getTime() / 1000)
-          ) {
-            return true;
-          }
-
-          return false;
-        },
+    return session;
+    }
   },
 } as AuthOptions;
 
 
 // No authentication
-export const noAuthOptions = {
+const noAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'NoAuth',
@@ -184,8 +169,10 @@ export const noAuthOptions = {
 } as AuthOptions;
 
 console.log("Starting Keep frontend with auth type: ", authType);
-export default (authType == AuthenticationType.MULTI_TENANT)
-  ? NextAuth(multiTenantAuthOptions)
-  : (authType == AuthenticationType.SINGLE_TENANT)
-  ? NextAuth(singleTenantAuthOptions)
-  : NextAuth(noAuthOptions);
+export const authOptions = (authType === AuthenticationType.MULTI_TENANT)
+  ? multiTenantAuthOptions
+  : (authType === AuthenticationType.SINGLE_TENANT)
+    ? singleTenantAuthOptions
+    : noAuthOptions;
+
+export default NextAuth(authOptions);

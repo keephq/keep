@@ -3,7 +3,7 @@ import { getServerSession } from "../../utils/customAuth";
 import ErrorComponent from "../error";
 import PostHogClient from "../posthog-server";
 import { getApiURL } from "../../utils/apiUrl";
-import { authOptions } from "../../pages/api/auth/[...nextauth]";
+import  {authOptions} from "../../pages/api/auth/[...nextauth]";
 
 
 export default async function CicdPage() {

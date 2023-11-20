@@ -5,7 +5,9 @@ export { default } from "next-auth/middleware";
 // exclude keep_big.svg from being protected
 export const config = {
   matcher: [
-    // Match all request paths except the specific path '/keep_big.svg'
+    // Exclude two pages from the middleware:
+    // 1. Signin page (so that users can sign in)
+    // 2. keep svg (so that it can be displayed on the signin page)
     '/((?!keep_big\\.svg$|signin$).*)',
   ],
 };
