@@ -340,7 +340,7 @@
     "sequential-workflow-designer": "^0.13.8",
     "sequential-workflow-designer-react": "^0.13.8",
     "server-only": "^0.0.1",
-    "sharp": "^0.32.4",
+    "sharp": "^0.32.6",
     "shebang-command": "^2.0.0",
     "shebang-regex": "^3.0.0",
     "side-channel": "^1.0.4",
