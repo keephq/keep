@@ -5,6 +5,7 @@ import time
 import typing
 import uuid
 
+from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_enrichment, save_workflow_results
 from keep.api.models.alert import AlertDto
 from keep.parser.parser import Parser
@@ -192,7 +193,7 @@ class WorkflowManager:
             Exception: If the workflow uses premium providers in multi tenant mode.
         """
         if (
-            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
             == AuthenticationType.MULTI_TENANT.value
         ):
             for provider in workflow.workflow_providers_type:
