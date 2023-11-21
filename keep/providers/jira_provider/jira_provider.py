@@ -290,9 +290,19 @@ class JiraProvider(BaseProvider):
             headers={"Accept": "application/json"},
         )
         if boards_response.status_code == 200:
-            for board in boards_response.json()["values"]:
+            boards = boards_response.json()["values"]
+            for board in boards:
                 if board["name"].lower() == board_name.lower():
+                    self.logger.info(
+                        f"Found board {board_name} with project key {board['location']['projectKey']}"
+                    )
                     return board["location"]["projectKey"]
+
+            # if we got here, we didn't find the board name so let's throw an indicative exception
+            board_names = [board["name"] for board in boards]
+            raise Exception(
+                f"Could not find board {board_name} - please verify your board name is in this list: {board_names}."
+            )
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
 
@@ -305,14 +315,18 @@ class JiraProvider(BaseProvider):
         """
         # extracrt the required params
         project_key = kwargs.get("project_key", "")
-        board_name = kwargs.get("board_name", "")
-        if board_name:
+        # if the user didn't provider a project_key, try to extract it from the board name
+        if not project_key:
+            board_name = kwargs.get("board_name", "")
             project_key = self._extract_project_key_from_board_name(board_name)
         summary = kwargs.get("summary", "")
         description = kwargs.get("description", "")
         issue_type = kwargs.get("issuetype", "")
+
         if not project_key or not summary or not issue_type or not description:
-            raise ProviderException("Project key and summary are required!")
+            raise ProviderException(
+                f"Project key and summary are required! - {project_key}, {summary}, {issuetype}, {description}"
+            )
         try:
             self.logger.info("Notifying jira...")
             result = self.__create_issue(
@@ -387,8 +401,8 @@ if __name__ == "__main__":
     scopes = provider.validate_scopes()
     # Create ticket
     provider.notify(
-        board_name="Oncall Board",
-        issue_type="Bug",
+        board_name="ALERTS",
+        issue_type="Task",
         summary="Test",
         description="Test",
     )
