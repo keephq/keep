@@ -54,7 +54,7 @@ def webhook_settings(
 @router.get("/users", description="Get all users")
 def get_users(tenant_id: str = Depends(verify_bearer_token)) -> list[User]:
     if (
-        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
         == AuthenticationType.MULTI_TENANT.value
     ):
         return _get_users_auth0(tenant_id)
