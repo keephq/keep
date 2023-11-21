@@ -277,17 +277,11 @@ class ZabbixProvider(BaseProvider):
             try:
                 self.__send_request(scope.name)
             except Exception as e:
-                try:
-                    # This is a hack to check if the error is related to permissions
-                    error = e.args[0]["data"]
-                    # If we got here, it means it's an exception from Zabbix
-                    if "permission" in error or "not authorized" in error.lower():
-                        validated_scopes[scope.name] = e.args[0]["data"]
-                        continue
-                except:
-                    # Not zabbix-realted exception
-                    self.logger.exception("Error while validating scopes")
-                    validated_scopes[scope.name] = str(e)
+                # This is a hack to check if the error is related to permissions
+                error = getattr(e, "message", e.args[0])
+                # If we got here, it means it's an exception from Zabbix
+                if "permission" in error or "not authorized" in error.lower():
+                    validated_scopes[scope.name] = error
                     continue
             validated_scopes[scope.name] = True
         return validated_scopes
