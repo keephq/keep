@@ -16,6 +16,7 @@ import requests
 
 import keep.functions as keep_functions
 from keep.contextmanager.contextmanager import ContextManager
+from keep.step.step_provider_parameter import StepProviderParameter
 
 
 class RenderException(Exception):
@@ -210,11 +211,18 @@ class IOHandler:
         context_to_render = copy.deepcopy(context_to_render)
         for key, value in context_to_render.items():
             if isinstance(value, str):
-                context_to_render[key] = self._render_template_with_context(value)
+                context_to_render[key] = self._render_template_with_context(
+                    value, safe=True
+                )
             elif isinstance(value, list):
                 context_to_render[key] = self._render_list_context(value)
             elif isinstance(value, dict):
                 context_to_render[key] = self.render_context(value)
+            elif isinstance(value, StepProviderParameter):
+                safe = value.safe and value.default is not None
+                context_to_render[key] = self._render_template_with_context(
+                    value.key, safe=safe, default=value.default
+                )
         return context_to_render
 
     def _render_list_context(self, context_to_render: list):
@@ -224,14 +232,18 @@ class IOHandler:
         for i in range(0, len(context_to_render)):
             value = context_to_render[i]
             if isinstance(value, str):
-                context_to_render[i] = self._render_template_with_context(value)
+                context_to_render[i] = self._render_template_with_context(
+                    value, safe=True
+                )
             if isinstance(value, list):
                 context_to_render[i] = self._render_list_context(value)
             if isinstance(value, dict):
                 context_to_render[i] = self.render_context(value)
         return context_to_render
 
-    def _render_template_with_context(self, template: str) -> str:
+    def _render_template_with_context(
+        self, template: str, safe: bool = False, default: str = ""
+    ) -> str:
         """
         Renders a template with the given context.
 
@@ -241,7 +253,7 @@ class IOHandler:
         Returns:
             str: rendered template
         """
-        rendered_template = self.render(template)
+        rendered_template = self.render(template, safe, default)
 
         # shorten urls if enabled
         if self.shorten_urls:
