@@ -137,10 +137,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
             fingerprint = None
 
         if not fingerprint:
-            raise Exception(
+            self.logger.error(
                 "No fingerprint found for alert enrichment",
                 extra={"provider": self.provider_id},
             )
+            raise Exception("No fingerprint found for alert enrichment")
         self.logger.debug("Fingerprint extracted", extra={"fingerprint": fingerprint})
         self._enrich_alert(fingerprint, enrich_alert, results)
         return results

@@ -1,45 +1,28 @@
 workflow:
-  id: column
-  description: handle column alerts
-  triggers:
-    - type: alert
-      # we want to run this workflow only for Sentry alerts with high severity
-      filters:
-        - key: source
-          value: sentry
-        - key: severity
-          value: critical
-        - key: service
-          value: r"(payments|ftp)"
   actions:
-    - name: send-slack-message-team-payments
-      # if the alert is on the payments service, slack the payments team
-      if: "'{{ alert.service }}' == 'payments'"
-      provider:
-        type: slack
-        config: " {{ providers.team-payments-slack }} "
-        with:
-          message: |
-           "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
-           {{ alert}}"
-    - name: create-jira-ticket-oncall-board
-      if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
-      provider:
-        type: jira
-        config: " {{ providers.jira }} "
-        with:
-          board_name: "Oncall Board"
-          issuetype: "Task"
-          summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
-          description: |
-            "This ticket was created by Keep.
-            Please check the alert details below:
-            {code:json} {{ alert }} {code}"
-          # enrich the alerts
-          enrich_alert:
-            - key: ticket_type
-              value: jira
-            - key: ticket_id
-              value: results.issue.key
-            - key: ticket_url
-              value: results.ticket_url
+  - if: not '{{ alert.ticket_id }}'
+    name: create-jira-ticket
+    provider:
+      config: '{{ providers.Jira }}'
+      type: jira
+      with:
+        description: 'This ticket was created by Keep. Details: {{ alert }}'
+        enrich_alert:
+        - key: ticket_type
+          value: jira
+        - key: ticket_id
+          value: results.issue.key
+        - key: ticket_url
+          value: results.ticket_url
+        issuetype: Task
+        project_key: KEEP
+        summary: '[{{ alert.service }}] {{ alert.name }} - {{ alert.description }}'
+  description: Route critical Sentry alerts
+  id: sentry-critical-alerts-jira
+  triggers:
+  - filters:
+    - key: source
+      value: sentry
+    - key: tags.severity
+      value: critical
+    type: alert
