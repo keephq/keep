@@ -294,7 +294,7 @@ class Parser:
         return workflow_interval
 
     @staticmethod
-    def _parse_provider_parameters(provider_parameters: dict) -> dict:
+    def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
             if isinstance(provider_parameters[parameter], str):
@@ -314,7 +314,7 @@ class Parser:
         for _step in workflow_steps:
             provider = self._get_step_provider(context_manager, _step)
             provider_parameters = _step.get("provider", {}).get("with")
-            parsed_provider_parameters = self._parse_provider_parameters(
+            parsed_provider_parameters = Parser.parse_provider_parameters(
                 provider_parameters
             )
             step_id = _step.get("name")
@@ -357,7 +357,7 @@ class Parser:
         name = action_name or action.get("name")
         provider_config = action.get("provider").get("config")
         provider_parameters = action.get("provider").get("with", {})
-        parsed_provider_parameters = self._parse_provider_parameters(
+        parsed_provider_parameters = Parser.parse_provider_parameters(
             provider_parameters
         )
         provider_type = action.get("provider").get("type")
