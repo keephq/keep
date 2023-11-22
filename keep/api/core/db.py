@@ -320,6 +320,7 @@ def add_or_update_workflow(
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
+        # TODO: we need to better understanad if that's the right behavior we want
         existing_workflow = (
             session.query(Workflow)
             .filter_by(name=name)
@@ -328,8 +329,7 @@ def add_or_update_workflow(
         )
 
         if existing_workflow:
-            # Update the existing workflow's fields
-            existing_workflow.id = id
+            # tb: no need to override the id field here because it has foreign key constraints.
             existing_workflow.tenant_id = tenant_id
             existing_workflow.description = description
             existing_workflow.updated_by = (
@@ -339,6 +339,7 @@ def add_or_update_workflow(
             existing_workflow.workflow_raw = workflow_raw
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
+            existing_workflow.is_deleted = False
 
         else:
             # Create a new workflow
