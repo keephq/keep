@@ -181,7 +181,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
   const [alertPayload, setAlertPayload] = useState({});
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
-  const [alertDependencies, setAlertDependencies] = useState([]);
+  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+
 
 
   const { providers } = useFetchProviders();
@@ -209,12 +210,12 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   // todo: this logic should move to the backend
-  function extractAlertDependencies(workflowRaw: string) {
+  function extractAlertDependencies(workflowRaw: string): string [] {
     const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
     const dependencies = workflowRaw.match(dependencyRegex);
 
     if (!dependencies) {
-      return {};
+      return [];
     }
 
     // Convert Set to Array
