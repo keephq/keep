@@ -36,7 +36,7 @@ class IOHandler:
         ):
             self.shorten_urls = True
 
-    def render(self, template, safe=False):
+    def render(self, template, safe=False, default=""):
         # rendering is only support for strings
         if not isinstance(template, str):
             return template
@@ -50,7 +50,7 @@ class IOHandler:
             raise Exception(
                 f"Invalid template - number of ( and ) does not match {template}"
             )
-        val = self.parse(template, safe)
+        val = self.parse(template, safe, default)
         return val
 
     def quote(self, template):
@@ -66,7 +66,7 @@ class IOHandler:
         replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
-    def parse(self, string, safe=False):
+    def parse(self, string, safe=False, default=""):
         """Use AST module to parse 'call stack'-like string and return the result
 
         Example -
@@ -91,7 +91,7 @@ class IOHandler:
 
         # first render everything using chevron
         # inject the context
-        string = self._render(string, safe)
+        string = self._render(string, safe, default)
 
         # Now, extract the token if exists -
         pattern = (
@@ -182,7 +182,7 @@ class IOHandler:
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key, safe=False):
+    def _render(self, key, safe=False, default=""):
         # change [] to . for the key because thats what chevron uses
         _key = key.replace("[", ".").replace("]", "")
 
@@ -198,6 +198,8 @@ class IOHandler:
             raise RenderException(
                 f"Could not find key {key} in context - {stderr_output}"
             )
+        if not rendered:
+            return default
         return rendered
 
     def render_context(self, context_to_render: dict):
