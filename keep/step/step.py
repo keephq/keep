@@ -3,20 +3,13 @@ import inspect
 import time
 from enum import Enum
 
-from pydantic import BaseModel
-
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
+from keep.step.step_provider_parameter import StepProviderParameter
 from keep.throttles.throttle_factory import ThrottleFactory
-
-
-class ProviderParameter(BaseModel):
-    key: str | dict | list | bool  # the key to render
-    safe: bool = False  # whether to validate this key or fail silently ("safe")
-    default: str | int | bool = None  # default value if this key doesn't exist
 
 
 class StepType(Enum):
@@ -39,7 +32,7 @@ class Step:
         self.step_type = step_type
         self.provider = provider
         self.provider_parameters: dict[
-            str, str | ProviderParameter
+            str, str | StepProviderParameter
         ] = provider_parameters
         self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager: ContextManager = context_manager
@@ -181,6 +174,9 @@ class Step:
 
             aeval = Interpreter()
             evaluated_if_met = aeval(if_met)
+            # tb: when Shahar and I debugged, conclusion was:
+            if isinstance(evaluated_if_met, str):
+                evaluated_if_met = aeval(evaluated_if_met)
             # if the evaluation failed, raise an exception
             if aeval.error_msg:
                 self.logger.error(
@@ -231,19 +227,9 @@ class Step:
         # else, just run the provider
         else:
             try:
-                rendered_providers_parameters = {}
-                for parameter, value in self.provider_parameters.items():
-                    if isinstance(value, ProviderParameter):
-                        safe = value.safe is True and value.default is None
-                        rendered_providers_parameters[
-                            parameter
-                        ] = self.io_handler.render(
-                            value.key, safe=safe, default=value.default
-                        )
-                    else:
-                        rendered_providers_parameters[
-                            parameter
-                        ] = self.io_handler.render(value, safe=True)
+                rendered_providers_parameters = self.io_handler.render_context(
+                    self.provider_parameters
+                )
 
                 for curr_retry_count in range(self.__retry_count + 1):
                     try:
