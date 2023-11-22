@@ -121,11 +121,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
             return
 
         # Now try to enrich the alert
+        self.logger.debug("Extracting the fingerprint from the alert")
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
-            fingerprint = self.context_manager.event_context.get("fingerprint")
+            # TODO: map all casses event_context is dict and update them to the DTO
+            #       and remove this if statement
+            if isinstance(self.context_manager.event_context, dict):
+                fingerprint = self.context_manager.event_context.get("fingerprint")
+            # Alert DTO
+            else:
+                fingerprint = self.context_manager.event_context.fingerprint
         else:
             fingerprint = None
 
@@ -134,6 +141,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 "No fingerprint found for alert enrichment",
                 extra={"provider": self.provider_id},
             )
+        self.logger.debug("Fingerprint extracted", extra={"fingerprint": fingerprint})
         self._enrich_alert(fingerprint, enrich_alert, results)
         return results
 
