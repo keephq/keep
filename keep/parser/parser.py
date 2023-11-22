@@ -300,9 +300,15 @@ class Parser:
             if isinstance(provider_parameters[parameter], str):
                 parsed_provider_parameters[parameter] = provider_parameters[parameter]
             elif isinstance(provider_parameters[parameter], dict):
-                parsed_provider_parameters[parameter] = ProviderParameter(
-                    **provider_parameters[parameter]
-                )
+                try:
+                    parsed_provider_parameters[parameter] = ProviderParameter(
+                        **provider_parameters[parameter]
+                    )
+                except:
+                    # It could be a dict/list but not of ProviderParameter type
+                    parsed_provider_parameters[parameter] = provider_parameters[
+                        parameter
+                    ]
         return parsed_provider_parameters
 
     def _parse_steps(
