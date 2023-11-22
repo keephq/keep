@@ -54,7 +54,7 @@ class WorkflowScheduler:
                 workflow_id = workflow.get("workflow_id")
                 workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
             except ProviderConfigurationException as e:
-                self.logger.error(f"Error getting workflow: {e}")
+                self.logger.error(f"Provider configuration is invalid: {e}")
                 finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
