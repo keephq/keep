@@ -1,18 +1,16 @@
-import io
 import json
 import logging
 import os
 import typing
 
-import requests
 import yaml
 
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
-from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
+from keep.step.step_provider_parameter import StepProviderParameter
 from keep.workflowmanager.workflow import Workflow
 
 
@@ -293,6 +291,24 @@ class Parser:
                 workflow_interval = trigger.get("value", 0)
         return workflow_interval
 
+    @staticmethod
+    def parse_provider_parameters(provider_parameters: dict) -> dict:
+        parsed_provider_parameters = {}
+        for parameter in provider_parameters:
+            if isinstance(provider_parameters[parameter], str):
+                parsed_provider_parameters[parameter] = provider_parameters[parameter]
+            elif isinstance(provider_parameters[parameter], dict):
+                try:
+                    parsed_provider_parameters[parameter] = StepProviderParameter(
+                        **provider_parameters[parameter]
+                    )
+                except:
+                    # It could be a dict/list but not of ProviderParameter type
+                    parsed_provider_parameters[parameter] = provider_parameters[
+                        parameter
+                    ]
+        return parsed_provider_parameters
+
     def _parse_steps(
         self, context_manager: ContextManager, workflow
     ) -> typing.List[Step]:
@@ -302,13 +318,16 @@ class Parser:
         for _step in workflow_steps:
             provider = self._get_step_provider(context_manager, _step)
             provider_parameters = _step.get("provider", {}).get("with")
+            parsed_provider_parameters = Parser.parse_provider_parameters(
+                provider_parameters
+            )
             step_id = _step.get("name")
             step = Step(
                 context_manager=context_manager,
                 step_id=step_id,
                 config=_step,
                 provider=provider,
-                provider_parameters=provider_parameters,
+                provider_parameters=parsed_provider_parameters,
                 step_type=StepType.STEP,
             )
             workflow_steps_parsed.append(step)
@@ -342,6 +361,9 @@ class Parser:
         name = action_name or action.get("name")
         provider_config = action.get("provider").get("config")
         provider_parameters = action.get("provider").get("with", {})
+        parsed_provider_parameters = Parser.parse_provider_parameters(
+            provider_parameters
+        )
         provider_type = action.get("provider").get("type")
         provider_id, provider_config = self._parse_provider_config(
             context_manager, provider_type, provider_config
@@ -351,7 +373,7 @@ class Parser:
             provider_id,
             provider_type,
             provider_config,
-            **provider_parameters,
+            **parsed_provider_parameters,
         )
         action = Step(
             context_manager=context_manager,

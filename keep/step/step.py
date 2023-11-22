@@ -1,18 +1,14 @@
 import asyncio
 import inspect
-import logging
 import time
-from dataclasses import field
 from enum import Enum
-
-import chevron
-from pydantic.dataclasses import dataclass
 
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
 from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
+from keep.step.step_provider_parameter import StepProviderParameter
 from keep.throttles.throttle_factory import ThrottleFactory
 
 
@@ -35,9 +31,11 @@ class Step:
         self.step_id = step_id
         self.step_type = step_type
         self.provider = provider
-        self.provider_parameters = provider_parameters
+        self.provider_parameters: dict[
+            str, str | StepProviderParameter
+        ] = provider_parameters
         self.on_failure = self.config.get("provider", {}).get("on-failure", {})
-        self.context_manager = context_manager
+        self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
         self.conditions_results = {}
@@ -176,6 +174,9 @@ class Step:
 
             aeval = Interpreter()
             evaluated_if_met = aeval(if_met)
+            # tb: when Shahar and I debugged, conclusion was:
+            if isinstance(evaluated_if_met, str):
+                evaluated_if_met = aeval(evaluated_if_met)
             # if the evaluation failed, raise an exception
             if aeval.error_msg:
                 self.logger.error(
@@ -220,28 +221,29 @@ class Step:
             return
 
         # Last, run the action
-        rendered_value = self.io_handler.render_context(self.provider_parameters)
         # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
             result = self._run_single_async()
         # else, just run the provider
         else:
             try:
-                rendered_providers_parameters = {}
-                for parameter in self.provider_parameters:
-                    rendered_providers_parameters[parameter] = self.io_handler.render(
-                        self.provider_parameters[parameter], safe=True
-                    )
+                rendered_providers_parameters = self.io_handler.render_context(
+                    self.provider_parameters
+                )
 
                 for curr_retry_count in range(self.__retry_count + 1):
                     try:
                         if self.step_type == StepType.STEP:
-                            step_output = self.provider.query(**rendered_value)
+                            step_output = self.provider.query(
+                                **rendered_providers_parameters
+                            )
                             self.context_manager.set_step_context(
                                 self.step_id, results=step_output, foreach=self.foreach
                             )
                         else:
-                            results = self.provider.notify(**rendered_value)
+                            results = self.provider.notify(
+                                **rendered_providers_parameters
+                            )
                         # exiting the loop as step/action execution was successful
                         break
                     except Exception as e:
