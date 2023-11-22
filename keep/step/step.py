@@ -13,8 +13,8 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.throttles.throttle_factory import ThrottleFactory
 
 
-class ProviderParameter(BaseModel, extra="ignore"):
-    key: str  # the key to render
+class ProviderParameter(BaseModel):
+    key: str | dict | list | bool  # the key to render
     safe: bool = False  # whether to validate this key or fail silently ("safe")
     default: str | int | bool = None  # default value if this key doesn't exist
 
@@ -233,17 +233,17 @@ class Step:
             try:
                 rendered_providers_parameters = {}
                 for parameter, value in self.provider_parameters.items():
-                    if isinstance(value, str):
-                        rendered_providers_parameters[
-                            parameter
-                        ] = self.io_handler.render(value, safe=True)
-                    elif isinstance(value, ProviderParameter):
+                    if isinstance(value, ProviderParameter):
                         safe = value.safe is True and value.default is None
                         rendered_providers_parameters[
                             parameter
                         ] = self.io_handler.render(
                             value.key, safe=safe, default=value.default
                         )
+                    else:
+                        rendered_providers_parameters[
+                            parameter
+                        ] = self.io_handler.render(value, safe=True)
 
                 for curr_retry_count in range(self.__retry_count + 1):
                     try:
