@@ -13,7 +13,7 @@ interface WorkflowMenuProps {
   onBuilder?: () => void;
   allProvidersInstalled: boolean;
   hasManualTrigger: boolean;
-
+  hasAlertTrigger: boolean;
 }
 
 
@@ -25,16 +25,20 @@ export default function WorkflowMenu({
   onBuilder,
   allProvidersInstalled,
   hasManualTrigger,
+  hasAlertTrigger
 }: WorkflowMenuProps) {
   const getDisabledTooltip = () => {
     if (!allProvidersInstalled) return "Not all providers are installed.";
     if (!hasManualTrigger) return "No manual trigger available.";
     return "";
   };
-    const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        };
-      const isRunButtonDisabled = !allProvidersInstalled || !hasManualTrigger;
+  const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      };
+
+  const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
+
+
   return (
     <div className="w-44 text-right">
       <Menu as="div" className="relative inline-block text-left z-10">

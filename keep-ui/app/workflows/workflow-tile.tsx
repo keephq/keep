@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";;
-import { Workflow } from "./models";
+import { Workflow, Filter } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -28,7 +28,10 @@ import { useFetchProviders } from "app/providers/page.client";
 import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
+import AlertTriggerModal from "./workflow-run-with-alert-modal"
+import { set } from "date-fns";
+
+
 
 function WorkflowMenuSection({
   onDelete,
@@ -45,6 +48,7 @@ function WorkflowMenuSection({
   onBuilder: () => void;
   workflow: Workflow;
 }) {
+
   // Determine if all providers are installed
   const allProvidersInstalled = workflow.providers.every(
     (provider) => provider.installed
@@ -55,6 +59,10 @@ function WorkflowMenuSection({
     (trigger) => trigger.type === "manual"
   ); // Replace 'manual' with the actual value that represents a manual trigger in your data
 
+  const hasAlertTrigger = workflow.triggers.some(
+    (trigger) => trigger.type === "alert"
+  );
+
   return (
     <WorkflowMenu
       onDelete={onDelete}
@@ -64,6 +72,7 @@ function WorkflowMenuSection({
       onBuilder={onBuilder}
       allProvidersInstalled={allProvidersInstalled}
       hasManualTrigger={hasManualTrigger}
+      hasAlertTrigger={hasAlertTrigger}
     />
   );
 }
@@ -168,6 +177,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [isRunning, setIsRunning] = useState(false);
+  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
+
+  const [alertPayload, setAlertPayload] = useState({});
+  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
+  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+
+
 
   const { providers } = useFetchProviders();
 
@@ -193,14 +209,40 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     setFormErrors(updatedFormErrors);
   };
 
-  const handleRunClick = async () => {
-    setIsRunning(true);
+  // todo: this logic should move to the backend
+  function extractAlertDependencies(workflowRaw: string): string [] {
+    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
+    const dependencies = workflowRaw.match(dependencyRegex);
+
+    if (!dependencies) {
+      return [];
+    }
+
+    // Convert Set to Array
+    const uniqueDependencies = Array.from(new Set(dependencies)).reduce<string[]>((acc, dep) => {
+      // Ensure 'dep' is treated as a string
+      const match = dep.match(/alert\.([\w.]+)/);
+      if (match) {
+        acc.push(match[1]);
+      }
+      return acc;
+    }, []);
+
+
+    return uniqueDependencies;
+  }
+
+
+  const runWorkflow = async (payload: object) => {
     try {
+      setIsRunning(true);
       const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -216,6 +258,41 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       console.error("An error occurred while starting workflow", error);
     }
     setIsRunning(false);
+  };
+
+
+  const handleRunClick = async () => {
+    const hasAlertTrigger = workflow.triggers.some(
+      (trigger) => trigger.type === "alert"
+    );
+
+    // if it needs alert payload, than open the modal
+    if(hasAlertTrigger){
+      // extract the filters
+      // TODO: support more than one trigger
+      for (const trigger of workflow.triggers) {
+        // at least one trigger is alert, o/w hasAlertTrigger was false
+        if(trigger.type === "alert"){
+          const staticAlertFilters = trigger.filters || [];
+          setAlertFilters(staticAlertFilters);
+          break;
+        }
+      }
+      const dependencies = extractAlertDependencies(workflow.workflow_raw);
+      setAlertDependencies(dependencies);
+      setIsAlertTriggerModalOpen(true);
+      return;
+    }
+    // else, manual trigger, just run it
+    else{
+      runWorkflow({});
+    }
+
+  };
+
+  const handleAlertTriggerModalSubmit = (payload: any) => {
+    setAlertPayload(payload);
+    runWorkflow(payload); // Function to run the workflow with the payload
   };
 
   const handleDeleteClick = async () => {
@@ -452,6 +529,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           )}
         </SlidingPanel>
       </Card>
+      <AlertTriggerModal
+        isOpen={isAlertTriggerModalOpen}
+        onClose={() => setIsAlertTriggerModalOpen(false)}
+        onSubmit={handleAlertTriggerModalSubmit}
+        staticFields={alertFilters}
+        dependencies={alertDependencies}
+      />
     </div>
   );
 }

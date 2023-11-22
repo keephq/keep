@@ -5,7 +5,7 @@ export type Provider = {
   installed: boolean;
 }
 
-type Filter = {
+export type Filter = {
   key: string;
   value: string;
 };
