@@ -1,7 +1,10 @@
 # Alert when there are new GitHub Stars utilizing keepstate
-alert:
+workflow:
   id: new-github-stars
   description: Get new GitHub Stars
+  triggers:
+    - type: interval
+      value: 300
   steps:
     - name: get-github-stars
       provider:
@@ -9,7 +12,9 @@ alert:
         config: "{{ providers.github }}"
         with:
           repository: "keephq/keep"
-          previous_stars_count: "{{ state.new-github-stars.-1.workflow_context.steps_context.get-github-stars.results.stars }}"
+          previous_stars_count:
+            key: "{{ state.new-github-stars.-1.workflow_context.steps_context.get-github-stars.results.stars }}"
+            default: 0
   actions:
     - name: trigger-slack
       condition:
@@ -24,7 +29,7 @@ alert:
             - type: section
               text:
                 type: plain_text
-                text: There are new len({{ steps.get-github-stars.results.new_stargazers }}) stargazers for keephq/keep
+                text: There are new keep.len({{ steps.get-github-stars.results.new_stargazers }}) stargazers for keephq/keep
                 emoji: true
             - type: section
               text:
