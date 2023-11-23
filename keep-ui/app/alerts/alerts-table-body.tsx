@@ -29,6 +29,7 @@ import moment from "moment";
 import { Provider } from "app/providers/providers";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { TrashIcon } from "@heroicons/react/20/solid";
 
 interface Props {
   data: Alert[];
@@ -39,7 +40,7 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   showSkeleton?: boolean;
-  onDelete?: (fingerprint: string) => void;
+  onDelete?: (fingerprint: string, restore?: boolean) => void;
 }
 
 const getSeverity = (severity: Severity | undefined) => {
@@ -203,6 +204,16 @@ export function AlertsTableBody({
                           variant="solid"
                         />
                       </a>
+                    )}
+                    {alert.isDeleted && (
+                      <Icon
+                        icon={TrashIcon}
+                        tooltip="This alert has been deleted"
+                        size="xs"
+                        color="gray"
+                        className="ml-1"
+                        variant="solid"
+                      />
                     )}
                     {relevantWorkflows?.length > 0 && (
                       <Icon

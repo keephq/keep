@@ -657,7 +657,7 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
     return alerts
 
 
-def get_alerts(tenant_id, provider_id=None):
+def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)

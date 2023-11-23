@@ -20,7 +20,7 @@ interface Props {
   openHistory: () => void;
   provider?: Provider;
   mutate?: () => void;
-  callDelete?: (fingerprint: string) => void;
+  callDelete?: (fingerprint: string, restore?: boolean) => void;
 }
 
 export default function AlertMenu({
@@ -63,16 +63,21 @@ export default function AlertMenu({
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
+      // TODO: we'll change this once we have pulled alerts in the DB as well
+      const body =
+        alert.pushed || alert.isDeleted
+          ? { fingerprint: fingerprint, restore: alert.isDeleted } // pushe alerts
+          : { pulled_alert_dto: alert }; // pulled alerts (we need to keep it in the db)
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fingerprint: fingerprint }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint);
+        callDelete!(fingerprint, alert.isDeleted);
       }
     }
   };
@@ -187,14 +192,12 @@ export default function AlertMenu({
                 {({ active }) => (
                   <button
                     onClick={onDelete}
-                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                      !alert.pushed ? "text-slate-300 cursor-not-allowed" : ""
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                    disabled={!alert.pushed}
-                    title={!alert.pushed ? "Cannot delete a pulled alert" : ""}
+                    className={`${
+                      active ? "bg-slate-200" : "text-gray-900"
+                    }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                   >
                     <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Delete
+                    {alert.isDeleted ? "Restore" : "Delete"}
                   </button>
                 )}
               </Menu.Item>
