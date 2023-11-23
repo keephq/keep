@@ -35,6 +35,26 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _is_localhost():
+    # TODO - there are more "advanced" cases that we don't catch here
+    #        e.g. IP's that are not public but not localhost
+    #        the more robust way is to try access KEEP_API_URL from another tool (such as wtfismy.com but the opposite)
+    #
+    #        this is a temporary solution until we have a better one
+    api_url = config("KEEP_API_URL")
+    if "localhost" in api_url:
+        return True
+
+    if "127.0.0" in api_url:
+        return True
+
+    # default on localhost if no USE_NGROK
+    if "0.0.0.0" in api_url:
+        return True
+
+    return False
+
+
 @router.get(
     "",
 )
@@ -47,14 +67,21 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
+    is_localhost = _is_localhost()
+
     try:
         return {
             "providers": providers,
             "installed_providers": installed_providers,
+            "is_localhost": is_localhost,
         }
     except Exception:
         logger.exception("Failed to get providers")
-        return {"providers": providers, "installed_providers": []}
+        return {
+            "providers": providers,
+            "installed_providers": [],
+            "is_localhost": is_localhost,
+        }
 
 
 @router.get(

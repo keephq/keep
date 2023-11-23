@@ -250,6 +250,7 @@
       "pages": [
         "development/getting-started",
         "development/authentication",
+        "development/external-url",
         "development/adding-a-new-provider"
       ]
     }
