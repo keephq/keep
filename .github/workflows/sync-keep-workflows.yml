@@ -16,8 +16,8 @@ on:
               default: 'https://api.keephq.dev'
 
 jobs:
-    compile:
-        name: Upload workflows to Keep
+    sync-workflows:
+        name: Sync workflows to Keep
         runs-on: ubuntu-latest
         # Use the Keep CLI image
         container:

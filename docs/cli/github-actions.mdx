@@ -1,0 +1,59 @@
+---
+title: "Sync Keep Workflows With Github Action"
+---
+
+This documentation provides a detailed guide on how to use the Keep CLI within a GitHub Actions workflow to synchronize and manage Keep workflows from a directory. This setup automates the process of uploading workflows to Keep, making it easier to maintain and update them.
+
+
+
+
+
+### Configuration
+To set up this workflow in your repository:
+
+- Add the workflow YAML file to your repository under `.github/workflows/`.
+- Set your Keep API Key and URL as secrets in your repository settings if you haven't already.
+- Make changes to your workflows in the specified directory or trigger the workflow manually through the GitHub UI.
+- Change 'example/workflows/**' to the directory you store your Keep Workflows.
+
+
+### GitHub Action Workflow
+This GitHub Actions workflow automatically synchronizes workflows from a specified directory to Keep whenever there are changes. It also allows for manual triggering with optional parameters.
+
+```yaml
+# A workflow that sync Keep workflows from a directory
+name: "Sync Keep Workflows"
+
+on:
+    push:
+        paths:
+          - 'examples/workflows/**'
+    workflow_dispatch:
+        inputs:
+            keep_api_key:
+              description: 'Keep API Key'
+              required: false
+            keep_api_url:
+              description: 'Keep API URL'
+              required: false
+              default: 'https://api.keephq.dev'
+
+jobs:
+    sync-workflows:
+        name: Sync workflows to Keep
+        runs-on: ubuntu-latest
+        container:
+            image: us-central1-docker.pkg.dev/keephq/keep/keep-cli:latest
+        env:
+            KEEP_API_KEY: ${{ secrets.KEEP_API_KEY || github.event.inputs.keep_api_key }}
+            KEEP_API_URL: ${{ secrets.KEEP_API_URL || github.event.inputs.keep_api_url }}
+
+        steps:
+        - name: Check out the repo
+          uses: actions/checkout@v2
+
+        - name: Run Keep CLI
+          run: |
+            keep workflow apply -f examples/workflows
+
+```
