@@ -56,6 +56,8 @@ logging_config = {
 }
 logger = logging.getLogger(__name__)
 
+DEFAULT_CONF_FILE = ".keep.yaml"
+
 
 def make_keep_request(method, url, **kwargs):
     try:
@@ -107,6 +109,12 @@ class Info:
             or Info.KEEP_MANAGED_API_URL
         )
 
+        arguments = sys.argv
+
+        # if we auth, we don't need to check for api key
+        if "auth" in arguments or "api" in arguments:
+            return
+
         if not self.api_key:
             click.echo(
                 click.style(
@@ -146,9 +154,9 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.option(
     "--keep-config",
     "-c",
-    help="The path to the keep config file (default keep.yaml)",
+    help=f"The path to the keep config file (default {DEFAULT_CONF_FILE}",
     required=False,
-    default="keep.yaml",
+    default=f"{DEFAULT_CONF_FILE}",
 )
 @pass_info
 @click.pass_context
@@ -195,10 +203,10 @@ def config(info: Info):
     api_key = click.prompt(
         "Enter your api key (leave blank for localhost)", hide_input=True, default=""
     )
-    with open("keep.yaml", "w") as f:
+    with open(f"{DEFAULT_CONF_FILE}", "w") as f:
         f.write(f"api_key: {api_key}\n")
         f.write(f"keep_api_url: {keep_url}\n")
-    click.echo(click.style(f"Config file created at keep.yaml", bold=True))
+    click.echo(click.style(f"Config file created at {DEFAULT_CONF_FILE}", bold=True))
 
 
 @cli.command()
@@ -974,6 +982,115 @@ def enrich(info: Info, fingerprint, params):
         )
     else:
         click.echo(click.style(f"Alert {fingerprint} enriched successfully", bold=True))
+
+
+@cli.group()
+@pass_info
+def auth(info: Info):
+    """Manage auth."""
+    pass
+
+
+# global token will be populated in the callback
+token = None
+
+
+@auth.command()
+@pass_info
+def login(info: Info):
+    # first, prepare the oauth2 session:
+    import multiprocessing
+    import os
+    import threading
+    import time
+    import webbrowser
+
+    import uvicorn
+    from fastapi import FastAPI
+    from requests_oauthlib import OAuth2Session
+
+    app = FastAPI()
+
+    @app.get("/callback")
+    def callback(code: str, state: str):
+        global token
+        token_url = "https://auth.keephq.dev/oauth/token"
+        token = oauth_session.fetch_token(
+            token_url,
+            code=code,
+            client_secret="",
+            include_client_id=True,
+            authorization_response=redirect_uri,
+        )
+        print("Got the token")
+        return "Authenticated!"
+
+    # https://github.com/encode/uvicorn/discussions/1103#discussioncomment-1389875
+    class UvicornServer:
+        def __init__(self):
+            super().__init__()
+
+        def start(self):
+            # Define the FastAPI app running logic here
+            print("PID of the server process: {}".format(os.getpid()))
+            uvicorn.run(app, host="127.0.0.1", port=8085, log_level="info")
+
+    client_id = "P7zzubZGLNe8BQ4HRzvrhT5qPgRFa0BL"
+    authorization_base_url = "https://auth.keephq.dev/authorize"
+    scope = ["openid", "profile", "email"]
+    redirect_uri = "http://localhost:8085/callback"
+    oauth_session = OAuth2Session(client_id, scope=scope, redirect_uri=redirect_uri)
+    # now that we have the state parameter, we can start the fast api server
+    print("PID of the main process: {}".format(os.getpid()))
+    # start the server on another process
+    server_thread = threading.Thread(target=UvicornServer().start)
+    server_thread.start()
+    # now, open the browser and wait for the authentication
+    webbrowser.open(oauth_session.authorization_url(authorization_base_url)[0])
+
+    # Now wait for the callback
+    timeout = 60 * 2  # 2 minutes
+    times = 0
+    time_start = time.time()
+    while not token:
+        if time.time() - time_start > timeout:
+            print("Timeout waiting for callback")
+            os.exit(1)
+        # print every 15 seconds
+        if times % 15 == 0:
+            print("Waiting for callback")
+        time.sleep(1)
+
+    # get the api key
+    print("Got the token, getting the api key")
+    id_token = token["id_token"]
+    api_key_resp = make_keep_request(
+        "GET",
+        info.keep_api_url + "/settings/apikey",
+        headers={"accept": "application/json", "Authorization": f"Bearer {id_token}"},
+    )
+    if not api_key_resp.ok:
+        raise Exception(f"Error getting api key: {api_key_resp.text}")
+
+    api_key = api_key_resp.json().get("apiKey")
+    # keep it in the config file
+    with open(f"{DEFAULT_CONF_FILE}", "w") as f:
+        f.write(f"api_key: {api_key}\n")
+    # Authenticated successfully
+    print("Authenticated successfully!")
+    # Check that we can get whoami
+    resp = make_keep_request(
+        "GET",
+        # info.keep_api_url + "/whoami",
+        "http://localhost:8080/whoami",
+        headers={"x-api-key": api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting whoami: {resp.text}")
+    print("Authenticated to Keep successfully!")
+    print(resp.json())
+    # kills the server also
+    os._exit(0)
 
 
 if __name__ == "__main__":
