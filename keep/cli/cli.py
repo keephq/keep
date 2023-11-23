@@ -57,6 +57,24 @@ logging_config = {
 logger = logging.getLogger(__name__)
 
 
+def make_keep_request(method, url, **kwargs):
+    try:
+        response = requests.request(method, url, **kwargs)
+        if response.status_code == 401:
+            click.echo(
+                click.style(
+                    "Authentication failed. Please check your API key.",
+                    fg="red",
+                    bold=True,
+                )
+            )
+            sys.exit(401)
+        return response
+    except requests.exceptions.RequestException as e:
+        click.echo(click.style(f"Request failed: {e}", fg="red", bold=True))
+        sys.exit(1)
+
+
 class Info:
     """An information object to pass data between CLI functions."""
 
@@ -188,7 +206,8 @@ def config(info: Info):
 def whoami(info: Info):
     """Verify the api key auth."""
     try:
-        resp = requests.get(
+        resp = make_keep_request(
+            "GET",
             info.keep_api_url + "/whoami",
             headers={"x-api-key": info.api_key, "accept": "application/json"},
         )
@@ -344,7 +363,8 @@ def workflow(info: Info):
 @pass_info
 def list_workflows(info: Info):
     """List workflows."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url + "/workflows",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -390,7 +410,8 @@ def apply_workflow(file: str, info: Info):
     with open(file, "rb") as f:
         files = {"file": (os.path.basename(file), f)}
         workflow_endpoint = info.keep_api_url + "/workflows"
-        response = requests.post(
+        response = make_keep_request(
+            "POST",
             workflow_endpoint,
             headers={"x-api-key": info.api_key, "accept": "application/json"},
             files=files,
@@ -469,7 +490,8 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
 
     # Run the workflow with the fetched payload as the request body
     workflow_endpoint = info.keep_api_url + f"/workflows/{workflow_id}/run"
-    response = requests.post(
+    response = make_keep_request(
+        "POST",
         workflow_endpoint,
         headers={"x-api-key": info.api_key, "accept": "application/json"},
         json=payload,
@@ -502,7 +524,8 @@ def workflow_executions(info: Info):
 @pass_info
 def list_workflow_executions(info: Info):
     """List workflow executions."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url + "/workflows/executions/list",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -549,7 +572,8 @@ def list_workflow_executions(info: Info):
 @pass_info
 def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
     """Get workflow execution logs."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url
         + "/workflows/executions/list?workflow_execution_id="
         + workflow_execution_id,
@@ -594,7 +618,8 @@ def provider(info: Info):
 @pass_info
 def list_providers(info: Info, available: bool):
     """List providers."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url + "/providers",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -659,7 +684,8 @@ def list_providers(info: Info, available: bool):
 @click.pass_context
 def connect(ctx, help: bool, provider_name, provider_type, params):
     info = ctx.ensure_object(Info)
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url + "/providers",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -729,7 +755,8 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         if config_as_flag in options_dict:
             provider_install_payload[config] = options_dict[config_as_flag]
     # Install the provider
-    resp = requests.post(
+    resp = make_keep_request(
+        "POST",
         info.keep_api_url + "/providers/install",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
         json=provider_install_payload,
@@ -768,7 +795,8 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
 def delete(ctx, provider_id):
     info = ctx.ensure_object(Info)
     dummy_provider_type = "dummy"
-    resp = requests.delete(
+    resp = make_keep_request(
+        "DELETE",
         info.keep_api_url + f"/providers/{dummy_provider_type}/{provider_id}",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -791,7 +819,8 @@ def delete(ctx, provider_id):
 
 def _get_alert_by_fingerprint(keep_url, api_key, fingerprint: str):
     """Get an alert by fingerprint."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         keep_url + f"/alerts/{fingerprint}",
         headers={"x-api-key": api_key, "accept": "application/json"},
     )
@@ -835,7 +864,8 @@ def get_alert(info: Info, fingerprint: str):
 @pass_info
 def list_alerts(info: Info, filter: typing.List[str], export: bool):
     """List alerts."""
-    resp = requests.get(
+    resp = make_keep_request(
+        "GET",
         info.keep_api_url + "/alerts",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
@@ -930,7 +960,8 @@ def enrich(info: Info, fingerprint, params):
         "enrichments": params_dict,
     }
     # Make the API request
-    resp = requests.post(
+    resp = make_keep_request(
+        "POST",
         f"{info.keep_api_url}/alerts/enrich",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
         json=params_dict,
