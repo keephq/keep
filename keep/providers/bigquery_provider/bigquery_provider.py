@@ -19,14 +19,14 @@ class BigqueryProviderAuthConfig:
     BigQuery authentication configuration.
     """
 
-    credentials_json: str = dataclasses.field(
+    service_account_json: str = dataclasses.field(
         default=None,
         metadata={
             "required": False,
             "description": "Service account key in JSON format. "
             "If not provided, will use application default credentials",
             "type": "file",
-            "name": "credentials_json",
+            "name": "service_account_json",
             "file_type": ".json",  # this is used to filter the file type in the UI
         },
     )
@@ -78,9 +78,9 @@ class BigqueryProvider(BaseProvider):
                 raise ValueError("BigQuery project id is missing.")
 
     def init_client(self):
-        if self.authentication_config.credentials_path:
+        if self.authentication_config.service_account_json:
             self.client = bigquery.Client.from_service_account_json(
-                self.authentication_config.service_account_file
+                self.authentication_config.service_account_json
             )
         else:
             self.client = bigquery.Client()
