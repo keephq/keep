@@ -42,6 +42,7 @@ export interface ProviderScope {
 export interface ProvidersResponse {
   providers: Provider[];
   installed_providers: Provider[];
+  is_localhost: boolean;
 }
 
 export interface Provider {
