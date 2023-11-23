@@ -1,4 +1,5 @@
 # A workflow that sync Keep workflows from a directory
+name: "Sync Keep Workflows"
 
 on:
     push:
@@ -31,4 +32,4 @@ jobs:
 
         - name: Run Keep CLI
           run: |
-            keep apply -f examples/workflows
+            keep workflows apply -f examples/workflows
