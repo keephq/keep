@@ -43,7 +43,7 @@ class PushoverProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs: dict):
+    def _notify(self, message=None, **kwargs: dict):
         """
         Notify alert message to Pushover using the Pushover API
         https://support.pushover.net/i44-example-code-and-pushover-libraries#python
@@ -52,7 +52,6 @@ class PushoverProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Pushover")
-        message = kwargs.pop("message", "")
         resp = requests.post(
             "https://api.pushover.net/1/messages.json",
             data={

@@ -159,6 +159,7 @@ class ProvidersFactory:
             "mock_provider",
             "file_provider",
             "github_workflows_provider",
+            "github_provider",  # TODO: github provider doesn't do anything, remove this when it's refactored
         ]
 
         for provider_directory in os.listdir(
@@ -239,10 +240,15 @@ class ProvidersFactory:
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
 
-                provider_tags = provider_class.PROVIDER_TAGS
+                provider_tags = []
+                provider_tags.extend(provider_class.PROVIDER_TAGS)
                 if can_query and "data" not in provider_tags:
                     provider_tags.append("data")
-                if supports_webhook and "alert" not in provider_tags:
+                if (
+                    supports_webhook
+                    or can_setup_webhook
+                    and "alert" not in provider_tags
+                ):
                     provider_tags.append("alert")
                 if can_notify and "ticketing" not in provider_tags:
                     provider_tags.append("messaging")

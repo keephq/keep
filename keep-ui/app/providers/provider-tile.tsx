@@ -1,6 +1,21 @@
-import { Button, Icon, Text } from "@tremor/react";
+import {
+  Badge,
+  Button,
+  Icon,
+  Italic,
+  Subtitle,
+  Text,
+  Title,
+} from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
+import {
+  BellAlertIcon,
+  ChatBubbleBottomCenterIcon,
+  CircleStackIcon,
+  QueueListIcon,
+  TicketIcon,
+} from "@heroicons/react/20/solid";
 
 interface Props {
   provider: Provider;
@@ -81,29 +96,60 @@ export default function ProviderTile({ provider, onClick }: Props) {
           />
         )}
         {provider.installed ? (
-          <Text color={"green"} className="ml-2.5 text-xs group-hover:hidden">
+          <Text color={"green"} className="flex text-xs group-hover:hidden">
             Connected
           </Text>
         ) : null}
-        <div className="flex items-center">
-          <Text
-            className="group-hover:hidden capitalize"
-            title={provider.details?.name}
+        <div className="flex flex-col">
+          <div>
+            <Title
+              className="group-hover:hidden capitalize"
+              title={provider.details?.name}
+            >
+              {provider.type}{" "}
+            </Title>
+            {provider.details.name && (
+              <Subtitle className="group-hover:hidden">
+                id: {provider.details.name}
+              </Subtitle>
+            )}
+          </div>
+          <div className="labels flex group-hover:hidden">
+            {!provider.installed &&
+              provider.tags.map((tag) => {
+                const icon =
+                  tag === "alert"
+                    ? BellAlertIcon
+                    : tag === "data"
+                    ? CircleStackIcon
+                    : tag === "ticketing"
+                    ? TicketIcon
+                    : tag === "queue"
+                    ? QueueListIcon
+                    : ChatBubbleBottomCenterIcon;
+                return (
+                  <Badge
+                    key={tag}
+                    icon={icon}
+                    size="xs"
+                    className="text-[3px] mr-1 mt-5"
+                    color="slate"
+                  >
+                    {tag}
+                  </Badge>
+                );
+              })}
+          </div>
+
+          <Button
+            variant="secondary"
+            size="xs"
+            color={provider.installed ? "orange" : "green"}
+            className="hidden group-hover:block"
           >
-            {provider.type}{" "}
-          </Text>
-          <Text className="ml-1 group-hover:hidden">
-            {provider.details.name && `(${provider.details.name})`}
-          </Text>
+            {provider.installed ? "Modify" : "Connect"}
+          </Button>
         </div>
-        <Button
-          variant="secondary"
-          size="xs"
-          color={provider.installed ? "orange" : "green"}
-          className="hidden group-hover:block"
-        >
-          {provider.installed ? "Modify" : "Connect"}
-        </Button>
       </div>
       <Image
         src={`/icons/${provider.type}-icon.png`}

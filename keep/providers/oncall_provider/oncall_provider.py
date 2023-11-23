@@ -68,7 +68,7 @@ class OncallProvider(BaseProvider):
     def random_color() -> str:
         return random.randint(0, 255)
 
-    def notify(
+    def _notify(
         self,
         title: str,
         roomPrefix: str = "incident",

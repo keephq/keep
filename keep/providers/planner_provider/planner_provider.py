@@ -148,7 +148,7 @@ class PlannerProvider(BaseProvider):
 
         return response_data
 
-    def notify(self, plan_id="", title="", bucket_id=None, **kwargs: dict):
+    def _notify(self, plan_id="", title="", bucket_id=None, **kwargs: dict):
         # to verify if the plan with plan_id exists or not
         self.__get_plan_by_id(plan_id=plan_id)
 

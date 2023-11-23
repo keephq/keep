@@ -104,6 +104,7 @@ class KafkaProvider(BaseProvider):
             alias="Topic Read",
         )
     ]
+    PROVIDER_TAGS = ["queue"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

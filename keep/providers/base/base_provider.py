@@ -28,7 +28,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
-    PROVIDER_TAGS: list[Literal["alert", "ticketing", "messaging", "data"]] = []
+    PROVIDER_TAGS: list[
+        Literal["alert", "ticketing", "messaging", "data", "queue"]
+    ] = []
 
     def __init__(
         self,
