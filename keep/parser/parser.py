@@ -1,18 +1,16 @@
-import io
 import json
 import logging
 import os
 import typing
 
-import requests
 import yaml
 
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
-from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
-from keep.step.step import ProviderParameter, Step, StepType
+from keep.step.step import Step, StepType
+from keep.step.step_provider_parameter import StepProviderParameter
 from keep.workflowmanager.workflow import Workflow
 
 
@@ -301,7 +299,7 @@ class Parser:
                 parsed_provider_parameters[parameter] = provider_parameters[parameter]
             elif isinstance(provider_parameters[parameter], dict):
                 try:
-                    parsed_provider_parameters[parameter] = ProviderParameter(
+                    parsed_provider_parameters[parameter] = StepProviderParameter(
                         **provider_parameters[parameter]
                     )
                 except:

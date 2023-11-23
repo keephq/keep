@@ -1,6 +1,6 @@
 workflow:
-  id: column
-  description: handle column alerts
+  id: sentry-alerts
+  description: handle alerts
   triggers:
     - type: alert
       # we want to run this workflow only for Sentry alerts with high severity
