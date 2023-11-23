@@ -57,9 +57,7 @@ export default function AlertMenu({
   );
 
   const onDelete = async () => {
-    const confirmed = confirm(
-      "Are you sure you want to delete this alert? This is irreversible."
-    );
+    const confirmed = confirm(`Are you sure you want to ${alert.isDeleted ? "restore" : "delete"} this alert?`);
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
