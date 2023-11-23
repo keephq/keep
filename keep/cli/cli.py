@@ -60,6 +60,8 @@ logger = logging.getLogger(__name__)
 class Info:
     """An information object to pass data between CLI functions."""
 
+    KEEP_MANAGED_API_URL = "https://api.keephq.dev"
+
     def __init__(self):  # Note: This object must have an empty constructor.
         """Create a new instance."""
         self.verbose: int = 0
@@ -81,7 +83,11 @@ class Info:
             )
             pass
         self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
-        self.keep_api_url = self.config.get("keep_api_url") or os.getenv("KEEP_API_URL")
+        self.keep_api_url = (
+            self.config.get("keep_api_url")
+            or os.getenv("KEEP_API_URL")
+            or Info.KEEP_MANAGED_API_URL
+        )
 
         if not self.api_key:
             click.echo(
@@ -100,6 +106,13 @@ class Info:
                 )
             )
             sys.exit(2)
+
+        click.echo(
+            click.style(
+                f"Using keep api url: {self.keep_api_url}",
+                bold=True,
+            )
+        )
 
 
 # pass_info is a decorator for functions that pass 'Info' objects.
@@ -372,36 +385,54 @@ def list_workflows(info: Info):
     print(table)
 
 
-@workflow.command()
-@click.option(
-    "--file",
-    "-f",
-    type=click.Path(exists=True),
-    help="The workflow file",
-    required=True,
-)
-@pass_info
-def apply(info: Info, file: str):
-    """Apply a workflow."""
+def apply_workflow(file: str, info: Info):
+    """Helper function to apply a single workflow."""
     with open(file, "rb") as f:
-        files = {
-            "file": (file.split("/")[-1], f)
-        }  # The field 'file' should match the name in the API endpoint
+        files = {"file": (os.path.basename(file), f)}
         workflow_endpoint = info.keep_api_url + "/workflows"
         response = requests.post(
             workflow_endpoint,
             headers={"x-api-key": info.api_key, "accept": "application/json"},
             files=files,
         )
+        return response
+
+
+@workflow.command()
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="The workflow file or directory containing workflow files",
+    required=True,
+)
+@pass_info
+def apply(info: Info, file: str):
+    """Apply a workflow or multiple workflows from a directory."""
+    if os.path.isdir(file):
+        for filename in os.listdir(file):
+            if filename.endswith(".yml") or filename.endswith(".yaml"):
+                click.echo(click.style(f"Applying workflow {filename}", bold=True))
+                full_path = os.path.join(file, filename)
+                response = apply_workflow(full_path, info)
+                # Handle response for each file
+                if response.ok:
+                    click.echo(
+                        click.style(
+                            f"Workflow {filename} applied successfully", bold=True
+                        )
+                    )
+                else:
+                    click.echo(
+                        click.style(
+                            f"Error applying workflow {filename}: {response.text}",
+                            bold=True,
+                        )
+                    )
+    else:
+        response = apply_workflow(file, info)
         if response.ok:
             click.echo(click.style(f"Workflow {file} applied successfully", bold=True))
-            response = response.json()
-            click.echo(
-                click.style(f"Workflow id: {response.get('workflow_id')}", bold=True)
-            )
-            click.echo(
-                click.style(f"Workflow revision: {response.get('revision')}", bold=True)
-            )
         else:
             click.echo(
                 click.style(
