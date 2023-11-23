@@ -73,18 +73,33 @@ class Info:
             with open(file=keep_config, mode="r") as f:
                 self.logger.debug("Loading configuration file.")
                 self.config = yaml.safe_load(f) or {}
-                self.api_key = (
-                    self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
-                )
-                self.keep_api_url = self.config.get("keep_api_url") or os.getenv(
-                    "KEEP_API_URL"
-                )
                 self.logger.debug("Configuration file loaded.")
+
         except FileNotFoundError:
             logger.debug(
                 "Configuration file could not be found. Running without configuration."
             )
             pass
+        self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
+        self.keep_api_url = self.config.get("keep_api_url") or os.getenv("KEEP_API_URL")
+
+        if not self.api_key:
+            click.echo(
+                click.style(
+                    "No api key found. Please run `keep config` to set the api key or set KEEP_API_KEY env variable.",
+                    bold=True,
+                )
+            )
+            sys.exit(2)
+
+        if not self.keep_api_url:
+            click.echo(
+                click.style(
+                    "No keep api url found. Please run `keep config` to set the keep api url or set KEEP_API_URL env variable.",
+                    bold=True,
+                )
+            )
+            sys.exit(2)
 
 
 # pass_info is a decorator for functions that pass 'Info' objects.
