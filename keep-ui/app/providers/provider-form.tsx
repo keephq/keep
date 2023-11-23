@@ -24,10 +24,14 @@ import {
   ArrowTopRightOnSquareIcon,
   ArrowDownOnSquareIcon,
   GlobeAltIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
+import Link from 'next/link'
+
+
 
 type ProviderFormProps = {
   provider: Provider;
@@ -305,10 +309,22 @@ const ProviderForm = ({
   return (
     <div className="flex flex-col h-full justify-between p-5">
       <div>
+        <div className="flex flex-row">
         <Title>
           Connect to{" "}
           {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
         </Title>
+          <Link href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`} target="_blank">
+            <Icon
+              icon={DocumentTextIcon}
+              variant="simple"
+              color="gray"
+              size="sm"
+              tooltip={`${provider.type} provider documentation`}
+            />
+          </Link>
+        </div>
+
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
         )}
