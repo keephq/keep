@@ -144,7 +144,7 @@
           "pages": ["workflows/examples/multi-step-alert"]
         },
         "workflows/state"
-      ]
+        ]
     },
     {
       "group": "Keep API",
@@ -201,6 +201,7 @@
       "pages": [
         "cli/overview",
         "cli/installation",
+        "cli/github-actions",
         {
           "group": "Commands",
           "pages": [
