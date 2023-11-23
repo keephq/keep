@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import os
 from typing import Optional
@@ -9,17 +8,14 @@ from fastapi.security import (
     APIKeyHeader,
     HTTPAuthorizationCredentials,
     HTTPBasic,
-    HTTPBasicCredentials,
     HTTPDigest,
     OAuth2PasswordBearer,
 )
 from pusher import Pusher
-from sqlmodel import Session, select
-from starlette_context import context
+from sqlmodel import Session
 
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_api_key, get_session
-from keep.api.models.db.tenant import TenantApiKey
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +81,7 @@ def verify_api_key(
         auth_header = request.headers.get("Authorization")
         try:
             scheme, _, credentials = auth_header.partition(" ")
-        except:
+        except Exception:
             raise HTTPException(status_code=401, detail="Missing API Key")
         # support basic auth (e.g. AWS SNS)
         if scheme.lower() == "basic":
@@ -132,7 +128,7 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
         )
         tenant_id = payload.get("keep_tenant_id")
         return tenant_id
-    except jwt.exceptions.DecodeError as e:
+    except jwt.exceptions.DecodeError:
         logger.exception("Failed to decode token")
         raise HTTPException(status_code=401, detail="Token is not a valid JWT")
     except Exception as e:
@@ -172,7 +168,7 @@ def verify_bearer_token_single_tenant(token: str = Depends(oauth2_scheme)) -> st
         )
         tenant_id = payload.get("tenant_id")
         return tenant_id
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid JWT token")
 
 
@@ -207,7 +203,7 @@ def verify_token_or_key(
     if api_key:
         try:
             return verify_api_key(request, api_key, authorization)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to validate API Key")
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
@@ -216,7 +212,7 @@ def verify_token_or_key(
     if token:
         try:
             return verify_bearer_token(token)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to validate token")
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
@@ -234,7 +230,7 @@ def verify_token_or_key_single_tenant(
     if api_key:
         try:
             return verify_api_key_single_tenant(request, api_key, authorization)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to validate API Key")
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
@@ -243,7 +239,7 @@ def verify_token_or_key_single_tenant(
     if token:
         try:
             return verify_bearer_token_single_tenant(token)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to validate token")
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"

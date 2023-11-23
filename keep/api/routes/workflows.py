@@ -1,14 +1,12 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-import jwt
 import validators
 import yaml
 from fastapi import (
     APIRouter,
     Body,
     Depends,
-    File,
     HTTPException,
     Query,
     Request,
@@ -38,7 +36,6 @@ from keep.api.models.workflow import (
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
 )
-from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -137,11 +134,6 @@ def run_workflow(
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
         workflow_id = get_workflow_id_by_name(tenant_id, workflow_id)
     workflowmanager = WorkflowManager.get_instance()
-    context_manager = ContextManager(
-        tenant_id=tenant_id,
-        workflow_id=workflow_id,
-        load_state=False,  # state is not needed
-    )
 
     # Finally, run it
     try:
@@ -185,7 +177,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
         elif "workflow" in workflow_data:
             workflow_data = workflow_data.pop("workflow")
 
-    except yaml.YAMLError as e:
+    except yaml.YAMLError:
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
 

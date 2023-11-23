@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -29,3 +30,4 @@ class Provider(BaseModel):
     installed_by: str | None = None
     installation_time: datetime | None = None
     docs: str | None = None
+    tags: list[Literal["alert", "ticketing", "messaging", "data"]] = []

@@ -8,7 +8,6 @@ import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
@@ -68,7 +67,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
             token = request.headers.get("Authorization").split(" ")[1]
             decoded_token = jwt.decode(token, options={"verify_signature": False})
             return decoded_token.get("email")
-        except:
+        except Exception:
             return "anonymous"
 
     def capture_request(self, request: Request) -> None:
@@ -276,7 +275,7 @@ def _wait_for_server_to_be_ready():
         if _is_server_ready():
             return True
         if time.time() - start_time >= 60:
-            raise TimeoutError(f"Server is not ready after 60 seconds.")
+            raise TimeoutError("Server is not ready after 60 seconds.")
         else:
             logger.warning("Server is not ready yet, retrying in 1 second...")
         time.sleep(1)

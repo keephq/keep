@@ -52,7 +52,9 @@ class AxiomProvider(BaseProvider):
         Validates required configuration for Axiom provider.
 
         """
-        self.authentication_config = AxiomAuthConfig(**self.config.authentication)
+        self.authentication_config = AxiomProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def query(self, **kwargs: dict):
         """

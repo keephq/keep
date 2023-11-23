@@ -93,7 +93,8 @@ class OncallProvider(BaseProvider):
         response.raise_for_status()
         response = response.json()
         existing_labels = [
-            l.get("label") for l in response.get("org", {}).get("incidentLabels", [])
+            label.get("label")
+            for label in response.get("org", {}).get("incidentLabels", [])
         ]
         if not incidentID:
             self.logger.info(f'Creating incident "{title}"')

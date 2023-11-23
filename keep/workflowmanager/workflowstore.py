@@ -1,7 +1,6 @@
 import io
 import logging
 import os
-import typing
 import uuid
 
 import requests
@@ -17,10 +16,7 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflows_with_last_execution,
 )
-from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser
-from keep.providers.providers_factory import ProvidersFactory
-from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
 from keep.workflowmanager.workflow import Workflow
 
 
@@ -52,8 +48,8 @@ class WorkflowStore:
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
         try:
-            workflow = delete_workflow(tenant_id, workflow_id)
-        except Exception as e:
+            delete_workflow(tenant_id, workflow_id)
+        except Exception:
             raise HTTPException(
                 status_code=404, detail=f"Workflow {workflow_id} not found"
             )

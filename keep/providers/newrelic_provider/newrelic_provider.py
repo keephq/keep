@@ -3,8 +3,8 @@ NewrelicProvider is a provider that provides a way to interact with New Relic.
 """
 
 import dataclasses
-from datetime import datetime
 import json
+from datetime import datetime
 
 import pydantic
 import requests
@@ -17,15 +17,15 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
-
 @pydantic.dataclasses.dataclass
 class NewrelicProviderAuthConfig:
-    '''
+    """
     Destinations can be only be created through ADMIN User key.
 
     reference: https://api.newrelic.com/docs/#/Deprecation%20Notice%20-%20Alerts%20Channels/post_alerts_channels_json
     not mentioned in GraphQL docs though, got to know after trying this out.
-    '''
+    """
+
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
@@ -116,7 +116,7 @@ class NewrelicProvider(BaseProvider):
                         aiNotificationsCreateDestination(
                             accountId: {self.newrelic_config.account_id}
                             destination: {{
-                                type: WEBHOOK, 
+                                type: WEBHOOK,
                                 name: "{name}",
                                 properties: [{{key: "url", value:"{url}"}}]}}
                         ) {{
@@ -125,7 +125,7 @@ class NewrelicProvider(BaseProvider):
                                 name
                             }}
                         }}
- 
+
                     }}"""
 
         return {
@@ -140,7 +140,7 @@ class NewrelicProvider(BaseProvider):
                         ) {{
                             ids
                         }}
- 
+
                     }}"""
 
         return {
@@ -201,7 +201,7 @@ class NewrelicProvider(BaseProvider):
 
             for read_scope in read_scopes:
                 scopes[read_scope] = True
-        except Exception as e:
+        except Exception:
             self.logger.exception(
                 "Error while trying to validate read scopes from new relic"
             )
@@ -247,7 +247,7 @@ class NewrelicProvider(BaseProvider):
 
             for write_scope in write_scopes:
                 scopes[write_scope] = True
-        except Exception as e:
+        except Exception:
             self.logger.exception(
                 "Error while trying to validate write scopes from new relic"
             )
@@ -277,9 +277,7 @@ class NewrelicProvider(BaseProvider):
                 "Missing NRQL query", provider_id=self.provider_id
             )
 
-        query = '{actor {account(id: %s) {nrql(query: "%s") {results}}}}'.format(
-            self.newrelic_config.account_id, nrql
-        )
+        query = f'{{actor {{account(id: {self.newrelic_config.account_id}) {{nrql(query: "{nrql}") {{results}}}}'
         payload = {"query": query}
 
         response = requests.post(
@@ -298,7 +296,10 @@ class NewrelicProvider(BaseProvider):
 
     @property
     def __headers(self):
-        return {"Api-Key": self.newrelic_config.api_key, "Content-Type": "application/json"}
+        return {
+            "Api-Key": self.newrelic_config.api_key,
+            "Content-Type": "application/json",
+        }
 
     def get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
@@ -401,22 +402,19 @@ class NewrelicProvider(BaseProvider):
             )
             formatted_alerts.append(alert)
 
-
         return formatted_alerts
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:        
-        '''We are already registering template same as generic AlertDTO'''
+    def format_alert(event: dict) -> AlertDto:
+        """We are already registering template same as generic AlertDTO"""
         lastReceived = event["lastReceived"] if "lastReceived" in event else None
         if lastReceived:
             lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
-                    "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%S"
             )
             event["lastReceived"] = lastReceived
-        return AlertDto(
-                **event
-            )
-            
+        return AlertDto(**event)
+
     def __get_all_policy_ids(
         self,
     ) -> list[str]:
@@ -487,7 +485,7 @@ class NewrelicProvider(BaseProvider):
                 "destinations"
             ]["entities"]
             return id_list[0]["id"]
-        except Exception as e:
+        except Exception:
             self.logger.error("Error getting destination id")
 
     def __add_webhook_destination(self, name: str, url: str) -> str | None:
@@ -501,7 +499,7 @@ class NewrelicProvider(BaseProvider):
                 "destination"
             ]["id"]
             return new_id
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error creating destination for webhook")
 
     def __get_channel_id_by_destination_and_name(self, destination_id: str, name: str):
@@ -536,41 +534,43 @@ class NewrelicProvider(BaseProvider):
 
             return id_list[0]["id"]
 
-        except Exception as e:
+        except Exception:
             self.logger.error("Exception fetching channel id")
 
-    def __add_new_channel(self, destination_id: str, name: str, api_key:str) -> str | None:
+    def __add_new_channel(
+        self, destination_id: str, name: str, api_key: str
+    ) -> str | None:
         try:
-            '''
+            """
             To update the payload template
             Go to new relic -> Alerts & Ai ->  workflows -> create the new channel int (Notfy section).
             Here set the template you want
             once set query channels with sort in descending order by CREATED_AT, maek sure to choose pay key and value in enteties.
-            copy the string value of format 
+            copy the string value of format
             change:
                 { to {{,
                 } to }},
                 \n to \\n,
                 \t to \\t,
-                " to \" 
-            '''
+                " to \"
+            """
 
             mutation_query = """
             mutation {{
                 aiNotificationsCreateChannel(
                     accountId: {account_id},
                     channel: {{
-                        name: "{name}", 
-                        product: IINT, 
-                        type: WEBHOOK, 
-                        destinationId: "{destination_id}", 
+                        name: "{name}",
+                        product: IINT,
+                        type: WEBHOOK,
+                        destinationId: "{destination_id}",
                         properties: [
                             {{
-                                key: "headers", 
+                                key: "headers",
                                 value: "{{ \\\"X-API-KEY\\\":\\\"{api_key}\\\"}}"
                             }},
                             {{
-                                key: "payload", 
+                                key: "payload",
                                 value: "{{\\n\\t\\\"id\\\": {{{{ json issueId }}}},\\n\\t\\\"issueUrl\\\": {{{{ json issuePageUrl }}}},\\n\\t\\\"name\\\": {{{{ json annotations.title.[0] }}}},\\n\\t\\\"severity\\\": {{{{ json priority }}}},\\n\\t\\\"impactedEntities\\\": {{{{ json entitiesData.names }}}},\\n\\t\\\"totalIncidents\\\": {{{{ json totalIncidents }}}},\\n\\t\\\"status\\\": {{{{ json state }}}},\\n\\t\\\"trigger\\\": {{{{ json triggerEvent }}}},\\n\\t\\\"isCorrelated\\\": {{{{ json isCorrelated }}}},\\n\\t\\\"createdAt\\\": {{{{ createdAt }}}},\\n\\t\\\"updatedAt\\\": {{{{ updatedAt }}}},\\n\\t\\\"lastReceived\\\": {{{{ updatedAt }}}},\\n\\t\\\"source\\\": {{{{ json accumulations.source }}}},\\n\\t\\\"alertPolicyNames\\\": {{{{ json accumulations.policyName }}}},\\n\\t\\\"alertConditionNames\\\": {{{{ json accumulations.conditionName }}}},\\n\\t\\\"workflowName\\\": {{{{ json workflowName }}}}\\n}}"
                             }}
                         ]
@@ -581,19 +581,24 @@ class NewrelicProvider(BaseProvider):
                     }}
                 }}
             }}
-            """.format(account_id=self.newrelic_config.account_id, destination_id=destination_id, name=name, api_key=api_key)
+            """.format(
+                account_id=self.newrelic_config.account_id,
+                destination_id=destination_id,
+                name=name,
+                api_key=api_key,
+            )
 
-            query = {
-                "query": mutation_query
-            }
-            #print(query)
-            response = requests.post(self.new_relic_graphql_url,headers=self.__headers,json=query)
-            #print(response.json())
+            query = {"query": mutation_query}
+            # print(query)
+            response = requests.post(
+                self.new_relic_graphql_url, headers=self.__headers, json=query
+            )
+            # print(response.json())
             new_id = response.json()["data"]["aiNotificationsCreateChannel"]["channel"][
                 "id"
             ]
             return new_id
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error creating channel for webhook")
 
     def __get_workflow_by_name_and_channel(
@@ -626,9 +631,9 @@ class NewrelicProvider(BaseProvider):
             id_list = response.json()["data"]["actor"]["account"]["aiWorkflows"][
                 "workflows"
             ]["entities"]
-            #print(id_list)
+            # print(id_list)
             return id_list[0]["id"]
-        except Exception as e:
+        except Exception:
             self.logger.error("Error getting workflow by name and channel")
 
     def __add_new_worflow(
@@ -672,11 +677,11 @@ class NewrelicProvider(BaseProvider):
             response = requests.post(
                 self.new_relic_graphql_url, headers=self.__headers, json=query
             )
-           #print(response.content.decode("utf-8"))
+            # print(response.content.decode("utf-8"))
             return response.json()["data"]["aiWorkflowsCreateWorkflow"]["workflow"][
                 "id"
             ]
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error creating channel for webhook")
 
     def setup_webhook(
@@ -763,15 +768,14 @@ if __name__ == "__main__":
     )
 
     scopes = provider.validate_scopes()
-    #print(scopes)
+    # print(scopes)
 
     alerts = provider.get_alerts()
-    #print(alerts)
+    # print(alerts)
 
     created = provider.setup_webhook(
         tenant_id="test-v2",
         keep_api_url="https://6fd6-2401-4900-1cb0-3b5f-6d04-474-81c5-30c7.ngrok-free.app/alerts/event",
         setup_alerts=True,
-        
     )
-    #print(created)
+    # print(created)

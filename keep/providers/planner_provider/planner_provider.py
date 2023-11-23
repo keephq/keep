@@ -9,7 +9,6 @@ import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -151,7 +150,7 @@ class PlannerProvider(BaseProvider):
 
     def notify(self, plan_id="", title="", bucket_id=None, **kwargs: dict):
         # to verify if the plan with plan_id exists or not
-        plan = self.__get_plan_by_id(plan_id=plan_id)
+        self.__get_plan_by_id(plan_id=plan_id)
 
         # create a new task in given plan
         created_task = self.__create_task(

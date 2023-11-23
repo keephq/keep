@@ -1,15 +1,11 @@
 import dataclasses
-import datetime
-import json
 import typing
-import uuid
 
 import opsgenie_sdk
 import pydantic
 from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -84,8 +80,8 @@ class OpsgenieProvider(BaseProvider):
             priority=priority,
         )
         try:
-            api_response = api_instance.create_alert(create_alert_payload)
-        except ApiException as e:
+            api_instance.create_alert(create_alert_payload)
+        except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
 

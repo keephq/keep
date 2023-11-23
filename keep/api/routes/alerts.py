@@ -19,7 +19,7 @@ from keep.api.core.dependencies import (
     verify_token_or_key,
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
-from keep.api.models.db.alert import Alert, AlertEnrichment
+from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -307,7 +307,7 @@ def handle_formatted_events(
                         zlib.compress(json.dumps([alert.event]).encode(), level=9)
                     ).decode(),
                 )
-            except:
+            except Exception:
                 logger.exception("Failed to push alert to the client")
         session.commit()
         logger.info(
@@ -319,7 +319,7 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
-    except Exception as e:
+    except Exception:
         logger.exception(
             "Failed to push alerts to the DB",
             extra={
@@ -337,7 +337,7 @@ def handle_formatted_events(
         logger.info("Adding events to the workflow manager queue")
         workflow_manager.insert_events(tenant_id, formatted_events)
         logger.info("Added events to the workflow manager queue")
-    except Exception as e:
+    except Exception:
         logger.exception(
             "Failed to run workflows based on alerts",
             extra={

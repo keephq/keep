@@ -2,8 +2,7 @@ import hashlib
 import json
 import logging
 import os
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pymysql
@@ -12,7 +11,7 @@ from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import aliased, joinedload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -130,7 +129,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
         from keep.api.models.db.user import User
 
         create_db_and_tables()
-    except:
+    except Exception:
         pass
     with Session(engine) as session:
         try:
@@ -148,7 +147,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
         except IntegrityError:
             # Tenant already exists
             pass
-        except Exception as e:
+        except Exception:
             pass
 
 

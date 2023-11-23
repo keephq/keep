@@ -53,62 +53,62 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex justify-around items-center bg-white rounded-md shadow-md w-80 max-w-xs h-44 hover:shadow-xl hover:grayscale-0"
+      className="relative flex-grow group flex justify-around items-center bg-white rounded-lg shadow w-80 max-w-xs h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
-      {(provider.can_setup_webhook || provider.supports_webhook) &&
-        !provider.installed && (
+      <div className="w-32">
+        {(provider.can_setup_webhook || provider.supports_webhook) &&
+          !provider.installed && (
+            <Icon
+              icon={WebhookIcon}
+              className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+              color="green"
+              size="sm"
+              tooltip="Webhook available"
+            />
+          )}
+        {provider.oauth2_url && !provider.installed && (
           <Icon
-            icon={WebhookIcon}
-            className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+            icon={OAuthIcon}
+            className={`absolute top-[-15px] ${
+              provider.can_setup_webhook || provider.supports_webhook
+                ? "right-[-0px]"
+                : "right-[-15px]"
+            } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
-            tooltip="Webhook available"
+            tooltip="OAuth2 available"
           />
         )}
-      {provider.oauth2_url && !provider.installed && (
-        <Icon
-          icon={OAuthIcon}
-          className={`absolute top-[-15px] ${
-            provider.can_setup_webhook || provider.supports_webhook
-              ? "right-[-0px]"
-              : "right-[-15px]"
-          } grayscale hover:grayscale-0 group-hover:grayscale-0`}
-          color="green"
-          size="sm"
-          tooltip="OAuth2 available"
-        />
-      )}
-      {provider.installed ? (
-        <Text color={"green"} className="ml-2.5 text-xs">
-          Connected
-        </Text>
-      ) : null}
-      <div className="h-8">
-        <p
-          className={`text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize ${
-            provider.installed ? "" : "group-hover:hidden"
-          } ${provider.details?.name ? "w-[85px]" : ""}`}
-          title={provider.details?.name}
-        >
-          {provider.type}{" "}
-          {provider.details.name && `(${provider.details.name})`}
-        </p>
-        {!provider.installed && (
-          <Button
-            variant="secondary"
-            size="xs"
-            color="green"
-            className="hidden group-hover:block"
+        {provider.installed ? (
+          <Text color={"green"} className="ml-2.5 text-xs group-hover:hidden">
+            Connected
+          </Text>
+        ) : null}
+        <div className="flex items-center">
+          <Text
+            className="group-hover:hidden capitalize"
+            title={provider.details?.name}
           >
-            Connect
-          </Button>
-        )}
+            {provider.type}{" "}
+          </Text>
+          <Text className="ml-1 group-hover:hidden">
+            {provider.details.name && `(${provider.details.name})`}
+          </Text>
+        </div>
+        <Button
+          variant="secondary"
+          size="xs"
+          color={provider.installed ? "orange" : "green"}
+          className="hidden group-hover:block"
+        >
+          {provider.installed ? "Modify" : "Connect"}
+        </Button>
       </div>
       <Image
         src={`/icons/${provider.type}-icon.png`}
-        width={60}
-        height={60}
+        width={48}
+        height={48}
         alt={provider.type}
         className={`${
           provider.installed ? "" : "grayscale group-hover:grayscale-0"

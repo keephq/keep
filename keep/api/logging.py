@@ -1,6 +1,5 @@
 import copy
 import inspect
-import json
 import logging
 import logging.config
 import os

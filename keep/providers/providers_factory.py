@@ -238,6 +238,15 @@ class ProvidersFactory:
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
+
+                provider_tags = provider_class.PROVIDER_TAGS
+                if can_query and "data" not in provider_tags:
+                    provider_tags.append("data")
+                if supports_webhook and "alert" not in provider_tags:
+                    provider_tags.append("alert")
+                if can_notify and "ticketing" not in provider_tags:
+                    provider_tags.append("messaging")
+
                 provider_methods = ProvidersFactory.__get_methods(provider_class)
                 providers.append(
                     Provider(
@@ -254,6 +263,7 @@ class ProvidersFactory:
                         scopes=scopes,
                         docs=docs,
                         methods=provider_methods,
+                        tags=provider_tags,
                     )
                 )
             except ModuleNotFoundError:
