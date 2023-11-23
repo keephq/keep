@@ -19,12 +19,15 @@ class BigqueryProviderAuthConfig:
     BigQuery authentication configuration.
     """
 
-    credentials_path: Optional[str] = dataclasses.field(
+    credentials_json: str = dataclasses.field(
         default=None,
         metadata={
             "required": False,
-            "description": "Path to the service account key in JSON format. "
+            "description": "Service account key in JSON format. "
             "If not provided, will use application default credentials",
+            "type": "file",
+            "name": "credentials_json",
+            "file_type": ".json",  # this is used to filter the file type in the UI
         },
     )
     project_id: Optional[str] = dataclasses.field(
@@ -35,7 +38,6 @@ class BigqueryProviderAuthConfig:
             "it will try to fetch it from the environment variable 'GOOGLE_CLOUD_PROJECT'",
         },
     )
-
 
 class BigqueryProvider(BaseProvider):
     """Enrich alerts with data from BigQuery."""
