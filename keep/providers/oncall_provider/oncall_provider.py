@@ -68,7 +68,7 @@ class OncallProvider(BaseProvider):
     def random_color() -> str:
         return random.randint(0, 255)
 
-    def notify(
+    def _notify(
         self,
         title: str,
         roomPrefix: str = "incident",
@@ -93,7 +93,8 @@ class OncallProvider(BaseProvider):
         response.raise_for_status()
         response = response.json()
         existing_labels = [
-            l.get("label") for l in response.get("org", {}).get("incidentLabels", [])
+            label.get("label")
+            for label in response.get("org", {}).get("incidentLabels", [])
         ]
         if not incidentID:
             self.logger.info(f'Creating incident "{title}"')

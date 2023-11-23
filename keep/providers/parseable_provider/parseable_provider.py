@@ -6,11 +6,9 @@ import datetime
 import json
 import logging
 import os
-import random
 from uuid import uuid4
 
 import pydantic
-import requests
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager

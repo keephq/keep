@@ -30,11 +30,10 @@ class GcpSecretManager(BaseSecretManager):
             self.logger.info("Writing secret", extra={"secret_name": secret_name})
 
             # Construct the resource name
-            resource_name = f"projects/{self.project_id}/secrets/{secret_name}"
             parent = f"projects/{self.project_id}"
             try:
                 # Create the secret if it does not exist
-                response = self.client.create_secret(
+                self.client.create_secret(
                     request={
                         "parent": parent,
                         "secret_id": secret_name,

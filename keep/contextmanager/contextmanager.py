@@ -5,7 +5,6 @@ import os
 
 import click
 from pympler.asizeof import asizeof
-from starlette_context import context
 
 from keep.api.core.db import get_session
 from keep.api.logging import WorkflowLoggerAdapter
@@ -62,12 +61,6 @@ class ContextManager:
             )
             session.close()
         return self._api_key
-
-    def __get_api_key(self):
-        try:
-            return get_api_key()
-        except KeyError:
-            return None
 
     def set_execution_context(self, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id

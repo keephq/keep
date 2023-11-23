@@ -11,6 +11,7 @@ import {
   TextInput,
   Button,
   Card,
+  Switch,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -25,20 +26,21 @@ import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
 import "./alerts.client.css";
-import { useRouter } from "next/navigation";
 
 export default function Alerts({
   accessToken,
   tenantId,
+  pusher,
 }: {
   accessToken: string;
   tenantId: string;
+  pusher: Pusher;
 }) {
   const apiUrl = getApiURL();
-  const router = useRouter();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
+  const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertNameSearchString, setAlertNameSearchString] =
@@ -46,7 +48,7 @@ export default function Alerts({
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
-  const { data, error, isLoading, mutate } = useSWR<Alert[]>(
+  const { data, isLoading, mutate } = useSWR<Alert[]>(
     `${apiUrl}/alerts`,
     (url) => fetcher(url, accessToken),
     {
@@ -72,54 +74,30 @@ export default function Alerts({
   }, [data]);
 
   useEffect(() => {
-    if (tenantId) {
-      console.log("Connecting to pusher");
-      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
-        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
-          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
-          : undefined,
-        forceTLS: false,
-        disableStats: true,
-        enabledTransports: ["ws", "wss"],
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
-        channelAuthorization: {
-          transport: "ajax",
-          endpoint: `${getApiURL()}/pusher/auth`,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      });
+    console.log("Connecting to pusher");
+    const channelName = `private-${tenantId}`;
+    const channel = pusher.subscribe(channelName);
 
-      const channelName = `private-${tenantId}`;
-      const channel = pusher.subscribe(channelName);
+    channel.bind("async-alerts", function (base64CompressedAlert: string) {
+      const decompressedAlert = zlib.inflateSync(
+        Buffer.from(base64CompressedAlert, "base64")
+      );
+      const newAlerts = JSON.parse(
+        new TextDecoder().decode(decompressedAlert)
+      ) as Alert[];
+      setAlerts((prevAlerts) =>
+        Array.from(new Set([...newAlerts, ...prevAlerts]))
+      );
+    });
 
-      channel.bind("async-alerts", function (base64CompressedAlert: string) {
-        const decompressedAlert = zlib.inflateSync(
-          Buffer.from(base64CompressedAlert, "base64")
-        );
-        const newAlerts = JSON.parse(
-          new TextDecoder().decode(decompressedAlert)
-        ) as Alert[];
-        setAlerts((prevAlerts) =>
-          Array.from(new Set([...newAlerts, ...prevAlerts]))
-        );
-      });
-
-      channel.bind("async-done", function (data: any) {
-        setIsAsyncLoading(false);
-      });
-      console.log("Connected to pusher");
-      return () => {
-        pusher.unsubscribe(channelName);
-      };
-    } else {
-      // User doesn't have a tenant id, so they are not logged in
-      //  or they were logged in before we added the tenant id to the session.
-      router.push("/signin");
-    }
-  }, [tenantId, accessToken, router]);
+    channel.bind("async-done", function () {
+      setIsAsyncLoading(false);
+    });
+    console.log("Connected to pusher");
+    return () => {
+      pusher.unsubscribe(channelName);
+    };
+  }, [pusher, tenantId]);
 
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
@@ -134,9 +112,14 @@ export default function Alerts({
     );
   }
 
-  const onDelete = (fingerprint: string) => {
+  const onDelete = (fingerprint: string, restore: boolean = false) => {
     setAlerts((prevAlerts) =>
-      prevAlerts.filter((alert) => alert.fingerprint !== fingerprint)
+      prevAlerts.map((alert) => {
+        if (alert.fingerprint === fingerprint) {
+          alert.isDeleted = !restore;
+        }
+        return alert;
+      })
     );
   };
 
@@ -194,6 +177,18 @@ export default function Alerts({
             value={alertNameSearchString}
             onChange={(e) => setAlertNameSearchString(e.target.value)}
           />
+          <div className="flex items-center space-x-3 ml-2.5">
+            <Switch
+              id="switch"
+              name="switch"
+              checked={showDeleted}
+              onChange={setShowDeleted}
+              color={"orange"}
+            />
+            <label htmlFor="switch" className="text-sm text-gray-500">
+              Show Deleted
+            </label>
+          </div>
         </div>
         <Button
           icon={ArrowPathIcon}
@@ -210,23 +205,19 @@ export default function Alerts({
         ></Button>
       </Flex>
       <AlertTable
-        data={alerts
-          .map((alert) => {
-            alert.lastReceived = new Date(alert.lastReceived);
-            return alert;
-          })
-          .filter(
-            (alert) =>
-              environmentIsSeleected(alert) &&
-              statusIsSeleected(alert) &&
-              searchAlert(alert)
-          )}
+        data={alerts.filter(
+          (alert) =>
+            environmentIsSeleected(alert) &&
+            statusIsSeleected(alert) &&
+            searchAlert(alert)
+        )}
         groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
         onDelete={onDelete}
+        showDeleted={showDeleted}
       />
     </Card>
   );

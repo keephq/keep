@@ -1,7 +1,6 @@
 import hashlib
 import json
 import logging
-import random
 import threading
 import time
 import typing
@@ -247,7 +246,7 @@ class WorkflowScheduler:
                 # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
                 except IntegrityError:
                     self.logger.exception(
-                        f"Collision with workflow execution! will retry next time"
+                        "Collision with workflow execution! will retry next time"
                     )
                     continue
                 except Exception as e:
@@ -313,7 +312,7 @@ class WorkflowScheduler:
             self.logger.info(f"Running workflow {workflow.workflow_id}...")
             try:
                 self.workflow_manager._run_workflow(workflow, uuid.uuid4())
-            except Exception as e:
+            except Exception:
                 self.logger.exception(
                     f"Failed to run workflow {workflow.workflow_id}..."
                 )

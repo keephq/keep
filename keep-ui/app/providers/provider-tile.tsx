@@ -1,6 +1,20 @@
-import { Button, Icon, Text } from "@tremor/react";
+import {
+  Badge,
+  Button,
+  Icon,
+  Subtitle,
+  Text,
+  Title,
+} from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
+import {
+  BellAlertIcon,
+  ChatBubbleBottomCenterIcon,
+  CircleStackIcon,
+  QueueListIcon,
+  TicketIcon,
+} from "@heroicons/react/20/solid";
 
 interface Props {
   provider: Provider;
@@ -53,69 +67,98 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-[187px] max-w-[187px] h-44 m-2.5 hover:shadow-xl hover:grayscale-0"
+      className="relative flex-grow group flex justify-around items-center bg-white rounded-lg shadow w-80 max-w-xs h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
-      {(provider.can_setup_webhook || provider.supports_webhook) &&
-        !provider.installed && (
+      <div className="w-32">
+        {(provider.can_setup_webhook || provider.supports_webhook) &&
+          !provider.installed && (
+            <Icon
+              icon={WebhookIcon}
+              className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+              color="green"
+              size="sm"
+              tooltip="Webhook available"
+            />
+          )}
+        {provider.oauth2_url && !provider.installed && (
           <Icon
-            icon={WebhookIcon}
-            className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+            icon={OAuthIcon}
+            className={`absolute top-[-15px] ${
+              provider.can_setup_webhook || provider.supports_webhook
+                ? "right-[-0px]"
+                : "right-[-15px]"
+            } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
-            tooltip="Webhook available"
+            tooltip="OAuth2 available"
           />
         )}
-      {provider.oauth2_url && !provider.installed && (
-        <Icon
-          icon={OAuthIcon}
-          className={`absolute top-[-15px] ${
-            provider.can_setup_webhook || provider.supports_webhook
-              ? "right-[-0px]"
-              : "right-[-15px]"
-          } grayscale hover:grayscale-0 group-hover:grayscale-0`}
-          color="green"
-          size="sm"
-          tooltip="OAuth2 available"
-        />
-      )}
-      {provider.installed ? (
-        <Text color={"green"} className="ml-2.5 text-xs">
-          Connected
-        </Text>
-      ) : (
-        <div></div>
-      )}
+        {provider.installed ? (
+          <Text color={"green"} className="flex text-xs group-hover:hidden">
+            Connected
+          </Text>
+        ) : null}
+        <div className="flex flex-col">
+          <div>
+            <Title
+              className="group-hover:hidden capitalize"
+              title={provider.details?.name}
+            >
+              {provider.type}{" "}
+            </Title>
+            {provider.details.name && (
+              <Subtitle className="group-hover:hidden">
+                id: {provider.details.name}
+              </Subtitle>
+            )}
+          </div>
+          <div className="labels flex group-hover:hidden">
+            {!provider.installed &&
+              provider.tags.map((tag) => {
+                const icon =
+                  tag === "alert"
+                    ? BellAlertIcon
+                    : tag === "data"
+                    ? CircleStackIcon
+                    : tag === "ticketing"
+                    ? TicketIcon
+                    : tag === "queue"
+                    ? QueueListIcon
+                    : ChatBubbleBottomCenterIcon;
+                return (
+                  <Badge
+                    key={tag}
+                    icon={icon}
+                    size="xs"
+                    className="text-[3px] mr-1 mt-5"
+                    color="slate"
+                  >
+                    {tag}
+                  </Badge>
+                );
+              })}
+          </div>
+
+          <Button
+            variant="secondary"
+            size="xs"
+            color={provider.installed ? "orange" : "green"}
+            className="hidden group-hover:block"
+          >
+            {provider.installed ? "Modify" : "Connect"}
+          </Button>
+        </div>
+      </div>
       <Image
         src={`/icons/${provider.type}-icon.png`}
-        width={60}
-        height={60}
+        width={48}
+        height={48}
         alt={provider.type}
         className={`${
           provider.installed ? "" : "grayscale group-hover:grayscale-0"
         }`}
       />
-      <div className="h-8">
-        <p
-          className={`text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize ${
-            provider.installed ? "" : "group-hover:hidden"
-          } ${provider.details?.name ? "w-[85px]" : ""}`}
-          title={provider.details?.name}
-        >
-          {provider.type}{" "}
-          {provider.details.name && `(${provider.details.name})`}
-        </p>
-        {!provider.installed && (
-          <Button
-            variant="secondary"
-            size="xs"
-            color="green"
-            className="hidden group-hover:block"
-          >
-            Connect
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

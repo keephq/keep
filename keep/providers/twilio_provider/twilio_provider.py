@@ -86,14 +86,14 @@ class TwilioProvider(BaseProvider):
                 validated_scopes["send_sms"] = True
             else:
                 self.logger.warning(
-                    f"Failed to validate scope send_sms",
+                    "Failed to validate scope send_sms",
                     extra={"reason": str(e)},
                 )
                 validated_scopes["send_sms"] = str(e)
         # other unknown exception
         except Exception as e:
             self.logger.warning(
-                f"Failed to validate scope send_sms",
+                "Failed to validate scope send_sms",
                 extra={"reason": str(e)},
             )
             validated_scopes["send_sms"] = str(e)

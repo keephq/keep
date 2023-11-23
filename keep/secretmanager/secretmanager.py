@@ -1,5 +1,4 @@
 import abc
-import logging
 
 from keep.contextmanager.contextmanager import ContextManager
 

@@ -9,12 +9,7 @@ import pydantic
 
 # from confluent_kafka import Consumer, KafkaError, KafkaException
 from kafka import KafkaConsumer
-from kafka.errors import (
-    KafkaError,
-    KafkaTimeoutError,
-    NoBrokersAvailable,
-    TopicAuthorizationFailedError,
-)
+from kafka.errors import KafkaError, NoBrokersAvailable
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -109,6 +104,7 @@ class KafkaProvider(BaseProvider):
             alias="Topic Read",
         )
     ]
+    PROVIDER_TAGS = ["queue"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -147,7 +143,7 @@ class KafkaProvider(BaseProvider):
         except KafkaError as e:
             self.err = str(e)
             self.logger.warning(f"Error connecting to Kafka: {e}")
-            scopes["topic_read"] = self.err or f"Could not connect to Kafka "
+            scopes["topic_read"] = self.err or "Could not connect to Kafka "
             return scopes
 
         topics = consumer.topics()
@@ -251,10 +247,10 @@ class KafkaProvider(BaseProvider):
                         )
                         try:
                             self._push_alert(record.value)
-                        except Exception as e:
+                        except Exception:
                             self.logger.warning("Error pushing alert to API")
                             pass
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Error consuming message from Kafka")
                 break
 
@@ -262,7 +258,7 @@ class KafkaProvider(BaseProvider):
         if self.consumer:
             try:
                 self.consumer.close()
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Error closing Kafka connection")
             self.consumer = None
         self.logger.info("Consuming stopped")

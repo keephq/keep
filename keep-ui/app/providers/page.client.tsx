@@ -6,7 +6,7 @@ import {
   Provider,
   ProvidersResponse,
 } from "./providers";
-import { useSession } from "next-auth/react"
+import { useSession } from "next-auth/react";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
@@ -105,6 +105,7 @@ export const useFetchProviders = () => {
         oauth2_url: provider.oauth2_url,
         scopes: provider.scopes,
         validatedScopes: provider.validatedScopes,
+        tags: provider.tags,
       };
       return updatedProvider;
     }) as Providers;
@@ -139,7 +140,7 @@ export default function ProvidersPage({
     isSlowLoading,
     isLocalhost
   } = useFetchProviders();
-  const { searchProviderString } = useContext(LayoutContext);
+  const { searchProviderString, selectedTags } = useContext(LayoutContext);
   const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
@@ -190,6 +191,13 @@ export default function ProvidersPage({
     );
   };
 
+  const searchTags = (provider: Provider) => {
+    return (
+      selectedTags.length === 0 ||
+      provider.tags.some((tag) => selectedTags.includes(tag))
+    );
+  };
+
   return (
     <>
       <FrigadeAnnouncement
@@ -214,7 +222,9 @@ export default function ProvidersPage({
         />
       )}
       <ProvidersTiles
-        providers={providers.filter(searchProviders)}
+        providers={providers.filter(
+          (provider) => searchProviders(provider) && searchTags(provider)
+        )}
         addProvider={addProvider}
         onDelete={deleteProvider}
         isLocalhost={isLocalhost}
