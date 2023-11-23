@@ -15,11 +15,13 @@ const ProvidersTiles = ({
   addProvider,
   onDelete,
   installedProvidersMode = false,
+  isLocalhost = false,
 }: {
   providers: Providers;
   addProvider: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   installedProvidersMode?: boolean;
+  isLocalhost?: boolean;
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
@@ -138,6 +140,7 @@ const ProvidersTiles = ({
             installedProvidersMode={installedProvidersMode}
             isProviderNameDisabled={installedProvidersMode}
             onDelete={onDelete}
+            isLocalhost={isLocalhost}
           />
         )}
       </SlidingPanel>
