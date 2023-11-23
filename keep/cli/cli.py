@@ -107,6 +107,10 @@ class Info:
             or Info.KEEP_MANAGED_API_URL
         )
 
+        # the server doesn't need an api key
+        if "api" in sys.argv:
+            return
+
         if not self.api_key:
             click.echo(
                 click.style(
