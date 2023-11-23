@@ -1,5 +1,3 @@
-import chevron
-
 from keep.conditions.base_condition import BaseCondition
 
 
@@ -34,7 +32,7 @@ class ThresholdCondition(BaseCondition):
                 raise ValueError(
                     "Number of levels and number of thresholds do not match"
                 )
-            self.levels = [l.strip() for l in levels.split(",")]
+            self.levels = [level.strip() for level in levels.split(",")]
             return True
         return False
 

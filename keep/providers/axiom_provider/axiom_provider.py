@@ -2,7 +2,6 @@
 AxiomProvider is a class that allows to ingest/digest data from Axiom.
 """
 import dataclasses
-import datetime
 from typing import Optional
 
 import pydantic
@@ -52,9 +51,18 @@ class AxiomProvider(BaseProvider):
         Validates required configuration for Axiom provider.
 
         """
-        self.authentication_config = AxiomAuthConfig(**self.config.authentication)
+        self.authentication_config = AxiomProviderAuthConfig(
+            **self.config.authentication
+        )
 
-    def query(self, **kwargs: dict):
+    def _query(
+        self,
+        datasets_api_url=None,
+        organization_id=None,
+        startTime=None,
+        endTime=None,
+        **kwargs: dict,
+    ):
         """
         Query Axiom using the given query
 
@@ -64,10 +72,10 @@ class AxiomProvider(BaseProvider):
         Returns:
             https://axiom.co/docs/restapi/query#response-example
         """
-        datasets_api_url = kwargs.get("api_url", "https://api.axiom.co/v1/datasets")
-        organization_id = kwargs.get(
-            "organization_id", self.authentication_config.organization_id
+        datasets_api_url = datasets_api_url or kwargs.get(
+            "api_url", "https://api.axiom.co/v1/datasets"
         )
+        organization_id = organization_id or self.authentication_config.organization_id
         if not organization_id:
             raise Exception("organization_id is required for Axiom provider")
 
@@ -83,10 +91,6 @@ class AxiomProvider(BaseProvider):
         }
 
         # Todo: support easier syntax (e.g. 1d, 1h, 1m, 1s, etc)
-        startTime = kwargs.get("startTime", datetime.datetime.now().isoformat())
-        endTime = kwargs.get(
-            "endTime", datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        )
         body = {"startTime": startTime, "endTime": endTime}
 
         # Todo: add support for body parameters (https://axiom.co/docs/restapi/query#request-example)

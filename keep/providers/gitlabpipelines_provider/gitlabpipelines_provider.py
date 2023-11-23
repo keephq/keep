@@ -109,7 +109,7 @@ if __name__ == "__main__":
         tenant_id="singletenant",
         workflow_id="test",
     )
-    gitlab_pipelines_provider = GitlabPipelinesProvider(
+    gitlab_pipelines_provider = GitlabpipelinesProvider(
         context_manager,
         "test",
         ProviderConfig(authentication={"access_token": gitlab_private_access_token}),

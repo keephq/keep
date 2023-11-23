@@ -115,7 +115,7 @@ class GrafanaProvider(BaseProvider):
                 for scope in self.PROVIDER_SCOPES
             }
             return validated_scopes
-        except Exception as e:
+        except Exception:
             validated_scopes = {
                 scope.name: "Failed to get permissions. Please check your token."
                 for scope in self.PROVIDER_SCOPES

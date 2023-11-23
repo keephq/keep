@@ -1,23 +1,13 @@
 """
 Keep Provider is a class that allows to ingest/digest data from Keep.
 """
-import dataclasses
-import datetime
-import json
 import logging
-import os
-import random
-from uuid import uuid4
-
-import pydantic
-import requests
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
-from keep.providers.providers_factory import ProvidersFactory
 
 
 class KeepProvider(BaseProvider):
@@ -69,4 +59,3 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     # Load environment variables
-    import os

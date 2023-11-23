@@ -1,5 +1,3 @@
-import chevron
-
 from keep.throttles.base_throttle import BaseThrottle
 
 

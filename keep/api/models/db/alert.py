@@ -14,6 +14,7 @@ class Alert(SQLModel, table=True):
     provider_type: str
     provider_id: str | None
     event: dict = Field(sa_column=Column(JSON))
+    is_deleted: bool = Field(default=False)
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
 
     # Define a one-to-one relationship to AlertEnrichment using alert_fingerprint

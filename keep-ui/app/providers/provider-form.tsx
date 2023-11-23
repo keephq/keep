@@ -371,7 +371,7 @@ const ProviderForm = ({
         )}
         <form>
           <div className="form-group">
-            {provider.oauth2_url ? (
+            {provider.oauth2_url && !provider.installed ? (
               <>
                 <Button
                   color="orange"

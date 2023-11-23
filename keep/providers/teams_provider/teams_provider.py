@@ -44,7 +44,7 @@ class TeamsProvider(BaseProvider):
         """
         pass
 
-    def notify(
+    def _notify(
         self,
         message="",
         typeCard="MessageCard",

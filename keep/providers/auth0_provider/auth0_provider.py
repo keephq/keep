@@ -4,10 +4,8 @@ Auth0 provider.
 import dataclasses
 import datetime
 import os
-from typing import Optional
 
 import requests
-from pydantic.dataclasses import dataclass
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider

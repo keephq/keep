@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, Form, HTTPException
 from pusher import Pusher
 

@@ -63,7 +63,6 @@ class GptUtils:
             prompt=alert_prompt,
             repo=json.dumps(repository_context),
             alerts=json.dumps(alerts_context),
-            schema=json.dumps(schema, indent=4),
             provider_type=provider_type,
         )
 

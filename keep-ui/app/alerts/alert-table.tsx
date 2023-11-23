@@ -23,27 +23,42 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   isAsyncLoading?: boolean;
-  onDelete?: (fingerprint: string) => void;
+  onDelete?: (fingerprint: string, restore?: boolean) => void;
+  showDeleted?: boolean;
 }
 
 export function AlertTable({
-  data,
+  data: alerts,
   groupBy,
   workflows,
   providers,
   mutate,
   isAsyncLoading = false,
   onDelete,
+  showDeleted = false,
 }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  let groupedByData = {} as { [key: string]: Alert[] };
-  let aggregatedData = data;
+  function showDeletedAlert(alert: Alert): boolean {
+    return showDeleted || !alert.isDeleted;
+  }
+
+  let groupedByAlerts = {} as { [key: string]: Alert[] };
+  const deletedAlertFingerprints = new Set(
+    alerts.filter((alert) => alert.isDeleted).map((alert) => alert.fingerprint)
+  );
+  let aggregatedAlerts = alerts.map((alert) => {
+    alert.lastReceived = new Date(alert.lastReceived);
+    if (deletedAlertFingerprints.has(alert.fingerprint)) {
+      alert.isDeleted = true;
+    }
+    return alert;
+  });
 
   if (groupBy) {
     // Group alerts by the groupBy key
-    groupedByData = data.reduce((acc, alert) => {
+    groupedByAlerts = alerts.reduce((acc, alert) => {
       const key = (alert as any)[groupBy] as string;
       if (!acc[key]) {
         acc[key] = [alert];
@@ -51,22 +66,22 @@ export function AlertTable({
         acc[key].push(alert);
       }
       return acc;
-    }, groupedByData);
+    }, groupedByAlerts);
     // Sort by last received
-    Object.keys(groupedByData).forEach((key) =>
-      groupedByData[key].sort(
+    Object.keys(groupedByAlerts).forEach((key) =>
+      groupedByAlerts[key].sort(
         (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
       )
     );
     // Only the last state of each alert is shown if we group by something
-    aggregatedData = Object.keys(groupedByData).map(
-      (key) => groupedByData[key][0]
+    aggregatedAlerts = Object.keys(groupedByAlerts).map(
+      (key) => groupedByAlerts[key][0]
     );
   }
 
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {
-    setSelectedAlertHistory(groupedByData[(alert as any)[groupBy!]]);
+    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
     setIsOpen(true);
   };
 
@@ -104,9 +119,9 @@ export function AlertTable({
           </TableRow>
         </TableHead>
         <AlertsTableBody
-          data={aggregatedData}
+          data={aggregatedAlerts.filter(showDeletedAlert)}
           groupBy={groupBy}
-          groupedByData={groupedByData}
+          groupedByData={groupedByAlerts}
           openModal={openModal}
           workflows={workflows}
           providers={providers}

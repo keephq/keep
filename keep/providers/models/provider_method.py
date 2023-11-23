@@ -1,4 +1,4 @@
-from typing import Callable, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
