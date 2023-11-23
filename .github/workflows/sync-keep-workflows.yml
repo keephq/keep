@@ -32,4 +32,4 @@ jobs:
 
         - name: Run Keep CLI
           run: |
-            keep workflows apply -f examples/workflows
+            keep workflow apply -f examples/workflows
