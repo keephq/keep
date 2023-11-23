@@ -53,7 +53,7 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex flex-col justify-around items-center bg-white rounded-md shadow-md w-[187px] max-w-[187px] h-44 m-2.5 hover:shadow-xl hover:grayscale-0"
+      className="relative flex-grow group flex justify-around items-center bg-white rounded-md shadow-md w-80 max-w-xs h-44 hover:shadow-xl hover:grayscale-0"
       onClick={onClick}
     >
       {(provider.can_setup_webhook || provider.supports_webhook) &&
@@ -83,18 +83,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
         <Text color={"green"} className="ml-2.5 text-xs">
           Connected
         </Text>
-      ) : (
-        <div></div>
-      )}
-      <Image
-        src={`/icons/${provider.type}-icon.png`}
-        width={60}
-        height={60}
-        alt={provider.type}
-        className={`${
-          provider.installed ? "" : "grayscale group-hover:grayscale-0"
-        }`}
-      />
+      ) : null}
       <div className="h-8">
         <p
           className={`text-tremor-default text-tremor-content dark:text-dark-tremor-content truncate capitalize ${
@@ -116,6 +105,15 @@ export default function ProviderTile({ provider, onClick }: Props) {
           </Button>
         )}
       </div>
+      <Image
+        src={`/icons/${provider.type}-icon.png`}
+        width={60}
+        height={60}
+        alt={provider.type}
+        className={`${
+          provider.installed ? "" : "grayscale group-hover:grayscale-0"
+        }`}
+      />
     </div>
   );
 }
