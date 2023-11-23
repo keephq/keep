@@ -281,6 +281,6 @@ def get_api_key(
         session=session,
         tenant_id=tenant_id,
         unique_api_key_id="cli",
-        system_description="API API key",
+        system_description="API key",
     )
     return {"apiKey": api_key}

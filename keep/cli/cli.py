@@ -1081,8 +1081,7 @@ def login(info: Info):
     # Check that we can get whoami
     resp = make_keep_request(
         "GET",
-        # info.keep_api_url + "/whoami",
-        "http://localhost:8080/whoami",
+        info.keep_api_url + "/whoami",
         headers={"x-api-key": api_key, "accept": "application/json"},
     )
     if not resp.ok:
