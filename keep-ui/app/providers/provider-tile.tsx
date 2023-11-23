@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Icon,
-  Italic,
   Subtitle,
   Text,
   Title,

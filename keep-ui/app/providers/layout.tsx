@@ -17,7 +17,7 @@ export default function ProvidersLayout({
     <main className="p-4">
       <div className="flex w-full justify-between mb-4 ml-2.5">
         <div className="flex justify-center items-center">
-          <Title>Providers</Title>
+          {/* <Title>Providers</Title> */}
           {/* <Select className="h-8 w-44 ml-2.5" placeholder="Filter 1">
             <SelectItem value="filter-1">Filter 1</SelectItem>
           </Select>
