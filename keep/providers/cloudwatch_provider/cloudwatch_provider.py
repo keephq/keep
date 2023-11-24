@@ -199,7 +199,7 @@ class CloudwatchProvider(BaseProvider):
                 }
                 cloudwatch_client.put_metric_alarm(**filtered_alarm)
                 scopes["cloudwatch:PutMetricAlarm"] = True
-            except Exception:
+            except Exception as e:
                 self.logger.exception(
                     "Error validating AWS cloudwatch:PutMetricAlarm scope"
                 )
@@ -218,7 +218,7 @@ class CloudwatchProvider(BaseProvider):
                     sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.cloudwatch_sns_topic}"
                 sns_client.list_subscriptions_by_topic(TopicArn=sns_topic)
                 scopes["sns:ListSubscriptionsByTopic"] = True
-            except Exception:
+            except Exception as e:
                 self.logger.exception(
                     "Error validating AWS sns:ListSubscriptionsByTopic scope"
                 )
@@ -231,7 +231,7 @@ class CloudwatchProvider(BaseProvider):
         # 4. validate start query
         logs_client = self.__generate_client("logs")
         try:
-            start_query_response = logs_client.start_query(
+            logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -254,7 +254,7 @@ class CloudwatchProvider(BaseProvider):
         # 5. validate get query results
         try:
             query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error validating AWS logs:DescribeQueries scope")
             scopes[
                 "logs:GetQueryResults"
@@ -416,7 +416,7 @@ class CloudwatchProvider(BaseProvider):
                         TopicArn=topic
                     ).get("Subscriptions", [])
                 # this means someone deleted the topic that this alarm sends notification too
-                except botocore.errorfactory.NotFoundException as exc:
+                except Exception as exc:
                     self.logger.warning(
                         "Topic %s not found, skipping...", topic, exc_info=exc
                     )
@@ -456,7 +456,7 @@ class CloudwatchProvider(BaseProvider):
             #        do we want to validate that the tenant id exist?
             logger.info("Confirming subscription...")
             subscribe_url = event.get("SubscribeURL")
-            resp = requests.get(subscribe_url)
+            requests.get(subscribe_url)
             logger.info("Subscription confirmed!")
             # Done
             return

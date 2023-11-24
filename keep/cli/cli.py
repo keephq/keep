@@ -5,7 +5,6 @@ import os
 import sys
 import typing
 from collections import OrderedDict
-from dataclasses import fields
 from importlib import metadata
 
 import click
@@ -14,11 +13,10 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
 
-from keep.api.core.db import get_api_key, try_create_single_tenant
+from keep.api.core.db import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client, get_random_user_id
-from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -220,7 +218,7 @@ def whoami(info: Info):
             info.keep_api_url + "/whoami",
             headers={"x-api-key": info.api_key, "accept": "application/json"},
         )
-    except requests.exceptions.ConnectionError as e:
+    except requests.exceptions.ConnectionError:
         click.echo(click.style(f"Timeout connecting to {info.keep_api_url}"))
         sys.exit(1)
 
@@ -701,7 +699,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
     if not resp.ok:
         raise Exception(f"Error getting providers: {resp.text}")
 
-    available_providers = providers = resp.json().get("providers")
+    available_providers = resp.json().get("providers")
 
     provider = [p for p in available_providers if p.get("type") == provider_type]
     if not provider:
@@ -744,7 +742,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         )
 
     # Connect the provider
-    raw_opts = ctx.args
+    ctx.args
     options_dict = {params[i]: params[i + 1] for i in range(0, len(params), 2)}
     # Verify the provided options against the expected ones for the provider
 
@@ -774,7 +772,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         # installation failed because the credentials are invalid
         if resp.status_code == 412:
             click.echo(
-                click.style(f"Failed to install provider: invalid scopes", bold=True)
+                click.style("Failed to install provider: invalid scopes", bold=True)
             )
             table = PrettyTable()
             table.field_names = ["Scope Name", "Status"]
@@ -1000,7 +998,6 @@ token = None
 @pass_info
 def login(info: Info):
     # first, prepare the oauth2 session:
-    import multiprocessing
     import os
     import threading
     import time

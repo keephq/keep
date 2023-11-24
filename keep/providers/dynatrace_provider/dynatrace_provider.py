@@ -4,7 +4,6 @@ Kafka Provider is a class that allows to ingest/digest data from Grafana.
 import base64
 import dataclasses
 import datetime
-import inspect
 import logging
 import os
 import random
@@ -118,7 +117,7 @@ class DynatraceProvider(BaseProvider):
             # wrong environment
             if "Not Found" in str(e):
                 self.logger.info(
-                    f"Failed to validate dynatrace scopes - wrong environment id"
+                    "Failed to validate dynatrace scopes - wrong environment id"
                 )
                 scopes[
                     "problems.read"
@@ -129,7 +128,7 @@ class DynatraceProvider(BaseProvider):
             # authentication
             if "401" in str(e):
                 self.logger.info(
-                    f"Failed to validate dynatrace scopes - invalid API token"
+                    "Failed to validate dynatrace scopes - invalid API token"
                 )
                 scopes[
                     "problems.read"
@@ -139,20 +138,20 @@ class DynatraceProvider(BaseProvider):
                 return scopes
             if "403" in str(e):
                 self.logger.info(
-                    f"Failed to validate dynatrace scopes - no problems.read scopes"
+                    "Failed to validate dynatrace scopes - no problems.read scopes"
                 )
                 scopes[
                     "problems.read"
                 ] = "Token is missing required scope - problems.read (403)"
         else:
-            self.logger.info(f"Validated dynatrace scopes - problems.read")
+            self.logger.info("Validated dynatrace scopes - problems.read")
             scopes["problems.read"] = True
 
         # check webhook scopes:
         # settings.read:
         try:
             self._get_alerting_profiles()
-            self.logger.info(f"Validated dynatrace scopes - settings.read")
+            self.logger.info("Validated dynatrace scopes - settings.read")
             scopes["settings.read"] = True
         except Exception as e:
             self.logger.info(
@@ -166,7 +165,7 @@ class DynatraceProvider(BaseProvider):
             return scopes
         # if we have settings.read, we can try settings.write
         try:
-            self.logger.info(f"Validating dynatrace scopes - settings.write")
+            self.logger.info("Validating dynatrace scopes - settings.write")
             keep_api_url = os.environ.get("KEEP_API_URL")
             self.setup_webhook(
                 tenant_id=self.context_manager.tenant_id,
@@ -175,7 +174,7 @@ class DynatraceProvider(BaseProvider):
                 setup_alerts=False,
             )
             scopes["settings.write"] = True
-            self.logger.info(f"Validated dynatrace scopes - settings.write")
+            self.logger.info("Validated dynatrace scopes - settings.write")
         except Exception as e:
             self.logger.info(
                 f"Failed to validate dynatrace scopes - settings.write: {e}"
@@ -207,7 +206,7 @@ class DynatraceProvider(BaseProvider):
             impacted_entity = event.get("ImpactedEntity", "")
             pid = event.get("PID", "")
             names_of_impacted_entities = event.get("NamesOfImpactedEntities", "")
-            details = event.get("ProblemDetails", "")
+            event.get("ProblemDetails", "")
 
             alert_dto = AlertDto(
                 id=event.get("ProblemID"),
@@ -234,7 +233,7 @@ class DynatraceProvider(BaseProvider):
             )
         # else, problem from the problem API
         else:
-            alert_id = event.pop("problemId")
+            event.pop("problemId")
             name = event.pop("displayId")
             status = event.pop("status")
             severity = event.pop("severityLevel", None)
@@ -269,11 +268,11 @@ class DynatraceProvider(BaseProvider):
             },
         )
         if response.ok:
-            self.logger.info(f"Got alerting profiles")
+            self.logger.info("Got alerting profiles")
             return response.json().get("items")
         elif "Use one of: settings.read" in response.text:
             self.logger.info(
-                f"Failed to get alerting profiles - missing settings.read scope"
+                "Failed to get alerting profiles - missing settings.read scope"
             )
             raise Exception("Token is missing required scope - settings.read (403)")
         else:
@@ -373,7 +372,7 @@ class DynatraceProvider(BaseProvider):
                 == "The environment does not allow for site-local URLs"
             ):
                 raise Exception(
-                    f"Dynatrace doesn't support use localhost as a webhook URL, use a public URL when installing dynatrace webhook."
+                    "Dynatrace doesn't support use localhost as a webhook URL, use a public URL when installing dynatrace webhook."
                 )
             else:
                 raise Exception(

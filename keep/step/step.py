@@ -223,7 +223,7 @@ class Step:
         # Last, run the action
         # if the provider is async, run it in a new event loop
         if inspect.iscoroutinefunction(self.provider.notify):
-            result = self._run_single_async()
+            self._run_single_async()
         # else, just run the provider
         else:
             try:
@@ -241,9 +241,7 @@ class Step:
                                 self.step_id, results=step_output, foreach=self.foreach
                             )
                         else:
-                            results = self.provider.notify(
-                                **rendered_providers_parameters
-                            )
+                            self.provider.notify(**rendered_providers_parameters)
                         # exiting the loop as step/action execution was successful
                         break
                     except Exception as e:

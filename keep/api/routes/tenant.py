@@ -46,7 +46,7 @@ async def save_github_installation_id(
         data = await request.json()
         installation_id = data.get("installation_id")
         # TODO - do things with the action (update, etc)
-        action = data.get("setup_action")
+        # action = data.get("setup_action")
 
         # Check if the installation ID already exists for the tenant
         statement = select(TenantInstallation).where(
@@ -72,7 +72,7 @@ async def save_github_installation_id(
         )  # commit happens after the installation is saved
         session.add(new_installation)
         session.commit()
-    except Exception as e:
+    except Exception:
         return JSONResponse({"success": False})
     # Return a success response
     return JSONResponse({"success": True})

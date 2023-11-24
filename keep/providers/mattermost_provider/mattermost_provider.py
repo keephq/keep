@@ -43,7 +43,7 @@ class MattermostProvider(BaseProvider):
         """
         pass
 
-    def notify(self, message="", blocks=[], channel="", **kwargs: dict):
+    def _notify(self, message="", blocks=[], channel="", **kwargs: dict):
         """
         Notify alert message to Mattermost using the Mattermost Incoming Webhook API
         https://docs.mattermost.com/developer/webhooks-incoming.html

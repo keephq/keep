@@ -1,14 +1,12 @@
 import logging
 import os
 import re
-import time
 import typing
 import uuid
 
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_enrichment, save_workflow_results
 from keep.api.models.alert import AlertDto
-from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
@@ -61,7 +59,6 @@ class WorkflowManager:
             return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
-        workflows_that_should_be_run = []
         for event in events:
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
             for workflow_model in all_workflow_models:
@@ -97,7 +94,7 @@ class WorkflowManager:
                             )
                             continue
                         # if its list, check if the filter is in the list
-                        if type(getattr(event, filter_key)) == list:
+                        if isinstance(getattr(event, filter_key), list):
                             for val in getattr(event, filter_key):
                                 # if one filter applies, it should run
                                 if self._apply_filter(filter_val, val):
@@ -160,7 +157,7 @@ class WorkflowManager:
             workflow (str): Either an workflow yaml or a directory containing workflow yamls or a list of URLs to get the workflows from.
             providers_file (str, optional): The path to the providers yaml. Defaults to None.
         """
-        self.logger.info(f"Running workflow(s)")
+        self.logger.info("Running workflow(s)")
         workflows_errors = []
         # If at least one workflow has an interval, run workflows using the scheduler,
         #   otherwise, just run it

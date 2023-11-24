@@ -2,17 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import String
-from sqlmodel import (
-    JSON,
-    Column,
-    DateTime,
-    Field,
-    ForeignKey,
-    Integer,
-    Relationship,
-    SQLModel,
-    UniqueConstraint,
-)
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 class Workflow(SQLModel, table=True):

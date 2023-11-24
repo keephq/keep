@@ -9,32 +9,35 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    - name: cache deps
-      id: cache-deps
-      uses: actions/cache@v2
-      with:
-        path: .venv
-        key: pydeps-${{ hashFiles('**/poetry.lock') }}
-    - name: Install dependencies using poetry
-      run: poetry install --no-interaction --no-root
-    - name: Run unit tests and report coverage
-      run: poetry run coverage run --branch -m pytest
-    - name: Convert coverage results to JSON (for CodeCov support)
-      run: poetry run coverage json --omit="keep/providers/*"
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        fail_ci_if_error: false  # don't fail if we didn't manage to upload the coverage report
-        files: coverage.json
-        verbose: true
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --no-root
+      - name: Run unit tests and report coverage
+        run: poetry run coverage run --branch -m pytest
+      - name: Convert coverage results to JSON (for CodeCov support)
+        run: poetry run coverage json --omit="keep/providers/*"
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: false # don't fail if we didn't manage to upload the coverage report
+          files: coverage.json
+          verbose: true

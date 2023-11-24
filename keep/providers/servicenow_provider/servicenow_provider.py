@@ -57,6 +57,7 @@ class ServicenowProvider(BaseProvider):
             alias="Read from datahase",
         )
     ]
+    PROVIDER_TAGS = ["ticketing"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -136,9 +137,8 @@ class ServicenowProvider(BaseProvider):
             data=json.dumps(payload),
         )
 
-        if (
-            response.status_code == 201
-        ):  # HTTP status code for "Created"            resp = response.json()
+        if response.status_code == 201:  # HTTP status code for "Created"
+            resp = response.json()
             self.logger.info(f"Created ticket: {resp}")
             result = resp.get("result")
             # Add link to ticket
@@ -177,12 +177,12 @@ class ServicenowProvider(BaseProvider):
             # else, we are ok
             else:
                 resp = json.loads(resp)
-            self.logger.info(f"Updated ticket", extra={"resp": resp})
+            self.logger.info("Updated ticket", extra={"resp": resp})
             resp = resp.get("result")
             resp["fingerprint"] = fingerprint
             return resp
         else:
-            self.logger.info(f"Failed to update ticket", extra={"resp": response.text})
+            self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
 
 

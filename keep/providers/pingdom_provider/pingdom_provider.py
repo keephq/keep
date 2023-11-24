@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import json
 import random
 
 import pydantic
@@ -9,7 +8,7 @@ import requests
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_config import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 

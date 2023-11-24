@@ -2,13 +2,10 @@ import ast
 import copy
 
 # TODO: fix this! It screws up the eval statement if these are not imported
-import datetime
 import io
-import json
 import logging
 import re
 import sys
-from decimal import Decimal
 
 import astunparse
 import chevron

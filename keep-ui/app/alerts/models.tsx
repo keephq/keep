@@ -25,6 +25,7 @@ export interface Alert {
   pushed: boolean;
   generatorURL?: string;
   fingerprint: string;
+  isDeleted?: boolean;
 }
 
 export const AlertKnownKeys = [
