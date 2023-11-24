@@ -556,7 +556,7 @@ class ZabbixProvider(BaseProvider):
         if isinstance(tags, dict):
             environment = tags.pop("environment", "unknown")
             # environment exists in tags but is None
-            if environment == None:
+            if environment is None:
                 environment = "unknown"
         severity = ZabbixProvider.__get_severity(event.pop("severity", "").lower())
         event_id = event.get("id")

@@ -1,5 +1,4 @@
 import json
-import logging
 
 from google.cloud import storage
 
@@ -16,7 +15,7 @@ class GcpStorageManager(BaseStorageManager):
         """Create the GCP bucket if it doesn't exist."""
         try:
             bucket = self.storage_client.get_bucket(bucket_name)
-        except:
+        except Exception:
             self.logger.info("Creating bucket %s", bucket_name)
             bucket = self.storage_client.create_bucket(bucket_name)
             self.logger.info("Bucket %s created successfully", bucket_name)

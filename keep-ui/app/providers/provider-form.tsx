@@ -16,7 +16,7 @@ import {
   Divider,
   TextInput,
 } from "@tremor/react";
-import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import { ExclamationCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
   ArrowLongRightIcon,
@@ -47,6 +47,7 @@ type ProviderFormProps = {
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
   onDelete?: (provider: Provider) => void;
+  isLocalhost?: boolean;
 };
 
 const ProviderForm = ({
@@ -59,6 +60,7 @@ const ProviderForm = ({
   isProviderNameDisabled,
   installedProvidersMode,
   onDelete,
+  isLocalhost,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const initialData = {
@@ -369,7 +371,7 @@ const ProviderForm = ({
         )}
         <form>
           <div className="form-group">
-            {provider.oauth2_url ? (
+            {provider.oauth2_url && !provider.installed ? (
               <>
                 <Button
                   color="orange"
@@ -482,34 +484,46 @@ const ProviderForm = ({
               </div>
             );
           })}
-          {provider.can_setup_webhook && !installedProvidersMode && (
-            <div className="flex items-center w-full" key="install_webhook">
-              <input
-                type="checkbox"
-                id="install_webhook"
-                name="install_webhook"
-                className="mr-2.5"
-                onChange={handleWebhookChange}
-                checked={formValues["install_webhook"] || false}
-              />
-              <label
-                htmlFor="install_webhook"
-                className="flex items-center w-full"
-              >
-                <Text className="capitalize">Install Webhook</Text>
-                <Icon
-                  icon={QuestionMarkCircleIcon}
-                  variant="simple"
-                  color="gray"
-                  size="sm"
-                  tooltip={`Whether to install Keep as a webhook integration in ${provider.type}.
+          <div className="w-full mt-2" key="install_webhook">
+            {provider.can_setup_webhook && !installedProvidersMode && (
+              <div className={`${isLocalhost ? 'bg-gray-100 p-2' : ''}`}>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="install_webhook"
+                    name="install_webhook"
+                    className="mr-2.5"
+                    onChange={handleWebhookChange}
+                    checked={(formValues["install_webhook"] || false) && !isLocalhost}
+                    disabled={isLocalhost}
+                  />
+                  <label htmlFor="install_webhook" className="flex items-center">
+                    <Text className="capitalize">Install Webhook</Text>
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      variant="simple"
+                      color="gray"
+                      size="sm"
+                      tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
+                    />
+                  </label>
+                </div>
+                {isLocalhost && (
+                  <span className="text-sm">
+                    <Callout className="mt-4" icon={ExclamationTriangleIcon} color="gray">
+                        <a href="https://docs.keephq.dev/development/external-url" target="_blank" rel="noopener noreferrer">
+                        Webhook installation is disabled because Keep is running without an external URL.
+                        <br/><br/>
+                        Click to learn more
+                        </a>
 
-                  This allows Keep to asynchronously receive alerts from ${provider.type}.
-                  Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notificaiton policy to include Keep.`}
-                />
-              </label>
-            </div>
-          )}
+                    </Callout>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {provider.can_setup_webhook && installedProvidersMode && (
             <Button
               icon={GlobeAltIcon}

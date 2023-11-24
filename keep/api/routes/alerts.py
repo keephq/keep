@@ -5,6 +5,7 @@ import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
+from sqlalchemy import update
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
@@ -18,7 +19,7 @@ from keep.api.core.dependencies import (
     verify_token_or_key,
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
-from keep.api.models.db.alert import Alert, AlertEnrichment
+from keep.api.models.db.alert import Alert
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -207,7 +208,9 @@ def get_all_alerts(
     for alert in db_alerts:
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
-    alerts = [AlertDto(**alert.event) for alert in db_alerts]
+    alerts = [
+        AlertDto(**alert.event, isDeleted=alert.is_deleted) for alert in db_alerts
+    ]
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -230,22 +233,39 @@ def delete_alert(
         "Deleting alert",
         extra={
             "fingerprint": delete_alert.fingerprint,
+            "pulled_alert": delete_alert.pulled_alert_dto is not None,
             "tenant_id": tenant_id,
         },
     )
 
-    alerts = (
-        session.query(Alert).filter(Alert.fingerprint == delete_alert.fingerprint).all()
-    )
+    # TODO: change this in the future when we keep pulled alerts in the DB as well
+    # pushed alert flow
+    if delete_alert.fingerprint:
+        result = session.execute(
+            update(Alert)
+            .where(Alert.fingerprint == delete_alert.fingerprint)
+            .values(is_deleted=not delete_alert.restore)
+        )
 
-    if not alerts:
-        raise HTTPException(status_code=404, detail="Alert not found")
+        if not result.rowcount:
+            raise HTTPException(status_code=404, detail="Alert not found")
 
-    # TODO: is_deleted=true instead of deleting it from the DB
-    for alert in alerts:
-        session.delete(alert)
-
-    session.commit()
+        session.commit()
+    # pulled alert flow
+    elif delete_alert.pulled_alert_dto:
+        alert_event = delete_alert.pulled_alert_dto.dict()
+        # to prevent "got multiple values for keyword argument" exception
+        alert_event.pop("isDeleted")
+        alert = Alert(
+            id=delete_alert.pulled_alert_dto.id,
+            tenant_id=tenant_id,
+            provider_type=delete_alert.pulled_alert_dto.source[0],
+            is_deleted=True,
+            fingerprint=delete_alert.pulled_alert_dto.fingerprint,
+            event={**alert_event, "pushed": True},
+        )
+        session.add(alert)
+        session.commit()
 
     return {"status": "ok"}
 
@@ -287,7 +307,7 @@ def handle_formatted_events(
                         zlib.compress(json.dumps([alert.event]).encode(), level=9)
                     ).decode(),
                 )
-            except:
+            except Exception:
                 logger.exception("Failed to push alert to the client")
         session.commit()
         logger.info(
@@ -299,7 +319,7 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
-    except Exception as e:
+    except Exception:
         logger.exception(
             "Failed to push alerts to the DB",
             extra={
@@ -317,7 +337,7 @@ def handle_formatted_events(
         logger.info("Adding events to the workflow manager queue")
         workflow_manager.insert_events(tenant_id, formatted_events)
         logger.info("Added events to the workflow manager queue")
-    except Exception as e:
+    except Exception:
         logger.exception(
             "Failed to run workflows based on alerts",
             extra={

@@ -1,5 +1,5 @@
 "use client";
-import { Text } from "@tremor/react";
+import { Title } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useEffect, useState } from "react";
 import SlidingPanel from "react-sliding-side-panel";
@@ -15,11 +15,13 @@ const ProvidersTiles = ({
   addProvider,
   onDelete,
   installedProvidersMode = false,
+  isLocalhost = false,
 }: {
   providers: Providers;
   addProvider: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   installedProvidersMode?: boolean;
+  isLocalhost?: boolean;
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
@@ -53,12 +55,12 @@ const ProvidersTiles = ({
   useEffect(() => {
     const pageWidth = window.innerWidth;
 
-    if(pageWidth < 640){
-      setPanelSize(100)
+    if (pageWidth < 640) {
+      setPanelSize(100);
     } else {
-      setPanelSize(40)
+      setPanelSize(40);
     }
-  }, [openPanel])
+  }, [openPanel]);
 
   const handleFormChange = (
     updatedFormValues: Record<string, string>,
@@ -107,10 +109,10 @@ const ProvidersTiles = ({
 
   return (
     <div>
-      <Text className="ml-2.5 mt-5 text-[15px]">
+      <Title className="mb-2.5">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
-      </Text>
-      <div className="provider-tiles">
+      </Title>
+      <div className="provider-tiles mb-5">
         {providersWithConfig.map((provider, index) => (
           <ProviderTile
             key={provider.id}
@@ -138,6 +140,7 @@ const ProvidersTiles = ({
             installedProvidersMode={installedProvidersMode}
             isProviderNameDisabled={installedProvidersMode}
             onDelete={onDelete}
+            isLocalhost={isLocalhost}
           />
         )}
       </SlidingPanel>

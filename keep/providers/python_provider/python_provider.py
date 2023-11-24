@@ -34,7 +34,7 @@ class PythonProvider(BaseProvider):
         for module in modules.split(","):
             try:
                 loaded_modules[module] = __import__(module)
-            except Exception as e:
+            except Exception:
                 raise ProviderConfigException(
                     f"{self.__class__.__name__} failed to import library: {module}",
                     provider_id=self.provider_id,

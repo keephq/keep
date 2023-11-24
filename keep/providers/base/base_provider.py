@@ -6,16 +6,13 @@ import copy
 import datetime
 import hashlib
 import json
-import logging
 import os
 import re
 import uuid
-from dataclasses import field
-from typing import Optional
+from typing import Literal, Optional
 
 import opentelemetry.trace as trace
 import requests
-from pydantic.dataclasses import dataclass
 
 from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
@@ -31,6 +28,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_TAGS: list[
+        Literal["alert", "ticketing", "messaging", "data", "queue"]
+    ] = []
 
     def __init__(
         self,
@@ -164,7 +164,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     _enrichments[enrichment["key"]] = r
                 else:
                     _enrichments[enrichment["key"]] = enrichment["value"]
-            except Exception as e:
+            except Exception:
                 self.logger.error(
                     f"Failed to enrich alert - enrichment: {enrichment}",
                     extra={"fingerprint": fingerprint, "provider": self.provider_id},
@@ -206,7 +206,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # just run the query
         results = self._query(**kwargs)
         # now add the type of the results to the global context
-        if results and type(results) == list:
+        if results and isinstance(results, list):
             self.context_manager.dependencies.add(results[0].__class__)
         elif results:
             self.context_manager.dependencies.add(results.__class__)
@@ -395,16 +395,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
             alert (dict): The alert to push.
         """
         # if this is not a dict, try to convert it to a dict
-        if not type(alert) == dict:
+        if not isinstance(alert, dict):
             try:
                 alert_data = json.loads(alert)
-            except:
+            except Exception:
                 alert_data = alert_data
         else:
             alert_data = alert
 
         # if this is still not a dict, we can't push it
-        if not type(alert_data) == dict:
+        if not isinstance(alert_data, dict):
             self.logger.warning(
                 "We currently support only alert represented as a dict, dismissing alert",
                 extra={"alert": alert},
@@ -442,8 +442,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         response = requests.post(url, json=alert_model.dict(), headers=headers)
         try:
             response.raise_for_status()
-            self.logger.info(f"Alert pushed successfully")
-        except:
+            self.logger.info("Alert pushed successfully")
+        except Exception:
             self.logger.error(
                 f"Failed to push alert to {self.provider_id}: {response.content}"
             )

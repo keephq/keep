@@ -5,8 +5,6 @@ import dataclasses
 import datetime
 import json
 import os
-import random
-import re
 import time
 
 import pydantic
@@ -515,7 +513,7 @@ class DatadogProvider(BaseProvider):
                         alert, self.fingerprint_fields
                     )
                     formatted_alerts.append(alert)
-                except Exception as e:
+                except Exception:
                     self.logger.exception(
                         "Could not parse alert event",
                         extra={"event_id": event.id, "monitor_id": event.monitor_id},

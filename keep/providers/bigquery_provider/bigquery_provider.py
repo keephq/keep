@@ -5,10 +5,8 @@ import dataclasses
 import os
 from typing import Optional
 
-import google.auth
 import pydantic
 from google.cloud import bigquery
-from pydantic.dataclasses import dataclass
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider

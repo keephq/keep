@@ -97,7 +97,7 @@ class Parser:
                 provider_type = step_or_action.provider.provider_type
                 if provider_type not in provider_types:
                     provider_types.append(provider_type)
-            except:
+            except Exception:
                 self.logger.warn(
                     "Could not get provider type from step or action",
                     extra={"step_or_action": step_or_action},
@@ -194,7 +194,7 @@ class Parser:
             tenant_id=tenant_id, all_providers=all_providers
         )
         for provider in installed_providers:
-            self.logger.debug(f"Loading provider", extra={"provider_id": provider.id})
+            self.logger.debug("Loading provider", extra={"provider_id": provider.id})
             try:
                 provider_name = provider.details.get("name")
                 context_manager.providers_context[provider.id] = provider.details
@@ -302,7 +302,7 @@ class Parser:
                     parsed_provider_parameters[parameter] = StepProviderParameter(
                         **provider_parameters[parameter]
                     )
-                except:
+                except Exception:
                     # It could be a dict/list but not of ProviderParameter type
                     parsed_provider_parameters[parameter] = provider_parameters[
                         parameter

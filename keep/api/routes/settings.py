@@ -107,7 +107,7 @@ def _delete_user_db(user_email: str, tenant_id: str) -> dict:
     try:
         delete_user_from_db(user_email)
         return {"status": "OK"}
-    except:
+    except Exception:
         raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -154,7 +154,7 @@ def _create_user_db(user_email: str, password: str, tenant_id: str) -> dict:
     try:
         create_user_in_db(user_email, password)
         return {"status": "OK"}
-    except:
+    except Exception:
         raise HTTPException(status_code=409, detail="User already exists")
 
 
@@ -186,7 +186,7 @@ async def get_smtp_settings(
         smtp_settings = secret_manager.read_secret(secret_name="smtp")
         smtp_settings = json.loads(smtp_settings)
         return JSONResponse(status_code=200, content=smtp_settings)
-    except:
+    except Exception:
         # everything ok but no smtp settings
         return JSONResponse(status_code=200, content={})
 
@@ -281,6 +281,6 @@ def get_api_key(
         session=session,
         tenant_id=tenant_id,
         unique_api_key_id="cli",
-        system_description="API API key",
+        system_description="API key",
     )
     return {"apiKey": api_key}

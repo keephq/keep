@@ -1,4 +1,3 @@
-import chevron
 from asteval import Interpreter
 
 from keep.conditions.base_condition import BaseCondition

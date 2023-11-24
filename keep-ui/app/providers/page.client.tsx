@@ -6,7 +6,7 @@ import {
   Provider,
   ProvidersResponse,
 } from "./providers";
-import { useSession } from "next-auth/react"
+import { useSession } from "next-auth/react";
 import { getApiURL } from "../../utils/apiUrl";
 import { fetcher } from "../../utils/fetcher";
 import { KeepApiError } from "../error";
@@ -14,11 +14,11 @@ import ProvidersTiles from "./providers-tiles";
 import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
-import Image from "next/image";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
 import { useRouter } from "next/navigation";
+import { Callout } from "@tremor/react";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -26,6 +26,7 @@ export const useFetchProviders = () => {
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const { data: session, status } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
+
 
   const { data, error } = useSWR<ProvidersResponse>(
     shouldFetch ? `${getApiURL()}/providers` : null,
@@ -38,6 +39,35 @@ export const useFetchProviders = () => {
       revalidateOnFocus: false,
     }
   );
+
+  const isLocalhost = data && data.is_localhost;
+  const toastShownKey = 'localhostToastShown';
+  const ToastMessage = () => (
+    <div>
+      Webhooks are disabled because Keep is not accessible from the internet.<br /><br />
+
+      Click for Keep docs on how to enabled it 📚
+    </div>
+  );
+
+  useEffect(() => {
+    const toastShown = localStorage.getItem(toastShownKey);
+
+    if (isLocalhost && !toastShown) {
+      toast(<ToastMessage/>, {
+        type: "info",
+        position: toast.POSITION.TOP_CENTER,
+        autoClose: 10000,
+        onClick: () => window.open('https://docs.keephq.dev/development/external-url', '_blank'),
+        style: {
+          width: "250%", // Set width
+          marginLeft: "-75%", // Adjust starting position to left
+        },
+        progressStyle: { backgroundColor: 'orange' }
+      });
+      localStorage.setItem(toastShownKey, 'true');
+    }
+  }, [isLocalhost]);
 
   // process data here if it's available
   if (data && providers.length === 0 && installedProviders.length === 0) {
@@ -75,6 +105,7 @@ export const useFetchProviders = () => {
         oauth2_url: provider.oauth2_url,
         scopes: provider.scopes,
         validatedScopes: provider.validatedScopes,
+        tags: provider.tags,
       };
       return updatedProvider;
     }) as Providers;
@@ -90,6 +121,7 @@ export const useFetchProviders = () => {
     error,
     session,
     isSlowLoading,
+    isLocalhost
   };
 };
 
@@ -106,8 +138,9 @@ export default function ProvidersPage({
     error,
     session,
     isSlowLoading,
+    isLocalhost
   } = useFetchProviders();
-  const { searchProviderString } = useContext(LayoutContext);
+  const { searchProviderString, selectedTags } = useContext(LayoutContext);
   const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
@@ -158,6 +191,13 @@ export default function ProvidersPage({
     );
   };
 
+  const searchTags = (provider: Provider) => {
+    return (
+      selectedTags.length === 0 ||
+      provider.tags.some((tag) => selectedTags.includes(tag))
+    );
+  };
+
   return (
     <>
       <FrigadeAnnouncement
@@ -182,9 +222,12 @@ export default function ProvidersPage({
         />
       )}
       <ProvidersTiles
-        providers={providers.filter(searchProviders)}
+        providers={providers.filter(
+          (provider) => searchProviders(provider) && searchTags(provider)
+        )}
         addProvider={addProvider}
         onDelete={deleteProvider}
+        isLocalhost={isLocalhost}
       />
     </>
   );

@@ -2,7 +2,7 @@
 JiraProvider is a class that implements the BaseProvider interface for Jira updates.
 """
 import dataclasses
-from typing import Dict, List, Literal
+from typing import List
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -88,6 +88,7 @@ class JiraProvider(BaseProvider):
             alias="Modidy issue reporter",
         ),
     ]
+    PROVIDER_TAGS = ["ticketing"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -112,9 +113,9 @@ class JiraProvider(BaseProvider):
         )
         try:
             resp.raise_for_status()
-        except Exception as e:
+        except Exception:
             scopes = {
-                scope.name: f"Failed to authenticate with Jira - wrong credentials"
+                scope.name: "Failed to authenticate with Jira - wrong credentials"
                 for scope in JiraProvider.PROVIDER_SCOPES
             }
             return scopes
@@ -133,7 +134,10 @@ class JiraProvider(BaseProvider):
         try:
             resp.raise_for_status()
         except Exception as e:
-            scopes = {scope.name: f"Failed to authenticate with Jira: {e}"}
+            scopes = {
+                scope.name: f"Failed to authenticate with Jira: {e}"
+                for scope in JiraProvider.PROVIDER_SCOPES
+            }
             return scopes
         permissions = resp.json().get("permissions", [])
         scopes = {
@@ -272,7 +276,7 @@ class JiraProvider(BaseProvider):
             response = requests.post(url=url, json=request_body, auth=self.__get_auth())
             try:
                 response.raise_for_status()
-            except Exception as e:
+            except Exception:
                 self.logger.exception(
                     "Failed to create an issue", extra=response.json()
                 )
@@ -325,7 +329,7 @@ class JiraProvider(BaseProvider):
 
         if not project_key or not summary or not issue_type or not description:
             raise ProviderException(
-                f"Project key and summary are required! - {project_key}, {summary}, {issuetype}, {description}"
+                f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
             )
         try:
             self.logger.info("Notifying jira...")
@@ -357,8 +361,6 @@ class JiraProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Fetching data from Jira")
-
-        jira_api_token = self.authentication_config.api_token
 
         request_url = f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
         response = requests.get(request_url, auth=self.__get_auth())

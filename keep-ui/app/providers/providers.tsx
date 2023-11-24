@@ -42,6 +42,7 @@ export interface ProviderScope {
 export interface ProvidersResponse {
   providers: Provider[];
   installed_providers: Provider[];
+  is_localhost: boolean;
 }
 
 export interface Provider {
@@ -75,6 +76,7 @@ export interface Provider {
   scopes?: ProviderScope[];
   validatedScopes?: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
+  tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
 }
 
 export type Providers = Provider[];
@@ -87,4 +89,5 @@ export const defaultProvider: Provider = {
   can_notify: false,
   can_query: false,
   type: "",
+  tags: [],
 };

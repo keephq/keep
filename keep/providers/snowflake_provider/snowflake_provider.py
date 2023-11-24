@@ -12,7 +12,6 @@ from snowflake.connector import connect
 from snowflake.connector.connection import SnowflakeConnection
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
