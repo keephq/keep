@@ -1,4 +1,4 @@
-"""
+o"""
 BigQuery provider.
 """
 import dataclasses
@@ -19,12 +19,14 @@ class BigqueryProviderAuthConfig:
     BigQuery authentication configuration.
     """
 
-     service_account_json: Optional[str] = dataclasses.field(
-        default=None,
+    service_account_json: str = dataclasses.field(
         metadata={
-            "required": False,
-            "description": "Path to the service account key file in JSON format. "
-            "If not provided, will use application default credentials",
+            "required": True,
+            "description": "The service account JSON with container.viewer role",
+            "sensitive": True,
+            "type": "file",
+            "name": "service_account_json",
+            "file_type": ".json",  # this is used to filter the file type in the UI
         },
     )
      project_id: Optional[str] = dataclasses.field(
