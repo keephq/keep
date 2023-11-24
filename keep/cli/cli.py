@@ -56,6 +56,7 @@ logging_config = {
 }
 logger = logging.getLogger(__name__)
 
+
 DEFAULT_CONF_FILE = ".keep.yaml"
 
 
@@ -1007,6 +1008,7 @@ def login(info: Info):
 
     import uvicorn
     from fastapi import FastAPI
+    from fastapi.responses import PlainTextResponse
     from requests_oauthlib import OAuth2Session
 
     app = FastAPI()
@@ -1023,31 +1025,35 @@ def login(info: Info):
             authorization_response=redirect_uri,
         )
         print("Got the token")
-        return "Authenticated!"
+        return PlainTextResponse(
+            "Authenticated successfully, you can close this tab now, Keep rulezzz!"
+        )
 
-    # https://github.com/encode/uvicorn/discussions/1103#discussioncomment-1389875
+    # We needed a way to run a server without blocking the main thread:
+    #   https://github.com/encode/uvicorn/discussions/1103#discussioncomment-1389875
     class UvicornServer:
         def __init__(self):
             super().__init__()
 
         def start(self):
             # Define the FastAPI app running logic here
-            print("PID of the server process: {}".format(os.getpid()))
-            uvicorn.run(app, host="127.0.0.1", port=8085, log_level="info")
+            uvicorn.run(app, host="127.0.0.1", port=8085, log_level="critical")
 
-    client_id = "P7zzubZGLNe8BQ4HRzvrhT5qPgRFa0BL"
-    authorization_base_url = "https://auth.keephq.dev/authorize"
+    # These are the public client_id of KeepHQ auth0
+    # If you have your own identity provider, we'll need to implement to flow
+    client_id = os.getenv("KEEP_OAUTH_CLIENT_ID", "P7zzubZGLNe8BQ4HRzvrhT5qPgRFa0BL")
+    authorization_base_url = os.getenv(
+        "KEEP_OAUTH_AUTHORIZATION_BASE_URL", "https://auth.keephq.dev/authorize"
+    )
     scope = ["openid", "profile", "email"]
     redirect_uri = "http://localhost:8085/callback"
     oauth_session = OAuth2Session(client_id, scope=scope, redirect_uri=redirect_uri)
     # now that we have the state parameter, we can start the fast api server
-    print("PID of the main process: {}".format(os.getpid()))
     # start the server on another process
     server_thread = threading.Thread(target=UvicornServer().start)
     server_thread.start()
     # now, open the browser and wait for the authentication
     webbrowser.open(oauth_session.authorization_url(authorization_base_url)[0])
-
     # Now wait for the callback
     timeout = 60 * 2  # 2 minutes
     times = 0
@@ -1055,13 +1061,14 @@ def login(info: Info):
     while not token:
         if time.time() - time_start > timeout:
             print("Timeout waiting for callback")
-            os.exit(1)
+            # kill the server
+            os._exit(1)
         # print every 15 seconds
         if times % 15 == 0:
-            print("Waiting for callback")
+            print("Still waiting for callback")
         time.sleep(1)
 
-    # get the api key
+    # Ok, we got the token from the oauth2 flow, now let's get a permanent api key
     print("Got the token, getting the api key")
     id_token = token["id_token"]
     api_key_resp = make_keep_request(
@@ -1070,7 +1077,9 @@ def login(info: Info):
         headers={"accept": "application/json", "Authorization": f"Bearer {id_token}"},
     )
     if not api_key_resp.ok:
-        raise Exception(f"Error getting api key: {api_key_resp.text}")
+        print(f"Error getting api key: {api_key_resp.text}")
+        # kill the server
+        os._exit(2)
 
     api_key = api_key_resp.json().get("apiKey")
     # keep it in the config file
@@ -1088,7 +1097,7 @@ def login(info: Info):
         raise Exception(f"Error getting whoami: {resp.text}")
     print("Authenticated to Keep successfully!")
     print(resp.json())
-    # kills the server also
+    # kills the server also, great success
     os._exit(0)
 
 
