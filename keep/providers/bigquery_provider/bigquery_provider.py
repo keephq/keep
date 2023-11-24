@@ -133,11 +133,8 @@ if __name__ == "__main__":
     )
     # If you want to use application default credentials, you can omit the authentication config
     config = {
-        "authentication": {
-        "service_account_json": "/path/to/your/service_account.json",
-        "project_id": "your-project-id",
-    },
-        #"authentication": {},
+        # "authentication": {"service_account.json": "/path/to/your/service_account.json"},
+        "authentication": {},
     }
 
     # Create the provider
