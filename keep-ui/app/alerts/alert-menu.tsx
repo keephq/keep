@@ -6,6 +6,7 @@ import {
   ArchiveBoxIcon,
   PlusIcon,
   TrashIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
@@ -13,6 +14,8 @@ import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";
 import { Alert } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
+import { User } from "app/settings/models";
+import { User as NextUser } from "next-auth";
 
 interface Props {
   alert: Alert;
@@ -21,6 +24,8 @@ interface Props {
   provider?: Provider;
   mutate?: () => void;
   callDelete?: (fingerprint: string, restore?: boolean) => void;
+  setAssignee?: (fingerprint: string, unassign: boolean) => void;
+  currentUser: NextUser;
 }
 
 export default function AlertMenu({
@@ -30,6 +35,8 @@ export default function AlertMenu({
   openHistory,
   mutate,
   callDelete,
+  setAssignee,
+  currentUser,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
@@ -57,15 +64,15 @@ export default function AlertMenu({
   );
 
   const onDelete = async () => {
-    const confirmed = confirm(`Are you sure you want to ${alert.isDeleted ? "restore" : "delete"} this alert?`);
+    const confirmed = confirm(
+      `Are you sure you want to ${
+        alert.deleted ? "restore" : "delete"
+      } this alert?`
+    );
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      // TODO: we'll change this once we have pulled alerts in the DB as well
-      const body =
-        alert.pushed || alert.isDeleted
-          ? { fingerprint: fingerprint, restore: alert.isDeleted } // pushe alerts
-          : { pulled_alert_dto: alert }; // pulled alerts (we need to keep it in the db)
+      const body = { fingerprint: fingerprint, restore: alert.deleted };
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
         headers: {
@@ -75,8 +82,26 @@ export default function AlertMenu({
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint, alert.isDeleted);
+        callDelete!(fingerprint, alert.deleted);
       }
+    }
+  };
+
+  const callAssignEndpoint = async (unassign: boolean = false) => {
+    const session = await getSession();
+    const apiUrl = getApiURL();
+    const res = await fetch(
+      `${apiUrl}/alerts/${fingerprint}/assign?unassign=${unassign}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    if (res.ok) {
+      setAssignee!(fingerprint, unassign);
     }
   };
 
@@ -150,6 +175,27 @@ export default function AlertMenu({
                   </button>
                 )}
               </Menu.Item>
+              <Menu.Item>
+                {({ active }) => (
+                  <button
+                    onClick={() => callAssignEndpoint(!!alert.assignee)}
+                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+                      alert.assignee && currentUser.email !== alert.assignee
+                        ? "text-slate-300 cursor-not-allowed"
+                        : ""
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                    disabled={!!alert.assignee && currentUser.email !== alert.assignee}
+                    title={`${
+                      !!alert.assignee && currentUser.email !== alert.assignee
+                        ? "Cannot unassign other users"
+                        : ""
+                    }`}
+                  >
+                    <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {alert.assignee ? "Unassign" : "Self-Assign"}
+                  </button>
+                )}
+              </Menu.Item>
             </div>
             {provider?.methods && provider?.methods?.length > 0 && (
               <div className="px-1 py-1">
@@ -195,7 +241,7 @@ export default function AlertMenu({
                     }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                   >
                     <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {alert.isDeleted ? "Restore" : "Delete"}
+                    {alert.deleted ? "Restore" : "Delete"}
                   </button>
                 )}
               </Menu.Item>

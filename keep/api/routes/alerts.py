@@ -5,7 +5,6 @@ import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
-from sqlalchemy import update
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
@@ -14,6 +13,7 @@ from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import (
     get_pusher_client,
+    get_user_email,
     verify_api_key,
     verify_bearer_token,
     verify_token_or_key,
@@ -208,12 +208,7 @@ def get_all_alerts(
     for alert in db_alerts:
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
-    alerts = [
-        AlertDto(
-            isDeleted=alert.event.pop("isDeleted", alert.is_deleted), **alert.event
-        )
-        for alert in db_alerts
-    ]
+    alerts = [AlertDto(**alert.event) for alert in db_alerts]
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -230,46 +225,62 @@ def get_all_alerts(
 def delete_alert(
     delete_alert: DeleteRequestBody,
     tenant_id: str = Depends(verify_bearer_token),
-    session: Session = Depends(get_session),
+    user_email: str = Depends(get_user_email),
 ) -> dict[str, str]:
     logger.info(
         "Deleting alert",
         extra={
             "fingerprint": delete_alert.fingerprint,
-            "pulled_alert": delete_alert.pulled_alert_dto is not None,
+            "restore": delete_alert.restore,
             "tenant_id": tenant_id,
         },
     )
 
-    # TODO: change this in the future when we keep pulled alerts in the DB as well
-    # pushed alert flow
-    if delete_alert.fingerprint:
-        result = session.execute(
-            update(Alert)
-            .where(Alert.fingerprint == delete_alert.fingerprint)
-            .values(is_deleted=not delete_alert.restore)
-        )
+    enrich_alert_db(
+        tenant_id=tenant_id,
+        fingerprint=delete_alert.fingerprint,
+        enrichments={"deleted": not delete_alert.restore, "assignee": user_email},
+    )
 
-        if not result.rowcount:
-            raise HTTPException(status_code=404, detail="Alert not found")
+    logger.info(
+        "Deleted alert successfully",
+        extra={
+            "tenant_id": tenant_id,
+            "restore": delete_alert.restore,
+            "fingerprint": delete_alert.fingerprint,
+        },
+    )
+    return {"status": "ok"}
 
-        session.commit()
-    # pulled alert flow
-    elif delete_alert.pulled_alert_dto:
-        alert_event = delete_alert.pulled_alert_dto.dict()
-        # to prevent "got multiple values for keyword argument" exception
-        alert_event.pop("isDeleted")
-        alert = Alert(
-            id=delete_alert.pulled_alert_dto.id,
-            tenant_id=tenant_id,
-            provider_type=delete_alert.pulled_alert_dto.source[0],
-            is_deleted=True,
-            fingerprint=delete_alert.pulled_alert_dto.fingerprint,
-            event={**alert_event, "pushed": True},
-        )
-        session.add(alert)
-        session.commit()
 
+@router.post("/{fingerprint}/assign", description="Assign alert to user")
+def assign_alert(
+    fingerprint: str,
+    unassign: bool = False,
+    tenant_id: str = Depends(verify_bearer_token),
+    user_email: str = Depends(get_user_email),
+) -> dict[str, str]:
+    logger.info(
+        "Assigning alert",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    enrich_alert_db(
+        tenant_id=tenant_id,
+        fingerprint=fingerprint,
+        enrichments={"assignee": user_email if not unassign else None},
+    )
+
+    logger.info(
+        "Assigned alert successfully",
+        extra={
+            "tenant_id": tenant_id,
+            "fingerprint": fingerprint,
+        },
+    )
     return {"status": "ok"}
 
 
@@ -510,7 +521,6 @@ def get_alert(
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     tenant_id: str = Depends(verify_token_or_key),
-    session: Session = Depends(get_session),
 ) -> dict[str, str]:
     logger.info(
         "Enriching alert",

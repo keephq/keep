@@ -19,30 +19,47 @@ import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
 import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
 import "./alerts.client.css";
+import { User as NextUser } from "next-auth";
+import { User } from "app/settings/models";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function Alerts({
   accessToken,
   tenantId,
   pusher,
+  user,
 }: {
   accessToken: string;
   tenantId: string;
   pusher: Pusher;
+  user: NextUser;
 }) {
   const apiUrl = getApiURL();
+  const searchParams = useSearchParams()!;
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  const [showDeleted, setShowDeleted] = useState<boolean>(false);
+  const [showDeleted, setShowDeleted] = useState<boolean>(
+    searchParams?.get("showDeleted") === "true"
+  );
+  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
+    searchParams?.get("onlyDeleted") === "true"
+  );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
+  const [groupedByAlerts, setGroupedByAlerts] = useState<{
+    [key: string]: Alert[];
+  }>({});
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
@@ -67,6 +84,48 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
+  const { data: users } = useSWR<User[]>(
+    `${apiUrl}/settings/users`,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
+  );
+
+  useEffect(() => {
+    const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
+    let groupedByAlerts = {} as { [key: string]: Alert[] };
+
+    // Fix the date format (it is received as text)
+    let aggregatedAlerts = alerts.map((alert) => {
+      alert.lastReceived = new Date(alert.lastReceived);
+      return alert;
+    });
+
+    if (groupBy) {
+      // Group alerts by the groupBy key
+      groupedByAlerts = alerts.reduce((acc, alert) => {
+        const key = (alert as any)[groupBy] as string;
+        if (!acc[key]) {
+          acc[key] = [alert];
+        } else {
+          acc[key].push(alert);
+        }
+        return acc;
+      }, groupedByAlerts);
+      // Sort by last received
+      Object.keys(groupedByAlerts).forEach((key) =>
+        groupedByAlerts[key].sort(
+          (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+        )
+      );
+      // Only the last state of each alert is shown if we group by something
+      aggregatedAlerts = Object.keys(groupedByAlerts).map(
+        (key) => groupedByAlerts[key][0]
+      );
+    }
+
+    setGroupedByAlerts(groupedByAlerts);
+    setAggregatedAlerts(aggregatedAlerts);
+  }, [alerts]);
 
   useEffect(() => {
     if (data)
@@ -99,9 +158,22 @@ export default function Alerts({
     };
   }, [pusher, tenantId]);
 
+  // Get a new searchParams string by merging the current
+  // searchParams with a provided key/value pair
+  // https://nextjs.org/docs/app/api-reference/functions/use-search-params
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set(name, value);
+
+      return params.toString();
+    },
+    [searchParams]
+  );
+
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
-  const environments = alerts
+  const environments = aggregatedAlerts
     .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
@@ -116,7 +188,19 @@ export default function Alerts({
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
-          alert.isDeleted = !restore;
+          alert.deleted = !restore;
+          alert.assignee = user.email;
+        }
+        return alert;
+      })
+    );
+  };
+
+  const setAssignee = (fingerprint: string, unassign: boolean) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.map((alert) => {
+        if (alert.fingerprint === fingerprint) {
+          alert.assignee = !unassign ? user?.email : "";
         }
         return alert;
       })
@@ -136,10 +220,17 @@ export default function Alerts({
     );
   }
 
-  const statuses = alerts.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = aggregatedAlerts
+    .map((alert) => alert.status)
+    .filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
+  }
+
+  function showDeletedAlert(alert: Alert): boolean {
+    if (showDeleted && onlyDeleted) return alert.deleted === true;
+    return showDeleted || !alert.deleted;
   }
 
   return (
@@ -182,11 +273,41 @@ export default function Alerts({
               id="switch"
               name="switch"
               checked={showDeleted}
-              onChange={setShowDeleted}
+              onChange={(value) => {
+                setShowDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("showDeleted", value.toString())
+                );
+              }}
               color={"orange"}
             />
             <label htmlFor="switch" className="text-sm text-gray-500">
               Show Deleted
+            </label>
+          </div>
+          <div
+            className={`flex items-center space-x-3 ml-2.5 ${
+              showDeleted ? "" : "hidden"
+            }`}
+          >
+            <Switch
+              id="switch"
+              name="switch"
+              checked={onlyDeleted}
+              onChange={(value) => {
+                setOnlyDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("onlyDeleted", value.toString())
+                );
+              }}
+              color={"orange"}
+            />
+            <label htmlFor="switch" className="text-sm text-gray-500">
+              Only Deleted
             </label>
           </div>
         </div>
@@ -205,19 +326,28 @@ export default function Alerts({
         ></Button>
       </Flex>
       <AlertTable
-        data={alerts.filter(
+        alerts={aggregatedAlerts.filter(
           (alert) =>
             environmentIsSeleected(alert) &&
             statusIsSeleected(alert) &&
-            searchAlert(alert)
+            searchAlert(alert) &&
+            showDeletedAlert(alert)
         )}
+        groupedByAlerts={groupedByAlerts}
         groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
         onDelete={onDelete}
-        showDeleted={showDeleted}
+        setAssignee={setAssignee}
+        users={users}
+        currentUser={user}
+        deletedCount={
+          !showDeleted
+            ? aggregatedAlerts.filter((alert) => alert.deleted).length
+            : 0
+        }
       />
     </Card>
   );

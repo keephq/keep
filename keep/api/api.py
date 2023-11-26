@@ -170,14 +170,18 @@ def get_app(
                 raise HTTPException(status_code=401, detail="Missing JWT secret")
             token = jwt.encode(
                 {
-                    "email": f"{user.username}@keephq.com",
+                    "email": user.username,
                     "tenant_id": SINGLE_TENANT_UUID,
                 },
                 jwt_secret,
                 algorithm="HS256",
             )
             # return the token
-            return {"accessToken": token, "tenantId": SINGLE_TENANT_UUID}
+            return {
+                "accessToken": token,
+                "tenantId": SINGLE_TENANT_UUID,
+                "email": user.username,
+            }
 
     from fastapi import BackgroundTasks
 
