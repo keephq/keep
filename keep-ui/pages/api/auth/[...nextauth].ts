@@ -2,7 +2,11 @@ import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
-import { AuthenticationType, NoAuthUserEmail, NoAuthTenant } from "utils/authenticationType";
+import {
+  AuthenticationType,
+  NoAuthUserEmail,
+  NoAuthTenant,
+} from "utils/authenticationType";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
@@ -16,7 +20,6 @@ Depends on authType which can be NO_AUTH, SINGLE_TENANT or MULTI_TENANT
 Note that the same environment variable should be set in the backend too.
 
 */
-
 
 // multi tenant authentication using Auth0
 const multiTenantAuthOptions = {
@@ -33,7 +36,7 @@ const multiTenantAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: '/signin',
+    signIn: "/signin",
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -53,9 +56,9 @@ const multiTenantAuthOptions = {
       session.accessToken = token.accessToken as string;
       session.tenantId = token.keep_tenant_id as string;
       return session;
-     }
-    }
-  } as AuthOptions;
+    },
+  },
+} as AuthOptions;
 
 // Single tenant authentication using username/password
 const singleTenantAuthOptions = {
@@ -120,6 +123,7 @@ const singleTenantAuthOptions = {
       if (user) {
         token.accessToken = user.accessToken;
         token.tenantId = user.tenantId;
+        token.email = user.email;
       }
       return token;
     },
@@ -127,26 +131,25 @@ const singleTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
       session.tenantId = token.tenantId as string;
-    return session;
-    }
+      return session;
+    },
   },
 } as AuthOptions;
-
 
 // No authentication
 const noAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'NoAuth',
+      name: "NoAuth",
       credentials: {},
       async authorize(credentials, req) {
         // Return a static user object with a predefined token
         return {
-          id: 'keep-user-for-no-auth-purposes',
-          name: 'Keep',
+          id: "keep-user-for-no-auth-purposes",
+          name: "Keep",
           email: NoAuthUserEmail,
           tenantId: NoAuthTenant,
-          accessToken: 'keep-token-for-no-auth-purposes', // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
+          accessToken: "keep-token-for-no-auth-purposes", // Static token for no-auth purposes - DO NOT USE IN PRODUCTION
         };
       },
     }),
@@ -167,14 +170,15 @@ const noAuthOptions = {
     },
   },
   pages: {
-    signIn: '/signin',
+    signIn: "/signin",
   },
 } as AuthOptions;
 
 console.log("Starting Keep frontend with auth type: ", authType);
-export const authOptions = (authType === AuthenticationType.MULTI_TENANT)
-  ? multiTenantAuthOptions
-  : (authType === AuthenticationType.SINGLE_TENANT)
+export const authOptions =
+  authType === AuthenticationType.MULTI_TENANT
+    ? multiTenantAuthOptions
+    : authType === AuthenticationType.SINGLE_TENANT
     ? singleTenantAuthOptions
     : noAuthOptions;
 

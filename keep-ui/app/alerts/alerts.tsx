@@ -26,15 +26,19 @@ import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
 import "./alerts.client.css";
+import { User as NextUser } from "next-auth";
+import { User } from "app/settings/models";
 
 export default function Alerts({
   accessToken,
   tenantId,
   pusher,
+  user,
 }: {
   accessToken: string;
   tenantId: string;
   pusher: Pusher;
+  user: NextUser;
 }) {
   const apiUrl = getApiURL();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
@@ -69,6 +73,11 @@ export default function Alerts({
   );
   const { data: providers } = useSWR<ProvidersResponse>(
     `${apiUrl}/providers`,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
+  );
+  const { data: users } = useSWR<User[]>(
+    `${apiUrl}/settings/users`,
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
@@ -159,6 +168,18 @@ export default function Alerts({
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
           alert.deleted = !restore;
+          alert.assignee = user.email;
+        }
+        return alert;
+      })
+    );
+  };
+
+  const setAssignee = (fingerprint: string, unassign: boolean) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.map((alert) => {
+        if (alert.fingerprint === fingerprint) {
+          alert.assignee = !unassign ? user?.email : "";
         }
         return alert;
       })
@@ -284,6 +305,10 @@ export default function Alerts({
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
         onDelete={onDelete}
+        setAssignee={setAssignee}
+        users={users}
+        currentUser={user}
+        deletedCount={!showDeleted ? aggregatedAlerts.filter((alert) => alert.deleted).length : 0}
       />
     </Card>
   );

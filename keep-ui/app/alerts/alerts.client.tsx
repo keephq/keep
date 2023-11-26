@@ -14,25 +14,27 @@ export default function AlertsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-      wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
-      wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
-        ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
-        : undefined,
-      forceTLS: false,
-      disableStats: true,
-      enabledTransports: ["ws", "wss"],
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
-      channelAuthorization: {
-        transport: "ajax",
-        endpoint: `${getApiURL()}/pusher/auth`,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken!}`,
+    if (session && pusherClient === null) {
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
+        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
+        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
+          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
+          : undefined,
+        forceTLS: false,
+        disableStats: true,
+        enabledTransports: ["ws", "wss"],
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
+        channelAuthorization: {
+          transport: "ajax",
+          endpoint: `${getApiURL()}/pusher/auth`,
+          headers: {
+            Authorization: `Bearer ${session?.accessToken!}`,
+          },
         },
-      },
-    });
-    setPusherClient(pusher);
-  }, [session]);
+      });
+      setPusherClient(pusher);
+    }
+  }, [session, pusherClient]);
 
   if (status === "loading") return <Loading />;
   if (pusherClient === null) return <Loading />;
@@ -44,6 +46,7 @@ export default function AlertsPage() {
       accessToken={session?.accessToken!}
       tenantId={session?.tenantId!}
       pusher={pusherClient}
+      user={session?.user!}
     />
   );
 }

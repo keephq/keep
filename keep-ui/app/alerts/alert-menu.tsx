@@ -6,6 +6,7 @@ import {
   ArchiveBoxIcon,
   PlusIcon,
   TrashIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
@@ -13,6 +14,8 @@ import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";
 import { Alert } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
+import { User } from "app/settings/models";
+import { User as NextUser } from "next-auth";
 
 interface Props {
   alert: Alert;
@@ -21,6 +24,8 @@ interface Props {
   provider?: Provider;
   mutate?: () => void;
   callDelete?: (fingerprint: string, restore?: boolean) => void;
+  setAssignee?: (fingerprint: string, unassign: boolean) => void;
+  currentUser: NextUser;
 }
 
 export default function AlertMenu({
@@ -30,6 +35,8 @@ export default function AlertMenu({
   openHistory,
   mutate,
   callDelete,
+  setAssignee,
+  currentUser,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
@@ -77,6 +84,24 @@ export default function AlertMenu({
       if (res.ok) {
         callDelete!(fingerprint, alert.deleted);
       }
+    }
+  };
+
+  const callAssignEndpoint = async (unassign: boolean = false) => {
+    const session = await getSession();
+    const apiUrl = getApiURL();
+    const res = await fetch(
+      `${apiUrl}/alerts/${fingerprint}/assign?unassign=${unassign}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    if (res.ok) {
+      setAssignee!(fingerprint, unassign);
     }
   };
 
@@ -147,6 +172,27 @@ export default function AlertMenu({
                       aria-hidden="true"
                     />
                     History
+                  </button>
+                )}
+              </Menu.Item>
+              <Menu.Item>
+                {({ active }) => (
+                  <button
+                    onClick={() => callAssignEndpoint(!!alert.assignee)}
+                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+                      alert.assignee && currentUser.email !== alert.assignee
+                        ? "text-slate-300 cursor-not-allowed"
+                        : ""
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                    disabled={!!alert.assignee && currentUser.email !== alert.assignee}
+                    title={`${
+                      !!alert.assignee && currentUser.email !== alert.assignee
+                        ? "Cannot unassign other users"
+                        : ""
+                    }`}
+                  >
+                    <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {alert.assignee ? "Unassign" : "Self-Assign"}
                   </button>
                 )}
               </Menu.Item>

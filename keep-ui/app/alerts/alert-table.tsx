@@ -24,6 +24,8 @@ import {
   ArrowRightIcon,
   TableCellsIcon,
 } from "@heroicons/react/20/solid";
+import { User } from "app/settings/models";
+import { User as NextUser } from "next-auth";
 
 interface Props {
   alerts: Alert[];
@@ -34,6 +36,10 @@ interface Props {
   mutate?: () => void;
   isAsyncLoading?: boolean;
   onDelete?: (fingerprint: string, restore?: boolean) => void;
+  setAssignee?: (fingerprint: string, unassign: boolean) => void;
+  users?: User[];
+  currentUser: NextUser;
+  deletedCount?: number;
 }
 
 export function AlertTable({
@@ -45,6 +51,10 @@ export function AlertTable({
   mutate,
   isAsyncLoading = false,
   onDelete,
+  setAssignee,
+  users = [],
+  currentUser,
+  deletedCount = 0,
 }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -71,7 +81,8 @@ export function AlertTable({
     return (
       <div className="flex justify-between items-center">
         <Text>
-          Showing {startItem} – {endItem} of {alerts.length}
+          Showing {startItem} – {endItem} of {alerts.length}{" "}
+          {deletedCount > 0 && `(there are ${deletedCount} deleted alerts)`}
         </Text>
         <div className="flex">
           <Select
@@ -155,6 +166,9 @@ export function AlertTable({
           mutate={mutate}
           showSkeleton={isAsyncLoading}
           onDelete={onDelete}
+          setAssignee={setAssignee}
+          users={users}
+          currentUser={currentUser}
         />
       </Table>
       {renderPagination()}
@@ -162,6 +176,8 @@ export function AlertTable({
         isOpen={isOpen}
         closeModal={closeModal}
         data={selectedAlertHistory}
+        users={users}
+        currentUser={currentUser}
       />
     </>
   );

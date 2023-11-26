@@ -13,6 +13,7 @@ from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import (
     get_pusher_client,
+    get_user_email,
     verify_api_key,
     verify_bearer_token,
     verify_token_or_key,
@@ -224,6 +225,7 @@ def get_all_alerts(
 def delete_alert(
     delete_alert: DeleteRequestBody,
     tenant_id: str = Depends(verify_bearer_token),
+    user_email: str = Depends(get_user_email),
 ) -> dict[str, str]:
     logger.info(
         "Deleting alert",
@@ -237,7 +239,7 @@ def delete_alert(
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=delete_alert.fingerprint,
-        enrichments={"deleted": not delete_alert.restore},
+        enrichments={"deleted": not delete_alert.restore, "assignee": user_email},
     )
 
     logger.info(
@@ -246,6 +248,37 @@ def delete_alert(
             "tenant_id": tenant_id,
             "restore": delete_alert.restore,
             "fingerprint": delete_alert.fingerprint,
+        },
+    )
+    return {"status": "ok"}
+
+
+@router.post("/{fingerprint}/assign", description="Assign alert to user")
+def assign_alert(
+    fingerprint: str,
+    unassign: bool = False,
+    tenant_id: str = Depends(verify_bearer_token),
+    user_email: str = Depends(get_user_email),
+) -> dict[str, str]:
+    logger.info(
+        "Assigning alert",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    enrich_alert_db(
+        tenant_id=tenant_id,
+        fingerprint=fingerprint,
+        enrichments={"assignee": user_email if not unassign else None},
+    )
+
+    logger.info(
+        "Assigned alert successfully",
+        extra={
+            "tenant_id": tenant_id,
+            "fingerprint": fingerprint,
         },
     )
     return {"status": "ok"}
