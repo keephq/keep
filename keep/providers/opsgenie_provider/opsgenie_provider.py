@@ -87,7 +87,7 @@ class OpsgenieProvider(BaseProvider):
         Creates OpsGenie Alert.
 
         """
-        api_instance = opsgenie_sdk.AccountApi(opsgenie_sdk.ApiClient(self.configuration))
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
         create_alert_payload = opsgenie_sdk.CreateAlertPayload(
             user=user,
             note=note,
