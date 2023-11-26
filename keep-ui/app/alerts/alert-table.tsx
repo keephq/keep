@@ -17,67 +17,28 @@ import {
 import { Provider } from "app/providers/providers";
 
 interface Props {
-  data: Alert[];
+  alerts: Alert[];
   groupBy?: string;
+  groupedByAlerts?: { [key: string]: Alert[] };
   workflows?: any[];
   providers?: Provider[];
   mutate?: () => void;
   isAsyncLoading?: boolean;
   onDelete?: (fingerprint: string, restore?: boolean) => void;
-  showDeleted?: boolean;
 }
 
 export function AlertTable({
-  data: alerts,
+  alerts,
+  groupedByAlerts = {},
   groupBy,
   workflows,
   providers,
   mutate,
   isAsyncLoading = false,
   onDelete,
-  showDeleted = false,
 }: Props) {
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-
-  function showDeletedAlert(alert: Alert): boolean {
-    return showDeleted || !alert.deleted;
-  }
-
-  let groupedByAlerts = {} as { [key: string]: Alert[] };
-  const deletedAlertFingerprints = new Set(
-    alerts.filter((alert) => alert.deleted).map((alert) => alert.fingerprint)
-  );
-  let aggregatedAlerts = alerts.map((alert) => {
-    alert.lastReceived = new Date(alert.lastReceived);
-    if (deletedAlertFingerprints.has(alert.fingerprint)) {
-      alert.deleted = true;
-    }
-    return alert;
-  });
-
-  if (groupBy) {
-    // Group alerts by the groupBy key
-    groupedByAlerts = alerts.reduce((acc, alert) => {
-      const key = (alert as any)[groupBy] as string;
-      if (!acc[key]) {
-        acc[key] = [alert];
-      } else {
-        acc[key].push(alert);
-      }
-      return acc;
-    }, groupedByAlerts);
-    // Sort by last received
-    Object.keys(groupedByAlerts).forEach((key) =>
-      groupedByAlerts[key].sort(
-        (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
-      )
-    );
-    // Only the last state of each alert is shown if we group by something
-    aggregatedAlerts = Object.keys(groupedByAlerts).map(
-      (key) => groupedByAlerts[key][0]
-    );
-  }
 
   const closeModal = (): any => setIsOpen(false);
   const openModal = (alert: Alert): any => {
@@ -119,7 +80,7 @@ export function AlertTable({
           </TableRow>
         </TableHead>
         <AlertsTableBody
-          data={aggregatedAlerts.filter(showDeletedAlert)}
+          alerts={alerts}
           groupBy={groupBy}
           groupedByData={groupedByAlerts}
           openModal={openModal}
