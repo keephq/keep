@@ -88,7 +88,10 @@ export function AlertTable({
           <Select
             value={defaultPageSize.toString()}
             enableClear={false}
-            onValueChange={(value) => setDefaultPageSize(parseInt(value))}
+            onValueChange={(value) => {
+              setDefaultPageSize(parseInt(value));
+              setCurrentPage(1);
+            }}
             className="mr-2"
             icon={TableCellsIcon}
           >
