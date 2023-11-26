@@ -37,6 +37,7 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
 )
 from keep.parser.parser import Parser
+from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -88,13 +89,27 @@ def get_workflows(
                 )
                 providers_dto.append(provider_dto)
             except KeyError:
-                # the provider is not installed
-                provider_dto = ProviderDTO(
-                    name=provider.get("name"),
-                    type=provider.get("type"),
-                    id=None,
-                    installed=False,
+                # the provider is not installed, now we want to check:
+                # 1. if the provider requires any config - so its not instaleld
+                # 2. if the provider does not require any config - consider it as installed
+                conf = ProvidersFactory.get_provider_required_config(
+                    provider.get("type")
                 )
+                if conf:
+                    provider_dto = ProviderDTO(
+                        name=provider.get("name"),
+                        type=provider.get("type"),
+                        id=None,
+                        installed=False,
+                    )
+                # if the provider does not require any config, consider it as installed
+                else:
+                    provider_dto = ProviderDTO(
+                        name=provider.get("name"),
+                        type=provider.get("type"),
+                        id=None,
+                        installed=True,
+                    )
                 providers_dto.append(provider_dto)
 
         triggers = parser.get_triggers_from_workflow(workflow_yaml)
