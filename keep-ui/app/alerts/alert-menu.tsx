@@ -57,15 +57,15 @@ export default function AlertMenu({
   );
 
   const onDelete = async () => {
-    const confirmed = confirm(`Are you sure you want to ${alert.isDeleted ? "restore" : "delete"} this alert?`);
+    const confirmed = confirm(
+      `Are you sure you want to ${
+        alert.deleted ? "restore" : "delete"
+      } this alert?`
+    );
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      // TODO: we'll change this once we have pulled alerts in the DB as well
-      const body =
-        alert.pushed || alert.isDeleted
-          ? { fingerprint: fingerprint, restore: alert.isDeleted } // pushe alerts
-          : { pulled_alert_dto: alert }; // pulled alerts (we need to keep it in the db)
+      const body = { fingerprint: fingerprint, restore: alert.deleted };
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
         headers: {
@@ -75,7 +75,7 @@ export default function AlertMenu({
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint, alert.isDeleted);
+        callDelete!(fingerprint, alert.deleted);
       }
     }
   };
@@ -195,7 +195,7 @@ export default function AlertMenu({
                     }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                   >
                     <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {alert.isDeleted ? "Restore" : "Delete"}
+                    {alert.deleted ? "Restore" : "Delete"}
                   </button>
                 )}
               </Menu.Item>
