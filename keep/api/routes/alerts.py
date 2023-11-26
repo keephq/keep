@@ -313,6 +313,17 @@ def handle_formatted_events(
             )
             session.add(alert)
             formatted_event.event_id = alert.id
+            alert_enrichments = get_enrichments_from_db(
+                tenant_id=tenant_id, fingerprints=[formatted_event.fingerprint]
+            )
+            if alert_enrichments:
+                # enrich
+                for alert_enrichment in alert_enrichments:
+                    for enrichment in alert_enrichment.enrichments:
+                        # set the enrichment
+                        alert.event[enrichment] = alert_enrichment.enrichments[
+                            enrichment
+                        ]
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
