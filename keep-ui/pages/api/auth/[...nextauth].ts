@@ -160,6 +160,7 @@ const noAuthOptions = {
       if (user) {
         token.accessToken = user.accessToken;
         token.tenantId = user.tenantId;
+        token.email = user.email;
       }
       return token;
     },

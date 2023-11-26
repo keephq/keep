@@ -61,8 +61,9 @@ export default function Alerts({
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: Alert[];
   }>({});
-  const [alertNameSearchString, setAlertNameSearchString] =
-    useState<string>("");
+  const [alertNameSearchString, setAlertNameSearchString] = useState<string>(
+    searchParams?.get("searchQuery") || ""
+  );
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
@@ -237,7 +238,8 @@ export default function Alerts({
 
   function assigneeIsSelected(alert: Alert): boolean {
     return (
-      selectedAssignees.includes(alert.assignee!) || selectedAssignees.length === 0
+      selectedAssignees.includes(alert.assignee!) ||
+      selectedAssignees.length === 0
     );
   }
 
@@ -253,7 +255,7 @@ export default function Alerts({
           <MultiSelect
             onValueChange={setSelectedEnvironments}
             placeholder="Select Environment..."
-            className="max-w-xs"
+            className="max-w-[280px]"
             icon={ServerStackIcon}
           >
             {environments!.map((item) => (
@@ -265,7 +267,7 @@ export default function Alerts({
           <MultiSelect
             onValueChange={setSelectedStatus}
             placeholder="Select Status..."
-            className="max-w-xs ml-2.5"
+            className="max-w-[280px] ml-2.5"
             icon={BellAlertIcon}
           >
             {statuses!.map((item) => (
@@ -277,7 +279,7 @@ export default function Alerts({
           <MultiSelect
             onValueChange={setSelectedAssignees}
             placeholder="Select Assignee..."
-            className="max-w-xs ml-2.5"
+            className="max-w-[280px] ml-2.5"
             icon={UserPlusIcon}
             disabled={assignees.length === 0}
             title={assignees.length === 0 ? "No assignees" : ""}
@@ -289,11 +291,18 @@ export default function Alerts({
             ))}
           </MultiSelect>
           <TextInput
-            className="max-w-xs ml-2.5"
+            className="max-w-[280px] ml-2.5"
             icon={MagnifyingGlassIcon}
             placeholder="Search Alert..."
             value={alertNameSearchString}
-            onChange={(e) => setAlertNameSearchString(e.target.value)}
+            onChange={(e) => {
+              setAlertNameSearchString(e.target.value);
+              router.push(
+                pathname +
+                  "?" +
+                  createQueryString("searchQuery", e.target.value)
+              );
+            }}
           />
           <div className="flex items-center space-x-3 ml-2.5">
             <Switch

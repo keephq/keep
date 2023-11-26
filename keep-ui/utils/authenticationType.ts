@@ -7,5 +7,5 @@ export enum AuthenticationType {
     NO_AUTH = "NO_AUTH"  // Default
 }
 
-export const NoAuthUserEmail = "keep@example.com";
+export const NoAuthUserEmail = "keep";
 export const NoAuthTenant = "keep";
