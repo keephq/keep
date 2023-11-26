@@ -19,28 +19,41 @@ import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
 import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
 import "./alerts.client.css";
+import { User as NextUser } from "next-auth";
+import { User } from "app/settings/models";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function Alerts({
   accessToken,
   tenantId,
   pusher,
+  user,
 }: {
   accessToken: string;
   tenantId: string;
   pusher: Pusher;
+  user: NextUser;
 }) {
   const apiUrl = getApiURL();
+  const searchParams = useSearchParams()!;
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  const [showDeleted, setShowDeleted] = useState<boolean>(false);
+  const [showDeleted, setShowDeleted] = useState<boolean>(
+    searchParams?.get("showDeleted") === "true"
+  );
+  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
+    searchParams?.get("onlyDeleted") === "true"
+  );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
@@ -68,6 +81,11 @@ export default function Alerts({
   );
   const { data: providers } = useSWR<ProvidersResponse>(
     `${apiUrl}/providers`,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
+  );
+  const { data: users } = useSWR<User[]>(
+    `${apiUrl}/settings/users`,
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
@@ -140,6 +158,19 @@ export default function Alerts({
     };
   }, [pusher, tenantId]);
 
+  // Get a new searchParams string by merging the current
+  // searchParams with a provided key/value pair
+  // https://nextjs.org/docs/app/api-reference/functions/use-search-params
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set(name, value);
+
+      return params.toString();
+    },
+    [searchParams]
+  );
+
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
   const environments = aggregatedAlerts
@@ -158,6 +189,18 @@ export default function Alerts({
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
           alert.deleted = !restore;
+          alert.assignee = user.email;
+        }
+        return alert;
+      })
+    );
+  };
+
+  const setAssignee = (fingerprint: string, unassign: boolean) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.map((alert) => {
+        if (alert.fingerprint === fingerprint) {
+          alert.assignee = !unassign ? user?.email : "";
         }
         return alert;
       })
@@ -177,13 +220,16 @@ export default function Alerts({
     );
   }
 
-  const statuses = aggregatedAlerts.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = aggregatedAlerts
+    .map((alert) => alert.status)
+    .filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
   }
 
   function showDeletedAlert(alert: Alert): boolean {
+    if (showDeleted && onlyDeleted) return alert.deleted === true;
     return showDeleted || !alert.deleted;
   }
 
@@ -227,11 +273,41 @@ export default function Alerts({
               id="switch"
               name="switch"
               checked={showDeleted}
-              onChange={setShowDeleted}
+              onChange={(value) => {
+                setShowDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("showDeleted", value.toString())
+                );
+              }}
               color={"orange"}
             />
             <label htmlFor="switch" className="text-sm text-gray-500">
               Show Deleted
+            </label>
+          </div>
+          <div
+            className={`flex items-center space-x-3 ml-2.5 ${
+              showDeleted ? "" : "hidden"
+            }`}
+          >
+            <Switch
+              id="switch"
+              name="switch"
+              checked={onlyDeleted}
+              onChange={(value) => {
+                setOnlyDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("onlyDeleted", value.toString())
+                );
+              }}
+              color={"orange"}
+            />
+            <label htmlFor="switch" className="text-sm text-gray-500">
+              Only Deleted
             </label>
           </div>
         </div>
@@ -264,6 +340,14 @@ export default function Alerts({
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
         onDelete={onDelete}
+        setAssignee={setAssignee}
+        users={users}
+        currentUser={user}
+        deletedCount={
+          !showDeleted
+            ? aggregatedAlerts.filter((alert) => alert.deleted).length
+            : 0
+        }
       />
     </Card>
   );
