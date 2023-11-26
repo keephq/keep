@@ -101,6 +101,10 @@ class ProvidersFactory:
         Returns:
             BaseProvider: The provider class.
         """
+        # support for provider types with subtypes e.g. auth0.logs, github.stars
+        # todo: if some day there will be different conf for auth0.logs and auth0.users, this will need to be revisited
+        if "." in provider_type:
+            provider_type = provider_type.split(".")[0]
         module = importlib.import_module(
             f"keep.providers.{provider_type}_provider.{provider_type}_provider"
         )
@@ -109,7 +113,7 @@ class ProvidersFactory:
                 module, provider_type.title().replace("_", "") + "ProviderAuthConfig"
             )
             return provider_auth_config_class
-        except ImportError:
+        except (ImportError, AttributeError):
             logging.getLogger(__name__).warning(
                 f"Provider {provider_type} does not have a provider auth config class"
             )
