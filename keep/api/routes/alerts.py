@@ -237,7 +237,7 @@ def delete_alert(
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=delete_alert.fingerprint,
-        enrichments={"is_deleted": not delete_alert.restore},
+        enrichments={"deleted": not delete_alert.restore},
     )
 
     logger.info(
