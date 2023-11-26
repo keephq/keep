@@ -10,14 +10,24 @@ import {
   Title,
   Divider,
 } from "@tremor/react";
+import { User } from "app/settings/models";
+import { User as NextUser } from "next-auth";
 
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
   data: Alert[];
+  users?: User[];
+  currentUser: NextUser;
 }
 
-export function AlertTransition({ isOpen, closeModal, data }: Props) {
+export function AlertTransition({
+  isOpen,
+  closeModal,
+  data,
+  users = [],
+  currentUser,
+}: Props) {
   if (!data) {
     return <></>;
   }
@@ -127,7 +137,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                   yAxisWidth={40}
                 />
                 <Divider />
-                <AlertTable alerts={data} />
+                <AlertTable alerts={data} users={users} currentUser={currentUser} />
               </Dialog.Panel>
             </Transition.Child>
           </div>

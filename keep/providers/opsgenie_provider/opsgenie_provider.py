@@ -7,7 +7,7 @@ from opsgenie_sdk.rest import ApiException
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -30,13 +30,37 @@ class OpsGenieRecipient(pydantic.BaseModel):
 class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="opsgenie:create",
+            description="Create OpsGenie alerts",
+            mandatory=True,
+            alias="Create alerts",
+        ),
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.configuration = opsgenie_sdk.Configuration()
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
-
+        
+    def validate_scopes(self):
+        scopes = {}
+        self.logger.info("Validating scopes")
+        try:
+            self._create_alert(
+                user="John Doe",
+                note="Simple alert",
+                message="Simple alert showing context with name: John Doe",
+            )
+            scopes["opsgenie:create"] = True
+        except ApiException:
+            self.logger.exception("Failed to create OpsGenie alert")
+            scopes["opsgenie:create"] = False
+        return scopes
+            
     def validate_config(self):
         self.authentication_config = OpsgenieProviderAuthConfig(
             **self.config.authentication
