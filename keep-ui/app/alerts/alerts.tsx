@@ -3,6 +3,7 @@ import {
   BellAlertIcon,
   MagnifyingGlassIcon,
   ServerStackIcon,
+  UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import {
   MultiSelect,
@@ -63,6 +64,7 @@ export default function Alerts({
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, isLoading, mutate } = useSWR<Alert[]>(
@@ -177,6 +179,11 @@ export default function Alerts({
     .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
+  const assignees = aggregatedAlerts
+    .filter((alert) => !!alert.assignee)
+    .map((alert) => alert.assignee!.toLowerCase())
+    .filter(onlyUnique);
+
   function environmentIsSeleected(alert: Alert): boolean {
     return (
       selectedEnvironments.includes(alert.environment.toLowerCase()) ||
@@ -228,6 +235,12 @@ export default function Alerts({
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
   }
 
+  function assigneeIsSelected(alert: Alert): boolean {
+    return (
+      selectedAssignees.includes(alert.assignee!) || selectedAssignees.length === 0
+    );
+  }
+
   function showDeletedAlert(alert: Alert): boolean {
     if (showDeleted && onlyDeleted) return alert.deleted === true;
     return showDeleted || !alert.deleted;
@@ -256,6 +269,20 @@ export default function Alerts({
             icon={BellAlertIcon}
           >
             {statuses!.map((item) => (
+              <MultiSelectItem key={item} value={item}>
+                {item}
+              </MultiSelectItem>
+            ))}
+          </MultiSelect>
+          <MultiSelect
+            onValueChange={setSelectedAssignees}
+            placeholder="Select Assignee..."
+            className="max-w-xs ml-2.5"
+            icon={UserPlusIcon}
+            disabled={assignees.length === 0}
+            title={assignees.length === 0 ? "No assignees" : ""}
+          >
+            {assignees!.map((item) => (
               <MultiSelectItem key={item} value={item}>
                 {item}
               </MultiSelectItem>
@@ -331,7 +358,8 @@ export default function Alerts({
             environmentIsSeleected(alert) &&
             statusIsSeleected(alert) &&
             searchAlert(alert) &&
-            showDeletedAlert(alert)
+            showDeletedAlert(alert) &&
+            assigneeIsSelected(alert)
         )}
         groupedByAlerts={groupedByAlerts}
         groupBy="fingerprint"
