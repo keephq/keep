@@ -209,7 +209,10 @@ def get_all_alerts(
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
     alerts = [
-        AlertDto(**alert.event, isDeleted=alert.is_deleted) for alert in db_alerts
+        AlertDto(
+            isDeleted=alert.event.pop("isDeleted", alert.is_deleted), **alert.event
+        )
+        for alert in db_alerts
     ]
     logger.info(
         "Fetched alerts from DB",
