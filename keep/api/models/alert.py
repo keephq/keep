@@ -22,7 +22,7 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    isDeleted: bool = False  # Whether the alert is deleted or not
+    deleted: bool = False  # Whether the alert is deleted or not
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
@@ -59,16 +59,7 @@ class AlertDto(BaseModel):
 
 class DeleteRequestBody(BaseModel):
     fingerprint: str | None = None
-    pulled_alert_dto: AlertDto | None = (
-        None  # If we delete a pulled alert, we need to pass the alert dto
-    )
     restore: bool = False
-
-    @validator("pulled_alert_dto")
-    def check_fingerprint_or_alert(cls, v, values):
-        if "fingerprint" not in values and not v:
-            raise ValueError("either fingerprint or pulled_alert_dto must be provided")
-        return v
 
 
 class EnrichAlertRequestBody(BaseModel):

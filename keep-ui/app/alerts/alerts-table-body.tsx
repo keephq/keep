@@ -205,7 +205,7 @@ export function AlertsTableBody({
                         />
                       </a>
                     )}
-                    {alert.isDeleted && (
+                    {alert.deleted && (
                       <Icon
                         icon={TrashIcon}
                         tooltip="This alert has been deleted"

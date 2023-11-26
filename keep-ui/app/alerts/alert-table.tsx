@@ -41,17 +41,17 @@ export function AlertTable({
   const [isOpen, setIsOpen] = useState(false);
 
   function showDeletedAlert(alert: Alert): boolean {
-    return showDeleted || !alert.isDeleted;
+    return showDeleted || !alert.deleted;
   }
 
   let groupedByAlerts = {} as { [key: string]: Alert[] };
   const deletedAlertFingerprints = new Set(
-    alerts.filter((alert) => alert.isDeleted).map((alert) => alert.fingerprint)
+    alerts.filter((alert) => alert.deleted).map((alert) => alert.fingerprint)
   );
   let aggregatedAlerts = alerts.map((alert) => {
     alert.lastReceived = new Date(alert.lastReceived);
     if (deletedAlertFingerprints.has(alert.fingerprint)) {
-      alert.isDeleted = true;
+      alert.deleted = true;
     }
     return alert;
   });

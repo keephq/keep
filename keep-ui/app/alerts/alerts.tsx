@@ -116,7 +116,7 @@ export default function Alerts({
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
-          alert.isDeleted = !restore;
+          alert.deleted = !restore;
         }
         return alert;
       })
