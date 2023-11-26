@@ -251,13 +251,21 @@ export default function NavbarInner({ user }: { user?: User }) {
                 <>
                   <div className="flex items-center px-4">
                     <div className="flex-shrink-0">
-                      <Image
-                        className="h-8 w-8 rounded-full"
-                        src={user.image}
-                        height={32}
-                        width={32}
-                        alt={`${user.name} avatar`}
-                      />
+                      {
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          className="h-8 w-8 rounded-full"
+                          src={
+                            user?.image ||
+                            `https://ui-avatars.com/api/?name=${
+                              user?.name ?? user?.email
+                            }&background=random`
+                          }
+                          height={32}
+                          width={32}
+                          alt={`${user?.name ?? user?.email} profile picture`}
+                        />
+                      }
                     </div>
                     <div className="ml-3">
                       <div className="text-base font-medium text-gray-800">
