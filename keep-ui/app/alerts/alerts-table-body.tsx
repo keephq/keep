@@ -32,7 +32,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { TrashIcon } from "@heroicons/react/20/solid";
 
 interface Props {
-  data: Alert[];
+  alerts: Alert[];
   groupBy?: string;
   groupedByData?: { [key: string]: Alert[] };
   openModal?: (alert: Alert) => void;
@@ -92,7 +92,7 @@ const getSeverity = (severity: Severity | undefined) => {
 };
 
 export function AlertsTableBody({
-  data,
+  alerts,
   groupBy,
   groupedByData,
   openModal,
@@ -124,7 +124,7 @@ export function AlertsTableBody({
 
   return (
     <TableBody>
-      {data
+      {alerts
         .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
         .map((alert, index) => {
           const extraPayloadNoKnownKeys = Object.keys(alert)
@@ -205,7 +205,7 @@ export function AlertsTableBody({
                         />
                       </a>
                     )}
-                    {alert.isDeleted && (
+                    {alert.deleted && (
                       <Icon
                         icon={TrashIcon}
                         tooltip="This alert has been deleted"

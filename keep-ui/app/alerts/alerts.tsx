@@ -43,6 +43,10 @@ export default function Alerts({
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
+  const [groupedByAlerts, setGroupedByAlerts] = useState<{
+    [key: string]: Alert[];
+  }>({});
   const [alertNameSearchString, setAlertNameSearchString] =
     useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
@@ -67,6 +71,43 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
+
+  useEffect(() => {
+    const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
+    let groupedByAlerts = {} as { [key: string]: Alert[] };
+
+    // Fix the date format (it is received as text)
+    let aggregatedAlerts = alerts.map((alert) => {
+      alert.lastReceived = new Date(alert.lastReceived);
+      return alert;
+    });
+
+    if (groupBy) {
+      // Group alerts by the groupBy key
+      groupedByAlerts = alerts.reduce((acc, alert) => {
+        const key = (alert as any)[groupBy] as string;
+        if (!acc[key]) {
+          acc[key] = [alert];
+        } else {
+          acc[key].push(alert);
+        }
+        return acc;
+      }, groupedByAlerts);
+      // Sort by last received
+      Object.keys(groupedByAlerts).forEach((key) =>
+        groupedByAlerts[key].sort(
+          (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+        )
+      );
+      // Only the last state of each alert is shown if we group by something
+      aggregatedAlerts = Object.keys(groupedByAlerts).map(
+        (key) => groupedByAlerts[key][0]
+      );
+    }
+
+    setGroupedByAlerts(groupedByAlerts);
+    setAggregatedAlerts(aggregatedAlerts);
+  }, [alerts]);
 
   useEffect(() => {
     if (data)
@@ -101,7 +142,7 @@ export default function Alerts({
 
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
-  const environments = alerts
+  const environments = aggregatedAlerts
     .map((alert) => alert.environment.toLowerCase())
     .filter(onlyUnique);
 
@@ -116,7 +157,7 @@ export default function Alerts({
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
-          alert.isDeleted = !restore;
+          alert.deleted = !restore;
         }
         return alert;
       })
@@ -136,10 +177,14 @@ export default function Alerts({
     );
   }
 
-  const statuses = alerts.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = aggregatedAlerts.map((alert) => alert.status).filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
+  }
+
+  function showDeletedAlert(alert: Alert): boolean {
+    return showDeleted || !alert.deleted;
   }
 
   return (
@@ -205,19 +250,20 @@ export default function Alerts({
         ></Button>
       </Flex>
       <AlertTable
-        data={alerts.filter(
+        alerts={aggregatedAlerts.filter(
           (alert) =>
             environmentIsSeleected(alert) &&
             statusIsSeleected(alert) &&
-            searchAlert(alert)
+            searchAlert(alert) &&
+            showDeletedAlert(alert)
         )}
+        groupedByAlerts={groupedByAlerts}
         groupBy="fingerprint"
         workflows={workflows}
         providers={providers?.installed_providers}
         mutate={() => mutate(null, { optimisticData: [] })}
         isAsyncLoading={isAsyncLoading}
         onDelete={onDelete}
-        showDeleted={showDeleted}
       />
     </Card>
   );
