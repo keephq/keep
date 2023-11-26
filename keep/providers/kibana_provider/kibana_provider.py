@@ -424,7 +424,8 @@ class KibanaProvider(BaseProvider):
     @staticmethod
     def format_alert_from_watcher(event: dict) -> AlertDto | list[AlertDto]:
         alert_id = event.get("payload", {}).pop("id")
-        alert_name = event.get("payload", {}).get("metadata", {}).get("name")
+        alert_metadata = event.get("payload", {}).get("metadata", {})
+        alert_name = alert_metadata.get("name") if alert_metadata else alert_id
         last_received = (
             event.get("payload", {})
             .get("trigger", {})
