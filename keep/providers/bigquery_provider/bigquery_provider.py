@@ -1,4 +1,4 @@
-o"""
+"""
 BigQuery provider.
 """
 import dataclasses
@@ -29,7 +29,7 @@ class BigqueryProviderAuthConfig:
             "file_type": ".json",  # this is used to filter the file type in the UI
         },
     )
-     project_id: Optional[str] = dataclasses.field(
+    project_id: Optional[str] = dataclasses.field(
         default=None,
         metadata={
             "required": False,
