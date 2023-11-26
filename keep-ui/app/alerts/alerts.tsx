@@ -19,7 +19,7 @@ import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
 import { Alert } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
@@ -28,6 +28,7 @@ import zlib from "zlib";
 import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export default function Alerts({
   accessToken,
@@ -41,11 +42,18 @@ export default function Alerts({
   user: NextUser;
 }) {
   const apiUrl = getApiURL();
+  const searchParams = useSearchParams()!;
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
     []
   );
-  const [showDeleted, setShowDeleted] = useState<boolean>(false);
-  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(false);
+  const [showDeleted, setShowDeleted] = useState<boolean>(
+    searchParams?.get("showDeleted") === "true"
+  );
+  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
+    searchParams?.get("onlyDeleted") === "true"
+  );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
@@ -150,6 +158,19 @@ export default function Alerts({
     };
   }, [pusher, tenantId]);
 
+  // Get a new searchParams string by merging the current
+  // searchParams with a provided key/value pair
+  // https://nextjs.org/docs/app/api-reference/functions/use-search-params
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set(name, value);
+
+      return params.toString();
+    },
+    [searchParams]
+  );
+
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
   const environments = aggregatedAlerts
@@ -252,7 +273,14 @@ export default function Alerts({
               id="switch"
               name="switch"
               checked={showDeleted}
-              onChange={setShowDeleted}
+              onChange={(value) => {
+                setShowDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("showDeleted", value.toString())
+                );
+              }}
               color={"orange"}
             />
             <label htmlFor="switch" className="text-sm text-gray-500">
@@ -268,7 +296,14 @@ export default function Alerts({
               id="switch"
               name="switch"
               checked={onlyDeleted}
-              onChange={setOnlyDeleted}
+              onChange={(value) => {
+                setOnlyDeleted(value);
+                router.push(
+                  pathname +
+                    "?" +
+                    createQueryString("onlyDeleted", value.toString())
+                );
+              }}
               color={"orange"}
             />
             <label htmlFor="switch" className="text-sm text-gray-500">
@@ -308,7 +343,11 @@ export default function Alerts({
         setAssignee={setAssignee}
         users={users}
         currentUser={user}
-        deletedCount={!showDeleted ? aggregatedAlerts.filter((alert) => alert.deleted).length : 0}
+        deletedCount={
+          !showDeleted
+            ? aggregatedAlerts.filter((alert) => alert.deleted).length
+            : 0
+        }
       />
     </Card>
   );
