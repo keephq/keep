@@ -127,7 +127,7 @@ export function AlertTransition({ isOpen, closeModal, data }: Props) {
                   yAxisWidth={40}
                 />
                 <Divider />
-                <AlertTable data={data} showDeleted={true} />
+                <AlertTable alerts={data} />
               </Dialog.Panel>
             </Transition.Child>
           </div>

@@ -25,7 +25,7 @@ export interface Alert {
   pushed: boolean;
   generatorURL?: string;
   fingerprint: string;
-  isDeleted?: boolean;
+  deleted?: boolean;
 }
 
 export const AlertKnownKeys = [
@@ -46,6 +46,8 @@ export const AlertKnownKeys = [
   "event_id",
   "ticket_url",
   "ack_status",
+  "deleted",
+  "isDeleted", // TODO: leftover, should be removed in the future.
 ];
 
 export const AlertTableKeys: { [key: string]: string } = {
