@@ -125,7 +125,6 @@ export function AlertsTableBody({
   return (
     <TableBody>
       {alerts
-        .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
         .map((alert, index) => {
           const extraPayloadNoKnownKeys = Object.keys(alert)
             .filter((key) => !AlertKnownKeys.includes(key))

@@ -19,7 +19,11 @@ import {
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Provider } from "app/providers/providers";
-import { ArrowLeftIcon, ArrowRightIcon, TableCellsIcon } from "@heroicons/react/20/solid";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  TableCellsIcon,
+} from "@heroicons/react/20/solid";
 
 interface Props {
   alerts: Alert[];
@@ -140,7 +144,9 @@ export function AlertTable({
           </TableRow>
         </TableHead>
         <AlertsTableBody
-          alerts={alerts.slice(startIndex, endIndex)}
+          alerts={alerts
+            .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
+            .slice(startIndex, endIndex)}
           groupBy={groupBy}
           groupedByData={groupedByAlerts}
           openModal={openModal}

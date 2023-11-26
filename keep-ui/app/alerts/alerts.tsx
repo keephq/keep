@@ -41,6 +41,7 @@ export default function Alerts({
     []
   );
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
+  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
@@ -177,13 +178,16 @@ export default function Alerts({
     );
   }
 
-  const statuses = aggregatedAlerts.map((alert) => alert.status).filter(onlyUnique);
+  const statuses = aggregatedAlerts
+    .map((alert) => alert.status)
+    .filter(onlyUnique);
 
   function statusIsSeleected(alert: Alert): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
   }
 
   function showDeletedAlert(alert: Alert): boolean {
+    if (showDeleted && onlyDeleted) return alert.deleted === true;
     return showDeleted || !alert.deleted;
   }
 
@@ -232,6 +236,22 @@ export default function Alerts({
             />
             <label htmlFor="switch" className="text-sm text-gray-500">
               Show Deleted
+            </label>
+          </div>
+          <div
+            className={`flex items-center space-x-3 ml-2.5 ${
+              showDeleted ? "" : "hidden"
+            }`}
+          >
+            <Switch
+              id="switch"
+              name="switch"
+              checked={onlyDeleted}
+              onChange={setOnlyDeleted}
+              color={"orange"}
+            />
+            <label htmlFor="switch" className="text-sm text-gray-500">
+              Only Deleted
             </label>
           </div>
         </div>
