@@ -31,7 +31,9 @@ export default async function RootLayout({
           {/* @ts-expect-error Server Component */}
           <Nav />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
+          <div className="max-container">
           <ErrorBoundary>{children}</ErrorBoundary>
+          </div>
         </NextAuthProvider>
         <ToastContainer />
       </body>

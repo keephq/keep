@@ -108,7 +108,7 @@ const ProvidersTiles = ({
     ) as Providers;
 
   return (
-    <div>
+    <div className="flex w-full flex-col">
       <Title className="mb-2.5">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
       </Title>

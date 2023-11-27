@@ -14,7 +14,7 @@ export default function ProvidersLayout({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const searchProviderString = providersSearchString;
   return (
-    <main className="p-4">
+    <main className="p-4 flex flex-col w-full">
       <div className="flex w-full justify-between mb-4 ml-2.5">
         <div className="flex justify-center items-center">
           {/* <Title>Providers</Title> */}
@@ -30,7 +30,7 @@ export default function ProvidersLayout({
             className="static"
             id="search-providers"
             icon={MagnifyingGlassIcon}
-            placeholder="Filter providers..."
+            placeholder="Search..."
             value={providersSearchString}
             onChange={(e) => setProvidersSearchString(e.target.value)}
           />

@@ -213,6 +213,7 @@ export default function ProvidersPage({
           return true;
         }}
       />
+      <div className="w-full">
       {installedProviders.length > 0 && (
         <ProvidersTiles
           providers={installedProviders}
@@ -229,6 +230,7 @@ export default function ProvidersPage({
         onDelete={deleteProvider}
         isLocalhost={isLocalhost}
       />
+      </div>
     </>
   );
 }
