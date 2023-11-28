@@ -14,16 +14,13 @@ import { AuthenticationType } from "utils/authenticationType";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
 import { User } from "next-auth";
+import { InternalConfig } from "types/internal-config";
 
 const navigation = [
   { name: "Providers", href: "/providers" },
   { name: "Alerts", href: "/alerts" },
   { name: "Workflows", href: "/workflows" },
 ];
-
-interface Config {
-  AUTH_TYPE: string;
-}
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -75,7 +72,7 @@ const GnipLogo = (props: any) => (
 
 export default function NavbarInner({ user }: { user?: User }) {
   const pathname = usePathname();
-  const { data: configData } = useSWR<Config>("/api/config", fetcher);
+  const { data: configData } = useSWR<InternalConfig>("/api/config", fetcher);
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE;

@@ -27,6 +27,12 @@ def pusher_authentication(
     Returns:
         dict: The authentication response.
     """
+    if not pusher_client:
+        raise HTTPException(
+            status_code=500,
+            detail="Pusher client not initalized on backend, PUSHER_DISABLED is set to True?",
+        )
+
     if channel_name == f"private-{tenant_id}":
         auth = pusher_client.authenticate(channel=channel_name, socket_id=socket_id)
         return auth

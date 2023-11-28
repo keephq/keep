@@ -36,11 +36,13 @@ export default function Alerts({
   tenantId,
   pusher,
   user,
+  pusherDisabled,
 }: {
   accessToken: string;
   tenantId: string;
-  pusher: Pusher;
+  pusher: Pusher | null;
   user: NextUser;
+  pusherDisabled: boolean;
 }) {
   const apiUrl = getApiURL();
   const searchParams = useSearchParams()!;
@@ -69,7 +71,7 @@ export default function Alerts({
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, isLoading, mutate } = useSWR<Alert[]>(
-    `${apiUrl}/alerts`,
+    `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
     (url) => fetcher(url, accessToken),
     {
       revalidateOnFocus: false,
@@ -131,35 +133,41 @@ export default function Alerts({
   }, [alerts]);
 
   useEffect(() => {
-    if (data)
+    if (data) {
       setAlerts((prevAlerts) => Array.from(new Set([...data, ...prevAlerts])));
-  }, [data]);
+      if (pusherDisabled) setIsAsyncLoading(false);
+    }
+  }, [data, pusherDisabled]);
 
   useEffect(() => {
-    console.log("Connecting to pusher");
-    const channelName = `private-${tenantId}`;
-    const channel = pusher.subscribe(channelName);
+    if (!pusherDisabled && pusher) {
+      console.log("Connecting to pusher");
+      const channelName = `private-${tenantId}`;
+      const channel = pusher.subscribe(channelName);
 
-    channel.bind("async-alerts", function (base64CompressedAlert: string) {
-      const decompressedAlert = zlib.inflateSync(
-        Buffer.from(base64CompressedAlert, "base64")
-      );
-      const newAlerts = JSON.parse(
-        new TextDecoder().decode(decompressedAlert)
-      ) as Alert[];
-      setAlerts((prevAlerts) =>
-        Array.from(new Set([...newAlerts, ...prevAlerts]))
-      );
-    });
+      channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        const decompressedAlert = zlib.inflateSync(
+          Buffer.from(base64CompressedAlert, "base64")
+        );
+        const newAlerts = JSON.parse(
+          new TextDecoder().decode(decompressedAlert)
+        ) as Alert[];
+        setAlerts((prevAlerts) =>
+          Array.from(new Set([...newAlerts, ...prevAlerts]))
+        );
+      });
 
-    channel.bind("async-done", function () {
-      setIsAsyncLoading(false);
-    });
-    console.log("Connected to pusher");
-    return () => {
-      pusher.unsubscribe(channelName);
-    };
-  }, [pusher, tenantId]);
+      channel.bind("async-done", function () {
+        setIsAsyncLoading(false);
+      });
+      console.log("Connected to pusher");
+      return () => {
+        pusher.unsubscribe(channelName);
+      };
+    } else {
+      console.log("Pusher disabled");
+    }
+  }, [pusher, tenantId, pusherDisabled]);
 
   // Get a new searchParams string by merging the current
   // searchParams with a provided key/value pair
