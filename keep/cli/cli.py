@@ -111,7 +111,7 @@ class Info:
         arguments = sys.argv
 
         # if we auth, we don't need to check for api key
-        if "auth" in arguments or "api" in arguments:
+        if "auth" in arguments or "api" in arguments or "config" in arguments:
             return
 
         if not self.api_key:
@@ -202,6 +202,8 @@ def config(info: Info):
     api_key = click.prompt(
         "Enter your api key (leave blank for localhost)", hide_input=True, default=""
     )
+    if not api_key:
+        api_key = "localhost"
     with open(f"{DEFAULT_CONF_FILE}", "w") as f:
         f.write(f"api_key: {api_key}\n")
         f.write(f"keep_api_url: {keep_url}\n")
@@ -873,7 +875,7 @@ def list_alerts(info: Info, filter: typing.List[str], export: bool):
     """List alerts."""
     resp = make_keep_request(
         "GET",
-        info.keep_api_url + "/alerts",
+        info.keep_api_url + "/alerts?sync=true",
         headers={"x-api-key": info.api_key, "accept": "application/json"},
     )
     if not resp.ok:
