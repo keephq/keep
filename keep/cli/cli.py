@@ -179,6 +179,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     """Run Keep CLI."""
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
+    info.set_config(keep_config)
     posthog_client.capture(
         info.random_user_id,
         "keep-cli-started",
@@ -195,7 +196,6 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
         logging_config["handlers"]["default"]["formatter"] = "json"
     logging.config.dictConfig(logging_config)
     info.verbose = verbose
-    info.set_config(keep_config)
     info.json = json
 
     @ctx.call_on_close
@@ -226,6 +226,7 @@ def config(info: Info):
     with open(f"{get_default_conf_file_path()}", "w") as f:
         f.write(f"api_key: {api_key}\n")
         f.write(f"keep_api_url: {keep_url}\n")
+        f.write(f"random_user_id: {info.random_user_id}\n")
     click.echo(
         click.style(f"Config file created at {get_default_conf_file_path()}", bold=True)
     )
