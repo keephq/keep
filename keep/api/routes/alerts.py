@@ -56,7 +56,11 @@ def __send_compressed_alerts(
     )
 
 
-def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
+def pull_alerts_from_providers(
+    tenant_id: str, pusher_client: Pusher | None, sync: bool = False
+) -> list[AlertDto] | None:
+    if pusher_client is None and sync is False:
+        raise HTTPException(500, "Cannot pull alerts async when pusher is disabled.")
     all_providers = ProvidersFactory.get_all_providers()
     context_manager = ContextManager(
         tenant_id=tenant_id,
@@ -65,7 +69,10 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id=tenant_id, all_providers=all_providers
     )
-    logger.info("Asyncronusly pulling alerts from installed providers")
+    logger.info(
+        f"{'Asynchronously' if sync is False else 'Synchronously'} pulling alerts from installed providers"
+    )
+    sync_alerts = []  # if we're running in sync mode
     for provider in installed_providers:
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
@@ -128,6 +135,17 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                         "tenant_id": tenant_id,
                     },
                 )
+                if sync:
+                    sync_alerts.extend(alerts)
+                    logger.info(
+                        f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(alerts)})",
+                        extra={
+                            "provider_type": provider.type,
+                            "provider_id": provider.id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
+                    continue
 
                 logger.info("Batch sending pulled alerts via pusher")
                 batch_send = []
@@ -184,8 +202,11 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
                 },
             )
             pass
-    pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
-    logger.info("Asyncronusly fetched alerts from installed providers")
+    if sync is False:
+        pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
+    logger.info("Fetched alerts from installed providers")
+    if sync is True:
+        return sync_alerts
 
 
 @router.get(
@@ -194,8 +215,9 @@ def get_alerts_from_providers_async(tenant_id: str, pusher_client: Pusher):
 )
 def get_all_alerts(
     background_tasks: BackgroundTasks,
+    sync: bool = False,
     tenant_id: str = Depends(verify_token_or_key),
-    pusher_client: Pusher = Depends(get_pusher_client),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching alerts from DB",
@@ -209,15 +231,19 @@ def get_all_alerts(
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
     alerts = [AlertDto(**alert.event) for alert in db_alerts]
+    if sync:
+        alerts.extend(pull_alerts_from_providers(tenant_id, pusher_client, sync=True))
     logger.info(
         "Fetched alerts from DB",
         extra={
             "tenant_id": tenant_id,
         },
     )
-    logger.info("Adding task to fetch async alerts from providers")
-    background_tasks.add_task(get_alerts_from_providers_async, tenant_id, pusher_client)
-    logger.info("Added task to async fetch alerts from providers")
+    if not sync:
+        logger.info("Adding task to fetch async alerts from providers")
+        background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
+        logger.info("Added task to async fetch alerts from providers")
+
     return alerts
 
 
