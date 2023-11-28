@@ -196,7 +196,10 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 @cli.command()
 def version():
     """Get the library version."""
-    click.echo(click.style(f"{metadata.version('keep')}", bold=True))
+    try:
+        click.echo(click.style(f"{metadata.version('keep')}", bold=True))
+    except metadata.PackageNotFoundError:
+        click.echo(click.style(f"{metadata.version('keephq')}", bold=True))
 
 
 @cli.command()
