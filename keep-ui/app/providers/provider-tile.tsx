@@ -67,7 +67,7 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex justify-around items-center bg-white rounded-lg shadow w-80 max-w-xs h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="relative flex-grow group flex justify-around items-center bg-white rounded-lg shadow w-[250px]  h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
       <div className="w-32">
