@@ -4,6 +4,7 @@ import logging.config
 import os
 import sys
 import typing
+import uuid
 from collections import OrderedDict
 from importlib import metadata
 
@@ -16,14 +17,12 @@ from prettytable import PrettyTable
 from keep.api.core.db import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
-from keep.posthog.posthog import get_posthog_client, get_random_user_id
+from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 posthog_client = get_posthog_client()
-
-RANDOM_USER_ID = get_random_user_id()
 
 
 logging_config = {
@@ -55,7 +54,12 @@ logging_config = {
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_CONF_FILE = ".keep.yaml"
+def get_default_conf_file_path():
+    DEFAULT_CONF_FILE = ".keep.yaml"
+    from pathlib import Path
+
+    home = str(Path.home())
+    return os.path.join(home, DEFAULT_CONF_FILE)
 
 
 def make_keep_request(method, url, **kwargs):
@@ -107,6 +111,13 @@ class Info:
             or os.getenv("KEEP_API_URL")
             or Info.KEEP_MANAGED_API_URL
         )
+        self.random_user_id = self.config.get("random_user_id")
+        # if we don't have a random user id, we create one and keep it on the config file
+        if not self.random_user_id:
+            self.random_user_id = str(uuid.uuid4())
+            self.config["random_user_id"] = self.random_user_id
+            with open(file=keep_config, mode="w") as f:
+                yaml.dump(self.config, f)
 
         arguments = sys.argv
 
@@ -158,9 +169,9 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.option(
     "--keep-config",
     "-c",
-    help=f"The path to the keep config file (default {DEFAULT_CONF_FILE}",
+    help=f"The path to the keep config file (default {get_default_conf_file_path()}",
     required=False,
-    default=f"{DEFAULT_CONF_FILE}",
+    default=f"{get_default_conf_file_path()}",
 )
 @pass_info
 @click.pass_context
@@ -169,7 +180,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
     # https://posthog.com/tutorials/identifying-users-guide#identifying-and-setting-user-ids-for-every-other-library
     # random user id
     posthog_client.capture(
-        RANDOM_USER_ID,
+        info.random_user_id,
         "keep-cli-started",
         properties={
             "args": sys.argv,
@@ -212,10 +223,12 @@ def config(info: Info):
     )
     if not api_key:
         api_key = "localhost"
-    with open(f"{DEFAULT_CONF_FILE}", "w") as f:
+    with open(f"{get_default_conf_file_path()}", "w") as f:
         f.write(f"api_key: {api_key}\n")
         f.write(f"keep_api_url: {keep_url}\n")
-    click.echo(click.style(f"Config file created at {DEFAULT_CONF_FILE}", bold=True))
+    click.echo(
+        click.style(f"Config file created at {get_default_conf_file_path()}", bold=True)
+    )
 
 
 @cli.command()
@@ -319,7 +332,7 @@ def run(
     """Run a workflow."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
     posthog_client.capture(
-        RANDOM_USER_ID,
+        info.random_user_id,
         "keep-run-alert-started",
         properties={
             "args": sys.argv,
@@ -338,7 +351,7 @@ def run(
     except KeyboardInterrupt:
         logger.info("Keep stopped by user, stopping the scheduler")
         posthog_client.capture(
-            RANDOM_USER_ID,
+            info.random_user_id,
             "keep-run-stopped-by-user",
             properties={
                 "args": sys.argv,
@@ -348,7 +361,7 @@ def run(
         logger.info("Scheduler stopped")
     except Exception as e:
         posthog_client.capture(
-            RANDOM_USER_ID,
+            info.random_user_id,
             "keep-run-unexpected-error",
             properties={
                 "args": sys.argv,
@@ -360,7 +373,7 @@ def run(
             raise e
         sys.exit(1)
     posthog_client.capture(
-        RANDOM_USER_ID,
+        info.random_user_id,
         "keep-run-alert-finished",
         properties={
             "args": sys.argv,
@@ -1090,7 +1103,7 @@ def login(info: Info):
 
     api_key = api_key_resp.json().get("apiKey")
     # keep it in the config file
-    with open(f"{DEFAULT_CONF_FILE}", "w") as f:
+    with open(f"{get_default_conf_file_path()}", "w") as f:
         f.write(f"api_key: {api_key}\n")
     # Authenticated successfully
     print("Authenticated successfully!")
