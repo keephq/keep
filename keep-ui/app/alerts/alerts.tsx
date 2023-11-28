@@ -140,7 +140,7 @@ export default function Alerts({
   }, [data, pusherDisabled]);
 
   useEffect(() => {
-    if (!pusherDisabled) {
+    if (!pusherDisabled && pusher) {
       console.log("Connecting to pusher");
       const channelName = `private-${tenantId}`;
       const channel = pusher.subscribe(channelName);
