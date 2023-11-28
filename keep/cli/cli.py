@@ -111,7 +111,12 @@ class Info:
         arguments = sys.argv
 
         # if we auth, we don't need to check for api key
-        if "auth" in arguments or "api" in arguments or "config" in arguments:
+        if (
+            "auth" in arguments
+            or "api" in arguments
+            or "config" in arguments
+            or "version" in arguments
+        ):
             return
 
         if not self.api_key:
