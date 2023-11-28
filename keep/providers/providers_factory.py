@@ -163,7 +163,6 @@ class ProvidersFactory:
             "mock_provider",
             "file_provider",
             "github_workflows_provider",
-            "github_provider",  # TODO: github provider doesn't do anything, remove this when it's refactored
         ]
 
         for provider_directory in os.listdir(
