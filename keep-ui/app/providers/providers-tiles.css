@@ -14,7 +14,7 @@
 @media only screen and (min-width: 600px) and (max-width: 1300px) {
   /* For medium screens */
   .provider-tiles {
-    gap: 10px;
+    gap: 25px;
   }
 }
 
@@ -24,6 +24,13 @@
     gap: 10px;
   }
 }
+@media only screen and (min-width: 1900px) {
+  /* Styles for 16-inch laptop screens and bigger screens */
+  .provider-tiles {
+    gap: 30px;
+  }
+}
+
 .provider-tiles .card {
   grid-column: span 1;
   display: flex;
