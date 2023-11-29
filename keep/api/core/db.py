@@ -684,6 +684,11 @@ def get_api_key(api_key: str):
     return tenant_api_key
 
 
+def get_user_by_api_key(api_key: str):
+    api_key = get_api_key(api_key)
+    return api_key.created_by
+
+
 # this is only for single tenant
 def get_user(username, password, update_sign_in=True):
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
