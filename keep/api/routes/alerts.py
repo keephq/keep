@@ -303,6 +303,7 @@ def assign_alert(
     )
 
     try:
+        logger.info("Sending assign alert email to user")
         keep_api_url = os.environ.get("KEEP_API_URL")
         url = f"{keep_api_url}/alerts?fingerprint={fingerprint}"
         send_email(
@@ -310,6 +311,7 @@ def assign_alert(
             template_id=EmailTemplates.ALERT_ASSIGNED_TO_USER,
             url=url,
         )
+        logger.info("Sent assign alert email to user")
     except Exception as e:
         logger.exception(
             "Failed to send email to user",
