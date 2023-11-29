@@ -2,7 +2,6 @@ import enum
 import hashlib
 import json
 import logging
-import os
 import threading
 import time
 import typing
@@ -10,6 +9,7 @@ import uuid
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_previous_execution_id
@@ -364,11 +364,11 @@ class WorkflowScheduler:
             self.logger.info(
                 f"Sending email to {workflow.created_by} for failed workflow {workflow_id}"
             )
-            # TODO - should have url generator that will be used in all places
-            keep_api_url = os.environ.get("KEEP_API_URL")
-            error_logs_url = (
-                f"{keep_api_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+            # TODO - should be handled
+            keep_platform_url = config(
+                "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
             )
+            error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
             # send the email
             try:
                 send_email(
