@@ -88,27 +88,28 @@ class WorkflowManager:
                         # TODO: more sophisticated filtering/attributes/nested, etc
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
-                        if not getattr(event, filter_key, None):
+                        event_val = self._get_event_value(event, filter_key)
+                        if not event_val:
                             self.logger.warning(
                                 "Failed to run filter, skipping the event. Probably misconfigured workflow."
                             )
+                            should_run = False
                             continue
                         # if its list, check if the filter is in the list
-                        if isinstance(getattr(event, filter_key), list):
-                            for val in getattr(event, filter_key):
+                        if isinstance(event_val, list):
+                            for val in event_val:
                                 # if one filter applies, it should run
                                 if self._apply_filter(filter_val, val):
                                     should_run = True
                                     break
                                 should_run = False
                         # elif the filter is string/int/float, compare them:
-                        elif type(getattr(event, filter_key, None)) in [
+                        elif type(event_val) in [
                             int,
                             str,
                             float,
                         ]:
-                            val = getattr(event, filter_key)
-                            if not self._apply_filter(filter_val, val):
+                            if not self._apply_filter(filter_val, event_val):
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
                                     extra={
@@ -147,6 +148,24 @@ class WorkflowManager:
                                 "event": event,
                             }
                         )
+
+    def _get_event_value(self, event, filter_key):
+        # if the filter key is a nested key, get the value
+        if "." in filter_key:
+            filter_key_split = filter_key.split(".")
+            # event is alert dto so we need getattr
+            event_val = getattr(event, filter_key_split[0], None)
+            if not event_val:
+                return None
+            # iterate the other keys
+            for key in filter_key_split[1:]:
+                event_val = event_val.get(key, None)
+                # if the key doesn't exist, return None because we didn't find the value
+                if not event_val:
+                    return None
+            return event_val
+        else:
+            return getattr(event, filter_key, None)
 
     # TODO should be fixed to support the usual CLI
     def run(self, workflows: list[Workflow]):
