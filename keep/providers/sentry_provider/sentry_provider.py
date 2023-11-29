@@ -182,9 +182,11 @@ class SentryProvider(BaseProvider):
         tags_as_dict.pop("id", None)
 
         last_received = (
-            datetime.datetime.fromtimestamp(event_data.get("received"))
+            datetime.datetime.fromtimestamp(
+                event_data.get("received"), tz=datetime.timezone.utc
+            )
             if "received" in event_data
-            else event_data.get("datetime")
+            else datetime.datetime.now()
         )
 
         return AlertDto(
@@ -201,7 +203,7 @@ class SentryProvider(BaseProvider):
             description=event.get("culprit", ""),
             pushed=True,
             severity=event.pop("level", tags_as_dict.get("level", "high")),
-            url=event_data.pop("url", tags_as_dict.pop("url", None)),
+            url=event_data.pop("url", tags_as_dict.pop("url", event.get("url", None))),
             fingerprint=event.get("id"),
             tags=tags_as_dict,
         )
