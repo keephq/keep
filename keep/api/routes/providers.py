@@ -675,6 +675,7 @@ def install_provider_webhook(
     webhook_api_key = get_or_create_api_key(
         session=session,
         tenant_id=tenant_id,
+        created_by="system",
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
@@ -702,6 +703,7 @@ def get_webhook_settings(
     webhook_api_key = get_or_create_api_key(
         session=session,
         tenant_id=tenant_id,
+        created_by="system",
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )

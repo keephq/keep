@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pusher import Pusher
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import get_alerts as get_alerts_from_db
 from keep.api.core.db import get_enrichments as get_enrichments_from_db
@@ -20,6 +21,7 @@ from keep.api.core.dependencies import (
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert
+from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -299,6 +301,29 @@ def assign_alert(
         fingerprint=fingerprint,
         enrichments={"assignee": user_email if not unassign else None},
     )
+
+    try:
+        logger.info("Sending assign alert email to user")
+        # TODO: this should be changed to dynamic url but we don't know what's the frontend URL
+        keep_platform_url = config(
+            "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
+        )
+        url = f"{keep_platform_url}/alerts?fingerprint={fingerprint}"
+        send_email(
+            to_email=user_email,
+            template_id=EmailTemplates.ALERT_ASSIGNED_TO_USER,
+            url=url,
+        )
+        logger.info("Sent assign alert email to user")
+    except Exception as e:
+        logger.exception(
+            "Failed to send email to user",
+            extra={
+                "error": str(e),
+                "tenant_id": tenant_id,
+                "user_email": user_email,
+            },
+        )
 
     logger.info(
         "Assigned alert successfully",

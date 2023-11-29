@@ -18,6 +18,7 @@ class TenantApiKey(SQLModel, table=True):
     tenant: Tenant = Relationship()
     is_system: bool = False
     system_description: Optional[str] = None
+    created_by: str
 
     class Config:
         orm_mode = True

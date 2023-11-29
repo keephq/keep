@@ -1,3 +1,4 @@
+import enum
 import hashlib
 import json
 import logging
@@ -8,14 +9,22 @@ import uuid
 
 from sqlalchemy.exc import IntegrityError
 
-from keep.api.core.db import (
-    create_workflow_execution,
-    finish_workflow_execution,
-    get_workflows_that_should_run,
-)
+from keep.api.core.config import config
+from keep.api.core.db import create_workflow_execution
+from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
+from keep.api.core.db import get_previous_execution_id
+from keep.api.core.db import get_workflow as get_workflow_db
+from keep.api.core.db import get_workflows_that_should_run
+from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
+
+
+class WorkflowStatus(enum.Enum):
+    SUCCESS = "success"
+    ERROR = "error"
+    PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
 
 
 class WorkflowScheduler:
@@ -54,21 +63,21 @@ class WorkflowScheduler:
                 workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
             except ProviderConfigurationException as e:
                 self.logger.error(f"Provider configuration is invalid: {e}")
-                finish_workflow_execution(
+                self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
-                    execution_id=workflow_execution_id,
-                    status="providers_not_configured",
+                    workflow_execution_id=workflow_execution_id,
+                    status=WorkflowStatus.PROVIDERS_NOT_CONFIGURED,
                     error=f"Providers are not configured for workflow {workflow_id}, please configure it so Keep will be able to run it",
                 )
                 continue
             except Exception as e:
                 self.logger.error(f"Error getting workflow: {e}")
-                finish_workflow_execution(
+                self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
-                    execution_id=workflow_execution_id,
-                    status="error",
+                    workflow_execution_id=workflow_execution_id,
+                    status=WorkflowStatus.ERROR,
                     error=f"Error getting workflow: {e}",
                 )
                 continue
@@ -96,30 +105,30 @@ class WorkflowScheduler:
             )
         except Exception as e:
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
-            finish_workflow_execution(
+            self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
-                execution_id=workflow_execution_id,
-                status="error",
+                workflow_execution_id=workflow_execution_id,
+                status=WorkflowStatus.ERROR,
                 error=str(e),
             )
             return
 
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
-            finish_workflow_execution(
+            self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
-                execution_id=workflow_execution_id,
-                status="error",
+                workflow_execution_id=workflow_execution_id,
+                status=WorkflowStatus.ERROR,
                 error=",".join(str(e) for e in errors),
             )
         else:
-            finish_workflow_execution(
+            self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
-                execution_id=workflow_execution_id,
-                status="success",
+                workflow_execution_id=workflow_execution_id,
+                status=WorkflowStatus.SUCCESS,
                 error=None,
             )
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
@@ -202,21 +211,21 @@ class WorkflowScheduler:
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    finish_workflow_execution(
+                    self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
-                        execution_id=workflow_execution_id,
-                        status="providers_not_configured",
+                        workflow_execution_id=workflow_execution_id,
+                        status=WorkflowStatus.PROVIDERS_NOT_CONFIGURED,
                         error=f"Providers are not configured for workflow {workflow_id}, please configure it so Keep will be able to run it",
                     )
                     continue
                 except Exception as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    finish_workflow_execution(
+                    self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
-                        execution_id=workflow_execution_id,
-                        status="error",
+                        workflow_execution_id=workflow_execution_id,
+                        status=WorkflowStatus.ERROR,
                         error=f"Error getting workflow: {e}",
                     )
                     continue
@@ -325,3 +334,56 @@ class WorkflowScheduler:
             else:
                 self.logger.info("Workflow will not run again")
                 break
+
+    def _finish_workflow_execution(
+        self,
+        tenant_id: str,
+        workflow_id: str,
+        workflow_execution_id: str,
+        status: WorkflowStatus,
+        error=None,
+    ):
+        # get the previous workflow execution id
+        previous_execution = get_previous_execution_id(
+            tenant_id, workflow_id, workflow_execution_id
+        )
+        # mark the workflow execution as finished in the db
+        finish_workflow_execution_db(
+            tenant_id=tenant_id,
+            workflow_id=workflow_id,
+            execution_id=workflow_execution_id,
+            status=status.value,
+            error=error,
+        )
+        # if error, send an email
+        if (
+            status == WorkflowStatus.ERROR
+            and previous_execution.status != WorkflowStatus.ERROR.value
+        ):
+            workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
+            self.logger.info(
+                f"Sending email to {workflow.created_by} for failed workflow {workflow_id}"
+            )
+            # TODO - should be handled
+            keep_platform_url = config(
+                "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
+            )
+            error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+            # send the email
+            try:
+                send_email(
+                    to_email=workflow.created_by,
+                    template_id=EmailTemplates.WORKFLOW_RUN_FAILED,
+                    workflow_id=workflow_id,
+                    workflow_name=workflow.name,
+                    workflow_execution_id=workflow_execution_id,
+                    error=error,
+                    url=error_logs_url,
+                )
+                self.logger.info(
+                    f"Email sent to {workflow.created_by} for failed workflow {workflow_id}"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to send email to {workflow.created_by} for failed workflow {workflow_id}: {e}"
+                )

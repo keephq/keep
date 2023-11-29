@@ -144,6 +144,8 @@ class IOHandler:
                                 # because the user can run any python code need to find a way to limit the functions that can be used
 
                                 # https://github.com/keephq/keep/issues/138
+                                import datetime
+
                                 from dateutil.tz import tzutc
 
                                 g = globals()
@@ -153,6 +155,7 @@ class IOHandler:
 
                                 # TODO: this is a hack to tzutc in the eval, should be more robust
                                 g["tzutc"] = tzutc
+                                g["datetime"] = datetime
                                 # finally, eval the expression
                                 _arg = eval(_arg, g)
                             except ValueError:
