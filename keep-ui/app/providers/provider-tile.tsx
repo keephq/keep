@@ -1,11 +1,4 @@
-import {
-  Badge,
-  Button,
-  Icon,
-  Subtitle,
-  Text,
-  Title,
-} from "@tremor/react";
+import { Badge, Button, Icon, Subtitle, Text, Title } from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
 import {
@@ -15,6 +8,7 @@ import {
   QueueListIcon,
   TicketIcon,
 } from "@heroicons/react/20/solid";
+import "./provider-tile.css";
 
 interface Props {
   provider: Provider;
@@ -67,7 +61,7 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="relative flex-grow group flex justify-around items-center bg-white rounded-lg shadow w-80 max-w-xs h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
       <div className="w-32">
