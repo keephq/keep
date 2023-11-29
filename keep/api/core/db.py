@@ -775,3 +775,19 @@ def get_workflow_id_by_name(tenant_id, workflow_name):
 
         if workflow:
             return workflow.id
+
+
+def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
+    with Session(engine) as session:
+        previous_execution = session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.id != workflow_execution_id)
+            .order_by(WorkflowExecution.started.desc())
+            .limit(1)
+        ).first()
+        if previous_execution:
+            return previous_execution
+        else:
+            return None
