@@ -47,22 +47,27 @@ def get_user_email(request: Request) -> str | None:
         )
 
 
-def verify_api_key(
-    request: Request,
-    api_key: str = Security(auth_header),
-    authorization: HTTPAuthorizationCredentials = Security(http_basic),
+def __extract_api_key(
+    request: Request, api_key: str, authorization: HTTPAuthorizationCredentials
 ) -> str:
     """
-    Verifies that a customer is allowed to access the API.
+    Extracts the API key from the request.
+    API key can be passed in the following ways:
+    1. X-API-KEY header
+    2. api_key query param
+    3. Basic auth header
+    4. Digest auth header
 
     Args:
-        api_key (str, optional): The API key extracted from X-API-KEY header. Defaults to Security(auth_header).
+        request (Request): FastAPI request object
+        api_key (str): The API key extracted from X-API-KEY header
+        authorization (HTTPAuthorizationCredentials): The credentials extracted from the Authorization header
 
     Raises:
         HTTPException: 401 if the user is unauthorized.
 
     Returns:
-        str: The tenant id.
+        str: api key
     """
     api_key = api_key or request.query_params.get("api_key", None)
     if not api_key:
@@ -98,6 +103,27 @@ def verify_api_key(
                 api_key = credentials
         else:
             raise HTTPException(status_code=401, detail="Missing API Key")
+    return api_key
+
+
+def verify_api_key(
+    request: Request,
+    api_key: str = Security(auth_header),
+    authorization: HTTPAuthorizationCredentials = Security(http_basic),
+) -> str:
+    """
+    Verifies that a customer is allowed to access the API.
+
+    Args:
+        api_key (str, optional): The API key extracted from X-API-KEY header. Defaults to Security(auth_header).
+
+    Raises:
+        HTTPException: 401 if the user is unauthorized.
+
+    Returns:
+        str: The tenant id.
+    """
+    api_key = __extract_api_key(request, api_key, authorization)
 
     tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:
@@ -185,6 +211,8 @@ def verify_api_key_single_tenant(
         == AuthenticationType.NO_AUTH.value
     ):
         return SINGLE_TENANT_UUID
+
+    api_key = __extract_api_key(request, api_key, authorization)
 
     tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:

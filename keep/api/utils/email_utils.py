@@ -2,7 +2,7 @@ import enum
 import logging
 
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Cc, Mail
+from sendgrid.helpers.mail import Mail
 
 from keep.api.core.config import config
 
@@ -45,8 +45,6 @@ def send_email(
     message.template_id = template_id.value
     # TODO: validate the kwargs and the template parameters are the same
     message.dynamic_template_data = kwargs
-    # add founders to CC
-    message.add_cc(Cc(email=CC))
     # send the email
     try:
         logger.info(f"Sending email to {to_email} with template {template_id}")

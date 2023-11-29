@@ -20,7 +20,7 @@ class Alert(SQLModel, table=True):
     alert_enrichment: "AlertEnrichment" = Relationship(
         back_populates="alert",
         sa_relationship_kwargs={
-            "primaryjoin": "Alert.fingerprint == AlertEnrichment.alert_fingerprint",
+            "primaryjoin": "and_(Alert.fingerprint == AlertEnrichment.alert_fingerprint, Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
         },
     )
@@ -40,7 +40,7 @@ class AlertEnrichment(SQLModel, table=True):
     alert: Alert = Relationship(
         back_populates="alert_enrichment",
         sa_relationship_kwargs={
-            "primaryjoin": "Alert.fingerprint == AlertEnrichment.alert_fingerprint"
+            "primaryjoin": "and_(Alert.fingerprint == AlertEnrichment.alert_fingerprint, Alert.tenant_id == AlertEnrichment.tenant_id)"
         },
     )
 
