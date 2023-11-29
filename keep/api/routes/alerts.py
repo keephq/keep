@@ -573,7 +573,7 @@ def get_alert(
     if alert:
         return alert[0]
     else:
-        return HTTPException(status_code=404, detail="Alert not found")
+        raise HTTPException(status_code=404, detail="Alert not found")
 
 
 @router.post(
