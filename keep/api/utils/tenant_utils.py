@@ -17,6 +17,7 @@ def create_api_key(
     tenant_id: str,
     unique_api_key_id: str,
     is_system: bool,
+    created_by: str,
     commit: bool = True,
     system_description: Optional[str] = None,
 ) -> str:
@@ -54,6 +55,7 @@ def create_api_key(
         key_hash=hashed_api_key,
         is_system=is_system,
         system_description=system_description,
+        created_by=created_by,
     )
     session.add(new_installation_api_key)
     if commit:
@@ -68,6 +70,7 @@ def create_api_key(
 def get_or_create_api_key(
     session: Session,
     tenant_id: str,
+    created_by: str,
     unique_api_key_id: str,
     system_description: Optional[str] = None,
 ) -> str:
@@ -98,6 +101,7 @@ def get_or_create_api_key(
             session,
             tenant_id,
             unique_api_key_id,
+            created_by=created_by,
             is_system=True,
             system_description=system_description,
         )

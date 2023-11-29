@@ -56,6 +56,7 @@ class ContextManager:
             session = next(get_session())
             self._api_key = get_or_create_api_key(
                 session=session,
+                created_by="system",
                 tenant_id=self.tenant_id,
                 unique_api_key_id="webhook",
             )

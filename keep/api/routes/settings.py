@@ -15,7 +15,7 @@ from keep.api.core.db import create_user as create_user_in_db
 from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_session
 from keep.api.core.db import get_users as get_users_from_db
-from keep.api.core.dependencies import verify_bearer_token
+from keep.api.core.dependencies import get_user_email, verify_bearer_token
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
@@ -41,6 +41,7 @@ def webhook_settings(
     webhook_api_key = get_or_create_api_key(
         session=session,
         tenant_id=tenant_id,
+        created_by="system",
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
@@ -275,11 +276,13 @@ class PatchedSMTP(smtplib.SMTP):
 def get_api_key(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
+    user_name: str = Depends(get_user_email),
 ):
     # get the api key for the CLI
     api_key = get_or_create_api_key(
         session=session,
         tenant_id=tenant_id,
+        created_by=user_name,
         unique_api_key_id="cli",
         system_description="API key",
     )
