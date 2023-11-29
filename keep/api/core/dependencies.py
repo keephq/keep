@@ -15,7 +15,7 @@ from pusher import Pusher
 from sqlmodel import Session
 
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_api_key, get_session
+from keep.api.core.db import get_api_key, get_session, get_user_by_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,8 @@ def get_user_email(request: Request) -> str | None:
         decoded_token = jwt.decode(token, options={"verify_signature": False})
         return decoded_token.get("email")
     elif "x-api-key" in request.headers:
-        return "apikey@keephq.dev"
+        username = get_user_by_api_key(request.headers["x-api-key"])
+        return username
     else:
         raise HTTPException(
             status_code=401, detail="Invalid authentication credentials"
