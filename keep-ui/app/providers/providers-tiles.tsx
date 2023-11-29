@@ -111,7 +111,7 @@ const ProvidersTiles = ({
       <Title className="mb-2.5">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
       </Title>
-      <div className="flex flex-wrap mb-5 gap-2">
+      <div className="flex flex-wrap mb-5 gap-5">
         {providersWithConfig.map((provider, index) => (
           <ProviderTile
             key={provider.id}
