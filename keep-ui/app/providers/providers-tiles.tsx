@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
-import "./providers-tiles.css";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { hideOrShowIntercom } from "@/components/ui/Intercom";
@@ -112,7 +111,7 @@ const ProvidersTiles = ({
       <Title className="mb-2.5">
         {installedProvidersMode ? "Installed Providers" : "Available Providers"}
       </Title>
-      <div className="provider-tiles mb-5">
+      <div className="flex flex-wrap mb-5 gap-2">
         {providersWithConfig.map((provider, index) => (
           <ProviderTile
             key={provider.id}
