@@ -142,9 +142,6 @@ auth_domain = os.environ.get("AUTH0_DOMAIN")
 if auth_domain:
     jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
     jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
-# if its multi tenant, we must have an auth domain
-elif os.environ.get("AUTH_TYPE", AuthenticationType.MULTI_TENANT.value):
-    raise Exception("Missing AUTH0_DOMAIN env var")
 
 
 def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
