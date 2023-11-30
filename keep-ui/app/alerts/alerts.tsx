@@ -63,8 +63,8 @@ export default function Alerts({
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: Alert[];
   }>({});
-  const [alertNameSearchString, setAlertNameSearchString] = useState<string>(
-    searchParams?.get("searchQuery") || ""
+  const [alertSearchString, setAlertSearchString] = useState<string>(
+    searchParams?.get("searchQuery") || searchParams?.get("fingerprint") || ""
   );
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
@@ -225,13 +225,14 @@ export default function Alerts({
 
   function searchAlert(alert: Alert): boolean {
     return (
-      alertNameSearchString === "" ||
-      alertNameSearchString === undefined ||
-      alertNameSearchString === null ||
-      alert.name.toLowerCase().includes(alertNameSearchString.toLowerCase()) ||
+      alertSearchString === "" ||
+      alertSearchString === undefined ||
+      alertSearchString === null ||
+      alert.name.toLowerCase().includes(alertSearchString.toLowerCase()) ||
       alert.description
         ?.toLowerCase()
-        .includes(alertNameSearchString.toLowerCase()) ||
+        .includes(alertSearchString.toLowerCase()) ||
+      alert.fingerprint === alertSearchString ||
       false
     );
   }
@@ -302,9 +303,9 @@ export default function Alerts({
             className="max-w-[280px] ml-2.5"
             icon={MagnifyingGlassIcon}
             placeholder="Search Alert..."
-            value={alertNameSearchString}
+            value={alertSearchString}
             onChange={(e) => {
-              setAlertNameSearchString(e.target.value);
+              setAlertSearchString(e.target.value);
               router.push(
                 pathname +
                   "?" +
