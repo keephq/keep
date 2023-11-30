@@ -13,13 +13,15 @@ interface ApiKeyResponse {
 
 interface Props {
   accessToken: string;
+  selectedTab: string;
 }
 
-export default function ApiKeySettings({ accessToken }: Props) {
+export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
-    `${apiUrl}/settings/apikey`,
-    (url) => fetcher(url, accessToken)
+    selectedTab === "api-key" ? `${apiUrl}/settings/apikey` : null,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
 
   if (isLoading) return <Loading />;
@@ -28,7 +30,7 @@ export default function ApiKeySettings({ accessToken }: Props) {
   const copyBlockApiKeyProps = {
     theme: { ...a11yLight },
     language: "text",
-    text: data?.apiKey || '',
+    text: data?.apiKey || "",
     codeBlock: true,
     showLineNumbers: false,
   };
