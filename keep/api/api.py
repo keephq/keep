@@ -105,12 +105,12 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
         # Capture event before request
-        self.capture_request(request)
+        await self.capture_request(request)
 
         response = await call_next(request)
 
         # Capture event after request
-        self.capture_response(request, response)
+        await self.capture_response(request, response)
 
         # Perform async tasks or flush events after the request is handled
         self.flush()
