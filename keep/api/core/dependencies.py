@@ -137,6 +137,16 @@ def verify_api_key(
     return tenant_api_key.tenant_id
 
 
+# init once so the cache will actually work
+auth_domain = os.environ.get("AUTH0_DOMAIN")
+if auth_domain:
+    jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
+    jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
+# if its multi tenant, we must have an auth domain
+elif os.environ.get("AUTH_TYPE", AuthenticationType.MULTI_TENANT.value):
+    raise Exception("Missing AUTH0_DOMAIN env var")
+
+
 def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
     # Took the implementation from here:
     #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
@@ -147,11 +157,8 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
         if not token:
             raise HTTPException(status_code=401, detail="No token provided 👈")
         try:
-            auth_domain = os.environ.get("AUTH0_DOMAIN")
             auth_audience = os.environ.get("AUTH0_AUDIENCE")
-            jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
             issuer = f"https://{auth_domain}/"
-            jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
             jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
             payload = jwt.decode(
                 token,
