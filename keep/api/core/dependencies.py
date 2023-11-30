@@ -151,7 +151,7 @@ def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
             auth_audience = os.environ.get("AUTH0_AUDIENCE")
             jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
             issuer = f"https://{auth_domain}/"
-            jwks_client = jwt.PyJWKClient(jwks_uri)
+            jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
             jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
             payload = jwt.decode(
                 token,
