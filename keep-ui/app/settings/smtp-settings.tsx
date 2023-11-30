@@ -92,7 +92,7 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   );
 
   // Show loading state or error messages if needed
-  if (smtpSettings === undefined || isLoading) {
+  if (isLoading) {
     return <Loading />;
   }
 
