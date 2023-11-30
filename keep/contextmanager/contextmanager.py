@@ -15,7 +15,7 @@ class ContextManager:
     STATE_FILE = "keepstate.json"
 
     def __init__(
-        self, tenant_id, workflow_id=None, workflow_execution_id=None, load_state=True
+        self, tenant_id, workflow_id=None, workflow_execution_id=None, load_state=False
     ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
@@ -37,7 +37,7 @@ class ContextManager:
         except RuntimeError:
             self.click_context = {}
         self.aliases = {}
-        self.state = {}
+        self._state = {}
         # dependencies are used so iohandler will be able to use the output class of the providers
         # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row
         #     and we want to use it in iohandler, we need to import it before the eval
@@ -190,7 +190,7 @@ class ContextManager:
 
     def __load_state(self):
         try:
-            self.state = json.loads(
+            self._state = json.loads(
                 self.storage_manager.get_file(
                     self.tenant_id, self.state_file, create_if_not_exist=True
                 )
@@ -201,7 +201,13 @@ class ContextManager:
                 f"State storage: {self.storage_manager.__class__.__name__}"
             )
             self.logger.warning(f"Reason: {exc}")
-            self.state = {}
+            self._state = {}
+
+    @property
+    def state(self):
+        if not self._state:
+            self.__load_state()
+        return self._state
 
     def get_last_workflow_run(self, workflow_id):
         if workflow_id in self.state:
