@@ -24,11 +24,11 @@ const navigation = [
   { name: "Providers", href: "/providers", icon: PuzzlePieceIcon },
   { name: "Alerts", href: "/alerts", icon: BellAlertIcon },
   { name: "Workflows", href: "/workflows", icon: BriefcaseIcon },
-  {
-    name: "Notifications Hub",
-    href: "/notifications-hub",
-    icon: EnvelopeOpenIcon,
-  },
+  // {
+  //   name: "Notifications Hub",
+  //   href: "/notifications-hub",
+  //   icon: EnvelopeOpenIcon,
+  // },
 ];
 
 function classNames(...classes: string[]) {
@@ -106,21 +106,20 @@ export default function NavbarInner({ user }: { user?: User }) {
                 </div>
                 <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
                   {navigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={classNames(
-                          pathname === item.href
-                            ? "border-slate-500 text-gray-900"
-                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
-                          "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                        )}
-                        aria-current={
-                          pathname === item.href ? "page" : undefined
-                        }
-                      >
-                        <Icon icon={item.icon} color="gray" />{item.name}
-                      </Link>
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={classNames(
+                        pathname === item.href
+                          ? "border-slate-500 text-gray-900"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                        "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      )}
+                      aria-current={pathname === item.href ? "page" : undefined}
+                    >
+                      <Icon icon={item.icon} color="gray" />
+                      {item.name}
+                    </Link>
                   ))}
                   <Link
                     key="ctrlk"
