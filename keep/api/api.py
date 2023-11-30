@@ -9,6 +9,7 @@ import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
@@ -61,6 +62,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.posthog_client = get_posthog_client()
+        self.tracer = trace.get_tracer(__name__)
 
     def _extract_identity(self, request: Request) -> str:
         try:
@@ -72,28 +74,31 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
     def capture_request(self, request: Request) -> None:
         identity = self._extract_identity(request)
-        self.posthog_client.capture(
-            identity,
-            "request-started",
-            {"path": request.url.path, "method": request.method},
-        )
+        with self.tracer.start_as_current_span("capture_request"):
+            self.posthog_client.capture(
+                identity,
+                "request-started",
+                {"path": request.url.path, "method": request.method},
+            )
 
     def capture_response(self, request: Request, response: Response) -> None:
         identity = self._extract_identity(request)
-        self.posthog_client.capture(
-            identity,
-            "request-finished",
-            {
-                "path": request.url.path,
-                "method": request.method,
-                "status_code": response.status_code,
-            },
-        )
+        with self.tracer.start_as_current_span("capture_response"):
+            self.posthog_client.capture(
+                identity,
+                "request-finished",
+                {
+                    "path": request.url.path,
+                    "method": request.method,
+                    "status_code": response.status_code,
+                },
+            )
 
     def flush(self):
-        logger.info("Flushing Posthog events")
-        self.posthog_client.flush()
-        logger.info("Posthog events flushed")
+        with self.tracer.start_as_current_span("flush_posthog_events"):
+            logger.info("Flushing Posthog events")
+            self.posthog_client.flush()
+            logger.info("Posthog events flushed")
 
     async def dispatch(self, request: Request, call_next):
         # Skip OPTIONS requests
