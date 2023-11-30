@@ -81,7 +81,9 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
   );
 
   // Show loading state or error messages if needed
-  if (!smtpSettings || isLoading) return <Loading />;
+  if (smtpSettings === undefined || isLoading) {
+    return <Loading />;
+  }
 
   // if no errors and we have data, set the settings
   if(smtpSettings){
