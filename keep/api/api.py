@@ -224,6 +224,13 @@ def get_app(
             ] = verify_token_or_key_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
+        # load all providers into cache
+        from keep.providers.providers_factory import ProvidersFactory
+
+        logger.info("Loading providers into cache")
+        ProvidersFactory.get_all_providers()
+        logger.info("Providers loaded successfully")
+
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
