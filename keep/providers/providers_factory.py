@@ -24,6 +24,8 @@ class ProviderConfigurationException(Exception):
 
 
 class ProvidersFactory:
+    _loaded_providers_cache = None
+
     @staticmethod
     def get_provider_class(provider_type: str) -> BaseProvider:
         provider_type_split = provider_type.split(
@@ -157,6 +159,10 @@ class ProvidersFactory:
         Returns:
             list: All the providers.
         """
+        # use the cache if exists
+        if ProvidersFactory._loaded_providers_cache:
+            return ProvidersFactory._loaded_providers_cache
+
         providers = []
         blacklisted_providers = [
             "base_provider",
@@ -278,6 +284,8 @@ class ProvidersFactory:
             except ModuleNotFoundError:
                 logger.exception(f"Cannot import provider {provider_directory}")
                 continue
+
+        ProvidersFactory._loaded_providers_cache = providers
         return providers
 
     @staticmethod
