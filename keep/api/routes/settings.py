@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import os
 import secrets
 import smtplib
@@ -27,6 +28,8 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
+
 
 @router.get(
     "/webhook",
@@ -36,6 +39,7 @@ def webhook_settings(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ) -> WebhookSettings:
+    logger.info("Getting webhook settings")
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event"
     webhook_api_key = get_or_create_api_key(
@@ -45,6 +49,7 @@ def webhook_settings(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
+    logger.info("Webhook settings retrieved successfully")
     return WebhookSettings(
         webhookApi=keep_webhook_api_url,
         apiKey=webhook_api_key,
@@ -180,12 +185,14 @@ async def get_smtp_settings(
     tenant_id: str = Depends(verify_bearer_token),
     session: Session = Depends(get_session),
 ):
+    logger.info("Getting SMTP settings")
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     # Read the SMTP settings from the secret manager
     try:
         smtp_settings = secret_manager.read_secret(secret_name="smtp")
         smtp_settings = json.loads(smtp_settings)
+        logger.info("SMTP settings retrieved successfully")
         return JSONResponse(status_code=200, content=smtp_settings)
     except Exception:
         # everything ok but no smtp settings
@@ -278,6 +285,7 @@ def get_api_key(
     session: Session = Depends(get_session),
     user_name: str = Depends(get_user_email),
 ):
+    logger.info("Getting API key")
     # get the api key for the CLI
     api_key = get_or_create_api_key(
         session=session,
@@ -286,4 +294,5 @@ def get_api_key(
         unique_api_key_id="cli",
         system_description="API key",
     )
+    logger.info("API key retrieved successfully")
     return {"apiKey": api_key}

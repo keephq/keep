@@ -9,6 +9,7 @@ import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
@@ -61,6 +62,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.posthog_client = get_posthog_client()
+        self.tracer = trace.get_tracer(__name__)
 
     def _extract_identity(self, request: Request) -> str:
         try:
@@ -70,42 +72,45 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         except Exception:
             return "anonymous"
 
-    def capture_request(self, request: Request) -> None:
+    async def capture_request(self, request: Request) -> None:
         identity = self._extract_identity(request)
-        self.posthog_client.capture(
-            identity,
-            "request-started",
-            {"path": request.url.path, "method": request.method},
-        )
+        with self.tracer.start_as_current_span("capture_request"):
+            self.posthog_client.capture(
+                identity,
+                "request-started",
+                {"path": request.url.path, "method": request.method},
+            )
 
-    def capture_response(self, request: Request, response: Response) -> None:
+    async def capture_response(self, request: Request, response: Response) -> None:
         identity = self._extract_identity(request)
-        self.posthog_client.capture(
-            identity,
-            "request-finished",
-            {
-                "path": request.url.path,
-                "method": request.method,
-                "status_code": response.status_code,
-            },
-        )
+        with self.tracer.start_as_current_span("capture_response"):
+            self.posthog_client.capture(
+                identity,
+                "request-finished",
+                {
+                    "path": request.url.path,
+                    "method": request.method,
+                    "status_code": response.status_code,
+                },
+            )
 
-    def flush(self):
-        logger.info("Flushing Posthog events")
-        self.posthog_client.flush()
-        logger.info("Posthog events flushed")
+    async def flush(self):
+        with self.tracer.start_as_current_span("flush_posthog_events"):
+            logger.info("Flushing Posthog events")
+            self.posthog_client.flush()
+            logger.info("Posthog events flushed")
 
     async def dispatch(self, request: Request, call_next):
         # Skip OPTIONS requests
         if request.method == "OPTIONS":
             return await call_next(request)
         # Capture event before request
-        self.capture_request(request)
+        await self.capture_request(request)
 
         response = await call_next(request)
 
         # Capture event after request
-        self.capture_response(request, response)
+        await self.capture_response(request, response)
 
         # Perform async tasks or flush events after the request is handled
         self.flush()
@@ -219,6 +224,13 @@ def get_app(
             ] = verify_token_or_key_single_tenant
             try_create_single_tenant(SINGLE_TENANT_UUID)
 
+        # load all providers into cache
+        from keep.providers.providers_factory import ProvidersFactory
+
+        logger.info("Loading providers into cache")
+        ProvidersFactory.get_all_providers()
+        logger.info("Providers loaded successfully")
+
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
@@ -232,6 +244,13 @@ def get_app(
                 "error_msg": str(exc),
             },
         )
+
+    @app.middleware("http")
+    async def log_middeware(request: Request, call_next):
+        logger.info(f"Request started: {request.method} {request.url.path}")
+        response = await call_next(request)
+        logger.info(f"Request finished: {request.method} {request.url.path}")
+        return response
 
     keep.api.observability.setup(app)
 
