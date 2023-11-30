@@ -44,14 +44,16 @@ class AlertDto(BaseModel):
                     "duplicateReason": None,
                     "service": "backend",
                     "source": ["keep"],
-                    "message": "Alert message",
-                    "description": "Alert description",
+                    "message": "Keep: Alert message",
+                    "description": "Keep: Alert description",
                     "severity": "critical",
                     "fatigueMeter": 0,
                     "pushed": True,
                     "event_id": "1234",
-                    "url": "https://www.google.com/search?q=open+source+alert+management",
-                    "fingerprint": "Alert name",
+                    "url": "https://www.keephq.dev?alertId=1234",
+                    "labels": {"key": "value"},
+                    "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
+                    "fingerprint": "1234",
                 }
             ]
         }

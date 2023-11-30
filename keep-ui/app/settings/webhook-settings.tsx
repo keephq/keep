@@ -44,7 +44,6 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   const copyBlockProps = {
     theme: { ...a11yLight },
     customStyle: {
-      height: "450px",
       overflowY: "scroll",
     },
     language: "shell",
