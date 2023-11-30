@@ -17,13 +17,15 @@ interface Webhook {
 
 interface Props {
   accessToken: string;
+  selectedTab: string;
 }
 
-export default function WebhookSettings({ accessToken }: Props) {
+export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<Webhook>(
-    `${apiUrl}/settings/webhook`,
-    (url) => fetcher(url, accessToken)
+    selectedTab === "webhook" ? `${apiUrl}/settings/webhook` : null,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
   const router = useRouter();
 
