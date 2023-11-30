@@ -1,5 +1,4 @@
 "use client";
-import { FrigadeAnnouncement } from "@frigade/react";
 import {
   Providers,
   defaultProvider,
@@ -200,19 +199,6 @@ export default function ProvidersPage({
 
   return (
     <>
-      <FrigadeAnnouncement
-        flowId="flow_VpefBUPWpliWceBm"
-        modalPosition="center"
-        onButtonClick={(stepData, index, cta) => {
-          if (cta === "primary") {
-            window.open(
-              "https://calendly.com/d/4p7-8dg-399/keep-onboarding",
-              "_blank"
-            );
-          }
-          return true;
-        }}
-      />
       {installedProviders.length > 0 && (
         <ProvidersTiles
           providers={installedProviders}

@@ -20,24 +20,32 @@ import { User } from "./models";
 import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
-import { AuthenticationType } from 'utils/authenticationType';
+import { AuthenticationType } from "utils/authenticationType";
 
 interface Props {
   accessToken: string;
   currentUser?: AuthUser;
+  selectedTab: string;
 }
 interface Config {
   AUTH_TYPE: string;
 }
 
-export default function UsersSettings({ accessToken, currentUser }: Props) {
+export default function UsersSettings({
+  accessToken,
+  currentUser,
+  selectedTab,
+}: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<User[]>(
-    `${apiUrl}/settings/users`,
-    (url) => fetcher(url, accessToken)
+    selectedTab === "users" ? `${apiUrl}/settings/users` : null,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
 
-  const { data: configData } = useSWR<Config>('/api/config', fetcher);
+  const { data: configData } = useSWR<Config>("/api/config", fetcher, {
+    revalidateOnFocus: false,
+  });
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE;
@@ -47,16 +55,16 @@ export default function UsersSettings({ accessToken, currentUser }: Props) {
   async function addUser() {
     let email;
     let password;
-    if(authType == AuthenticationType.SINGLE_TENANT ){
+    if (authType == AuthenticationType.SINGLE_TENANT) {
       email = prompt("Enter the user name");
       password = prompt("Enter the user password");
-    }
-    else if (authType == AuthenticationType.MULTI_TENANT){
+    } else if (authType == AuthenticationType.MULTI_TENANT) {
       email = prompt("Enter the user email");
       password = "";
-    }
-    else{
-      alert("Keep cannot add users on NO_AUTH mode. To add users, please set Keep AUTH_TYPE environment variable to either SINGLE_TENANT or MULTI_TENANT");
+    } else {
+      alert(
+        "Keep cannot add users on NO_AUTH mode. To add users, please set Keep AUTH_TYPE environment variable to either SINGLE_TENANT or MULTI_TENANT"
+      );
     }
     console.log(email);
     if (email) {

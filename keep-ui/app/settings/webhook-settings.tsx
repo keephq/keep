@@ -17,13 +17,15 @@ interface Webhook {
 
 interface Props {
   accessToken: string;
+  selectedTab: string;
 }
 
-export default function WebhookSettings({ accessToken }: Props) {
+export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<Webhook>(
-    `${apiUrl}/settings/webhook`,
-    (url) => fetcher(url, accessToken)
+    selectedTab === "webhook" ? `${apiUrl}/settings/webhook` : null,
+    (url) => fetcher(url, accessToken),
+    { revalidateOnFocus: false }
   );
   const router = useRouter();
 
@@ -32,6 +34,7 @@ export default function WebhookSettings({ accessToken }: Props) {
 
   const example = data.modelSchema.examples[0] as any;
   example.lastReceived = new Date().toISOString();
+  example.fatigueMeter = Math.floor(Math.random() * 100);
 
   const code = `curl --location '${data.webhookApi}' \\
   --header 'Content-Type: application/json' \\
@@ -42,7 +45,6 @@ export default function WebhookSettings({ accessToken }: Props) {
   const copyBlockProps = {
     theme: { ...a11yLight },
     customStyle: {
-      height: "450px",
       overflowY: "scroll",
     },
     language: "shell",
@@ -52,16 +54,16 @@ export default function WebhookSettings({ accessToken }: Props) {
   };
 
   const tryNow = async () => {
-    var myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
-    myHeaders.append("Accept", "application/json");
-    myHeaders.append("X-API-KEY", data.apiKey);
+    var requestHeaders = new Headers();
+    requestHeaders.append("Content-Type", "application/json");
+    requestHeaders.append("Accept", "application/json");
+    requestHeaders.append("X-API-KEY", data.apiKey);
 
     var raw = JSON.stringify(example);
 
     const requestOptions = {
       method: "POST",
-      headers: myHeaders,
+      headers: requestHeaders,
       body: raw,
     };
 
