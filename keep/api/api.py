@@ -72,7 +72,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         except Exception:
             return "anonymous"
 
-    def capture_request(self, request: Request) -> None:
+    async def capture_request(self, request: Request) -> None:
         identity = self._extract_identity(request)
         with self.tracer.start_as_current_span("capture_request"):
             self.posthog_client.capture(
@@ -81,7 +81,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
                 {"path": request.url.path, "method": request.method},
             )
 
-    def capture_response(self, request: Request, response: Response) -> None:
+    async def capture_response(self, request: Request, response: Response) -> None:
         identity = self._extract_identity(request)
         with self.tracer.start_as_current_span("capture_response"):
             self.posthog_client.capture(
@@ -94,7 +94,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-    def flush(self):
+    async def flush(self):
         with self.tracer.start_as_current_span("flush_posthog_events"):
             logger.info("Flushing Posthog events")
             self.posthog_client.flush()

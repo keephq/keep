@@ -67,7 +67,7 @@ CONFIG = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s",
+            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s",
             "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
         }
     },
