@@ -119,8 +119,12 @@ def get_session() -> Session:
     Yields:
         Session: A database session
     """
-    with Session(engine) as session:
-        yield session
+    from opentelemetry import trace
+
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("get_session"):
+        with Session(engine) as session:
+            yield session
 
 
 def try_create_single_tenant(tenant_id: str) -> None:

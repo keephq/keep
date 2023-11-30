@@ -33,18 +33,22 @@ SINGLE_TENANT_EMAIL = "admin@keephq"
 
 
 def get_user_email(request: Request) -> str | None:
-    token = request.headers.get("Authorization")
-    if token:
-        token = token.split(" ")[1]
-        decoded_token = jwt.decode(token, options={"verify_signature": False})
-        return decoded_token.get("email")
-    elif "x-api-key" in request.headers:
-        username = get_user_by_api_key(request.headers["x-api-key"])
-        return username
-    else:
-        raise HTTPException(
-            status_code=401, detail="Invalid authentication credentials"
-        )
+    from opentelemetry import trace
+
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("get_user_email"):
+        token = request.headers.get("Authorization")
+        if token:
+            token = token.split(" ")[1]
+            decoded_token = jwt.decode(token, options={"verify_signature": False})
+            return decoded_token.get("email")
+        elif "x-api-key" in request.headers:
+            username = get_user_by_api_key(request.headers["x-api-key"])
+            return username
+        else:
+            raise HTTPException(
+                status_code=401, detail="Invalid authentication credentials"
+            )
 
 
 def __extract_api_key(
@@ -136,31 +140,35 @@ def verify_api_key(
 def verify_bearer_token(token: str = Depends(oauth2_scheme)) -> str:
     # Took the implementation from here:
     #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
-    if not token:
-        raise HTTPException(status_code=401, detail="No token provided 👈")
-    try:
-        auth_domain = os.environ.get("AUTH0_DOMAIN")
-        auth_audience = os.environ.get("AUTH0_AUDIENCE")
-        jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
-        issuer = f"https://{auth_domain}/"
-        jwks_client = jwt.PyJWKClient(jwks_uri)
-        jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
-        payload = jwt.decode(
-            token,
-            jwt_signing_key,
-            algorithms="RS256",
-            audience=auth_audience,
-            issuer=issuer,
-            leeway=60,
-        )
-        tenant_id = payload.get("keep_tenant_id")
-        return tenant_id
-    except jwt.exceptions.DecodeError:
-        logger.exception("Failed to decode token")
-        raise HTTPException(status_code=401, detail="Token is not a valid JWT")
-    except Exception as e:
-        logger.exception("Failed to validate token")
-        raise HTTPException(status_code=401, detail=str(e))
+    from opentelemetry import trace
+
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("verify_bearer_token"):
+        if not token:
+            raise HTTPException(status_code=401, detail="No token provided 👈")
+        try:
+            auth_domain = os.environ.get("AUTH0_DOMAIN")
+            auth_audience = os.environ.get("AUTH0_AUDIENCE")
+            jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
+            issuer = f"https://{auth_domain}/"
+            jwks_client = jwt.PyJWKClient(jwks_uri)
+            jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
+            payload = jwt.decode(
+                token,
+                jwt_signing_key,
+                algorithms="RS256",
+                audience=auth_audience,
+                issuer=issuer,
+                leeway=60,
+            )
+            tenant_id = payload.get("keep_tenant_id")
+            return tenant_id
+        except jwt.exceptions.DecodeError:
+            logger.exception("Failed to decode token")
+            raise HTTPException(status_code=401, detail="Token is not a valid JWT")
+        except Exception as e:
+            logger.exception("Failed to validate token")
+            raise HTTPException(status_code=401, detail=str(e))
 
 
 def get_user_email_single_tenant(request: Request) -> str:
