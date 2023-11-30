@@ -343,10 +343,6 @@ class WorkflowScheduler:
         status: WorkflowStatus,
         error=None,
     ):
-        # get the previous workflow execution id
-        previous_execution = get_previous_execution_id(
-            tenant_id, workflow_id, workflow_execution_id
-        )
         # mark the workflow execution as finished in the db
         finish_workflow_execution_db(
             tenant_id=tenant_id,
@@ -355,10 +351,15 @@ class WorkflowScheduler:
             status=status.value,
             error=error,
         )
+        # get the previous workflow execution id
+        previous_execution = get_previous_execution_id(
+            tenant_id, workflow_id, workflow_execution_id
+        )
         # if error, send an email
-        if (
-            status == WorkflowStatus.ERROR
-            and previous_execution.status != WorkflowStatus.ERROR.value
+        if status == WorkflowStatus.ERROR and (
+            previous_execution
+            is None  # this means this is the first execution, for example
+            or previous_execution.status != WorkflowStatus.ERROR.value
         ):
             workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
             self.logger.info(

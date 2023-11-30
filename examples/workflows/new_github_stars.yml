@@ -1,7 +1,7 @@
 # Alert when there are new GitHub Stars utilizing keepstate
 workflow:
   id: new-github-stars
-  description: Get new GitHub Stars
+  description: Notify Slack about new GitHub star for keephq/keep
   triggers:
     - type: interval
       value: 300
@@ -20,7 +20,7 @@ workflow:
       condition:
       - name: assert-condition
         type: assert
-        assert: "{{ steps.get-github-stars.results.new_stargazers_count }} == 0" # if there are more than 0 new stargazers, trigger the action
+        assert: "{{ steps.get-github-stars.results.new_stargazers_count }} > 0" # if there are more than 0 new stargazers, trigger the action
       provider:
         type: slack
         config: " {{ providers.slack-demo }} "
