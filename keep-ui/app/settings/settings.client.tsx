@@ -13,7 +13,7 @@ import { useSession } from "next-auth/react";
 import Loading from "app/loading";
 import SmtpSettings from "./smtp-settings";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -23,31 +23,37 @@ export default function SettingsPage() {
   const [selectedTab, setSelectedTab] = useState<string>(
     searchParams?.get("selectedTab") || "users"
   );
+  const [tabIndex, setTabIndex] = useState<number>(0);
 
-  const handleTabChange = (tab: string) => {
-    setSelectedTab(tab);
-    router.push(`${pathname}?selectedTab=${tab}`);
-  };
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setSelectedTab(tab);
+      router.push(`${pathname}?selectedTab=${tab}`);
+    },
+    [pathname, router]
+  );
+
+  useEffect(() => {
+    const selectedTab = searchParams?.get("selectedTab") || "users";
+    handleTabChange(selectedTab);
+  }, [searchParams, handleTabChange]);
 
   // TODO: more robust way to handle this
-  const tabIndex =
-    selectedTab === "users"
-      ? 0
-      : selectedTab === "webhook"
-      ? 1
-      : selectedTab === "smtp"
-      ? 2
-      : 3;
+  useEffect(() => {
+    const tabIndex =
+      selectedTab === "users"
+        ? 0
+        : selectedTab === "webhook"
+        ? 1
+        : selectedTab === "smtp"
+        ? 2
+        : 3;
+    setTabIndex(tabIndex);
+  }, [selectedTab]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
 
-  /**
-   * TODO: Refactor this page to use pages
-   * Right now we load all components at once when we load the main settings page.
-   * It should be /settings/users and /settings/webhook, etc.
-   * Think about a proper way to implement it.
-   */
   return (
     <TabGroup index={tabIndex}>
       <TabList color="orange">

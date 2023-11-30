@@ -5,7 +5,11 @@ import { signOut } from "next-auth/react";
 import { Fragment } from "react";
 import {
   Bars3Icon,
+  BellAlertIcon,
+  BriefcaseIcon,
   DocumentTextIcon,
+  EnvelopeOpenIcon,
+  PuzzlePieceIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
@@ -17,9 +21,14 @@ import { User } from "next-auth";
 import { InternalConfig } from "types/internal-config";
 
 const navigation = [
-  { name: "Providers", href: "/providers" },
-  { name: "Alerts", href: "/alerts" },
-  { name: "Workflows", href: "/workflows" },
+  { name: "Providers", href: "/providers", icon: PuzzlePieceIcon },
+  { name: "Alerts", href: "/alerts", icon: BellAlertIcon },
+  { name: "Workflows", href: "/workflows", icon: BriefcaseIcon },
+  // {
+  //   name: "Notifications Hub",
+  //   href: "/notifications-hub",
+  //   icon: EnvelopeOpenIcon,
+  // },
 ];
 
 function classNames(...classes: string[]) {
@@ -108,6 +117,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                       )}
                       aria-current={pathname === item.href ? "page" : undefined}
                     >
+                      <Icon icon={item.icon} color="gray" />
                       {item.name}
                     </Link>
                   ))}
