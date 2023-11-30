@@ -3,6 +3,7 @@ import { Card, Button, Title, Subtitle, TextInput } from '@tremor/react';
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
+import Loading from "app/loading";
 
 interface SMTPSettings {
   host: string;
@@ -80,8 +81,7 @@ export default function SMTPSettingsForm({ accessToken }: Props) {
   );
 
   // Show loading state or error messages if needed
-  if (isLoading) return <div>Loading...</div>; // Loading state
-  if (error) return <div>Error: {error.message}</div>;
+  if (!data || isLoading) return <Loading />;
 
   // if no errors and we have data, set the settings
   if(smtpSettings){
