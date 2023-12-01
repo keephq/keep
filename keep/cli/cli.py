@@ -1007,6 +1007,38 @@ def enrich(info: Info, fingerprint, params):
         click.echo(click.style(f"Alert {fingerprint} enriched successfully", bold=True))
 
 
+@alert.command()
+@click.option(
+    "--provider-type",
+    "-p",
+    required=True,
+    help="The provider type of the alert to use.",
+)
+@click.option(
+    "--alert-json-file",
+    "-f",
+    help=f"The path to the keep config file (default {get_default_conf_file_path()}",
+    required=False,
+    default=f"{get_default_conf_file_path()}",
+)
+@pass_info
+def trigger(info: Info, provider_type, alert_json_file: str):
+    """Create an alert from a json file."""
+    with open(alert_json_file, "r") as f:
+        alert_json = json.load(f)
+    resp = make_keep_request(
+        "POST",
+        info.keep_api_url + f"/alerts/event/{provider_type}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json=alert_json,
+    )
+    if not resp.ok:
+        raise Exception(f"Error creating alert: {resp.text}")
+    else:
+        alert = resp.json()
+        print(json.dumps(alert, indent=4))
+
+
 @cli.group()
 @pass_info
 def auth(info: Info):
