@@ -3,6 +3,7 @@ SentryProvider is a class that provides a way to read data from Sentry.
 """
 import dataclasses
 import datetime
+import logging
 
 import pydantic
 import requests
@@ -174,6 +175,13 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Formatting Sentry alert",
+            extra={
+                "event": event,
+            },
+        )
         event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
 
@@ -188,7 +196,7 @@ class SentryProvider(BaseProvider):
             if "received" in event_data
             else datetime.datetime.now()
         )
-
+        logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("title"),
@@ -283,32 +291,26 @@ class SentryProvider(BaseProvider):
                 headers=self.__headers,
             ).raise_for_status()
             # TODO: make sure keep alert does not exist and if it doesnt create it.
-            alert_name = f"Keep Alert Rule - {project_slug}"
+            alert_rule_name = f"Keep Alert Rule - {project_slug}"
             alert_rules_response = requests.get(
                 f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
                 headers=self.__headers,
             ).json()
-            alert_exists = next(
+            alert_rule_exists = next(
                 iter(
                     [
-                        alert
-                        for alert in alert_rules_response
-                        if alert.get("name") == alert_name
+                        alert_rule
+                        for alert_rule in alert_rules_response
+                        if alert_rule.get("name") == alert_rule_name
                     ]
                 ),
                 None,
             )
-            if not alert_exists:
+            if not alert_rule_exists:
                 alert_payload = {
                     "conditions": [
                         {
-                            "id": "sentry.rules.conditions.first_seen_event.FirstSeenEventCondition",
-                        },
-                        {
-                            "id": "sentry.rules.conditions.regression_event.RegressionEventCondition",
-                        },
-                        {
-                            "id": "sentry.rules.conditions.reappeared_event.ReappearedEventCondition",
+                            "id": "sentry.rules.conditions.every_event.EveryEventCondition",
                         },
                     ],
                     "filters": [],
@@ -322,17 +324,24 @@ class SentryProvider(BaseProvider):
                     "actionMatch": "any",
                     "filterMatch": "any",
                     "frequency": 5,
-                    "name": alert_name,
-                    "dateCreated": "2023-10-09T13:40:37.144220Z",
+                    "name": alert_rule_name,
                     "projects": [project_slug],
                     "status": "active",
                 }
-
-                requests.post(
-                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                    headers=self.__headers,
-                    json=alert_payload,
-                ).raise_for_status()
+                try:
+                    requests.post(
+                        f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
+                        headers=self.__headers,
+                        json=alert_payload,
+                    ).raise_for_status()
+                except Exception as e:
+                    # don't raise because we want to continue to the next project
+                    # TODO: identify the case where its "rule already exists" and raise for other errors
+                    self.logger.error(
+                        f"Failed to create alert rule for project {project_slug}",
+                        extra={"error": e},
+                    )
+                    continue
                 self.logger.info(f"Sentry webhook setup complete for {project_slug}")
             else:
                 self.logger.info(f"Sentry webhook already exists for {project_slug}")
@@ -455,17 +464,20 @@ if __name__ == "__main__":
 
     sentry_api_token = os.environ.get("SENTRY_API_TOKEN")
     sentry_org_slug = os.environ.get("SENTRY_ORG_SLUG")
-    sentry_project = "python"
+    sentry_project_slug = os.environ.get("SENTRY_PROJECT_SLUG")
 
     config = {
-        "id": "sentry-prod",
-        "authentication": {"api_token": sentry_api_token, "org_slug": sentry_org_slug},
+        "authentication": {
+            "api_key": sentry_api_token,
+            "organization_slug": sentry_org_slug,
+            "project_slug": sentry_project_slug,
+        },
     }
     provider = ProvidersFactory.get_provider(
         context_manager,
+        provider_id="sentry-prod",
         provider_type="sentry",
         provider_config=config,
-        project=sentry_project,
     )
-    result = provider.query("")
-    print(result)
+    alerts = provider.get_alerts()
+    print(alerts)
