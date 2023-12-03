@@ -3,6 +3,7 @@ SentryProvider is a class that provides a way to read data from Sentry.
 """
 import dataclasses
 import datetime
+import logging
 
 import pydantic
 import requests
