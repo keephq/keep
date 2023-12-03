@@ -18,11 +18,10 @@ class Alert(SQLModel, table=True):
 
     # Define a one-to-one relationship to AlertEnrichment using alert_fingerprint
     alert_enrichment: "AlertEnrichment" = Relationship(
-        back_populates="alert",
         sa_relationship_kwargs={
-            "primaryjoin": "and_(Alert.fingerprint == AlertEnrichment.alert_fingerprint, Alert.tenant_id == AlertEnrichment.tenant_id)",
+            "primaryjoin": "and_(Alert.fingerprint == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
-        },
+        }
     )
 
     class Config:
@@ -33,14 +32,15 @@ class AlertEnrichment(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    alert_fingerprint: str = Field(foreign_key="alert.fingerprint")
+    alert_fingerprint: str = Field(unique=True)
     enrichments: dict = Field(sa_column=Column(JSON))
 
-    # Define a one-to-one relationship to Alert using alert_fingerprint
-    alert: Alert = Relationship(
+    alerts: list[Alert] = Relationship(
         back_populates="alert_enrichment",
         sa_relationship_kwargs={
-            "primaryjoin": "and_(Alert.fingerprint == AlertEnrichment.alert_fingerprint, Alert.tenant_id == AlertEnrichment.tenant_id)"
+            "primaryjoin": "and_(Alert.fingerprint == AlertEnrichment.alert_fingerprint, Alert.tenant_id == AlertEnrichment.tenant_id)",
+            "foreign_keys": "[AlertEnrichment.alert_fingerprint, AlertEnrichment.tenant_id]",
+            "uselist": True,
         },
     )
 
