@@ -174,6 +174,13 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Formatting Sentry alert",
+            extra={
+                "event": event,
+            },
+        )
         event_data: dict = event.get("event", {})
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
 
@@ -188,7 +195,7 @@ class SentryProvider(BaseProvider):
             if "received" in event_data
             else datetime.datetime.now()
         )
-
+        logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("title"),
@@ -320,12 +327,20 @@ class SentryProvider(BaseProvider):
                     "projects": [project_slug],
                     "status": "active",
                 }
-
-                requests.post(
-                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
-                    headers=self.__headers,
-                    json=alert_payload,
-                ).raise_for_status()
+                try:
+                    requests.post(
+                        f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
+                        headers=self.__headers,
+                        json=alert_payload,
+                    ).raise_for_status()
+                except Exception as e:
+                    # don't raise because we want to continue to the next project
+                    # TODO: identify the case where its "rule already exists" and raise for other errors
+                    self.logger.error(
+                        f"Failed to create alert rule for project {project_slug}",
+                        extra={"error": e},
+                    )
+                    continue
                 self.logger.info(f"Sentry webhook setup complete for {project_slug}")
             else:
                 self.logger.info(f"Sentry webhook already exists for {project_slug}")
