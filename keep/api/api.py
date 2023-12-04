@@ -32,7 +32,6 @@ from keep.api.core.dependencies import (
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
-    ai,
     alerts,
     healthcheck,
     providers,
@@ -56,6 +55,22 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+
+if os.environ.get("USE_NGROK", "false") == "true":
+    from pyngrok import ngrok
+    from pyngrok.conf import PyngrokConfig
+
+    ngrok_config = PyngrokConfig(auth_token=os.environ.get("NGROK_AUTH_TOKEN", None))
+    # If you want to use a custom domain, set the NGROK_DOMAIN & NGROK_AUTH_TOKEN environment variables
+    # read https://ngrok.com/blog-post/free-static-domains-ngrok-users -> https://dashboard.ngrok.com/cloud-edge/domains
+    ngrok_connection = ngrok.connect(
+        PORT,
+        pyngrok_config=ngrok_config,
+        domain=os.environ.get("NGROK_DOMAIN", None),
+    )
+    public_url = ngrok_connection.public_url
+    logger.info(f"ngrok tunnel: {public_url}")
+    os.environ["KEEP_API_URL"] = public_url
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -144,7 +159,6 @@ def get_app(
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
-    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
@@ -260,24 +274,6 @@ def get_app(
         return response
 
     keep.api.observability.setup(app)
-
-    if os.environ.get("USE_NGROK", "false") == "true":
-        from pyngrok import ngrok
-        from pyngrok.conf import PyngrokConfig
-
-        ngrok_config = PyngrokConfig(
-            auth_token=os.environ.get("NGROK_AUTH_TOKEN", None)
-        )
-        # If you want to use a custom domain, set the NGROK_DOMAIN & NGROK_AUTH_TOKEN environment variables
-        # read https://ngrok.com/blog-post/free-static-domains-ngrok-users -> https://dashboard.ngrok.com/cloud-edge/domains
-        ngrok_connection = ngrok.connect(
-            PORT,
-            pyngrok_config=ngrok_config,
-            domain=os.environ.get("NGROK_DOMAIN", None),
-        )
-        public_url = ngrok_connection.public_url
-        logger.info(f"ngrok tunnel: {public_url}")
-        os.environ["KEEP_API_URL"] = public_url
 
     return app
 
