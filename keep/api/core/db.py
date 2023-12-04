@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pymysql
 import validators
+from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, select, update
@@ -81,6 +82,9 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     return conn
 
 
+# this is a workaround for gunicorn to load the env vars
+#   becuase somehow in gunicorn it doesn't load the .env file
+load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 
 if running_in_cloud_run:
