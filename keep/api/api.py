@@ -113,7 +113,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         await self.capture_response(request, response)
 
         # Perform async tasks or flush events after the request is handled
-        self.flush()
+        await self.flush()
         return response
 
 
@@ -231,6 +231,13 @@ def get_app(
         ProvidersFactory.get_all_providers()
         logger.info("Providers loaded successfully")
 
+        # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
+        # so we init a thread that will wait for the server to be up and then start the internal services
+        # start the internal services
+        logger.info("Starting the run services thread")
+        thread = threading.Thread(target=run_services_after_app_is_up)
+        thread.start()
+
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
@@ -316,11 +323,6 @@ def _wait_for_server_to_be_ready():
 
 
 def run(app: FastAPI):
-    # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
-    # so we init a thread that will wait for the server to be up and then start the internal services
-    logger.info("Starting the run services thread")
-    thread = threading.Thread(target=run_services_after_app_is_up)
-    thread.start()
     logger.info("Starting the uvicorn server")
     # run the server
     uvicorn.run(
