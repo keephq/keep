@@ -1,7 +1,12 @@
+import { Suspense } from "react";
 import SettingsPage from "./settings.client";
 
 export default function Page() {
-  return <SettingsPage />;
+  return (
+    <Suspense>
+      <SettingsPage />
+    </Suspense>
+  );
 }
 
 export const metadata = {
