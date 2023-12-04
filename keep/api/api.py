@@ -153,6 +153,7 @@ def get_app(
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
     app.include_router(pusher.router, prefix="/pusher", tags=["pusher"])
     app.include_router(status.router, prefix="/status", tags=["status"])
+    print(os.environ)
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
@@ -230,6 +231,13 @@ def get_app(
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
         logger.info("Providers loaded successfully")
+
+        # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
+        # so we init a thread that will wait for the server to be up and then start the internal services
+        # start the internal services
+        logger.info("Starting the run services thread")
+        thread = threading.Thread(target=run_services_after_app_is_up)
+        thread.start()
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
@@ -316,11 +324,6 @@ def _wait_for_server_to_be_ready():
 
 
 def run(app: FastAPI):
-    # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
-    # so we init a thread that will wait for the server to be up and then start the internal services
-    logger.info("Starting the run services thread")
-    thread = threading.Thread(target=run_services_after_app_is_up)
-    thread.start()
     logger.info("Starting the uvicorn server")
     # run the server
     uvicorn.run(
