@@ -7,23 +7,23 @@ services:
 
     ports:
       - "3100:3100"
-    command: [ "-config.file=/etc/loki/local-config.yaml"]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
 
   tempo:
     image: grafana/tempo:latest
     profiles:
       - otel
-    command: [ "-config.file=/etc/tempo.yaml" ]
+    command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./otel-shared/tempo.yaml:/etc/tempo.yaml
       - ./tempo-data:/tmp/tempo
     ports:
-      - "14268:14268"  # jaeger ingest
-      - "3200:3200"   # tempo
+      - "14268:14268" # jaeger ingest
+      - "3200:3200" # tempo
       - "9095:9095" # tempo grpc
-      - "4317:4317"  # otlp grpc
-      - "4318:4318"  # otlp http
-      - "9411:9411"   # zipkin
+      - "4317:4317" # otlp grpc
+      - "4318:4318" # otlp http
+      - "9411:9411" # zipkin
 
   prometheus:
     image: prom/prometheus:latest
@@ -50,7 +50,6 @@ services:
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
 
-
   grafana:
     image: grafana/grafana:10.0.3
     profiles:
@@ -70,7 +69,6 @@ services:
     ports:
       - "3001:3000"
 
-
   # OpenTelemetry collector. Make sure you set USERID and GOOGLE_APPLICATION_CREDENTIALS
   # environment variables for your container to authenticate correctly
   otel-collector:
@@ -86,15 +84,12 @@ services:
     volumes:
       - ./otel-shared/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
 
-
-
-
   keep-frontend-dev:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev.ui
     ports:
-      - '3000:3000'
+      - "3000:3000"
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3001
@@ -119,7 +114,7 @@ services:
       - vector_scrape=true
       - service=keep-api
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - OTEL_SERVICE_NAME=keephq
       - OTLP_ENDPOINT=http://otel-collector:4317
@@ -136,7 +131,6 @@ services:
     volumes:
       - ./keep/keep:/code/keep
       - ./state:/state
-
   keep-websocket-server:
     image: quay.io/soketi/soketi:1.4-16-debian
     ports:
