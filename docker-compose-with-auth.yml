@@ -38,8 +38,6 @@ services:
       - PUSHER_HOST=keep-websocket-server
       - PUSHER_PORT=6001
       - USE_NGROK=true
-      - NGROK_DOMAIN=relaxed-stork-full.ngrok-free.app
-      - NGROK_AUTH_TOKEN=2RSa28MufYgIfOGNYcTO1SfcfH5_68bthJFDKmra1XwGo8fAp
     volumes:
       - ./state:/state
   keep-websocket-server:
