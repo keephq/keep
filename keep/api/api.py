@@ -18,7 +18,7 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import create_db_and_tables, get_user, try_create_single_tenant
+from keep.api.core.db import get_user
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
     get_user_email,
@@ -55,22 +55,6 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-
-if os.environ.get("USE_NGROK", "false") == "true":
-    from pyngrok import ngrok
-    from pyngrok.conf import PyngrokConfig
-
-    ngrok_config = PyngrokConfig(auth_token=os.environ.get("NGROK_AUTH_TOKEN", None))
-    # If you want to use a custom domain, set the NGROK_DOMAIN & NGROK_AUTH_TOKEN environment variables
-    # read https://ngrok.com/blog-post/free-static-domains-ngrok-users -> https://dashboard.ngrok.com/cloud-edge/domains
-    ngrok_connection = ngrok.connect(
-        PORT,
-        pyngrok_config=ngrok_config,
-        domain=os.environ.get("NGROK_DOMAIN", None),
-    )
-    public_url = ngrok_connection.public_url
-    logger.info(f"ngrok tunnel: {public_url}")
-    os.environ["KEEP_API_URL"] = public_url
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -223,9 +207,6 @@ def get_app(
 
     @app.on_event("startup")
     async def on_startup():
-        if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
-            create_db_and_tables()
-
         # When running in mode other than multi tenant auth, we want to override the secured endpoints
         if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
             app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
@@ -236,7 +217,6 @@ def get_app(
             app.dependency_overrides[
                 verify_token_or_key
             ] = verify_token_or_key_single_tenant
-            try_create_single_tenant(SINGLE_TENANT_UUID)
 
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
@@ -320,6 +300,11 @@ def _wait_for_server_to_be_ready():
 
 def run(app: FastAPI):
     logger.info("Starting the uvicorn server")
+    # call on starting to create the db and tables
+    import keep.api.config
+
+    keep.api.config.on_starting(None)
+
     # run the server
     uvicorn.run(
         app,
