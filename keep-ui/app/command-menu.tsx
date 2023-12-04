@@ -116,7 +116,7 @@ const navigationItems = [
     icon: <UserGroupIcon />,
     label: "Go to users management",
     shortcut: ["u"],
-    navigate: "/settings",
+    navigate: "/settings?selectedTab=users",
   },
   {
     icon: <GlobeAltIcon />,
