@@ -27,10 +27,12 @@ export default function SettingsPage() {
 
   const handleTabChange = useCallback(
     (tab: string) => {
-      setSelectedTab(tab);
-      router.push(`${pathname}?selectedTab=${tab}`);
+      if (tab !== selectedTab) {
+        setSelectedTab(tab);
+        router.push(`${pathname}?selectedTab=${tab}`);
+      }
     },
-    [pathname, router]
+    [pathname, router, selectedTab]
   );
 
   useEffect(() => {

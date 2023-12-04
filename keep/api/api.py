@@ -18,7 +18,7 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import create_db_and_tables, get_user, try_create_single_tenant
+from keep.api.core.db import get_user
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
     get_user_email,
@@ -32,7 +32,6 @@ from keep.api.core.dependencies import (
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
-    ai,
     alerts,
     healthcheck,
     providers,
@@ -144,7 +143,6 @@ def get_app(
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
-    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
@@ -209,9 +207,6 @@ def get_app(
 
     @app.on_event("startup")
     async def on_startup():
-        if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
-            create_db_and_tables()
-
         # When running in mode other than multi tenant auth, we want to override the secured endpoints
         if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
             app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
@@ -222,7 +217,6 @@ def get_app(
             app.dependency_overrides[
                 verify_token_or_key
             ] = verify_token_or_key_single_tenant
-            try_create_single_tenant(SINGLE_TENANT_UUID)
 
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
@@ -260,24 +254,6 @@ def get_app(
         return response
 
     keep.api.observability.setup(app)
-
-    if os.environ.get("USE_NGROK", "false") == "true":
-        from pyngrok import ngrok
-        from pyngrok.conf import PyngrokConfig
-
-        ngrok_config = PyngrokConfig(
-            auth_token=os.environ.get("NGROK_AUTH_TOKEN", None)
-        )
-        # If you want to use a custom domain, set the NGROK_DOMAIN & NGROK_AUTH_TOKEN environment variables
-        # read https://ngrok.com/blog-post/free-static-domains-ngrok-users -> https://dashboard.ngrok.com/cloud-edge/domains
-        ngrok_connection = ngrok.connect(
-            PORT,
-            pyngrok_config=ngrok_config,
-            domain=os.environ.get("NGROK_DOMAIN", None),
-        )
-        public_url = ngrok_connection.public_url
-        logger.info(f"ngrok tunnel: {public_url}")
-        os.environ["KEEP_API_URL"] = public_url
 
     return app
 
@@ -324,6 +300,11 @@ def _wait_for_server_to_be_ready():
 
 def run(app: FastAPI):
     logger.info("Starting the uvicorn server")
+    # call on starting to create the db and tables
+    import keep.api.config
+
+    keep.api.config.on_starting()
+
     # run the server
     uvicorn.run(
         app,
