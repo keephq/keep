@@ -6,6 +6,8 @@ ENV PYTHONFAULTHANDLER=1 \
 
 WORKDIR /app
 
+# TODO: we need to find a way to cache everything in here
+#   and not to install keep as package.
 FROM base as builder
 
 ENV PIP_DEFAULT_TIMEOUT=100 \
@@ -22,4 +24,4 @@ FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 COPY --from=builder /venv /venv
-ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "keep/api/config.py" ]
+ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]

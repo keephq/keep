@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
+    logger.info("Keep server starting")
     if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
         create_db_and_tables()
     try_create_single_tenant(SINGLE_TENANT_UUID)
@@ -34,3 +35,4 @@ def on_starting(server=None):
         public_url = ngrok_connection.public_url
         logger.info(f"ngrok tunnel: {public_url}")
         os.environ["KEEP_API_URL"] = public_url
+    logger.info("Keep server started")
