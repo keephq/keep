@@ -36,7 +36,6 @@ services:
       - PUSHER_PORT=6001
     volumes:
       - ./state:/state
-    entrypoint: ["keep", "--json", "api"]
   keep-websocket-server:
     image: quay.io/soketi/soketi:1.4-16-debian
     ports:

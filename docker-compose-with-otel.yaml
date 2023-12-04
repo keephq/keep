@@ -131,7 +131,6 @@ services:
     volumes:
       - ./keep/keep:/code/keep
       - ./state:/state
-    entrypoint: ["keep", "--json", "api"]
   keep-websocket-server:
     image: quay.io/soketi/soketi:1.4-16-debian
     ports:
