@@ -285,7 +285,9 @@ class ProvidersFactory:
                     )
                 )
             except ModuleNotFoundError:
-                logger.exception(f"Cannot import provider {provider_directory}")
+                logger.error(
+                    f"Cannot import provider {provider_directory}, module not found."
+                )
                 continue
 
         ProvidersFactory._loaded_providers_cache = providers
