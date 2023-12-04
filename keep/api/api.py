@@ -303,7 +303,7 @@ def run(app: FastAPI):
     # call on starting to create the db and tables
     import keep.api.config
 
-    keep.api.config.on_starting(None)
+    keep.api.config.on_starting()
 
     # run the server
     uvicorn.run(

@@ -11,7 +11,7 @@ keep.api.logging.setup()
 logger = logging.getLogger(__name__)
 
 
-def on_starting(server):
+def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
     if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
         create_db_and_tables()
