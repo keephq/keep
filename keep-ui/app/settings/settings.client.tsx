@@ -28,30 +28,32 @@ export default function SettingsPage() {
   const handleTabChange = useCallback(
     (tab: string) => {
       if (tab !== selectedTab) {
+        router.replace(`${pathname}?selectedTab=${tab}`);
         setSelectedTab(tab);
-        router.push(`${pathname}?selectedTab=${tab}`);
       }
     },
     [pathname, router, selectedTab]
   );
 
-  useEffect(() => {
-    const selectedTab = searchParams?.get("selectedTab") || "users";
-    handleTabChange(selectedTab);
-  }, [searchParams, handleTabChange]);
+  // useEffect(() => {
+  //   const newSelectedTab = searchParams?.get("selectedTab") || selectedTab;
+  //   handleTabChange(newSelectedTab);
+  // }, [searchParams, handleTabChange, selectedTab]);
 
   // TODO: more robust way to handle this
   useEffect(() => {
+    const newSelectedTab = searchParams?.get("selectedTab") || "users";
     const tabIndex =
-      selectedTab === "users"
+      newSelectedTab === "users"
         ? 0
-        : selectedTab === "webhook"
+        : newSelectedTab === "webhook"
         ? 1
-        : selectedTab === "smtp"
+        : newSelectedTab === "smtp"
         ? 2
         : 3;
     setTabIndex(tabIndex);
-  }, [selectedTab]);
+    setSelectedTab(newSelectedTab);
+  }, [searchParams]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
