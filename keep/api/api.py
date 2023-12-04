@@ -113,7 +113,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         await self.capture_response(request, response)
 
         # Perform async tasks or flush events after the request is handled
-        self.flush()
+        await self.flush()
         return response
 
 
