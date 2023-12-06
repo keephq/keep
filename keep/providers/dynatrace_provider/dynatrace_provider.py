@@ -75,6 +75,7 @@ class DynatraceProvider(BaseProvider):
             alias="Settings Write",
         ),
     ]
+    FINGERPRINT_FIELDS = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -258,6 +259,9 @@ class DynatraceProvider(BaseProvider):
                 url=url,
                 **event,  # any other field
             )
+        alert_dto.fingerprint = DynatraceProvider.get_alert_fingerprint(
+            alert_dto, DynatraceProvider.FINGERPRINT_FIELDS
+        )
         return alert_dto
 
     def _get_alerting_profiles(self):
