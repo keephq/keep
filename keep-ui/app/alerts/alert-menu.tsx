@@ -14,7 +14,6 @@ import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";
 import { Alert } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
-import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 
 interface Props {
@@ -23,7 +22,11 @@ interface Props {
   openHistory: () => void;
   provider?: Provider;
   mutate?: () => void;
-  callDelete?: (fingerprint: string, restore?: boolean) => void;
+  callDelete?: (
+    fingerprint: string,
+    lastReceived: Date,
+    restore?: boolean
+  ) => void;
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   currentUser: NextUser;
 }
@@ -66,13 +69,18 @@ export default function AlertMenu({
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to ${
-        alert.deleted ? "restore" : "delete"
+        alert.deleted.includes(alert.lastReceived.toISOString()) ? "restore" : "delete"
       } this alert?`
     );
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      const body = { fingerprint: fingerprint, restore: alert.deleted };
+      const restore = alert.deleted.includes(alert.lastReceived.toISOString());
+      const body = {
+        fingerprint: fingerprint,
+        lastReceived: alert.lastReceived,
+        restore: restore,
+      };
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
         headers: {
@@ -82,26 +90,29 @@ export default function AlertMenu({
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint, alert.deleted);
+        callDelete!(fingerprint, alert.lastReceived, restore);
       }
     }
   };
 
   const callAssignEndpoint = async (unassign: boolean = false) => {
-    const session = await getSession();
-    const apiUrl = getApiURL();
-    const res = await fetch(
-      `${apiUrl}/alerts/${fingerprint}/assign?unassign=${unassign}`,
-      {
+    if (
+      confirm(
+        "After assiging this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
+      )
+    ) {
+      const session = await getSession();
+      const apiUrl = getApiURL();
+      const res = await fetch(`${apiUrl}/alerts/${fingerprint}/assign`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
           "Content-Type": "application/json",
         },
+      });
+      if (res.ok) {
+        setAssignee!(fingerprint, unassign);
       }
-    );
-    if (res.ok) {
-      setAssignee!(fingerprint, unassign);
     }
   };
 
@@ -175,27 +186,30 @@ export default function AlertMenu({
                   </button>
                 )}
               </Menu.Item>
-              <Menu.Item>
-                {({ active }) => (
-                  <button
-                    onClick={() => callAssignEndpoint(!!alert.assignee)}
-                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
-                      alert.assignee && currentUser.email !== alert.assignee
-                        ? "text-slate-300 cursor-not-allowed"
-                        : ""
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                    disabled={!!alert.assignee && currentUser.email !== alert.assignee}
-                    title={`${
-                      !!alert.assignee && currentUser.email !== alert.assignee
-                        ? "Cannot unassign other users"
-                        : ""
-                    }`}
-                  >
-                    <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {alert.assignee ? "Unassign" : "Self-Assign"}
-                  </button>
-                )}
-              </Menu.Item>
+              {alert.assignee !== currentUser.email && (
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={() => callAssignEndpoint()}
+                      className={`${
+                        active ? "bg-slate-200" : "text-gray-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      // disabled={!!alert.assignee && currentUser.email !== alert.assignee}
+                      // title={`${
+                      //   !!alert.assignee && currentUser.email !== alert.assignee
+                      //     ? "Cannot unassign other users"
+                      //     : ""
+                      // }`}
+                    >
+                      <UserPlusIcon
+                        className="mr-2 h-4 w-4"
+                        aria-hidden="true"
+                      />
+                      Self-Assign
+                    </button>
+                  )}
+                </Menu.Item>
+              )}
             </div>
             {provider?.methods && provider?.methods?.length > 0 && (
               <div className="px-1 py-1">
@@ -241,7 +255,9 @@ export default function AlertMenu({
                     }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                   >
                     <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {alert.deleted ? "Restore" : "Delete"}
+                    {alert.deleted.includes(alert.lastReceived.toISOString())
+                      ? "Restore"
+                      : "Delete"}
                   </button>
                 )}
               </Menu.Item>

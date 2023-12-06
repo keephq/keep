@@ -54,9 +54,10 @@ export default function Alerts({
   const [showDeleted, setShowDeleted] = useState<boolean>(
     searchParams?.get("showDeleted") === "true"
   );
-  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
-    searchParams?.get("onlyDeleted") === "true"
-  );
+  // TODO: we might want to bring this back
+  // const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
+  //   searchParams?.get("onlyDeleted") === "true"
+  // );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
@@ -95,15 +96,23 @@ export default function Alerts({
     { revalidateOnFocus: false }
   );
 
+  const deletedCount = !showDeleted
+    ? aggregatedAlerts.filter((alert) =>
+        alert.deleted.includes(alert.lastReceived.toISOString())
+      ).length
+    : 0;
+
   useEffect(() => {
     const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
     let groupedByAlerts = {} as { [key: string]: Alert[] };
 
     // Fix the date format (it is received as text)
-    let aggregatedAlerts = alerts.map((alert) => {
-      alert.lastReceived = new Date(alert.lastReceived);
-      return alert;
+    alerts.forEach((alert) => {
+      if (typeof alert.lastReceived === "string")
+        alert.lastReceived = new Date(alert.lastReceived);
     });
+
+    let aggregatedAlerts = alerts;
 
     if (groupBy) {
       // Group alerts by the groupBy key
@@ -152,9 +161,14 @@ export default function Alerts({
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
         ) as Alert[];
-        setAlerts((prevAlerts) =>
-          Array.from(new Set([...newAlerts, ...prevAlerts]))
-        );
+        setAlerts((prevAlerts) => {
+          const combinedAlerts = [...newAlerts, ...prevAlerts];
+          const uniqueObjectsMap = new Map();
+          combinedAlerts.forEach((alert) => {
+            uniqueObjectsMap.set(alert.id, alert);
+          });
+          return Array.from(new Set(uniqueObjectsMap.values()));
+        });
       });
 
       channel.bind("async-done", function () {
@@ -200,11 +214,22 @@ export default function Alerts({
     );
   }
 
-  const onDelete = (fingerprint: string, restore: boolean = false) => {
+  const onDelete = (
+    fingerprint: string,
+    lastReceived: Date,
+    restore: boolean = false
+  ) => {
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
-        if (alert.fingerprint === fingerprint) {
-          alert.deleted = !restore;
+        if (
+          alert.fingerprint === fingerprint &&
+          alert.lastReceived == lastReceived
+        ) {
+          if (!restore) {
+            alert.deleted = [lastReceived.toISOString()];
+          } else {
+            alert.deleted = [];
+          }
           alert.assignee = user.email;
         }
         return alert;
@@ -253,8 +278,9 @@ export default function Alerts({
   }
 
   function showDeletedAlert(alert: Alert): boolean {
-    if (showDeleted && onlyDeleted) return alert.deleted === true;
-    return showDeleted || !alert.deleted;
+    return (
+      showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
+    );
   }
 
   return (
@@ -332,7 +358,7 @@ export default function Alerts({
               Show Deleted
             </label>
           </div>
-          <div
+          {/* <div
             className={`flex items-center space-x-3 ml-2.5 ${
               showDeleted ? "" : "hidden"
             }`}
@@ -354,7 +380,7 @@ export default function Alerts({
             <label htmlFor="switch" className="text-sm text-gray-500">
               Only Deleted
             </label>
-          </div>
+          </div> */}
         </div>
         <Button
           icon={ArrowPathIcon}
@@ -389,11 +415,7 @@ export default function Alerts({
         setAssignee={setAssignee}
         users={users}
         currentUser={user}
-        deletedCount={
-          !showDeleted
-            ? aggregatedAlerts.filter((alert) => alert.deleted).length
-            : 0
-        }
+        deletedCount={deletedCount}
       />
     </Card>
   );

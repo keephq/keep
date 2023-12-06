@@ -10,6 +10,7 @@ from sqlmodel import Session
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import get_alerts as get_alerts_from_db
+from keep.api.core.db import get_enrichment
 from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import (
@@ -260,14 +261,31 @@ def delete_alert(
         extra={
             "fingerprint": delete_alert.fingerprint,
             "restore": delete_alert.restore,
+            "lastReceived": delete_alert.lastReceived,
             "tenant_id": tenant_id,
         },
     )
 
+    deleted_last_received = []  # the last received(s) that are deleted
+    enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
+    if enrichment:
+        deleted_last_received = enrichment.enrichments.get("deleted", [])
+        # TODO: this is due to legacy deleted field that was a bool, remove in the future
+        if isinstance(deleted_last_received, bool):
+            deleted_last_received = []
+
+    if (
+        delete_alert.restore is True
+        and delete_alert.lastReceived in deleted_last_received
+    ):
+        deleted_last_received.remove(delete_alert.lastReceived)
+    elif delete_alert.restore is False:
+        deleted_last_received.append(delete_alert.lastReceived)
+
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=delete_alert.fingerprint,
-        enrichments={"deleted": not delete_alert.restore, "assignee": user_email},
+        enrichments={"deleted": deleted_last_received, "assignee": user_email},
     )
 
     logger.info(

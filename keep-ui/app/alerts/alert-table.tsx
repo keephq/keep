@@ -35,7 +35,11 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   isAsyncLoading?: boolean;
-  onDelete?: (fingerprint: string, restore?: boolean) => void;
+  onDelete?: (
+    fingerprint: string,
+    lastReceived: Date,
+    restore?: boolean
+  ) => void;
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   users?: User[];
   currentUser: NextUser;
@@ -81,7 +85,8 @@ export function AlertTable({
     return (
       <div className="flex justify-between items-center">
         <Text>
-          Showing {startItem} – {endItem} of {alerts.length}{" "}
+          Showing {alerts.length === 0 ? 0 : startItem} – {endItem} of{" "}
+          {alerts.length}{" "}
           {deletedCount > 0 && `(there are ${deletedCount} deleted alerts)`}
         </Text>
         <div className="flex">

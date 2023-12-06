@@ -182,7 +182,9 @@ class GrafanaProvider(BaseProvider):
                     name=event.get("title"),
                     status=event.get("status"),
                     severity=alert.get("severity", None),
-                    lastReceived=datetime.datetime.now().isoformat(),
+                    lastReceived=datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
                     fatigueMeter=random.randint(0, 100),
                     description=alert.get("annotations", {}).get("summary", ""),
                     source=["grafana"],
