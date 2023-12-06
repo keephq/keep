@@ -54,9 +54,10 @@ export default function Alerts({
   const [showDeleted, setShowDeleted] = useState<boolean>(
     searchParams?.get("showDeleted") === "true"
   );
-  const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
-    searchParams?.get("onlyDeleted") === "true"
-  );
+  // TODO: we might want to bring this back
+  // const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
+  //   searchParams?.get("onlyDeleted") === "true"
+  // );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
@@ -253,7 +254,6 @@ export default function Alerts({
   }
 
   function showDeletedAlert(alert: Alert): boolean {
-    if (showDeleted && onlyDeleted) return alert.deleted === true;
     return showDeleted || !alert.deleted;
   }
 
@@ -332,7 +332,7 @@ export default function Alerts({
               Show Deleted
             </label>
           </div>
-          <div
+          {/* <div
             className={`flex items-center space-x-3 ml-2.5 ${
               showDeleted ? "" : "hidden"
             }`}
@@ -354,7 +354,7 @@ export default function Alerts({
             <label htmlFor="switch" className="text-sm text-gray-500">
               Only Deleted
             </label>
-          </div>
+          </div> */}
         </div>
         <Button
           icon={ArrowPathIcon}
