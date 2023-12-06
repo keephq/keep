@@ -42,7 +42,7 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   showSkeleton?: boolean;
-  onDelete?: (fingerprint: string, restore?: boolean) => void;
+  onDelete?: (fingerprint: string, lastReceived: Date, restore?: boolean) => void;
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   users?: User[];
   currentUser: NextUser;
@@ -209,7 +209,7 @@ export function AlertsTableBody({
                       />
                     </a>
                   )}
-                  {alert.deleted && (
+                  {alert.deleted.includes(alert.lastReceived.toISOString()) && (
                     <Icon
                       icon={TrashIcon}
                       tooltip="This alert has been deleted"
@@ -272,7 +272,9 @@ export function AlertsTableBody({
               <PushPullBadge pushed={alert.pushed} />
             </TableCell>
             <TableCell>{alert.status}</TableCell>
-            <TableCell>{getAlertLastReceieved(alert)}</TableCell>
+            <TableCell title={alert.lastReceived.toISOString()}>
+              {getAlertLastReceieved(alert)}
+            </TableCell>
             <TableCell>
               {alert.source?.map((source, index) => {
                 return (

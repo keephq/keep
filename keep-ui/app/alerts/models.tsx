@@ -25,7 +25,7 @@ export interface Alert {
   pushed: boolean;
   generatorURL?: string;
   fingerprint: string;
-  deleted?: boolean;
+  deleted: string[];
   assignee?: string;
 }
 
@@ -58,7 +58,7 @@ export const AlertTableKeys: { [key: string]: string } = {
   Description: "",
   Type: "Whether the alert was pushed or pulled from the alert source",
   Status: "",
-  "Last Received": "",
+  When: "",
   Source: "",
   Assignee: "",
   "Fatigue Meter": "Calculated based on various factors",
