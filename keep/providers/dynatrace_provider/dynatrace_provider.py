@@ -244,12 +244,15 @@ class DynatraceProvider(BaseProvider):
             tags = event.pop("entityTags")
             impacted_entities = event.pop("impactedEntities", [])
             url = event.pop("ProblemURL", None)
+            lastReceived = datetime.datetime.fromtimestamp(
+                event.pop("startTime") / 1000, tz=datetime.timezone.utc
+            )
             alert_dto = AlertDto(
                 id=_id,
                 name=name,
                 status=status,
                 severity=severity,
-                lastReceived=datetime.datetime.now().isoformat(),
+                lastReceived=lastReceived.isoformat(),
                 fatigueMeter=random.randint(0, 100),
                 description=description,
                 source=["dynatrace"],

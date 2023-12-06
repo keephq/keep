@@ -96,6 +96,12 @@ export default function Alerts({
     { revalidateOnFocus: false }
   );
 
+  const deletedCount = !showDeleted
+    ? aggregatedAlerts.filter((alert) =>
+        alert.deleted.includes(alert.lastReceived.toISOString())
+      ).length
+    : 0;
+
   useEffect(() => {
     const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
     let groupedByAlerts = {} as { [key: string]: Alert[] };
@@ -201,11 +207,22 @@ export default function Alerts({
     );
   }
 
-  const onDelete = (fingerprint: string, restore: boolean = false) => {
+  const onDelete = (
+    fingerprint: string,
+    lastReceived: Date,
+    restore: boolean = false
+  ) => {
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
-        if (alert.fingerprint === fingerprint) {
-          alert.deleted = !restore;
+        if (
+          alert.fingerprint === fingerprint &&
+          alert.lastReceived == lastReceived
+        ) {
+          if (!restore) {
+            alert.deleted = [lastReceived.toISOString()];
+          } else {
+            alert.deleted = [];
+          }
           alert.assignee = user.email;
         }
         return alert;
@@ -254,7 +271,9 @@ export default function Alerts({
   }
 
   function showDeletedAlert(alert: Alert): boolean {
-    return showDeleted || !alert.deleted;
+    return (
+      showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
+    );
   }
 
   return (
@@ -389,11 +408,7 @@ export default function Alerts({
         setAssignee={setAssignee}
         users={users}
         currentUser={user}
-        deletedCount={
-          !showDeleted
-            ? aggregatedAlerts.filter((alert) => alert.deleted).length
-            : 0
-        }
+        deletedCount={deletedCount}
       />
     </Card>
   );

@@ -22,7 +22,7 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: bool = False  # Whether the alert is deleted or not
+    deleted: list[str] = []  # Whether the alert is deleted or not
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
@@ -60,7 +60,8 @@ class AlertDto(BaseModel):
 
 
 class DeleteRequestBody(BaseModel):
-    fingerprint: str | None = None
+    fingerprint: str
+    lastReceived: str
     restore: bool = False
 
 
