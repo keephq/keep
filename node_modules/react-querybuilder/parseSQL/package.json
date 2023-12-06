@@ -1,4 +1,0 @@
-{
-  "main": "../dist/parseSQL.js",
-  "types": "../dist/parseSQL.d.ts"
-}
