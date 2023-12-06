@@ -270,7 +270,7 @@ def delete_alert(
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
         deleted_last_received = enrichment.enrichments.get("deleted", [])
-        # TODO: this is due to legacy deleted field that was a bool
+        # TODO: this is due to legacy deleted field that was a bool, remove in the future
         if isinstance(deleted_last_received, bool):
             deleted_last_received = []
 

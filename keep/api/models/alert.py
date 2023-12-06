@@ -30,6 +30,13 @@ class AlertDto(BaseModel):
             return values.get("name", "")
         return fingerprint
 
+    @validator("deleted", pre=True, always=True)
+    def validate_old_deleted(cls, deleted, values):
+        """This is a temporary validator to handle the old deleted field"""
+        if isinstance(deleted, bool):
+            return []
+        return deleted
+
     class Config:
         extra = Extra.allow
         schema_extra = {
