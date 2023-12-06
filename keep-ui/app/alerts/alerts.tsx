@@ -107,10 +107,12 @@ export default function Alerts({
     let groupedByAlerts = {} as { [key: string]: Alert[] };
 
     // Fix the date format (it is received as text)
-    let aggregatedAlerts = alerts.map((alert) => {
-      alert.lastReceived = new Date(alert.lastReceived);
-      return alert;
+    alerts.forEach((alert) => {
+      if (typeof alert.lastReceived === "string")
+        alert.lastReceived = new Date(alert.lastReceived);
     });
+
+    let aggregatedAlerts = alerts;
 
     if (groupBy) {
       // Group alerts by the groupBy key
@@ -159,9 +161,14 @@ export default function Alerts({
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
         ) as Alert[];
-        setAlerts((prevAlerts) =>
-          Array.from(new Set([...newAlerts, ...prevAlerts]))
-        );
+        setAlerts((prevAlerts) => {
+          const combinedAlerts = [...newAlerts, ...prevAlerts];
+          const uniqueObjectsMap = new Map();
+          combinedAlerts.forEach((alert) => {
+            uniqueObjectsMap.set(alert.id, alert);
+          });
+          return Array.from(new Set(uniqueObjectsMap.values()));
+        });
       });
 
       channel.bind("async-done", function () {
