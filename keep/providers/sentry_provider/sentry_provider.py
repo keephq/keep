@@ -194,7 +194,7 @@ class SentryProvider(BaseProvider):
                 event_data.get("received"), tz=datetime.timezone.utc
             )
             if "received" in event_data
-            else datetime.datetime.now()
+            else datetime.datetime.now(tz=datetime.timezone.utc)
         )
         logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(

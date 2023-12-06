@@ -75,6 +75,7 @@ class DynatraceProvider(BaseProvider):
             alias="Settings Write",
         ),
     ]
+    FINGERPRINT_FIELDS = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -243,12 +244,15 @@ class DynatraceProvider(BaseProvider):
             tags = event.pop("entityTags")
             impacted_entities = event.pop("impactedEntities", [])
             url = event.pop("ProblemURL", None)
+            lastReceived = datetime.datetime.fromtimestamp(
+                event.pop("startTime") / 1000, tz=datetime.timezone.utc
+            )
             alert_dto = AlertDto(
                 id=_id,
                 name=name,
                 status=status,
                 severity=severity,
-                lastReceived=datetime.datetime.now().isoformat(),
+                lastReceived=lastReceived.isoformat(),
                 fatigueMeter=random.randint(0, 100),
                 description=description,
                 source=["dynatrace"],
@@ -258,6 +262,9 @@ class DynatraceProvider(BaseProvider):
                 url=url,
                 **event,  # any other field
             )
+        alert_dto.fingerprint = DynatraceProvider.get_alert_fingerprint(
+            alert_dto, DynatraceProvider.FINGERPRINT_FIELDS
+        )
         return alert_dto
 
     def _get_alerting_profiles(self):
