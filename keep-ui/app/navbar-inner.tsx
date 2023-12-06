@@ -5,13 +5,15 @@ import { signOut } from "next-auth/react";
 import { Fragment } from "react";
 import {
   Bars3Icon,
-  BellAlertIcon,
-  BriefcaseIcon,
   DocumentTextIcon,
-  EnvelopeOpenIcon,
-  PuzzlePieceIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { VscDebugDisconnect } from "react-icons/vsc";
+import { LuWorkflow } from "react-icons/lu";
+import { AiOutlineAlert } from "react-icons/ai";
+import { MdOutlineEngineering } from "react-icons/md";
+
+
 import Link from "next/link";
 import { Icon } from "@tremor/react";
 import { AuthenticationType } from "utils/authenticationType";
@@ -21,9 +23,10 @@ import { User } from "next-auth";
 import { InternalConfig } from "types/internal-config";
 
 const navigation = [
-  { name: "Providers", href: "/providers", icon: PuzzlePieceIcon },
-  { name: "Alerts", href: "/alerts", icon: BellAlertIcon },
-  { name: "Workflows", href: "/workflows", icon: BriefcaseIcon },
+  { name: "Providers", href: "/providers", icon: VscDebugDisconnect },
+  { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
+  { name: "Workflows", href: "/workflows", icon: LuWorkflow },
+  { name: "Rules", href: "/rules", icon: MdOutlineEngineering}
   // {
   //   name: "Notifications Hub",
   //   href: "/notifications-hub",

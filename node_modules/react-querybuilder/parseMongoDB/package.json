@@ -1,0 +1,4 @@
+{
+  "main": "../dist/parseMongoDB.js",
+  "types": "../dist/parseMongoDB.d.ts"
+}
