@@ -1,6 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
-import { Alert } from "./models";
+import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import {
   Button,
@@ -16,7 +16,7 @@ import { User as NextUser } from "next-auth";
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
-  data: Alert[];
+  data: AlertDto[];
   users?: User[];
   currentUser: NextUser;
 }

@@ -19,7 +19,7 @@ import {
   AccordionHeader,
   AccordionBody,
 } from "@tremor/react";
-import { Alert, AlertKnownKeys, Severity } from "./models";
+import { AlertDto, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
 import "./alerts-table-body.css";
 import AlertMenu from "./alert-menu";
@@ -34,10 +34,10 @@ import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 
 interface Props {
-  alerts: Alert[];
+  alerts: AlertDto[];
   groupBy?: string;
-  groupedByData?: { [key: string]: Alert[] };
-  openModal?: (alert: Alert) => void;
+  groupedByData?: { [key: string]: AlertDto[] };
+  openModal?: (alert: AlertDto) => void;
   workflows?: Workflow[];
   providers?: Provider[];
   mutate?: () => void;
@@ -111,7 +111,7 @@ export function AlertsTableBody({
   currentUser,
 }: Props) {
   const router = useRouter();
-  const getAlertLastReceieved = (alert: Alert) => {
+  const getAlertLastReceieved = (alert: AlertDto) => {
     let lastReceived = "unknown";
     if (alert.lastReceived) {
       lastReceived = alert.lastReceived.toString();

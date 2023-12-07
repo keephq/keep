@@ -12,8 +12,8 @@ const mulish = Mulish({
   display: "swap",
 });
 
-import Nav from "./nav";
 import { ToastContainer } from "react-toastify";
+import Navbar from "./navbar";
 
 export default async function RootLayout({
   children,
@@ -28,8 +28,7 @@ export default async function RootLayout({
     >
       <body className="h-full">
         <NextAuthProvider>
-          {/* @ts-expect-error Server Component */}
-          <Nav />
+          <Navbar />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
           <ErrorBoundary>{children}</ErrorBoundary>
         </NextAuthProvider>

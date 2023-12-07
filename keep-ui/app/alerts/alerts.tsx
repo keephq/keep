@@ -18,7 +18,7 @@ import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
 import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
-import { Alert } from "./models";
+import { AlertDto } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useCallback, useEffect, useState } from "react";
 import Loading from "app/loading";
@@ -59,10 +59,10 @@ export default function Alerts({
   //   searchParams?.get("onlyDeleted") === "true"
   // );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<AlertDto[]>([]);
+  const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
-    [key: string]: Alert[];
+    [key: string]: AlertDto[];
   }>({});
   const [alertSearchString, setAlertSearchString] = useState<string>(
     searchParams?.get("searchQuery") || searchParams?.get("fingerprint") || ""
@@ -71,7 +71,7 @@ export default function Alerts({
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
-  const { data, isLoading, mutate } = useSWR<Alert[]>(
+  const { data, isLoading, mutate } = useSWR<AlertDto[]>(
     `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
     (url) => fetcher(url, accessToken),
     {
@@ -104,7 +104,7 @@ export default function Alerts({
 
   useEffect(() => {
     const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
-    let groupedByAlerts = {} as { [key: string]: Alert[] };
+    let groupedByAlerts = {} as { [key: string]: AlertDto[] };
 
     // Fix the date format (it is received as text)
     alerts.forEach((alert) => {
@@ -160,7 +160,7 @@ export default function Alerts({
         );
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
-        ) as Alert[];
+        ) as AlertDto[];
         newAlerts.forEach((alert) => {
           if (typeof alert.lastReceived === "string")
             alert.lastReceived = new Date(alert.lastReceived);
@@ -214,7 +214,7 @@ export default function Alerts({
     .map((alert) => alert.assignee!.toLowerCase())
     .filter(onlyUnique);
 
-  function environmentIsSeleected(alert: Alert): boolean {
+  function environmentIsSeleected(alert: AlertDto): boolean {
     return (
       selectedEnvironments.includes(alert.environment.toLowerCase()) ||
       selectedEnvironments.length === 0
@@ -255,7 +255,7 @@ export default function Alerts({
     );
   };
 
-  function searchAlert(alert: Alert): boolean {
+  function searchAlert(alert: AlertDto): boolean {
     return (
       alertSearchString === "" ||
       alertSearchString === undefined ||
@@ -273,18 +273,18 @@ export default function Alerts({
     .map((alert) => alert.status)
     .filter(onlyUnique);
 
-  function statusIsSeleected(alert: Alert): boolean {
+  function statusIsSeleected(alert: AlertDto): boolean {
     return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
   }
 
-  function assigneeIsSelected(alert: Alert): boolean {
+  function assigneeIsSelected(alert: AlertDto): boolean {
     return (
       selectedAssignees.includes(alert.assignee!) ||
       selectedAssignees.length === 0
     );
   }
 
-  function showDeletedAlert(alert: Alert): boolean {
+  function showDeletedAlert(alert: AlertDto): boolean {
     return (
       showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
     );

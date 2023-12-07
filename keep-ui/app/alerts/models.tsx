@@ -7,7 +7,7 @@ export enum Severity {
   Error = "error",
 }
 
-export interface Alert {
+export interface AlertDto {
   id: string;
   name: string;
   status: string;

@@ -11,7 +11,7 @@ import {
   SelectItem,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { Alert, AlertTableKeys } from "./models";
+import { AlertDto, AlertTableKeys } from "./models";
 import { useEffect, useState } from "react";
 import { AlertTransition } from "./alert-transition";
 import {
@@ -28,9 +28,9 @@ import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 
 interface Props {
-  alerts: Alert[];
+  alerts: AlertDto[];
   groupBy?: string;
-  groupedByAlerts?: { [key: string]: Alert[] };
+  groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
   mutate?: () => void;
@@ -60,13 +60,13 @@ export function AlertTable({
   currentUser,
   deletedCount = 0,
 }: Props) {
-  const [selectedAlertHistory, setSelectedAlertHistory] = useState<Alert[]>([]);
+  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [defaultPageSize, setDefaultPageSize] = useState(10);
 
   const closeModal = (): any => setIsOpen(false);
-  const openModal = (alert: Alert): any => {
+  const openModal = (alert: AlertDto): any => {
     setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
     setIsOpen(true);
   };

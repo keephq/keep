@@ -12,12 +12,12 @@ import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { Provider, ProviderMethod } from "app/providers/providers";
-import { Alert } from "./models";
+import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
 import { User as NextUser } from "next-auth";
 
 interface Props {
-  alert: Alert;
+  alert: AlertDto;
   canOpenHistory: boolean;
   openHistory: () => void;
   provider?: Provider;
