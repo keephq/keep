@@ -161,11 +161,18 @@ export default function Alerts({
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
         ) as Alert[];
+        newAlerts.forEach((alert) => {
+          if (typeof alert.lastReceived === "string")
+            alert.lastReceived = new Date(alert.lastReceived);
+        });
         setAlerts((prevAlerts) => {
-          const combinedAlerts = [...newAlerts, ...prevAlerts];
+          const combinedAlerts = [...prevAlerts, ...newAlerts];
           const uniqueObjectsMap = new Map();
           combinedAlerts.forEach((alert) => {
-            uniqueObjectsMap.set(alert.id, alert);
+            uniqueObjectsMap.set(
+              `${alert.id}-${alert.lastReceived.toISOString()}`,
+              alert
+            );
           });
           return Array.from(new Set(uniqueObjectsMap.values()));
         });
