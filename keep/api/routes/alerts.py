@@ -382,7 +382,7 @@ def handle_formatted_events(
             )
             session.add(alert)
             formatted_event.event_id = alert.id
-            alert_copy = alert.copy()
+            alert_event_copy = {**alert.event}
             alert_enrichments = get_enrichments_from_db(
                 tenant_id=tenant_id, fingerprints=[formatted_event.fingerprint]
             )
@@ -391,7 +391,7 @@ def handle_formatted_events(
                 for alert_enrichment in alert_enrichments:
                     for enrichment in alert_enrichment.enrichments:
                         # set the enrichment
-                        alert_copy.event[enrichment] = alert_enrichment.enrichments[
+                        alert_event_copy[enrichment] = alert_enrichment.enrichments[
                             enrichment
                         ]
             try:
@@ -399,7 +399,10 @@ def handle_formatted_events(
                     f"private-{tenant_id}",
                     "async-alerts",
                     base64.b64encode(
-                        zlib.compress(json.dumps([alert_copy.event]).encode(), level=9)
+                        zlib.compress(
+                            json.dumps([AlertDto(**alert_event_copy).dict()]).encode(),
+                            level=9,
+                        )
                     ).decode(),
                 )
             except Exception:
