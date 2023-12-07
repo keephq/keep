@@ -1,26 +1,17 @@
 import {
-  ArrowPathIcon,
-  BellAlertIcon,
-  MagnifyingGlassIcon,
-  ServerStackIcon,
-  UserPlusIcon,
-} from "@heroicons/react/24/outline";
-import {
-  MultiSelect,
-  MultiSelectItem,
-  Flex,
-  TextInput,
-  Button,
   Card,
-  Switch,
+  TabGroup,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
-import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
-import { AlertDto } from "./models";
+import { AlertDto, Presets } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
@@ -29,7 +20,8 @@ import zlib from "zlib";
 import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import AlertPagination from "./alert-pagination";
 
 export default function Alerts({
   accessToken,
@@ -46,30 +38,17 @@ export default function Alerts({
 }) {
   const apiUrl = getApiURL();
   const searchParams = useSearchParams()!;
-  const router = useRouter();
-  const pathname = usePathname();
-  const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
-    []
-  );
   const [showDeleted, setShowDeleted] = useState<boolean>(
     searchParams?.get("showDeleted") === "true"
   );
-  // TODO: we might want to bring this back
-  // const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
-  //   searchParams?.get("onlyDeleted") === "true"
-  // );
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [endIndex, setEndIndex] = useState<number>(0);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: AlertDto[];
   }>({});
-  const [alertSearchString, setAlertSearchString] = useState<string>(
-    searchParams?.get("searchQuery") || searchParams?.get("fingerprint") || ""
-  );
-  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
-  const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, isLoading, mutate } = useSWR<AlertDto[]>(
     `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
@@ -96,11 +75,12 @@ export default function Alerts({
     { revalidateOnFocus: false }
   );
 
-  const deletedCount = !showDeleted
-    ? aggregatedAlerts.filter((alert) =>
-        alert.deleted.includes(alert.lastReceived.toISOString())
-      ).length
-    : 0;
+  const presets: Presets = {
+    Feed: {},
+    Deleted: {},
+    "test preset": { severity: "critical", source: "kibana" },
+    "mine preset": { assignee: "keep" },
+  };
 
   useEffect(() => {
     const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
@@ -193,33 +173,8 @@ export default function Alerts({
   // Get a new searchParams string by merging the current
   // searchParams with a provided key/value pair
   // https://nextjs.org/docs/app/api-reference/functions/use-search-params
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams);
-      params.set(name, value);
-
-      return params.toString();
-    },
-    [searchParams]
-  );
 
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
-
-  const environments = aggregatedAlerts
-    .map((alert) => alert.environment.toLowerCase())
-    .filter(onlyUnique);
-
-  const assignees = aggregatedAlerts
-    .filter((alert) => !!alert.assignee)
-    .map((alert) => alert.assignee!.toLowerCase())
-    .filter(onlyUnique);
-
-  function environmentIsSeleected(alert: AlertDto): boolean {
-    return (
-      selectedEnvironments.includes(alert.environment.toLowerCase()) ||
-      selectedEnvironments.length === 0
-    );
-  }
 
   const onDelete = (
     fingerprint: string,
@@ -255,173 +210,76 @@ export default function Alerts({
     );
   };
 
-  function searchAlert(alert: AlertDto): boolean {
-    return (
-      alertSearchString === "" ||
-      alertSearchString === undefined ||
-      alertSearchString === null ||
-      alert.name.toLowerCase().includes(alertSearchString.toLowerCase()) ||
-      alert.description
-        ?.toLowerCase()
-        .includes(alertSearchString.toLowerCase()) ||
-      alert.fingerprint === alertSearchString ||
-      false
-    );
-  }
-
-  const statuses = aggregatedAlerts
-    .map((alert) => alert.status)
-    .filter(onlyUnique);
-
-  function statusIsSeleected(alert: AlertDto): boolean {
-    return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
-  }
-
-  function assigneeIsSelected(alert: AlertDto): boolean {
-    return (
-      selectedAssignees.includes(alert.assignee!) ||
-      selectedAssignees.length === 0
-    );
-  }
-
   function showDeletedAlert(alert: AlertDto): boolean {
     return (
       showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
     );
   }
 
+  const currentStateAlerts = aggregatedAlerts
+    .filter((alert) => showDeletedAlert(alert))
+    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
+    .slice(startIndex, endIndex);
+
+  const TabContent = () => {
+    return (
+      <>
+        <div className="flex w-full"></div>
+        <AlertTable
+          alerts={currentStateAlerts}
+          groupedByAlerts={groupedByAlerts}
+          groupBy="fingerprint"
+          workflows={workflows}
+          providers={providers?.installed_providers}
+          mutate={() => mutate(null, { optimisticData: [] })}
+          isAsyncLoading={isAsyncLoading}
+          onDelete={onDelete}
+          setAssignee={setAssignee}
+          users={users}
+          currentUser={user}
+        />
+      </>
+    );
+  };
+
+  function onIndexChange(index: number) {
+    const preset = Object.keys(presets)[index];
+    if (preset === "Deleted") {
+      setShowDeleted(true);
+    } else {
+      setShowDeleted(false);
+    }
+  }
+
+  const deletedCount = !showDeleted
+    ? aggregatedAlerts.filter((alert) =>
+        alert.deleted.includes(alert.lastReceived.toISOString())
+      ).length
+    : 0;
+
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
-      <Flex justifyContent="between" alignItems="center">
-        <div className="flex w-full">
-          <MultiSelect
-            onValueChange={setSelectedEnvironments}
-            placeholder="Select Environment..."
-            className="max-w-[280px]"
-            icon={ServerStackIcon}
-          >
-            {environments!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-          <MultiSelect
-            onValueChange={setSelectedStatus}
-            placeholder="Select Status..."
-            className="max-w-[280px] ml-2.5"
-            icon={BellAlertIcon}
-          >
-            {statuses!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-          <MultiSelect
-            onValueChange={setSelectedAssignees}
-            placeholder="Select Assignee..."
-            className="max-w-[280px] ml-2.5"
-            icon={UserPlusIcon}
-            disabled={assignees.length === 0}
-            title={assignees.length === 0 ? "No assignees" : ""}
-          >
-            {assignees!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-          <TextInput
-            className="max-w-[280px] ml-2.5"
-            icon={MagnifyingGlassIcon}
-            placeholder="Search Alert..."
-            value={alertSearchString}
-            onChange={(e) => {
-              setAlertSearchString(e.target.value);
-              router.push(
-                pathname +
-                  "?" +
-                  createQueryString("searchQuery", e.target.value)
-              );
-            }}
-          />
-          <div className="flex items-center space-x-3 ml-2.5">
-            <Switch
-              id="switch"
-              name="switch"
-              checked={showDeleted}
-              onChange={(value) => {
-                setShowDeleted(value);
-                router.push(
-                  pathname +
-                    "?" +
-                    createQueryString("showDeleted", value.toString())
-                );
-              }}
-              color={"orange"}
-            />
-            <label htmlFor="switch" className="text-sm text-gray-500">
-              Show Deleted
-            </label>
-          </div>
-          {/* <div
-            className={`flex items-center space-x-3 ml-2.5 ${
-              showDeleted ? "" : "hidden"
-            }`}
-          >
-            <Switch
-              id="switch"
-              name="switch"
-              checked={onlyDeleted}
-              onChange={(value) => {
-                setOnlyDeleted(value);
-                router.push(
-                  pathname +
-                    "?" +
-                    createQueryString("onlyDeleted", value.toString())
-                );
-              }}
-              color={"orange"}
-            />
-            <label htmlFor="switch" className="text-sm text-gray-500">
-              Only Deleted
-            </label>
-          </div> */}
-        </div>
-        <Button
-          icon={ArrowPathIcon}
-          color="orange"
-          size="xs"
-          disabled={reloadLoading}
-          loading={reloadLoading}
-          onClick={async () => {
-            setReloadLoading(true);
-            await mutate();
-            setReloadLoading(false);
-          }}
-          title="Refresh"
-        ></Button>
-      </Flex>
-      <AlertTable
-        alerts={aggregatedAlerts.filter(
-          (alert) =>
-            environmentIsSeleected(alert) &&
-            statusIsSeleected(alert) &&
-            searchAlert(alert) &&
-            showDeletedAlert(alert) &&
-            assigneeIsSelected(alert)
-        )}
-        groupedByAlerts={groupedByAlerts}
-        groupBy="fingerprint"
-        workflows={workflows}
-        providers={providers?.installed_providers}
-        mutate={() => mutate(null, { optimisticData: [] })}
-        isAsyncLoading={isAsyncLoading}
-        onDelete={onDelete}
-        setAssignee={setAssignee}
-        users={users}
-        currentUser={user}
+      <TabGroup onIndexChange={onIndexChange}>
+        <TabList className="mb-4" variant="line" color="orange">
+          {Object.keys(presets).map((preset, index) => (
+            <Tab key={preset} tabIndex={index}>
+              {preset}
+            </Tab>
+          ))}
+        </TabList>
+        <TabPanels>
+          {Object.keys(presets).map((preset) => (
+            <TabPanel key={preset}>
+              <TabContent />
+            </TabPanel>
+          ))}
+        </TabPanels>
+      </TabGroup>
+      <AlertPagination
+        alerts={currentStateAlerts}
+        mutate={mutate}
+        setEndIndex={setEndIndex}
+        setStartIndex={setStartIndex}
         deletedCount={deletedCount}
       />
     </Card>

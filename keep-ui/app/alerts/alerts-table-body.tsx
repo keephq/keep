@@ -314,18 +314,18 @@ export function AlertsTableBody({
                 colors={["emerald", "yellow", "orange", "rose"]}
                 markerValue={alert.fatigueMeter ?? 0}
                 tooltip={alert.fatigueMeter?.toString() ?? "0"}
-                className="w-48"
+                className="min-w-[192px]"
               />
             </TableCell>
             {/* <TableCell>List of workflows refs</TableCell> */}
-            <TableCell className="w-96">
+            <TableCell className="w-64 px-0">
               {extraIsEmpty ? null : (
                 <Accordion>
-                  <AccordionHeader className="w-96">
+                  <AccordionHeader className="w-64">
                     Extra Payload
                   </AccordionHeader>
                   <AccordionBody>
-                    <pre className="w-80 overflow-y-scroll">
+                    <pre className="w-64 overflow-y-scroll">
                       {JSON.stringify(extraPayloadNoKnownKeys, null, 2)}
                     </pre>
                   </AccordionBody>

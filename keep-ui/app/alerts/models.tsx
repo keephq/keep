@@ -29,6 +29,10 @@ export interface AlertDto {
   assignee?: string;
 }
 
+export interface Presets {
+  [key: string]: { [key: string]: string };
+}
+
 export const AlertKnownKeys = [
   "id",
   "name",
