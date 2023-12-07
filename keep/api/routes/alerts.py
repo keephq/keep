@@ -399,7 +399,10 @@ def handle_formatted_events(
                     f"private-{tenant_id}",
                     "async-alerts",
                     base64.b64encode(
-                        zlib.compress(json.dumps([alert_event_copy]).encode(), level=9)
+                        zlib.compress(
+                            json.dumps([AlertDto(**alert_event_copy).dict()]).encode(),
+                            level=9,
+                        )
                     ).decode(),
                 )
             except Exception:
