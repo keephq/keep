@@ -19,6 +19,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from keep.api.core.config import config
 from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
+from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
 
@@ -799,3 +800,35 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             return previous_execution
         else:
             return None
+
+
+def create_rule(tenant_id, name, timeframe, definition, definition_cel, created_by):
+    with Session(engine) as session:
+        rule = Rule(
+            tenant_id=tenant_id,
+            name=name,
+            timeframe=timeframe,
+            definition=definition,
+            definition_cel=definition_cel,
+            created_by=created_by,
+            creation_time=datetime.utcnow(),
+        )
+        session.add(rule)
+        session.commit()
+    return rule
+
+
+def get_rules(tenant_id):
+    with Session(engine) as session:
+        rules = session.exec(select(Rule).where(Rule.tenant_id == tenant_id)).all()
+    return rules
+
+
+def run_rule(tenant_id, rule):
+    with Session(engine) as session:
+        # get all the alerts that are not already in the rule
+        sql = rule.rule_definition.get("sql")
+        params = rule.rule_definition.get("params")
+        query = text(sql)
+        result = session.execute(query, params)
+        return result

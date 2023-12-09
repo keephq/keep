@@ -2,9 +2,10 @@
 import React, { useState } from "react";
 import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button} from "@tremor/react";
 import QueryBuilder, { RuleGroupType, RuleType, Field, formatQuery, defaultOperators, ActionElement} from 'react-querybuilder';
-import 'react-querybuilder/dist/query-builder.scss';
+// import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
+import './query-builder.scss';
 
 const getOperators = (fieldName: string) => {
   const field = fields.find(fld => fld.name === fieldName);
@@ -14,6 +15,7 @@ const getOperators = (fieldName: string) => {
       return [
         ...defaultOperators.filter(op =>
           [
+            '=',
             'contains',
             'beginsWith',
             'endsWith',
@@ -101,6 +103,9 @@ const CustomFieldSelector = (props) => {
 const CustomAddGroupAction = (props) => {
   const { label, handleOnClick } = props;
 
+  if(props.level > 0){
+    return null;
+  }
   return (
     <Button onClick={handleOnClick} color="orange">
       New Group
@@ -110,6 +115,10 @@ const CustomAddGroupAction = (props) => {
 
 const CustomAddRuleAction = (props) => {
   const { label, handleOnClick } = props;
+
+  if (props.level === 0) {
+    return null;
+  }
 
   return (
     <Button onClick={handleOnClick} color="orange">
@@ -125,23 +134,40 @@ export default function Page() {
   const [query, setQuery] = useState<RuleGroupType>({
     combinator: 'and',
     rules: [
-      { field: 'source', operator: 'beginsWith', value: ''},
-      { field: 'severity', operator: 'in', value: '' },
+      {
+        combinator: 'and', // or 'or' depending on your logic
+        rules: [
+          { field: 'source', operator: '=', value: 'sentry' }
+        ],
+      },
+      {
+        combinator: 'and', // or 'or' depending on your logic
+        rules: [
+          { field: 'source', operator: '=', value: 'grafana' },
+          { field: 'severity', operator: '=', value: 'critical' }
+        ],
+      }
     ],
   });
+  const [ruleName, setRuleName] = useState<string>('Rule Name');
+  const [timeframe, setTimeframe] = useState<number>(600);
+  const [timeframeUnit, setTimeframeUnit] = useState<string>('Seconds');
+
   const { data: session, status } = useSession();
 
   const testRule = () => {
     // Send the query to the server and handle the response here
-    const sqlQuery = formatQuery(query, );
+    const sqlQuery = formatQuery(query, 'parameterized_named');
+    const celQuery = formatQuery(query, 'cel');
     const apiUrl = getApiURL();
-    fetch("/your-server-endpoint", {
+    const timeframeInSeconds = timeframeUnit === 'Seconds' ? timeframe : timeframeUnit === 'Minutes' ? timeframe * 60 : timeframeUnit === 'Hours' ? timeframe * 3600 : timeframe * 86400;
+    fetch(`${apiUrl}/rules`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session!.accessToken}`,
       },
-      body: JSON.stringify({ sqlQuery }), // Adjust the payload structure as needed
+      body: JSON.stringify({ sqlQuery, ruleName: ruleName, celQuery, timeframeInSeconds}),
     })
       .then((response) => response.json())
       .then((data) => {
@@ -159,6 +185,21 @@ export default function Page() {
             <Title>Rule Builder</Title>
             <Subtitle>define the rules that will create your dynamic alerts</Subtitle>
             <Flex>
+                <TextInput className="mt-4 mr-2" placeholder="Rule Name"  defaultValue="Rule Name" onChange={(e) => setRuleName(e.target.value)} />
+                <Flex>
+                  <TextInput className="mt-4 mr-2" placeholder="Timeframe"  onChange={(e) => setRuleName(e.target.value)} />
+                  <Select
+                    className="mt-4 mr-2"
+                    defaultValue="Minutes"
+                    onValueChange={(value: string) => setTimeframeUnit(value)}
+                  >
+                    <SelectItem value="Seconds">Seconds</SelectItem>
+                    <SelectItem value="Minutes">Minutes</SelectItem>
+                    <SelectItem value="Hours">Hours</SelectItem>
+                    <SelectItem value="Days">Days</SelectItem>
+                  </Select>
+                </Flex>
+            </Flex>
               <QueryBuilder
               fields={fields} query={query} getOperators={getOperators} onQueryChange={q => setQuery(q)}
 
@@ -171,8 +212,8 @@ export default function Page() {
                 addRuleAction: CustomAddRuleAction,
               }}
               controlClassnames={{
-                queryBuilder: 'queryBuilder-branches bg-orange-600 !important rounded-lg shadow-xl',
-                ruleGroup: 'rounded-lg bg-orange-400 !important',
+                queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
+                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4 !important',
                 combinators: 'bg-orange-400 text-white rounded-l-full p-1 shadow',
                 addRule: 'bg-orange-400 text-white rounded-none p-1 shadow',
                 addGroup: 'bg-orange-400 text-white rounded-r-full p-1 shadow',
@@ -183,7 +224,6 @@ export default function Page() {
                 removeRule: 'p-1 ml-auto',
               }}
               />
-            </Flex>
             <Button className="mt-4 mr-2" color="orange" onClick={testRule}>
               Test Rule
             </Button>

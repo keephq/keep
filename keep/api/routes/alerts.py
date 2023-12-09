@@ -24,6 +24,7 @@ from keep.api.models.db.alert import Alert
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
+from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
@@ -335,6 +336,11 @@ def assign_alert(
     return {"status": "ok"}
 
 
+# this is super important function and does three things:
+# 1. adds the alerts to the DB
+# 2. runs workflows based on the alerts
+# 3. runs the rules engine
+# TODO: add appropriate logs, trace and all of that so we can track errors
 def handle_formatted_events(
     tenant_id,
     provider_type,
@@ -423,6 +429,10 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+
+    # Now we need to run the rules engine
+    rules_engine = RulesEngine(tenant_id=tenant_id)
+    rules_engine.run_rules(formatted_events)
 
 
 @router.post(
