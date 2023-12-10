@@ -20,9 +20,8 @@ import zlib from "zlib";
 import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
-import { useSearchParams } from "next/navigation";
 import AlertPagination from "./alert-pagination";
-import AlertFilters from "./alert-filters";
+import AlertFilters, { Option } from "./alert-filters";
 
 export default function Alerts({
   accessToken,
@@ -38,21 +37,13 @@ export default function Alerts({
   pusherDisabled: boolean;
 }) {
   const apiUrl = getApiURL();
-  const searchParams = useSearchParams()!;
-  const [showDeleted, setShowDeleted] = useState<boolean>(
-    searchParams?.get("showDeleted") === "true"
-  );
+  const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [startIndex, setStartIndex] = useState<number>(0);
   const [endIndex, setEndIndex] = useState<number>(0);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<
-    {
-      label: string;
-      value: string;
-    }[]
-  >([]);
+  const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: AlertDto[];
   }>({});
@@ -83,10 +74,10 @@ export default function Alerts({
   );
 
   const presets: Presets = {
-    Feed: {},
-    Deleted: {},
-    "test preset": { severity: "critical", source: "kibana" },
-    "mine preset": { assignee: "keep" },
+    Feed: [],
+    Deleted: [],
+    "Kibana Alerts": [{ label: "name=kibana", value: "name=kibana" }],
+    "Keep Assignee": [{ label: "assignee=keep", value: "assignee=keep" }],
   };
 
   useEffect(() => {
@@ -230,9 +221,9 @@ export default function Alerts({
     return selectedOptions.some((option) => {
       const optionSplit = option.value.split("=");
       const key = optionSplit[0];
-      const value = optionSplit[1];
+      const value = optionSplit[1]?.toLowerCase();
       if (typeof value === "string") {
-        return (alert as any)[key].includes(value);
+        return ((alert as any)[key] as string)?.toLowerCase().includes(value);
       }
       return false;
     });
@@ -271,6 +262,7 @@ export default function Alerts({
     } else {
       setShowDeleted(false);
     }
+    setSelectedOptions(presets[preset]);
   }
 
   const deletedCount = !showDeleted

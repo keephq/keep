@@ -1,3 +1,5 @@
+import { Option } from "./alert-filters";
+
 export enum Severity {
   Critical = "critical",
   High = "high",
@@ -30,7 +32,7 @@ export interface AlertDto {
 }
 
 export interface Presets {
-  [key: string]: { [key: string]: string };
+  [key: string]: Option[];
 }
 
 export const AlertKnownKeys = [
