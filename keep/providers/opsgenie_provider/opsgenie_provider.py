@@ -45,7 +45,7 @@ class OpsgenieProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.configuration = opsgenie_sdk.Configuration()
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
-        
+
     def validate_scopes(self):
         scopes = {}
         self.logger.info("Validating scopes")
@@ -56,11 +56,14 @@ class OpsgenieProvider(BaseProvider):
                 message="Simple alert showing context with name: John Doe",
             )
             scopes["opsgenie:create"] = True
-        except ApiException:
+        except ApiException as e:
             self.logger.exception("Failed to create OpsGenie alert")
-            scopes["opsgenie:create"] = False
+            scopes["opsgenie:create"] = str(e)
+        except Exception as e:
+            self.logger.exception("Failed to create OpsGenie alert")
+            scopes["opsgenie:create"] = str(e)
         return scopes
-            
+
     def validate_config(self):
         self.authentication_config = OpsgenieProviderAuthConfig(
             **self.config.authentication

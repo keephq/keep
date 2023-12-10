@@ -22,13 +22,20 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: bool = False  # Whether the alert is deleted or not
+    deleted: list[str] = []  # Whether the alert is deleted or not
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
         if fingerprint is None:
             return values.get("name", "")
         return fingerprint
+
+    @validator("deleted", pre=True, always=True)
+    def validate_old_deleted(cls, deleted, values):
+        """This is a temporary validator to handle the old deleted field"""
+        if isinstance(deleted, bool):
+            return []
+        return deleted
 
     class Config:
         extra = Extra.allow
@@ -60,7 +67,8 @@ class AlertDto(BaseModel):
 
 
 class DeleteRequestBody(BaseModel):
-    fingerprint: str | None = None
+    fingerprint: str
+    lastReceived: str
     restore: bool = False
 
 
