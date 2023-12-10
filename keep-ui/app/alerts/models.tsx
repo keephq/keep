@@ -31,8 +31,9 @@ export interface AlertDto {
   assignee?: string;
 }
 
-export interface Presets {
-  [key: string]: Option[];
+export interface Preset {
+  name: string;
+  options: Option[];
 }
 
 export const AlertKnownKeys = [

@@ -9,7 +9,7 @@ import {
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
 import { AlertTable } from "./alert-table";
-import { AlertDto, Presets } from "./models";
+import { AlertDto, Preset } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useEffect, useState } from "react";
 import Loading from "app/loading";
@@ -22,6 +22,11 @@ import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
 import AlertPagination from "./alert-pagination";
 import AlertFilters, { Option } from "./alert-filters";
+
+const defaultPresets: Preset[] = [
+  { name: "Feed", options: [] },
+  { name: "Deleted", options: [] },
+];
 
 export default function Alerts({
   accessToken,
@@ -72,13 +77,14 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
-
-  const presets: Presets = {
-    Feed: [],
-    Deleted: [],
-    "Kibana Alerts": [{ label: "name=kibana", value: "name=kibana" }],
-    "Keep Assignee": [{ label: "assignee=keep", value: "assignee=keep" }],
-  };
+  const { data: presets } = useSWR<Preset[]>(
+    `${apiUrl}/preset`,
+    async (url) => {
+      const data = await fetcher(url, accessToken);
+      return [...defaultPresets, ...data];
+    },
+    { revalidateOnFocus: false }
+  );
 
   useEffect(() => {
     const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
@@ -256,13 +262,13 @@ export default function Alerts({
   };
 
   function onIndexChange(index: number) {
-    const preset = Object.keys(presets)[index];
-    if (preset === "Deleted") {
+    const preset = presets[index];
+    if (preset.name === "Deleted") {
       setShowDeleted(true);
     } else {
       setShowDeleted(false);
     }
-    setSelectedOptions(presets[preset]);
+    setSelectedOptions(preset.options);
   }
 
   const deletedCount = !showDeleted
@@ -275,9 +281,9 @@ export default function Alerts({
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       <TabGroup onIndexChange={onIndexChange}>
         <TabList className="mb-4" variant="line" color="orange">
-          {Object.keys(presets).map((preset, index) => (
-            <Tab key={preset} tabIndex={index}>
-              {preset}
+          {presets.map((preset, index) => (
+            <Tab key={preset.name} tabIndex={index}>
+              {preset.name}
             </Tab>
           ))}
         </TabList>
@@ -287,8 +293,8 @@ export default function Alerts({
           setSelectedOptions={setSelectedOptions}
         />
         <TabPanels>
-          {Object.keys(presets).map((preset) => (
-            <TabPanel key={preset}>
+          {presets.map((preset) => (
+            <TabPanel key={preset.name}>
               <TabContent />
             </TabPanel>
           ))}
