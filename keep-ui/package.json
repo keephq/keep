@@ -312,7 +312,7 @@
     "react-modal": "^3.16.1",
     "react-resize-detector": "^8.1.0",
     "react-router": "^6.11.1",
-    "react-select": "^5.7.3",
+    "react-select": "^5.8.0",
     "react-sliding-side-panel": "^2.0.3",
     "react-smooth": "^2.0.2",
     "react-toastify": "^9.1.3",

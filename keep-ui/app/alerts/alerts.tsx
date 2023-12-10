@@ -22,6 +22,7 @@ import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
 import { useSearchParams } from "next/navigation";
 import AlertPagination from "./alert-pagination";
+import AlertFilters from "./alert-filters";
 
 export default function Alerts({
   accessToken,
@@ -46,6 +47,12 @@ export default function Alerts({
   const [endIndex, setEndIndex] = useState<number>(0);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<
+    {
+      label: string;
+      value: string;
+    }[]
+  >([]);
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: AlertDto[];
   }>({});
@@ -216,8 +223,23 @@ export default function Alerts({
     );
   }
 
+  function filterAlerts(alert: AlertDto): boolean {
+    if (selectedOptions.length === 0) {
+      return true;
+    }
+    return selectedOptions.some((option) => {
+      const optionSplit = option.value.split("=");
+      const key = optionSplit[0];
+      const value = optionSplit[1];
+      if (typeof value === "string") {
+        return (alert as any)[key].includes(value);
+      }
+      return false;
+    });
+  }
+
   const currentStateAlerts = aggregatedAlerts
-    .filter((alert) => showDeletedAlert(alert))
+    .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
     .slice(startIndex, endIndex);
 
@@ -267,6 +289,11 @@ export default function Alerts({
             </Tab>
           ))}
         </TabList>
+        <AlertFilters
+          alerts={currentStateAlerts}
+          selectedOptions={selectedOptions}
+          setSelectedOptions={setSelectedOptions}
+        />
         <TabPanels>
           {Object.keys(presets).map((preset) => (
             <TabPanel key={preset}>
