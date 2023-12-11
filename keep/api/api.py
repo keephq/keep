@@ -34,6 +34,7 @@ from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     alerts,
     healthcheck,
+    preset,
     providers,
     pusher,
     settings,
@@ -151,6 +152,7 @@ def get_app(
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
     app.include_router(pusher.router, prefix="/pusher", tags=["pusher"])
     app.include_router(status.router, prefix="/status", tags=["status"])
+    app.include_router(preset.router, prefix="/preset", tags=["preset"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")

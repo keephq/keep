@@ -1,26 +1,17 @@
 import {
-  ArrowPathIcon,
-  BellAlertIcon,
-  MagnifyingGlassIcon,
-  ServerStackIcon,
-  UserPlusIcon,
-} from "@heroicons/react/24/outline";
-import {
-  MultiSelect,
-  MultiSelectItem,
-  Flex,
-  TextInput,
-  Button,
   Card,
-  Switch,
+  TabGroup,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
-import { onlyUnique } from "utils/helpers";
 import { AlertTable } from "./alert-table";
-import { Alert } from "./models";
+import { AlertDto, Preset } from "./models";
 import { getApiURL } from "utils/apiUrl";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Loading from "app/loading";
 import Pusher from "pusher-js";
 import { Workflow } from "app/workflows/models";
@@ -29,7 +20,15 @@ import zlib from "zlib";
 import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import AlertPagination from "./alert-pagination";
+import AlertPresets, { Option } from "./alert-presets";
+import { AlertHistory } from "./alert-history";
+
+const defaultPresets: Preset[] = [
+  { name: "Feed", options: [] },
+  { name: "Deleted", options: [] },
+];
+const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
 
 export default function Alerts({
   accessToken,
@@ -45,33 +44,32 @@ export default function Alerts({
   pusherDisabled: boolean;
 }) {
   const apiUrl = getApiURL();
-  const searchParams = useSearchParams()!;
-  const router = useRouter();
-  const pathname = usePathname();
-  const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>(
+  const [showDeleted, setShowDeleted] = useState<boolean>(false);
+  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [endIndex, setEndIndex] = useState<number>(0);
+  const [alerts, setAlerts] = useState<AlertDto[]>([]);
+  const [tabIndex, setTabIndex] = useState<number>(0);
+  const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
+  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
     []
   );
-  const [showDeleted, setShowDeleted] = useState<boolean>(
-    searchParams?.get("showDeleted") === "true"
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeModal = (): any => setIsOpen(false);
+  const openModal = (alert: AlertDto): any => {
+    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
+    setIsOpen(true);
+  };
+  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
+    defaultPresets[0] // Feed
   );
-  // TODO: we might want to bring this back
-  // const [onlyDeleted, setOnlyDeleted] = useState<boolean>(
-  //   searchParams?.get("onlyDeleted") === "true"
-  // );
-  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [aggregatedAlerts, setAggregatedAlerts] = useState<Alert[]>([]);
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
-    [key: string]: Alert[];
+    [key: string]: AlertDto[];
   }>({});
-  const [alertSearchString, setAlertSearchString] = useState<string>(
-    searchParams?.get("searchQuery") || searchParams?.get("fingerprint") || ""
-  );
-  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
-  const [reloadLoading, setReloadLoading] = useState<boolean>(false);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
-  const { data, isLoading, mutate } = useSWR<Alert[]>(
+  const { data, isLoading, mutate } = useSWR<AlertDto[]>(
     `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
     (url) => fetcher(url, accessToken),
     {
@@ -95,16 +93,17 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
-
-  const deletedCount = !showDeleted
-    ? aggregatedAlerts.filter((alert) =>
-        alert.deleted.includes(alert.lastReceived.toISOString())
-      ).length
-    : 0;
+  const { data: presets, mutate: presetsMutate } = useSWR<Preset[]>(
+    `${apiUrl}/preset`,
+    async (url) => {
+      const data = await fetcher(url, accessToken);
+      return [...defaultPresets, ...data];
+    },
+    { revalidateOnFocus: false }
+  );
 
   useEffect(() => {
-    const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
-    let groupedByAlerts = {} as { [key: string]: Alert[] };
+    let groupedByAlerts = {} as { [key: string]: AlertDto[] };
 
     // Fix the date format (it is received as text)
     alerts.forEach((alert) => {
@@ -160,7 +159,7 @@ export default function Alerts({
         );
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
-        ) as Alert[];
+        ) as AlertDto[];
         newAlerts.forEach((alert) => {
           if (typeof alert.lastReceived === "string")
             alert.lastReceived = new Date(alert.lastReceived);
@@ -193,33 +192,8 @@ export default function Alerts({
   // Get a new searchParams string by merging the current
   // searchParams with a provided key/value pair
   // https://nextjs.org/docs/app/api-reference/functions/use-search-params
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams);
-      params.set(name, value);
-
-      return params.toString();
-    },
-    [searchParams]
-  );
 
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
-
-  const environments = aggregatedAlerts
-    .map((alert) => alert.environment.toLowerCase())
-    .filter(onlyUnique);
-
-  const assignees = aggregatedAlerts
-    .filter((alert) => !!alert.assignee)
-    .map((alert) => alert.assignee!.toLowerCase())
-    .filter(onlyUnique);
-
-  function environmentIsSeleected(alert: Alert): boolean {
-    return (
-      selectedEnvironments.includes(alert.environment.toLowerCase()) ||
-      selectedEnvironments.length === 0
-    );
-  }
 
   const onDelete = (
     fingerprint: string,
@@ -255,175 +229,117 @@ export default function Alerts({
     );
   };
 
-  function searchAlert(alert: Alert): boolean {
-    return (
-      alertSearchString === "" ||
-      alertSearchString === undefined ||
-      alertSearchString === null ||
-      alert.name.toLowerCase().includes(alertSearchString.toLowerCase()) ||
-      alert.description
-        ?.toLowerCase()
-        .includes(alertSearchString.toLowerCase()) ||
-      alert.fingerprint === alertSearchString ||
-      false
-    );
-  }
-
-  const statuses = aggregatedAlerts
-    .map((alert) => alert.status)
-    .filter(onlyUnique);
-
-  function statusIsSeleected(alert: Alert): boolean {
-    return selectedStatus.includes(alert.status) || selectedStatus.length === 0;
-  }
-
-  function assigneeIsSelected(alert: Alert): boolean {
-    return (
-      selectedAssignees.includes(alert.assignee!) ||
-      selectedAssignees.length === 0
-    );
-  }
-
-  function showDeletedAlert(alert: Alert): boolean {
+  function showDeletedAlert(alert: AlertDto): boolean {
     return (
       showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
     );
   }
 
+  function filterAlerts(alert: AlertDto): boolean {
+    if (selectedOptions.length === 0) {
+      return true;
+    }
+    return selectedOptions.some((option) => {
+      const optionSplit = option.value.split("=");
+      const key = optionSplit[0];
+      const value = optionSplit[1]?.toLowerCase();
+      if (typeof value === "string") {
+        return ((alert as any)[key] as string)?.toLowerCase().includes(value);
+      }
+      return false;
+    });
+  }
+
+  const currentStateAlerts = aggregatedAlerts
+    .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
+    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
+    .slice(startIndex, endIndex);
+
+  const TabContent = () => {
+    return (
+      <>
+        <div className="flex w-full"></div>
+        <AlertTable
+          alerts={currentStateAlerts}
+          groupedByAlerts={groupedByAlerts}
+          groupBy="fingerprint"
+          workflows={workflows}
+          providers={providers?.installed_providers}
+          mutate={() => mutate(null, { optimisticData: [] })}
+          isAsyncLoading={isAsyncLoading}
+          onDelete={onDelete}
+          setAssignee={setAssignee}
+          users={users}
+          currentUser={user}
+          openModal={openModal}
+        />
+      </>
+    );
+  };
+
+  function onIndexChange(index: number) {
+    setTabIndex(index);
+    const preset = presets![index];
+    if (preset.name === "Deleted") {
+      setShowDeleted(true);
+    } else {
+      setShowDeleted(false);
+    }
+    setSelectedOptions(preset.options);
+    setSelectedPreset(preset);
+  }
+
+  const deletedCount = !showDeleted
+    ? aggregatedAlerts.filter((alert) =>
+        alert.deleted.includes(alert.lastReceived.toISOString())
+      ).length
+    : 0;
+
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
-      <Flex justifyContent="between" alignItems="center">
-        <div className="flex w-full">
-          <MultiSelect
-            onValueChange={setSelectedEnvironments}
-            placeholder="Select Environment..."
-            className="max-w-[280px]"
-            icon={ServerStackIcon}
-          >
-            {environments!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
+    <>
+      <Card className="mt-10 p-4 md:p-10 mx-auto">
+        <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
+          <TabList className="mb-4" variant="line" color="orange">
+            {presets!.map((preset, index) => (
+              <Tab key={preset.name} tabIndex={index}>
+                {preset.name}
+              </Tab>
             ))}
-          </MultiSelect>
-          <MultiSelect
-            onValueChange={setSelectedStatus}
-            placeholder="Select Status..."
-            className="max-w-[280px] ml-2.5"
-            icon={BellAlertIcon}
-          >
-            {statuses!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-          <MultiSelect
-            onValueChange={setSelectedAssignees}
-            placeholder="Select Assignee..."
-            className="max-w-[280px] ml-2.5"
-            icon={UserPlusIcon}
-            disabled={assignees.length === 0}
-            title={assignees.length === 0 ? "No assignees" : ""}
-          >
-            {assignees!.map((item) => (
-              <MultiSelectItem key={item} value={item}>
-                {item}
-              </MultiSelectItem>
-            ))}
-          </MultiSelect>
-          <TextInput
-            className="max-w-[280px] ml-2.5"
-            icon={MagnifyingGlassIcon}
-            placeholder="Search Alert..."
-            value={alertSearchString}
-            onChange={(e) => {
-              setAlertSearchString(e.target.value);
-              router.push(
-                pathname +
-                  "?" +
-                  createQueryString("searchQuery", e.target.value)
-              );
+          </TabList>
+          <AlertPresets
+            preset={selectedPreset}
+            alerts={currentStateAlerts}
+            selectedOptions={selectedOptions}
+            setSelectedOptions={setSelectedOptions}
+            accessToken={accessToken}
+            presetsMutator={() => {
+              onIndexChange(0);
+              presetsMutate();
             }}
           />
-          <div className="flex items-center space-x-3 ml-2.5">
-            <Switch
-              id="switch"
-              name="switch"
-              checked={showDeleted}
-              onChange={(value) => {
-                setShowDeleted(value);
-                router.push(
-                  pathname +
-                    "?" +
-                    createQueryString("showDeleted", value.toString())
-                );
-              }}
-              color={"orange"}
-            />
-            <label htmlFor="switch" className="text-sm text-gray-500">
-              Show Deleted
-            </label>
-          </div>
-          {/* <div
-            className={`flex items-center space-x-3 ml-2.5 ${
-              showDeleted ? "" : "hidden"
-            }`}
-          >
-            <Switch
-              id="switch"
-              name="switch"
-              checked={onlyDeleted}
-              onChange={(value) => {
-                setOnlyDeleted(value);
-                router.push(
-                  pathname +
-                    "?" +
-                    createQueryString("onlyDeleted", value.toString())
-                );
-              }}
-              color={"orange"}
-            />
-            <label htmlFor="switch" className="text-sm text-gray-500">
-              Only Deleted
-            </label>
-          </div> */}
-        </div>
-        <Button
-          icon={ArrowPathIcon}
-          color="orange"
-          size="xs"
-          disabled={reloadLoading}
-          loading={reloadLoading}
-          onClick={async () => {
-            setReloadLoading(true);
-            await mutate();
-            setReloadLoading(false);
-          }}
-          title="Refresh"
-        ></Button>
-      </Flex>
-      <AlertTable
-        alerts={aggregatedAlerts.filter(
-          (alert) =>
-            environmentIsSeleected(alert) &&
-            statusIsSeleected(alert) &&
-            searchAlert(alert) &&
-            showDeletedAlert(alert) &&
-            assigneeIsSelected(alert)
-        )}
-        groupedByAlerts={groupedByAlerts}
-        groupBy="fingerprint"
-        workflows={workflows}
-        providers={providers?.installed_providers}
-        mutate={() => mutate(null, { optimisticData: [] })}
-        isAsyncLoading={isAsyncLoading}
-        onDelete={onDelete}
-        setAssignee={setAssignee}
+          <TabPanels>
+            {presets!.map((preset) => (
+              <TabPanel key={preset.name}>
+                <TabContent />
+              </TabPanel>
+            ))}
+          </TabPanels>
+        </TabGroup>
+        <AlertPagination
+          alerts={currentStateAlerts}
+          mutate={mutate}
+          setEndIndex={setEndIndex}
+          setStartIndex={setStartIndex}
+          deletedCount={deletedCount}
+        />
+      </Card>
+      <AlertHistory
+        isOpen={isOpen}
+        closeModal={closeModal}
+        data={selectedAlertHistory}
         users={users}
         currentUser={user}
-        deletedCount={deletedCount}
       />
-    </Card>
+    </>
   );
 }

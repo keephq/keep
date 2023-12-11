@@ -1,6 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
-import { Alert } from "./models";
+import { Fragment, useEffect, useState } from "react";
+import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import {
   Button,
@@ -12,26 +12,24 @@ import {
 } from "@tremor/react";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
+import Loading from "app/loading";
+import AlertPagination from "./alert-pagination";
 
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
-  data: Alert[];
+  data: AlertDto[];
   users?: User[];
   currentUser: NextUser;
 }
 
-export function AlertTransition({
+export function AlertHistory({
   isOpen,
   closeModal,
   data,
   users = [],
   currentUser,
 }: Props) {
-  if (!data) {
-    return <></>;
-  }
-  const categoriesByStatus: string[] = [];
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
@@ -49,37 +47,57 @@ export function AlertTransition({
     // Less than 24 hours (in milliseconds)
     timeUnit = "Hours";
   }
-  const rawChartData = data
-    .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
-    .reduce((prev, curr) => {
-      const date = curr.lastReceived;
-      let dateKey: string;
-      if (timeUnit === "Minutes") {
-        dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-      } else if (timeUnit === "Hours") {
-        dateKey = `${date.getHours()}:${date.getMinutes()}`;
-      } else {
-        dateKey = `${date.getDate()}/${
-          date.getMonth() + 1
-        }/${date.getFullYear()}`;
-      }
-      if (!prev[dateKey]) {
-        prev[dateKey] = {
-          [curr.status]: 1,
-        };
-      } else {
-        prev[dateKey][curr.status]
-          ? (prev[dateKey][curr.status] += 1)
-          : (prev[dateKey][curr.status] = 1);
-      }
-      if (categoriesByStatus.includes(curr.status) === false) {
-        categoriesByStatus.push(curr.status);
-      }
-      return prev;
-    }, {} as { [date: string]: any });
-  const chartData = Object.keys(rawChartData).map((key) => {
-    return { ...rawChartData[key], date: key };
-  });
+
+  const [chartData, setChartData] = useState<any[] | null>(null);
+  const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [endIndex, setEndIndex] = useState<number>(0);
+
+  useEffect(() => {
+    const categoriesByStatus: string[] = [];
+    const rawChartData = data
+      .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
+      .reduce((prev, curr) => {
+        const date = curr.lastReceived;
+        let dateKey: string;
+        if (timeUnit === "Minutes") {
+          dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+        } else if (timeUnit === "Hours") {
+          dateKey = `${date.getHours()}:${date.getMinutes()}`;
+        } else {
+          dateKey = `${date.getDate()}/${
+            date.getMonth() + 1
+          }/${date.getFullYear()}`;
+        }
+        if (!prev[dateKey]) {
+          prev[dateKey] = {
+            [curr.status]: 1,
+          };
+        } else {
+          prev[dateKey][curr.status]
+            ? (prev[dateKey][curr.status] += 1)
+            : (prev[dateKey][curr.status] = 1);
+        }
+        if (categoriesByStatus.includes(curr.status) === false) {
+          categoriesByStatus.push(curr.status);
+        }
+        return prev;
+      }, {} as { [date: string]: any });
+
+    setCategoriesByStatus(categoriesByStatus);
+    setChartData(
+      Object.keys(rawChartData).map((key) => {
+        return { ...rawChartData[key], date: key };
+      })
+    );
+  }, [data, timeUnit]);
+
+  const currentStateAlerts = data
+    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
+    .slice(startIndex, endIndex);
+  const deletedCount = data.filter((alert) =>
+    alert.deleted.includes(alert.lastReceived.toISOString())
+  ).length;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -129,15 +147,29 @@ export function AlertTransition({
                   </Button>
                 </Flex>
                 <Divider />
-                <LineChart
-                  className="mt-6 max-h-56"
-                  data={chartData}
-                  index="date"
-                  categories={categoriesByStatus}
-                  yAxisWidth={40}
-                />
+                {chartData === null ? (
+                  <Loading />
+                ) : (
+                  <LineChart
+                    className="mt-6 max-h-56"
+                    data={chartData!}
+                    index="date"
+                    categories={categoriesByStatus}
+                    yAxisWidth={40}
+                  />
+                )}
                 <Divider />
-                <AlertTable alerts={data} users={users} currentUser={currentUser} />
+                <AlertTable
+                  alerts={currentStateAlerts}
+                  users={users}
+                  currentUser={currentUser}
+                />
+                <AlertPagination
+                  alerts={data}
+                  setEndIndex={setEndIndex}
+                  setStartIndex={setStartIndex}
+                  deletedCount={deletedCount}
+                />
               </Dialog.Panel>
             </Transition.Child>
           </div>
