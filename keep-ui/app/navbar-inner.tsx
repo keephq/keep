@@ -2,13 +2,12 @@ import { Disclosure, Menu, Transition } from "@headlessui/react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import {
   Bars3Icon,
   BellAlertIcon,
   BriefcaseIcon,
   DocumentTextIcon,
-  EnvelopeOpenIcon,
   PuzzlePieceIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -19,6 +18,7 @@ import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
 import { User } from "next-auth";
 import { InternalConfig } from "types/internal-config";
+import { NameInitialsAvatar } from "react-name-initials-avatar";
 
 const navigation = [
   { name: "Providers", href: "/providers", icon: PuzzlePieceIcon },
@@ -82,6 +82,7 @@ const GnipLogo = (props: any) => (
 export default function NavbarInner({ user }: { user?: User }) {
   const pathname = usePathname();
   const { data: configData } = useSWR<InternalConfig>("/api/config", fetcher);
+  const [imageError, setImageError] = useState(false);
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE;
@@ -166,7 +167,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                   <Menu as="div" className="relative ml-3">
                     <Menu.Button className="flex rounded-full bg-white text-sm hover:ring-orange-500 hover:ring-offset-2 hover:ring-2">
                       <span className="sr-only">Open user menu</span>
-                      {
+                      {!imageError ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           className="h-8 w-8 rounded-full"
@@ -178,9 +179,18 @@ export default function NavbarInner({ user }: { user?: User }) {
                           }
                           height={32}
                           width={32}
+                          onError={() => setImageError(true)}
                           alt={`${user?.name ?? user?.email} profile picture`}
                         />
-                      }
+                      ) : (
+                        <NameInitialsAvatar
+                          name={user?.name ?? user?.email}
+                          bgColor="orange"
+                          borderWidth="1px"
+                          textColor="white"
+                          size="32px"
+                        />
+                      )}
                     </Menu.Button>
                     <Transition
                       as={Fragment}
@@ -258,7 +268,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                 <>
                   <div className="flex items-center px-4">
                     <div className="flex-shrink-0">
-                      {
+                      {!imageError ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           className="h-8 w-8 rounded-full"
@@ -270,9 +280,18 @@ export default function NavbarInner({ user }: { user?: User }) {
                           }
                           height={32}
                           width={32}
+                          onError={() => setImageError(true)}
                           alt={`${user?.name ?? user?.email} profile picture`}
                         />
-                      }
+                      ) : (
+                        <NameInitialsAvatar
+                          name={user?.name ?? user?.email}
+                          bgColor="orange"
+                          borderWidth="1px"
+                          textColor="white"
+                          size="32px"
+                        />
+                      )}
                     </div>
                     <div className="ml-3">
                       <div className="text-base font-medium text-gray-800">

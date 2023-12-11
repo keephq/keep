@@ -267,6 +267,12 @@ def verify_token_or_key_single_tenant(
     authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> str:
+    # if we don't want to use authentication, return the single tenant id
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        == AuthenticationType.NO_AUTH.value
+    ):
+        return SINGLE_TENANT_UUID
     # Attempt to verify API Key first
     if api_key:
         try:

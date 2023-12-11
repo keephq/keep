@@ -18,6 +18,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 # This import is required to create the tables
 from keep.api.core.config import config
 from keep.api.models.db.alert import *
+from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
