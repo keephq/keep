@@ -30,6 +30,10 @@ export function AlertHistory({
   users = [],
   currentUser,
 }: Props) {
+  if (!data) {
+    return <></>;
+  }
+
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
