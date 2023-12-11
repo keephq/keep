@@ -22,23 +22,21 @@ export default function AlertPagination({
   const [currentPage, setCurrentPage] = useState(1);
   const [defaultPageSize, setDefaultPageSize] = useState(10);
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
+  const totalPages = Math.ceil(alerts.length / defaultPageSize);
+  const startItem = (currentPage - 1) * defaultPageSize + 1;
+  const endItem = Math.min(currentPage * defaultPageSize, alerts.length);
+  const startIndex = (currentPage - 1) * defaultPageSize;
 
   useEffect(() => {
     setCurrentPage(1);
   }, [alerts]);
 
-  if (!defaultPageSize) return null;
-
-  const totalPages = Math.ceil(alerts.length / defaultPageSize);
-  const startItem = (currentPage - 1) * defaultPageSize + 1;
-  const endItem = Math.min(currentPage * defaultPageSize, alerts.length);
-
-  const startIndex = (currentPage - 1) * defaultPageSize;
-
-  if (startIndex !== 0) {
+  useEffect(() => {
     setStartIndex(startIndex);
     setEndIndex(startIndex + defaultPageSize);
-  }
+  }, [startIndex, defaultPageSize, setStartIndex, setEndIndex]);
+
+  if (!defaultPageSize) return null;
 
   return (
     <div className="flex justify-between items-center">

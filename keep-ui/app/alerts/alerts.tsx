@@ -262,15 +262,14 @@ export default function Alerts({
 
   const currentStateAlerts = aggregatedAlerts
     .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
-    .slice(startIndex, endIndex);
+    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   const TabContent = () => {
     return (
       <>
         <div className="flex w-full"></div>
         <AlertTable
-          alerts={currentStateAlerts}
+          alerts={currentStateAlerts.slice(startIndex, endIndex)}
           groupedByAlerts={groupedByAlerts}
           groupBy="fingerprint"
           workflows={workflows}
@@ -336,7 +335,7 @@ export default function Alerts({
           </TabPanels>
         </TabGroup>
         <AlertPagination
-          alerts={currentStateAlerts}
+          alerts={aggregatedAlerts}
           mutate={mutate}
           setEndIndex={setEndIndex}
           setStartIndex={setStartIndex}
