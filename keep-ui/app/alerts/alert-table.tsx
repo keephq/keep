@@ -8,8 +8,6 @@ import {
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto, AlertTableKeys } from "./models";
-import { useState } from "react";
-import { AlertTransition } from "./alert-transition";
 import {
   CircleStackIcon,
   QuestionMarkCircleIcon,
@@ -34,6 +32,7 @@ interface Props {
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   users?: User[];
   currentUser: NextUser;
+  openModal?: (alert: AlertDto) => void;
 }
 
 export function AlertTable({
@@ -48,18 +47,8 @@ export function AlertTable({
   setAssignee,
   users = [],
   currentUser,
+  openModal,
 }: Props) {
-  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
-    []
-  );
-  const [isOpen, setIsOpen] = useState(false);
-
-  const closeModal = (): any => setIsOpen(false);
-  const openModal = (alert: AlertDto): any => {
-    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
-    setIsOpen(true);
-  };
-
   return (
     <>
       {isAsyncLoading && (
@@ -108,13 +97,6 @@ export function AlertTable({
           currentUser={currentUser}
         />
       </Table>
-      <AlertTransition
-        isOpen={isOpen}
-        closeModal={closeModal}
-        data={selectedAlertHistory}
-        users={users}
-        currentUser={currentUser}
-      />
     </>
   );
 }

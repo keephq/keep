@@ -22,11 +22,13 @@ import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
 import AlertPagination from "./alert-pagination";
 import AlertPresets, { Option } from "./alert-presets";
+import { AlertHistory } from "./alert-history";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
   { name: "Deleted", options: [] },
 ];
+const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
 
 export default function Alerts({
   accessToken,
@@ -50,6 +52,16 @@ export default function Alerts({
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
+  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
+    []
+  );
+  const [isOpen, setIsOpen] = useState(false);
+
+  const closeModal = (): any => setIsOpen(false);
+  const openModal = (alert: AlertDto): any => {
+    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
+    setIsOpen(true);
+  };
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
   );
@@ -91,7 +103,6 @@ export default function Alerts({
   );
 
   useEffect(() => {
-    const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
     let groupedByAlerts = {} as { [key: string]: AlertDto[] };
 
     // Fix the date format (it is received as text)
@@ -260,6 +271,7 @@ export default function Alerts({
           setAssignee={setAssignee}
           users={users}
           currentUser={user}
+          openModal={openModal}
         />
       </>
     );
@@ -284,41 +296,50 @@ export default function Alerts({
     : 0;
 
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
-      <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
-        <TabList className="mb-4" variant="line" color="orange">
-          {presets!.map((preset, index) => (
-            <Tab key={preset.name} tabIndex={index}>
-              {preset.name}
-            </Tab>
-          ))}
-        </TabList>
-        <AlertPresets
-          preset={selectedPreset}
+    <>
+      <Card className="mt-10 p-4 md:p-10 mx-auto">
+        <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
+          <TabList className="mb-4" variant="line" color="orange">
+            {presets!.map((preset, index) => (
+              <Tab key={preset.name} tabIndex={index}>
+                {preset.name}
+              </Tab>
+            ))}
+          </TabList>
+          <AlertPresets
+            preset={selectedPreset}
+            alerts={currentStateAlerts}
+            selectedOptions={selectedOptions}
+            setSelectedOptions={setSelectedOptions}
+            accessToken={accessToken}
+            presetsMutator={() => {
+              onIndexChange(0);
+              presetsMutate();
+            }}
+          />
+          <TabPanels>
+            {presets!.map((preset) => (
+              <TabPanel key={preset.name}>
+                <TabContent />
+              </TabPanel>
+            ))}
+          </TabPanels>
+        </TabGroup>
+        <AlertPagination
           alerts={currentStateAlerts}
-          selectedOptions={selectedOptions}
-          setSelectedOptions={setSelectedOptions}
-          accessToken={accessToken}
-          presetsMutator={() => {
-            onIndexChange(0);
-            presetsMutate();
-          }}
+          mutate={mutate}
+          setEndIndex={setEndIndex}
+          setStartIndex={setStartIndex}
+          deletedCount={deletedCount}
         />
-        <TabPanels>
-          {presets!.map((preset) => (
-            <TabPanel key={preset.name}>
-              <TabContent />
-            </TabPanel>
-          ))}
-        </TabPanels>
-      </TabGroup>
-      <AlertPagination
-        alerts={currentStateAlerts}
-        mutate={mutate}
-        setEndIndex={setEndIndex}
-        setStartIndex={setStartIndex}
-        deletedCount={deletedCount}
+      </Card>
+      <AlertHistory
+        isOpen={isOpen}
+        closeModal={closeModal}
+        data={selectedAlertHistory}
+        users={users}
+        currentUser={user}
       />
-    </Card>
+    </>
   );
 }

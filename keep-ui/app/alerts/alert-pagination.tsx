@@ -6,7 +6,7 @@ import { AlertDto } from "./models";
 
 interface Props {
   alerts: AlertDto[];
-  mutate: () => void;
+  mutate?: () => void;
   deletedCount: number;
   setStartIndex: Dispatch<SetStateAction<number>>;
   setEndIndex: Dispatch<SetStateAction<number>>;
@@ -78,20 +78,22 @@ export default function AlertPagination({
             color="orange"
             variant="secondary"
           />
-          <Button
-            icon={ArrowPathIcon}
-            color="orange"
-            size="xs"
-            className="ml-2.5"
-            disabled={reloadLoading}
-            loading={reloadLoading}
-            onClick={async () => {
-              setReloadLoading(true);
-              await mutate();
-              setReloadLoading(false);
-            }}
-            title="Refresh"
-          ></Button>
+          {mutate !== undefined && (
+            <Button
+              icon={ArrowPathIcon}
+              color="orange"
+              size="xs"
+              className="ml-2.5"
+              disabled={reloadLoading}
+              loading={reloadLoading}
+              onClick={async () => {
+                setReloadLoading(true);
+                await mutate!();
+                setReloadLoading(false);
+              }}
+              title="Refresh"
+            ></Button>
+          )}
         </div>
       </div>
     );
