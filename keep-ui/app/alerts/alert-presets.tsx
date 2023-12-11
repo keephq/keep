@@ -112,6 +112,13 @@ export default function AlertPresets({
       handleInputChange(`${actionMeta.option.value}=`);
       // Optionally, you can prevent the selection or handle it differently
     } else {
+      setIsMenuOpen(false);
+      setOptions(
+        Array.from(uniqueValuesMap.keys()).map((key) => ({
+          label: key,
+          value: key,
+        }))
+      );
       setSelectedOptions(selected);
       setIsMenuOpen(false);
     }
