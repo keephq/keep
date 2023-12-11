@@ -47,9 +47,10 @@ export default function Alerts({
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(0);
+  const [endIndex, setEndIndex] = useState<number>(10);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [tabIndex, setTabIndex] = useState<number>(0);
+  const [presets, setPresets] = useState<Preset[]>(defaultPresets);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
@@ -93,7 +94,7 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
-  const { data: presets, mutate: presetsMutate } = useSWR<Preset[]>(
+  const { data: serverPresets, mutate: presetsMutate } = useSWR<Preset[]>(
     `${apiUrl}/preset`,
     async (url) => {
       const data = await fetcher(url, accessToken);
@@ -101,6 +102,12 @@ export default function Alerts({
     },
     { revalidateOnFocus: false }
   );
+
+  useEffect(() => {
+    if (serverPresets) {
+      setPresets(serverPresets);
+    }
+  }, [serverPresets]);
 
   useEffect(() => {
     let groupedByAlerts = {} as { [key: string]: AlertDto[] };
@@ -242,7 +249,7 @@ export default function Alerts({
     if (selectedOptions.length === 0) {
       return true;
     }
-    return selectedOptions.some((option) => {
+    return selectedOptions.every((option) => {
       const optionSplit = option.value.split("=");
       const key = optionSplit[0];
       const value = optionSplit[1]?.toLowerCase();

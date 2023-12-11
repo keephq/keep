@@ -29,22 +29,31 @@ export default function AlertPresets({
   presetsMutator: () => void;
 }) {
   const apiUrl = getApiURL();
-  const [options, setOptions] = useState<Option[]>([]);
   const selectRef = useRef(null);
+  const [options, setOptions] = useState<Option[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const uniqueValuesMap = new Map<string, Set<string>>();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [uniqueValuesMap, setUniqueValuesMap] = useState(
+    new Map<string, Set<string>>()
+  );
 
-  // Populating the map with keys and values
-  alerts.forEach((alert) => {
-    Object.entries(alert).forEach(([key, value]) => {
-      if (typeof value !== "string") return;
-      if (!uniqueValuesMap.has(key)) {
-        uniqueValuesMap.set(key, new Set());
-      }
-      if (!uniqueValuesMap.get(key)?.has(value?.trim()))
-        uniqueValuesMap.get(key)?.add(value?.toString().trim());
-    });
-  });
+  useEffect(() => {
+    const newUniqueValuesMap = new Map<string, Set<string>>();
+    if (alerts) {
+      // Populating the map with keys and values
+      alerts.forEach((alert) => {
+        Object.entries(alert).forEach(([key, value]) => {
+          if (typeof value !== "string") return;
+          if (!newUniqueValuesMap.has(key)) {
+            newUniqueValuesMap.set(key, new Set());
+          }
+          if (!newUniqueValuesMap.get(key)?.has(value?.trim()))
+            newUniqueValuesMap.get(key)?.add(value?.toString().trim());
+        });
+      });
+    }
+    setUniqueValuesMap(newUniqueValuesMap);
+  }, [alerts]);
 
   // Initially, set options to keys
   useEffect(() => {
@@ -54,7 +63,7 @@ export default function AlertPresets({
         value: key,
       }))
     );
-  }, [alerts]);
+  }, [uniqueValuesMap]);
 
   const isValidNewOption = (
     inputValue: string,
@@ -104,6 +113,7 @@ export default function AlertPresets({
       // Optionally, you can prevent the selection or handle it differently
     } else {
       setSelectedOptions(selected);
+      setIsMenuOpen(false);
     }
   };
 
@@ -209,6 +219,10 @@ export default function AlertPresets({
         isValidNewOption={isValidNewOption}
         ref={selectRef}
         className="w-full"
+        menuIsOpen={isMenuOpen}
+        onFocus={() => setIsMenuOpen(true)}
+        onBlur={() => setIsMenuOpen(false)}
+        isClearable={false}
       />
       {preset?.name === "Feed" && (
         <Button
