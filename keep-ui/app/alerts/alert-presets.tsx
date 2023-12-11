@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Dispatch, SetStateAction } from "react";
-import { AlertDto } from "./models";
+import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
 import { GroupBase, OptionsOrGroups } from "react-select/dist/declarations/src";
+import { Button } from "@tremor/react";
+import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import { getApiURL } from "utils/apiUrl";
+import { toast } from "react-toastify";
 
 export interface Option {
   readonly label: string;
@@ -10,14 +14,21 @@ export interface Option {
 }
 
 export default function AlertPresets({
+  preset,
   alerts,
   selectedOptions,
+  accessToken,
   setSelectedOptions,
+  presetsMutator,
 }: {
+  preset: Preset | null;
   alerts: AlertDto[];
   selectedOptions: Option[];
   setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
+  accessToken: string;
+  presetsMutator: () => void;
 }) {
+  const apiUrl = getApiURL();
   const [options, setOptions] = useState<Option[]>([]);
   const selectRef = useRef(null);
   const [inputValue, setInputValue] = useState("");
@@ -89,7 +100,7 @@ export default function AlertPresets({
       selected.some((option: any) => !option.value.includes("="))
     ) {
       // Handle invalid option selection
-      handleInputChange(`${selected[0].value}=`);
+      handleInputChange(`${actionMeta.option.value}=`);
       // Optionally, you can prevent the selection or handle it differently
     } else {
       setSelectedOptions(selected);
@@ -126,18 +137,113 @@ export default function AlertPresets({
     return label.toLowerCase().includes(input.toLowerCase());
   };
 
+  async function deletePreset(presetId: string) {
+    if (
+      confirm(`You are about to delete preset ${preset!.name}, are you sure?`)
+    ) {
+      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response.ok) {
+        toast(`Preset ${preset!.name} deleted!`, {
+          position: "top-left",
+          type: "success",
+        });
+        presetsMutator();
+      }
+    }
+  }
+
+  async function addOrUpdatePreset() {
+    const presetName = prompt(
+      `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
+      preset?.name === "Feed" || preset?.name === "Deleted" ? "" : preset?.name
+    );
+    if (presetName) {
+      const options = selectedOptions.map((option) => {
+        return {
+          value: option.value,
+          label: option.label,
+        };
+      });
+      const response = await fetch(
+        preset?.id ? `${apiUrl}/preset/${preset?.id}` : `${apiUrl}/preset`,
+        {
+          method: preset?.id ? "PUT" : "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: presetName, options: options }),
+        }
+      );
+      if (response.ok) {
+        toast(
+          preset?.name
+            ? `Preset ${presetName} updated!`
+            : `Preset ${presetName} created!`,
+          {
+            position: "top-left",
+            type: "success",
+          }
+        );
+        presetsMutator();
+      }
+    }
+  }
+
   return (
-    <CreatableSelect
-      isMulti
-      options={options}
-      value={selectedOptions}
-      onChange={handleChange}
-      onInputChange={handleInputChange}
-      inputValue={inputValue}
-      filterOption={filterOption}
-      onKeyDown={handleKeyDown}
-      isValidNewOption={isValidNewOption}
-      ref={selectRef}
-    />
+    <div className="flex w-full">
+      <CreatableSelect
+        isMulti
+        options={options}
+        value={selectedOptions}
+        onChange={handleChange}
+        onInputChange={handleInputChange}
+        inputValue={inputValue}
+        filterOption={filterOption}
+        onKeyDown={handleKeyDown}
+        isValidNewOption={isValidNewOption}
+        ref={selectRef}
+        className="w-full"
+      />
+      {preset?.name === "Feed" && (
+        <Button
+          icon={PlusIcon}
+          size="xs"
+          color="orange"
+          title="Create preset"
+          className="ml-2.5"
+          disabled={selectedOptions.length <= 0}
+          onClick={async () => await addOrUpdatePreset()}
+        />
+      )}
+      {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
+        <div className="flex ml-2.5">
+          <Button
+            icon={CheckIcon}
+            size="xs"
+            color="orange"
+            title="Save preset"
+            className="mr-1"
+            disabled={selectedOptions.length <= 0}
+            onClick={async () => await addOrUpdatePreset()}
+          />
+          <Button
+            icon={TrashIcon}
+            size="xs"
+            color="orange"
+            variant="secondary"
+            title="Delete preset"
+            onClick={async () => {
+              await deletePreset(preset!.id);
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 }

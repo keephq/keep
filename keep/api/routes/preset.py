@@ -1,11 +1,12 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import verify_token_or_key
-from keep.api.models.db.preset import Preset, PresetDto
+from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -26,18 +27,24 @@ def get_presets(
     return [PresetDto(**preset.dict()) for preset in presets]
 
 
-@router.post("/{name}", description="Create a preset for tenant")
+class CreateOrUpdatePresetDto(BaseModel):
+    name: str | None
+    options: list[PresetOption]
+
+
+@router.post("", description="Create a preset for tenant")
 def create_preset(
-    name: str,
-    options: list = [],
+    body: CreateOrUpdatePresetDto,
     tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
 ) -> PresetDto:
-    # TODO: add validation for options
     logger.info("Creating preset")
-    if not options:
-        raise HTTPException(400, "Options cannot be empty")
-    preset = Preset(tenant_id=tenant_id, options=options, name=name)
+    if not body.options or not body.name:
+        raise HTTPException(400, "Options and name are required")
+    if body.name == "Feed" or body.name == "Deleted":
+        raise HTTPException(400, "Cannot create preset with this name")
+    options_dict = [option.dict() for option in body.options]
+    preset = Preset(tenant_id=tenant_id, options=options_dict, name=body.name)
     session.add(preset)
     session.commit()
     session.refresh(preset)
@@ -73,8 +80,7 @@ def delete_preset(
 )
 def update_preset(
     uuid: str,
-    name: str,
-    options: list = [],
+    body: CreateOrUpdatePresetDto,
     tenant_id: str = Depends(verify_token_or_key),
     session: Session = Depends(get_session),
 ) -> PresetDto:
@@ -85,8 +91,15 @@ def update_preset(
     preset = session.exec(statement).first()
     if not preset:
         raise HTTPException(404, "Preset not found")
-    preset.name = name
-    preset.options = options
+    if body.name:
+        if body.name == "Feed" or body.name == "Deleted":
+            raise HTTPException(400, "Cannot create preset with this name")
+        if body.name != preset.name:
+            preset.name = body.name
+    options_dict = [option.dict() for option in body.options]
+    if not options_dict:
+        raise HTTPException(400, "Options cannot be empty")
+    preset.options = options_dict
     session.commit()
     session.refresh(preset)
     logger.info("Updated preset", extra={"uuid": uuid})

@@ -47,8 +47,12 @@ export default function Alerts({
   const [startIndex, setStartIndex] = useState<number>(0);
   const [endIndex, setEndIndex] = useState<number>(0);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
+  const [tabIndex, setTabIndex] = useState<number>(0);
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
+    defaultPresets[0] // Feed
+  );
   const [groupedByAlerts, setGroupedByAlerts] = useState<{
     [key: string]: AlertDto[];
   }>({});
@@ -77,7 +81,7 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
-  const { data: presets } = useSWR<Preset[]>(
+  const { data: presets, mutate: presetsMutate } = useSWR<Preset[]>(
     `${apiUrl}/preset`,
     async (url) => {
       const data = await fetcher(url, accessToken);
@@ -262,13 +266,15 @@ export default function Alerts({
   };
 
   function onIndexChange(index: number) {
-    const preset = presets[index];
+    setTabIndex(index);
+    const preset = presets![index];
     if (preset.name === "Deleted") {
       setShowDeleted(true);
     } else {
       setShowDeleted(false);
     }
     setSelectedOptions(preset.options);
+    setSelectedPreset(preset);
   }
 
   const deletedCount = !showDeleted
@@ -279,21 +285,27 @@ export default function Alerts({
 
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
-      <TabGroup onIndexChange={onIndexChange}>
+      <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
         <TabList className="mb-4" variant="line" color="orange">
-          {presets.map((preset, index) => (
+          {presets!.map((preset, index) => (
             <Tab key={preset.name} tabIndex={index}>
               {preset.name}
             </Tab>
           ))}
         </TabList>
         <AlertPresets
+          preset={selectedPreset}
           alerts={currentStateAlerts}
           selectedOptions={selectedOptions}
           setSelectedOptions={setSelectedOptions}
+          accessToken={accessToken}
+          presetsMutator={() => {
+            onIndexChange(0);
+            presetsMutate();
+          }}
         />
         <TabPanels>
-          {presets.map((preset) => (
+          {presets!.map((preset) => (
             <TabPanel key={preset.name}>
               <TabContent />
             </TabPanel>

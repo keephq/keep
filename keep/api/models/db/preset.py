@@ -16,3 +16,8 @@ class PresetDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
     options: list = []
+
+
+class PresetOption(BaseModel, extra="ignore"):
+    label: str
+    value: str

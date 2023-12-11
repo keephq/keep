@@ -32,6 +32,7 @@ export interface AlertDto {
 }
 
 export interface Preset {
+  id: string;
   name: string;
   options: Option[];
 }
