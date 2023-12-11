@@ -242,7 +242,7 @@ export default function Alerts({
     if (selectedOptions.length === 0) {
       return true;
     }
-    return selectedOptions.some((option) => {
+    return selectedOptions.every((option) => {
       const optionSplit = option.value.split("=");
       const key = optionSplit[0];
       const value = optionSplit[1]?.toLowerCase();
