@@ -32,6 +32,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
+import AlertAssignee from "./alert-assignee";
 
 interface Props {
   alerts: AlertDto[];
@@ -42,7 +43,11 @@ interface Props {
   providers?: Provider[];
   mutate?: () => void;
   showSkeleton?: boolean;
-  onDelete?: (fingerprint: string, lastReceived: Date, restore?: boolean) => void;
+  onDelete?: (
+    fingerprint: string,
+    lastReceived: Date,
+    restore?: boolean
+  ) => void;
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   users?: User[];
   currentUser: NextUser;
@@ -292,20 +297,7 @@ export function AlertsTableBody({
             </TableCell>
             <TableCell>
               {users.length > 0 && alert.assignee && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  className="h-8 w-8 rounded-full"
-                  src={
-                    users.find((u) => u.email === alert.assignee)?.picture ||
-                    `https://ui-avatars.com/api/?name=${
-                      users.find((u) => u.email === alert.assignee)?.name
-                    }&background=random`
-                  }
-                  height={24}
-                  width={24}
-                  alt={`${alert.assignee} profile picture`}
-                  title={alert.assignee}
-                />
+                <AlertAssignee alert={alert} users={users} />
               )}
             </TableCell>
             <TableCell>
