@@ -168,10 +168,13 @@ export default function Alerts({
           const combinedAlerts = [...prevAlerts, ...newAlerts];
           const uniqueObjectsMap = new Map();
           combinedAlerts.forEach((alert) => {
-            uniqueObjectsMap.set(
-              `${alert.id}-${alert.lastReceived.toISOString()}`,
-              alert
-            );
+            let alertKey = "";
+            try {
+              alertKey = `${alert.id}-${alert.lastReceived.toISOString()}`;
+            } catch {
+              alertKey = alert.id;
+            }
+            uniqueObjectsMap.set(alertKey, alert);
           });
           return Array.from(new Set(uniqueObjectsMap.values()));
         });
