@@ -5,7 +5,7 @@ import {
   ProviderMethod,
   ProviderMethodParam,
 } from "app/providers/providers";
-import { Alert } from "./models";
+import { AlertDto } from "./models";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
@@ -24,7 +24,7 @@ interface Props {
   isOpen: boolean;
   closeModal: () => void;
   method: ProviderMethod | null;
-  alert: Alert;
+  alert: AlertDto;
   provider?: Provider;
   mutate?: () => void;
 }

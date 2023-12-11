@@ -19,7 +19,7 @@ import {
   AccordionHeader,
   AccordionBody,
 } from "@tremor/react";
-import { Alert, AlertKnownKeys, Severity } from "./models";
+import { AlertDto, AlertKnownKeys, Severity } from "./models";
 import Image from "next/image";
 import "./alerts-table-body.css";
 import AlertMenu from "./alert-menu";
@@ -32,17 +32,22 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
+import AlertAssignee from "./alert-assignee";
 
 interface Props {
-  alerts: Alert[];
+  alerts: AlertDto[];
   groupBy?: string;
-  groupedByData?: { [key: string]: Alert[] };
-  openModal?: (alert: Alert) => void;
+  groupedByData?: { [key: string]: AlertDto[] };
+  openModal?: (alert: AlertDto) => void;
   workflows?: Workflow[];
   providers?: Provider[];
   mutate?: () => void;
   showSkeleton?: boolean;
-  onDelete?: (fingerprint: string, lastReceived: Date, restore?: boolean) => void;
+  onDelete?: (
+    fingerprint: string,
+    lastReceived: Date,
+    restore?: boolean
+  ) => void;
   setAssignee?: (fingerprint: string, unassign: boolean) => void;
   users?: User[];
   currentUser: NextUser;
@@ -111,7 +116,7 @@ export function AlertsTableBody({
   currentUser,
 }: Props) {
   const router = useRouter();
-  const getAlertLastReceieved = (alert: Alert) => {
+  const getAlertLastReceieved = (alert: AlertDto) => {
     let lastReceived = "unknown";
     if (alert.lastReceived) {
       lastReceived = alert.lastReceived.toString();
@@ -292,20 +297,7 @@ export function AlertsTableBody({
             </TableCell>
             <TableCell>
               {users.length > 0 && alert.assignee && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  className="h-8 w-8 rounded-full"
-                  src={
-                    users.find((u) => u.email === alert.assignee)?.picture ||
-                    `https://ui-avatars.com/api/?name=${
-                      users.find((u) => u.email === alert.assignee)?.name
-                    }&background=random`
-                  }
-                  height={24}
-                  width={24}
-                  alt={`${alert.assignee} profile picture`}
-                  title={alert.assignee}
-                />
+                <AlertAssignee alert={alert} users={users} />
               )}
             </TableCell>
             <TableCell>
@@ -314,18 +306,18 @@ export function AlertsTableBody({
                 colors={["emerald", "yellow", "orange", "rose"]}
                 markerValue={alert.fatigueMeter ?? 0}
                 tooltip={alert.fatigueMeter?.toString() ?? "0"}
-                className="w-48"
+                className="min-w-[192px]"
               />
             </TableCell>
             {/* <TableCell>List of workflows refs</TableCell> */}
-            <TableCell className="w-96">
+            <TableCell className="w-64 px-0">
               {extraIsEmpty ? null : (
                 <Accordion>
-                  <AccordionHeader className="w-96">
+                  <AccordionHeader className="w-64">
                     Extra Payload
                   </AccordionHeader>
                   <AccordionBody>
-                    <pre className="w-80 overflow-y-scroll">
+                    <pre className="w-64 overflow-y-scroll">
                       {JSON.stringify(extraPayloadNoKnownKeys, null, 2)}
                     </pre>
                   </AccordionBody>

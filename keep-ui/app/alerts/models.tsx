@@ -1,3 +1,5 @@
+import { Option } from "./alert-presets";
+
 export enum Severity {
   Critical = "critical",
   High = "high",
@@ -7,7 +9,7 @@ export enum Severity {
   Error = "error",
 }
 
-export interface Alert {
+export interface AlertDto {
   id: string;
   name: string;
   status: string;
@@ -27,6 +29,12 @@ export interface Alert {
   fingerprint: string;
   deleted: string[];
   assignee?: string;
+}
+
+export interface Preset {
+  id?: string;
+  name: string;
+  options: Option[];
 }
 
 export const AlertKnownKeys = [
