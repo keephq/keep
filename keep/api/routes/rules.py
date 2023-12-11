@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from keep.api.core.db import create_rule as create_rule_db
+from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.dependencies import (
     get_user_email,
     verify_bearer_token,
@@ -22,9 +23,10 @@ def get_rules(
     tenant_id: str = Depends(verify_bearer_token),
 ):
     logger.info("Getting rules")
-    # rules = Rules()
+    rules = get_rules_db(tenant_id=tenant_id)
     logger.info("Got rules")
     # return rules
+    return rules
 
 
 @router.post(
@@ -42,6 +44,7 @@ async def create_rule(
         rule_name = body["ruleName"]
         sql_query = body["sqlQuery"]
         cel_query = body["celQuery"]
+        timeframe = body["timeframeInSeconds"]
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -60,6 +63,9 @@ async def create_rule(
     if not rule_name:
         raise HTTPException(status_code=400, detail="Rule name is required")
 
+    if not timeframe:
+        raise HTTPException(status_code=400, detail="Timeframe is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -67,6 +73,7 @@ async def create_rule(
             "sql": sql,
             "params": params,
         },
+        timeframe=timeframe,
         definition_cel=cel_query,
         created_by=created_by,
     )

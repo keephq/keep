@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -10,7 +11,7 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, bindparam, case, desc, func, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -827,8 +828,126 @@ def get_rules(tenant_id):
 def run_rule(tenant_id, rule):
     with Session(engine) as session:
         # get all the alerts that are not already in the rule
-        sql = rule.rule_definition.get("sql")
-        params = rule.rule_definition.get("params")
-        query = text(sql)
-        result = session.execute(query, params)
-        return result
+        sql = rule.definition.get("sql")
+        params = rule.definition.get("params")
+
+        timeframe_datetime = datetime.utcnow() - timedelta(seconds=rule.timeframe)
+
+        groups = re.split(r"\s+and\s+(?![^()]*\))", sql)
+
+        results_per_group = {}
+        for group in groups:
+            # Removing outer parentheses and spaces
+            group = group.strip().strip("()").strip()
+
+            # Building the text object for the filter part
+            filter_text = text(group)
+            # find the params it needs
+            bind_names = [str(p) for p in filter_text._bindparams]
+
+            # Applying bindparams with expanding for lists
+            filters = []
+            for bind in bind_names:
+                value = params.get(bind)
+                # TODO: we use 'like' and 'json_contains' but
+                #       we need to support other operators like =, !=, >, <, etc
+                #       down the road we will need to adjust this to support other types (dict?)
+                #       the problem is that we need to know upfront what's the type of the attribute in nested JSON
+                #       which is not trivial
+
+                # source_1 => source, severity_2 => severity
+                attribute_name = bind.split("_")[0]
+                json_path = f"$.{attribute_name}"
+                # Handling different SQL dialects
+                if session.bind.dialect.name == "mysql":
+                    filters.append(
+                        func.json_contains(
+                            Alert.event, bindparam(bind, value), json_path
+                        )
+                    )
+                elif session.bind.dialect.name == "sqlite":
+                    json_extracted = func.json_extract(Alert.event, json_path)
+                    # Check if the field is an array or a string
+                    condition = case(
+                        [
+                            (
+                                func.json_type(Alert.event, json_path) == "array",
+                                json_extracted.like(
+                                    '%"' + bindparam(bind, value) + '"%'
+                                ),
+                            ),
+                        ],
+                        else_=json_extracted == bindparam(bind, value),
+                    )
+                    filters.append(condition)
+                else:
+                    raise Exception(
+                        f"Unsupported SQL dialect for Rules Engine: {session.bind.dialect.name}"
+                    )
+
+            # add the tenant_id and timeframe filters
+            filters.append(Alert.tenant_id == tenant_id)
+            # TODO: maybe timeframe should support lastReceived? but idk if there is a use case for that
+            filters.append(Alert.timestamp >= timeframe_datetime)
+            # Construct and execute the ORM query
+            query = session.query(Alert).filter(*filters)
+            # Shahar: to get the RAW query -
+            #         from sqlalchemy.sql import compiler
+            #         from sqlalchemy.dialects import mysql, sqlite
+            #         str(query.params(params).statement.compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True}))
+            result = query.all()
+            results_per_group[group] = result
+
+        # if each group have at least one alert, than the run applies
+        if all(results_per_group.values()):
+            return results_per_group
+
+        # otherwise, it doesn't
+        return None
+
+
+"""
+# prepare the rule
+        # first, split to groups
+        pattern = re.compile(r"\) (?:and|or) \(")
+        groups = pattern.split(sql[1:-1])
+
+        # second, split each group to conditions
+        # Convert conditions into SQLAlchemy filters
+        sqlalchemy_conditions = []
+        for group in groups:
+            parts = group.split(" and ")
+            filters = []
+            for part in parts:
+                column, value = part.strip().split("=")
+                column = column.strip()
+                if column.startswith("("):
+                    column = column[1:]
+                value = value.strip().lstrip(':')
+
+                # TODO: solve generic case of list, dictionary, etc
+                # TODO: support postgresql array
+                # TODO: handle per-db logic in a better way
+                if column == "source":
+                    json_path = f'$.{column}'
+                    # in mysql, we need to use json_contains
+                    if session.bind.dialect.name == "mysql":
+                        filters.append(func.json_contains(Alert.event, bindparam(value), json_path))
+                    # in sqlite, we need to use json_extract
+                    elif session.bind.dialect.name == "sqlite":
+                        value_param = bindparam(value)
+                        json_extracted = func.json_extract(Alert.event, json_path)
+                        # this is a workaround for sqlite since it doesn't support json_contains
+                        # so we need to check if the value is a list or not
+                        filters.append(
+                            json_extracted.like('%"' + value_param + '"%')
+                        )
+                # else, it's a string comparison which should be supported with all major dbs
+                else:
+                    filters.append(cast(Alert.event[column], JSON) == bindparam(value))
+
+            # Execute query for the current group
+            query = session.query(Alert).filter(and_(*filters))
+            result = query.params(params).all()
+            results_per_group.append(result is not None)
+"""

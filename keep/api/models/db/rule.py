@@ -16,7 +16,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 # 4. timeframe - should be per definition group
 class Rule(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: UUID = Field(foreign_key="tenant.id")
+    tenant_id: str = Field(foreign_key="tenant.id")
     name: str
     definition: dict = Field(sa_column=Column(JSON))  # sql / params
     definition_cel: str  # cel

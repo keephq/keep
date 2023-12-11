@@ -1,10 +1,11 @@
 'use client';
-import React, { useState } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button} from "@tremor/react";
+import React, { useState, useEffect } from "react";
+import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
 import QueryBuilder, { RuleGroupType, RuleType, Field, formatQuery, defaultOperators, ActionElement} from 'react-querybuilder';
 // import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
+import Loading from "../loading";
 import './query-builder.scss';
 
 const getOperators = (fieldName: string) => {
@@ -52,9 +53,12 @@ const getOperators = (fieldName: string) => {
   return defaultOperators;
 };
 
+// Todo: validation
+// Todo: dynamic
 const fields: Field[] = [
   { name: 'source', label: 'source', datatype: 'text'},
   { name: 'severity', label: 'severity', datatype: 'text' },
+  { name: 'service', label: 'service', datatype: 'text' },
 ];
 
 const CustomValueEditor = (props) => {
@@ -79,6 +83,20 @@ const CustomValueEditor = (props) => {
     </>
   );
 };
+
+const CustomCmbinatorSelector = (props) => {
+  const { options, value, handleOnChange, level, path } = props;
+
+  if(level === 0){
+    return null;
+  }
+
+  return (
+      <Title>
+        Alert Group {path[0] + 1}
+      </Title>
+  );
+}
 
 const CustomFieldSelector = (props) => {
   const { options, value, handleOnChange } = props;
@@ -128,6 +146,19 @@ const CustomAddRuleAction = (props) => {
 };
 
 
+interface Rule {
+  id: number;
+  name: string;
+  definition: string;
+  definition_cel: string;
+  timeframe: number;
+  created_by: string;
+  creation_time: string;
+  updated_by: string;
+  update_time: string
+
+}
+
 
 export default function Page() {
   // Use the extended type for the query state
@@ -149,25 +180,77 @@ export default function Page() {
       }
     ],
   });
-  const [ruleName, setRuleName] = useState<string>('Rule Name');
-  const [timeframe, setTimeframe] = useState<number>(600);
-  const [timeframeUnit, setTimeframeUnit] = useState<string>('Seconds');
-
+  const [formData, setFormData] = useState({
+    ruleName: "Rule Name",
+    timeframe: 600,
+    timeframeUnit: "Seconds",
+  });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>(
+    {}
+  );
   const { data: session, status } = useSession();
+  const [rules, setRules] = useState<Rule[]>([]);
 
-  const testRule = () => {
+
+  useEffect(() => {
+    // Fetch rules data from the /rules API
+    if (!session) return;
+
+    const apiUrl = getApiURL();
+    fetch(`${apiUrl}/rules`, {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setRules(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching rules:", error);
+      });
+  }, [session]);
+
+  if (status === "loading") return <Loading />;
+
+  const isNumber = (value: string) => {
+    return !isNaN(Number(value));
+  };
+
+
+  const saveRule = () => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.ruleName) {
+      errors.ruleName = "Rule Name is required";
+    }
+
+    if (!formData.timeframe.toString().trim()) {
+      errors.timeframe = "Timeframe is required and must be a number";
+    } else if (!isNumber(formData.timeframe.toString().trim())) {
+      errors.timeframe = "Timeframe must be a number";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    // Reset validation errors
+    setValidationErrors({});
+
     // Send the query to the server and handle the response here
     const sqlQuery = formatQuery(query, 'parameterized_named');
     const celQuery = formatQuery(query, 'cel');
     const apiUrl = getApiURL();
-    const timeframeInSeconds = timeframeUnit === 'Seconds' ? timeframe : timeframeUnit === 'Minutes' ? timeframe * 60 : timeframeUnit === 'Hours' ? timeframe * 3600 : timeframe * 86400;
+    const timeframeInSeconds = formData.timeframeUnit === 'Seconds' ? formData.timeframe : formData.timeframeUnit === 'Minutes' ? formData.timeframe * 60 : formData.timeframeUnit === 'Hours' ? formData.timeframe * 3600 : formData.timeframe * 86400;
     fetch(`${apiUrl}/rules`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session!.accessToken}`,
       },
-      body: JSON.stringify({ sqlQuery, ruleName: ruleName, celQuery, timeframeInSeconds}),
+      body: JSON.stringify({ sqlQuery, ruleName: formData.ruleName, celQuery, timeframeInSeconds}),
     })
       .then((response) => response.json())
       .then((data) => {
@@ -179,27 +262,59 @@ export default function Page() {
       });
   };
 
+
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setFormData({
+      ...formData,
+      [fieldName]: value,
+    });
+
+    // Clear the validation error for the field when the user edits it
+    setValidationErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+  }
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
           <Card>
             <Title>Rule Builder</Title>
             <Subtitle>define the rules that will create your dynamic alerts</Subtitle>
-            <Flex>
-                <TextInput className="mt-4 mr-2" placeholder="Rule Name"  defaultValue="Rule Name" onChange={(e) => setRuleName(e.target.value)} />
-                <Flex>
-                  <TextInput className="mt-4 mr-2" placeholder="Timeframe"  onChange={(e) => setRuleName(e.target.value)} />
-                  <Select
-                    className="mt-4 mr-2"
-                    defaultValue="Minutes"
-                    onValueChange={(value: string) => setTimeframeUnit(value)}
-                  >
-                    <SelectItem value="Seconds">Seconds</SelectItem>
-                    <SelectItem value="Minutes">Minutes</SelectItem>
-                    <SelectItem value="Hours">Hours</SelectItem>
-                    <SelectItem value="Days">Days</SelectItem>
-                  </Select>
-                </Flex>
-            </Flex>
+            <Flex style={{ maxWidth: '50%' }}>
+              <TextInput
+                  className={`mt-4 mr-2 ${
+                    validationErrors.ruleName ? "border-red-500" : ""
+                  }`}
+                  placeholder="Rule Name"
+                  value={formData.ruleName}
+                  onChange={(e) => handleFieldChange("ruleName", e.target.value)}
+                />
+              </Flex>
+              <Flex style={{ maxWidth: '50%' }}>
+                <TextInput
+                  className={`mt-4 mr-2 ${
+                    validationErrors.timeframe ? "border-red-500" : ""
+                  }`}
+                  placeholder="Timeframe"
+                  value={formData.timeframe.toString()}
+                  onChange={(e) =>
+                    handleFieldChange("timeframe", e.target.value)
+                  }
+                />
+                <Select
+                  className="mt-4 mr-2"
+                  defaultValue={formData.timeframeUnit}
+                  onValueChange={(value: string) => handleFieldChange("timeframeUnit", value)}
+                >
+                  <SelectItem value="Seconds">Seconds</SelectItem>
+                  <SelectItem value="Minutes">Minutes</SelectItem>
+                  <SelectItem value="Hours">Hours</SelectItem>
+                  <SelectItem value="Days">Days</SelectItem>
+                </Select>
+              </Flex>
+
               <QueryBuilder
               fields={fields} query={query} getOperators={getOperators} onQueryChange={q => setQuery(q)}
 
@@ -207,7 +322,7 @@ export default function Page() {
                 valueEditor: CustomValueEditor,
                 fieldSelector: CustomFieldSelector,
                 operatorSelector: CustomFieldSelector,
-                combinatorSelector: CustomFieldSelector,
+                combinatorSelector: CustomCmbinatorSelector,
                 addGroupAction: CustomAddGroupAction,
                 addRuleAction: CustomAddRuleAction,
               }}
@@ -224,16 +339,34 @@ export default function Page() {
                 removeRule: 'p-1 ml-auto',
               }}
               />
-            <Button className="mt-4 mr-2" color="orange" onClick={testRule}>
-              Test Rule
+            <Button className="mt-4 mr-2" color="orange" onClick={saveRule}>
+              Save Rule
             </Button>
-            <Button className="mt-4 mr-2" color="orange" onClick={() => console.log(JSON.stringify(query))}>Save Rule</Button>
           </Card>
           <Card className="mt-8">
-            <Flex>
-              <Title>Rules</Title>
-              {/* Add your table of rules here */}
-            </Flex>
+            <Title>Rules</Title>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Rule Name</TableHeaderCell>
+                    <TableHeaderCell>Definition</TableHeaderCell>
+                    <TableHeaderCell>Timeframe</TableHeaderCell>
+                    <TableHeaderCell>Created By</TableHeaderCell>
+                    <TableHeaderCell>Creation Time</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rules && rules.map((rule) => (
+                    <TableRow key={rule.id}>
+                      <TableCell>{rule.name}</TableCell>
+                      <TableCell>{rule.definition_cel}</TableCell>
+                      <TableCell>{rule.timeframe} Seconds</TableCell>
+                      <TableCell>{rule.created_by}</TableCell>
+                      <TableCell>{rule.creation_time}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
           </Card>
       </Card>
   );

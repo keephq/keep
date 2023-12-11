@@ -5,15 +5,14 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
-from keep.api.core.config import config
-from keep.api.core.db import engine
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
+from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
 from keep.contextmanager.contextmanager import ContextManager
@@ -78,7 +77,7 @@ def db_session():
     session.commit()
 
     with patch("keep.api.core.db.engine", mock_engine):
-        yield
+        yield session
 
     # Clean up after the test
     session.close()
