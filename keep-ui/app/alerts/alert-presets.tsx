@@ -239,7 +239,7 @@ export default function AlertPresets({
             variant="secondary"
             title="Delete preset"
             onClick={async () => {
-              await deletePreset(preset!.id);
+              await deletePreset(preset!.id!);
             }}
           />
         </div>
