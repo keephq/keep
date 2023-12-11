@@ -9,7 +9,7 @@ export interface Option {
   readonly value: string;
 }
 
-export default function AlertFilters({
+export default function AlertPresets({
   alerts,
   selectedOptions,
   setSelectedOptions,

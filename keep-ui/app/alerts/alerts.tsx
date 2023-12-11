@@ -21,7 +21,7 @@ import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
 import AlertPagination from "./alert-pagination";
-import AlertFilters, { Option } from "./alert-filters";
+import AlertPresets, { Option } from "./alert-presets";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -287,7 +287,7 @@ export default function Alerts({
             </Tab>
           ))}
         </TabList>
-        <AlertFilters
+        <AlertPresets
           alerts={currentStateAlerts}
           selectedOptions={selectedOptions}
           setSelectedOptions={setSelectedOptions}

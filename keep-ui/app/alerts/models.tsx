@@ -1,4 +1,4 @@
-import { Option } from "./alert-filters";
+import { Option } from "./alert-presets";
 
 export enum Severity {
   Critical = "critical",
