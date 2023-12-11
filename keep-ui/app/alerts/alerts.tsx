@@ -335,7 +335,7 @@ export default function Alerts({
           </TabPanels>
         </TabGroup>
         <AlertPagination
-          alerts={aggregatedAlerts}
+          alerts={currentStateAlerts}
           mutate={mutate}
           setEndIndex={setEndIndex}
           setStartIndex={setStartIndex}

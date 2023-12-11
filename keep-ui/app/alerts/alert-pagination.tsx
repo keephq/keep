@@ -28,10 +28,6 @@ export default function AlertPagination({
   const startIndex = (currentPage - 1) * defaultPageSize;
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [alerts]);
-
-  useEffect(() => {
     setStartIndex(startIndex);
     setEndIndex(startIndex + defaultPageSize);
   }, [startIndex, defaultPageSize, setStartIndex, setEndIndex]);
