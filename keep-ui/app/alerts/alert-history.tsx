@@ -98,9 +98,10 @@ export function AlertHistory({
     return <></>;
   }
 
-  const currentStateAlerts = data
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
-    .slice(startIndex, endIndex);
+  const currentStateAlerts = data.sort(
+    (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+  );
+
   const deletedCount = data.filter((alert) =>
     alert.deleted.includes(alert.lastReceived.toISOString())
   ).length;
@@ -166,7 +167,7 @@ export function AlertHistory({
                 )}
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts}
+                  alerts={currentStateAlerts.slice(startIndex, endIndex)}
                   users={users}
                   currentUser={currentUser}
                 />
