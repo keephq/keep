@@ -89,7 +89,7 @@ class MongoDBProvider(BaseProvider):
         )
 
     def _query(
-        self, query="", as_dict=False, single_row=False, **kwargs: dict
+        self, **query: dict, as_dict=False, single_row=False, **kwargs: dict
     ) -> list | tuple:
         """
         Executes a query against the MongoDB database.
@@ -99,7 +99,7 @@ class MongoDBProvider(BaseProvider):
         """
         client = self.__generate_client()
         database = client[self.authentication_config.database]
-        results = list(database.eval(query))
+        results = list(database.command(**query))
 
         if single_row:
             return results[0] if results else None
@@ -122,5 +122,5 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     mongodb_provider = MongoDBProvider(context_manager, "mongodb-prod", config)
-    results = mongodb_provider.query(query="db.collection.find({}).limit(1)")
+    results = mongodb_provider.query(query={find: "restaurants", limit: 5})
     print(results)
