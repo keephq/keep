@@ -234,7 +234,26 @@ def get_all_alerts(
     for alert in db_alerts:
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
-    alerts = [AlertDto(**alert.event) for alert in db_alerts]
+
+    alerts = []
+    for alert in db_alerts:
+        # if its group alert
+        if alert.provider_type == "rules":
+            try:
+                alert_dto = AlertDto(**alert.event)
+            except Exception:
+                # should never happen but just in case
+                logger.exception(
+                    "Failed to parse group alert",
+                    extra={
+                        "alert": alert,
+                        "tenant_id": tenant_id,
+                    },
+                )
+                continue
+        else:
+            alert_dto = AlertDto(**alert.event)
+        alerts.append(alert_dto)
     if sync:
         alerts.extend(pull_alerts_from_providers(tenant_id, pusher_client, sync=True))
     logger.info(

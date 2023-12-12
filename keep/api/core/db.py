@@ -907,48 +907,15 @@ def run_rule(tenant_id, rule):
         return None
 
 
-"""
-# prepare the rule
-        # first, split to groups
-        pattern = re.compile(r"\) (?:and|or) \(")
-        groups = pattern.split(sql[1:-1])
-
-        # second, split each group to conditions
-        # Convert conditions into SQLAlchemy filters
-        sqlalchemy_conditions = []
-        for group in groups:
-            parts = group.split(" and ")
-            filters = []
-            for part in parts:
-                column, value = part.strip().split("=")
-                column = column.strip()
-                if column.startswith("("):
-                    column = column[1:]
-                value = value.strip().lstrip(':')
-
-                # TODO: solve generic case of list, dictionary, etc
-                # TODO: support postgresql array
-                # TODO: handle per-db logic in a better way
-                if column == "source":
-                    json_path = f'$.{column}'
-                    # in mysql, we need to use json_contains
-                    if session.bind.dialect.name == "mysql":
-                        filters.append(func.json_contains(Alert.event, bindparam(value), json_path))
-                    # in sqlite, we need to use json_extract
-                    elif session.bind.dialect.name == "sqlite":
-                        value_param = bindparam(value)
-                        json_extracted = func.json_extract(Alert.event, json_path)
-                        # this is a workaround for sqlite since it doesn't support json_contains
-                        # so we need to check if the value is a list or not
-                        filters.append(
-                            json_extracted.like('%"' + value_param + '"%')
-                        )
-                # else, it's a string comparison which should be supported with all major dbs
-                else:
-                    filters.append(cast(Alert.event[column], JSON) == bindparam(value))
-
-            # Execute query for the current group
-            query = session.query(Alert).filter(and_(*filters))
-            result = query.params(params).all()
-            results_per_group.append(result is not None)
-"""
+def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
+    with Session(engine) as session:
+        alert = Alert(
+            tenant_id=tenant_id,
+            provider_type=provider_type,
+            provider_id=provider_id,
+            event=event,
+            fingerprint=fingerprint,
+        )
+        session.add(alert)
+        session.commit()
+        return alert

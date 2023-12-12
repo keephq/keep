@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from "react";
 import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
-import QueryBuilder, { RuleGroupType, RuleType, Field, formatQuery, defaultOperators, ActionElement} from 'react-querybuilder';
+import QueryBuilder, { defaultValidator, RuleGroupType, RuleType, Field, formatQuery, defaultOperators, ActionElement} from 'react-querybuilder';
 // import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
@@ -61,7 +61,7 @@ const fields: Field[] = [
   { name: 'service', label: 'service', datatype: 'text' },
 ];
 
-const CustomValueEditor = (props) => {
+const CustomValueEditor = (props: any) => {
   const { value, handleOnChange, operator } = props;
 
   // Define an array of operators that do not require the input
@@ -84,7 +84,7 @@ const CustomValueEditor = (props) => {
   );
 };
 
-const CustomCmbinatorSelector = (props) => {
+const CustomCmbinatorSelector = (props: any) => {
   const { options, value, handleOnChange, level, path } = props;
 
   if(level === 0){
@@ -98,8 +98,43 @@ const CustomCmbinatorSelector = (props) => {
   );
 }
 
-const CustomFieldSelector = (props) => {
+const CustomOperatorSelector = (props: any) => {
   const { options, value, handleOnChange } = props;
+  return (
+    <Select
+      className="w-auto"
+      enableClear={false}
+      value={value}
+      onChange={(e) => handleOnChange(e)} // Update the selected field
+      // Pass the options as children to the Select component
+    >
+      {options.map((option: any) => (
+        <SelectItem key={option.name} value={option.name}>
+          {option.label}
+        </SelectItem>
+      ))}
+    </Select>
+  );
+};
+
+const CustomFieldSelector = (props: any) => {
+  const { options, value, handleOnChange, path, currentQuery } = props;
+
+  // Assuming path[0] is the group index and path[1] is the rule index
+  let currentGroup = currentQuery.rules[path[0]];
+  let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
+
+  // Get other rules in the same group, excluding the current rule if it's not new
+  let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
+    isRuleNew || index !== path[1]) : [];
+
+  // Filter out options that are already used in other rules of the current group,
+  // unless the current rule is new
+  const filteredOptions = options.filter((option: unknown) =>
+    !otherRules.some((rule: unknown) =>
+      typeof rule === 'object' && (rule as any).field === (option as any).name
+    )
+  );
 
   return (
     <Select
@@ -109,7 +144,7 @@ const CustomFieldSelector = (props) => {
       onChange={(e) => handleOnChange(e)} // Update the selected field
       // Pass the options as children to the Select component
     >
-      {options.map((option) => (
+      {filteredOptions.map((option: any) => (
         <SelectItem key={option.name} value={option.name}>
           {option.label}
         </SelectItem>
@@ -118,20 +153,19 @@ const CustomFieldSelector = (props) => {
   );
 };
 
-const CustomAddGroupAction = (props) => {
-  const { label, handleOnClick } = props;
-
+const CustomAddGroupAction = (props: any) => {
   if(props.level > 0){
     return null;
   }
+
   return (
-    <Button onClick={handleOnClick} color="orange">
+    <Button onClick={props.handleOnClick} color="orange">
       New Group
     </Button>
   );
 };
 
-const CustomAddRuleAction = (props) => {
+const CustomAddRuleAction = (props: any) => {
   const { label, handleOnClick } = props;
 
   if (props.level === 0) {
@@ -317,15 +351,16 @@ export default function Page() {
 
               <QueryBuilder
               fields={fields} query={query} getOperators={getOperators} onQueryChange={q => setQuery(q)}
-
+              addRuleToNewGroups
               controlElements={{
                 valueEditor: CustomValueEditor,
-                fieldSelector: CustomFieldSelector,
-                operatorSelector: CustomFieldSelector,
+                fieldSelector: (props) => <CustomFieldSelector {...props} currentQuery={query} />,
+                operatorSelector: CustomOperatorSelector,
                 combinatorSelector: CustomCmbinatorSelector,
                 addGroupAction: CustomAddGroupAction,
                 addRuleAction: CustomAddRuleAction,
               }}
+              validator={defaultValidator}
               controlClassnames={{
                 queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
                 ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4 !important',

@@ -1,7 +1,9 @@
+import hashlib
 import logging
 
 import celpy
 
+from keep.api.core.db import create_alert as create_alert_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import run_rule as run_rule_db
 from keep.api.models.alert import AlertDto
@@ -43,8 +45,49 @@ class RulesEngine:
         # Create the alerts if needed
         for rule in relevent_rules_for_events:
             self.logger.info(f"Running relevant rule {rule.name}")
-            self._run_rule(rule)
-        return []
+            rule_results = self._run_rule(rule)
+            if rule_results:
+                self.logger.info("Rule applies, creating grouped alert")
+                # create grouped alert
+                event_payload = []
+                fingerprints = []
+                for group in rule_results:
+                    # todo: we take here the first but we should take all of them down the road
+                    group_payload = rule_results[group][0].dict().get("event")
+                    event_payload.append(group_payload)
+                    fingerprints.append(rule_results[group][0].fingerprint)
+                # TODO: should be calculated somehow else
+                fingerprint = hashlib.sha256(
+                    "".join(fingerprints).encode("utf-8")
+                ).hexdigest()
+                group_alert_name = f"Group alert {rule.name}: " + ", ".join(
+                    [event["name"] for event in event_payload]
+                )
+                create_alert_db(
+                    tenant_id=self.tenant_id,
+                    provider_type="rules",
+                    provider_id=rule.id,
+                    # todo: event should support list?
+                    event={
+                        "events": event_payload,
+                        "name": group_alert_name,
+                        "lastReceived": max(
+                            [event["lastReceived"] for event in event_payload]
+                        ),
+                        "severity": max([event["severity"] for event in event_payload]),
+                        "source": list(
+                            set([event["source"][0] for event in event_payload])
+                        ),
+                        # TODO: should be calculated somehow else
+                        "id": fingerprint,
+                        "status": "firing",
+                    },
+                    fingerprint=fingerprint,
+                )
+                self.logger.info("Created alert")
+
+        self.logger.info("Rules ran, alerts created")
+        return
 
     def _extract_subrules(self, expression):
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'

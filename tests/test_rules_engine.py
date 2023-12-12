@@ -228,3 +228,46 @@ def test_three_groups():
     results = rules_engine._run_rule(rule)
     # there should be results
     assert results is not None
+
+
+def test_find_relevant(db_session):
+    # create first rule
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2) and (source = :source_3 and service = :service_1))",
+            "params": {
+                "source_1": "sentry",
+                "severity_1": "high",
+                "source_2": "grafana",
+                "severity_2": "critical",
+                "source_3": "elastic",
+                "service_1": "db",
+            },
+        },
+        timeframe=600,
+        definition_cel='(source == "sentry" && severity == "high") && (source == "grafana" && severity == "critical") && (source == "elastic" && service == "db")',
+        created_by="test@keephq.dev",
+    )
+    # create seconds rule
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2) and (source = :source_3 and service = :service_1))",
+            "params": {
+                "source_1": "sentry",
+                "severity_1": "high",
+                "source_2": "grafana",
+                "severity_2": "critical",
+                "source_3": "datadog",
+                "service_1": "db",
+            },
+        },
+        timeframe=600,
+        definition_cel='(source == "datadog" && severity == "high") && (source == "grafana" && severity == "critical") && (source == "elastic" && service == "db")',
+        created_by="test@keephq.dev",
+    )
+    # now let's create some event:
+    # event = AlertDto()
