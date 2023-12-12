@@ -1,0 +1,45 @@
+---
+title: "MongoDB"
+sidebarTitle: "MongoDB Provider"
+description: "MongoDB Provider is a provider used to query MongoDB databases"
+---
+
+## Inputs
+
+The `query` function of `MongoDBProvider` takes the following arguments:
+
+- `query` (str): A string containing the query to be executed against the MongoDB database.
+- `single_row` (bool, optional): If `True`, the function will return only the first result.
+
+## Outputs
+
+The `query` function returns either a `list` or a `tuple` of results, depending on whether `single_row` was set to `True` or not. If `single_row` was `True`, then the function returns a single result.
+
+## Authentication Parameters
+
+The following authentication parameters are used to connect to the MongoDB database:
+
+- `uri` (str, optional): The MongoDB connection URI. If provided, other authentication parameters will be ignored.
+- `username` (str): The MongoDB username.
+- `password` (str): The MongoDB password.
+- `host` (str): The MongoDB hostname.
+- `database` (str): The name of the MongoDB database.
+
+## Connecting with the Provider
+
+In order to connect to the MongoDB database, you can use either a connection URI or individual parameters. Here's how you can provide authentication information:
+
+1. If using a connection URI, provide the `uri` parameter with the MongoDB connection string.
+2. If using individual parameters, provide the following:
+   - `username`: MongoDB username.
+   - `password`: MongoDB password.
+   - `host`: MongoDB hostname.
+   - `database`: MongoDB database name.
+
+## Notes
+
+- Ensure that the provided user has the necessary privileges to execute queries on the specified MongoDB database.
+
+## Useful Links
+
+- [MongoDB Documentation](https://docs.mongodb.com/)
