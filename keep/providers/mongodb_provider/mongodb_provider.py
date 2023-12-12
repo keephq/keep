@@ -1,13 +1,16 @@
+import dataclasses
 import os
+
+import pydantic
 from pymongo import MongoClient
+
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-import pydantic
-import dataclasses
+
 
 @pydantic.dataclasses.dataclass
-class MongoDBProviderAuthConfig:
+class MongodbProviderAuthConfig:
     uri: str | None = dataclasses.field(
         metadata={"required": False, "description": "MongoDB connection URI"}
     )
@@ -15,7 +18,11 @@ class MongoDBProviderAuthConfig:
         metadata={"required": False, "description": "MongoDB username"}
     )
     password: str = dataclasses.field(
-        metadata={"required": False, "description": "MongoDB password", "sensitive": True}
+        metadata={
+            "required": False,
+            "description": "MongoDB password",
+            "sensitive": True,
+        }
     )
     host: str = dataclasses.field(
         metadata={"required": False, "description": "MongoDB hostname"}
@@ -24,7 +31,8 @@ class MongoDBProviderAuthConfig:
         metadata={"required": False, "description": "MongoDB database name"}
     )
 
-class MongoDBProvider(BaseProvider):
+
+class MongodbProvider(BaseProvider):
     """Enrich alerts with data from MongoDB."""
 
     PROVIDER_SCOPES = [
@@ -84,7 +92,7 @@ class MongoDBProvider(BaseProvider):
         """
         Validates required configuration for MongoDB's provider.
         """
-        self.authentication_config = MongoDBProviderAuthConfig(
+        self.authentication_config = MongodbProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -121,7 +129,7 @@ if __name__ == "__main__":
         tenant_id="singletenant",
         workflow_id="test",
     )
-    mongodb_provider = MongoDBProvider(context_manager, "mongodb-prod", config)
+    mongodb_provider = MongodbProvider(context_manager, "mongodb-prod", config)
     query = {"find": "restaurants", "limit": 5}
     results = mongodb_provider.query(query=query)
     print(results)
