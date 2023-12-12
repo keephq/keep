@@ -89,7 +89,7 @@ class MongoDBProvider(BaseProvider):
         )
 
     def _query(
-        self, **query: dict, as_dict=False, single_row=False, **kwargs: dict
+        self, query: dict, as_dict=False, single_row=False, **kwargs: dict
     ) -> list | tuple:
         """
         Executes a query against the MongoDB database.
