@@ -122,5 +122,6 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     mongodb_provider = MongoDBProvider(context_manager, "mongodb-prod", config)
-    results = mongodb_provider.query(query={find: "restaurants", limit: 5})
+    query = {"find": "restaurants", "limit": 5}
+    results = mongodb_provider.query(query=query)
     print(results)
