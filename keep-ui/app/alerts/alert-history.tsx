@@ -30,6 +30,11 @@ export function AlertHistory({
   users = [],
   currentUser,
 }: Props) {
+  const [chartData, setChartData] = useState<any[] | null>(null);
+  const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [endIndex, setEndIndex] = useState<number>(0);
+
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
@@ -48,53 +53,55 @@ export function AlertHistory({
     timeUnit = "Hours";
   }
 
-  const [chartData, setChartData] = useState<any[] | null>(null);
-  const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
-  const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(0);
-
   useEffect(() => {
-    const categoriesByStatus: string[] = [];
-    const rawChartData = data
-      .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
-      .reduce((prev, curr) => {
-        const date = curr.lastReceived;
-        let dateKey: string;
-        if (timeUnit === "Minutes") {
-          dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-        } else if (timeUnit === "Hours") {
-          dateKey = `${date.getHours()}:${date.getMinutes()}`;
-        } else {
-          dateKey = `${date.getDate()}/${
-            date.getMonth() + 1
-          }/${date.getFullYear()}`;
-        }
-        if (!prev[dateKey]) {
-          prev[dateKey] = {
-            [curr.status]: 1,
-          };
-        } else {
-          prev[dateKey][curr.status]
-            ? (prev[dateKey][curr.status] += 1)
-            : (prev[dateKey][curr.status] = 1);
-        }
-        if (categoriesByStatus.includes(curr.status) === false) {
-          categoriesByStatus.push(curr.status);
-        }
-        return prev;
-      }, {} as { [date: string]: any });
+    if (data) {
+      const categoriesByStatus: string[] = [];
+      const rawChartData = data
+        .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
+        .reduce((prev, curr) => {
+          const date = curr.lastReceived;
+          let dateKey: string;
+          if (timeUnit === "Minutes") {
+            dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+          } else if (timeUnit === "Hours") {
+            dateKey = `${date.getHours()}:${date.getMinutes()}`;
+          } else {
+            dateKey = `${date.getDate()}/${
+              date.getMonth() + 1
+            }/${date.getFullYear()}`;
+          }
+          if (!prev[dateKey]) {
+            prev[dateKey] = {
+              [curr.status]: 1,
+            };
+          } else {
+            prev[dateKey][curr.status]
+              ? (prev[dateKey][curr.status] += 1)
+              : (prev[dateKey][curr.status] = 1);
+          }
+          if (categoriesByStatus.includes(curr.status) === false) {
+            categoriesByStatus.push(curr.status);
+          }
+          return prev;
+        }, {} as { [date: string]: any });
 
-    setCategoriesByStatus(categoriesByStatus);
-    setChartData(
-      Object.keys(rawChartData).map((key) => {
-        return { ...rawChartData[key], date: key };
-      })
-    );
+      setCategoriesByStatus(categoriesByStatus);
+      setChartData(
+        Object.keys(rawChartData).map((key) => {
+          return { ...rawChartData[key], date: key };
+        })
+      );
+    }
   }, [data, timeUnit]);
 
-  const currentStateAlerts = data
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime())
-    .slice(startIndex, endIndex);
+  if (!data) {
+    return <></>;
+  }
+
+  const currentStateAlerts = data.sort(
+    (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
+  );
+
   const deletedCount = data.filter((alert) =>
     alert.deleted.includes(alert.lastReceived.toISOString())
   ).length;
@@ -160,7 +167,7 @@ export function AlertHistory({
                 )}
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts}
+                  alerts={currentStateAlerts.slice(startIndex, endIndex)}
                   users={users}
                   currentUser={currentUser}
                 />
