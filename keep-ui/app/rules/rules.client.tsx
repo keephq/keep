@@ -121,21 +121,22 @@ const CustomFieldSelector = (props: any) => {
   const { options, value, handleOnChange, path, currentQuery } = props;
 
   // Assuming path[0] is the group index and path[1] is the rule index
-  let currentGroup = currentQuery.rules[path[0]];
-  let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
+  // let currentGroup = currentQuery.rules[path[0]];
+  // let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
 
   // Get other rules in the same group, excluding the current rule if it's not new
-  let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
-    isRuleNew || index !== path[1]) : [];
+  //let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
+  //  isRuleNew || index !== path[1]) : [];
 
   // Filter out options that are already used in other rules of the current group,
   // unless the current rule is new
-  const filteredOptions = options.filter((option: unknown) =>
-    !otherRules.some((rule: unknown) =>
-      typeof rule === 'object' && (rule as any).field === (option as any).name
-    )
-  );
+  //const filteredOptions = options.filter((option: unknown) =>
+  //  !otherRules.some((rule: unknown) =>
+  //    typeof rule === 'object' && (rule as any).field === (option as any).name
+  //  )
+  //);
 
+  let filteredOptions = options;
   return (
     <Select
       className="w-auto"
