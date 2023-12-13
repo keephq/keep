@@ -1,12 +1,15 @@
 'use client';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
-import QueryBuilder, { defaultValidator, RuleGroupType, RuleType, Field, formatQuery, defaultOperators, ActionElement} from 'react-querybuilder';
+import QueryBuilder, { add, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, RuleValidator, QueryValidator} from 'react-querybuilder';
 // import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import Loading from "../loading";
 import './query-builder.scss';
+import { FaRegTrashAlt } from "react-icons/fa";
+import { MdEdit } from "react-icons/md";
+
 
 const getOperators = (fieldName: string) => {
   const field = fields.find(fld => fld.name === fieldName);
@@ -57,34 +60,67 @@ const getOperators = (fieldName: string) => {
 // Todo: dynamic
 const fields: Field[] = [
   { name: 'source', label: 'source', datatype: 'text'},
-  { name: 'severity', label: 'severity', datatype: 'text' },
-  { name: 'service', label: 'service', datatype: 'text' },
+  { name: 'severity', label: 'severity', datatype: 'text'},
+  { name: 'service', label: 'service', datatype: 'text'},
 ];
 
+const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
+  const validationMap: ValidationMap = {};
+
+  const checkRules = (rules) => {
+    rules.forEach(rule => {
+      if (rule.rules) {
+        // If it's a group, recursively check its rules
+        checkRules(rule.rules);
+      } else {
+        // Check if the rule value is empty and update the validation map
+        validationMap[rule.id] = {
+          valid: rule.value !== '',
+          reasons: rule.value === '' ? ['Value cannot be empty'] : []
+        };
+      }
+    });
+  };
+
+  checkRules(query.rules);
+  return validationMap;
+};
+
 const CustomValueEditor = (props: any) => {
-  const { value, handleOnChange, operator } = props;
+  const { value, handleOnChange, operator, rule, validationErrors } = props;
 
   // Define an array of operators that do not require the input
-  const operatorsWithoutInput = [ "null", "notNull"]; // Add more as needed
+  const operatorsWithoutInput = ["null", "notNull"]; // Add more as needed
 
   // Check if the selected operator is in the operatorsWithoutInput array
   const isInputHidden = operatorsWithoutInput.includes(operator);
+
+  const handleOnChangeInternal = (value: string) => {
+    // Clear the validation error for the rule when the user edits the value
+    handleOnChange(value);
+    delete props.validationErrors[`rule_${rule.id}`];
+  }
+  // Determine if the current rule has a validation error
+  const isValid = !validationErrors || !validationErrors[`rule_${rule.id}`];
+  const errorMessage = isValid ? "" : validationErrors[`rule_${rule.id}`];
 
   return (
     <>
       {!isInputHidden && (
         <TextInput
+          error={!isValid}
+          errorMessage={errorMessage}
           type="text"
           value={value}
-          onChange={(e) => handleOnChange(e.target.value)}
-          // Add your Tremor TextInput component props here
+          onChange={(e) => handleOnChangeInternal(e.target.value)}
         />
       )}
     </>
   );
 };
 
-const CustomCmbinatorSelector = (props: any) => {
+
+const CustomCombinatorSelector = (props: any) => {
   const { options, value, handleOnChange, level, path } = props;
 
   if(level === 0){
@@ -121,27 +157,29 @@ const CustomFieldSelector = (props: any) => {
   const { options, value, handleOnChange, path, currentQuery } = props;
 
   // Assuming path[0] is the group index and path[1] is the rule index
-  // let currentGroup = currentQuery.rules[path[0]];
-  // let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
-
+  let currentGroup = currentQuery.rules[path[0]];
+  let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
+  let currentRule = currentGroup.rules[path[1]];
   // Get other rules in the same group, excluding the current rule if it's not new
-  //let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
-  //  isRuleNew || index !== path[1]) : [];
+  let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
+     isRuleNew || index !== path[1]) : [];
 
   // Filter out options that are already used in other rules of the current group,
   // unless the current rule is new
-  //const filteredOptions = options.filter((option: unknown) =>
-  //  !otherRules.some((rule: unknown) =>
-  //    typeof rule === 'object' && (rule as any).field === (option as any).name
-  //  )
-  //);
+  const filteredOptions = options.filter((option: unknown) =>
+    !otherRules.some((rule: unknown) =>
+      typeof rule === 'object' && (rule as any).field === (option as any).name
+    )
+  );
 
-  let filteredOptions = options;
+  // if the rule is not new, add the current field to the filtered options
+  filteredOptions.push(fields.find((fld) => fld.name === currentRule.field));
+
   return (
     <Select
       className="w-auto"
       enableClear={false}
-      value={value}
+      value={currentRule.field}
       onChange={(e) => handleOnChange(e)} // Update the selected field
       // Pass the options as children to the Select component
     >
@@ -166,19 +204,29 @@ const CustomAddGroupAction = (props: any) => {
   );
 };
 
-const CustomAddRuleAction = (props: any) => {
-  const { label, handleOnClick } = props;
+const CustomAddRuleAction = (props) => {
+  const { label, handleOnClick, addRule } = props;
 
   if (props.level === 0) {
     return null;
   }
 
+  const handleAddRuleClick = () => {
+    addRule(props);
+  };
+
+  const availableFields = props.schema.fields.filter((fld) =>
+      !props.rules.some((rule) => rule.field === fld.name)
+    );
+
   return (
-    <Button onClick={handleOnClick} color="orange">
+    <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
       New Condition
     </Button>
   );
 };
+
+
 
 
 interface Rule {
@@ -203,14 +251,13 @@ export default function Page() {
       {
         combinator: 'and', // or 'or' depending on your logic
         rules: [
-          { field: 'source', operator: '=', value: 'sentry' }
+          { field: 'source', operator: '=', value: '' }
         ],
       },
       {
         combinator: 'and', // or 'or' depending on your logic
         rules: [
-          { field: 'source', operator: '=', value: 'grafana' },
-          { field: 'severity', operator: '=', value: 'critical' }
+          { field: 'source', operator: '=', value: '' },
         ],
       }
     ],
@@ -226,6 +273,9 @@ export default function Page() {
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
 
+  const valueEditor = useMemo(() => {
+    return (props) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
+  }, [validationErrors]);
 
   useEffect(() => {
     // Fetch rules data from the /rules API
@@ -252,10 +302,20 @@ export default function Page() {
     return !isNaN(Number(value));
   };
 
+  const addRule = (props) => {
+    // when adding a new Rule, add the rule with the first field that is not already used in the group
+    // the available fields are under props.schema.fields and the used fields are under props.rules
+    const availableFields = props.schema.fields.filter((fld) =>
+      !props.rules.some((rule) => rule.field === fld.name)
+    );
+    setQuery(add(query, { field: availableFields[0].name, operator: '=', value: '' }, props.path));
+  }
+
 
   const saveRule = () => {
     const errors: Record<string, string> = {};
 
+    // Validate form data
     if (!formData.ruleName) {
       errors.ruleName = "Rule Name is required";
     }
@@ -266,6 +326,18 @@ export default function Page() {
       errors.timeframe = "Timeframe must be a number";
     }
 
+    // Validate the query itself
+    const currentValidationState = customValidator(query);
+
+    // Include rule-specific validation errors
+    for (const [ruleId, validation] of Object.entries(currentValidationState)) {
+      if (!validation.valid) {
+        // Assuming validation.reasons is an array of string messages
+        errors[`rule_${ruleId}`] = validation.reasons.join(', ');
+      }
+    }
+
+    // Check if there are any errors
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
@@ -312,56 +384,97 @@ export default function Page() {
     });
   }
 
+  const isTimeframeNumeric = !isNaN(parseFloat(formData.timeframe.toString())) && isFinite(formData.timeframe);
+
+  const getTimeframeErrorMessage = () => {
+    if (formData.timeframe.toString() === '' || formData.timeframe === undefined) {
+      return "Timeframe is required";
+    } else if (!isTimeframeNumeric) {
+      return "Timeframe should be a number";
+    }
+    return ""; // No error
+  };
+
+  const handleDelete = (id: number) => {
+    const confirmed = confirm(
+      `Are you sure you want to delete this rule?`
+    );
+    if (confirmed) {
+      const session = session;
+      const apiUrl = getApiURL();
+      const body = {
+        id: id,
+      };
+      fetch(`${apiUrl}/rules`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          // Handle the response data here
+          console.log("Server Response:", data);
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+    }
+  }
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
           <Card>
             <Title>Rule Builder</Title>
             <Subtitle>define the rules that will create your dynamic alerts</Subtitle>
-            <Flex style={{ maxWidth: '50%' }}>
-              <TextInput
-                  className={`mt-4 mr-2 ${
-                    validationErrors.ruleName ? "border-red-500" : ""
-                  }`}
-                  placeholder="Rule Name"
-                  value={formData.ruleName}
-                  onChange={(e) => handleFieldChange("ruleName", e.target.value)}
-                />
-              </Flex>
-              <Flex style={{ maxWidth: '50%' }}>
+              <div style={{ maxWidth: '50%' }}>
                 <TextInput
-                  className={`mt-4 mr-2 ${
-                    validationErrors.timeframe ? "border-red-500" : ""
-                  }`}
-                  placeholder="Timeframe"
-                  value={formData.timeframe.toString()}
-                  onChange={(e) =>
-                    handleFieldChange("timeframe", e.target.value)
-                  }
-                />
-                <Select
-                  className="mt-4 mr-2"
-                  defaultValue={formData.timeframeUnit}
-                  onValueChange={(value: string) => handleFieldChange("timeframeUnit", value)}
-                >
-                  <SelectItem value="Seconds">Seconds</SelectItem>
-                  <SelectItem value="Minutes">Minutes</SelectItem>
-                  <SelectItem value="Hours">Hours</SelectItem>
-                  <SelectItem value="Days">Days</SelectItem>
-                </Select>
-              </Flex>
+                    error={formData.ruleName? false : true}
+                    errorMessage="Error name is required"
+                    placeholder="Rule Name"
+                    value={formData.ruleName}
+                    onChange={(e) => handleFieldChange("ruleName", e.target.value)}
+                  />
+                </div>
+
+                <div className="mt-4 mr-2">
+                  <Subtitle>Timeframe</Subtitle>
+                  <Flex style={{ maxWidth: '50%' }} className="items-center gap-4"> {/* Adjust gap as needed */}
+                    <TextInput
+                      error={formData.timeframe.toString() === '' || !isTimeframeNumeric}
+                      errorMessage={getTimeframeErrorMessage()}
+                      placeholder="Timeframe"
+                      value={formData.timeframe.toString()}
+                      onChange={(e) => handleFieldChange("timeframe", e.target.value)}
+                    />
+                    <Select
+                      defaultValue={formData.timeframeUnit}
+                      onValueChange={(value: string) => handleFieldChange("timeframeUnit", value)}
+                    >
+                      <SelectItem value="Seconds">Seconds</SelectItem>
+                      <SelectItem value="Minutes">Minutes</SelectItem>
+                      <SelectItem value="Hours">Hours</SelectItem>
+                      <SelectItem value="Days">Days</SelectItem>
+                    </Select>
+                  </Flex>
+                </div>
+
+
 
               <QueryBuilder
               fields={fields} query={query} getOperators={getOperators} onQueryChange={q => setQuery(q)}
               addRuleToNewGroups
               controlElements={{
-                valueEditor: CustomValueEditor,
+                valueEditor: valueEditor,
                 fieldSelector: (props) => <CustomFieldSelector {...props} currentQuery={query} />,
                 operatorSelector: CustomOperatorSelector,
-                combinatorSelector: CustomCmbinatorSelector,
+                combinatorSelector: CustomCombinatorSelector,
                 addGroupAction: CustomAddGroupAction,
-                addRuleAction: CustomAddRuleAction,
+                addRuleAction: (props) => <CustomAddRuleAction {...props} addRule={addRule} />
               }}
-              validator={defaultValidator}
+              validator={customValidator}
               controlClassnames={{
                 queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
                 ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4 !important',
@@ -399,6 +512,14 @@ export default function Page() {
                       <TableCell>{rule.timeframe} Seconds</TableCell>
                       <TableCell>{rule.created_by}</TableCell>
                       <TableCell>{rule.creation_time}</TableCell>
+                      <TableCell>
+                        <Button className="mr-1" color="orange" icon={FaRegTrashAlt} size="xs" onClick={() => handleDelete(rule.id)} title="Delete">
+
+                        </Button>
+                        <Button  color="orange" icon={MdEdit} size="xs" onClick={() => handleDelete(rule.id)} title="Edit">
+
+                        </Button>
+                    </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
