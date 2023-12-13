@@ -47,7 +47,7 @@ export default function WorkflowDetailPage({
     status === "authenticated"
       ? `${apiUrl}/workflows/${params.workflow_id}`
       : null,
-    (url) => fetcher(url, session?.accessToken!)
+    (url: string) => fetcher(url, session?.accessToken!)
   );
 
   if (isLoading || !data) return <Loading />;

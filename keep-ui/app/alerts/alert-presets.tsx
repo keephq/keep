@@ -229,11 +229,13 @@ export default function AlertPresets({
           icon={PlusIcon}
           size="xs"
           color="orange"
-          title="Create preset"
           className="ml-2.5"
           disabled={selectedOptions.length <= 0}
           onClick={async () => await addOrUpdatePreset()}
-        />
+          tooltip="Save current filter as a view"
+        >
+          Create Preset
+        </Button>
       )}
       {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
         <div className="flex ml-2.5">
@@ -245,7 +247,9 @@ export default function AlertPresets({
             className="mr-1"
             disabled={selectedOptions.length <= 0}
             onClick={async () => await addOrUpdatePreset()}
-          />
+          >
+            Save Preset
+          </Button>
           <Button
             icon={TrashIcon}
             size="xs"
@@ -255,7 +259,9 @@ export default function AlertPresets({
             onClick={async () => {
               await deletePreset(preset!.id!);
             }}
-          />
+          >
+            Delete Preset
+          </Button>
         </div>
       )}
     </div>
