@@ -302,6 +302,7 @@ def delete_provider(
 def validate_scopes(
     provider: BaseProvider, validate_mandatory=True
 ) -> dict[str, bool | str]:
+    logger.info("Validating provider scopes")
     validated_scopes = provider.validate_scopes()
     if validate_mandatory:
         mandatory_scopes_validated = True
@@ -320,6 +321,9 @@ def validate_scopes(
                 status_code=412,
                 detail=validated_scopes,
             )
+    logger.info(
+        "Validated provider scopes", extra={"validated_scopes": validated_scopes}
+    )
     return validated_scopes
 
 
