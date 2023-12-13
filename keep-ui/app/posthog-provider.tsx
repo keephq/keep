@@ -43,7 +43,7 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
         }
         posthog.capture("$pageview", {
           $current_url: url,
-          keep_version: process.env.NEXT_PUBLIC_KEEP_VERSION,
+          keep_version: process.env.NEXT_PUBLIC_KEEP_VERSION ?? "unknown",
         });
       }
     };
