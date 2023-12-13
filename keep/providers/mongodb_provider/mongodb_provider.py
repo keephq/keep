@@ -1,3 +1,7 @@
+"""
+MongodbProvider is a class that provides a way to read data from MySQL.
+"""
+
 import dataclasses
 import os
 
@@ -11,24 +15,38 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class MongodbProviderAuthConfig:
-    uri: str | None = dataclasses.field(
-        metadata={"required": False, "description": "MongoDB connection URI"}
+    host: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Mongo host_uri",
+            "hint": "any valid mongo host_uri like host:port, user:paassword@host:port?authSource",
+        }
     )
     username: str = dataclasses.field(
-        metadata={"required": False, "description": "MongoDB username"}
+        metadata={"required": False, "description": "MongoDB username"}, default=None
     )
     password: str = dataclasses.field(
         metadata={
             "required": False,
             "description": "MongoDB password",
             "sensitive": True,
-        }
-    )
-    host: str = dataclasses.field(
-        metadata={"required": False, "description": "MongoDB hostname"}
+        },
+        default=None,
     )
     database: str = dataclasses.field(
-        metadata={"required": False, "description": "MongoDB database name"}
+        metadata={"required": False, "description": "MongoDB database name"},
+        default=None,
+    )
+    auth_source: str | None = dataclasses.field(
+        metadata={"required": False, "description": "Mongo authSource database name"},
+        default=None,
+    )
+    additional_options: dict | None = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Mongo kwargs, these will be passed to MongoClient",
+        },
+        default_factory=dict,
     )
 
 
@@ -74,12 +92,18 @@ class MongodbProvider(BaseProvider):
         Returns:
             pymongo.MongoClient: MongoDB Client
         """
-        if self.authentication_config.uri:
-            client = MongoClient(self.authentication_config.uri)
-        else:
-            client = MongoClient(
-                f"mongodb://{self.authentication_config.username}:{self.authentication_config.password}@{self.authentication_config.host}/{self.authentication_config.database}"
-            )
+        # removing all None fields, as mongo will not accept None fields}
+        client_conf = {
+            k: v
+            for k, v in self.authentication_config.__dict__.items()
+            if v
+            and not k.startswith("__pydantic")  # removing pydantic default key
+            and k != "additional_options"  # additional_options will go seperately
+            and k != "database"
+        }  # database is not a valid mongo option
+        client = MongoClient(
+            **client_conf, **self.authentication_config.additional_options
+        )
         return client
 
     def dispose(self):
@@ -107,7 +131,7 @@ class MongodbProvider(BaseProvider):
         """
         client = self.__generate_client()
         database = client[self.authentication_config.database]
-        results = list(database.command(**query))
+        results = list(database.cursor_command(query))
 
         if single_row:
             return results[0] if results else None
@@ -118,10 +142,9 @@ class MongodbProvider(BaseProvider):
 if __name__ == "__main__":
     config = ProviderConfig(
         authentication={
-            "uri": os.environ.get("MONGODB_URI"),
+            "host": os.environ.get("MONGODB_HOST"),
             "username": os.environ.get("MONGODB_USER"),
             "password": os.environ.get("MONGODB_PASSWORD"),
-            "host": os.environ.get("MONGODB_HOST"),
             "database": os.environ.get("MONGODB_DATABASE"),
         }
     )

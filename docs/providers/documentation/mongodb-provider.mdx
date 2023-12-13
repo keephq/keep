@@ -19,22 +19,24 @@ The `query` function returns either a `list` or a `tuple` of results, depending 
 
 The following authentication parameters are used to connect to the MongoDB database:
 
-- `uri` (str, optional): The MongoDB connection URI. If provided, other authentication parameters will be ignored.
-- `username` (str): The MongoDB username.
-- `password` (str): The MongoDB password.
-- `host` (str): The MongoDB hostname.
-- `database` (str): The name of the MongoDB database.
+- `host` (str): The MongoDB connection URI. It can be a full uri with database, authSource, user, pass; or just hostip.
+- `username` (str, optional): The MongoDB username.
+- `password` (str, optional): The MongoDB password.
+- `database` (str, optional): The name of the MongoDB database.
+- `authSource` (str, optional): The name of the database against which authentication needs to be done.
+- `additional_options` (str, optional): Additinal options to be passed to MongoClient as kwargs.
 
 ## Connecting with the Provider
 
 In order to connect to the MongoDB database, you can use either a connection URI or individual parameters. Here's how you can provide authentication information:
 
-1. If using a connection URI, provide the `uri` parameter with the MongoDB connection string.
+1. If using a connection URI, provide the `host` parameter with the MongoDB connection string.
 2. If using individual parameters, provide the following:
    - `username`: MongoDB username.
    - `password`: MongoDB password.
    - `host`: MongoDB hostname.
    - `database`: MongoDB database name.
+   - `authSource`: MongoDB database name.
 
 ## Notes
 
