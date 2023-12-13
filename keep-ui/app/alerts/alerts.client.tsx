@@ -17,10 +17,10 @@ export default function AlertsPage() {
     data: configData,
     error,
     isLoading,
-  } = useSWR<InternalConfig>("/api/config", fetcher);
+  } = useSWR<InternalConfig>("/api/config", fetcher, undefined);
   const [pusherClient, setPusherClient] = useState<Pusher | null>(null);
   const router = useRouter();
-  const pusherDisabled = configData?.PUSHER_DISABLED === true
+  const pusherDisabled = configData?.PUSHER_DISABLED === true;
 
   useEffect(() => {
     if (

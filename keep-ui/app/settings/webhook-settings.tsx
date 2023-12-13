@@ -83,7 +83,7 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
         <div className="flex justify-between">
           <Icon variant="light" icon={GlobeAltIcon} size="lg" color="orange" />
           <Button
-            variant="light"
+            variant="primary"
             icon={PlayIcon}
             color="orange"
             onClick={tryNow}
@@ -91,12 +91,14 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
             Try now
           </Button>
         </div>
-        <div className="flex">
-          <div className="w-3/5">
+        <div className="flex divide-x">
+          <div className="w-4/5 mr-1">
             <Title className="mt-6">URL: {data?.webhookApi}</Title>
             <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
           </div>
-          <CopyBlock {...copyBlockProps} />
+          <div className="w-full">
+            <CopyBlock {...copyBlockProps} />
+          </div>
         </div>
       </Card>
     </div>
