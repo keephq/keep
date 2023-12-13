@@ -9,6 +9,7 @@ from collections import OrderedDict
 from importlib import metadata
 
 import click
+import pkg_resources
 import requests
 import yaml
 from dotenv import find_dotenv, load_dotenv
@@ -23,6 +24,10 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 posthog_client = get_posthog_client()
+try:
+    KEEP_VERSION = pkg_resources.get_distribution("keep").version
+except Exception:
+    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
 
 logging_config = {
@@ -185,6 +190,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
         "keep-cli-started",
         properties={
             "args": sys.argv,
+            "keep_version": KEEP_VERSION,
         },
     )
     # Use the verbosity count to determine the logging level...
@@ -337,6 +343,7 @@ def run(
         "keep-run-alert-started",
         properties={
             "args": sys.argv,
+            "keep_version": KEEP_VERSION,
         },
     )
     # this should be fixed
@@ -356,6 +363,7 @@ def run(
             "keep-run-stopped-by-user",
             properties={
                 "args": sys.argv,
+                "keep_version": KEEP_VERSION,
             },
         )
         workflow_manager.stop()
@@ -367,6 +375,7 @@ def run(
             properties={
                 "args": sys.argv,
                 "error": str(e),
+                "keep_version": KEEP_VERSION,
             },
         )
         logger.error(f"Error running alert {alerts_directory or alert_url}: {e}")
@@ -378,6 +387,7 @@ def run(
         "keep-run-alert-finished",
         properties={
             "args": sys.argv,
+            "keep_version": KEEP_VERSION,
         },
     )
     logger.debug(f"Alert in {alerts_directory or alert_url} ran successfully")
