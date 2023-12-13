@@ -96,14 +96,14 @@ class MongodbProvider(BaseProvider):
         # removing all None fields, as mongo will not accept None fields}
         if self.authentication_config.additional_options:
             try:
-                self.logger.debug("Casting the additional_options to JSON")
+                self.logger.debug("Casting the additional_options to dict")
                 additional_options = json.loads(
                     self.authentication_config.additional_options
                 )
-                self.logger.debug("Successfully casted the additional_options to JSON")
+                self.logger.debug("Successfully casted the additional_options to dict")
             except Exception:
-                self.logger.debug("Failed to cast the additional_options to JSON")
-                raise ValueError("additional_options must be a valid JSON")
+                self.logger.debug("Failed to cast the additional_options to dict")
+                raise ValueError("additional_options must be a valid dict")
         else:
             additional_options = {}
 
