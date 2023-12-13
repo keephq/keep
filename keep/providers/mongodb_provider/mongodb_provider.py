@@ -3,6 +3,7 @@ MongodbProvider is a class that provides a way to read data from MySQL.
 """
 
 import dataclasses
+import json
 import os
 
 import pydantic
@@ -41,12 +42,12 @@ class MongodbProviderAuthConfig:
         metadata={"required": False, "description": "Mongo authSource database name"},
         default=None,
     )
-    additional_options: dict | None = dataclasses.field(
+    additional_options: str | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "Mongo kwargs, these will be passed to MongoClient",
         },
-        default_factory=dict,
+        default=None,
     )
 
 
@@ -93,6 +94,19 @@ class MongodbProvider(BaseProvider):
             pymongo.MongoClient: MongoDB Client
         """
         # removing all None fields, as mongo will not accept None fields}
+        if self.authentication_config.additional_options:
+            try:
+                self.logger.debug("Casting the additional_options to dict")
+                additional_options = json.loads(
+                    self.authentication_config.additional_options
+                )
+                self.logger.debug("Successfully casted the additional_options to dict")
+            except Exception:
+                self.logger.debug("Failed to cast the additional_options to dict")
+                raise ValueError("additional_options must be a valid dict")
+        else:
+            additional_options = {}
+
         client_conf = {
             k: v
             for k, v in self.authentication_config.__dict__.items()
@@ -101,9 +115,7 @@ class MongodbProvider(BaseProvider):
             and k != "additional_options"  # additional_options will go seperately
             and k != "database"
         }  # database is not a valid mongo option
-        client = MongoClient(
-            **client_conf, **self.authentication_config.additional_options
-        )
+        client = MongoClient(**client_conf, **additional_options)
         return client
 
     def dispose(self):
@@ -146,6 +158,7 @@ if __name__ == "__main__":
             "username": os.environ.get("MONGODB_USER"),
             "password": os.environ.get("MONGODB_PASSWORD"),
             "database": os.environ.get("MONGODB_DATABASE"),
+            # "additional_options": '{"retryWrites": false}',
         }
     )
     context_manager = ContextManager(
