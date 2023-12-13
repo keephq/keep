@@ -317,6 +317,10 @@ def validate_scopes(
                     break
         # Otherwise we fail the installation
         if not mandatory_scopes_validated:
+            logger.warning(
+                "Failed to validate mandatory provider scopes",
+                extra={"validated_scopes": validated_scopes},
+            )
             raise HTTPException(
                 status_code=412,
                 detail=validated_scopes,
