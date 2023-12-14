@@ -26,8 +26,8 @@ import { NameInitialsAvatar } from "react-name-initials-avatar";
 const navigation = [
   { name: "Providers", href: "/providers", icon: VscDebugDisconnect },
   { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
-  { name: "Workflows", href: "/workflows", icon: LuWorkflow },
-  { name: "Rules", href: "/rules", icon: MdOutlineEngineering}
+  { name: "Rules", href: "/rules", icon: MdOutlineEngineering},
+  { name: "Workflows", href: "/workflows", icon: LuWorkflow }
   // {
   //   name: "Notifications Hub",
   //   href: "/notifications-hub",

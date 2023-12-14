@@ -1,6 +1,8 @@
 'use client';
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Select, SelectItem, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
+import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
+import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import QueryBuilder, { add, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, RuleValidator, QueryValidator} from 'react-querybuilder';
 // import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
@@ -10,59 +12,6 @@ import './query-builder.scss';
 import { FaRegTrashAlt } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
 
-
-const getOperators = (fieldName: string) => {
-  const field = fields.find(fld => fld.name === fieldName);
-
-  switch (field!.datatype) {
-    case 'text':
-      return [
-        ...defaultOperators.filter(op =>
-          [
-            '=',
-            'contains',
-            'beginsWith',
-            'endsWith',
-            'doesNotContain',
-            'doesNotBeginWith',
-            'doesNotEndWith',
-            'null',
-            'notNull',
-            'in',
-            'notIn',
-          ].includes(op.name)
-        ),
-      ];
-    case 'number':
-      return [
-        ...defaultOperators.filter(op => ['=', '!='].includes(op.name)),
-        { name: '<', label: 'less than' },
-        { name: '<=', label: 'less than or equal to' },
-        { name: '>', label: 'greater than' },
-        { name: '>=', label: 'greater than or equal to' },
-        ...defaultOperators.filter(op => ['null', 'notNull'].includes(op.name)),
-      ];
-    case 'date':
-      return [
-        { name: '=', label: 'on' },
-        { name: '!=', label: 'not on' },
-        { name: '<', label: 'before' },
-        { name: '<=', label: 'on or before' },
-        { name: '>', label: 'after' },
-        { name: '>=', label: 'on or after' },
-        ...defaultOperators.filter(op => ['null', 'notNull'].includes(op.name)),
-      ];
-  }
-  return defaultOperators;
-};
-
-// Todo: validation
-// Todo: dynamic
-const fields: Field[] = [
-  { name: 'source', label: 'source', datatype: 'text'},
-  { name: 'severity', label: 'severity', datatype: 'text'},
-  { name: 'service', label: 'service', datatype: 'text'},
-];
 
 const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
   const validationMap: ValidationMap = {};
@@ -134,63 +83,32 @@ const CustomCombinatorSelector = (props: any) => {
   );
 }
 
-const CustomOperatorSelector = (props: any) => {
+const CustomOperatorSelector = (props) => {
   const { options, value, handleOnChange } = props;
-  return (
-    <Select
-      className="w-auto"
-      enableClear={false}
-      value={value}
-      onChange={(e) => handleOnChange(e)} // Update the selected field
-      // Pass the options as children to the Select component
-    >
-      {options.map((option: any) => (
-        <SelectItem key={option.name} value={option.name}>
-          {option.label}
-        </SelectItem>
-      ))}
-    </Select>
-  );
-};
 
-const CustomFieldSelector = (props: any) => {
-  const { options, value, handleOnChange, path, currentQuery } = props;
-
-  // Assuming path[0] is the group index and path[1] is the rule index
-  let currentGroup = currentQuery.rules[path[0]];
-  let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
-  let currentRule = currentGroup.rules[path[1]];
-  // Get other rules in the same group, excluding the current rule if it's not new
-  let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
-     isRuleNew || index !== path[1]) : [];
-
-  // Filter out options that are already used in other rules of the current group,
-  // unless the current rule is new
-  const filteredOptions = options.filter((option: unknown) =>
-    !otherRules.some((rule: unknown) =>
-      typeof rule === 'object' && (rule as any).field === (option as any).name
-    )
-  );
-
-  // if the rule is not new, add the current field to the filtered options
-  filteredOptions.push(fields.find((fld) => fld.name === currentRule.field));
+  // Convert options to the format expected by react-select
+  const reactSelectOptions = options.map((option) => ({
+    label: option.label,
+    value: option.name,
+  }));
 
   return (
     <Select
       className="w-auto"
-      enableClear={false}
-      value={currentRule.field}
-      onChange={(e) => handleOnChange(e)} // Update the selected field
-      // Pass the options as children to the Select component
-    >
-      {filteredOptions.map((option: any) => (
-        <SelectItem key={option.name} value={option.name}>
-          {option.label}
-        </SelectItem>
-      ))}
-    </Select>
+      isClearable={false}
+      value={reactSelectOptions.find((option) => option.value === value)}
+      onChange={(selectedOption) => handleOnChange(selectedOption.value)} // Update the selected field
+      options={reactSelectOptions}
+      styles={{
+        control: (provided) => ({
+          ...provided,
+          width: '200px',
+        }),
+      }}
+    />
   );
 };
+
 
 const CustomAddGroupAction = (props: any) => {
   if(props.level > 0){
@@ -270,6 +188,13 @@ export default function Page() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>(
     {}
   );
+  const [fields, setFields] = useState<Field[]>([
+    { name: 'source', label: 'source', datatype: 'text'},
+    { name: 'severity', label: 'severity', datatype: 'text'},
+    { name: 'service', label: 'service', datatype: 'text'},
+  ]);
+
+
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
 
@@ -300,6 +225,127 @@ export default function Page() {
 
   const isNumber = (value: string) => {
     return !isNaN(Number(value));
+  };
+
+  const getOperators = (fieldName: string) => {
+    const field = fields.find(fld => fld.name === fieldName);
+    // if the field is not found - it means it added dynamically and we support only text for now anyway
+    // todo: in the future getOperators should wait for setFields hook to finish
+    if(!field){
+      return [
+        ...defaultOperators.filter(op =>
+          [
+            '=',
+            'contains',
+            'beginsWith',
+            'endsWith',
+            'doesNotContain',
+            'doesNotBeginWith',
+            'doesNotEndWith',
+            'null',
+            'notNull',
+            'in',
+            'notIn',
+          ].includes(op.name)
+        ),
+      ];
+    }
+
+    switch (field!.datatype) {
+      case 'text':
+        return [
+          ...defaultOperators.filter(op =>
+            [
+              '=',
+              'contains',
+              'beginsWith',
+              'endsWith',
+              'doesNotContain',
+              'doesNotBeginWith',
+              'doesNotEndWith',
+              'null',
+              'notNull',
+              'in',
+              'notIn',
+            ].includes(op.name)
+          ),
+        ];
+      case 'number':
+        return [
+          ...defaultOperators.filter(op => ['=', '!='].includes(op.name)),
+          { name: '<', label: 'less than' },
+          { name: '<=', label: 'less than or equal to' },
+          { name: '>', label: 'greater than' },
+          { name: '>=', label: 'greater than or equal to' },
+          ...defaultOperators.filter(op => ['null', 'notNull'].includes(op.name)),
+        ];
+      case 'date':
+        return [
+          { name: '=', label: 'on' },
+          { name: '!=', label: 'not on' },
+          { name: '<', label: 'before' },
+          { name: '<=', label: 'on or before' },
+          { name: '>', label: 'after' },
+          { name: '>=', label: 'on or after' },
+          ...defaultOperators.filter(op => ['null', 'notNull'].includes(op.name)),
+        ];
+    }
+    return defaultOperators;
+  };
+
+  const CustomFieldSelector = (props: any) => {
+    const { options, value, handleOnChange, path, currentQuery, setFields } = props;
+
+    // Assuming path[0] is the group index and path[1] is the rule index
+    let currentGroup = currentQuery.rules[path[0]];
+    let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
+    let currentRule = currentGroup.rules[path[1]];
+    // Get other rules in the same group, excluding the current rule if it's not new
+    let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
+       isRuleNew || index !== path[1]) : [];
+
+    // Filter out options that are already used in other rules of the current group,
+    // unless the current rule is new
+    const filteredOptions = options.filter((option: unknown) =>
+      !otherRules.some((rule: unknown) =>
+        typeof rule === 'object' && (rule as any).field === (option as any).name
+      )
+    );
+
+    // if the rule is not new, add the current field to the filtered options
+    filteredOptions.unshift(fields.find((fld) => fld.name === currentRule.field));
+
+
+    const reactSelectOptions = filteredOptions.map((option) => ({
+      label: option.label,
+      value: option.name,
+    }));
+
+    const handleCreate = (option: any) => {
+      // Create a new field and add it to the list of fields
+      const newField = { name: option, label: option, value: option, datatype: 'text' };
+      setFields((prevFields) => [...prevFields, newField]);
+      // Update the selected field
+      handleOnChange(option);
+    }
+
+
+    return (
+      <CreatableSelect
+        className="w-auto"
+        isClearable={false}
+        onCreateOption={handleCreate}
+        value={reactSelectOptions.find((option) => option.value === currentRule.field)}
+        onChange={(selectedOption) => handleOnChange(selectedOption.value)}
+        options={reactSelectOptions}
+        styles={{
+          control: (provided) => ({
+            ...provided,
+            width: '200px',
+          }),
+        }}
+      />
+    );
   };
 
   const addRule = (props) => {
@@ -424,6 +470,13 @@ export default function Page() {
     }
   }
 
+  const options = [
+    { value: 'Seconds', label: 'Seconds' },
+    { value: 'Minutes', label: 'Minutes' },
+    { value: 'Hours', label: 'Hours' },
+    { value: 'Days', label: 'Days' },
+  ];
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
           <Card>
@@ -449,15 +502,17 @@ export default function Page() {
                       value={formData.timeframe.toString()}
                       onChange={(e) => handleFieldChange("timeframe", e.target.value)}
                     />
-                    <Select
-                      defaultValue={formData.timeframeUnit}
-                      onValueChange={(value: string) => handleFieldChange("timeframeUnit", value)}
-                    >
-                      <SelectItem value="Seconds">Seconds</SelectItem>
-                      <SelectItem value="Minutes">Minutes</SelectItem>
-                      <SelectItem value="Hours">Hours</SelectItem>
-                      <SelectItem value="Days">Days</SelectItem>
-                    </Select>
+                      <Select
+                          value={{ value: formData.timeframeUnit, label: formData.timeframeUnit }}
+                          onChange={(selectedOption) => handleFieldChange("timeframeUnit", selectedOption.value)}
+                          options={options}
+                          styles={{
+                            control: (provided) => ({
+                              ...provided,
+                              width: '200px',
+                            }),
+                          }}
+                        />
                   </Flex>
                 </div>
 
@@ -468,7 +523,7 @@ export default function Page() {
               addRuleToNewGroups
               controlElements={{
                 valueEditor: valueEditor,
-                fieldSelector: (props) => <CustomFieldSelector {...props} currentQuery={query} />,
+                fieldSelector: (props) => <CustomFieldSelector {...props} currentQuery={query} setFields={setFields} />,
                 operatorSelector: CustomOperatorSelector,
                 combinatorSelector: CustomCombinatorSelector,
                 addGroupAction: CustomAddGroupAction,
