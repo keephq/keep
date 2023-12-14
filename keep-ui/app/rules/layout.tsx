@@ -4,9 +4,9 @@ export default function Layout({ children }: { children: any }) {
   return (
     <>
       <main className="p-4 md:p-10 mx-auto max-w-full">
-        <Title>Rules</Title>
+        <Title>Alert Groups</Title>
         <Subtitle>
-          Define dynamic alerts with Rules
+            Group multiple alerts into single alert
         </Subtitle>
         {children}
       </main>

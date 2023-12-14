@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
-import QueryBuilder, { add, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, RuleValidator, QueryValidator} from 'react-querybuilder';
+import QueryBuilder, { add, remove, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, parseCEL, QueryValidator, findPath} from 'react-querybuilder';
 // import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
@@ -117,7 +117,7 @@ const CustomAddGroupAction = (props: any) => {
 
   return (
     <Button onClick={props.handleOnClick} color="orange">
-      New Group
+      Add Alerts Group
     </Button>
   );
 };
@@ -139,7 +139,7 @@ const CustomAddRuleAction = (props) => {
 
   return (
     <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
-      New Condition
+      Add Condition
     </Button>
   );
 };
@@ -160,26 +160,27 @@ interface Rule {
 
 }
 
+const defaultQuery = {
+  combinator: 'and',
+  rules: [
+    {
+      combinator: 'and', // or 'or' depending on your logic
+      rules: [
+        { field: 'source', operator: '=', value: '' }
+      ],
+    },
+    {
+      combinator: 'and', // or 'or' depending on your logic
+      rules: [
+        { field: 'source', operator: '=', value: '' },
+      ],
+    }
+  ],
+}
 
 export default function Page() {
   // Use the extended type for the query state
-  const [query, setQuery] = useState<RuleGroupType>({
-    combinator: 'and',
-    rules: [
-      {
-        combinator: 'and', // or 'or' depending on your logic
-        rules: [
-          { field: 'source', operator: '=', value: '' }
-        ],
-      },
-      {
-        combinator: 'and', // or 'or' depending on your logic
-        rules: [
-          { field: 'source', operator: '=', value: '' },
-        ],
-      }
-    ],
-  });
+  const [query, setQuery] = useState<RuleGroupType>(defaultQuery);
   const [formData, setFormData] = useState({
     ruleName: "Rule Name",
     timeframe: 600,
@@ -197,6 +198,7 @@ export default function Page() {
 
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
+  const [editMode, setEditMode] = useState(false);
 
   const valueEditor = useMemo(() => {
     return (props) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
@@ -407,8 +409,16 @@ export default function Page() {
     })
       .then((response) => response.json())
       .then((data) => {
-        // Handle the response data here
-        console.log("Server Response:", data);
+        // Update the rules list
+        setRules((prevRules) => [...prevRules, data]);
+        // Reset the form
+        setFormData({
+          ruleName: "New Rule",
+          timeframe: 600,
+          timeframeUnit: "Seconds",
+        });
+        // Reset the query
+        setQuery(defaultQuery);
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -441,28 +451,35 @@ export default function Page() {
     return ""; // No error
   };
 
+  const handleEdit = (rule: Rule) => {
+    const query = parseCEL(rule.definition_cel);
+    setQuery(query);
+    setFormData({
+      ruleName: rule.name,
+      timeframe: rule.timeframe,
+      timeframeUnit: "Seconds",
+      });
+      setEditMode(true);
+    }
+
   const handleDelete = (id: number) => {
     const confirmed = confirm(
       `Are you sure you want to delete this rule?`
     );
     if (confirmed) {
-      const session = session;
       const apiUrl = getApiURL();
-      const body = {
-        id: id,
-      };
-      fetch(`${apiUrl}/rules`, {
+
+      fetch(`${apiUrl}/rules/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
           "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      })
+        }})
         .then((response) => response.json())
         .then((data) => {
-          // Handle the response data here
-          console.log("Server Response:", data);
+          // Delete Ok, remove from rules
+          const newRules = rules.filter((rule) => rule.id !== id);
+          setRules(newRules);
         })
         .catch((error) => {
           console.error("Error:", error);
@@ -477,47 +494,68 @@ export default function Page() {
     { value: 'Days', label: 'Days' },
   ];
 
+
+  const CustomRemoveRuleAction = (props) => {
+    // if its the only rule in the group, delete the group
+
+    const handleOnClick = (e: any) => {
+      // get the group index
+      const groupIndex = props.path[0];
+      // get the group
+      const group = findPath([groupIndex], query) as RuleGroupType;
+      // if its the only rule in the group, delete the group
+      if (group.rules.length === 1) {
+        setQuery(remove(query, [groupIndex]));
+      // else, delete the rule
+      } else {
+        props.handleOnClick(e)
+      }
+    }
+
+    return (
+      <Button icon={FaRegTrashAlt} size="xs" onClick={handleOnClick} color="orange">
+      </Button>
+    );
+  }
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
           <Card>
             <Title>Rule Builder</Title>
-            <Subtitle>define the rules that will create your dynamic alerts</Subtitle>
-              <div style={{ maxWidth: '50%' }}>
-                <TextInput
-                    error={formData.ruleName? false : true}
-                    errorMessage="Error name is required"
-                    placeholder="Rule Name"
-                    value={formData.ruleName}
-                    onChange={(e) => handleFieldChange("ruleName", e.target.value)}
+            <Subtitle>Rule name</Subtitle>
+            <div style={{ maxWidth: '50%' }}>
+              <TextInput
+                  error={formData.ruleName? false : true}
+                  errorMessage="Error name is required"
+                  placeholder="Rule Name"
+                  value={formData.ruleName}
+                  onChange={(e) => handleFieldChange("ruleName", e.target.value)}
+                />
+              </div>
+
+              <div className="mt-4 mr-2">
+                <Subtitle>Timeframe</Subtitle>
+                <Flex style={{ maxWidth: '50%' }} className="items-center gap-4"> {/* Adjust gap as needed */}
+                  <TextInput
+                    error={formData.timeframe.toString() === '' || !isTimeframeNumeric}
+                    errorMessage={getTimeframeErrorMessage()}
+                    placeholder="Timeframe"
+                    value={formData.timeframe.toString()}
+                    onChange={(e) => handleFieldChange("timeframe", e.target.value)}
                   />
-                </div>
-
-                <div className="mt-4 mr-2">
-                  <Subtitle>Timeframe</Subtitle>
-                  <Flex style={{ maxWidth: '50%' }} className="items-center gap-4"> {/* Adjust gap as needed */}
-                    <TextInput
-                      error={formData.timeframe.toString() === '' || !isTimeframeNumeric}
-                      errorMessage={getTimeframeErrorMessage()}
-                      placeholder="Timeframe"
-                      value={formData.timeframe.toString()}
-                      onChange={(e) => handleFieldChange("timeframe", e.target.value)}
-                    />
-                      <Select
-                          value={{ value: formData.timeframeUnit, label: formData.timeframeUnit }}
-                          onChange={(selectedOption) => handleFieldChange("timeframeUnit", selectedOption.value)}
-                          options={options}
-                          styles={{
-                            control: (provided) => ({
-                              ...provided,
-                              width: '200px',
-                            }),
-                          }}
-                        />
-                  </Flex>
-                </div>
-
-
-
+                    <Select
+                        value={{ value: formData.timeframeUnit, label: formData.timeframeUnit }}
+                        onChange={(selectedOption) => handleFieldChange("timeframeUnit", selectedOption.value)}
+                        options={options}
+                        styles={{
+                          control: (provided) => ({
+                            ...provided,
+                            width: '200px',
+                          }),
+                        }}
+                      />
+                </Flex>
+              </div>
               <QueryBuilder
               fields={fields} query={query} getOperators={getOperators} onQueryChange={q => setQuery(q)}
               addRuleToNewGroups
@@ -527,7 +565,8 @@ export default function Page() {
                 operatorSelector: CustomOperatorSelector,
                 combinatorSelector: CustomCombinatorSelector,
                 addGroupAction: CustomAddGroupAction,
-                addRuleAction: (props) => <CustomAddRuleAction {...props} addRule={addRule} />
+                addRuleAction: (props) => <CustomAddRuleAction {...props} addRule={addRule} />,
+                removeRuleAction: CustomRemoveRuleAction
               }}
               validator={customValidator}
               controlClassnames={{
@@ -543,9 +582,20 @@ export default function Page() {
                 removeRule: 'p-1 ml-auto',
               }}
               />
-            <Button className="mt-4 mr-2" color="orange" onClick={saveRule}>
-              Save Rule
-            </Button>
+              <div className="text-right">
+                <Button className="mt-2" color="orange" onClick={saveRule}>
+                  {editMode ? "Update Rule" : "Create Rule"}
+                </Button>
+                {editMode &&
+                  <Button className="mt-2 ml-2" color="orange" onClick={() => {setEditMode(false); setQuery(defaultQuery); setFormData({
+                    ruleName: "New Rule",
+                    timeframe: 600,
+                    timeframeUnit: "Seconds",
+                  });}}>
+                    Cancel
+                  </Button>
+                }
+              </div>
           </Card>
           <Card className="mt-8">
             <Title>Rules</Title>
@@ -571,7 +621,7 @@ export default function Page() {
                         <Button className="mr-1" color="orange" icon={FaRegTrashAlt} size="xs" onClick={() => handleDelete(rule.id)} title="Delete">
 
                         </Button>
-                        <Button  color="orange" icon={MdEdit} size="xs" onClick={() => handleDelete(rule.id)} title="Edit">
+                        <Button  color="orange" icon={MdEdit} size="xs" onClick={() => handleEdit(rule)} title="Edit">
 
                         </Button>
                     </TableCell>

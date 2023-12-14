@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from keep.api.core.db import create_rule as create_rule_db
+from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.dependencies import (
     get_user_email,
@@ -79,3 +80,21 @@ async def create_rule(
     )
     logger.info("Rule created")
     return rule
+
+
+@router.delete(
+    "/{rule_id}",
+    description="Delete Rule",
+)
+async def delete_rule(
+    rule_id: str,
+    request: Request,
+    tenant_id: str = Depends(verify_token_or_key),
+):
+    logger.info(f"Deleting rule {rule_id}")
+    if delete_rule_db(tenant_id=tenant_id, rule_id=rule_id):
+        logger.info(f"Rule {rule_id} deleted")
+        return {"message": "Rule deleted"}
+    else:
+        logger.info(f"Rule {rule_id} not found")
+        raise HTTPException(status_code=404, detail="Rule not found")

@@ -817,7 +817,8 @@ def create_rule(tenant_id, name, timeframe, definition, definition_cel, created_
         )
         session.add(rule)
         session.commit()
-    return rule
+        session.refresh(rule)
+        return rule
 
 
 def get_rules(tenant_id):
@@ -919,3 +920,16 @@ def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
         session.add(alert)
         session.commit()
         return alert
+
+
+def delete_rule(tenant_id, rule_id):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+        ).first()
+
+        if rule:
+            session.delete(rule)
+            session.commit()
+            return True
+        return False
