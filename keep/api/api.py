@@ -114,6 +114,11 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         # Skip OPTIONS requests
         if request.method == "OPTIONS":
             return await call_next(request)
+
+        # Skipping /healthcheck endpoint, as this is probed when application starts
+        # and this middleware doesn't let it go further.
+        if request.scope["path"] == "/healthcheck" or not _is_server_ready():
+            return await call_next(request)
         # Capture event before request
         await self.capture_request(request)
 
