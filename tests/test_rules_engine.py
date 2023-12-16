@@ -1,6 +1,6 @@
 import datetime
 
-from conftest import db_session
+import pytest
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import get_rules as get_rules_db
@@ -10,6 +10,7 @@ from keep.rulesengine.rulesengine import RulesEngine
 
 
 # Test that a simple rule works
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
 def test_sanity(db_session):
     # insert alerts
     alerts = [
@@ -111,7 +112,7 @@ def test_old_alerts(db_session):
     assert results is None
 
 
-def test_another():
+def test_another(db_session):
     alerts = [
         Alert(
             tenant_id=SINGLE_TENANT_UUID,
@@ -125,8 +126,6 @@ def test_another():
             provider_type="test",
             provider_id="test",
             event={"source": ["grafana"], "severity": "critical"},
-            # 15 minutes ago so out of timeframe
-            timestamp=datetime.datetime.utcnow() - datetime.timedelta(minutes=15),
             fingerprint="test",
         ),
     ]
@@ -162,13 +161,13 @@ def test_another():
     assert results is None
 
 
-def test_three_groups():
+def test_three_groups(db_session):
     alerts = [
         Alert(
             tenant_id=SINGLE_TENANT_UUID,
             provider_type="test",
             provider_id="test",
-            event={"source": ["sentry"], "severity": "critical"},
+            event={"source": ["sentry"], "severity": "high"},
             fingerprint="test",
         ),
         Alert(
@@ -176,8 +175,6 @@ def test_three_groups():
             provider_type="test",
             provider_id="test",
             event={"source": ["grafana"], "severity": "critical"},
-            # 15 minutes ago so out of timeframe
-            timestamp=datetime.datetime.utcnow() - datetime.timedelta(minutes=15),
             fingerprint="test",
         ),
     ]
@@ -230,44 +227,5 @@ def test_three_groups():
     assert results is not None
 
 
-def test_find_relevant(db_session):
-    # create first rule
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="test-rule",
-        definition={
-            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2) and (source = :source_3 and service = :service_1))",
-            "params": {
-                "source_1": "sentry",
-                "severity_1": "high",
-                "source_2": "grafana",
-                "severity_2": "critical",
-                "source_3": "elastic",
-                "service_1": "db",
-            },
-        },
-        timeframe=600,
-        definition_cel='(source == "sentry" && severity == "high") && (source == "grafana" && severity == "critical") && (source == "elastic" && service == "db")',
-        created_by="test@keephq.dev",
-    )
-    # create seconds rule
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="test-rule",
-        definition={
-            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2) and (source = :source_3 and service = :service_1))",
-            "params": {
-                "source_1": "sentry",
-                "severity_1": "high",
-                "source_2": "grafana",
-                "severity_2": "critical",
-                "source_3": "datadog",
-                "service_1": "db",
-            },
-        },
-        timeframe=600,
-        definition_cel='(source == "datadog" && severity == "high") && (source == "grafana" && severity == "critical") && (source == "elastic" && service == "db")',
-        created_by="test@keephq.dev",
-    )
-    # now let's create some event:
-    # event = AlertDto()
+# TODO: add tests for all operators (IMPORTANT)
+# TODO: add tests for every datatype e.g. source (list), severity (string)

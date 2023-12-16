@@ -3306,6 +3306,26 @@ pluggy = ">=0.12,<2.0"
 testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
 
 [[package]]
+name = "pytest-docker"
+version = "2.0.1"
+description = "Simple pytest fixtures for Docker and Docker Compose based tests"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pytest-docker-2.0.1.tar.gz", hash = "sha256:1c17e9202a566f85ed5ef269fe2815bd4899e90eb639622e5d14277372ca7524"},
+    {file = "pytest_docker-2.0.1-py3-none-any.whl", hash = "sha256:7103f97b8c479c826b63d73cfb83383dc1970d35105ed1ce78a722c90c7fe650"},
+]
+
+[package.dependencies]
+attrs = ">=19.2.0"
+pytest = ">=4.0,<8.0"
+
+[package.extras]
+docker-compose-v1 = ["docker-compose (>=1.27.3,<2.0)"]
+tests = ["pytest-pycodestyle (>=2.0.0,<3.0)", "pytest-pylint (>=0.14.1,<1.0)", "requests (>=2.22.0,<3.0)"]
+
+[[package]]
 name = "pytest-mock"
 version = "3.12.0"
 description = "Thin-wrapper around the mock package for easier use with pytest"
@@ -4525,4 +4545,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "b68c94dbdeba2caf10b1af54b85f858edcd0681b3461b628a13e14badcb85560"
+content-hash = "72ee8638be83a5d8dfc4c5d051132dc494ce50110d667832e0ed4e018d4d0a76"

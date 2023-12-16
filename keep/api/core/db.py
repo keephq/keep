@@ -863,10 +863,41 @@ def run_rule(tenant_id, rule):
                 # Handling different SQL dialects
                 if session.bind.dialect.name == "mysql":
                     filters.append(
-                        func.json_contains(
-                            Alert.event, bindparam(bind, value), json_path
+                        case(
+                            [
+                                # Check if the JSON value contains an array with the given value
+                                (
+                                    func.json_contains(
+                                        Alert.event, func.json_array(value), json_path
+                                    )
+                                    == 1,
+                                    True,
+                                ),
+                                # Check if the JSON value contains an object with the given value at key "0"
+                                (
+                                    func.json_contains(
+                                        Alert.event,
+                                        func.json_object("0", value),
+                                        json_path,
+                                    )
+                                    == 1,
+                                    True,
+                                ),
+                                # Check if the JSON value at the specified path is a string and contains the given value
+                                (
+                                    func.json_type(
+                                        func.json_extract(Alert.event, json_path)
+                                    )
+                                    == "STRING",
+                                    func.json_extract(Alert.event, json_path).like(
+                                        "%" + bindparam(bind, value) + "%"
+                                    ),
+                                ),
+                            ],
+                            else_=False,
                         )
                     )
+
                 elif session.bind.dialect.name == "sqlite":
                     json_extracted = func.json_extract(Alert.event, json_path)
                     # Check if the field is an array or a string
