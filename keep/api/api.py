@@ -4,6 +4,7 @@ import threading
 import time
 
 import jwt
+import pkg_resources
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -57,6 +58,10 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+try:
+    KEEP_VERSION = pkg_resources.get_distribution("keep").version
+except Exception:
+    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -79,7 +84,11 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
             self.posthog_client.capture(
                 identity,
                 "request-started",
-                {"path": request.url.path, "method": request.method},
+                {
+                    "path": request.url.path,
+                    "method": request.method,
+                    "keep_version": KEEP_VERSION,
+                },
             )
 
     async def capture_response(self, request: Request, response: Response) -> None:
@@ -92,6 +101,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "method": request.method,
                     "status_code": response.status_code,
+                    "keep_version": KEEP_VERSION,
                 },
             )
 

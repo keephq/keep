@@ -21,7 +21,7 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<WebhookSettings>(
     `${apiUrl}/providers/${provider.type}/webhook`,
-    (url) => fetcher(url, accessToken)
+    (url: string) => fetcher(url, accessToken)
   );
 
   if (isLoading) return <div>Loading...</div>;

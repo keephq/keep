@@ -85,7 +85,11 @@ const GnipLogo = (props: any) => (
 
 export default function NavbarInner({ user }: { user?: User }) {
   const pathname = usePathname();
-  const { data: configData } = useSWR<InternalConfig>("/api/config", fetcher);
+  const { data: configData } = useSWR<InternalConfig>(
+    "/api/config",
+    fetcher,
+    undefined
+  );
   const [imageError, setImageError] = useState(false);
 
   // Determine runtime configuration

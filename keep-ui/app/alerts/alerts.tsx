@@ -274,7 +274,7 @@ export default function Alerts({
           groupBy="fingerprint"
           workflows={workflows}
           providers={providers?.installed_providers}
-          mutate={() => mutate(null, { optimisticData: [] })}
+          mutate={() => mutate(undefined, { optimisticData: [] })}
           isAsyncLoading={isAsyncLoading}
           onDelete={onDelete}
           setAssignee={setAssignee}
