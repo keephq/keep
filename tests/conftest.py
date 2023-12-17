@@ -56,6 +56,7 @@ def docker_services(
     # If we are running in Github Actions, we don't need to start the docker services
     # as they are already handled by the Github Actions
     if os.getenv("GITHUB_ACTIONS") == "true":
+        print("Running in Github Actions, skipping docker services")
         yield
         return
 
@@ -102,7 +103,8 @@ def is_mysql_responsive(host, port, user, password, database):
 @pytest.fixture(scope="session")
 def mysql_container(docker_ip, docker_services):
     try:
-        if os.getenv("SKIP_DOCKER"):
+        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
+            print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
             yield
             return
         docker_services.wait_until_responsive(

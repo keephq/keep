@@ -828,6 +828,18 @@ def get_rules(tenant_id):
 
 
 def run_rule(tenant_id, rule):
+    """This function implements the rule engine logic.
+
+    We currently support two sql engines: mysql and sqlite.
+
+    The complexity of this function derives from the fact that we need to support nested JSON attributes.
+
+
+    Args:
+        tenant_id (str): the tenant_id
+        rule (Rule): the rule
+
+    """
     with Session(engine) as session:
         # get all the alerts that are not already in the rule
         sql = rule.definition.get("sql")
