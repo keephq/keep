@@ -201,8 +201,11 @@ export default function Page() {
   const [editMode, setEditMode] = useState(false);
 
   const valueEditor = useMemo(() => {
-    return (props) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
-  }, [validationErrors]);
+    const Component = (props: any) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
+    Component.displayName = 'ValueEditor'; // Assign a display name to the component
+    return Component;
+}, [validationErrors]);
+
 
   useEffect(() => {
     // Fetch rules data from the /rules API
