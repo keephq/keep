@@ -1350,19 +1350,19 @@ protobuf = ["protobuf (<5.0.0dev)"]
 
 [[package]]
 name = "google-cloud-trace"
-version = "1.12.0"
+version = "1.11.3"
 description = "Google Cloud Trace API client library"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-trace-1.12.0.tar.gz", hash = "sha256:22f6ccc476ce3101d41fbabceac3fefcdfe057d2967b3e8e20c02671363a524a"},
-    {file = "google_cloud_trace-1.12.0-py2.py3-none-any.whl", hash = "sha256:7f44c02d930b6e04a06065619de23b227badf7705de443edd41226fbec8f5414"},
+    {file = "google-cloud-trace-1.11.3.tar.gz", hash = "sha256:b9dd0c2dfbf93b2dc057a45d024c8c6c2c4cdbee79b71b5fa1e9130757b39c51"},
+    {file = "google_cloud_trace-1.11.3-py2.py3-none-any.whl", hash = "sha256:c87ef3a57670236720acc8d8ffb43453b8d0ecab4889a023623dbca8b45d4fe9"},
 ]
 
 [package.dependencies]
 google-api-core = {version = ">=1.34.0,<2.0.0 || >=2.11.0,<3.0.0dev", extras = ["grpc"]}
-proto-plus = ">=1.22.3,<2.0.0dev"
+proto-plus = {version = ">=1.22.2,<2.0.0dev", markers = "python_version >= \"3.11\""}
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0dev"
 
 [[package]]
@@ -4545,4 +4545,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "72ee8638be83a5d8dfc4c5d051132dc494ce50110d667832e0ed4e018d4d0a76"
+content-hash = "101fe33867416c2034a91b41cafc1a859ae3b30196579f10c74e2f20cfec61f2"
