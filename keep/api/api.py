@@ -61,6 +61,7 @@ try:
     KEEP_VERSION = pkg_resources.get_distribution("keep").version
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -78,46 +79,44 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
             return "anonymous"
 
     async def capture_request(self, request: Request) -> None:
-        identity = self._extract_identity(request)
-        with self.tracer.start_as_current_span("capture_request"):
-            self.posthog_client.capture(
-                identity,
-                "request-started",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
+        if POSTHOG_API_ENABLED:
+            identity = self._extract_identity(request)
+            with self.tracer.start_as_current_span("capture_request"):
+                self.posthog_client.capture(
+                    identity,
+                    "request-started",
+                    {
+                        "path": request.url.path,
+                        "method": request.method,
+                        "keep_version": KEEP_VERSION,
+                    },
+                )
 
     async def capture_response(self, request: Request, response: Response) -> None:
-        identity = self._extract_identity(request)
-        with self.tracer.start_as_current_span("capture_response"):
-            self.posthog_client.capture(
-                identity,
-                "request-finished",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "status_code": response.status_code,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
+        if POSTHOG_API_ENABLED:
+            identity = self._extract_identity(request)
+            with self.tracer.start_as_current_span("capture_response"):
+                self.posthog_client.capture(
+                    identity,
+                    "request-finished",
+                    {
+                        "path": request.url.path,
+                        "method": request.method,
+                        "status_code": response.status_code,
+                        "keep_version": KEEP_VERSION,
+                    },
+                )
 
     async def flush(self):
-        with self.tracer.start_as_current_span("flush_posthog_events"):
-            logger.info("Flushing Posthog events")
-            self.posthog_client.flush()
-            logger.info("Posthog events flushed")
+        if POSTHOG_API_ENABLED:
+            with self.tracer.start_as_current_span("flush_posthog_events"):
+                logger.info("Flushing Posthog events")
+                self.posthog_client.flush()
+                logger.info("Posthog events flushed")
 
     async def dispatch(self, request: Request, call_next):
         # Skip OPTIONS requests
         if request.method == "OPTIONS":
-            return await call_next(request)
-
-        # Skipping /healthcheck endpoint, as this is probed when application starts
-        # and this middleware doesn't let it go further.
-        if request.scope["path"] == "/healthcheck" or not _is_server_ready():
             return await call_next(request)
         # Capture event before request
         await self.capture_request(request)
