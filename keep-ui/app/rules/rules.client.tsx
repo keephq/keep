@@ -16,8 +16,8 @@ import { MdEdit } from "react-icons/md";
 const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
   const validationMap: ValidationMap = {};
 
-  const checkRules = (rules) => {
-    rules.forEach(rule => {
+  const checkRules = (rules: any) => {
+    rules.forEach((rule: any) => {
       if (rule.rules) {
         // If it's a group, recursively check its rules
         checkRules(rule.rules);
@@ -83,11 +83,11 @@ const CustomCombinatorSelector = (props: any) => {
   );
 }
 
-const CustomOperatorSelector = (props) => {
+const CustomOperatorSelector = (props: any) => {
   const { options, value, handleOnChange } = props;
 
   // Convert options to the format expected by react-select
-  const reactSelectOptions = options.map((option) => ({
+  const reactSelectOptions = options.map((option: any) => ({
     label: option.label,
     value: option.name,
   }));
@@ -96,7 +96,7 @@ const CustomOperatorSelector = (props) => {
     <Select
       className="w-auto"
       isClearable={false}
-      value={reactSelectOptions.find((option) => option.value === value)}
+      value={reactSelectOptions.find((option: any) => option.value === value)}
       onChange={(selectedOption) => handleOnChange(selectedOption.value)} // Update the selected field
       options={reactSelectOptions}
       styles={{
@@ -122,7 +122,7 @@ const CustomAddGroupAction = (props: any) => {
   );
 };
 
-const CustomAddRuleAction = (props) => {
+const CustomAddRuleAction = (props: any) => {
   const { label, handleOnClick, addRule } = props;
 
   if (props.level === 0) {
@@ -133,8 +133,8 @@ const CustomAddRuleAction = (props) => {
     addRule(props);
   };
 
-  const availableFields = props.schema.fields.filter((fld) =>
-      !props.rules.some((rule) => rule.field === fld.name)
+  const availableFields = props.schema.fields.filter((fld: any) =>
+      !props.rules.some((rule: any) => rule.field === fld.name)
     );
 
   return (
@@ -321,7 +321,7 @@ export default function Page() {
     filteredOptions.unshift(fields.find((fld) => fld.name === currentRule.field));
 
 
-    const reactSelectOptions = filteredOptions.map((option) => ({
+    const reactSelectOptions = filteredOptions.map((option: any) => ({
       label: option.label,
       value: option.name,
     }));
@@ -329,7 +329,7 @@ export default function Page() {
     const handleCreate = (option: any) => {
       // Create a new field and add it to the list of fields
       const newField = { name: option, label: option, value: option, datatype: 'text' };
-      setFields((prevFields) => [...prevFields, newField]);
+      setFields((prevFields: any) => [...prevFields, newField]);
       // Update the selected field
       handleOnChange(option);
     }
@@ -340,7 +340,7 @@ export default function Page() {
         className="w-auto"
         isClearable={false}
         onCreateOption={handleCreate}
-        value={reactSelectOptions.find((option) => option.value === currentRule.field)}
+        value={reactSelectOptions.find((option: any) => option.value === currentRule.field)}
         onChange={(selectedOption) => handleOnChange(selectedOption.value)}
         options={reactSelectOptions}
         styles={{
@@ -353,11 +353,11 @@ export default function Page() {
     );
   };
 
-  const addRule = (props) => {
+  const addRule = (props: any) => {
     // when adding a new Rule, add the rule with the first field that is not already used in the group
     // the available fields are under props.schema.fields and the used fields are under props.rules
-    const availableFields = props.schema.fields.filter((fld) =>
-      !props.rules.some((rule) => rule.field === fld.name)
+    const availableFields = props.schema.fields.filter((fld: any) =>
+      !props.rules.some((rule: any) => rule.field === fld.name)
     );
     setQuery(add(query, { field: availableFields[0].name, operator: '=', value: '' }, props.path));
   }
@@ -498,7 +498,7 @@ export default function Page() {
   ];
 
 
-  const CustomRemoveRuleAction = (props) => {
+  const CustomRemoveRuleAction = (props: any) => {
     // if its the only rule in the group, delete the group
 
     const handleOnClick = (e: any) => {
@@ -548,7 +548,11 @@ export default function Page() {
                   />
                     <Select
                         value={{ value: formData.timeframeUnit, label: formData.timeframeUnit }}
-                        onChange={(selectedOption) => handleFieldChange("timeframeUnit", selectedOption.value)}
+                        onChange={(selectedOption) => {
+                          if (selectedOption) {
+                            handleFieldChange("timeframeUnit", selectedOption.value);
+                          }
+                        }}
                         options={options}
                         styles={{
                           control: (provided) => ({
