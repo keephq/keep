@@ -11,7 +11,7 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, bindparam, case, desc, func, select, text, update
+from sqlalchemy import String, and_, bindparam, case, desc, func, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -862,55 +862,59 @@ def run_rule(tenant_id, rule):
                 json_path = f"$.{attribute_name}"
                 # Handling different SQL dialects
                 if session.bind.dialect.name == "mysql":
-                    filters.append(
-                        case(
-                            [
-                                # Check if the JSON value contains an array with the given value
-                                (
-                                    func.json_contains(
-                                        Alert.event, func.json_array(value), json_path
-                                    )
-                                    == 1,
-                                    True,
-                                ),
-                                # Check if the JSON value contains an object with the given value at key "0"
-                                (
-                                    func.json_contains(
-                                        Alert.event,
-                                        func.json_object("0", value),
-                                        json_path,
-                                    )
-                                    == 1,
-                                    True,
-                                ),
-                                # Check if the JSON value at the specified path is a string and contains the given value
-                                (
-                                    func.json_type(
-                                        func.json_extract(Alert.event, json_path)
-                                    )
-                                    == "STRING",
-                                    func.json_extract(Alert.event, json_path).like(
-                                        "%" + bindparam(bind, value) + "%"
-                                    ),
-                                ),
-                            ],
-                            else_=False,
-                        )
-                    )
-
-                elif session.bind.dialect.name == "sqlite":
                     json_extracted = func.json_extract(Alert.event, json_path)
-                    # Check if the field is an array or a string
+                    json_type = func.json_type(json_extracted)
+
                     condition = case(
                         [
                             (
-                                func.json_type(Alert.event, json_path) == "array",
+                                json_type == "ARRAY",
+                                func.json_contains(
+                                    json_extracted,
+                                    func.json_array(bindparam(bind, value)),
+                                )
+                                == 1,
+                            ),
+                            (
+                                json_type == "STRING",
+                                json_extracted.like("%" + bindparam(bind, value) + "%"),
+                            ),
+                            (
+                                json_type == "OBJECT",
+                                func.cast(json_extracted, String).like(value),
+                            ),
+                        ],
+                        else_=False,
+                    )
+                    filters.append(condition)
+                # else, sqlite
+                elif session.bind.dialect.name == "sqlite":
+                    json_extracted = func.json_extract(Alert.event, json_path)
+                    # Determine the type of the JSON field
+                    json_type = func.json_type(Alert.event, json_path)
+
+                    # This example assumes that the value you are looking for is a simple scalar value (like a string or a number).
+                    # Adjust the logic if you need to support complex nested objects.
+                    condition = case(
+                        [
+                            # If the field is an array, use LIKE operator for matching
+                            (
+                                json_type == "array",
+                                json_extracted.like(
+                                    '%"' + bindparam(bind, value) + '"%'
+                                ),
+                            ),
+                            # If the field is an object, use string matching. This is a workaround and has limitations.
+                            (
+                                json_type == "object",
                                 json_extracted.like(
                                     '%"' + bindparam(bind, value) + '"%'
                                 ),
                             ),
                         ],
-                        else_=json_extracted == bindparam(bind, value),
+                        else_=json_extracted.like(
+                            bindparam(bind, value)
+                        ),  # Default case for other types like string
                     )
                     filters.append(condition)
                 else:

@@ -61,6 +61,7 @@ def test_sanity(db_session):
     assert results is not None
 
 
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
 def test_old_alerts(db_session):
     # insert alerts
     alerts = [
@@ -112,6 +113,7 @@ def test_old_alerts(db_session):
     assert results is None
 
 
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
 def test_another(db_session):
     alerts = [
         Alert(
@@ -161,6 +163,7 @@ def test_another(db_session):
     assert results is None
 
 
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
 def test_three_groups(db_session):
     alerts = [
         Alert(
@@ -227,5 +230,106 @@ def test_three_groups(db_session):
     assert results is not None
 
 
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
+def test_dict(db_session):
+    # Insert alerts
+    alert1 = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event={
+            "source": ["sentry"],
+            "severity": "critical",
+            "tags": {"some_attr": "123", "tag1": "badtag"},
+        },
+        fingerprint="test",
+    )
+    db_session.add_all([alert1])
+    db_session.commit()
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="like-rule",
+        definition={
+            "sql": "((tags like :tags_1)",
+            "params": {"tags_1": "%goodtag%", "service_1": "dev"},
+        },
+        timeframe=600,
+        definition_cel='(tags.contains("sometag"))',
+        created_by="test@keephq.dev",
+    )
+    rules = get_rules_db(SINGLE_TENANT_UUID)
+    assert len(rules) == 1
+
+    # Run the rules engine
+    results = rules_engine._run_rule(rules[0])
+    assert results is None  # Expecting no alerts to match
+
+    alert2 = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event={
+            "source": ["sentry"],
+            "severity": "critical",
+            "tags": {"some_attr": "123", "tag1": "goodtag"},
+        },
+        fingerprint="test",
+    )
+    db_session.add_all([alert2])
+    db_session.commit()
+    results = rules_engine._run_rule(rules[0])
+    assert results and len(results) == 1
+    # now check the alert
+    alerts = list(results.values())[0]
+    assert len(alerts) == 1
+    assert alerts[0].event["tags"]["tag1"] == "goodtag"
+
+
+@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
+def test_dict_and_startswith(db_session):
+    # Insert alerts
+    alert1 = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event={
+            "source": ["sentry"],
+            "severity": "critical",
+            "tags": {"tag1": "sometag"},
+        },
+        fingerprint="test",
+    )
+    alert2 = Alert(
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="test",
+        provider_id="test",
+        event={"source": ["grafana"], "severity": "high", "service": "dev-123"},
+        fingerprint="test",
+    )
+    db_session.add_all([alert1, alert2])
+    db_session.commit()
+
+    # Create a rule using 'NOT' operator
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="like-rule",
+        definition={
+            "sql": "((tags like :tags_1) and (service like :service_1))",
+            "params": {"tags_1": "%sometag%", "service_1": "dev%"},
+        },
+        timeframe=600,
+        definition_cel='(tags.contains("sometag")) && (service.startsWith("dev"))',
+        created_by="test@keephq.dev",
+    )
+    rules = get_rules_db(SINGLE_TENANT_UUID)
+    assert len(rules) == 1
+
+    # Run the rules engine
+    results = rules_engine._run_rule(rules[0])
+    assert results and len(results) == 2
+
+
 # TODO: add tests for all operators (IMPORTANT)
-# TODO: add tests for every datatype e.g. source (list), severity (string)
+# TODO: add tests for every datatype e.g. source (list), severity (string), tags (dict), etc.

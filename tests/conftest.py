@@ -4,6 +4,8 @@ from unittest.mock import patch
 
 import mysql.connector
 import pytest
+from dotenv import find_dotenv, load_dotenv
+from pytest_docker.plugin import get_docker_services
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, create_engine
@@ -17,6 +19,8 @@ from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
 from keep.contextmanager.contextmanager import ContextManager
+
+load_dotenv(find_dotenv())
 
 
 @pytest.fixture
@@ -37,6 +41,44 @@ def mocked_context(ctx_store) -> None:
 def context_manager():
     os.environ["STORAGE_MANAGER_DIRECTORY"] = "/tmp/storage-manager"
     return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
+
+
+@pytest.fixture(scope="session")
+def docker_services(
+    docker_compose_command,
+    docker_compose_file,
+    docker_compose_project_name,
+    docker_setup,
+    docker_cleanup,
+):
+    """Start the MySQL service (or any other service from docker-compose.yml)."""
+
+    # If we are running in Github Actions, we don't need to start the docker services
+    # as they are already handled by the Github Actions
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        yield
+        return
+
+    # For local development, you can avoid spinning up the mysql container every time:
+    if os.getenv("SKIP_DOCKER"):
+        yield
+        return
+
+    # Else, start the docker services
+    try:
+        with get_docker_services(
+            docker_compose_command,
+            docker_compose_file,
+            docker_compose_project_name,
+            docker_setup,
+            docker_cleanup,
+        ) as docker_service:
+            yield docker_service
+
+    except Exception as e:
+        print(f"Docker services could not be started: {e}")
+        # Optionally, provide a fallback or mock service here
+        yield None
 
 
 def is_mysql_responsive(host, port, user, password, database):
@@ -60,6 +102,9 @@ def is_mysql_responsive(host, port, user, password, database):
 @pytest.fixture(scope="session")
 def mysql_container(docker_ip, docker_services):
     try:
+        if os.getenv("SKIP_DOCKER"):
+            yield
+            return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
@@ -72,13 +117,14 @@ def mysql_container(docker_ip, docker_services):
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
         print("Tearing down MySQL")
-        docker_services.down()
+        if docker_services:
+            docker_services.down()
 
 
 @pytest.fixture
 def db_session(request, mysql_container):
-    # Create a mock engine
-    if request and request.param == "mysql":
+    # Few tests require a mysql database (mainly rules)
+    if request and hasattr(request, "param") and request.param == "mysql":
         db_connection_string = "mysql+pymysql://root:keep@localhost:3306/keep"
     else:
         db_connection_string = "sqlite:///:memory:"
