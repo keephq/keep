@@ -239,6 +239,7 @@ export default function Page() {
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
   const [editMode, setEditMode] = useState(false);
+  const [loadingRules, setLoadingRules] = useState(true);
 
   const valueEditor = useMemo(() => {
     const Component = (props: any) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
@@ -260,6 +261,7 @@ export default function Page() {
       .then((response) => response.json())
       .then((data) => {
         setRules(data);
+        setLoadingRules(false);
       })
       .catch((error) => {
         console.error("Error fetching rules:", error);
@@ -761,7 +763,9 @@ export default function Page() {
               </div>
           </Card>
           <Card style={{ width: '50%',  marginLeft: '1rem'}}>
-            <Title>Rules</Title>
+            {loadingRules ? (<Loading />) : (
+                <>
+                <Title>Rules</Title>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -810,6 +814,9 @@ export default function Page() {
                   )}
                 </TableBody>
               </Table>
+                </>
+            )}
+
             </Card>
           </Flex>
       </Card>
