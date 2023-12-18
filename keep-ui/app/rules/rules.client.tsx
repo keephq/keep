@@ -123,6 +123,7 @@ const CustomAddGroupAction = (props: any) => {
         Add Alerts Group
       </Button>
       <Icon
+        className="rules-tooltip"
         icon={FaQuestionCircle}
         tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
         variant="simple"
@@ -161,6 +162,7 @@ const CustomAddRuleAction = (props: any) => {
         Add Condition
       </Button>
       <Icon
+        className="rules-tooltip"
         icon={FaQuestionCircle}
         tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
         variant="simple"
