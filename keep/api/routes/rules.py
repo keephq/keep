@@ -154,7 +154,7 @@ async def update_rule(
 
     if rule:
         logger.info(f"Rule {rule_id} updated")
-        return {"message": "Rule updated"}
+        return rule
     else:
         logger.info(f"Rule {rule_id} not found")
         raise HTTPException(status_code=404, detail="Rule not found")

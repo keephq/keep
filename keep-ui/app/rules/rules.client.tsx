@@ -118,7 +118,7 @@ const CustomAddGroupAction = (props: any) => {
   }
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block', zIndex:1000}}>
+    <div style={{ position: 'relative', display: 'inline-block'}}>
       <Button onClick={props.handleOnClick} color="orange">
         Add Alerts Group
       </Button>
@@ -132,7 +132,8 @@ const CustomAddGroupAction = (props: any) => {
           position: 'absolute',
           top: 0,
           right: 0,
-          transform: 'translate(50%, -50%)'
+          transform: 'translate(50%, -50%)',
+          zIndex:9999
         }}
       />
     </div>
@@ -515,7 +516,12 @@ export default function Page() {
         setQuery(defaultQuery);
         setActiveRow(null);
         setEditMode(false);
-      })
+        setRules((prevRules) => {
+          const newRules = [...prevRules];
+          const index = newRules.findIndex((rule) => rule.id === activeRow);
+          newRules[index] = data;
+          return newRules;
+        })})
       .catch((error) => {
         console.error("Error:", error);
       });
@@ -758,7 +764,7 @@ export default function Page() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rules && rules.map((rule) => (
+                  {rules && rules.length > 0 ? rules.map((rule) => (
                     <>
                       <TableRow key={rule.id} onClick={() => handleRowClick(rule)} className={`cursor-pointer ${activeRow === rule.id ? 'bg-gray-100' : 'hover:bg-gray-100'}`} >
                         <TableCell>{rule.name}</TableCell>
@@ -779,10 +785,25 @@ export default function Page() {
                         </TableRow>
                       )}
                     </>
-                  ))}
+                  )) :(
+                    <>
+                      <TableRow className="italic text-gray-400">
+                        <TableCell className="whitespace-normal break-words">Group Grafana and DB alerts</TableCell>
+                        <TableCell className="whitespace-normal break-words">(source == &quot;grafana&quot; && severity ==&quot;high&quot;) && (service == &quot;database&quot;)</TableCell>
+                        <TableCell>noc@example.com</TableCell>
+                      </TableRow>
+                      <TableRow>
+                          <TableCell colSpan={6}>
+                            <div>
+                              <Subtitle className="whitespace-normal break-words">A simple example to demonstrate how Rules works.  Begin grouping alerts by creating your first Rule.</Subtitle>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                    </>
+                  )}
                 </TableBody>
               </Table>
-          </Card>
+            </Card>
           </Flex>
       </Card>
   );
