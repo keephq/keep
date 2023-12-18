@@ -661,6 +661,11 @@ export default function Page() {
     setValidationErrors({});
   };
 
+  const canCreateRule = () => {
+    // Check if the query has at least one rule
+    return query.rules.length > 0;
+  }
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
         <Flex style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' }}>
@@ -732,7 +737,7 @@ export default function Page() {
               />
               <div className="text-right">
                 {!editMode &&
-                  <Button className="mt-2" color="orange" onClick={saveRule}>
+                  <Button tooltip={canCreateRule()? "": "At least one rule is required"} className="mt-2" color="orange" disabled={!canCreateRule()} onClick={saveRule}>
                     Create Rule
                   </Button>
                 }
