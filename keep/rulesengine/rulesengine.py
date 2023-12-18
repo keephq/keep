@@ -72,7 +72,9 @@ class RulesEngine:
                     event={
                         "events": event_payload,
                         "name": group_alert_name,
-                        "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc),
+                        "lastReceived": datetime.datetime.now(
+                            tz=datetime.timezone.utc
+                        ).isoformat(),
                         "severity": max(
                             [
                                 event["severity"]
