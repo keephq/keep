@@ -408,7 +408,7 @@ export default function Page() {
     setQuery(add(query, { field: availableFields[0].name, operator: '=', value: '' }, props.path));
   }
 
-  const validateFormData = (formData, query) => {
+  const validateFormData = (formData: any, query: any) => {
     const errors: Record<string, string> = {};
 
     if (!formData.ruleName) {
@@ -574,7 +574,7 @@ export default function Page() {
         .then((response) => response.json())
         .then((data) => {
           // Delete Ok, remove from rules
-          const newRules = rules.filter((rule) => rule.id !== id);
+          const newRules = rules.filter((rule) => rule.id !== activeRow);
           setRules(newRules);
           setActiveRow(null);
           setEditMode(false);
