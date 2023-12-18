@@ -960,6 +960,8 @@ def run_rule(tenant_id, rule):
             filters.append(Alert.tenant_id == tenant_id)
             # TODO: maybe timeframe should support lastReceived? but idk if there is a use case for that
             filters.append(Alert.timestamp >= timeframe_datetime)
+            # Exclude events created by the rule engine itself
+            filters.append(Alert.provider_type != "rules")
             # Construct and execute the ORM query
             query = session.query(Alert).filter(*filters)
             # Shahar: to get the RAW query -

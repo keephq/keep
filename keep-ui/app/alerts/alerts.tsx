@@ -177,9 +177,11 @@ export default function Alerts({
           combinedAlerts.forEach((alert) => {
             let alertKey = "";
             try {
-              alertKey = `${alert.id}-${alert.lastReceived.toISOString()}`;
+              alertKey = `${
+                alert.fingerprint
+              }-${alert.lastReceived.toISOString()}`;
             } catch {
-              alertKey = alert.id;
+              alertKey = alert.fingerprint;
             }
             uniqueObjectsMap.set(alertKey, alert);
           });

@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import logging
 
@@ -71,16 +72,23 @@ class RulesEngine:
                     event={
                         "events": event_payload,
                         "name": group_alert_name,
-                        "lastReceived": max(
-                            [event["lastReceived"] for event in event_payload]
+                        "lastReceived": datetime.datetime.now(
+                            tz=datetime.timezone.utc
+                        ).isoformat(),
+                        "severity": max(
+                            [
+                                event["severity"]
+                                for event in event_payload
+                                if event["severity"] is not None
+                            ]
                         ),
-                        "severity": max([event["severity"] for event in event_payload]),
                         "source": list(
                             set([event["source"][0] for event in event_payload])
                         ),
                         # TODO: should be calculated somehow else
                         "id": fingerprint,
                         "status": "firing",
+                        "pushed": True,
                     },
                     fingerprint=fingerprint,
                 )

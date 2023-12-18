@@ -2,9 +2,9 @@ import logging
 import os
 import threading
 import time
+from importlib import metadata
 
 import jwt
-import pkg_resources
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -59,7 +59,7 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
-    KEEP_VERSION = pkg_resources.get_distribution("keep").version
+    KEEP_VERSION = metadata.version("keep")
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
