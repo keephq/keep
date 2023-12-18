@@ -87,6 +87,7 @@ class RulesEngine:
                         # TODO: should be calculated somehow else
                         "id": fingerprint,
                         "status": "firing",
+                        "pushed": True,
                     },
                     fingerprint=fingerprint,
                 )
