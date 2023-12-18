@@ -1,0 +1,15 @@
+# MySQL server for testing
+services:
+  keep-database:
+      image: mysql:latest
+      container_name: keep-database-tests
+      environment:
+        - MYSQL_ROOT_PASSWORD=keep
+        - MYSQL_DATABASE=keep
+      volumes:
+        - mysql-data:/var/lib/mysql
+      ports:
+        - "0.0.0.0:3306:3306"
+
+volumes:
+  mysql-data:

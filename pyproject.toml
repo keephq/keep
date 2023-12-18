@@ -43,7 +43,7 @@ jwcrypto = "^1.4.2"
 sqlalchemy = "1.4.41"
 snowflake-connector-python = "3.1.0"
 openai = "^0.27.7"
-opentelemetry-sdk = "^1.20.0"
+opentelemetry-sdk = ">=1.20.0,<1.22"
 opentelemetry-instrumentation-fastapi = "^0.41b0"
 opentelemetry-instrumentation-logging = "^0.41b0"
 opentelemetry-propagator-gcp = "^1.5.0"
@@ -72,7 +72,9 @@ opentelemetry-exporter-gcp-trace = "^1.6.0"
 pusher = "^3.3.2"
 sendgrid = "^6.10.0"
 gunicorn = "^21.2.0"
+cel-python = "^0.1.5"
 pymongo = "^4.6.1"
+google-cloud-trace = "1.11.3"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -87,6 +89,7 @@ pytest = "^7.3.1"
 coverage = "^7.2.2"
 pytest-mock = "^3.11.1"
 ruff = "^0.1.6"
+pytest-docker = "^2.0.1"
 
 [build-system]
 requires = ["poetry-core"]
