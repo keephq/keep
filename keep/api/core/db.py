@@ -821,6 +821,28 @@ def create_rule(tenant_id, name, timeframe, definition, definition_cel, created_
         return rule
 
 
+def update_rule(
+    tenant_id, rule_id, name, timeframe, definition, definition_cel, updated_by
+):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+        ).first()
+
+        if rule:
+            rule.name = name
+            rule.timeframe = timeframe
+            rule.definition = definition
+            rule.definition_cel = definition_cel
+            rule.updated_by = updated_by
+            rule.update_time = datetime.utcnow()
+            session.commit()
+            session.refresh(rule)
+            return rule
+        else:
+            return None
+
+
 def get_rules(tenant_id):
     with Session(engine) as session:
         rules = session.exec(select(Rule).where(Rule.tenant_id == tenant_id)).all()

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell } from "@tremor/react";
+import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon } from "@tremor/react";
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import QueryBuilder, { add, remove, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, parseCEL, QueryValidator, findPath} from 'react-querybuilder';
@@ -10,7 +10,7 @@ import { useSession } from "next-auth/react";
 import Loading from "../loading";
 import './query-builder.scss';
 import { FaRegTrashAlt } from "react-icons/fa";
-import { MdEdit } from "react-icons/md";
+import { FaQuestionCircle } from 'react-icons/fa';
 
 
 const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
@@ -55,15 +55,18 @@ const CustomValueEditor = (props: any) => {
 
   return (
     <>
-      {!isInputHidden && (
-        <TextInput
-          error={!isValid}
-          errorMessage={errorMessage}
-          type="text"
-          value={value}
-          onChange={(e) => handleOnChangeInternal(e.target.value)}
-        />
-      )}
+      <div className={`relative ${!isValid ? 'pt-6' : ''}`}>
+        {!isInputHidden && (
+          <TextInput
+            className="w-auto"
+            error={!isValid}
+            errorMessage={errorMessage}
+            type="text"
+            value={value}
+            onChange={(e) => handleOnChangeInternal(e.target.value)}
+          />
+        )}
+    </div>
     </>
   );
 };
@@ -94,15 +97,14 @@ const CustomOperatorSelector = (props: any) => {
 
   return (
     <Select
-      className="w-auto"
       isClearable={false}
       value={reactSelectOptions.find((option: any) => option.value === value)}
-      onChange={(selectedOption) => handleOnChange(selectedOption.value)} // Update the selected field
+      onChange={(selectedOption) => handleOnChange(selectedOption.value)}
       options={reactSelectOptions}
       styles={{
         control: (provided) => ({
           ...provided,
-          width: '200px',
+          width: '150px',
         }),
       }}
     />
@@ -116,9 +118,24 @@ const CustomAddGroupAction = (props: any) => {
   }
 
   return (
-    <Button onClick={props.handleOnClick} color="orange">
-      Add Alerts Group
-    </Button>
+    <div style={{ position: 'relative', display: 'inline-block', zIndex:1000}}>
+      <Button onClick={props.handleOnClick} color="orange">
+        Add Alerts Group
+      </Button>
+      <Icon
+        icon={FaQuestionCircle}
+        tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
+        variant="simple"
+        size="md"
+        color="stone"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          transform: 'translate(50%, -50%)'
+        }}
+      />
+    </div>
   );
 };
 
@@ -138,9 +155,24 @@ const CustomAddRuleAction = (props: any) => {
     );
 
   return (
-    <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
-      Add Condition
-    </Button>
+    <div style={{ position: 'relative', display: 'inline-block', zIndex:1000}}>
+      <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
+        Add Condition
+      </Button>
+      <Icon
+        icon={FaQuestionCircle}
+        tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
+        variant="simple"
+        size="md"
+        color="stone"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          transform: 'translate(50%, -50%)'
+        }}
+      />
+    </div>
   );
 };
 
@@ -148,7 +180,7 @@ const CustomAddRuleAction = (props: any) => {
 
 
 interface Rule {
-  id: number;
+  id: string;
   name: string;
   definition: string;
   definition_cel: string;
@@ -159,6 +191,10 @@ interface Rule {
   update_time: string
 
 }
+
+type ExpandedRowsType = {
+  [key: string]: boolean;
+};
 
 const defaultQuery = {
   combinator: 'and',
@@ -194,7 +230,8 @@ export default function Page() {
     { name: 'severity', label: 'severity', datatype: 'text'},
     { name: 'service', label: 'service', datatype: 'text'},
   ]);
-
+  const [expandedRows, setExpandedRows] = useState<ExpandedRowsType>({});
+  const [activeRow, setActiveRow] = useState<string | null>(null);
 
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
@@ -318,7 +355,16 @@ export default function Page() {
     );
 
     // if the rule is not new, add the current field to the filtered options
-    filteredOptions.unshift(fields.find((fld) => fld.name === currentRule.field));
+    const field = fields.find((fld) => fld.name === currentRule.field);
+    // if its a fields that was added dynamically, add it to the fields list
+    if(!field){
+      const newField = { name: currentRule.field, label: currentRule.field, value: currentRule.field, datatype: 'text' };
+      setFields((prevFields: any) => [...prevFields, newField]);
+      filteredOptions.unshift(newField);
+    }
+    else{
+      filteredOptions.unshift(field);
+    }
 
 
     const reactSelectOptions = filteredOptions.map((option: any) => ({
@@ -337,7 +383,7 @@ export default function Page() {
 
     return (
       <CreatableSelect
-        className="w-auto"
+        placeholder="Select attribute or start typing to create a new one"
         isClearable={false}
         onCreateOption={handleCreate}
         value={reactSelectOptions.find((option: any) => option.value === currentRule.field)}
@@ -346,7 +392,7 @@ export default function Page() {
         styles={{
           control: (provided) => ({
             ...provided,
-            width: '200px',
+            width: '150px',
           }),
         }}
       />
@@ -362,11 +408,9 @@ export default function Page() {
     setQuery(add(query, { field: availableFields[0].name, operator: '=', value: '' }, props.path));
   }
 
-
-  const saveRule = () => {
+  const validateFormData = (formData, query) => {
     const errors: Record<string, string> = {};
 
-    // Validate form data
     if (!formData.ruleName) {
       errors.ruleName = "Rule Name is required";
     }
@@ -377,16 +421,18 @@ export default function Page() {
       errors.timeframe = "Timeframe must be a number";
     }
 
-    // Validate the query itself
     const currentValidationState = customValidator(query);
-
-    // Include rule-specific validation errors
     for (const [ruleId, validation] of Object.entries(currentValidationState)) {
       if (!validation.valid) {
-        // Assuming validation.reasons is an array of string messages
         errors[`rule_${ruleId}`] = validation.reasons.join(', ');
       }
     }
+
+    return errors;
+  };
+
+  const saveRule = () => {
+    const errors = validateFormData(formData, query);
 
     // Check if there are any errors
     if (Object.keys(errors).length > 0) {
@@ -428,6 +474,53 @@ export default function Page() {
       });
   };
 
+  const updateRule = () => {
+
+    const errors = validateFormData(formData, query);
+
+    // Check if there are any errors
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    // Reset validation errors
+    setValidationErrors({});
+
+    // Send the query to the server and handle the response here
+    const sqlQuery = formatQuery(query, 'parameterized_named');
+    const celQuery = formatQuery(query, 'cel');
+    const apiUrl = getApiURL();
+    const timeframeInSeconds = formData.timeframeUnit === 'Seconds' ? formData.timeframe : formData.timeframeUnit === 'Minutes' ? formData.timeframe * 60 : formData.timeframeUnit === 'Hours' ? formData.timeframe * 3600 : formData.timeframe * 86400;
+    if(activeRow === null){
+      return;
+    }
+    fetch(`${apiUrl}/rules/${activeRow}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session!.accessToken}`,
+      },
+      body: JSON.stringify({ sqlQuery, ruleName: formData.ruleName, celQuery, timeframeInSeconds}),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        // Reset the form
+        setFormData({
+          ruleName: "New Rule",
+          timeframe: 600,
+          timeframeUnit: "Seconds",
+        });
+        // Reset the query
+        setQuery(defaultQuery);
+        setActiveRow(null);
+        setEditMode(false);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  }
+
 
   const handleFieldChange = (fieldName: string, value: string) => {
     setFormData({
@@ -465,14 +558,14 @@ export default function Page() {
       setEditMode(true);
     }
 
-  const handleDelete = (id: number) => {
+  const handleDelete = () => {
     const confirmed = confirm(
       `Are you sure you want to delete this rule?`
     );
     if (confirmed) {
       const apiUrl = getApiURL();
 
-      fetch(`${apiUrl}/rules/${id}`, {
+      fetch(`${apiUrl}/rules/${activeRow}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
@@ -483,6 +576,14 @@ export default function Page() {
           // Delete Ok, remove from rules
           const newRules = rules.filter((rule) => rule.id !== id);
           setRules(newRules);
+          setActiveRow(null);
+          setEditMode(false);
+          setQuery(defaultQuery);
+          setFormData({
+            ruleName: "New Rule",
+            timeframe: 600,
+            timeframeUnit: "Seconds",
+          });
         })
         .catch((error) => {
           console.error("Error:", error);
@@ -521,9 +622,41 @@ export default function Page() {
     );
   }
 
+  const handleRowClick = (rule: Rule) => {
+    // if the user clicks on the same row, collapse it
+    if(activeRow === rule.id){
+      setActiveRow(null);
+      setEditMode(false);
+      setQuery(defaultQuery);
+      setFormData({
+        ruleName: "New Rule",
+        timeframe: 600,
+        timeframeUnit: "Seconds",
+      });
+      setExpandedRows(prevExpandedRows => ({
+        ...prevExpandedRows,
+        [rule.id]: !prevExpandedRows[rule.id]
+      }));
+      return;
+
+    }
+    // if the user clicks on a different row, collapse the previous one and expand the new one
+    else{
+      setExpandedRows(prevExpandedRows => ({
+        ...prevExpandedRows,
+        [rule.id]: true
+      }));
+      setActiveRow(rule.id);
+      handleEdit(rule);
+    }
+    // clean the errors
+    setValidationErrors({});
+  };
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
-          <Card>
+        <Flex style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' }}>
+          <Card style={{ width: '50%' }}>
             <Title>Rule Builder</Title>
             <Subtitle>Rule name</Subtitle>
             <div style={{ maxWidth: '50%' }}>
@@ -538,7 +671,7 @@ export default function Page() {
 
               <div className="mt-4 mr-2">
                 <Subtitle>Timeframe</Subtitle>
-                <Flex style={{ maxWidth: '50%' }} className="items-center gap-4"> {/* Adjust gap as needed */}
+                <Flex style={{ maxWidth: '50%' }} className="items-center gap-4">
                   <TextInput
                     error={formData.timeframe.toString() === '' || !isTimeframeNumeric}
                     errorMessage={getTimeframeErrorMessage()}
@@ -590,53 +723,67 @@ export default function Page() {
               }}
               />
               <div className="text-right">
-                <Button className="mt-2" color="orange" onClick={saveRule}>
-                  {editMode ? "Update Rule" : "Create Rule"}
-                </Button>
+                {!editMode &&
+                  <Button className="mt-2" color="orange" onClick={saveRule}>
+                    Create Rule
+                  </Button>
+                }
                 {editMode &&
-                  <Button className="mt-2 ml-2" color="orange" onClick={() => {setEditMode(false); setQuery(defaultQuery); setFormData({
-                    ruleName: "New Rule",
-                    timeframe: 600,
-                    timeframeUnit: "Seconds",
-                  });}}>
+                <div>
+                  <Button className="mt-2" color="orange" onClick={() => handleDelete()} title="Delete">
+                      Delete Rule
+                  </Button>
+                  <Button className="mt-2 ml-2" color="orange" onClick={updateRule}>
+                    Update Rule
+                  </Button>
+                  <Button className="mt-2 ml-2" color="orange" onClick={() => {setActiveRow(null); setEditMode(false); setQuery(defaultQuery); setFormData({
+                        ruleName: "New Rule",
+                        timeframe: 600,
+                        timeframeUnit: "Seconds",
+                      });}}>
                     Cancel
                   </Button>
+                  </div>
                 }
               </div>
           </Card>
-          <Card className="mt-8">
+          <Card style={{ width: '50%',  marginLeft: '1rem'}}>
             <Title>Rules</Title>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableHeaderCell>Rule Name</TableHeaderCell>
                     <TableHeaderCell>Definition</TableHeaderCell>
-                    <TableHeaderCell>Timeframe</TableHeaderCell>
                     <TableHeaderCell>Created By</TableHeaderCell>
-                    <TableHeaderCell>Creation Time</TableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {rules && rules.map((rule) => (
-                    <TableRow key={rule.id}>
-                      <TableCell>{rule.name}</TableCell>
-                      <TableCell>{rule.definition_cel}</TableCell>
-                      <TableCell>{rule.timeframe} Seconds</TableCell>
-                      <TableCell>{rule.created_by}</TableCell>
-                      <TableCell>{rule.creation_time}</TableCell>
-                      <TableCell>
-                        <Button className="mr-1" color="orange" icon={FaRegTrashAlt} size="xs" onClick={() => handleDelete(rule.id)} title="Delete">
-
-                        </Button>
-                        <Button  color="orange" icon={MdEdit} size="xs" onClick={() => handleEdit(rule)} title="Edit">
-
-                        </Button>
-                    </TableCell>
-                    </TableRow>
+                    <>
+                      <TableRow key={rule.id} onClick={() => handleRowClick(rule)} className={`cursor-pointer ${activeRow === rule.id ? 'bg-gray-100' : 'hover:bg-gray-100'}`} >
+                        <TableCell>{rule.name}</TableCell>
+                        <TableCell>{rule.definition_cel}</TableCell>
+                        <TableCell>{rule.created_by}</TableCell>
+                      </TableRow>
+                      {expandedRows[rule.id] && (
+                        <TableRow key={`details-${rule.id}`}>
+                          <TableCell colSpan={6}>
+                            <div>
+                              <Subtitle>Timeframe: {rule.timeframe}</Subtitle>
+                              <Subtitle className="mt-1">Created by: {rule.created_by}</Subtitle>
+                              <Subtitle className="mt-1">Creation Time: {rule.creation_time}</Subtitle>
+                              {rule.updated_by && <Subtitle className="mt-1">Updated by: {rule.updated_by}</Subtitle>}
+                              {rule.update_time && <Subtitle className="mt-1">Update Time: {rule.update_time}</Subtitle>}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))}
                 </TableBody>
               </Table>
           </Card>
+          </Flex>
       </Card>
   );
 }
