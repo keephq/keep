@@ -74,7 +74,13 @@ class RulesEngine:
                         "lastReceived": max(
                             [event["lastReceived"] for event in event_payload]
                         ),
-                        "severity": max([event["severity"] for event in event_payload]),
+                        "severity": max(
+                            [
+                                event["severity"]
+                                for event in event_payload
+                                if event["severity"] is not None
+                            ]
+                        ),
                         "source": list(
                             set([event["source"][0] for event in event_payload])
                         ),
