@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import logging
 
@@ -71,9 +72,7 @@ class RulesEngine:
                     event={
                         "events": event_payload,
                         "name": group_alert_name,
-                        "lastReceived": max(
-                            [event["lastReceived"] for event in event_payload]
-                        ),
+                        "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc),
                         "severity": max(
                             [
                                 event["severity"]
