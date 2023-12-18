@@ -2,9 +2,9 @@ import logging
 import os
 import threading
 import time
+from importlib import metadata
 
 import jwt
-import pkg_resources
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -38,6 +38,7 @@ from keep.api.routes import (
     preset,
     providers,
     pusher,
+    rules,
     settings,
     status,
     tenant,
@@ -58,7 +59,7 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
-    KEEP_VERSION = pkg_resources.get_distribution("keep").version
+    KEEP_VERSION = metadata.version("keep")
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
@@ -162,6 +163,7 @@ def get_app(
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
     app.include_router(pusher.router, prefix="/pusher", tags=["pusher"])
     app.include_router(status.router, prefix="/status", tags=["status"])
+    app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
 
     # if its single tenant with authentication, add signin endpoint
