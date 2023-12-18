@@ -22,14 +22,16 @@ class RulesEngine:
         # first, we need to understand which rules are actually relevant for the events that arrived
         relevent_rules_for_events = []
         for rule in rules:
-            self.logger.info(f"Running rule {rule.name}")
+            self.logger.info(f"Evaluating rule {rule.name}")
             for event in events:
-                self.logger.info(f"Running rule {rule.name} on event {event.id}")
+                self.logger.info(
+                    f"Checking if rule {rule.name} apply to event {event.id}"
+                )
                 try:
-                    rule_result = self._run_rule_on_event(rule, event)
+                    rule_result = self._check_if_rule_apply(rule, event)
                 except Exception:
                     self.logger.exception(
-                        f"Failed to run rule {rule.name} on event {event.id}"
+                        f"Failed to evaluate rule {rule.name} on event {event.id}"
                     )
                     continue
                 if rule_result:
@@ -102,19 +104,27 @@ class RulesEngine:
         # and we need to extract the subrules
         sub_rules = expression.split(") && (")
         # the first and the last rules will have a ( or ) at the beginning or the end
+        # e.g. for the example of:
+        #           (source == "sentry") && (source == "grafana" && severity == "critical")
+        # than sub_rules[0] will be (source == "sentry" and sub_rules[-1] will be source == "grafana" && severity == "critical")
+        # so we need to remove the first and last character
         sub_rules[0] = sub_rules[0][1:]
         sub_rules[-1] = sub_rules[-1][:-1]
         return sub_rules
 
     # TODO: a lot of unit tests to write here
-    def _run_rule_on_event(self, rule, event: AlertDto):
+    def _check_if_rule_apply(self, rule, event: AlertDto):
         sub_rules = self._extract_subrules(rule.definition_cel)
         payload = event.dict()
         # workaround since source is a list
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
+
+        # what we do here is to compile the CEL rule and evaluate it
+        #   https://github.com/cloud-custodian/cel-python
+        #   https://github.com/google/cel-spec
+        env = celpy.Environment()
         for sub_rule in sub_rules:
-            env = celpy.Environment()
             ast = env.compile(sub_rule)
             prgm = env.program(ast)
             r = prgm.evaluate(payload)
