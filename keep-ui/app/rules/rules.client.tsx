@@ -774,8 +774,8 @@ export default function Page() {
                   {rules && rules.length > 0 ? rules.map((rule) => (
                     <>
                       <TableRow key={rule.id} onClick={() => handleRowClick(rule)} className={`cursor-pointer ${activeRow === rule.id ? 'bg-gray-100' : 'hover:bg-gray-100'}`} >
-                        <TableCell>{rule.name}</TableCell>
-                        <TableCell>{rule.definition_cel}</TableCell>
+                        <TableCell className="whitespace-normal break-words">{rule.name}</TableCell>
+                        <TableCell className="whitespace-normal break-words">{rule.definition_cel}</TableCell>
                         <TableCell>{rule.created_by}</TableCell>
                       </TableRow>
                       {expandedRows[rule.id] && (
