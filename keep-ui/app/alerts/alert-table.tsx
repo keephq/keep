@@ -7,7 +7,7 @@ import {
   Callout,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto, AlertTableKeys } from "./models";
+import { AlertDto } from "./models";
 import {
   CircleStackIcon,
   QuestionMarkCircleIcon,
@@ -15,6 +15,12 @@ import {
 import { Provider } from "app/providers/providers";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
 interface Props {
   alerts: AlertDto[];
@@ -49,6 +55,69 @@ export function AlertTable({
   currentUser,
   openModal,
 }: Props) {
+  const columnHelper = createColumnHelper<AlertDto>();
+
+  const columns = [
+    columnHelper.accessor("severity", {
+      cell: (info) => info.getValue(),
+    }),
+    columnHelper.accessor("name", {
+      header: () => "Name",
+      cell: (info) => <i>{info.getValue()}</i>,
+    }),
+    columnHelper.accessor("description", {
+      header: () => "Description",
+      cell: (info) => info.renderValue(),
+    }),
+    columnHelper.accessor("pushed", {
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Pushed</span>
+          <Icon
+            icon={QuestionMarkCircleIcon}
+            tooltip="Whether the alert was pushed or pulled from the alert source"
+            variant="simple"
+            color="gray"
+          />
+        </div>
+      ),
+    }),
+    columnHelper.accessor("status", {
+      header: "Status",
+    }),
+    columnHelper.accessor("lastReceived", {
+      header: "When",
+    }),
+    columnHelper.accessor("source", {
+      header: "Source",
+    }),
+    columnHelper.accessor("assignee", {
+      header: "Assignee",
+    }),
+    columnHelper.accessor("fatigueMeter", {
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Fatigue Meter</span>
+          <Icon
+            icon={QuestionMarkCircleIcon}
+            tooltip="Calculated based on various factors"
+            variant="simple"
+            color="gray"
+          />
+        </div>
+      ),
+    }),
+    // columnHelper.accessor("", {
+    //   header: "Extra Payload",
+    // }),
+  ];
+
+  const table = useReactTable({
+    data: alerts,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <>
       {isAsyncLoading && (
@@ -63,24 +132,18 @@ export function AlertTable({
       )}
       <Table>
         <TableHead>
-          <TableRow>
-            {<TableHeaderCell>{/** Menu */}</TableHeaderCell>}
-            {Object.keys(AlertTableKeys).map((key) => (
-              <TableHeaderCell key={key}>
-                <div className="flex items-center">
-                  {key}{" "}
-                  {AlertTableKeys[key] !== "" && (
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      tooltip={AlertTableKeys[key]}
-                      variant="simple"
-                      color="gray"
-                    />
-                  )}{" "}
-                </div>
-              </TableHeaderCell>
-            ))}
-          </TableRow>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHeaderCell key={header.id}>
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          ))}
         </TableHead>
         <AlertsTableBody
           alerts={alerts}
