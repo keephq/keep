@@ -25,6 +25,7 @@ from keep.api.models.db.alert import Alert
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
+from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
@@ -233,7 +234,26 @@ def get_all_alerts(
     for alert in db_alerts:
         if alert.alert_enrichment:
             alert.event.update(alert.alert_enrichment.enrichments)
-    alerts = [AlertDto(**alert.event) for alert in db_alerts]
+
+    alerts = []
+    for alert in db_alerts:
+        # if its group alert
+        if alert.provider_type == "rules":
+            try:
+                alert_dto = AlertDto(**alert.event)
+            except Exception:
+                # should never happen but just in case
+                logger.exception(
+                    "Failed to parse group alert",
+                    extra={
+                        "alert": alert,
+                        "tenant_id": tenant_id,
+                    },
+                )
+                continue
+        else:
+            alert_dto = AlertDto(**alert.event)
+        alerts.append(alert_dto)
     if sync:
         alerts.extend(pull_alerts_from_providers(tenant_id, pusher_client, sync=True))
     logger.info(
@@ -353,6 +373,11 @@ def assign_alert(
     return {"status": "ok"}
 
 
+# this is super important function and does three things:
+# 1. adds the alerts to the DB
+# 2. runs workflows based on the alerts
+# 3. runs the rules engine
+# TODO: add appropriate logs, trace and all of that so we can track errors
 def handle_formatted_events(
     tenant_id,
     provider_type,
@@ -438,6 +463,42 @@ def handle_formatted_events(
     except Exception:
         logger.exception(
             "Failed to run workflows based on alerts",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+
+    # Now we need to run the rules engine
+    try:
+        rules_engine = RulesEngine(tenant_id=tenant_id)
+        grouped_alerts = rules_engine.run_rules(formatted_events)
+        # if new grouped alerts were created, we need to push them to the client
+        if grouped_alerts:
+            logger.info("Adding group alerts to the workflow manager queue")
+            workflow_manager.insert_events(tenant_id, grouped_alerts)
+            logger.info("Added group alerts to the workflow manager queue")
+            # Now send the grouped alerts to the client
+            logger.info("Sending grouped alerts to the client")
+            for grouped_alert in grouped_alerts:
+                try:
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
+                        base64.b64encode(
+                            zlib.compress(
+                                json.dumps([grouped_alert.dict()]).encode(), level=9
+                            )
+                        ).decode(),
+                    )
+                except Exception:
+                    logger.exception("Failed to push alert to the client")
+            logger.info("Sent grouped alerts to the client")
+    except Exception:
+        logger.exception(
+            "Failed to run rules engine",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),

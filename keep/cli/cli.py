@@ -9,7 +9,6 @@ from collections import OrderedDict
 from importlib import metadata
 
 import click
-import pkg_resources
 import requests
 import yaml
 from dotenv import find_dotenv, load_dotenv
@@ -25,9 +24,12 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 load_dotenv(find_dotenv())
 posthog_client = get_posthog_client()
 try:
-    KEEP_VERSION = pkg_resources.get_distribution("keep").version
-except Exception:
-    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+    KEEP_VERSION = metadata.version("keep")
+except metadata.PackageNotFoundError:
+    try:
+        KEEP_VERSION = metadata.version("keephq")
+    except metadata.PackageNotFoundError:
+        KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
 
 logging_config = {
@@ -213,10 +215,7 @@ def cli(ctx, info: Info, verbose: int, json: bool, keep_config: str):
 @cli.command()
 def version():
     """Get the library version."""
-    try:
-        click.echo(click.style(f"{metadata.version('keep')}", bold=True))
-    except metadata.PackageNotFoundError:
-        click.echo(click.style(f"{metadata.version('keephq')}", bold=True))
+    click.echo(click.style(KEEP_VERSION, bold=True))
 
 
 @cli.command()

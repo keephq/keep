@@ -15,6 +15,10 @@ import {
   KeyIcon,
   BriefcaseIcon,
 } from "@heroicons/react/24/outline";
+import { VscDebugDisconnect } from "react-icons/vsc";
+import { LuWorkflow } from "react-icons/lu";
+import { AiOutlineAlert } from "react-icons/ai";
+import { MdOutlineEngineering } from "react-icons/md";
 
 import "../styles/linear.scss";
 
@@ -95,19 +99,25 @@ export function CMDK() {
 
 const navigationItems = [
   {
-    icon: <ConnectIntegrationIcon />,
+    icon: <VscDebugDisconnect />,
     label: "Go to the providers page",
     shortcut: ["p"],
     navigate: "/providers",
   },
   {
-    icon: <GoToConsoleIcon />,
+    icon: <AiOutlineAlert />,
     label: "Go to alert console",
     shortcut: ["g"],
     navigate: "/alerts",
   },
   {
-    icon: <BriefcaseIcon />,
+    icon: <MdOutlineEngineering />,
+    label: "Go to alert groups",
+    shortcut: ["g"],
+    navigate: "/rules",
+  },
+  {
+    icon: <LuWorkflow />,
     label: "Go to the workflows page",
     shortcut: ["wf"],
     navigate: "/workflows",

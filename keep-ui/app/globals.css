@@ -7,3 +7,7 @@
     display: none;
 }
 */
+.rules-tooltip [role="tooltip"] {
+    @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
+    @apply break-words; /* This will wrap long words if needed. */
+  }
