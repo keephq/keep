@@ -46,6 +46,7 @@ class RulesEngine:
 
         self.logger.info("Rules ran, creating alerts")
         # Create the alerts if needed
+        grouped_alerts = []
         for rule in relevent_rules_for_events:
             self.logger.info(f"Running relevant rule {rule.name}")
             rule_results = self._run_rule(rule)
@@ -66,7 +67,7 @@ class RulesEngine:
                 group_alert_name = f"Group alert {rule.name}: " + ", ".join(
                     [event["name"] for event in event_payload]
                 )
-                create_alert_db(
+                alert = create_alert_db(
                     tenant_id=self.tenant_id,
                     provider_type="rules",
                     provider_id=rule.id,
@@ -94,10 +95,13 @@ class RulesEngine:
                     },
                     fingerprint=fingerprint,
                 )
+                # Now add it the the
+                grouped_alerts.append(alert)
                 self.logger.info("Created alert")
 
-        self.logger.info("Rules ran, alerts created")
-        return
+        self.logger.info(f"Rules ran, {len(grouped_alerts)} alerts created")
+        alerts_dto = [AlertDto(**alert.event) for alert in grouped_alerts]
+        return alerts_dto
 
     def _extract_subrules(self, expression):
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'

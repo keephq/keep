@@ -990,6 +990,7 @@ def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
         )
         session.add(alert)
         session.commit()
+        session.refresh(alert)
         return alert
 
 
