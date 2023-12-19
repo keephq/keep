@@ -123,6 +123,7 @@ const CustomAddGroupAction = (props: any) => {
         Add Alerts Group
       </Button>
       <Icon
+        className="rules-tooltip"
         icon={FaQuestionCircle}
         tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
         variant="simple"
@@ -161,6 +162,7 @@ const CustomAddRuleAction = (props: any) => {
         Add Condition
       </Button>
       <Icon
+        className="rules-tooltip"
         icon={FaQuestionCircle}
         tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
         variant="simple"
@@ -237,6 +239,7 @@ export default function Page() {
   const { data: session, status } = useSession();
   const [rules, setRules] = useState<Rule[]>([]);
   const [editMode, setEditMode] = useState(false);
+  const [loadingRules, setLoadingRules] = useState(true);
 
   const valueEditor = useMemo(() => {
     const Component = (props: any) => <CustomValueEditor {...props} validationErrors={validationErrors}/>;
@@ -258,6 +261,7 @@ export default function Page() {
       .then((response) => response.json())
       .then((data) => {
         setRules(data);
+        setLoadingRules(false);
       })
       .catch((error) => {
         console.error("Error fetching rules:", error);
@@ -659,6 +663,11 @@ export default function Page() {
     setValidationErrors({});
   };
 
+  const canCreateRule = () => {
+    // Check if the query has at least one rule
+    return query.rules.length > 0;
+  }
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
         <Flex style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' }}>
@@ -730,7 +739,7 @@ export default function Page() {
               />
               <div className="text-right">
                 {!editMode &&
-                  <Button className="mt-2" color="orange" onClick={saveRule}>
+                  <Button tooltip={canCreateRule()? "": "At least one rule is required"} className="mt-2" color="orange" disabled={!canCreateRule()} onClick={saveRule}>
                     Create Rule
                   </Button>
                 }
@@ -754,7 +763,9 @@ export default function Page() {
               </div>
           </Card>
           <Card style={{ width: '50%',  marginLeft: '1rem'}}>
-            <Title>Rules</Title>
+            {loadingRules ? (<Loading />) : (
+                <>
+                <Title>Rules</Title>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -767,8 +778,8 @@ export default function Page() {
                   {rules && rules.length > 0 ? rules.map((rule) => (
                     <>
                       <TableRow key={rule.id} onClick={() => handleRowClick(rule)} className={`cursor-pointer ${activeRow === rule.id ? 'bg-gray-100' : 'hover:bg-gray-100'}`} >
-                        <TableCell>{rule.name}</TableCell>
-                        <TableCell>{rule.definition_cel}</TableCell>
+                        <TableCell className="whitespace-normal break-words">{rule.name}</TableCell>
+                        <TableCell className="whitespace-normal break-words">{rule.definition_cel}</TableCell>
                         <TableCell>{rule.created_by}</TableCell>
                       </TableRow>
                       {expandedRows[rule.id] && (
@@ -803,6 +814,9 @@ export default function Page() {
                   )}
                 </TableBody>
               </Table>
+                </>
+            )}
+
             </Card>
           </Flex>
       </Card>
