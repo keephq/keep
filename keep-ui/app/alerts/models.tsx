@@ -29,6 +29,7 @@ export interface AlertDto {
   fingerprint: string;
   deleted: string[];
   assignee?: string;
+  ticket_url: string;
 }
 
 export interface Preset {
