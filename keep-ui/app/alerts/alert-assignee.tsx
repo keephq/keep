@@ -1,37 +1,39 @@
 import { useState } from "react";
-import { AlertDto } from "./models";
 import { User } from "app/settings/models";
 import { NameInitialsAvatar } from "react-name-initials-avatar";
 
 export default function AlertAssignee({
-  alert,
+  assignee,
   users,
 }: {
-  alert: AlertDto;
+  assignee: string | undefined;
   users: User[];
 }) {
   const [imageError, setImageError] = useState(false);
+
+  if (!assignee || users.length < 1) {
+    return null;
+  }
+
+  const user = users.find((user) => user.email === assignee);
+
   return !imageError ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className="h-8 w-8 rounded-full"
       src={
-        users.find((u) => u.email === alert.assignee)?.picture ||
-        `https://ui-avatars.com/api/?name=${
-          users.find((u) => u.email === alert.assignee)?.name
-        }&background=random`
+        user?.picture ||
+        `https://ui-avatars.com/api/?name=${user?.name}&background=random`
       }
       height={24}
       width={24}
-      alt={`${alert.assignee} profile picture`}
+      alt={`${assignee} profile picture`}
       onError={() => setImageError(true)}
-      title={alert.assignee}
+      title={assignee}
     />
   ) : (
     <NameInitialsAvatar
-      name={
-        users.find((u) => u.email === alert.assignee)?.name || "Unknown User"
-      }
+      name={user?.name || "Unknown User"}
       bgColor="orange"
       borderWidth="1px"
       textColor="white"
