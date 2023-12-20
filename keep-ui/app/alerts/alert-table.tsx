@@ -25,11 +25,11 @@ import {
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
 import Image from "next/image";
-import AlertAssignee from "./alert-assignee";
-import AlertMenu from "./alert-menu";
-import AlertName from "./alert-name";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
+import AlertName from "./alert-name";
+import AlertAssignee from "./alert-assignee";
+import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
 import AlertExtraPayload from "./alert-extra-payload";
 
@@ -92,14 +92,14 @@ export function AlertTable({
   const columns = [
     columnHelper.display({
       id: "alertMenu",
-      cell: (cell) => (
+      cell: (context) => (
         <div className="pb-9">
           <AlertMenu
-            alert={cell.row.original}
+            alert={context.row.original}
             canOpenHistory={!groupedByAlerts![(alert as any)[groupBy!]]}
-            openHistory={() => openModal!(cell.row.original)}
+            openHistory={() => openModal!(context.row.original)}
             provider={providers.find(
-              (p) => p.type === cell.row.original.source![0]
+              (p) => p.type === context.row.original.source![0]
             )}
             mutate={mutate}
             callDelete={onDelete}
@@ -111,13 +111,13 @@ export function AlertTable({
     }),
     columnHelper.accessor("severity", {
       header: () => "Severity",
-      cell: (cell) => <AlertSeverity severity={cell.getValue()} />,
+      cell: (context) => <AlertSeverity severity={context.getValue()} />,
     }),
     columnHelper.accessor("name", {
       header: () => "Name",
-      cell: (cell) => (
+      cell: (context) => (
         <AlertName
-          alert={cell.row.original}
+          alert={context.row.original}
           workflows={workflows}
           handleWorkflowClick={handleWorkflowClick}
         />
@@ -125,12 +125,12 @@ export function AlertTable({
     }),
     columnHelper.accessor("description", {
       header: () => "Description",
-      cell: (cell) => (
+      cell: (context) => (
         <div
           className="max-w-[340px] flex items-center"
-          title={cell.getValue()}
+          title={context.getValue()}
         >
-          <div className="truncate">{cell.getValue()}</div>,
+          <div className="truncate">{context.getValue()}</div>,
         </div>
       ),
     }),
@@ -146,19 +146,19 @@ export function AlertTable({
           />
         </div>
       ),
-      cell: (cell) => <PushPullBadge pushed={cell.getValue()} />,
+      cell: (context) => <PushPullBadge pushed={context.getValue()} />,
     }),
     columnHelper.accessor("status", {
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
       header: "When",
-      cell: (cell) => getAlertLastReceieved(cell.getValue()),
+      cell: (context) => getAlertLastReceieved(context.getValue()),
     }),
     columnHelper.accessor("source", {
       header: "Source",
-      cell: (cell) =>
-        (cell.getValue() ?? []).map((source, index) => (
+      cell: (context) =>
+        (context.getValue() ?? []).map((source, index) => (
           <Image
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
             key={source}
@@ -172,8 +172,8 @@ export function AlertTable({
     }),
     columnHelper.accessor("assignee", {
       header: "Assignee",
-      cell: (cell) => (
-        <AlertAssignee assignee={cell.getValue()} users={users} />
+      cell: (context) => (
+        <AlertAssignee assignee={context.getValue()} users={users} />
       ),
     }),
     columnHelper.accessor("fatigueMeter", {
@@ -188,19 +188,19 @@ export function AlertTable({
           />
         </div>
       ),
-      cell: (cell) => (
+      cell: (context) => (
         <CategoryBar
           values={[40, 30, 20, 10]}
           colors={["emerald", "yellow", "orange", "rose"]}
-          markerValue={cell.getValue() ?? 0}
-          tooltip={(cell.getValue() ?? 0).toString() ?? "0"}
+          markerValue={context.getValue() ?? 0}
+          tooltip={(context.getValue() ?? 0).toString() ?? "0"}
           className="min-w-[192px]"
         />
       ),
     }),
     columnHelper.display({
       id: "extraPayload",
-      cell: (cell) => <AlertExtraPayload alert={cell.row.original} />,
+      cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
   ];
 
