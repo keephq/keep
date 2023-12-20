@@ -4,10 +4,9 @@ ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1
 
+RUN useradd --user-group --system --create-home --no-log-init keep
 WORKDIR /app
 
-# TODO: we need to find a way to cache everything in here
-#   and not to install keep as package.
 FROM base as builder
 
 ENV PIP_DEFAULT_TIMEOUT=100 \
@@ -17,11 +16,18 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
-COPY . .
+COPY pyproject.toml poetry.lock ./
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes && /venv/bin/python -m pip install --upgrade -r requirements.txt
+COPY keep keep
+COPY README.md README.md
 RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
 FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 COPY --from=builder /venv /venv
+# as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
+RUN chgrp -R 0 /app && chmod -R g=u /app
+RUN chown -R keep:keep /app
+USER keep
 ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]

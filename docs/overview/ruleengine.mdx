@@ -1,0 +1,27 @@
+---
+title: "Alert grouping"
+---
+
+The Keep Rule Engine is a versatile tool for grouping and consolidating alerts.
+This guide explains the core concepts, usage, and best practices for effectively utilizing the rule engine.
+
+<Note>Access the Rule Engine UI through the Keep platform by navigating to the Rule Builder section.</Note>
+
+## Core Concepts
+- **Rule definition**: A rule in Keep is a set of conditions that, when met, creates an alert group.
+- **Alert attributes**: These are characteristics or data points of an alert, such as source, severity, or any attribute an alert might have.
+- **Conditions and logic**: Rules are built by defining conditions based on alert attributes, using logical operators (like AND/OR) to combine multiple conditions.
+
+## Creating Rules
+Creating a rule involves defining the conditions under which an alert should be categorized or actions should be grouped.
+
+1. **Accessing the Rule Engine**: Navigate to the Rule Engine section in the Keep platform.
+2. **Defining rule criteria**:
+ - **Name the rule**: Assign a descriptive name that reflects its purpose.
+ - **Set conditions**: Use alert attributes to create conditions. For example, a rule might specify that an alert with a severity of 'critical' and a source of 'Prometheus' should be categorized as 'High Priority'.
+ - **Logical grouping**: Combine conditions using logical operators to form comprehensive rules.
+
+## Examples
+- **Metric-based alerts**: Construct a rule to pinpoint alerts associated with specific metrics, such as high CPU usage on servers. This can be achieved by grouping alerts that share a common attribute, like a 'CPU usage' tag, ensuring you quickly identify and address performance issues.
+- **Feature-related alerts**: Establish rules to organize alerts by specific features or services. For instance, you can group alerts based on a 'service' or 'URL' tag. This approach is particularly useful for tracking and managing alerts related to distinct functionalities or components within your application.
+- **Team-based alert management**: Implement rules to categorize alerts according to team responsibilities. This might involve grouping alerts based on the systems or services a particular team oversees. Such a strategy ensures that alerts are promptly directed to the appropriate team, enhancing response times and efficiency.

@@ -4,10 +4,26 @@ on: [push, pull_request]
 env:
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+  MYSQL_ROOT_PASSWORD: keep
+  MYSQL_DATABASE: keep
 
 jobs:
   tests:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -31,8 +47,17 @@ jobs:
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root
+
       - name: Run unit tests and report coverage
-        run: poetry run coverage run --branch -m pytest
+        run: |
+          # Add a step to wait for MySQL to be fully up and running
+          until nc -z 127.0.0.1 3306; do
+            echo "waiting for MySQL..."
+            sleep 1
+          done
+          echo "MySQL is up and running!"
+          poetry run coverage run --branch -m pytest
+
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
       - name: Upload coverage reports to Codecov

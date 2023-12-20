@@ -2,9 +2,9 @@ import logging
 import os
 import threading
 import time
+from importlib import metadata
 
 import jwt
-import pkg_resources
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -38,6 +38,7 @@ from keep.api.routes import (
     preset,
     providers,
     pusher,
+    rules,
     settings,
     status,
     tenant,
@@ -58,9 +59,10 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
-    KEEP_VERSION = pkg_resources.get_distribution("keep").version
+    KEEP_VERSION = metadata.version("keep")
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 
 
 class EventCaptureMiddleware(BaseHTTPMiddleware):
@@ -78,37 +80,40 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
             return "anonymous"
 
     async def capture_request(self, request: Request) -> None:
-        identity = self._extract_identity(request)
-        with self.tracer.start_as_current_span("capture_request"):
-            self.posthog_client.capture(
-                identity,
-                "request-started",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
+        if POSTHOG_API_ENABLED:
+            identity = self._extract_identity(request)
+            with self.tracer.start_as_current_span("capture_request"):
+                self.posthog_client.capture(
+                    identity,
+                    "request-started",
+                    {
+                        "path": request.url.path,
+                        "method": request.method,
+                        "keep_version": KEEP_VERSION,
+                    },
+                )
 
     async def capture_response(self, request: Request, response: Response) -> None:
-        identity = self._extract_identity(request)
-        with self.tracer.start_as_current_span("capture_response"):
-            self.posthog_client.capture(
-                identity,
-                "request-finished",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "status_code": response.status_code,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
+        if POSTHOG_API_ENABLED:
+            identity = self._extract_identity(request)
+            with self.tracer.start_as_current_span("capture_response"):
+                self.posthog_client.capture(
+                    identity,
+                    "request-finished",
+                    {
+                        "path": request.url.path,
+                        "method": request.method,
+                        "status_code": response.status_code,
+                        "keep_version": KEEP_VERSION,
+                    },
+                )
 
     async def flush(self):
-        with self.tracer.start_as_current_span("flush_posthog_events"):
-            logger.info("Flushing Posthog events")
-            self.posthog_client.flush()
-            logger.info("Posthog events flushed")
+        if POSTHOG_API_ENABLED:
+            with self.tracer.start_as_current_span("flush_posthog_events"):
+                logger.info("Flushing Posthog events")
+                self.posthog_client.flush()
+                logger.info("Posthog events flushed")
 
     async def dispatch(self, request: Request, call_next):
         # Skip OPTIONS requests
@@ -162,6 +167,7 @@ def get_app(
     app.include_router(whoami.router, prefix="/whoami", tags=["whoami"])
     app.include_router(pusher.router, prefix="/pusher", tags=["pusher"])
     app.include_router(status.router, prefix="/status", tags=["status"])
+    app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
 
     # if its single tenant with authentication, add signin endpoint
