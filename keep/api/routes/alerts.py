@@ -287,9 +287,11 @@ def delete_alert(
     )
 
     deleted_last_received = []  # the last received(s) that are deleted
+    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
         deleted_last_received = enrichment.enrichments.get("deleted", [])
+        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
         # TODO: this is due to legacy deleted field that was a bool, remove in the future
         if isinstance(deleted_last_received, bool):
             deleted_last_received = []
@@ -302,10 +304,16 @@ def delete_alert(
     elif delete_alert.restore is False:
         deleted_last_received.append(delete_alert.lastReceived)
 
+    if delete_alert.lastReceived not in assignees_last_receievd:
+        assignees_last_receievd[delete_alert.lastReceived] = user_email
+
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=delete_alert.fingerprint,
-        enrichments={"deleted": deleted_last_received, "assignee": user_email},
+        enrichments={
+            "deleted": deleted_last_received,
+            "assignees": assignees_last_receievd,
+        },
     )
 
     logger.info(
@@ -319,9 +327,12 @@ def delete_alert(
     return {"status": "ok"}
 
 
-@router.post("/{fingerprint}/assign", description="Assign alert to user")
+@router.post(
+    "/{fingerprint}/assign/{last_received}", description="Assign alert to user"
+)
 def assign_alert(
     fingerprint: str,
+    last_received: str,
     unassign: bool = False,
     tenant_id: str = Depends(verify_bearer_token),
     user_email: str = Depends(get_user_email),
@@ -334,25 +345,36 @@ def assign_alert(
         },
     )
 
+    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    enrichment = get_enrichment(tenant_id, fingerprint)
+    if enrichment:
+        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+
+    if unassign:
+        assignees_last_receievd.pop(last_received, None)
+    else:
+        assignees_last_receievd[last_received] = user_email
+
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=fingerprint,
-        enrichments={"assignee": user_email if not unassign else None},
+        enrichments={"assignees": assignees_last_receievd},
     )
 
     try:
-        logger.info("Sending assign alert email to user")
-        # TODO: this should be changed to dynamic url but we don't know what's the frontend URL
-        keep_platform_url = config(
-            "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
-        )
-        url = f"{keep_platform_url}/alerts?fingerprint={fingerprint}"
-        send_email(
-            to_email=user_email,
-            template_id=EmailTemplates.ALERT_ASSIGNED_TO_USER,
-            url=url,
-        )
-        logger.info("Sent assign alert email to user")
+        if not unassign:  # if we're assigning the alert to someone, send email
+            logger.info("Sending assign alert email to user")
+            # TODO: this should be changed to dynamic url but we don't know what's the frontend URL
+            keep_platform_url = config(
+                "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
+            )
+            url = f"{keep_platform_url}/alerts?fingerprint={fingerprint}"
+            send_email(
+                to_email=user_email,
+                template_id=EmailTemplates.ALERT_ASSIGNED_TO_USER,
+                url=url,
+            )
+            logger.info("Sent assign alert email to user")
     except Exception as e:
         logger.exception(
             "Failed to send email to user",

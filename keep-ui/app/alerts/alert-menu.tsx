@@ -27,7 +27,11 @@ interface Props {
     lastReceived: Date,
     restore?: boolean
   ) => void;
-  setAssignee?: (fingerprint: string, unassign: boolean) => void;
+  setAssignee?: (
+    fingerprint: string,
+    lastReceived: Date,
+    unassign: boolean
+  ) => void;
   currentUser: NextUser;
 }
 
@@ -69,7 +73,9 @@ export default function AlertMenu({
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to ${
-        alert.deleted.includes(alert.lastReceived.toISOString()) ? "restore" : "delete"
+        alert.deleted.includes(alert.lastReceived.toISOString())
+          ? "restore"
+          : "delete"
       } this alert?`
     );
     if (confirmed) {
@@ -103,15 +109,18 @@ export default function AlertMenu({
     ) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      const res = await fetch(`${apiUrl}/alerts/${fingerprint}/assign`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
       if (res.ok) {
-        setAssignee!(fingerprint, unassign);
+        setAssignee!(fingerprint, alert.lastReceived, unassign);
       }
     }
   };
@@ -127,6 +136,10 @@ export default function AlertMenu({
     setMethod(method);
     setIsOpen(true);
   };
+
+  const assignee = alert.assignees
+    ? [alert.lastReceived.toISOString()]
+    : "";
 
   return (
     <>
@@ -186,7 +199,7 @@ export default function AlertMenu({
                   </button>
                 )}
               </Menu.Item>
-              {alert.assignee !== currentUser.email && (
+              {assignee !== currentUser.email && (
                 <Menu.Item>
                   {({ active }) => (
                     <button
