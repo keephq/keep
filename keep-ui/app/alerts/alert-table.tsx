@@ -93,10 +93,12 @@ export function AlertTable({
     columnHelper.display({
       id: "alertMenu",
       cell: (context) => (
-        <div className="pb-9">
+        <div className="pb-6">
           <AlertMenu
             alert={context.row.original}
-            canOpenHistory={!groupedByAlerts![(alert as any)[groupBy!]]}
+            canOpenHistory={
+              !groupedByAlerts![(context.row.original as any)[groupBy!]]
+            }
             openHistory={() => openModal!(context.row.original)}
             provider={providers.find(
               (p) => p.type === context.row.original.source![0]
