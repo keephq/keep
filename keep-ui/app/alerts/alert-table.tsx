@@ -59,7 +59,11 @@ interface Props {
     lastReceived: Date,
     restore?: boolean
   ) => void;
-  setAssignee?: (fingerprint: string, unassign: boolean) => void;
+  setAssignee?: (
+    fingerprint: string,
+    lastReceived: Date,
+    unassign: boolean
+  ) => void;
   users?: User[];
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
@@ -172,10 +176,17 @@ export function AlertTable({
           />
         )),
     }),
-    columnHelper.accessor("assignee", {
+    columnHelper.accessor("assignees", {
       header: "Assignee",
       cell: (context) => (
-        <AlertAssignee assignee={context.getValue()} users={users} />
+        <AlertAssignee
+          assignee={
+            (context.getValue() ?? {})[
+              context.row.original.lastReceived?.toISOString()
+            ]
+          }
+          users={users}
+        />
       ),
     }),
     columnHelper.accessor("fatigueMeter", {

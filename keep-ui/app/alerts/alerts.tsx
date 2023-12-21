@@ -192,6 +192,9 @@ export default function Alerts({
       channel.bind("async-done", function () {
         setIsAsyncLoading(false);
       });
+
+      setTimeout(() => setIsAsyncLoading(false), 3000); // If we don't receive any alert in 3 seconds, we assume that the async process is done (#641)
+
       console.log("Connected to pusher");
       return () => {
         pusher.unsubscribe(channelName);
@@ -223,18 +226,26 @@ export default function Alerts({
           } else {
             alert.deleted = [];
           }
-          alert.assignee = user.email;
+          if (alert.assignees !== undefined) {
+            alert.assignees[lastReceived.toISOString()] = user.email;
+          } else {
+            alert.assignees = { [lastReceived.toISOString()]: user.email };
+          }
         }
         return alert;
       })
     );
   };
 
-  const setAssignee = (fingerprint: string, unassign: boolean) => {
+  const setAssignee = (fingerprint: string, lastReceived: Date, unassign: boolean) => {
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
-          alert.assignee = !unassign ? user?.email : "";
+          if (alert.assignees !== undefined) {
+            alert.assignees[lastReceived.toISOString()] = user.email;
+          } else {
+            alert.assignees = { [lastReceived.toISOString()]: user.email };
+          }
         }
         return alert;
       })
