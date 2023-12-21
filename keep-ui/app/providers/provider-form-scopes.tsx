@@ -18,7 +18,6 @@ import {
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import "./provider-form-scopes.css";
-import { type } from "os";
 
 const ProviderFormScopes = ({
   provider,
