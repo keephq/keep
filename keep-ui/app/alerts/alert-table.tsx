@@ -94,27 +94,6 @@ export function AlertTable({
   };
 
   const columns = [
-    columnHelper.display({
-      id: "alertMenu",
-      cell: (context) => (
-        <div className="pb-6">
-          <AlertMenu
-            alert={context.row.original}
-            canOpenHistory={
-              !groupedByAlerts![(context.row.original as any)[groupBy!]]
-            }
-            openHistory={() => openModal!(context.row.original)}
-            provider={providers.find(
-              (p) => p.type === context.row.original.source![0]
-            )}
-            mutate={mutate}
-            callDelete={onDelete}
-            setAssignee={setAssignee}
-            currentUser={currentUser}
-          />
-        </div>
-      ),
-    }),
     columnHelper.accessor("severity", {
       header: () => "Severity",
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
@@ -214,6 +193,25 @@ export function AlertTable({
     columnHelper.display({
       id: "extraPayload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
+    }),
+    columnHelper.display({
+      id: "alertMenu",
+      cell: (context) => (
+        <AlertMenu
+          alert={context.row.original}
+          canOpenHistory={
+            !groupedByAlerts![(context.row.original as any)[groupBy!]]
+          }
+          openHistory={() => openModal!(context.row.original)}
+          provider={providers.find(
+            (p) => p.type === context.row.original.source![0]
+          )}
+          mutate={mutate}
+          callDelete={onDelete}
+          setAssignee={setAssignee}
+          currentUser={currentUser}
+        />
+      ),
     }),
   ];
 
