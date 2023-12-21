@@ -130,7 +130,7 @@ export function AlertTable({
           className="max-w-[340px] flex items-center"
           title={context.getValue()}
         >
-          <div className="truncate">{context.getValue()}</div>,
+          <div className="truncate">{context.getValue()}</div>
         </div>
       ),
     }),
