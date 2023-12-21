@@ -60,17 +60,3 @@ export const AlertKnownKeys = [
   "isDeleted", // TODO: leftover, should be removed in the future.
   "assignee",
 ];
-
-export const AlertTableKeys: { [key: string]: string } = {
-  Severity: "",
-  Name: "",
-  Description: "",
-  Type: "Whether the alert was pushed or pulled from the alert source",
-  Status: "",
-  When: "",
-  Source: "",
-  Assignee: "",
-  "Fatigue Meter": "Calculated based on various factors",
-  // "Automated workflow": "Workflows that defined to be executed automatically when this alert triggers",
-  Payload: "",
-};
