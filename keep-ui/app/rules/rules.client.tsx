@@ -558,7 +558,14 @@ export default function Page() {
   };
 
   const handleEdit = (rule: Rule) => {
-    const query = parseCEL(rule.definition_cel);
+    let query = parseCEL(rule.definition_cel);
+    // if the query has only one rule, wrap it with a group
+    if(query.rules.length === 1){
+      query = {
+        combinator: 'and',
+        rules: [query]
+      }
+    }
     setQuery(query);
     setFormData({
       ruleName: rule.name,
