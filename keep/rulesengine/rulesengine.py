@@ -15,6 +15,35 @@ class RulesEngine:
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
 
+    def _calc_max_severity(self, severities):
+        # TODO: this is a naive implementation, we should normaliaze all the severities from all providers and calculate the max
+        # TODO 2: this could be also be configured by the user ("more than 5 highs => critical")
+
+        # if we don't have any severities, we fallback to info
+        if not severities:
+            self.logger.info(
+                "Could not calculate max severity from empty list - fallbacking to info"
+            )
+            return "info"
+        severities_lower = [severity.lower() for severity in severities]
+        # fatal is the highest severity
+        if "fatal" in severities_lower:
+            return "fatal"
+        # critical is the second highest severity
+        if "critical" in severities_lower:
+            return "critical"
+        if "high" in severities_lower:
+            return "high"
+        if "medium" in severities_lower:
+            return "medium"
+        if "low" in severities_lower:
+            return "low"
+        # if none of the severities are fatal, critical, high, medium or low, we fallback to the first severity
+        self.logger.info(
+            f"Could not calculate max severity from {severities} - fallbacking"
+        )
+        return severities[0]
+
     def run_rules(self, events: list[AlertDto]):
         self.logger.info("Running rules")
         rules = get_rules_db(tenant_id=self.tenant_id)
@@ -67,6 +96,10 @@ class RulesEngine:
                 group_alert_name = f"Group alert {rule.name}: " + ", ".join(
                     [event["name"] for event in event_payload]
                 )
+                # calc the group severity
+                severity = self._calc_max_severity(
+                    [event.get("severity", "info") for event in event_payload]
+                )
                 alert = create_alert_db(
                     tenant_id=self.tenant_id,
                     provider_type="rules",
@@ -78,13 +111,7 @@ class RulesEngine:
                         "lastReceived": datetime.datetime.now(
                             tz=datetime.timezone.utc
                         ).isoformat(),
-                        "severity": max(
-                            [
-                                event["severity"]
-                                for event in event_payload
-                                if event["severity"] is not None
-                            ]
-                        ),
+                        "severity": severity,
                         "source": list(
                             set([event["source"][0] for event in event_payload])
                         ),
