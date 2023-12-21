@@ -18,6 +18,7 @@ import {
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import "./provider-form-scopes.css";
+import { type } from "os";
 
 const ProviderFormScopes = ({
   provider,
@@ -63,6 +64,12 @@ const ProviderFormScopes = ({
             {
               // provider.scopes! is because we validates scopes exists in the parent component
               provider.scopes!.map((scope) => {
+                let isScopeString = typeof validatedScopes[scope.name] === 'string';
+                let isScopeLong = false;
+
+                if (isScopeString) {
+                    isScopeLong = validatedScopes[scope.name].toString().length > 100;
+                }
                 return (
                   <TableRow key={scope.name}>
                     <TableCell>
@@ -83,7 +90,7 @@ const ProviderFormScopes = ({
                             ? "gray"
                             : "red" // scope was tested and is a string, meaning it has an error
                         }
-                        className="truncate max-w-xs"
+                        className={`truncate ${isScopeLong? 'max-w-lg' : 'max-w-xs' }`}
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
