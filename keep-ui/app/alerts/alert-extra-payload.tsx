@@ -27,9 +27,9 @@ export default function AlertExtraPayload({ alert }: Props) {
   return (
     <div>
       <Accordion>
-        <AccordionHeader className="w-64">Extra Payload</AccordionHeader>
+        <AccordionHeader>Extra Payload</AccordionHeader>
         <AccordionBody>
-          <pre className="w-64 overflow-y-scroll">
+          <pre className="overflow-y-scroll">
             {JSON.stringify(extraPayload, null, 2)}
           </pre>
         </AccordionBody>
