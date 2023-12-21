@@ -558,7 +558,14 @@ export default function Page() {
   };
 
   const handleEdit = (rule: Rule) => {
-    const query = parseCEL(rule.definition_cel);
+    let query = parseCEL(rule.definition_cel);
+    // if the query has only one rule, wrap it with a group
+    if(query.rules.length === 1){
+      query = {
+        combinator: 'and',
+        rules: [query]
+      }
+    }
     setQuery(query);
     setFormData({
       ruleName: rule.name,
@@ -726,7 +733,7 @@ export default function Page() {
               validator={customValidator}
               controlClassnames={{
                 queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
-                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4 !important',
+                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4  overflow-x-auto !important',
                 combinators: 'bg-orange-400 text-white rounded-l-full p-1 shadow',
                 addRule: 'bg-orange-400 text-white rounded-none p-1 shadow',
                 addGroup: 'bg-orange-400 text-white rounded-r-full p-1 shadow',

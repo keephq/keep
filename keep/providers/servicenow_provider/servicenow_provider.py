@@ -64,6 +64,13 @@ class ServicenowProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
+    @property
+    def service_now_base_url(self):
+        # if not starts with http:
+        if not self.authentication_config.service_now_base_url.startswith("http"):
+            return f"https://{self.authentication_config.service_now_base_url}"
+        return self.authentication_config.service_now_base_url
+
     def validate_scopes(self):
         """
         Validates that the user has the required scopes to use the provider.
