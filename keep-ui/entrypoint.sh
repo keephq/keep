@@ -1,4 +1,3 @@
 #!/bin/sh
-
-echo "Starting Nextjs"
+echo "Starting Nextjs [${API_URL}]"
 exec node server.js

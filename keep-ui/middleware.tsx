@@ -1,13 +1,21 @@
-export { default } from "next-auth/middleware";
+import { NextRequest, NextResponse } from "next/server";
+import NextAuthMiddleware from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 
-// matchers - https://nextjs.org/docs/pages/building-your-application/routing/middleware#matcher
-
-// exclude keep_big.svg from being protected
 export const config = {
   matcher: [
-    // Exclude two pages from the middleware:
-    // 1. Signin page (so that users can sign in)
-    // 2. keep svg (so that it can be displayed on the signin page)
     '/((?!keep_big\\.svg$|signin$).*)',
   ],
 };
+
+export function middleware(req: NextRequest) {
+  const { pathname } = new URL(req.url);
+
+  if (pathname.startsWith('/backend/')) {
+    const newURL = pathname.replace('/backend/', process.env.API_URL + '/');
+    return NextResponse.rewrite(newURL);
+  }
+
+  // Use type assertion here
+  return NextAuthMiddleware(req as unknown as NextRequestWithAuth);
+}
