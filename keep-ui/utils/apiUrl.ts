@@ -9,31 +9,32 @@ export function getApiURL(): string {
   const componentType = typeof window === "undefined" ? "server" : "client";
 
   // if its client, use the same url as the browser but with the "/backend" prefix so that middleware.ts can proxy the request to the backend
-  if(componentType === "client"){
-    return "/backend"
+  if (componentType === "client") {
+    return "/backend";
   }
 
   // SERVER ONLY FROM HERE ON
 
-
   // else, its the server, and we need to check if we are on vercel or not
   const gitBranchName = process.env.VERCEL_GIT_COMMIT_REF || "notvercel";
   // main branch or not vercel - use the normal url
-  if(gitBranchName === "main" || gitBranchName === "notvercel"){
+  if (gitBranchName === "main" || gitBranchName === "notvercel") {
     return process.env.API_URL!;
   }
   // else, preview branch on vercel
-  else{
+  else {
     console.log("preview branch on vercel");
-    let branchNameSanitized = gitBranchName.replace(/\//g, '-').substring(0, 63);
+    let branchNameSanitized = gitBranchName
+      .replace(/\//g, "-")
+      .substring(0, 63);
     let serviceName = `keep-api-${branchNameSanitized}`;
     if (serviceName.length > 63) {
       serviceName = serviceName.substring(0, 49);
     }
 
-    if (serviceName.endsWith('-')) {
+    if (serviceName.endsWith("-")) {
       serviceName = serviceName.slice(0, -1);
     }
-    return process.env.API_URL!.replace('keep-api', serviceName);
+    return process.env.API_URL!.replace("keep-api", serviceName);
   }
 }
