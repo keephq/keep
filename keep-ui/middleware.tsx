@@ -11,7 +11,7 @@ export const config = {
 
 export function middleware(req: NextRequest) {
   const { pathname } = new URL(req.url);
-
+  // Redirect /backend/ to the API
   if (pathname.startsWith('/backend/')) {
     let apiUrl = getApiURL();
     const newURL = pathname.replace('/backend/', apiUrl + '/');
@@ -19,6 +19,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(newURL);
   }
 
-  // Use type assertion here
+  // For all other requests, we need to check if the user is authenticated
   return NextAuthMiddleware(req as unknown as NextRequestWithAuth);
 }
