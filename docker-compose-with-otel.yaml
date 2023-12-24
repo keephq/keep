@@ -132,16 +132,11 @@ services:
     volumes:
       - ./keep/keep:/code/keep
       - ./state:/state
+  
   keep-websocket-server:
-    image: quay.io/soketi/soketi:1.4-16-debian
-    ports:
-      - "6001:6001"
-      - "9601:9601"
-    environment:
-      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
-      - SOKETI_DEFAULT_APP_ID=1
-      - SOKETI_DEFAULT_APP_KEY=keepappkey
-      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+    extends:
+      file: common.yml
+      service: keep-websocket-server
 
   log_collector:
     image: timberio/vector:0.32.2-debian
