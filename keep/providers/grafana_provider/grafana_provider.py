@@ -108,7 +108,9 @@ class GrafanaProvider(BaseProvider):
             f"{self.authentication_config.host}/api/access-control/user/permissions"
         )
         try:
-            response = requests.get(permissions_api, headers=headers, timeout=5).json()
+            response = requests.get(
+                permissions_api, headers=headers, timeout=5, verify=False
+            ).json()
         except requests.exceptions.ConnectionError:
             self.logger.exception("Failed to connect to Grafana")
             validated_scopes = {
@@ -134,7 +136,7 @@ class GrafanaProvider(BaseProvider):
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = requests.get(api, headers=headers)
+        response = requests.get(api, verify=False, headers=headers)
         if not response.ok:
             self.logger.warn(
                 "Could not get alerts", extra={"response": response.json()}
@@ -151,7 +153,7 @@ class GrafanaProvider(BaseProvider):
         self.logger.info("Deploying alert")
         api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = requests.post(api, json=alert, headers=headers)
+        response = requests.post(api, verify=False, json=alert, headers=headers)
 
         if not response.ok:
             response_json = response.json()
@@ -204,7 +206,7 @@ class GrafanaProvider(BaseProvider):
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
-        all_contact_points = requests.get(contacts_api, headers=headers)
+        all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
         all_contact_points.raise_for_status()
         all_contact_points = all_contact_points.json()
         webhook_exists = [
@@ -219,7 +221,10 @@ class GrafanaProvider(BaseProvider):
             webhook["settings"]["authorization_scheme"] = "digest"
             webhook["settings"]["authorization_credentials"] = api_key
             requests.put(
-                f'{contacts_api}/{webhook["uid"]}', json=webhook, headers=headers
+                f'{contacts_api}/{webhook["uid"]}',
+                verify=False,
+                json=webhook,
+                headers=headers,
             )
             self.logger.info(f'Updated webhook {webhook["uid"]}')
         else:
@@ -236,6 +241,7 @@ class GrafanaProvider(BaseProvider):
             }
             response = requests.post(
                 contacts_api,
+                verify=False,
                 json=webhook,
                 headers={**headers, "X-Disable-Provenance": "true"},
             )
@@ -245,7 +251,9 @@ class GrafanaProvider(BaseProvider):
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
-            all_policies = requests.get(policies_api, headers=headers).json()
+            all_policies = requests.get(
+                policies_api, verify=False, headers=headers
+            ).json()
             policy_exists = any(
                 [
                     p
@@ -278,6 +286,7 @@ class GrafanaProvider(BaseProvider):
                 )
                 requests.put(
                     policies_api,
+                    verify=False,
                     json=all_policies,
                     headers={**headers, "X-Disable-Provenance": "true"},
                 )
@@ -339,7 +348,9 @@ class GrafanaProvider(BaseProvider):
         now = int(datetime.datetime.now().timestamp())
         api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = response = requests.get(api_endpoint, headers=headers, timeout=3)
+        response = response = requests.get(
+            api_endpoint, verify=False, headers=headers, timeout=3
+        )
         if not response.ok:
             raise ProviderException("Failed to get alerts from Grafana")
         events_history = response.json()
