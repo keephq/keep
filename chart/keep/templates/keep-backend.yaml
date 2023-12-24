@@ -48,6 +48,10 @@ spec:
             - name: OPENAI_API_KEY
               value: {{ .Values.backend.openAiApi.openAiApiKey | default "" | quote }}
             {{- end }}
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           volumeMounts:
             - name: state-volume
               mountPath: /state
