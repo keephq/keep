@@ -27,10 +27,6 @@ backend:
       value: keep-websocket
     - name: PUSHER_PORT
       value: 6001
-    - name: K8S_NAMESPACE
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.namespace
   openAiApi:
     enabled: false
     openAiApiKey: ""
