@@ -28,16 +28,16 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["@tremor/react"],
   },
-  //compiler: {
-  //  removeConsole:
-  //    process.env.NODE_ENV === "production"
-  //      ? {
-  //         exclude: ["error"],
-  //        }
-  //      : false,
-  //},
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+           exclude: ["error"],
+          }
+        : false,
+  },
   output: "standalone",
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
     return [
       {
