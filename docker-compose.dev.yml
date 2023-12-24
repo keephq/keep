@@ -1,9 +1,10 @@
 services:
   keep-frontend-dev:
-    
     extends:
       file: docker-compose.common.yml
       service: keep-frontend-common
+    environment:
+      - API_URL=http://keep-backend-dev:8080
     build:
       dockerfile: docker/Dockerfile.dev.ui
     volumes:
@@ -20,7 +21,7 @@ services:
     build:
       dockerfile: docker/Dockerfile.dev.api
     environment:
-      - USE_NGROK=true
+      - USE_NGROK=true 
     volumes:
       - .:/app
       - ./state:/state
