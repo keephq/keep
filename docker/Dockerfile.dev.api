@@ -12,12 +12,16 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_NO_CACHE_DIR=1 \
     POETRY_VERSION=1.3.2
 
+# Install gcc
+RUN apt-get update && apt-get install -y gcc
+
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
 COPY pyproject.toml ./
 RUN . /venv/bin/activate && poetry install --no-root
 
 # Setting the virtual environment path
+RUN echo "test"
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 
