@@ -13,6 +13,7 @@ export function middleware(req: NextRequest) {
 
   if (pathname.startsWith('/backend/')) {
     const newURL = pathname.replace('/backend/', process.env.API_URL + '/');
+    console.log(`Redirecting ${pathname} to ${newURL}`);
     return NextResponse.rewrite(newURL);
   }
 
