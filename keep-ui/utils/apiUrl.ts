@@ -7,21 +7,22 @@ export function getApiURL(): string {
   // since its the name of the container (and not accesible from the host)
   // so we need to use the "http://localhost:3000" url instead.
   const componentType = typeof window === "undefined" ? "server" : "client";
-  let apiUrl = "";
-  // we need to check if we are on vercel or not
-  const gitBranchName = process.env.VERCEL_GIT_COMMIT_REF || "notvercel";
-  // main branch or not vercel
-  if(gitBranchName === "main" || gitBranchName === "notvercel"){
-    // server
-    if (componentType === "server") {
-      apiUrl = process.env.API_URL!;
-    }
-    // on the frontend, we want to use the same url as the browser but with the "/backend" prefix so that middleware.ts can proxy the request to the backend
-    else {
-      apiUrl = "/backend";
-    }
+
+  // if its client, use the same url as the browser but with the "/backend" prefix so that middleware.ts can proxy the request to the backend
+  if(componentType === "client"){
+    return "/backend"
   }
-  // else, preview branch on vercel [ONLY SERVER!]
+
+  // SERVER ONLY FROM HERE ON
+
+
+  // else, its the server, and we need to check if we are on vercel or not
+  const gitBranchName = process.env.VERCEL_GIT_COMMIT_REF || "notvercel";
+  // main branch or not vercel - use the normal url
+  if(gitBranchName === "main" || gitBranchName === "notvercel"){
+    return process.env.API_URL!;
+  }
+  // else, preview branch on vercel
   else{
     console.log("preview branch on vercel");
     let branchNameSanitized = gitBranchName.replace(/\//g, '-').substring(0, 63);
@@ -33,7 +34,6 @@ export function getApiURL(): string {
     if (serviceName.endsWith('-')) {
       serviceName = serviceName.slice(0, -1);
     }
-    apiUrl = process.env.API_URL!.replace('keep-api', serviceName);
+    return process.env.API_URL!.replace('keep-api', serviceName);
   }
-  return apiUrl;
 }
