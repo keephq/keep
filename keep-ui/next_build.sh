@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This allows us to dynamically set the API_URL and NEXT_PUBLIC_API_URL based on the branch name
+# This allows us to dynamically set the API_URL based on the branch name
 # This is useful for testing PRs on Vercel
 if [ -n "$VERCEL_GIT_COMMIT_REF" ]; then
     branch_name_sanitized=$(echo $VERCEL_GIT_COMMIT_REF | sed 's/\//-/g' | cut -c 1-63)
@@ -18,8 +18,6 @@ if [ -n "$VERCEL_GIT_COMMIT_REF" ]; then
         if [ "${service_name: -1}" = "-" ]; then
             service_name="${service_name::-1}" # Remove the last character
         fi
-
-        export NEXT_PUBLIC_API_URL=$(echo $NEXT_PUBLIC_API_URL | sed "s|keep-api|${service_name}|")
         export API_URL=$(echo $API_URL | sed "s|keep-api|${service_name}|")
     fi
 fi
