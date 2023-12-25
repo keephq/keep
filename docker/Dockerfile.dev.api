@@ -21,7 +21,6 @@ COPY pyproject.toml ./
 RUN . /venv/bin/activate && poetry install --no-root
 
 # Setting the virtual environment path
-RUN echo "test"
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 
