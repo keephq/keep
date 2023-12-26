@@ -1,9 +1,9 @@
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
-import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import {
   ArchiveBoxIcon,
+  EllipsisHorizontalIcon,
   PlusIcon,
   TrashIcon,
   UserPlusIcon,
@@ -137,17 +137,14 @@ export default function AlertMenu({
     setIsOpen(true);
   };
 
-  const assignee = alert.assignees
-    ? [alert.lastReceived.toISOString()]
-    : "";
+  const assignee = alert.assignees ? [alert.lastReceived.toISOString()] : "";
 
   return (
     <>
-      <Menu as="div" className="absolute inline-block text-left">
+      <Menu>
         <Menu.Button>
           <Icon
-            size="xs"
-            icon={Bars3Icon}
+            icon={EllipsisHorizontalIcon}
             className="hover:bg-gray-100"
             color="gray"
           />
@@ -161,7 +158,7 @@ export default function AlertMenu({
           leaveFrom="transform opacity-100 scale-100"
           leaveTo="transform opacity-0 scale-95"
         >
-          <Menu.Items className="z-50 relative mt-2 min-w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <Menu.Items className="z-50 fixed right-12 mt-2 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
