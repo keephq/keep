@@ -17,6 +17,8 @@ import { Provider } from "app/providers/providers";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import {
+  OnChangeFn,
+  RowSelectionState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -32,6 +34,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
 import AlertExtraPayload from "./alert-extra-payload";
+import AlertTableCheckbox from "./alert-table-checkbox";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -84,6 +87,8 @@ export function AlertTable({
   users = [],
   currentUser,
   openModal,
+  rowSelection,
+  setRowSelection,
 }: Props) {
   const router = useRouter();
 
@@ -95,7 +100,30 @@ export function AlertTable({
     }
   };
 
+  const checkboxColumn = rowSelection
+    ? [
+        columnHelper.display({
+          id: "checkbox",
+          header: (context) => (
+            <AlertTableCheckbox
+              checked={context.table.getIsAllRowsSelected()}
+              indeterminate={context.table.getIsSomeRowsSelected()}
+              onChange={context.table.getToggleAllRowsSelectedHandler()}
+            />
+          ),
+          cell: (context) => (
+            <AlertTableCheckbox
+              checked={context.row.getIsSelected()}
+              indeterminate={context.row.getIsSomeSelected()}
+              onChange={context.row.getToggleSelectedHandler()}
+            />
+          ),
+        }),
+      ]
+    : [];
+
   const columns = [
+    ...checkboxColumn,
     columnHelper.accessor("severity", {
       header: () => "Severity",
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
