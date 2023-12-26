@@ -23,18 +23,20 @@ export default function AlertActions({
     const confirmed = confirm(
       `Are you sure you want to delete ${amountOfRowSelections} alert(s)?`
     );
+
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
 
-      alerts.forEach(async (alert) => {
+      for await (const alert of alerts) {
         const { fingerprint } = alert;
 
         const body = {
-          fingerprint: fingerprint,
+          fingerprint,
           lastReceived: alert.lastReceived,
           restore: false,
         };
+
         const res = await fetch(`${apiUrl}/alerts`, {
           method: "DELETE",
           headers: {
@@ -44,9 +46,9 @@ export default function AlertActions({
           body: JSON.stringify(body),
         });
         if (res.ok) {
-          callDelete(fingerprint, alert.lastReceived, false);
+          callDelete(fingerprint, alert.lastReceived);
         }
-      });
+      }
     }
   };
 
