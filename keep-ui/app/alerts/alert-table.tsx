@@ -67,6 +67,8 @@ interface Props {
   users?: User[];
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
+  rowSelection?: RowSelectionState;
+  setRowSelection?: OnChangeFn<RowSelectionState>;
 }
 
 export function AlertTable({
@@ -219,6 +221,11 @@ export function AlertTable({
     data: alerts,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    state: {
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
   });
 
   return (
