@@ -110,6 +110,7 @@ class JiraProvider(BaseProvider):
             f"{self.jira_host}/rest/api/3/myself",
             headers={"Accept": "application/json"},
             auth=auth,
+            verify=False,
         )
         try:
             resp.raise_for_status()
@@ -130,6 +131,7 @@ class JiraProvider(BaseProvider):
             headers=headers,
             auth=auth,
             params=params,
+            verify=False,
         )
         try:
             resp.raise_for_status()
@@ -208,7 +210,7 @@ class JiraProvider(BaseProvider):
                 query_params={"projectKeys": project_key},
             )
 
-            response = requests.get(url=url, auth=self.__get_auth())
+            response = requests.get(url=url, auth=self.__get_auth(), verify=False)
 
             response.raise_for_status()
 
@@ -273,7 +275,9 @@ class JiraProvider(BaseProvider):
                 }
             }
 
-            response = requests.post(url=url, json=request_body, auth=self.__get_auth())
+            response = requests.post(
+                url=url, json=request_body, auth=self.__get_auth(), verify=False
+            )
             try:
                 response.raise_for_status()
             except Exception:
@@ -292,6 +296,7 @@ class JiraProvider(BaseProvider):
             f"{self.jira_host}/rest/agile/1.0/board",
             auth=self.__get_auth(),
             headers={"Accept": "application/json"},
+            verify=False,
         )
         if boards_response.status_code == 200:
             boards = boards_response.json()["values"]
@@ -363,7 +368,7 @@ class JiraProvider(BaseProvider):
         self.logger.debug("Fetching data from Jira")
 
         request_url = f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
-        response = requests.get(request_url, auth=self.__get_auth())
+        response = requests.get(request_url, auth=self.__get_auth(), verify=False)
         if not response.ok:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
