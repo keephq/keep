@@ -59,7 +59,7 @@ class MattermostProvider(BaseProvider):
         if channel:
             payload["channel"] = channel
 
-        response = requests.post(webhook_url, json=payload)
+        response = requests.post(webhook_url, json=payload, verify=False)
 
         if not response.ok:
             raise ProviderException(
