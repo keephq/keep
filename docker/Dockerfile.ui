@@ -31,7 +31,7 @@ ENV NEXT_PUBLIC_PUSHER_PORT=6001
 ENV NEXT_PUBLIC_PUSHER_APP_KEY=keepappkey
 
 
-RUN API_URL=http://APP_API_URL-keep-api npm run build
+RUN npm run build
 
 
 # Production image, copy all the files and run next
