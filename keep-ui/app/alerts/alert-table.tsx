@@ -249,6 +249,7 @@ export function AlertTable({
     data: alerts,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
     state: {
       rowSelection,
     },
