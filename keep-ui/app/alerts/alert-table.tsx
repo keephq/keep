@@ -226,6 +226,10 @@ export function AlertTable({
     }),
     columnHelper.display({
       id: "alertMenu",
+      meta: {
+        thClassName: "sticky right-0",
+        tdClassName: "sticky right-0",
+      },
       cell: (context) => (
         <AlertMenu
           alert={context.row.original}
@@ -274,7 +278,14 @@ export function AlertTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHeaderCell key={header.id}>
+                <TableHeaderCell
+                  key={header.id}
+                  className={`bg-white ${
+                    header.column.columnDef.meta?.thClassName
+                      ? header.column.columnDef.meta?.thClassName
+                      : ""
+                  }`}
+                >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
