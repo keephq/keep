@@ -242,13 +242,22 @@ export default function Alerts({
   const AlertTableTabPanel = ({ preset }: { preset: Preset }) => {
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-    const amountOfRowSelections = Object.keys(rowSelection).length;
+    const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
+      (acc, [alertId, isSelected]) => {
+        if (isSelected) {
+          return acc.concat(alertId);
+        }
+
+        return acc;
+      },
+      []
+    );
 
     return (
       <TabPanel className="mt-4">
-        {amountOfRowSelections ? (
+        {selectedRowIds.length ? (
           <AlertActions
-            amountOfRowSelections={amountOfRowSelections}
+            selectedRowIds={selectedRowIds}
             onDelete={onDelete}
             alerts={currentStateAlerts.slice(startIndex, endIndex)}
           />

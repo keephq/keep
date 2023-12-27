@@ -5,7 +5,7 @@ import { getApiURL } from "utils/apiUrl";
 import { AlertDto } from "./models";
 
 interface Props {
-  amountOfRowSelections: number;
+  selectedRowIds: string[];
   onDelete: (
     fingerprint: string,
     lastReceived: Date,
@@ -15,20 +15,24 @@ interface Props {
 }
 
 export default function AlertActions({
-  amountOfRowSelections,
+  selectedRowIds,
   onDelete: callDelete,
   alerts,
 }: Props) {
   const onDelete = async () => {
     const confirmed = confirm(
-      `Are you sure you want to delete ${amountOfRowSelections} alert(s)?`
+      `Are you sure you want to delete ${selectedRowIds.length} alert(s)?`
     );
 
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
 
-      for await (const alert of alerts) {
+      const selectedAlerts = alerts.filter(({ id }) =>
+        selectedRowIds.includes(id)
+      );
+
+      for await (const alert of selectedAlerts) {
         const { fingerprint } = alert;
 
         const body = {
@@ -61,7 +65,7 @@ export default function AlertActions({
         title="Delete"
         onClick={onDelete}
       >
-        Delete {amountOfRowSelections} alert(s)
+        Delete {selectedRowIds.length} alert(s)
       </Button>
     </div>
   );
