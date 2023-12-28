@@ -168,7 +168,7 @@ export default function AlertMenu({
                 >
                   <Menu.Items
                     ref={refs.setFloating}
-                    className="z-50 fixed mt-2 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    className="z-50 absolute mt-2 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                     style={{ left: (x ?? 0) - 50, top: y ?? 0 }}
                   >
                     <div className="px-1 py-1">
