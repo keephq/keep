@@ -22,6 +22,7 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  VisibilityState,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
@@ -258,14 +259,11 @@ export function AlertTable({
     getColumnsOrderLocalStorageKey(presetName)
   );
 
-  const [columns] = useState<typeof defaultColumns>(() => [
-    ...defaultColumns,
-    ...extraPayloadColumns,
-  ]);
+  const columns = [...defaultColumns, ...extraPayloadColumns];
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
   );
-  const [columnVisibility, setColumnVisibility] = useState<{}>(
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     // Exclude the extra payload columns from the default visibility
     columnsToHideFromLocalStorage
       ? JSON.parse(columnsToHideFromLocalStorage)
