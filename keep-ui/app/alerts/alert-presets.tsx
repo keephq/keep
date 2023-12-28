@@ -20,6 +20,7 @@ export default function AlertPresets({
   accessToken,
   setSelectedOptions,
   presetsMutator,
+  isLoading,
 }: {
   preset: Preset | null;
   alerts: AlertDto[];
@@ -27,6 +28,7 @@ export default function AlertPresets({
   setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
   accessToken: string;
   presetsMutator: () => void;
+  isLoading: boolean;
 }) {
   const apiUrl = getApiURL();
   const selectRef = useRef(null);
@@ -207,7 +209,7 @@ export default function AlertPresets({
 
   return (
     <>
-    <Subtitle>Filters</Subtitle>
+      <Subtitle>Filters</Subtitle>
       <div className="flex w-full">
         <CreatableSelect
           isMulti
@@ -225,6 +227,7 @@ export default function AlertPresets({
           onFocus={() => setIsMenuOpen(true)}
           onBlur={() => setIsMenuOpen(false)}
           isClearable={false}
+          isDisabled={isLoading}
         />
         {preset?.name === "Feed" && (
           <Button

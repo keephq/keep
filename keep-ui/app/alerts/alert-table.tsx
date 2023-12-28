@@ -6,7 +6,6 @@ import {
   Icon,
   Callout,
   CategoryBar,
-  Subtitle,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -18,6 +17,7 @@ import { Provider } from "app/providers/providers";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import {
+  ColumnOrderState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -36,7 +36,10 @@ import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
 import { useState } from "react";
-import SortableSelect from "react-select";
+import AlertColumnsSelect, {
+  getColumnsOrderLocalStorageKey,
+  getHiddenColumnsLocalStorageKey,
+} from "./alert-columns-select";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -50,15 +53,6 @@ const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
 };
 
 const columnHelper = createColumnHelper<AlertDto>();
-
-const styles = {
-  multiValueRemove: (base: any, state: any) => {
-    return state.data.isFixed ? { ...base, display: "none" } : base;
-  },
-  multiValue: (base: any, state: any) => {
-    return state.data.isFixed ? { ...base, display: "none" } : base;
-  },
-};
 
 interface Props {
   alerts: AlertDto[];
@@ -258,13 +252,19 @@ export function AlertTable({
     })
   );
   const columnsToHideFromLocalStorage = localStorage.getItem(
-    presetName ?? "default"
+    getHiddenColumnsLocalStorageKey(presetName)
+  );
+  const columnOrderLocalStorage = localStorage.getItem(
+    getColumnsOrderLocalStorageKey(presetName)
   );
 
   const [columns] = useState<typeof defaultColumns>(() => [
     ...defaultColumns,
     ...extraPayloadColumns,
   ]);
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
+    columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
+  );
   const [columnVisibility, setColumnVisibility] = useState<{}>(
     // Exclude the extra payload columns from the default visibility
     columnsToHideFromLocalStorage
@@ -277,54 +277,23 @@ export function AlertTable({
   const table = useReactTable({
     data: alerts,
     columns: columns,
+    onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     state: {
       columnVisibility: columnVisibility,
+      columnOrder: columnOrder,
     },
     onColumnVisibilityChange: setColumnVisibility,
   });
-  const columnsOptions = table.getAllLeafColumns().map((column) => {
-    return {
-      label: column.id,
-      value: column.id,
-      isFixed: column.id === "alertMenu",
-    };
-  });
-  const selectedColumns = table
-    .getAllColumns()
-    .filter((col) => col.getIsVisible())
-    .map((column) => {
-      return {
-        label: column.id,
-        value: column.id,
-        isFixed: column.id === "alertMenu",
-      };
-    });
 
   return (
     <>
-      <Subtitle>Columns</Subtitle>
-      <SortableSelect
-        isMulti
-        value={selectedColumns}
-        options={columnsOptions}
-        styles={styles}
-        onChange={(value) => {
-          const valueKeys = value.map((v) => v.value);
-          const newColumnVisibility = table
-            .getAllColumns()
-            .filter((col) => !valueKeys.includes(col.id))
-            .map((col) => col.id)
-            .reduce((obj, key) => {
-              obj[key] = false;
-              return obj;
-            }, {} as any);
-          localStorage.setItem(
-            presetName ?? "default",
-            JSON.stringify(newColumnVisibility)
-          );
-          setColumnVisibility(newColumnVisibility);
-        }}
+      <AlertColumnsSelect
+        table={table}
+        presetName={presetName}
+        setColumnVisibility={setColumnVisibility}
+        isLoading={isAsyncLoading}
+        columnOrder={columnOrder}
       />
       {isAsyncLoading && (
         <Callout

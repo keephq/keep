@@ -343,6 +343,7 @@ export default function Alerts({
               onIndexChange(0);
               presetsMutate();
             }}
+            isLoading={isAsyncLoading}
           />
           <TabPanels>
             {presets!.map((preset) => (
