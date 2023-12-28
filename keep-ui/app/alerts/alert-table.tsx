@@ -17,6 +17,8 @@ import { Provider } from "app/providers/providers";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import {
+  OnChangeFn,
+  RowSelectionState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -32,6 +34,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
 import AlertExtraPayload from "./alert-extra-payload";
+import AlertTableCheckbox from "./alert-table-checkbox";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -67,6 +70,8 @@ interface Props {
   users?: User[];
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
+  rowSelection?: RowSelectionState;
+  setRowSelection?: OnChangeFn<RowSelectionState>;
 }
 
 export function AlertTable({
@@ -82,6 +87,8 @@ export function AlertTable({
   users = [],
   currentUser,
   openModal,
+  rowSelection,
+  setRowSelection,
 }: Props) {
   const router = useRouter();
 
@@ -93,28 +100,58 @@ export function AlertTable({
     }
   };
 
+  const checkboxColumn = rowSelection
+    ? [
+        columnHelper.display({
+          id: "checkbox",
+          header: (context) => (
+            <AlertTableCheckbox
+              checked={context.table.getIsAllRowsSelected()}
+              indeterminate={context.table.getIsSomeRowsSelected()}
+              onChange={context.table.getToggleAllRowsSelectedHandler()}
+            />
+          ),
+          cell: (context) => (
+            <AlertTableCheckbox
+              checked={context.row.getIsSelected()}
+              indeterminate={context.row.getIsSomeSelected()}
+              onChange={context.row.getToggleSelectedHandler()}
+            />
+          ),
+        }),
+      ]
+    : [];
+
+  const menuColumn = openModal
+    ? [
+        columnHelper.display({
+          id: "alertMenu",
+          meta: {
+            thClassName: "sticky right-0",
+            tdClassName: "sticky right-0",
+          },
+          cell: (context) => (
+            <AlertMenu
+              alert={context.row.original}
+              canOpenHistory={
+                !groupedByAlerts![(context.row.original as any)[groupBy!]]
+              }
+              openHistory={() => openModal!(context.row.original)}
+              provider={providers.find(
+                (p) => p.type === context.row.original.source![0]
+              )}
+              mutate={mutate}
+              callDelete={onDelete}
+              setAssignee={setAssignee}
+              currentUser={currentUser}
+            />
+          ),
+        }),
+      ]
+    : [];
+
   const columns = [
-    columnHelper.display({
-      id: "alertMenu",
-      cell: (context) => (
-        <div className="pb-6">
-          <AlertMenu
-            alert={context.row.original}
-            canOpenHistory={
-              !groupedByAlerts![(context.row.original as any)[groupBy!]]
-            }
-            openHistory={() => openModal!(context.row.original)}
-            provider={providers.find(
-              (p) => p.type === context.row.original.source![0]
-            )}
-            mutate={mutate}
-            callDelete={onDelete}
-            setAssignee={setAssignee}
-            currentUser={currentUser}
-          />
-        </div>
-      ),
-    }),
+    ...checkboxColumn,
     columnHelper.accessor("severity", {
       header: () => "Severity",
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
@@ -215,12 +252,19 @@ export function AlertTable({
       id: "extraPayload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
+    ...menuColumn,
   ];
 
   const table = useReactTable({
     data: alerts,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+    state: {
+      rowSelection,
+    },
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
   });
 
   return (
@@ -240,7 +284,14 @@ export function AlertTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHeaderCell key={header.id}>
+                <TableHeaderCell
+                  key={header.id}
+                  className={`bg-white ${
+                    header.column.columnDef.meta?.thClassName
+                      ? header.column.columnDef.meta?.thClassName
+                      : ""
+                  }`}
+                >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
