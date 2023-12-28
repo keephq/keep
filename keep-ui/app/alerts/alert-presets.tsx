@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction } from "react";
 import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
 import { GroupBase, OptionsOrGroups } from "react-select/dist/declarations/src";
-import { Button } from "@tremor/react";
+import { Button, Subtitle } from "@tremor/react";
 import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
@@ -206,64 +206,67 @@ export default function AlertPresets({
   }
 
   return (
-    <div className="flex w-full">
-      <CreatableSelect
-        isMulti
-        options={options}
-        value={selectedOptions}
-        onChange={handleChange}
-        onInputChange={handleInputChange}
-        inputValue={inputValue}
-        filterOption={filterOption}
-        onKeyDown={handleKeyDown}
-        isValidNewOption={isValidNewOption}
-        ref={selectRef}
-        className="w-full"
-        menuIsOpen={isMenuOpen}
-        onFocus={() => setIsMenuOpen(true)}
-        onBlur={() => setIsMenuOpen(false)}
-        isClearable={false}
-      />
-      {preset?.name === "Feed" && (
-        <Button
-          icon={PlusIcon}
-          size="xs"
-          color="orange"
-          className="ml-2.5"
-          disabled={selectedOptions.length <= 0}
-          onClick={async () => await addOrUpdatePreset()}
-          tooltip="Save current filter as a view"
-        >
-          Create Preset
-        </Button>
-      )}
-      {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
-        <div className="flex ml-2.5">
+    <>
+    <Subtitle>Filters</Subtitle>
+      <div className="flex w-full">
+        <CreatableSelect
+          isMulti
+          options={options}
+          value={selectedOptions}
+          onChange={handleChange}
+          onInputChange={handleInputChange}
+          inputValue={inputValue}
+          filterOption={filterOption}
+          onKeyDown={handleKeyDown}
+          isValidNewOption={isValidNewOption}
+          ref={selectRef}
+          className="w-full"
+          menuIsOpen={isMenuOpen}
+          onFocus={() => setIsMenuOpen(true)}
+          onBlur={() => setIsMenuOpen(false)}
+          isClearable={false}
+        />
+        {preset?.name === "Feed" && (
           <Button
-            icon={CheckIcon}
+            icon={PlusIcon}
             size="xs"
             color="orange"
-            title="Save preset"
-            className="mr-1"
+            className="ml-2.5"
             disabled={selectedOptions.length <= 0}
             onClick={async () => await addOrUpdatePreset()}
+            tooltip="Save current filter as a view"
           >
-            Save Preset
+            Create Preset
           </Button>
-          <Button
-            icon={TrashIcon}
-            size="xs"
-            color="orange"
-            variant="secondary"
-            title="Delete preset"
-            onClick={async () => {
-              await deletePreset(preset!.id!);
-            }}
-          >
-            Delete Preset
-          </Button>
-        </div>
-      )}
-    </div>
+        )}
+        {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
+          <div className="flex ml-2.5">
+            <Button
+              icon={CheckIcon}
+              size="xs"
+              color="orange"
+              title="Save preset"
+              className="mr-1"
+              disabled={selectedOptions.length <= 0}
+              onClick={async () => await addOrUpdatePreset()}
+            >
+              Save Preset
+            </Button>
+            <Button
+              icon={TrashIcon}
+              size="xs"
+              color="orange"
+              variant="secondary"
+              title="Delete preset"
+              onClick={async () => {
+                await deletePreset(preset!.id!);
+              }}
+            >
+              Delete Preset
+            </Button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

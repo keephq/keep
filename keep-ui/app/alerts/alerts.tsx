@@ -193,7 +193,7 @@ export default function Alerts({
         setIsAsyncLoading(false);
       });
 
-      setTimeout(() => setIsAsyncLoading(false), 6000); // If we don't receive any alert in 6 seconds, we assume that the async process is done (#641)
+      setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
 
       console.log("Connected to pusher");
       return () => {
