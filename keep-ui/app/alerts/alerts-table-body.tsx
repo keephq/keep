@@ -16,7 +16,14 @@ export function AlertsTableBody({ table, showSkeleton = true }: Props) {
       {table.getRowModel().rows.map((row) => (
         <TableRow key={row.id}>
           {row.getVisibleCells().map((cell) => (
-            <TableCell key={cell.id}>
+            <TableCell
+              key={cell.id}
+              className={`bg-white ${
+                cell.column.columnDef.meta?.tdClassName
+                  ? cell.column.columnDef.meta?.tdClassName
+                  : ""
+              }`}
+            >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </TableCell>
           ))}
