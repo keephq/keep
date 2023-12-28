@@ -1,49 +1,28 @@
 services:
   keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
-    ports:
-      - "3000:3000"
     environment:
       - AUTH_TYPE=NO_AUTH
-      - NEXTAUTH_SECRET=secret
-      - NEXTAUTH_URL=http://localhost:3000
       - API_URL=http://keep-backend:8080
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
-      - NEXT_PUBLIC_POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
-      - NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-      - NEXT_PUBLIC_PUSHER_HOST=localhost
-      - NEXT_PUBLIC_PUSHER_PORT=6001
-      - NEXT_PUBLIC_PUSHER_APP_KEY=keepappkey
-      - NEXT_PUBLIC_KEEP_VERSION=0.2.9
     volumes:
       - ./state:/state
     depends_on:
       - keep-backend
+
   keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
-    ports:
-      - "8080:8080"
     environment:
-      - PORT=8080
       - AUTH_TYPE=NO_AUTH
-      - SECRET_MANAGER_TYPE=FILE
-      - SECRET_MANAGER_DIRECTORY=/state
-      - DATABASE_CONNECTION_STRING=sqlite:////state/db.sqlite3?check_same_thread=False
-      - OPENAI_API_KEY=$OPENAI_API_KEY
-      - PUSHER_APP_ID=1
-      - PUSHER_APP_KEY=keepappkey
-      - PUSHER_APP_SECRET=keepappsecret
-      - PUSHER_HOST=keep-websocket-server
-      - PUSHER_PORT=6001
     volumes:
       - ./state:/state
+  
   keep-websocket-server:
-    image: quay.io/soketi/soketi:1.4-16-debian
-    ports:
-      - "6001:6001"
-      - "9601:9601"
-    environment:
-      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
-      - SOKETI_DEFAULT_APP_ID=1
-      - SOKETI_DEFAULT_APP_KEY=keepappkey
-      - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
