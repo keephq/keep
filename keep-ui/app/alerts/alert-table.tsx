@@ -316,8 +316,8 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     state: {
-      columnVisibility,
-      columnOrder,
+      columnVisibility: columnVisibility,
+      columnOrder: columnOrder,
       rowSelection,
     },
     onColumnVisibilityChange: setColumnVisibility,
