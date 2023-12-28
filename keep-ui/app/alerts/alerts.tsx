@@ -23,6 +23,8 @@ import { User } from "app/settings/models";
 import AlertPagination from "./alert-pagination";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertHistory } from "./alert-history";
+import AlertActions from "./alert-actions";
+import { RowSelectionState } from "@tanstack/react-table";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -237,6 +239,63 @@ export default function Alerts({
     );
   };
 
+  const AlertTableTabPanel = ({ preset }: { preset: Preset }) => {
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+    const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
+      (acc, [alertId, isSelected]) => {
+        if (isSelected) {
+          return acc.concat(alertId);
+        }
+
+        return acc;
+      },
+      []
+    );
+
+    return (
+      <TabPanel className="mt-4">
+        {selectedRowIds.length ? (
+          <AlertActions
+            selectedRowIds={selectedRowIds}
+            onDelete={onDelete}
+            alerts={currentStateAlerts.slice(startIndex, endIndex)}
+          />
+        ) : (
+          <AlertPresets
+            preset={selectedPreset}
+            alerts={currentStateAlerts}
+            selectedOptions={selectedOptions}
+            setSelectedOptions={setSelectedOptions}
+            accessToken={accessToken}
+            presetsMutator={() => {
+              onIndexChange(0);
+              presetsMutate();
+            }}
+          />
+        )}
+        <AlertTable
+          alerts={currentStateAlerts.slice(startIndex, endIndex)}
+          groupedByAlerts={groupedByAlerts}
+          groupBy="fingerprint"
+          workflows={workflows}
+          providers={providers?.installed_providers}
+          mutate={() => mutate(undefined, { optimisticData: [] })}
+          isAsyncLoading={isAsyncLoading}
+          onDelete={onDelete}
+          setAssignee={setAssignee}
+          users={users}
+          currentUser={user}
+          openModal={openModal}
+          rowSelection={
+            preset.name === "Deleted" || isOpen ? undefined : rowSelection
+          }
+          setRowSelection={setRowSelection}
+        />
+      </TabPanel>
+    );
+  };
+
   const setAssignee = (
     fingerprint: string,
     lastReceived: Date,
@@ -281,29 +340,6 @@ export default function Alerts({
     .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
-  const TabContent = () => {
-    return (
-      <>
-        <div className="flex w-full"></div>
-        <AlertTable
-          alerts={currentStateAlerts.slice(startIndex, endIndex)}
-          groupedByAlerts={groupedByAlerts}
-          groupBy="fingerprint"
-          workflows={workflows}
-          providers={providers?.installed_providers}
-          mutate={() => mutate(undefined, { optimisticData: [] })}
-          isAsyncLoading={isAsyncLoading}
-          onDelete={onDelete}
-          setAssignee={setAssignee}
-          users={users}
-          currentUser={user}
-          openModal={openModal}
-          presetName={selectedPreset?.name}
-        />
-      </>
-    );
-  };
-
   function onIndexChange(index: number) {
     setTabIndex(index);
     const preset = presets![index];
@@ -326,30 +362,16 @@ export default function Alerts({
     <>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
-          <TabList className="mb-4" variant="line" color="orange">
-            {presets!.map((preset, index) => (
+          <TabList variant="line" color="orange">
+            {presets.map((preset, index) => (
               <Tab key={preset.name} tabIndex={index}>
                 {preset.name}
               </Tab>
             ))}
           </TabList>
-          <AlertPresets
-            preset={selectedPreset}
-            alerts={currentStateAlerts}
-            selectedOptions={selectedOptions}
-            setSelectedOptions={setSelectedOptions}
-            accessToken={accessToken}
-            presetsMutator={() => {
-              onIndexChange(0);
-              presetsMutate();
-            }}
-            isLoading={isAsyncLoading}
-          />
           <TabPanels>
-            {presets!.map((preset) => (
-              <TabPanel key={preset.name}>
-                <TabContent />
-              </TabPanel>
+            {presets.map((preset) => (
+              <AlertTableTabPanel key={preset.name} preset={preset} />
             ))}
           </TabPanels>
         </TabGroup>

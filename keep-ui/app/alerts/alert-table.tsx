@@ -18,6 +18,8 @@ import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import {
   ColumnOrderState,
+  OnChangeFn,
+  RowSelectionState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -41,6 +43,7 @@ import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
+import AlertTableCheckbox from "./alert-table-checkbox";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -77,6 +80,8 @@ interface Props {
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
   presetName?: string;
+  rowSelection?: RowSelectionState;
+  setRowSelection?: OnChangeFn<RowSelectionState>;
 }
 
 export function AlertTable({
@@ -93,6 +98,8 @@ export function AlertTable({
   currentUser,
   openModal,
   presetName,
+  rowSelection,
+  setRowSelection,
 }: Props) {
   const router = useRouter();
 
@@ -103,8 +110,59 @@ export function AlertTable({
       router.push("workflows");
     }
   };
+  
+  const checkboxColumn = rowSelection
+    ? [
+        columnHelper.display({
+          id: "checkbox",
+          header: (context) => (
+            <AlertTableCheckbox
+              checked={context.table.getIsAllRowsSelected()}
+              indeterminate={context.table.getIsSomeRowsSelected()}
+              onChange={context.table.getToggleAllRowsSelectedHandler()}
+            />
+          ),
+          cell: (context) => (
+            <AlertTableCheckbox
+              checked={context.row.getIsSelected()}
+              indeterminate={context.row.getIsSomeSelected()}
+              onChange={context.row.getToggleSelectedHandler()}
+            />
+          ),
+        }),
+      ]
+    : [];
+
+  const menuColumn = openModal
+    ? [
+        columnHelper.display({
+          id: "alertMenu",
+          meta: {
+            thClassName: "sticky right-0",
+            tdClassName: "sticky right-0",
+          },
+          cell: (context) => (
+            <AlertMenu
+              alert={context.row.original}
+              canOpenHistory={
+                !groupedByAlerts![(context.row.original as any)[groupBy!]]
+              }
+              openHistory={() => openModal!(context.row.original)}
+              provider={providers.find(
+                (p) => p.type === context.row.original.source![0]
+              )}
+              mutate={mutate}
+              callDelete={onDelete}
+              setAssignee={setAssignee}
+              currentUser={currentUser}
+            />
+          ),
+        }),
+      ]
+    : [];
 
   const defaultColumns = [
+    ...checkboxColumn,
     columnHelper.display({
       id: "alertMenu",
       cell: (context) => (
@@ -226,6 +284,7 @@ export function AlertTable({
       id: "extraPayload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
+    ...menuColumn,
   ];
 
   const extraPayloadKeys = Array.from(
@@ -278,10 +337,14 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     state: {
-      columnVisibility: columnVisibility,
-      columnOrder: columnOrder,
+      columnVisibility,
+      columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: setColumnVisibility,
+    getRowId: (row) => row.id,
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
   });
 
   return (
@@ -308,7 +371,14 @@ export function AlertTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHeaderCell key={header.id}>
+                <TableHeaderCell
+                  key={header.id}
+                  className={`bg-white ${
+                    header.column.columnDef.meta?.thClassName
+                      ? header.column.columnDef.meta?.thClassName
+                      : ""
+                  }`}
+                >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
