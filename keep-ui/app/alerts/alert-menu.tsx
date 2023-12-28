@@ -53,8 +53,6 @@ export default function AlertMenu({
   const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
 
-  console.log(x, y);
-
   const DynamicIcon = (props: any) => (
     <svg
       width="24px"
