@@ -193,7 +193,7 @@ export default function Alerts({
         setIsAsyncLoading(false);
       });
 
-      setTimeout(() => setIsAsyncLoading(false), 3000); // If we don't receive any alert in 3 seconds, we assume that the async process is done (#641)
+      setTimeout(() => setIsAsyncLoading(false), 6000); // If we don't receive any alert in 6 seconds, we assume that the async process is done (#641)
 
       console.log("Connected to pusher");
       return () => {
@@ -237,7 +237,11 @@ export default function Alerts({
     );
   };
 
-  const setAssignee = (fingerprint: string, lastReceived: Date, unassign: boolean) => {
+  const setAssignee = (
+    fingerprint: string,
+    lastReceived: Date,
+    unassign: boolean
+  ) => {
     setAlerts((prevAlerts) =>
       prevAlerts.map((alert) => {
         if (alert.fingerprint === fingerprint) {
@@ -294,6 +298,7 @@ export default function Alerts({
           users={users}
           currentUser={user}
           openModal={openModal}
+          presetName={selectedPreset?.name}
         />
       </>
     );

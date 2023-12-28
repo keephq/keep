@@ -6,6 +6,8 @@ import {
   Icon,
   Callout,
   CategoryBar,
+  MultiSelect,
+  MultiSelectItem,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -31,7 +33,10 @@ import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
-import AlertExtraPayload from "./alert-extra-payload";
+import AlertExtraPayload, {
+  getExtraPayloadNoKnownKeys,
+} from "./alert-extra-payload";
+import { useState } from "react";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -67,6 +72,7 @@ interface Props {
   users?: User[];
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
+  presetName?: string;
 }
 
 export function AlertTable({
@@ -82,6 +88,7 @@ export function AlertTable({
   users = [],
   currentUser,
   openModal,
+  presetName,
 }: Props) {
   const router = useRouter();
 
@@ -93,7 +100,7 @@ export function AlertTable({
     }
   };
 
-  const columns = [
+  const defaultColumns = [
     columnHelper.display({
       id: "alertMenu",
       cell: (context) => (
@@ -217,14 +224,82 @@ export function AlertTable({
     }),
   ];
 
+  const extraPayloadKeys = Array.from(
+    new Set(
+      alerts
+        .map((alert) => {
+          const extraPayload = getExtraPayloadNoKnownKeys(alert);
+          return Object.keys(extraPayload.extraPayload);
+        })
+        .reduce((acc, keys) => [...acc, ...keys], [])
+    )
+  );
+  // Create all the necessary columns
+  const extraPayloadColumns = extraPayloadKeys.map((key) =>
+    columnHelper.display({
+      id: key,
+      header: key,
+      cell: (context) => {
+        const val = (context.row.original as any)[key];
+        if (typeof val === "object") {
+          return JSON.stringify(val);
+        }
+        return (context.row.original as any)[key]?.toString() ?? "";
+      },
+    })
+  );
+  const columnsToHide = localStorage.getItem(presetName ?? "default");
+
+  const [columns] = useState<typeof defaultColumns>(() => [
+    ...defaultColumns,
+    ...extraPayloadColumns,
+  ]);
+  const [columnVisibility, setColumnVisibility] = useState<{}>(
+    // Exclude the extra payload columns from the default visibility
+    columnsToHide
+      ? JSON.parse(columnsToHide)
+      : extraPayloadKeys.reduce((obj, key) => {
+          obj[key] = false;
+          return obj;
+        }, {} as any)
+  );
   const table = useReactTable({
     data: alerts,
-    columns,
+    columns: columns,
     getCoreRowModel: getCoreRowModel(),
+    state: {
+      columnVisibility: columnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
   });
 
   return (
     <>
+      <MultiSelect
+        onValueChange={(value) => {
+          const newColumnVisibility = table
+            .getAllColumns()
+            .filter((col) => !value.includes(col.id))
+            .map((col) => col.id)
+            .reduce((obj, key) => {
+              obj[key] = false;
+              return obj;
+            }, {} as any);
+          localStorage.setItem(
+            presetName ?? "default",
+            JSON.stringify(newColumnVisibility)
+          );
+          setColumnVisibility(newColumnVisibility);
+        }}
+        value={table
+          .getAllColumns()
+          .filter((col) => col.getIsVisible())
+          .map((column) => column.id)}
+      >
+        {table.getAllLeafColumns().map((column) => {
+          return <MultiSelectItem key={column.id} value={column.id} />;
+        })}
+      </MultiSelect>
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."
