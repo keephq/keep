@@ -231,8 +231,8 @@ export function AlertTable({
     new Set(
       alerts
         .map((alert) => {
-          const extraPayload = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload.extraPayload);
+          const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
+          return Object.keys(extraPayload);
         })
         .reduce((acc, keys) => [...acc, ...keys], [])
     )
