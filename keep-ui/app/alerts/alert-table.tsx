@@ -122,6 +122,34 @@ export function AlertTable({
       ]
     : [];
 
+  const menuColumn = openModal
+    ? [
+        columnHelper.display({
+          id: "alertMenu",
+          meta: {
+            thClassName: "sticky right-0",
+            tdClassName: "sticky right-0",
+          },
+          cell: (context) => (
+            <AlertMenu
+              alert={context.row.original}
+              canOpenHistory={
+                !groupedByAlerts![(context.row.original as any)[groupBy!]]
+              }
+              openHistory={() => openModal!(context.row.original)}
+              provider={providers.find(
+                (p) => p.type === context.row.original.source![0]
+              )}
+              mutate={mutate}
+              callDelete={onDelete}
+              setAssignee={setAssignee}
+              currentUser={currentUser}
+            />
+          ),
+        }),
+      ]
+    : [];
+
   const columns = [
     ...checkboxColumn,
     columnHelper.accessor("severity", {
@@ -224,29 +252,7 @@ export function AlertTable({
       id: "extraPayload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
-    columnHelper.display({
-      id: "alertMenu",
-      meta: {
-        thClassName: "sticky right-0",
-        tdClassName: "sticky right-0",
-      },
-      cell: (context) => (
-        <AlertMenu
-          alert={context.row.original}
-          canOpenHistory={
-            !groupedByAlerts![(context.row.original as any)[groupBy!]]
-          }
-          openHistory={() => openModal!(context.row.original)}
-          provider={providers.find(
-            (p) => p.type === context.row.original.source![0]
-          )}
-          mutate={mutate}
-          callDelete={onDelete}
-          setAssignee={setAssignee}
-          currentUser={currentUser}
-        />
-      ),
-    }),
+    ...menuColumn,
   ];
 
   const table = useReactTable({
