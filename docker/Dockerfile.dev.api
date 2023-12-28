@@ -24,4 +24,4 @@ RUN . /venv/bin/activate && poetry install --no-root
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 
-CMD ["uvicorn", "keep.api.api:get_app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "1" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "./keep/api/config.py", "--reload"]
