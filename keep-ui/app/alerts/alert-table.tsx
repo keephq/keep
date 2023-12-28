@@ -110,7 +110,7 @@ export function AlertTable({
       router.push("workflows");
     }
   };
-  
+
   const checkboxColumn = rowSelection
     ? [
         columnHelper.display({
@@ -163,27 +163,6 @@ export function AlertTable({
 
   const defaultColumns = [
     ...checkboxColumn,
-    columnHelper.display({
-      id: "alertMenu",
-      cell: (context) => (
-        <div className="pb-6">
-          <AlertMenu
-            alert={context.row.original}
-            canOpenHistory={
-              !groupedByAlerts![(context.row.original as any)[groupBy!]]
-            }
-            openHistory={() => openModal!(context.row.original)}
-            provider={providers.find(
-              (p) => p.type === context.row.original.source![0]
-            )}
-            mutate={mutate}
-            callDelete={onDelete}
-            setAssignee={setAssignee}
-            currentUser={currentUser}
-          />
-        </div>
-      ),
-    }),
     columnHelper.accessor("severity", {
       header: () => "Severity",
       cell: (context) => <AlertSeverity severity={context.getValue()} />,

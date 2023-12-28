@@ -43,6 +43,8 @@ function arrayMove<T>(array: readonly T[], from: number, to: number) {
   return slicedArray;
 }
 
+const nonEditableColumns = ["alertMenu", "checkbox"];
+
 const SortableMultiValue = SortableElement((props: MultiValueProps<Option>) => {
   // this prevents the menu from being opened/closed when the user clicks
   // on a value to begin dragging it. ideally, detecting a click (instead of
@@ -77,7 +79,7 @@ const convertColumnToOption = (column: any) => {
   return {
     label: column.id,
     value: column.id,
-    isFixed: column.id === "alertMenu",
+    isFixed: nonEditableColumns.includes(column.id),
   } as Option;
 };
 

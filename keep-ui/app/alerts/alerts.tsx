@@ -272,6 +272,7 @@ export default function Alerts({
               onIndexChange(0);
               presetsMutate();
             }}
+            isLoading={isAsyncLoading}
           />
         )}
         <AlertTable
@@ -291,6 +292,7 @@ export default function Alerts({
             preset.name === "Deleted" || isOpen ? undefined : rowSelection
           }
           setRowSelection={setRowSelection}
+          presetName={selectedPreset?.name}
         />
       </TabPanel>
     );
