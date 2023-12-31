@@ -32,6 +32,8 @@ class MysqlProviderAuthConfig:
 class MysqlProvider(BaseProvider):
     """Enrich alerts with data from MySQL."""
 
+    PROVIDER_DISPLAY_NAME = "MySQL"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_server",

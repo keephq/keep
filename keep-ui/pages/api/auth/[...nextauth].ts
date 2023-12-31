@@ -175,12 +175,16 @@ const noAuthOptions = {
   },
 } as AuthOptions;
 
+
+
+
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
-  authType === AuthenticationType.MULTI_TENANT
+    authType === AuthenticationType.MULTI_TENANT
     ? multiTenantAuthOptions
     : authType === AuthenticationType.SINGLE_TENANT
     ? singleTenantAuthOptions
     : noAuthOptions;
+
 
 export default NextAuth(authOptions);

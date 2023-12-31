@@ -47,6 +47,7 @@ class NewrelicProviderAuthConfig:
 
 class NewrelicProvider(BaseProvider):
     NEWRELIC_WEBHOOK_NAME = "keep-webhook"
+    PROVIDER_DISPLAY_NAME = "New Relic"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="ai.issues:read",
