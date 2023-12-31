@@ -9,6 +9,7 @@ from keep.providers.models.provider_method import ProviderMethod
 
 class Provider(BaseModel):
     id: str | None = None
+    display_name: str
     type: str
     config: dict[str, dict] = {}
     details: dict[str, dict] | None = None

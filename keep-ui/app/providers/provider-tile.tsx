@@ -99,7 +99,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               className="group-hover:hidden capitalize"
               title={provider.details?.name}
             >
-              {provider.type}{" "}
+              {provider.display_name}{" "}
             </Title>
             {provider.details.name && (
               <Subtitle className="group-hover:hidden">

@@ -120,6 +120,7 @@ const ProvidersTiles = ({
           ></ProviderTile>
         ))}
       </div>
+
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}

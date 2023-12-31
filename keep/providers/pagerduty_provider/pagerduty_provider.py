@@ -41,6 +41,7 @@ class PagerdutyProvider(BaseProvider):
     """Pull alerts and query incidents from PagerDuty."""
 
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
+    PROVIDER_DISPLAY_NAME = "PagerDuty"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
