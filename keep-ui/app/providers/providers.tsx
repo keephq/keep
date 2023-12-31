@@ -87,7 +87,7 @@ export const defaultProvider: Provider = {
   installed: false, // Set default installed value
   details: { authentication: {}, name: "" }, // Set default authentication details as an empty object
   id: "", // Placeholder for the provider ID
-  name: "", // Placeholder for the provider name
+  display_name: "", // Placeholder for the provider name
   can_notify: false,
   can_query: false,
   type: "",
