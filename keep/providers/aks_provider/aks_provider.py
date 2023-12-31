@@ -71,6 +71,8 @@ class AksProviderAuthConfig:
 class AksProvider(BaseProvider):
     """Enrich alerts using data from AKS."""
 
+    PROVIDER_DISPLAY_NAME = "AKS"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
