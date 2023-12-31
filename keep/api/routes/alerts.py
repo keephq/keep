@@ -4,6 +4,7 @@ import logging
 import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
@@ -30,6 +31,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 def __send_compressed_alerts(
@@ -229,45 +231,50 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
+    alerts_dto = []
     db_alerts = get_alerts_from_db(tenant_id=tenant_id)
-    # enrich the alerts with the enrichment data
-    for alert in db_alerts:
-        if alert.alert_enrichment:
-            alert.event.update(alert.alert_enrichment.enrichments)
+    with tracer.start_as_current_span("alerts_enrichment"):
+        # enrich the alerts with the enrichment data
+        for alert in db_alerts:
+            if alert.alert_enrichment:
+                alert.event.update(alert.alert_enrichment.enrichments)
 
-    alerts = []
-    for alert in db_alerts:
-        # if its group alert
-        if alert.provider_type == "rules":
-            try:
+            # todo: what is this? :O
+            if alert.provider_type == "rules":
+                try:
+                    alert_dto = AlertDto(**alert.event)
+                except Exception:
+                    # should never happen but just in case
+                    logger.exception(
+                        "Failed to parse group alert",
+                        extra={
+                            "alert": alert,
+                            "tenant_id": tenant_id,
+                        },
+                    )
+                    continue
+            else:
                 alert_dto = AlertDto(**alert.event)
-            except Exception:
-                # should never happen but just in case
-                logger.exception(
-                    "Failed to parse group alert",
-                    extra={
-                        "alert": alert,
-                        "tenant_id": tenant_id,
-                    },
-                )
-                continue
-        else:
-            alert_dto = AlertDto(**alert.event)
-        alerts.append(alert_dto)
-    if sync:
-        alerts.extend(pull_alerts_from_providers(tenant_id, pusher_client, sync=True))
+            alerts_dto.append(alert_dto)
+
     logger.info(
         "Fetched alerts from DB",
         extra={
             "tenant_id": tenant_id,
         },
     )
-    if not sync:
-        logger.info("Adding task to fetch async alerts from providers")
+
+    if sync:
+        logger.info("Syncronusly pulling alerts from providers")
+        alerts_dto.extend(
+            pull_alerts_from_providers(tenant_id, pusher_client, sync=True)
+        )
+    else:
+        logger.info("Adding task to async fetch alerts from providers")
         background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
         logger.info("Added task to async fetch alerts from providers")
 
-    return alerts
+    return alerts_dto
 
 
 @router.delete("", description="Delete alert by name")

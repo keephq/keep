@@ -17,12 +17,14 @@ import { Provider } from "app/providers/providers";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import {
+  ColumnOrderState,
   OnChangeFn,
   RowSelectionState,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
+  VisibilityState,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
@@ -33,7 +35,14 @@ import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
-import AlertExtraPayload from "./alert-extra-payload";
+import AlertExtraPayload, {
+  getExtraPayloadNoKnownKeys,
+} from "./alert-extra-payload";
+import { useState } from "react";
+import AlertColumnsSelect, {
+  getColumnsOrderLocalStorageKey,
+  getHiddenColumnsLocalStorageKey,
+} from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
@@ -70,6 +79,7 @@ interface Props {
   users?: User[];
   currentUser: NextUser;
   openModal?: (alert: AlertDto) => void;
+  presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
 }
@@ -87,6 +97,7 @@ export function AlertTable({
   users = [],
   currentUser,
   openModal,
+  presetName,
   rowSelection,
   setRowSelection,
 }: Props) {
@@ -150,7 +161,7 @@ export function AlertTable({
       ]
     : [];
 
-  const columns = [
+  const defaultColumns = [
     ...checkboxColumn,
     columnHelper.accessor("severity", {
       header: () => "Severity",
@@ -255,20 +266,75 @@ export function AlertTable({
     ...menuColumn,
   ];
 
+  const extraPayloadKeys = Array.from(
+    new Set(
+      alerts
+        .map((alert) => {
+          const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
+          return Object.keys(extraPayload);
+        })
+        .reduce((acc, keys) => [...acc, ...keys], [])
+    )
+  );
+  // Create all the necessary columns
+  const extraPayloadColumns = extraPayloadKeys.map((key) =>
+    columnHelper.display({
+      id: key,
+      header: key,
+      cell: (context) => {
+        const val = (context.row.original as any)[key];
+        if (typeof val === "object") {
+          return JSON.stringify(val);
+        }
+        return (context.row.original as any)[key]?.toString() ?? "";
+      },
+    })
+  );
+  const columnsToHideFromLocalStorage = localStorage.getItem(
+    getHiddenColumnsLocalStorageKey(presetName)
+  );
+  const columnOrderLocalStorage = localStorage.getItem(
+    getColumnsOrderLocalStorageKey(presetName)
+  );
+
+  const columns = [...defaultColumns, ...extraPayloadColumns];
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
+    columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
+  );
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    // Defaultly exclude the extra payload columns from the default visibility
+    columnsToHideFromLocalStorage
+      ? JSON.parse(columnsToHideFromLocalStorage)
+      : extraPayloadKeys.reduce((obj, key) => {
+          obj[key] = false;
+          return obj;
+        }, {} as any)
+  );
   const table = useReactTable({
     data: alerts,
-    columns,
+    columns: columns,
+    onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
     state: {
+      columnVisibility,
+      columnOrder,
       rowSelection,
     },
+    onColumnVisibilityChange: setColumnVisibility,
+    getRowId: (row) => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
   });
 
   return (
     <>
+      <AlertColumnsSelect
+        table={table}
+        presetName={presetName}
+        setColumnVisibility={setColumnVisibility}
+        isLoading={isAsyncLoading}
+        columnOrder={columnOrder}
+      />
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."

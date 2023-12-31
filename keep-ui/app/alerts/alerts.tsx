@@ -195,7 +195,7 @@ export default function Alerts({
         setIsAsyncLoading(false);
       });
 
-      setTimeout(() => setIsAsyncLoading(false), 3000); // If we don't receive any alert in 3 seconds, we assume that the async process is done (#641)
+      setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
 
       console.log("Connected to pusher");
       return () => {
@@ -272,6 +272,7 @@ export default function Alerts({
               onIndexChange(0);
               presetsMutate();
             }}
+            isLoading={isAsyncLoading}
           />
         )}
         <AlertTable
@@ -291,6 +292,7 @@ export default function Alerts({
             preset.name === "Deleted" || isOpen ? undefined : rowSelection
           }
           setRowSelection={setRowSelection}
+          presetName={selectedPreset?.name}
         />
       </TabPanel>
     );
