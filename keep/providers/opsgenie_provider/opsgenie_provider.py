@@ -30,6 +30,8 @@ class OpsGenieRecipient(pydantic.BaseModel):
 class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
 
+    PROVIDER_DISPLAY_NAME = "OpsGenie"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="opsgenie:create",

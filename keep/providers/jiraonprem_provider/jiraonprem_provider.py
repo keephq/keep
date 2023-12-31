@@ -1,5 +1,5 @@
 """
-JiraProvider is a class that implements the BaseProvider interface for Jira updates.
+JiraonpremProvider is a class that implements the BaseProvider interface for Jira updates.
 """
 import dataclasses
 from typing import List
@@ -7,7 +7,6 @@ from urllib.parse import urlencode, urljoin
 
 import pydantic
 import requests
-from requests.auth import HTTPBasicAuth
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -16,38 +15,29 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
-class JiraProviderAuthConfig:
-    """Jira authentication configuration."""
+class JiraonpremProviderAuthConfig:
+    """Jira On Prem authentication configuration."""
 
-    email: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Atlassian Jira Email",
-            "sensitive": False,
-            "documentation_url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token",
-        }
-    )
-
-    api_token: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Atlassian Jira API Token",
-            "sensitive": True,
-            "documentation_url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token",
-        }
-    )
     host: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Atlassian Jira Host",
+            "description": "Jira Host",
             "sensitive": False,
-            "documentation_url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token",
-            "hint": "keephq.atlassian.net",
+            "hint": "jira.onprem.com",
+        }
+    )
+
+    personal_access_token: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Jira PAT",
+            "sensitive": True,
+            "documentation_url": "https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html",
         }
     )
 
 
-class JiraProvider(BaseProvider):
+class JiraonpremProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
 
     PROVIDER_SCOPES = [
@@ -89,10 +79,12 @@ class JiraProvider(BaseProvider):
         ),
     ]
     PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_DISPLAY_NAME = "Jira On Prem"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
+        self._host = None
         super().__init__(context_manager, provider_id, config)
 
     def validate_scopes(self):
@@ -100,16 +92,16 @@ class JiraProvider(BaseProvider):
         Validate that the provider has the required scopes.
         """
 
-        headers = {"Accept": "application/json"}
-        auth = requests.auth.HTTPBasicAuth(
-            self.authentication_config.email, self.authentication_config.api_token
-        )
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self.authentication_config.personal_access_token}",
+        }
 
         # first, validate user/api token are correct:
+        # Note: Jira On Prem does not support api/3
         resp = requests.get(
-            f"{self.jira_host}/rest/api/3/myself",
-            headers={"Accept": "application/json"},
-            auth=auth,
+            f"{self.jira_host}/rest/api/2/myself",
+            headers=headers,
             verify=False,
         )
         try:
@@ -117,19 +109,18 @@ class JiraProvider(BaseProvider):
         except Exception:
             scopes = {
                 scope.name: "Failed to authenticate with Jira - wrong credentials"
-                for scope in JiraProvider.PROVIDER_SCOPES
+                for scope in JiraonpremProvider.PROVIDER_SCOPES
             }
             return scopes
 
         params = {
             "permissions": ",".join(
-                [scope.name for scope in JiraProvider.PROVIDER_SCOPES]
+                [scope.name for scope in JiraonpremProvider.PROVIDER_SCOPES]
             )
         }
         resp = requests.get(
-            f"{self.jira_host}/rest/api/3/mypermissions",
+            f"{self.jira_host}/rest/api/2/mypermissions",
             headers=headers,
-            auth=auth,
             params=params,
             verify=False,
         )
@@ -138,7 +129,7 @@ class JiraProvider(BaseProvider):
         except Exception as e:
             scopes = {
                 scope.name: f"Failed to authenticate with Jira: {e}"
-                for scope in JiraProvider.PROVIDER_SCOPES
+                for scope in JiraonpremProvider.PROVIDER_SCOPES
             }
             return scopes
         permissions = resp.json().get("permissions", [])
@@ -149,18 +140,40 @@ class JiraProvider(BaseProvider):
         return scopes
 
     def validate_config(self):
-        self.authentication_config = JiraProviderAuthConfig(
+        self.authentication_config = JiraonpremProviderAuthConfig(
             **self.config.authentication
         )
 
     @property
     def jira_host(self):
-        host = (
-            self.authentication_config.host
-            if self.authentication_config.host.startswith("https://")
-            else f"https://{self.authentication_config.host}"
-        )
-        return host
+        # if not the first time, return the cached host
+        if self._host:
+            return self._host
+
+        # if the user explicitly supplied a host with http/https, use it
+        if self.authentication_config.host.startswith(
+            "http://"
+        ) or self.authentication_config.host.startswith("https://"):
+            self._host = self.authentication_config.host
+            return self.authentication_config.host
+
+        # otherwise, try to use https:
+        try:
+            requests.get(
+                f"https://{self.authentication_config.host}",
+                verify=False,
+            )
+            self.logger.debug("Using https")
+            self._host = f"https://{self.authentication_config.host}"
+            return self._host
+        except requests.exceptions.SSLError:
+            self.logger.debug("Using http")
+            self._host = f"http://{self.authentication_config.host}"
+            return self._host
+        except Exception:
+            raise ProviderException(
+                f"Failed to connect to {self.authentication_config.host}"
+            )
 
     def dispose(self):
         """
@@ -193,13 +206,13 @@ class JiraProvider(BaseProvider):
 
         return url
 
-    def __get_auth(self):
+    def __get_auth_header(self):
         """
         Helper method to build the auth payload for jira api requests.
         """
-        return HTTPBasicAuth(
-            self.authentication_config.email, self.authentication_config.api_token
-        )
+        return {
+            "Authorization": f"Bearer {self.authentication_config.personal_access_token}"
+        }
 
     def __get_createmeta(self, project_key: str):
         try:
@@ -209,8 +222,9 @@ class JiraProvider(BaseProvider):
                 paths=["issue", "createmeta"],
                 query_params={"projectKeys": project_key},
             )
-
-            response = requests.get(url=url, auth=self.__get_auth(), verify=False)
+            response = requests.get(
+                url=url, headers=self.__get_auth_header(), verify=False
+            )
 
             response.raise_for_status()
 
@@ -276,7 +290,10 @@ class JiraProvider(BaseProvider):
             }
 
             response = requests.post(
-                url=url, json=request_body, auth=self.__get_auth(), verify=False
+                url=url,
+                json=request_body,
+                headers=self.__get_auth_header(),
+                verify=False,
             )
             try:
                 response.raise_for_status()
@@ -292,20 +309,55 @@ class JiraProvider(BaseProvider):
             raise ProviderException(f"Failed to create an issue: {e}")
 
     def _extract_project_key_from_board_name(self, board_name: str):
+        headers = {
+            "Accept": "application/json",
+        }
+        headers.update(self.__get_auth_header())
+
         boards_response = requests.get(
             f"{self.jira_host}/rest/agile/1.0/board",
-            auth=self.__get_auth(),
-            headers={"Accept": "application/json"},
+            headers=headers,
             verify=False,
         )
         if boards_response.status_code == 200:
             boards = boards_response.json()["values"]
             for board in boards:
                 if board["name"].lower() == board_name.lower():
-                    self.logger.info(
-                        f"Found board {board_name} with project key {board['location']['projectKey']}"
+                    # Jira On Prem does not have the "location" in its response so we need to figure it out
+                    board_id = board["id"]
+                    # get the filter
+                    board_configuration = requests.get(
+                        f"{self.jira_host}/rest/agile/1.0/board/{board_id}/configuration",
+                        headers=headers,
+                        verify=False,
                     )
-                    return board["location"]["projectKey"]
+                    if board_configuration.status_code != 200:
+                        raise Exception(
+                            f"Could not fetch board configuration for board {board_name}"
+                        )
+                    # get the filter id
+                    filter_id = board_configuration.json()["filter"]["id"]
+                    # get the filter
+                    filter_response = requests.get(
+                        f"{self.jira_host}/rest/api/2/filter/{filter_id}",
+                        headers=headers,
+                        verify=False,
+                    )
+                    if filter_response.status_code != 200:
+                        raise Exception(
+                            f"Could not fetch filter for board {board_name}"
+                        )
+                    # get the project key
+                    # todo: should be more robust way but that's enough for now. note that the user can use projectKey directly
+                    project_key = (
+                        filter_response.json()["jql"]
+                        .split("project = ")[1]
+                        .split(" ")[0]
+                    )
+                    self.logger.info(
+                        f"Found board {board_name} with project key {project_key}"
+                    )
+                    return project_key
 
             # if we got here, we didn't find the board name so let's throw an indicative exception
             board_names = [board["name"] for board in boards]
@@ -330,7 +382,8 @@ class JiraProvider(BaseProvider):
             project_key = self._extract_project_key_from_board_name(board_name)
         summary = kwargs.get("summary", "")
         description = kwargs.get("description", "")
-        issue_type = kwargs.get("issuetype", "")
+        # issue_type, issuetype - both are supported
+        issue_type = kwargs.get("issuetype", kwargs.get("issue_type", ""))
 
         if not project_key or not summary or not issue_type or not description:
             raise ProviderException(
@@ -368,7 +421,9 @@ class JiraProvider(BaseProvider):
         self.logger.debug("Fetching data from Jira")
 
         request_url = f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
-        response = requests.get(request_url, auth=self.__get_auth(), verify=False)
+        response = requests.get(
+            request_url, auth=self.__get_auth_header(), verify=False
+        )
         if not response.ok:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
@@ -389,27 +444,24 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     # Load environment variables
-    import os
 
-    jira_api_token = os.environ.get("JIRA_API_TOKEN")
-    jira_email = os.environ.get("JIRA_EMAIL")
-    jira_host = os.environ.get("JIRA_HOST")
+    jira_pat = "NDAzODM3MzAyODcyOlYd3IcakEtE2vPrRPBzqvCH9aFA"
+    jira_host = "localhost:8080"
 
     # Initalize the provider and provider config
     config = ProviderConfig(
-        description="Jira Input Provider",
+        description="Jira On Prem Provider",
         authentication={
-            "api_token": jira_api_token,
-            "email": jira_email,
+            "personal_access_token": jira_pat,
             "host": jira_host,
         },
     )
-    provider = JiraProvider(context_manager, provider_id="jira", config=config)
+    provider = JiraonpremProvider(context_manager, provider_id="jira", config=config)
     scopes = provider.validate_scopes()
     # Create ticket
     provider.notify(
-        board_name="ALERTS",
+        board_name="KEEP board",
         issue_type="Task",
-        summary="Test",
-        description="Test",
+        summary="Test Alert",
+        description="Test Alert Description",
     )

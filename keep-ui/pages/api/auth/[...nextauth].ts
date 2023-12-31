@@ -7,6 +7,7 @@ import {
   NoAuthUserEmail,
   NoAuthTenant,
 } from "utils/authenticationType";
+import KeycloakProvider from "next-auth/providers/keycloak";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
@@ -175,12 +176,28 @@ const noAuthOptions = {
   },
 } as AuthOptions;
 
+// Keycloak authentication
+const keycloakAuthOptions = {
+  providers: [
+    KeycloakProvider({
+      clientId: process.env.KEYCLOAK_CLIENT_ID!,
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      issuer: process.env.KEYCLOAK_REALM!,
+          })
+        ]
+} as AuthOptions;
+
+
+
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
-  authType === AuthenticationType.MULTI_TENANT
+  authType === AuthenticationType.KEYCLOAK
+    ? keycloakAuthOptions
+    : authType === AuthenticationType.MULTI_TENANT
     ? multiTenantAuthOptions
     : authType === AuthenticationType.SINGLE_TENANT
     ? singleTenantAuthOptions
     : noAuthOptions;
+
 
 export default NextAuth(authOptions);

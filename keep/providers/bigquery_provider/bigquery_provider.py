@@ -45,6 +45,8 @@ class BigqueryProvider(BaseProvider):
     provider_id: str
     config: ProviderConfig
 
+    PROVIDER_DISPLAY_NAME = "BigQuery"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

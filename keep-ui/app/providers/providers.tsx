@@ -60,9 +60,10 @@ export interface Provider {
     };
     name?: string;
   };
-  // the name of the provider
+  // the id of the provider
   id: string;
   // the name of the provider
+  display_name: string;
   comingSoon?: boolean;
   can_query: boolean;
   query_params?: string[];
@@ -86,6 +87,7 @@ export const defaultProvider: Provider = {
   installed: false, // Set default installed value
   details: { authentication: {}, name: "" }, // Set default authentication details as an empty object
   id: "", // Placeholder for the provider ID
+  name: "", // Placeholder for the provider name
   can_notify: false,
   can_query: false,
   type: "",

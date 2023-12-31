@@ -21,8 +21,17 @@ services:
       - AUTH_TYPE=NO_AUTH
     volumes:
       - ./state:/state
-  
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+    image: quay.io/soketi/soketi:1.4-16-debian
+    ports:
+      - "6001:6001"
+      - "9601:9601"
+    environment:
+      - SOKETI_USER_AUTHENTICATION_TIMEOUT=3000
+      - SOKETI_DEFAULT_APP_ID=1
+      - SOKETI_DEFAULT_APP_KEY=keepappkey
+      - SOKETI_DEFAULT_APP_SECRET=keepappsecret

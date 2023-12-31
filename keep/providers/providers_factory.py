@@ -266,9 +266,16 @@ class ProvidersFactory:
                     provider_tags.append("messaging")
 
                 provider_methods = ProvidersFactory.__get_methods(provider_class)
+                # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type
+                provider_display_name = getattr(
+                    provider_class,
+                    "PROVIDER_DISPLAY_NAME",
+                    provider_type,
+                )
                 providers.append(
                     Provider(
                         type=provider_type,
+                        display_name=provider_display_name,
                         config=config,
                         can_notify=can_notify,
                         can_query=can_query,

@@ -314,7 +314,7 @@ const ProviderForm = ({
         <div className="flex flex-row">
         <Title>
           Connect to{" "}
-          {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
+          {provider.display_name}
         </Title>
           <Link href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`} target="_blank">
             <Icon

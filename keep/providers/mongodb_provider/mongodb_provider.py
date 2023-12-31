@@ -54,6 +54,8 @@ class MongodbProviderAuthConfig:
 class MongodbProvider(BaseProvider):
     """Enrich alerts with data from MongoDB."""
 
+    PROVIDER_DISPLAY_NAME = "MongoDB"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_server",
