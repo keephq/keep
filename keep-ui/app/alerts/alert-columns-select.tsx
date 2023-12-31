@@ -15,6 +15,7 @@ import {
   SortEndHandler,
   SortableHandle,
 } from "react-sortable-hoc";
+import { Column } from "@tanstack/react-table";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
@@ -42,7 +43,7 @@ function arrayMove<T>(array: readonly T[], from: number, to: number) {
   return slicedArray;
 }
 
-const nonEditableColumns = ["alertMenu", "checkbox"];
+const columnsWithFixedPosition = ["alertMenu", "checkbox"];
 
 const SortableMultiValue = SortableElement((props: MultiValueProps<Option>) => {
   // this prevents the menu from being opened/closed when the user clicks
@@ -65,20 +66,11 @@ const SortableSelect = SortableContainer(Select) as React.ComponentClass<
   Props<Option, true> & SortableContainerProps
 >;
 
-const styles = {
-  multiValueRemove: (base: any, state: any) => {
-    return state.data.isFixed ? { ...base, display: "none" } : base;
-  },
-  multiValue: (base: any, state: any) => {
-    return state.data.isFixed ? { ...base, display: "none" } : base;
-  },
-};
-
 const convertColumnToOption = (column: any) => {
   return {
     label: column.id,
     value: column.id,
-    isFixed: nonEditableColumns.includes(column.id),
+    isFixed: columnsWithFixedPosition.includes(column.id),
   } as Option;
 };
 
@@ -94,6 +86,10 @@ export const getColumnsOrderLocalStorageKey = (
   return `columnsOrder-${presetName}`;
 };
 
+const filterFixedPositionColumns = (column: Column<AlertDto, unknown>) => {
+  return !columnsWithFixedPosition.includes(column.id);
+};
+
 export default function AlertColumnsSelect({
   table,
   presetName,
@@ -101,41 +97,55 @@ export default function AlertColumnsSelect({
   isLoading,
   columnOrder,
 }: AlertColumnsSelectProps) {
-  const columnsOptions = table.getAllLeafColumns().map(convertColumnToOption);
+  const columnsOptions = table
+    .getAllLeafColumns()
+    .filter(filterFixedPositionColumns)
+    .map(convertColumnToOption);
   const selectedColumns = table
     .getAllColumns()
-    .filter((col) => col.getIsVisible())
+    .filter((col) => col.getIsVisible() && filterFixedPositionColumns(col))
     .map(convertColumnToOption)
     .sort(
       (a, b) => columnOrder.indexOf(a.label) - columnOrder.indexOf(b.label)
     );
 
   const onChange = (valueKeys: string[]) => {
-    const newColumnVisibility = table
+    const hiddenColumns = table
       .getAllColumns()
       .filter((col) => !valueKeys.includes(col.id))
       .map((col) => col.id)
       .reduce((obj, key) => {
+        // { "columnX": false, "columnY": false }
         obj[key] = false;
         return obj;
       }, {} as any);
     // This is where visibility is being actually saved
     localStorage.setItem(
       getHiddenColumnsLocalStorageKey(presetName),
-      JSON.stringify(newColumnVisibility)
+      JSON.stringify(hiddenColumns)
     );
-    setColumnVisibility(newColumnVisibility);
+    setColumnVisibility(hiddenColumns);
+    saveColumnsOrder(valueKeys);
   };
 
-  const onSortEnd: SortEndHandler = ({ oldIndex, newIndex }) => {
-    const newValuesOrder = arrayMove(selectedColumns, oldIndex, newIndex);
-    const newValuesKeys = newValuesOrder.map((v) => v.value);
-    table.setColumnOrder(newValuesKeys);
+  const saveColumnsOrder = (newColumnsOrder: string[]) => {
+    table.setColumnOrder(newColumnsOrder);
     // This is where ordering is being actually saved
     localStorage.setItem(
       getColumnsOrderLocalStorageKey(presetName),
-      JSON.stringify(newValuesKeys)
+      JSON.stringify(newColumnsOrder)
     );
+  };
+
+  const onSortEnd: SortEndHandler = ({ oldIndex, newIndex }) => {
+    const newColumnsOrder = arrayMove(selectedColumns, oldIndex, newIndex);
+    // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns in fixed positions
+    const newColumnsByKey = [
+      "checkbox",
+      ...newColumnsOrder.map((v) => v.value),
+      "alertMenu",
+    ];
+    saveColumnsOrder(newColumnsByKey);
   };
 
   return (
@@ -148,7 +158,6 @@ export default function AlertColumnsSelect({
         useDragHandle
         value={selectedColumns}
         options={columnsOptions}
-        styles={styles}
         isDisabled={isLoading}
         closeMenuOnSelect={false}
         getHelperDimensions={({ node }) => node.getBoundingClientRect()}
@@ -159,7 +168,10 @@ export default function AlertColumnsSelect({
           MultiValueLabel: SortableMultiValueLabel,
         }}
         onSortEnd={onSortEnd}
-        onChange={(value) => onChange(value.map((v) => v.value))}
+        onChange={(value) =>
+          // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns displayed
+          onChange(["checkbox", ...value.map((v) => v.value), "alertMenu"])
+        }
       />
     </>
   );

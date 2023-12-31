@@ -302,7 +302,7 @@ export function AlertTable({
     columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    // Exclude the extra payload columns from the default visibility
+    // Defaultly exclude the extra payload columns from the default visibility
     columnsToHideFromLocalStorage
       ? JSON.parse(columnsToHideFromLocalStorage)
       : extraPayloadKeys.reduce((obj, key) => {
@@ -316,8 +316,8 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     state: {
-      columnVisibility: columnVisibility,
-      columnOrder: columnOrder,
+      columnVisibility,
+      columnOrder,
       rowSelection,
     },
     onColumnVisibilityChange: setColumnVisibility,
