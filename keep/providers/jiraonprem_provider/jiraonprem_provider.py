@@ -170,10 +170,9 @@ class JiraonpremProvider(BaseProvider):
             self.logger.debug("Using http")
             self._host = f"http://{self.authentication_config.host}"
             return self._host
+        # should happen only if the user supplied invalid host, so just let validate_config fail
         except Exception:
-            raise ProviderException(
-                f"Failed to connect to {self.authentication_config.host}"
-            )
+            return self.authentication_config.host
 
     def dispose(self):
         """
