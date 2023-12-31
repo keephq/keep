@@ -20,6 +20,8 @@ import { User } from "./models";
 import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
+import AddUserModal from './add-user-modal';
 import { AuthenticationType } from "utils/authenticationType";
 
 interface Props {
@@ -39,47 +41,47 @@ export default function UsersSettings({
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<User[]>(
     selectedTab === "users" ? `${apiUrl}/settings/users` : null,
-    (url) => fetcher(url, accessToken),
+    async (url) => {
+      const response = await fetcher(url, accessToken);
+      setUsers(response); // Update users state
+      return response;
+    },
     { revalidateOnFocus: false }
   );
+
 
   const { data: configData } = useSWR<Config>("/api/config", fetcher, {
     revalidateOnFocus: false,
   });
 
+  const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+
+
   // Determine runtime configuration
-  const authType = configData?.AUTH_TYPE;
+  const authType = configData?.AUTH_TYPE as AuthenticationType;
 
   if (!data || isLoading) return <Loading />;
 
-  async function addUser() {
-    let email;
-    let password;
-    if (authType == AuthenticationType.SINGLE_TENANT) {
-      email = prompt("Enter the user name");
-      password = prompt("Enter the user password");
-    } else if (authType == AuthenticationType.MULTI_TENANT) {
-      email = prompt("Enter the user email");
-      password = "";
-    } else {
-      alert(
-        "Keep cannot add users on NO_AUTH mode. To add users, please set Keep AUTH_TYPE environment variable to either SINGLE_TENANT or MULTI_TENANT"
-      );
-    }
-    console.log(email);
+  const handleAddUser = async (email: string, role: string, password: string) => {
     if (email) {
-      const response = await fetch(`${apiUrl}/settings/users/${email}`, {
+      const response = await fetch(`${apiUrl}/settings/users`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, role, password }),
       });
+
       if (response.ok) {
-        mutate(`${apiUrl}/settings/users`);
+        const newUser = await response.json();
+        setUsers(currentUsers => [...currentUsers, newUser]);
       }
     }
-  }
+  };
+
+
 
   return (
     <div className="mt-10">
@@ -93,7 +95,7 @@ export default function UsersSettings({
             color="orange"
             size="md"
             icon={UserPlusIcon}
-            onClick={() => addUser()}
+            onClick={() => setAddUserModalOpen(true)}
           >
             Add User
           </Button>
@@ -106,6 +108,7 @@ export default function UsersSettings({
               <TableHeaderCell>{/** Image */}</TableHeaderCell>
               <TableHeaderCell>Email</TableHeaderCell>
               <TableHeaderCell className="text-right">Name</TableHeaderCell>
+              <TableHeaderCell className="text-right">Role</TableHeaderCell>
               <TableHeaderCell className="text-right">
                 Created At
               </TableHeaderCell>
@@ -139,6 +142,9 @@ export default function UsersSettings({
                   <Text>{user.name}</Text>
                 </TableCell>
                 <TableCell className="text-right">
+                  <Text>{user.role}</Text>
+                </TableCell>
+                <TableCell className="text-right">
                   <Text>{user.created_at}</Text>
                 </TableCell>
                 <TableCell className="text-right">
@@ -152,6 +158,12 @@ export default function UsersSettings({
           </TableBody>
         </Table>
       </Card>
+      <AddUserModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => setAddUserModalOpen(false)}
+        onSubmit={handleAddUser}
+        authType={authType}
+      />
     </div>
   );
 }

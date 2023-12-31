@@ -22,14 +22,8 @@ from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_user
 from keep.api.core.dependencies import (
     SINGLE_TENANT_UUID,
-    get_user_email,
-    get_user_email_single_tenant,
-    verify_api_key,
-    verify_api_key_single_tenant,
-    verify_bearer_token,
-    verify_bearer_token_single_tenant,
-    verify_token_or_key,
-    verify_token_or_key_single_tenant,
+    AuthVerifier,
+    AuthVerifierSingleTenant,
 )
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -193,6 +187,7 @@ def get_app(
                 {
                     "email": user.username,
                     "tenant_id": SINGLE_TENANT_UUID,
+                    "role": user.role,
                 },
                 jwt_secret,
                 algorithm="HS256",
@@ -202,6 +197,7 @@ def get_app(
                 "accessToken": token,
                 "tenantId": SINGLE_TENANT_UUID,
                 "email": user.username,
+                "role": user.role,
             }
 
     from fastapi import BackgroundTasks
@@ -227,14 +223,7 @@ def get_app(
     async def on_startup():
         # When running in mode other than multi tenant auth, we want to override the secured endpoints
         if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
-            app.dependency_overrides[verify_api_key] = verify_api_key_single_tenant
-            app.dependency_overrides[
-                verify_bearer_token
-            ] = verify_bearer_token_single_tenant
-            app.dependency_overrides[get_user_email] = get_user_email_single_tenant
-            app.dependency_overrides[
-                verify_token_or_key
-            ] = verify_token_or_key_single_tenant
+            app.dependency_overrides[AuthVerifier] = AuthVerifierSingleTenant
 
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
