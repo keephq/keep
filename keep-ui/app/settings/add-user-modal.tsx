@@ -23,7 +23,6 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, authType }: Ad
   const [emailError, setEmailError] = useState('');
   const [selectedRole, setSelectedRole] = useState<SingleValue<RoleOption>>(null);
   const [password, setPassword] = useState('');
-  const [showTooltip, setShowTooltip] = useState(false);
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
   let roleOptions: RoleOption[] = [
@@ -33,7 +32,7 @@ export default function AddUserModal({ isOpen, onClose, onSubmit, authType }: Ad
 ];
 
 
-const CustomOption = (props) => {
+const CustomOption = (props: any) => {
     const isHovered = hoveredOption === props.data.value;
     const tooltipContent = props.data.tooltip;
 
@@ -87,42 +86,38 @@ const CustomOption = (props) => {
   return (
     <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isOpen} onClose={onClose}>
       <div className="flex items-center justify-center min-h-screen">
-        <Dialog.Overlay className="fixed inset-0 bg-gray opacity-30" />
-
-      <div className="bg-white p-4 rounded" style={{ width: '400px', maxWidth: '90%' }}>
+        <Dialog.Panel className="bg-white p-4 rounded" style={{ width: '400px', maxWidth: '90%' }}>
           <Dialog.Title>Add User</Dialog.Title>
-          <form onSubmit={handleSubmit}>
-            <div className="mt-4">
-              <Subtitle>Email</Subtitle>
-              <TextInput value={email} onChange={e => setEmail(e.target.value)} />
-              {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
-            </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="mt-4">
+                    <Subtitle>Email</Subtitle>
+                    <TextInput value={email} onChange={e => setEmail(e.target.value)} />
+                    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
+                    </div>
+                    <div className="mt-4">
+                        <Subtitle>Role</Subtitle>
+                        <Select
+                            options={roleOptions}
+                            onChange={option => setSelectedRole(option)}
+                            className="mt-2"
+                            placeholder="Select role"
+                            components={{ Option: CustomOption }}
+                        />
+                    </div>
 
-            <div className="mt-4">
-              <Subtitle>Role</Subtitle>
-              <Select
-                options={roleOptions}
-                onChange={option => setSelectedRole(option)}
-                className="mt-2"
-                placeholder="Select role"
-                components={{ Option: CustomOption }}
-            />
+                    {authType === AuthenticationType.SINGLE_TENANT && (
+                        <div className="mt-4">
+                            <Subtitle>Password</Subtitle>
+                            <TextInput type="password" value={password} onChange={e => setPassword(e.target.value)} />
+                        </div>
+                    )}
+                    <div className="mt-6 flex gap-2">
+                        <Button color="orange" type="submit" disabled={!isFormValid()}>Add User</Button>
+                        <Button onClick={onClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
+                    </div>
+                </form>
+                </Dialog.Panel>
             </div>
-
-            {authType === AuthenticationType.SINGLE_TENANT && (
-              <div className="mt-4">
-                <Subtitle>Password</Subtitle>
-                <TextInput type="password" value={password} onChange={e => setPassword(e.target.value)} />
-              </div>
-            )}
-
-            <div className="mt-6 flex gap-2">
-            <Button color="orange" type="submit" disabled={!isFormValid()}>Add User</Button>
-              <Button onClick={onClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
-            </div>
-          </form>
-        </div>
-      </div>
     </Dialog>
   );
 }

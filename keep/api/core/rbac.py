@@ -3,8 +3,13 @@
 # - https://github.com/auth0-developer-hub/api_fastapi_python_hello-world
 # - https://developer.auth0.com/resources/code-samples/api/fastapi/basic-role-based-access-control#set-up-role-based-access-control-rbac
 
+# The scope convention {verb}:{resource} is inspired by Auth0's RBAC
+
 # Note that since we don't use Auth0's RBAC, I just took the concepts but left the implementation more simple
 
+# TODO: move resources (alert, rule, etc.) to class constants
+# TODO: move verbs (read, write, delete, update) to class constants
+# TODO: custom roles
 # TODO: implement a solid RBAC mechanism (probably OPA over Keycloak)
 
 
@@ -52,9 +57,6 @@ class Admin(Role):
 # this is internal role used by API keys
 class Webhook(Role):
     SCOPES = ["write:alert"]
-
-
-# TODO: more roles
 
 
 def get_role_by_role_name(role_name: str) -> list[str]:
