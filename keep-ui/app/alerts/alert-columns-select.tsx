@@ -1,12 +1,11 @@
 import { Table } from "@tanstack/table-core";
 import { Subtitle } from "@tremor/react";
 import { AlertDto } from "./models";
-import { MouseEventHandler, useEffect } from "react";
+import { MouseEventHandler } from "react";
 import Select, {
   components,
   MultiValueGenericProps,
   MultiValueProps,
-  OnChangeValue,
   Props,
 } from "react-select";
 import {
@@ -144,6 +143,7 @@ export default function AlertColumnsSelect({
       <Subtitle>Columns</Subtitle>
       <SortableSelect
         isMulti
+        isClearable={false}
         axis="xy"
         useDragHandle
         value={selectedColumns}
