@@ -443,9 +443,10 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     # Load environment variables
+    import os
 
-    jira_pat = "NDAzODM3MzAyODcyOlYd3IcakEtE2vPrRPBzqvCH9aFA"
-    jira_host = "localhost:8080"
+    jira_pat = os.environ.get("JIRA_PAT")
+    jira_host = os.environ.get("JIRA_HOST")
 
     # Initalize the provider and provider config
     config = ProviderConfig(
