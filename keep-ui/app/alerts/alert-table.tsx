@@ -25,6 +25,7 @@ import {
   getCoreRowModel,
   useReactTable,
   VisibilityState,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
@@ -317,6 +318,7 @@ export function AlertTable({
     columns: columns,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       columnVisibility,
       columnOrder,
