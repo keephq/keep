@@ -45,7 +45,7 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-
+import AlertPagination from "./alert-pagination";
 import { KeyedMutator } from "swr";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
@@ -154,7 +154,7 @@ export function AlertTable({
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
               )}
-              mutate={mutate}
+              mutate={mutate ?? (async () => undefined)}
               callDelete={onDelete}
               setAssignee={setAssignee}
               currentUser={currentUser}
@@ -373,6 +373,7 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
+      <AlertPagination table={table} mutate={mutate} />
     </>
   );
 }
