@@ -45,6 +45,8 @@ import AlertColumnsSelect, {
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
 
+import { KeyedMutator } from "swr";
+
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
   if (lastRecievedFromAlert) {
@@ -64,7 +66,7 @@ interface Props {
   groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
-  mutate?: () => void;
+  mutate?: KeyedMutator<AlertDto[]>;
   isAsyncLoading?: boolean;
   onDelete?: (
     fingerprint: string,
