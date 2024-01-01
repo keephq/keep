@@ -1,7 +1,7 @@
 import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "./models";
 
-const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
+export const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
   const extraPayload = Object.entries(alert).filter(
     ([key]) => !AlertKnownKeys.includes(key)
   );

@@ -16,7 +16,7 @@ COPY keep-ui/package*.json /app/
 COPY ./keep-ui/ /app
 
 # Install dependencies in /app
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Ensure port 3000 is accessible to our system
 EXPOSE 3000

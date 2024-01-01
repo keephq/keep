@@ -58,6 +58,7 @@ class ServicenowProvider(BaseProvider):
         )
     ]
     PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_DISPLAY_NAME = "Service Now"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

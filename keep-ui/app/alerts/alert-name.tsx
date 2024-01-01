@@ -1,5 +1,6 @@
 import {
   ArrowTopRightOnSquareIcon,
+  BookOpenIcon,
   Cog8ToothIcon,
   TicketIcon,
   TrashIcon,
@@ -52,6 +53,7 @@ export default function AlertName({
     deleted,
     lastReceived,
     ticket_url: ticketUrl,
+    playbook_url,
   } = alert;
 
   const relevantWorkflows = getRelevantWorkflows(alert, workflows);
@@ -80,6 +82,18 @@ export default function AlertName({
               <Icon
                 icon={TicketIcon}
                 tooltip="Ticket Assigned"
+                size="xs"
+                color="gray"
+                className="ml-1"
+                variant="solid"
+              />
+            </a>
+          )}
+          {playbook_url && (
+            <a href={playbook_url} target="_blank">
+              <Icon
+                icon={BookOpenIcon}
+                tooltip="Playbook"
                 size="xs"
                 color="gray"
                 className="ml-1"

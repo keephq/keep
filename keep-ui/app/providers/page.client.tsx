@@ -93,6 +93,7 @@ export const useFetchProviders = () => {
           },
         },
         id: provider.type,
+        display_name: provider.display_name,
         comingSoon:
           (provider as Provider).comingSoon || defaultProvider.comingSoon,
         can_query: false,
