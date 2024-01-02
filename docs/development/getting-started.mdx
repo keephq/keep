@@ -76,3 +76,271 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
     ]
   }
 ```
+
+## VSCode + Docker
+<Info>For this guide to work, the VSCode Docker extension is required.</Info>
+<Tip>In air-gapped environments, you might consider building the container on an internet-connected computer, exporting the image using docker save, transferring it with docker load in the air-gapped environment, and then using the run configuration.</Tip>
+
+In cases where you want to develop Keep but are unable to run it directly on your local laptop (e.g., with Windows), or if you lack access to all of its dependencies (e.g., in air-gapped environments), you can still accomplish this using VSCode and Docker.
+
+To achieve this, follow these steps:
+
+1. Clone Keep and open it with VSCode
+2. Create a tasks.json file to build and run the Keep API and Keep UI containers.
+3. Create a launch.json configuration to start the containers and attach a debugger to them.
+4. Profit.
+
+
+### Clone Keep and open it with VSCode
+```
+git clone https://github.com/keephq/keep.git && cd keep
+code .
+```
+
+### Create tasks.json
+
+#### including building the containers
+```
+{
+    "version": "2.0.0",
+    "tasks": [
+        # The API and UI containers needs to be in the same docker network
+        {
+            "label": "docker-create-network",
+            "type": "shell",
+            "command": "docker network create keep-network || true",
+            "problemMatcher": []
+        },
+        # Build the api container
+        {
+            "label": "docker-build-api-dev",
+            "type": "docker-build",
+            "dockerBuild": {
+                "context": "${workspaceFolder}",
+                "dockerfile": "${workspaceFolder}/Docker/Dockerfile.dev.api",
+                "tag": "keep-api-dev:latest"
+            }
+        },
+        # Run the api container
+        {
+            "label": "docker-run-api-dev",
+            "type": "docker-run",
+            "dependsOn": [
+                "docker-build-api-dev", "docker-create-network"
+            ],
+            "python": {
+                "args": [
+                    "api"
+                ],
+                "file": "./keep/cli/cli.py"
+            },
+            "dockerRun": {
+                "network": "keep-network",
+                "image": "keep-api-dev:latest",
+                "containerName": "keep-api",
+                "ports": [
+                    {
+                        "containerPort": 8080,
+                        "hostPort": 8080
+                    }
+                ],
+                "env": {
+                    "DEBUG": "1",
+                    "SECRET_MANAGER_TYPE": "FILE",
+                    "USE_NGROK": "false",
+                    "AUTH_TYPE": "SINGLE_TENANT"
+                },
+                "volumes": [
+                    {
+                        "containerPath": "/app",
+                        "localPath": "${workspaceFolder}"
+                    }
+                ]
+            }
+        },
+        # Build the UI container
+        {
+            "label": "docker-build-ui",
+            "type": "docker-build",
+            "dockerBuild": {
+                "context": "${workspaceFolder}",
+                "dockerfile": "${workspaceFolder}/Docker/Dockerfile.dev.ui",
+                "tag": "keep-ui-dev:latest"
+            }
+        },
+        # Run the UI container
+        {
+            "type": "docker-run",
+            "label": "docker-run-ui",
+            "dependsOn": [
+                "docker-build-ui", "docker-create-network"
+            ],
+            "dockerRun": {
+                "network": "keep-network",
+                "image": "keep-ui-dev:latest",
+                "containerName": "keep-ui",
+                "env": {
+                    // Uncomment for fully debug
+                    // "DEBUG": "*",
+                    "NODE_ENV": "development",
+                    "API_URL": "http://keep-api:8080"
+                    "AUTH_TYPE": "SINGLE_TENANT",
+                },
+                "volumes": [
+                    {
+                        "containerPath": "/app",
+                        "localPath": "${workspaceFolder}/keep-ui"
+                    }
+                ],
+                "ports": [
+                    {
+                        "containerPort": 9229,
+                        "hostPort": 9229
+                    },
+                    {
+                        "containerPort": 3000,
+                        "hostPort": 3000
+                    }
+                ],
+                "command": "npm run dev",
+            },
+            "node": {
+                "package": "${workspaceFolder}/keep-ui/package.json",
+                "enableDebugging": true
+            }
+        }
+    ]
+}
+
+```
+
+#### without building the containers
+<Tip>To start Keep without building the containers, you'll need to have `keep-api-dev` and `keep-ui-dev` images loaded into your docker.</Tip>
+
+```
+{
+    "version": "2.0.0",
+    "tasks": [
+        # The API and the UI needs to be in the same docker network
+        {
+            "label": "docker-create-network",
+            "type": "shell",
+            "command": "docker network create keep-network || true",
+            "problemMatcher": []
+        },
+        # Run the API container
+        {
+            "label": "docker-run-api-dev",
+            "type": "docker-run",
+            "dependsOn": [
+                "docker-create-network"
+            ],
+            "python": {
+                "args": [
+                    "api"
+                ],
+                "file": "./keep/cli/cli.py"
+            },
+            "dockerRun": {
+                "network": "keep-network",
+                "image": "keep-api-dev:latest",
+                "containerName": "keep-api",
+                "ports": [
+                    {
+                        "containerPort": 8080,
+                        "hostPort": 8080
+                    }
+                ],
+                "env": {
+                    "DEBUG": "1",
+                    "SECRET_MANAGER_TYPE": "FILE",
+                    "USE_NGROK": "false",
+                    "AUTH_TYPE": "SINGLE_TENANT"
+                },
+                "volumes": [
+                    {
+                        "containerPath": "/app",
+                        "localPath": "${workspaceFolder}"
+                    }
+                ]
+            }
+        },
+        # Run the UI container
+        {
+            "type": "docker-run",
+            "label": "docker-run-ui",
+            "dependsOn": [
+                "docker-create-network"
+            ],
+            "dockerRun": {
+                "network": "keep-network",
+                "image": "keep-ui-dev:latest",
+                "containerName": "keep-ui",
+                "env": {
+                    // Uncomment for fully debug
+                    // "DEBUG": "*",
+                    "NODE_ENV": "development",
+                    "API_URL": "http://keep-api:8080",
+                    "AUTH_TYPE": "SINGLE_TENANT"
+                },
+                "volumes": [
+                    {
+                        "containerPath": "/app",
+                        "localPath": "${workspaceFolder}/keep-ui"
+                    }
+                ],
+                "ports": [
+                    {
+                        "containerPort": 9229,
+                        "hostPort": 9229
+                    },
+                    {
+                        "containerPort": 3000,
+                        "hostPort": 3000
+                    }
+                ],
+                "command": "npm run dev",
+            },
+            "node": {
+                "package": "${workspaceFolder}/keep-ui/package.json",
+                "enableDebugging": true
+            }
+        }
+    ]
+}
+```
+
+### Create launch.json
+
+```
+{
+        "name": "Docker: Keep API",
+        "type": "docker",
+        "request": "launch",
+        "preLaunchTask": "docker-run-api-dev",
+        "removeContainerAfterDebug": true,
+        "containerName": "keep-api",
+        "python": {
+          "pathMappings": [
+            {
+              "localRoot": "${workspaceFolder}",
+              "remoteRoot": "/app"
+            }
+          ],
+          "module": "keep.cli.cli"
+        }
+      },
+      {
+        "name": "Docker: Keep UI",
+        "type": "docker",
+        "request": "launch",
+        "removeContainerAfterDebug": true,
+        "preLaunchTask": "docker-run-ui",
+        "containerName": "keep-api",
+        "platform": "node",
+        "node": {
+          "package": "${workspaceFolder}/keep-ui/package.json",
+          "localRoot": "${workspaceFolder}/keep-ui"
+        }
+      },
+```
