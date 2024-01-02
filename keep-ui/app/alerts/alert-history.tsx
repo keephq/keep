@@ -23,9 +23,6 @@ export function AlertHistory({
   users = [],
   currentUser,
 }: Props) {
-  const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(0);
-
   if (!data) {
     return <></>;
   }
@@ -97,16 +94,10 @@ export function AlertHistory({
                 />
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts.slice(startIndex, endIndex)}
+                  alerts={currentStateAlerts}
                   users={users}
                   currentUser={currentUser}
-                  columnsToExclude={["fatigueMeter"]}
-                />
-                <AlertPagination
-                  alerts={data}
-                  setEndIndex={setEndIndex}
-                  setStartIndex={setStartIndex}
-                  deletedCount={0}
+                  columnsToExclude={["fatigueMeter", "description"]}
                 />
               </Dialog.Panel>
             </Transition.Child>
