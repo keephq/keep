@@ -54,7 +54,9 @@ const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
       lastReceived = moment(lastRecievedFromAlert).fromNow();
     } catch {}
   }
-  return <span title={lastRecievedFromAlert.toISOString()}>{lastReceived}</span>;
+  return (
+    <span title={lastRecievedFromAlert.toISOString()}>{lastReceived}</span>
+  );
 };
 
 const columnHelper = createColumnHelper<AlertDto>();
@@ -249,7 +251,7 @@ export function AlertTable({
           <span>Fatigue Meter</span>
           <Icon
             icon={QuestionMarkCircleIcon}
-            tooltip={`Calculated based on number of alerts / ${MAX_ALERTS_PER_WINDOW}`}
+            tooltip={`Calculated based on the number of alerts / ${MAX_ALERTS_PER_WINDOW} in 1 hour`}
             variant="simple"
             color="gray"
           />
@@ -358,7 +360,7 @@ export function AlertTable({
               {headerGroup.headers.map((header) => (
                 <TableHeaderCell
                   key={header.id}
-                  className={`bg-white ${
+                  className={`bg-white pb-0 ${
                     header.column.columnDef.meta?.thClassName
                       ? header.column.columnDef.meta?.thClassName
                       : ""
