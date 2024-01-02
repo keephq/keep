@@ -333,6 +333,7 @@ export function AlertTable({
     onColumnVisibilityChange: setColumnVisibility,
     getRowId: (row) => row.fingerprint,
     enableRowSelection: true,
+    pageCount: 10,
     onRowSelectionChange: setRowSelection,
   });
 
