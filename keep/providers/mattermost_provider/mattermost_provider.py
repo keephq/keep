@@ -51,7 +51,7 @@ class MattermostProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self.logger.debug("Notifying alert message to Mattermost")
+        self.logger.info("Notifying alert message to Mattermost")
         if not message:
             message = blocks[0].get("text")
         webhook_url = self.authentication_config.webhook_url
@@ -67,7 +67,9 @@ class MattermostProvider(BaseProvider):
                 f"{self.__class__.__name__} failed to notify alert message to Mattermost: {response.text}"
             )
 
-        self.logger.debug("Alert message notified to Mattermost")
+        self.logger.info(
+            "Alert message notified to Mattermost", extra={"response": response.text}
+        )
 
 
 if __name__ == "__main__":

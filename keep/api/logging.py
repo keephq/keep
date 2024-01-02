@@ -97,6 +97,11 @@ CONFIG = {
             "level": "CRITICAL",
             "propagate": False,
         },
+        "Evaluator": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
     },
 }
 

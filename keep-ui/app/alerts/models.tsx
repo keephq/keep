@@ -30,6 +30,7 @@ export interface AlertDto {
   deleted: string[];
   assignees?: { [lastReceived: string]: string };
   ticket_url: string;
+  playbook_url?: string;
 }
 
 export interface Preset {
@@ -55,8 +56,8 @@ export const AlertKnownKeys = [
   "url",
   "event_id",
   "ticket_url",
+  "playbook_url",
   "ack_status",
   "deleted",
-  "isDeleted", // TODO: leftover, should be removed in the future.
   "assignee",
 ];
