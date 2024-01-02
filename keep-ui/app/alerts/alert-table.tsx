@@ -54,7 +54,7 @@ const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
       lastReceived = moment(lastRecievedFromAlert).fromNow();
     } catch {}
   }
-  return lastReceived;
+  return <span title={lastRecievedFromAlert.toISOString()}>{lastReceived}</span>;
 };
 
 const columnHelper = createColumnHelper<AlertDto>();
@@ -212,7 +212,7 @@ export function AlertTable({
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
-      header: "When",
+      header: "Last Received",
       cell: (context) => getAlertLastReceieved(context.getValue()),
     }),
     columnHelper.accessor("source", {
