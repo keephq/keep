@@ -21,7 +21,6 @@ import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
 import AlertPresets, { Option } from "./alert-presets";
-import { AlertHistory } from "./alert-history";
 import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
 
@@ -52,16 +51,7 @@ export default function Alerts({
 
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
-  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
-    []
-  );
-  const [isOpen, setIsOpen] = useState(false);
 
-  const closeModal = (): any => setIsOpen(false);
-  const openModal = (alert: AlertDto): any => {
-    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
-    setIsOpen(true);
-  };
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
   );
@@ -280,12 +270,9 @@ export default function Alerts({
           setAssignee={setAssignee}
           users={users}
           currentUser={user}
-          openModal={openModal}
-          rowSelection={
-            preset.name === "Deleted" || isOpen ? undefined : rowSelection
-          }
+          rowSelection={rowSelection}
           setRowSelection={setRowSelection}
-          presetName={selectedPreset?.name}
+          presetName={preset.name}
         />
       </TabPanel>
     );
@@ -365,13 +352,6 @@ export default function Alerts({
           </TabPanels>
         </TabGroup>
       </Card>
-      <AlertHistory
-        isOpen={isOpen}
-        closeModal={closeModal}
-        data={selectedAlertHistory}
-        users={users}
-        currentUser={user}
-      />
     </>
   );
 }
