@@ -324,10 +324,12 @@ export function AlertTable({
       columnOrder,
       rowSelection,
     },
+    initialState: {
+      pagination: { pageSize: 10 },
+    },
     onColumnVisibilityChange: setColumnVisibility,
     getRowId: (row) => row.id,
     enableRowSelection: true,
-    pageCount: 10,
     onRowSelectionChange: setRowSelection,
   });
 
