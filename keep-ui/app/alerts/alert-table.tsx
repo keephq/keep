@@ -5,7 +5,6 @@ import {
   TableHeaderCell,
   Icon,
   Callout,
-  CategoryBar,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -38,15 +37,14 @@ import AlertSeverity from "./alert-severity";
 import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-import { calculateFatigue } from "utils/fatigue";
-
-const oneHourAgo = new Date().getTime() - 60 * 60 * 1000; // Current time - 1 hour
+import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
+import AlertFatigueMeter from "./alert-fatigue-meter";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -86,6 +84,7 @@ interface Props {
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
   columnsToExclude?: string[];
+  isHistoryOpen?: boolean;
 }
 
 export function AlertTable({
@@ -105,6 +104,7 @@ export function AlertTable({
   rowSelection,
   setRowSelection,
   columnsToExclude = [],
+  isHistoryOpen = false,
 }: Props) {
   const router = useRouter();
 
@@ -116,42 +116,28 @@ export function AlertTable({
     }
   };
 
-  useEffect(() => {
-    Object.keys(groupedByAlerts).forEach((key) => {
-      if (groupedByAlerts[key].length > 1) {
-        const lastHourAlerts = groupedByAlerts[key].filter((alert) => {
-          return alert.lastReceived.getTime() > oneHourAgo;
-        });
-        if (lastHourAlerts.length > 0) {
-          const fatigueScore = calculateFatigue(lastHourAlerts)[0];
-          alerts.find((alert) => alert.fingerprint === key)!.fatigueMeter =
-            fatigueScore.fatigueScore as number;
-        }
-      }
-    });
-  }, [groupedByAlerts, alerts]);
-
-  const checkboxColumn = rowSelection
-    ? [
-        columnHelper.display({
-          id: "checkbox",
-          header: (context) => (
-            <AlertTableCheckbox
-              checked={context.table.getIsAllRowsSelected()}
-              indeterminate={context.table.getIsSomeRowsSelected()}
-              onChange={context.table.getToggleAllRowsSelectedHandler()}
-            />
-          ),
-          cell: (context) => (
-            <AlertTableCheckbox
-              checked={context.row.getIsSelected()}
-              indeterminate={context.row.getIsSomeSelected()}
-              onChange={context.row.getToggleSelectedHandler()}
-            />
-          ),
-        }),
-      ]
-    : [];
+  const checkboxColumn =
+    rowSelection && !isHistoryOpen
+      ? [
+          columnHelper.display({
+            id: "checkbox",
+            header: (context) => (
+              <AlertTableCheckbox
+                checked={context.table.getIsAllRowsSelected()}
+                indeterminate={context.table.getIsSomeRowsSelected()}
+                onChange={context.table.getToggleAllRowsSelectedHandler()}
+              />
+            ),
+            cell: (context) => (
+              <AlertTableCheckbox
+                checked={context.row.getIsSelected()}
+                indeterminate={context.row.getIsSomeSelected()}
+                onChange={context.row.getToggleSelectedHandler()}
+              />
+            ),
+          }),
+        ]
+      : [];
 
   const menuColumn = openModal
     ? [
@@ -263,20 +249,16 @@ export function AlertTable({
           <span>Fatigue Meter</span>
           <Icon
             icon={QuestionMarkCircleIcon}
-            tooltip="Calculated based on various factors"
+            tooltip={`Calculated based on number of alerts / ${MAX_ALERTS_PER_WINDOW}`}
             variant="simple"
             color="gray"
           />
         </div>
       ),
-      cell: (context) => (
-        <CategoryBar
-          values={[40, 30, 20, 10]}
-          colors={["emerald", "yellow", "orange", "rose"]}
-          markerValue={context.getValue() ?? 0}
-          tooltip={(context.getValue() ?? 0).toString() ?? "0"}
-          className="min-w-[192px]"
-          showAnimation={true}
+      cell: ({ row }) => (
+        <AlertFatigueMeter
+          currentAlert={row.original}
+          alerts={groupedByAlerts[row.original.fingerprint]}
         />
       ),
     }),
@@ -325,7 +307,7 @@ export function AlertTable({
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     // Defaultly exclude the extra payload columns from the default visibility
-    columnsToHideFromLocalStorage
+    !!columnsToHideFromLocalStorage
       ? JSON.parse(columnsToHideFromLocalStorage)
       : extraPayloadKeys.reduce((obj, key) => {
           obj[key] = false;
@@ -343,7 +325,7 @@ export function AlertTable({
       rowSelection,
     },
     onColumnVisibilityChange: setColumnVisibility,
-    getRowId: (row) => row.id,
+    getRowId: (row) => row.fingerprint,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
   });

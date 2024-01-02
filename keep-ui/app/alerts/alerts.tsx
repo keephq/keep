@@ -288,9 +288,7 @@ export default function Alerts({
           users={users}
           currentUser={user}
           openModal={openModal}
-          rowSelection={
-            preset.name === "Deleted" || isOpen ? undefined : rowSelection
-          }
+          rowSelection={preset.name === "Deleted" ? undefined : rowSelection}
           setRowSelection={setRowSelection}
           presetName={selectedPreset?.name}
         />
