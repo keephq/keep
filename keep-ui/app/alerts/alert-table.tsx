@@ -327,6 +327,7 @@ export function AlertTable({
     onColumnVisibilityChange: setColumnVisibility,
     getRowId: (row) => row.id,
     enableRowSelection: true,
+    pageCount: 10,
     onRowSelectionChange: setRowSelection,
   });
 
