@@ -38,12 +38,15 @@ import AlertSeverity from "./alert-severity";
 import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
+import { calculateFatigue } from "utils/fatigue";
+
+const oneHourAgo = new Date().getTime() - 60 * 60 * 1000; // Current time - 1 hour
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -82,6 +85,7 @@ interface Props {
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
+  columnsToExclude?: string[];
 }
 
 export function AlertTable({
@@ -100,6 +104,7 @@ export function AlertTable({
   presetName,
   rowSelection,
   setRowSelection,
+  columnsToExclude = [],
 }: Props) {
   const router = useRouter();
 
@@ -110,6 +115,21 @@ export function AlertTable({
       router.push("workflows");
     }
   };
+
+  useEffect(() => {
+    Object.keys(groupedByAlerts).forEach((key) => {
+      if (groupedByAlerts[key].length > 1) {
+        const lastHourAlerts = groupedByAlerts[key].filter((alert) => {
+          return alert.lastReceived.getTime() > oneHourAgo;
+        });
+        if (lastHourAlerts.length > 0) {
+          const fatigueScore = calculateFatigue(lastHourAlerts)[0];
+          alerts.find((alert) => alert.fingerprint === key)!.fatigueMeter =
+            fatigueScore.fatigueScore as number;
+        }
+      }
+    });
+  }, [groupedByAlerts, alerts]);
 
   const checkboxColumn = rowSelection
     ? [
@@ -256,6 +276,7 @@ export function AlertTable({
           markerValue={context.getValue() ?? 0}
           tooltip={(context.getValue() ?? 0).toString() ?? "0"}
           className="min-w-[192px]"
+          showAnimation={true}
         />
       ),
     }),
@@ -271,7 +292,7 @@ export function AlertTable({
       alerts
         .map((alert) => {
           const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload);
+          return Object.keys(extraPayload).concat(columnsToExclude);
         })
         .reduce((acc, keys) => [...acc, ...keys], [])
     )
@@ -290,6 +311,7 @@ export function AlertTable({
       },
     })
   );
+
   const columnsToHideFromLocalStorage = localStorage.getItem(
     getHiddenColumnsLocalStorageKey(presetName)
   );
@@ -328,13 +350,15 @@ export function AlertTable({
 
   return (
     <>
-      <AlertColumnsSelect
-        table={table}
-        presetName={presetName}
-        setColumnVisibility={setColumnVisibility}
-        isLoading={isAsyncLoading}
-        columnOrder={columnOrder}
-      />
+      {presetName && (
+        <AlertColumnsSelect
+          table={table}
+          presetName={presetName}
+          setColumnVisibility={setColumnVisibility}
+          isLoading={isAsyncLoading}
+          columnOrder={columnOrder}
+        />
+      )}
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."

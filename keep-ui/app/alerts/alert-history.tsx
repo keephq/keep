@@ -14,6 +14,7 @@ import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import Loading from "app/loading";
 import AlertPagination from "./alert-pagination";
+import { calculateFatigue } from "utils/fatigue";
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,8 @@ interface Props {
   currentUser: NextUser;
 }
 
+
+
 export function AlertHistory({
   isOpen,
   closeModal,
@@ -30,6 +33,8 @@ export function AlertHistory({
   users = [],
   currentUser,
 }: Props) {
+  const [fatigueData, setFatigueData] = useState<any[]>([]);
+
   const [chartData, setChartData] = useState<any[] | null>(null);
   const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
   const [startIndex, setStartIndex] = useState<number>(0);
@@ -91,6 +96,11 @@ export function AlertHistory({
           return { ...rawChartData[key], date: key };
         })
       );
+    }
+
+    if (data && data.length > 0) {
+      const newFatigueData = calculateFatigue(data);
+      console.log(newFatigueData);
     }
   }, [data, timeUnit]);
 
@@ -170,6 +180,7 @@ export function AlertHistory({
                   alerts={currentStateAlerts.slice(startIndex, endIndex)}
                   users={users}
                   currentUser={currentUser}
+                  columnsToExclude={["fatigueMeter"]}
                 />
                 <AlertPagination
                   alerts={data}
