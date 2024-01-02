@@ -83,6 +83,16 @@ const CustomOption = (props: any) => {
     }
   };
 
+  const handleEmailChange = (email: string) => {
+    setEmail(email);
+    if(validateEmail(email)){
+        setEmailError('');
+    }
+    else{
+        setEmailError('Please enter a valid email address.');
+    }
+  }
+
   return (
     <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isOpen} onClose={onClose}>
       <div className="flex items-center justify-center min-h-screen">
@@ -90,9 +100,8 @@ const CustomOption = (props: any) => {
           <Dialog.Title>Add User</Dialog.Title>
                 <form onSubmit={handleSubmit}>
                     <div className="mt-4">
-                    <Subtitle>Email</Subtitle>
-                    <TextInput value={email} onChange={e => setEmail(e.target.value)} />
-                    {emailError && <p className="text-red-500 text-sm">{emailError}</p>}
+                        <Subtitle>Email</Subtitle>
+                        <TextInput value={email} onChange={e => handleEmailChange(e.target.value)} error={!!emailError} errorMessage={emailError}/>
                     </div>
                     <div className="mt-4">
                         <Subtitle>Role</Subtitle>
