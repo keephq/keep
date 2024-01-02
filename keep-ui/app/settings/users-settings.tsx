@@ -56,31 +56,13 @@ export default function UsersSettings({
 
   const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [addUserError, setAddUserError] = useState('');
 
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthenticationType;
 
   if (!data || isLoading) return <Loading />;
-
-  const handleAddUser = async (email: string, role: string, password: string) => {
-    if (email) {
-      const response = await fetch(`${apiUrl}/settings/users`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, role, password }),
-      });
-
-      if (response.ok) {
-        const newUser = await response.json();
-        setUsers(currentUsers => [...currentUsers, newUser]);
-      }
-    }
-  };
-
 
 
   return (
@@ -89,6 +71,9 @@ export default function UsersSettings({
         <div className="flex flex-col">
           <Title>Users Management</Title>
           <Subtitle>Add or remove users from your tenant</Subtitle>
+          {addUserError && (
+            <div className="text-red-500 text-center mt-2">{addUserError}</div> // Display error message
+          )}
         </div>
         <div>
           <Button
@@ -106,7 +91,7 @@ export default function UsersSettings({
           <TableHead>
             <TableRow>
               <TableHeaderCell>{/** Image */}</TableHeaderCell>
-              <TableHeaderCell>Email</TableHeaderCell>
+              <TableHeaderCell>{authType == AuthenticationType.MULTI_TENANT? "Email": "Username"}</TableHeaderCell>
               <TableHeaderCell className="text-right">Name</TableHeaderCell>
               <TableHeaderCell className="text-right">Role</TableHeaderCell>
               <TableHeaderCell className="text-right">
@@ -119,7 +104,7 @@ export default function UsersSettings({
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.map((user) => (
+            {users.map((user) => (
               <TableRow
                 key={user.name}
                 className={`${
@@ -161,8 +146,9 @@ export default function UsersSettings({
       <AddUserModal
         isOpen={isAddUserModalOpen}
         onClose={() => setAddUserModalOpen(false)}
-        onSubmit={handleAddUser}
         authType={authType}
+        setUsers={setUsers}
+        accessToken={accessToken}
       />
     </div>
   );

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class CreateUserRequest(BaseModel):
-    user_email: str
+    email: str
     password: Optional[str] = None  # for auth0 we don't need a password
     role: str
 
@@ -127,7 +127,7 @@ def delete_user(
     tenant_id = authenticated_entity.tenant_id
     if (
         os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
-        == AuthenticationType.MULTI_TENANT.value
+        == AuthenticationType.MULTI_TENANT.value.lower()
     ):
         return _delete_user_auth0(tenant_id)
 
@@ -160,13 +160,16 @@ async def create_user(
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
-    user_email = request_data.user_email
+    user_email = request_data.email
     password = request_data.password
     role = request_data.role
 
+    if not user_email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
     if (
         os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
-        == AuthenticationType.MULTI_TENANT.value
+        == AuthenticationType.MULTI_TENANT.value.lower()
     ):
         return _create_user_auth0(user_email, tenant_id, role)
 
@@ -182,7 +185,7 @@ def _create_user_auth0(user_email: str, tenant_id: str, role: str) -> dict:
     users = auth0.users.list(q=f'email:"{user_email}"')
     if users.get("users", []):
         raise HTTPException(status_code=409, detail="User already exists")
-    auth0.users.create(
+    user = auth0.users.create(
         {
             "email": user_email,
             "password": secrets.token_urlsafe(13),
@@ -191,13 +194,28 @@ def _create_user_auth0(user_email: str, tenant_id: str, role: str) -> dict:
             "connection": "keep-users",  # TODO: move to env
         }
     )
-    return {"status": "OK"}
+    user_dto = User(
+        email=user["email"],
+        name=user["name"],
+        # for backwards compatibility we return admin if no role is set
+        role=user.get("app_metadata", {}).get("keep_role", AdminRole.get_name()),
+        last_login=user.get("last_login", None),
+        created_at=user["created_at"],
+        picture=user["picture"],
+    )
+    return user_dto
 
 
 def _create_user_db(tenant_id: str, user_email: str, password: str, role: str) -> dict:
     try:
-        create_user_in_db(tenant_id, user_email, password, role)
-        return {"status": "OK"}
+        user = create_user_in_db(tenant_id, user_email, password, role)
+        return User(
+            email=user_email,
+            name=user_email,
+            role=role,
+            last_login=None,
+            created_at=str(user.created_at),
+        )
     except Exception:
         raise HTTPException(status_code=409, detail="User already exists")
 

@@ -197,7 +197,9 @@ def _verify_bearer_token(
                     detail="You don't have the required permissions to access this resource",
                 )
             return AuthenticatedEntity(tenant_id, email)
-
+        # authorization error
+        except HTTPException:
+            raise
         except jwt.exceptions.DecodeError:
             logger.exception("Failed to decode token")
             raise HTTPException(status_code=401, detail="Token is not a valid JWT")
@@ -219,13 +221,13 @@ def get_user_email_single_tenant(request: Request) -> str:
 
 def _verify_bearer_token_single_tenant(
     scopes: list[str] = [], token: str = Depends(oauth2_scheme)
-) -> str:
+) -> AuthenticatedEntity:
     # if we don't want to use authentication, return the single tenant id
     if (
         os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
         == AuthenticationType.NO_AUTH.value
     ):
-        return SINGLE_TENANT_UUID
+        return AuthenticatedEntity(SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL)
 
     # else, validate the token
     jwt_secret = os.environ.get("KEEP_JWT_SECRET")
@@ -239,19 +241,20 @@ def _verify_bearer_token_single_tenant(
             algorithms="HS256",
         )
         tenant_id = payload.get("tenant_id")
+        email = payload.get("email")
         role_name = payload.get(
             "role", str(AdminRole)
         )  # default to admin for backwards compatibility
         role = get_role_by_role_name(role_name)
-        # validate scopes
-        if not role.has_scopes(scopes):
-            raise HTTPException(
-                status_code=403,
-                detail="You don't have the required permissions to access this resource",
-            )
-        return tenant_id
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid JWT token")
+    # validate scopes
+    if not role.has_scopes(scopes):
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have the required permissions to access this resource",
+        )
+    return AuthenticatedEntity(tenant_id, email)
 
 
 def _verify_api_key_single_tenant(
@@ -260,13 +263,15 @@ def _verify_api_key_single_tenant(
     api_key: str = Security(auth_header),
     authorization: HTTPAuthorizationCredentials = Security(http_basic),
     session: Session = Depends(get_session),
-) -> str:
+) -> AuthenticatedEntity:
     # if we don't want to use authentication, return the single tenant id
     if (
         os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
         == AuthenticationType.NO_AUTH.value
     ):
-        return SINGLE_TENANT_UUID
+        return AuthenticatedEntity(
+            tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
+        )
 
     api_key = __extract_api_key(request, api_key, authorization)
 
@@ -282,10 +287,21 @@ def _verify_api_key_single_tenant(
             detail="You don't have the required permissions to access this resource",
         )
     request.state.tenant_id = tenant_api_key.tenant_id
-    return tenant_api_key.tenant_id
+    return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
 
 
-class AuthVerifier:
+def AuthVerifier(scopes: list[str] = []):
+    # Determine the authentication type from the environment variable
+    auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+
+    # Return the appropriate verifier based on the auth type
+    if auth_type == AuthenticationType.SINGLE_TENANT.value:
+        return AuthVerifierSingleTenant(scopes)
+    else:
+        return AuthVerifierMultiTenant(scopes)
+
+
+class AuthVerifierMultiTenant:
     """Handles authentication and authorization for multi tenant mode"""
 
     def __init__(self, scopes: list[str] = []) -> None:
@@ -302,6 +318,10 @@ class AuthVerifier:
         if api_key:
             try:
                 return _verify_api_key(request, self.scopes, api_key, authorization)
+            # specific exceptions
+            except HTTPException:
+                raise
+            # generic exception
             except Exception:
                 logger.exception("Failed to validate API Key")
                 raise HTTPException(
@@ -311,6 +331,9 @@ class AuthVerifier:
         if token:
             try:
                 return _verify_bearer_token(self.scopes, token)
+            # specific exceptions
+            except HTTPException:
+                raise
             except Exception:
                 logger.exception("Failed to validate token")
                 raise HTTPException(
@@ -340,6 +363,9 @@ class AuthVerifierSingleTenant:
                 return _verify_api_key_single_tenant(
                     request, self.scopes, api_key, authorization
                 )
+            # authorization error
+            except HTTPException:
+                raise
             except Exception:
                 logger.exception("Failed to validate API Key")
                 raise HTTPException(
@@ -349,6 +375,9 @@ class AuthVerifierSingleTenant:
         if token:
             try:
                 return _verify_bearer_token_single_tenant(self.scopes, token)
+            # authorization error
+            except HTTPException:
+                raise
             except Exception:
                 logger.exception("Failed to validate token")
                 raise HTTPException(

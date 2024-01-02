@@ -18,6 +18,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.core.config import config
+from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -151,7 +152,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
                 os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
             ).hexdigest()
             default_user = User(
-                username=default_username, password_hash=default_password
+                username=default_username,
+                password_hash=default_password,
+                role=AdminRole.get_name(),
             )
             session.add(default_user)
             session.commit()

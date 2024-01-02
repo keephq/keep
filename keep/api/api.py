@@ -20,11 +20,7 @@ import keep.api.logging
 import keep.api.observability
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_user
-from keep.api.core.dependencies import (
-    SINGLE_TENANT_UUID,
-    AuthVerifier,
-    AuthVerifierSingleTenant,
-)
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     alerts,
@@ -221,10 +217,6 @@ def get_app(
 
     @app.on_event("startup")
     async def on_startup():
-        # When running in mode other than multi tenant auth, we want to override the secured endpoints
-        if AUTH_TYPE != AuthenticationType.MULTI_TENANT.value:
-            app.dependency_overrides[AuthVerifier] = AuthVerifierSingleTenant
-
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
 

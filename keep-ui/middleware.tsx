@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import NextAuthMiddleware from "next-auth/middleware";
-import type { NextRequestWithAuth } from "next-auth/middleware";
 import { getApiURL } from "utils/apiUrl";
 
 export const config = {
@@ -11,6 +10,7 @@ export const config = {
 
 export function middleware(req: NextRequest) {
   const { pathname } = new URL(req.url);
+
   // Redirect /backend/ to the API
   if (pathname.startsWith('/backend/')) {
     let apiUrl = getApiURL();
@@ -19,6 +19,16 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(newURL);
   }
 
-  // For all other requests, we need to check if the user is authenticated
-  return NextAuthMiddleware(req as unknown as NextRequestWithAuth);
+  // NextAuth middleware with custom authorized callback
+  return NextAuthMiddleware(req, {
+    callbacks: {
+      authorized: async ({ token }) => {
+        // Check if the user's role is 'noc' and redirect to /alerts
+        if (token?.role === 'noc' && pathname !== '/alerts') {
+          return NextResponse.redirect(new URL('/alerts', req.url));
+        }
+        return !!token; // Continue only if token exists (user is authenticated)
+      },
+    },
+  });
 }
