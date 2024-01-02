@@ -1,11 +1,10 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
-import AlertPagination from "./alert-pagination";
 import AlertHistoryCharts from "./alert-history-charts";
 
 interface Props {

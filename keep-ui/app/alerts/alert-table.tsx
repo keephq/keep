@@ -24,6 +24,7 @@ import {
   getCoreRowModel,
   useReactTable,
   VisibilityState,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
@@ -45,6 +46,8 @@ import AlertColumnsSelect, {
 import AlertTableCheckbox from "./alert-table-checkbox";
 import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
 import AlertFatigueMeter from "./alert-fatigue-meter";
+import AlertPagination from "./alert-pagination";
+import { KeyedMutator } from "swr";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -67,7 +70,7 @@ interface Props {
   groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
-  mutate?: () => void;
+  mutate?: KeyedMutator<AlertDto[]>;
   isAsyncLoading?: boolean;
   onDelete?: (
     fingerprint: string,
@@ -159,7 +162,7 @@ export function AlertTable({
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
               )}
-              mutate={mutate}
+              mutate={mutate ?? (async () => undefined)}
               callDelete={onDelete}
               setAssignee={setAssignee}
               currentUser={currentUser}
@@ -321,6 +324,7 @@ export function AlertTable({
     columns: columns,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       columnVisibility,
       columnOrder,
@@ -377,6 +381,7 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
+      <AlertPagination table={table} mutate={mutate} />
     </>
   );
 }

@@ -19,6 +19,7 @@ import {
   DatePicker,
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
+import { KeyedMutator } from "swr";
 
 interface Props {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface Props {
   method: ProviderMethod | null;
   alert: AlertDto;
   provider?: Provider;
-  mutate?: () => void;
+  mutate: KeyedMutator<AlertDto[]>;
 }
 
 export function AlertMethodTransition({
@@ -119,7 +120,7 @@ export function AlertMethodTransition({
     methodParams: { [key: string]: string },
     userParams: { [key: string]: string },
     closeModal: () => void,
-    mutate?: () => void
+    mutate: KeyedMutator<AlertDto[]>
   ) => {
     const session = await getSession();
     const apiUrl = getApiURL();
@@ -138,7 +139,7 @@ export function AlertMethodTransition({
       );
       const response_object = await response.json();
       if (response.ok) {
-        if (method.type === "action") mutate!();
+        if (method.type === "action") mutate(undefined, { optimisticData: [] });
         toast.success(`Successfully called "${method.name}"`, {
           position: toast.POSITION.TOP_LEFT,
         });

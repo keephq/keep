@@ -21,7 +21,6 @@ import zlib from "zlib";
 import "./alerts.client.css";
 import { User as NextUser } from "next-auth";
 import { User } from "app/settings/models";
-import AlertPagination from "./alert-pagination";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertHistory } from "./alert-history";
 import AlertActions from "./alert-actions";
@@ -50,11 +49,9 @@ export default function Alerts({
   const apiUrl = getApiURL();
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
-  const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(10);
   const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [tabIndex, setTabIndex] = useState<number>(0);
-  const [presets, setPresets] = useState<Preset[]>(defaultPresets);
+
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
@@ -98,7 +95,9 @@ export default function Alerts({
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
-  const { data: serverPresets, mutate: presetsMutate } = useSWR<Preset[]>(
+  const { data: presets = defaultPresets, mutate: presetsMutate } = useSWR<
+    Preset[]
+  >(
     `${apiUrl}/preset`,
     async (url) => {
       const data = await fetcher(url, accessToken);
@@ -106,12 +105,6 @@ export default function Alerts({
     },
     { revalidateOnFocus: false }
   );
-
-  useEffect(() => {
-    if (serverPresets) {
-      setPresets(serverPresets);
-    }
-  }, [serverPresets]);
 
   useEffect(() => {
     let groupedByAlerts = {} as { [key: string]: AlertDto[] };
@@ -261,7 +254,7 @@ export default function Alerts({
           <AlertActions
             selectedRowIds={selectedRowIds}
             onDelete={onDelete}
-            alerts={currentStateAlerts.slice(startIndex, endIndex)}
+            alerts={currentStateAlerts}
           />
         ) : (
           <AlertPresets
@@ -278,12 +271,12 @@ export default function Alerts({
           />
         )}
         <AlertTable
-          alerts={currentStateAlerts.slice(startIndex, endIndex)}
+          alerts={currentStateAlerts}
           groupedByAlerts={groupedByAlerts}
           groupBy="fingerprint"
           workflows={workflows}
           providers={providers?.installed_providers}
-          mutate={() => mutate(undefined, { optimisticData: [] })}
+          mutate={mutate}
           isAsyncLoading={isAsyncLoading}
           onDelete={onDelete}
           setAssignee={setAssignee}
@@ -354,12 +347,6 @@ export default function Alerts({
     setSelectedPreset(preset);
   }
 
-  const deletedCount = !showDeleted
-    ? aggregatedAlerts.filter((alert) =>
-        alert.deleted.includes(alert.lastReceived.toISOString())
-      ).length
-    : 0;
-
   return (
     <>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
@@ -388,13 +375,6 @@ export default function Alerts({
             ))}
           </TabPanels>
         </TabGroup>
-        <AlertPagination
-          alerts={currentStateAlerts}
-          mutate={mutate}
-          setEndIndex={setEndIndex}
-          setStartIndex={setStartIndex}
-          deletedCount={deletedCount}
-        />
       </Card>
       <AlertHistory
         isOpen={isOpen}
