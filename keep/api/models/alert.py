@@ -14,7 +14,6 @@ class AlertDto(BaseModel):
     message: str | None = None
     description: str | None = None
     severity: str | None = None
-    fatigueMeter: int | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
@@ -54,7 +53,6 @@ class AlertDto(BaseModel):
                     "message": "Keep: Alert message",
                     "description": "Keep: Alert description",
                     "severity": "critical",
-                    "fatigueMeter": 0,
                     "pushed": True,
                     "event_id": "1234",
                     "url": "https://www.keephq.dev?alertId=1234",

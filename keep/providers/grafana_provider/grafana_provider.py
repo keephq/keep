@@ -4,7 +4,6 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
-import random
 
 import pydantic
 import requests
@@ -189,7 +188,6 @@ class GrafanaProvider(BaseProvider):
                     lastReceived=datetime.datetime.now(
                         tz=datetime.timezone.utc
                     ).isoformat(),
-                    fatigueMeter=random.randint(0, 100),
                     description=alert.get("annotations", {}).get("summary", ""),
                     source=["grafana"],
                     labels=alert.get("labels", {}),

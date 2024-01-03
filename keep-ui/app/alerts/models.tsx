@@ -22,7 +22,6 @@ export interface AlertDto {
   message?: string;
   description?: string;
   severity?: Severity;
-  fatigueMeter?: number;
   url?: string;
   pushed: boolean;
   generatorURL?: string;
