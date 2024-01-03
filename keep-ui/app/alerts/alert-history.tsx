@@ -13,7 +13,6 @@ import {
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import Loading from "app/loading";
-import AlertPagination from "./alert-pagination";
 
 interface Props {
   isOpen: boolean;
@@ -32,8 +31,6 @@ export function AlertHistory({
 }: Props) {
   const [chartData, setChartData] = useState<any[] | null>(null);
   const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
-  const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(0);
 
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
@@ -102,10 +99,6 @@ export function AlertHistory({
     (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
   );
 
-  const deletedCount = data.filter((alert) =>
-    alert.deleted.includes(alert.lastReceived.toISOString())
-  ).length;
-
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={closeModal}>
@@ -167,15 +160,9 @@ export function AlertHistory({
                 )}
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts.slice(startIndex, endIndex)}
+                  alerts={currentStateAlerts}
                   users={users}
                   currentUser={currentUser}
-                />
-                <AlertPagination
-                  alerts={data}
-                  setEndIndex={setEndIndex}
-                  setStartIndex={setStartIndex}
-                  deletedCount={deletedCount}
                 />
               </Dialog.Panel>
             </Transition.Child>

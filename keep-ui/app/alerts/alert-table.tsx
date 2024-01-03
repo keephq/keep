@@ -25,6 +25,7 @@ import {
   getCoreRowModel,
   useReactTable,
   VisibilityState,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import moment from "moment";
@@ -44,6 +45,9 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
+import AlertPagination from "./alert-pagination";
+import { KeyedMutator } from "swr";
+import { AlertHistory } from "./alert-history";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -64,7 +68,7 @@ interface Props {
   groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
-  mutate?: () => void;
+  mutate?: KeyedMutator<AlertDto[]>;
   isAsyncLoading?: boolean;
   onDelete?: (
     fingerprint: string,
@@ -78,7 +82,6 @@ interface Props {
   ) => void;
   users?: User[];
   currentUser: NextUser;
-  openModal?: (alert: AlertDto) => void;
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
@@ -96,12 +99,23 @@ export function AlertTable({
   setAssignee,
   users = [],
   currentUser,
-  openModal,
   presetName,
   rowSelection,
   setRowSelection,
 }: Props) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
+    []
+  );
+
+  const openModal = (alert: AlertDto): any => {
+    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
+    setIsOpen(true);
+  };
+
+  const enabledRowSelection =
+    presetName === "Deleted" || isOpen ? undefined : rowSelection;
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -111,7 +125,7 @@ export function AlertTable({
     }
   };
 
-  const checkboxColumn = rowSelection
+  const checkboxColumn = enabledRowSelection
     ? [
         columnHelper.display({
           id: "checkbox",
@@ -133,7 +147,7 @@ export function AlertTable({
       ]
     : [];
 
-  const menuColumn = openModal
+  const menuColumn = presetName
     ? [
         columnHelper.display({
           id: "alertMenu",
@@ -147,11 +161,11 @@ export function AlertTable({
               canOpenHistory={
                 !groupedByAlerts![(context.row.original as any)[groupBy!]]
               }
-              openHistory={() => openModal!(context.row.original)}
+              openHistory={() => openModal(context.row.original)}
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
               )}
-              mutate={mutate}
+              mutate={mutate ?? (async () => undefined)}
               callDelete={onDelete}
               setAssignee={setAssignee}
               currentUser={currentUser}
@@ -315,10 +329,14 @@ export function AlertTable({
     columns: columns,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       columnVisibility,
       columnOrder,
-      rowSelection,
+      rowSelection: enabledRowSelection,
+    },
+    initialState: {
+      pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
     getRowId: (row) => row.id,
@@ -369,6 +387,14 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
+      <AlertPagination table={table} mutate={mutate} />
+      <AlertHistory
+        isOpen={isOpen}
+        closeModal={() => setIsOpen(false)}
+        data={selectedAlertHistory}
+        users={users}
+        currentUser={currentUser}
+      />
     </>
   );
 }
