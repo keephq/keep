@@ -148,7 +148,7 @@ def _verify_api_key(
     if not role.has_scopes(scopes):
         raise HTTPException(
             status_code=403,
-            detail="You don't have the required permissions to access this resource",
+            detail=f"You don't have the required scopes to access this resource [required scoopes: {scopes}]",
         )
     request.state.tenant_id = tenant_api_key.tenant_id
     return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
@@ -284,7 +284,7 @@ def _verify_api_key_single_tenant(
     if not role.has_scopes(scopes):
         raise HTTPException(
             status_code=403,
-            detail="You don't have the required permissions to access this resource",
+            detail=f"You don't have the required scopes to access this resource [required scoopes: {scopes}]",
         )
     request.state.tenant_id = tenant_api_key.tenant_id
     return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)

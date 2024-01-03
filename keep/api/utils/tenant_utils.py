@@ -60,7 +60,7 @@ def create_api_key(
         is_system=is_system,
         system_description=system_description,
         created_by=created_by,
-        role=str(role),
+        role=role.get_name(),
     )
     session.add(new_installation_api_key)
     if commit:
