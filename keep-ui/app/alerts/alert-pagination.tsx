@@ -35,7 +35,7 @@ export default function AlertPagination({ table, mutate }: Props) {
         </Select>
         <Button
           icon={ArrowLeftIcon}
-          onClick={() => table.previousPage()}
+          onClick={table.previousPage}
           disabled={!table.getCanPreviousPage()}
           size="xs"
           color="orange"
@@ -44,7 +44,7 @@ export default function AlertPagination({ table, mutate }: Props) {
         />
         <Button
           icon={ArrowRightIcon}
-          onClick={() => table.nextPage()}
+          onClick={table.nextPage}
           disabled={!table.getCanNextPage()}
           size="xs"
           color="orange"

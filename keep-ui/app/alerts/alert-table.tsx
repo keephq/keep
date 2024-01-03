@@ -48,6 +48,7 @@ import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
 import AlertFatigueMeter from "./alert-fatigue-meter";
 import AlertPagination from "./alert-pagination";
 import { KeyedMutator } from "swr";
+import { AlertHistory } from "./alert-history";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -84,7 +85,6 @@ interface Props {
   ) => void;
   users?: User[];
   currentUser: NextUser;
-  openModal?: (alert: AlertDto) => void;
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
@@ -104,7 +104,6 @@ export function AlertTable({
   setAssignee,
   users = [],
   currentUser,
-  openModal,
   presetName,
   rowSelection,
   setRowSelection,
@@ -112,6 +111,18 @@ export function AlertTable({
   isHistoryOpen = false,
 }: Props) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
+    []
+  );
+
+  const openModal = (alert: AlertDto): any => {
+    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
+    setIsOpen(true);
+  };
+
+  const enabledRowSelection =
+    presetName === "Deleted" || isOpen ? undefined : rowSelection;
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -121,30 +132,29 @@ export function AlertTable({
     }
   };
 
-  const checkboxColumn =
-    rowSelection && !isHistoryOpen
-      ? [
-          columnHelper.display({
-            id: "checkbox",
-            header: (context) => (
-              <AlertTableCheckbox
-                checked={context.table.getIsAllRowsSelected()}
-                indeterminate={context.table.getIsSomeRowsSelected()}
-                onChange={context.table.getToggleAllRowsSelectedHandler()}
-              />
-            ),
-            cell: (context) => (
-              <AlertTableCheckbox
-                checked={context.row.getIsSelected()}
-                indeterminate={context.row.getIsSomeSelected()}
-                onChange={context.row.getToggleSelectedHandler()}
-              />
-            ),
-          }),
-        ]
-      : [];
+  const checkboxColumn = enabledRowSelection
+    ? [
+        columnHelper.display({
+          id: "checkbox",
+          header: (context) => (
+            <AlertTableCheckbox
+              checked={context.table.getIsAllRowsSelected()}
+              indeterminate={context.table.getIsSomeRowsSelected()}
+              onChange={context.table.getToggleAllRowsSelectedHandler()}
+            />
+          ),
+          cell: (context) => (
+            <AlertTableCheckbox
+              checked={context.row.getIsSelected()}
+              indeterminate={context.row.getIsSomeSelected()}
+              onChange={context.row.getToggleSelectedHandler()}
+            />
+          ),
+        }),
+      ]
+    : [];
 
-  const menuColumn = openModal
+  const menuColumn = presetName
     ? [
         columnHelper.display({
           id: "alertMenu",
@@ -158,7 +168,7 @@ export function AlertTable({
               canOpenHistory={
                 !groupedByAlerts![(context.row.original as any)[groupBy!]]
               }
-              openHistory={() => openModal!(context.row.original)}
+              openHistory={() => openModal(context.row.original)}
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
               )}
@@ -326,12 +336,14 @@ export function AlertTable({
     state: {
       columnVisibility,
       columnOrder,
-      rowSelection,
+      rowSelection: enabledRowSelection,
+    },
+    initialState: {
+      pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
     getRowId: (row) => row.fingerprint,
     enableRowSelection: true,
-    pageCount: 10,
     onRowSelectionChange: setRowSelection,
   });
 
@@ -381,6 +393,13 @@ export function AlertTable({
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
       <AlertPagination table={table} mutate={mutate} />
+      <AlertHistory
+        isOpen={isOpen}
+        closeModal={() => setIsOpen(false)}
+        data={selectedAlertHistory}
+        users={users}
+        currentUser={currentUser}
+      />
     </>
   );
 }
