@@ -179,22 +179,26 @@ class GrafanaProvider(BaseProvider):
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:
-            formatted_alerts.append(
-                AlertDto(
-                    id=alert.get("fingerprint"),
-                    fingerprint=alert.get("fingerprint"),
-                    name=event.get("title"),
-                    status=event.get("status"),
-                    severity=alert.get("severity", None),
-                    lastReceived=datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    ).isoformat(),
-                    fatigueMeter=random.randint(0, 100),
-                    description=alert.get("annotations", {}).get("summary", ""),
-                    source=["grafana"],
-                    labels=alert.get("labels", {}),
-                )
+            labels = alert.get("labels", {})
+            alert_dto = AlertDto(
+                id=alert.get("fingerprint"),
+                fingerprint=alert.get("fingerprint"),
+                name=event.get("title"),
+                status=event.get("status"),
+                severity=alert.get("severity", None),
+                lastReceived=datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat(),
+                fatigueMeter=random.randint(0, 100),
+                description=alert.get("annotations", {}).get("summary", ""),
+                source=["grafana"],
+                labels=labels,
             )
+            # enrich extra payload with labels
+            for label in labels:
+                if getattr(alert_dto, label, None) is None:
+                    setattr(alert_dto, label, labels[label])
+            formatted_alerts.append()
         return formatted_alerts
 
     def setup_webhook(
