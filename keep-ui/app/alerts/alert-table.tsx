@@ -46,7 +46,6 @@ import AlertColumnsSelect, {
 import AlertTableCheckbox from "./alert-table-checkbox";
 import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
 import AlertFatigueMeter from "./alert-fatigue-meter";
-import AlertPagination from "./alert-pagination";
 import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
 

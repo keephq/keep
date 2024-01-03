@@ -25,7 +25,7 @@ export function AlertHistory({
   if (!data) {
     return <></>;
   }
-
+  
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
