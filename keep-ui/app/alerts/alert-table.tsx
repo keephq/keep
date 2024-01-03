@@ -48,6 +48,7 @@ import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
 import AlertFatigueMeter from "./alert-fatigue-meter";
 import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
+import AlertPagination from "./alert-pagination";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -88,7 +89,6 @@ interface Props {
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
   columnsToExclude?: string[];
-  isHistoryOpen?: boolean;
 }
 
 export function AlertTable({
@@ -107,7 +107,6 @@ export function AlertTable({
   rowSelection,
   setRowSelection,
   columnsToExclude = [],
-  isHistoryOpen = false,
 }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -121,7 +120,9 @@ export function AlertTable({
   };
 
   const enabledRowSelection =
-    presetName === "Deleted" || isOpen ? undefined : rowSelection;
+    presetName === "Deleted" || (isOpen && !presetName)
+      ? undefined
+      : rowSelection;
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -341,7 +342,6 @@ export function AlertTable({
       pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
-    getRowId: (row) => row.fingerprint,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
   });

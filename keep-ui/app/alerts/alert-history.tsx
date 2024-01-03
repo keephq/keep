@@ -22,10 +22,10 @@ export function AlertHistory({
   users = [],
   currentUser,
 }: Props) {
-  if (!data) {
+  if (!data || data.length === 0) {
     return <></>;
   }
-  
+
   const lastReceivedData = data.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
@@ -93,7 +93,7 @@ export function AlertHistory({
                 />
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts}
+                  alerts={[...data]}
                   users={users}
                   currentUser={currentUser}
                   columnsToExclude={["fatigueMeter", "description"]}
