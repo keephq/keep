@@ -58,5 +58,5 @@ export const AlertKnownKeys = [
   "playbook_url",
   "ack_status",
   "deleted",
-  "assignee",
+  "assignees",
 ];

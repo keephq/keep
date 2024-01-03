@@ -346,9 +346,7 @@ class GrafanaProvider(BaseProvider):
         now = int(datetime.datetime.now().timestamp())
         api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = response = requests.get(
-            api_endpoint, verify=False, headers=headers, timeout=3
-        )
+        response = requests.get(api_endpoint, verify=False, headers=headers, timeout=3)
         if not response.ok:
             raise ProviderException("Failed to get alerts from Grafana")
         events_history = response.json()
