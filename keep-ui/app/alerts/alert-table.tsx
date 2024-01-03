@@ -147,7 +147,7 @@ export function AlertTable({
       ]
     : [];
 
-  const menuColumn = openModal
+  const menuColumn = presetName
     ? [
         columnHelper.display({
           id: "alertMenu",
