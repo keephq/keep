@@ -1,6 +1,5 @@
 import dataclasses
 import datetime
-import random
 
 import pydantic
 import requests
@@ -137,7 +136,6 @@ class PingdomProvider(BaseProvider):
             status=event.get("current_state"),
             severity=event.get("importance_level", None),
             lastReceived=datetime.datetime.now().isoformat(),
-            fatigueMeter=random.randint(0, 100),
             description=event.get("long_description"),
             source=["pingdom"],
             check_params=event.get("check_params", {}),
