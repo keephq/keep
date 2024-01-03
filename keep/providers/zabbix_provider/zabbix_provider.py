@@ -551,7 +551,7 @@ class ZabbixProvider(BaseProvider):
         environment = "unknown"
         tags = {
             tag.get("tag"): tag.get("value")
-            for tag in json.loads(event.get("tags", "[]"))
+            for tag in json.loads(event.pop("tags", "[]"))
         }
         if isinstance(tags, dict):
             environment = tags.pop("environment", "unknown")

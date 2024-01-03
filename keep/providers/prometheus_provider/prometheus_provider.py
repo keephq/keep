@@ -151,6 +151,10 @@ receivers:
                 annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
                 payload=alert,
             )
+            for label in labels:
+                if getattr(alert_dto, label, None) is not None:
+                    continue
+                setattr(alert_dto, label, labels[label])
             alert_dtos.append(alert_dto)
         return alert_dtos
 
