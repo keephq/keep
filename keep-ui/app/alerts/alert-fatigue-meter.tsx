@@ -20,7 +20,7 @@ export default function AlertFatigueMeter({ alerts }: AlertFatigueProps) {
       tooltip={`${fatigueScore}% in the last hour`}
       showLabels={false}
       className="min-w-[192px]"
-      showAnimation={false}
+      showAnimation={true}
     />
   );
 }
