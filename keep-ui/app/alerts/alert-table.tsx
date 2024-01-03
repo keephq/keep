@@ -248,7 +248,8 @@ export function AlertTable({
         />
       ),
     }),
-    columnHelper.accessor("fatigueMeter", {
+    columnHelper.display({
+      id: "fatigueMeter",
       header: () => (
         <div className="flex items-center gap-1">
           <span>Fatigue Meter</span>
