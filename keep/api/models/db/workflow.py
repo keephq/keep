@@ -1,20 +1,20 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import String
+from sqlalchemy import String, TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    name: str
+    name: str = Field(sa_column=Column(TEXT))
     description: Optional[str]
-    created_by: str
+    created_by: str = Field(sa_column=Column(TEXT))
     updated_by: Optional[str] = None
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
-    workflow_raw: str = Field(sa_column=String(length=65535))
+    workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
@@ -30,8 +30,8 @@ class WorkflowExecution(SQLModel, table=True):
     workflow_id: str = Field(foreign_key="workflow.id")
     tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow)
-    triggered_by: str
-    status: str
+    triggered_by: str = Field(sa_column=Column(TEXT))
+    status: str = Field(sa_column=Column(TEXT))
     execution_number: int
     logs: Optional[str]
     error: Optional[str] = Field(sa_column=String(length=10240))
@@ -50,7 +50,7 @@ class WorkflowExecutionLog(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     timestamp: datetime
-    message: str
+    message: str = Field(sa_column=Column(TEXT))
     workflowexecution: Optional[WorkflowExecution] = Relationship(back_populates="logs")
     context: dict = Field(sa_column=Column(JSON))
 
