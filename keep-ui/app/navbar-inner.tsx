@@ -28,11 +28,12 @@ const navigation = [
   { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
   { name: "Alert Groups", href: "/rules", icon: MdOutlineEngineering},
   { name: "Workflows", href: "/workflows", icon: LuWorkflow }
-  // {
-  //   name: "Notifications Hub",
-  //   href: "/notifications-hub",
-  //   icon: EnvelopeOpenIcon,
-  // },
+];
+
+
+// noc navigation incldues only alerts
+const nocNavigation = [
+  { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
 ];
 
 function classNames(...classes: string[]) {
@@ -83,7 +84,7 @@ const GnipLogo = (props: any) => (
   </svg>
 );
 
-export default function NavbarInner({ user }: { user?: User }) {
+export default function NavbarInner({ session }: { session: any }) {
   const pathname = usePathname();
   const { data: configData } = useSWR<InternalConfig>(
     "/api/config",
@@ -94,6 +95,15 @@ export default function NavbarInner({ user }: { user?: User }) {
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE;
+
+  // choose navigation based on role:
+  const user = session?.user as User;
+  const isNocRole = session?.userRole === "noc";
+
+  let currNavigation = navigation;
+  if (session.userRole === "noc") {
+    currNavigation = nocNavigation;
+  };
 
   return (
     <Disclosure as="nav" className="bg-white shadow-sm">
@@ -114,7 +124,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                   </a>
                 </div>
                 <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                  {navigation.map((item) => (
+                  {currNavigation.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
@@ -143,6 +153,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                   </Link>
                 </div>
               </div>
+              {/* Dropdown Menu for Desktop */}
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
                 <div className="flex items-center">
                   <a href={"https://www.gnip.io/?ref=keep"} target="_blank">
@@ -210,30 +221,32 @@ export default function NavbarInner({ user }: { user?: User }) {
                       leaveTo="transform opacity-0 scale-95"
                     >
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                        <Menu.Item>
-                          {({ active }) => (
-                            <>
-                              <a
-                                className={classNames(
-                                  "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                )}
-                                href="/settings"
-                              >
-                                Settings
-                              </a>
-                              {authType != AuthenticationType.NO_AUTH ? (
-                                <button
+                          <Menu.Item>
+                            {({ active }) => (
+                              <>
+                              {!isNocRole &&
+                                <a
                                   className={classNames(
                                     "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                   )}
-                                  onClick={() => signOut()}
+                                  href="/settings"
                                 >
-                                  Sign out
-                                </button>
-                              ) : null}
-                            </>
-                          )}
-                        </Menu.Item>
+                                  Settings
+                                </a>
+                                }
+                                {authType != AuthenticationType.NO_AUTH ? (
+                                  <button
+                                    className={classNames(
+                                      "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    )}
+                                    onClick={() => signOut()}
+                                  >
+                                    Sign out
+                                  </button>
+                                ) : null}
+                              </>
+                            )}
+                          </Menu.Item>
                       </Menu.Items>
                     </Transition>
                   </Menu>
@@ -254,7 +267,7 @@ export default function NavbarInner({ user }: { user?: User }) {
 
           <Disclosure.Panel className="sm:hidden">
             <div className="space-y-1 pt-2 pb-3">
-              {navigation.map((item) => (
+              {currNavigation.map((item) => (
                 <Disclosure.Button
                   key={item.name}
                   as="a"
@@ -311,6 +324,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                     </div>
                   </div>
                   <div className="mt-3 space-y-1">
+                  {!isNocRole &&
                     <a
                       className={classNames(
                         "block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
@@ -319,6 +333,7 @@ export default function NavbarInner({ user }: { user?: User }) {
                     >
                       Settings
                     </a>
+                    }
                     {authType != AuthenticationType.NO_AUTH ? (
                       <button
                         onClick={() => signOut()}
