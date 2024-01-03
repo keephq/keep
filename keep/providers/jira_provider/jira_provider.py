@@ -16,7 +16,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
-class JiracloudProviderAuthConfig:
+class JiraProviderAuthConfig:
     """Jira Cloud authentication configuration."""
 
     email: str = dataclasses.field(
@@ -47,7 +47,7 @@ class JiracloudProviderAuthConfig:
     )
 
 
-class JiracloudProvider(BaseProvider):
+class JiraProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
 
     PROVIDER_SCOPES = [
@@ -118,13 +118,13 @@ class JiracloudProvider(BaseProvider):
         except Exception:
             scopes = {
                 scope.name: "Failed to authenticate with Jira - wrong credentials"
-                for scope in JiracloudProvider.PROVIDER_SCOPES
+                for scope in JiraProvider.PROVIDER_SCOPES
             }
             return scopes
 
         params = {
             "permissions": ",".join(
-                [scope.name for scope in JiracloudProvider.PROVIDER_SCOPES]
+                [scope.name for scope in JiraProvider.PROVIDER_SCOPES]
             )
         }
         resp = requests.get(
@@ -139,7 +139,7 @@ class JiracloudProvider(BaseProvider):
         except Exception as e:
             scopes = {
                 scope.name: f"Failed to authenticate with Jira: {e}"
-                for scope in JiracloudProvider.PROVIDER_SCOPES
+                for scope in JiraProvider.PROVIDER_SCOPES
             }
             return scopes
         permissions = resp.json().get("permissions", [])
@@ -150,7 +150,7 @@ class JiracloudProvider(BaseProvider):
         return scopes
 
     def validate_config(self):
-        self.authentication_config = JiracloudProviderAuthConfig(
+        self.authentication_config = JiraProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -406,7 +406,7 @@ if __name__ == "__main__":
             "host": jira_host,
         },
     )
-    provider = JiracloudProvider(context_manager, provider_id="jira", config=config)
+    provider = JiraProvider(context_manager, provider_id="jira", config=config)
     scopes = provider.validate_scopes()
     # Create ticket
     provider.notify(
