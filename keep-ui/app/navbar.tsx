@@ -9,9 +9,9 @@ export default function Navbar() {
   // extract status and session properties from useSession hook
   const { status, data: session } = useSession();
   // if session is loading, return nothing
-  if (status === "loading") return;
-  if (status === "unauthenticated") return;
-  if (!session) return;
+  if (status === "loading") return <></>;
+  if (status === "unauthenticated") return <></>;
+  if (!session) return <></>;
 
 
   return (

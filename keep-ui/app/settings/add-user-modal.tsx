@@ -140,7 +140,7 @@ const CustomOption = (props: any) => {
                     {authType === AuthenticationType.MULTI_TENANT ? (
                         <div className="mt-4">
                              <Subtitle>Email</Subtitle>
-                             <TextInput value={email} onChange={e => handleEmailChange(e.target.value)} error={!!emailError && email} errorMessage={emailError}/>
+                             <TextInput value={email} onChange={e => handleEmailChange(e.target.value)} error={!!emailError && !!email} errorMessage={emailError}/>
                         </div>
                     ) : (
                         <div className="mt-4">
