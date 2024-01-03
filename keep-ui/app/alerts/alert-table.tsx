@@ -261,10 +261,7 @@ export function AlertTable({
         </div>
       ),
       cell: ({ row }) => (
-        <AlertFatigueMeter
-          currentAlert={row.original}
-          alerts={groupedByAlerts[row.original.fingerprint]}
-        />
+        <AlertFatigueMeter alerts={groupedByAlerts[row.original.fingerprint]} />
       ),
     }),
     columnHelper.display({

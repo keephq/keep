@@ -1,30 +1,16 @@
 import { CategoryBar } from "@tremor/react";
 import { AlertDto } from "./models";
 import { calculateFatigue } from "utils/fatigue";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const oneHourAgo = new Date().getTime() - 60 * 60 * 1000; // Current time - 1 hour
 
 interface AlertFatigueProps {
-  currentAlert: AlertDto;
   alerts?: AlertDto[];
 }
 
-export default function AlertFatigueMeter({
-  alerts,
-  currentAlert,
-}: AlertFatigueProps) {
-  const [fatigueScore, setFatigueScore] = useState<number>(0);
-
-  useEffect(() => {
-    const lastHourAlerts = alerts?.filter((alert) => {
-      return alert.lastReceived.getTime() > oneHourAgo;
-    });
-    if (lastHourAlerts && lastHourAlerts.length > 0) {
-      const { fatigueScore } = calculateFatigue(lastHourAlerts)[0];
-      setFatigueScore(fatigueScore);
-    }
-  }, [alerts, currentAlert]);
+export default function AlertFatigueMeter({ alerts }: AlertFatigueProps) {
+  const fatigueScore = useMemo(() => calculateFatigueScore(alerts), [alerts]);
 
   return (
     <CategoryBar
@@ -38,3 +24,14 @@ export default function AlertFatigueMeter({
     />
   );
 }
+
+const calculateFatigueScore = (alerts: AlertDto[] | undefined): number => {
+  const lastHourAlerts = alerts?.filter((alert) => {
+    return alert.lastReceived.getTime() > oneHourAgo;
+  });
+  if (lastHourAlerts && lastHourAlerts.length > 0) {
+    const { fatigueScore } = calculateFatigue(lastHourAlerts)[0];
+    return fatigueScore;
+  }
+  return 0;
+};
