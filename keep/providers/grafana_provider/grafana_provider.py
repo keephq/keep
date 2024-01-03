@@ -198,7 +198,7 @@ class GrafanaProvider(BaseProvider):
             for label in labels:
                 if getattr(alert_dto, label, None) is None:
                     setattr(alert_dto, label, labels[label])
-            formatted_alerts.append()
+            formatted_alerts.append(alert_dto)
         return formatted_alerts
 
     def setup_webhook(
