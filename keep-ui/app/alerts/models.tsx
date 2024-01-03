@@ -22,7 +22,6 @@ export interface AlertDto {
   message?: string;
   description?: string;
   severity?: Severity;
-  fatigueMeter?: number;
   url?: string;
   pushed: boolean;
   generatorURL?: string;
@@ -59,5 +58,5 @@ export const AlertKnownKeys = [
   "playbook_url",
   "ack_status",
   "deleted",
-  "assignee",
+  "assignees",
 ];

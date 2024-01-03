@@ -5,6 +5,7 @@ import {
   Tab,
   TabPanels,
   TabPanel,
+  Badge,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -23,6 +24,7 @@ import { User } from "app/settings/models";
 import AlertPresets, { Option } from "./alert-presets";
 import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
+import { GlobeIcon } from "@radix-ui/react-icons";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -337,6 +339,17 @@ export default function Alerts({
   return (
     <>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
+        {!pusherDisabled && (
+          <Badge
+            icon={GlobeIcon}
+            color="orange"
+            tooltip="Live alerts are streamlining from Keep"
+            size="xs"
+            className="absolute right-9"
+          >
+            &nbsp;Live
+          </Badge>
+        )}
         <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
           <TabList variant="line" color="orange">
             {presets.map((preset, index) => (
