@@ -7,7 +7,6 @@ import datetime
 import json
 import logging
 import os
-import random
 
 import pydantic
 import requests
@@ -216,7 +215,6 @@ class DynatraceProvider(BaseProvider):
                 status=event.get("State"),
                 severity=event.get("ProblemSeverity", None),
                 lastReceived=datetime.datetime.now().isoformat(),
-                fatigueMeter=random.randint(0, 100),
                 description=json.dumps(
                     event.get("ImpactedEntities", {})
                 ),  # was asked by a user (should be configurable)
@@ -253,7 +251,6 @@ class DynatraceProvider(BaseProvider):
                 status=status,
                 severity=severity,
                 lastReceived=lastReceived.isoformat(),
-                fatigueMeter=random.randint(0, 100),
                 description=description,
                 source=["dynatrace"],
                 impact=impact,

@@ -34,7 +34,6 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
 
   const example = data.modelSchema.examples[0] as any;
   example.lastReceived = new Date().toISOString();
-  example.fatigueMeter = Math.floor(Math.random() * 100);
 
   const code = `curl --location '${data.webhookApi}' \\
   --header 'Content-Type: application/json' \\

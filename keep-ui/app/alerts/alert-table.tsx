@@ -5,7 +5,6 @@ import {
   TableHeaderCell,
   Icon,
   Callout,
-  CategoryBar,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -45,9 +44,11 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-import AlertPagination from "./alert-pagination";
+import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
+import AlertFatigueMeter from "./alert-fatigue-meter";
 import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
+import AlertPagination from "./alert-pagination";
 
 const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
   let lastReceived = "unknown";
@@ -57,7 +58,9 @@ const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
       lastReceived = moment(lastRecievedFromAlert).fromNow();
     } catch {}
   }
-  return lastReceived;
+  return (
+    <span title={lastRecievedFromAlert.toISOString()}>{lastReceived}</span>
+  );
 };
 
 const columnHelper = createColumnHelper<AlertDto>();
@@ -85,6 +88,7 @@ interface Props {
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
+  columnsToExclude?: string[];
 }
 
 export function AlertTable({
@@ -102,6 +106,7 @@ export function AlertTable({
   presetName,
   rowSelection,
   setRowSelection,
+  columnsToExclude = [],
 }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -115,7 +120,9 @@ export function AlertTable({
   };
 
   const enabledRowSelection =
-    presetName === "Deleted" || isOpen ? undefined : rowSelection;
+    presetName === "Deleted" || (isOpen && !presetName)
+      ? undefined
+      : rowSelection;
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -220,7 +227,7 @@ export function AlertTable({
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
-      header: "When",
+      header: "Last Received",
       cell: (context) => getAlertLastReceieved(context.getValue()),
     }),
     columnHelper.accessor("source", {
@@ -251,26 +258,21 @@ export function AlertTable({
         />
       ),
     }),
-    columnHelper.accessor("fatigueMeter", {
+    columnHelper.display({
+      id: "fatigueMeter",
       header: () => (
         <div className="flex items-center gap-1">
           <span>Fatigue Meter</span>
           <Icon
             icon={QuestionMarkCircleIcon}
-            tooltip="Calculated based on various factors"
+            tooltip={`Calculated based on the number of alerts / ${MAX_ALERTS_PER_WINDOW} in 1 hour`}
             variant="simple"
             color="gray"
           />
         </div>
       ),
-      cell: (context) => (
-        <CategoryBar
-          values={[40, 30, 20, 10]}
-          colors={["emerald", "yellow", "orange", "rose"]}
-          markerValue={context.getValue() ?? 0}
-          tooltip={(context.getValue() ?? 0).toString() ?? "0"}
-          className="min-w-[192px]"
-        />
+      cell: ({ row }) => (
+        <AlertFatigueMeter alerts={groupedByAlerts[row.original.fingerprint]} />
       ),
     }),
     columnHelper.display({
@@ -285,7 +287,7 @@ export function AlertTable({
       alerts
         .map((alert) => {
           const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload);
+          return Object.keys(extraPayload).concat(columnsToExclude);
         })
         .reduce((acc, keys) => [...acc, ...keys], [])
     )
@@ -304,6 +306,7 @@ export function AlertTable({
       },
     })
   );
+
   const columnsToHideFromLocalStorage = localStorage.getItem(
     getHiddenColumnsLocalStorageKey(presetName)
   );
@@ -317,7 +320,7 @@ export function AlertTable({
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     // Defaultly exclude the extra payload columns from the default visibility
-    columnsToHideFromLocalStorage
+    !!columnsToHideFromLocalStorage
       ? JSON.parse(columnsToHideFromLocalStorage)
       : extraPayloadKeys.reduce((obj, key) => {
           obj[key] = false;
@@ -339,20 +342,21 @@ export function AlertTable({
       pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
-    getRowId: (row) => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
   });
 
   return (
     <>
-      <AlertColumnsSelect
-        table={table}
-        presetName={presetName}
-        setColumnVisibility={setColumnVisibility}
-        isLoading={isAsyncLoading}
-        columnOrder={columnOrder}
-      />
+      {presetName && (
+        <AlertColumnsSelect
+          table={table}
+          presetName={presetName}
+          setColumnVisibility={setColumnVisibility}
+          isLoading={isAsyncLoading}
+          columnOrder={columnOrder}
+        />
+      )}
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."
@@ -370,7 +374,7 @@ export function AlertTable({
               {headerGroup.headers.map((header) => (
                 <TableHeaderCell
                   key={header.id}
-                  className={`bg-white ${
+                  className={`bg-white pb-0 ${
                     header.column.columnDef.meta?.thClassName
                       ? header.column.columnDef.meta?.thClassName
                       : ""

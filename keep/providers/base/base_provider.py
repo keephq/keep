@@ -426,7 +426,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
             message=alert_data.get("message", "alert-from-event-queue"),
             description=alert_data.get("description", "alert-from-event-queue"),
             severity=alert_data.get("severity", "alert-from-event-queue"),
-            fatigueMeter=alert_data.get("fatigueMeter", 0),
             pushed=alert_data.get("pushed", False),
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),
