@@ -33,5 +33,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ['/((?!keep_big\\.svg$|signin$).*)'], // Adjust as needed
+  matcher: ['/((?!keep_big\\.svg$|gnip\\.webp|signin$).*)'], // Adjust as needed
 };
