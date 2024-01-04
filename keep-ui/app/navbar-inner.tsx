@@ -228,7 +228,6 @@ export default function NavbarInner({ session }: { session: any }) {
                                 >
                                   Settings
                                 </a>
-                                }
                                 {authType != AuthenticationType.NO_AUTH ? (
                                   <button
                                     className={classNames(
@@ -242,6 +241,7 @@ export default function NavbarInner({ session }: { session: any }) {
                               </>
                             )}
                           </Menu.Item>
+                        }
                       </Menu.Items>
                     </Transition>
                   </Menu>
@@ -262,7 +262,7 @@ export default function NavbarInner({ session }: { session: any }) {
 
           <Disclosure.Panel className="sm:hidden">
             <div className="space-y-1 pt-2 pb-3">
-              {currNavigation.map((item) => (
+              {(isNocRole ? nocNavigation : navigation).map((item) => (
                 <Disclosure.Button
                   key={item.name}
                   as="a"

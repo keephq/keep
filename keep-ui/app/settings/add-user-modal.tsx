@@ -21,6 +21,12 @@ interface AddUserModalProps {
   accessToken: string;
 }
 
+const roleOptions: RoleOption[] = [
+    { value: 'admin', label: 'Admin', tooltip: "Admin has read/write/update/delete for every resource" },
+    { value: 'noc', label: 'NOC', tooltip: "NOC has the ability to view alerts and assign to alerts" },
+    { value: 'create_new', label: 'Create custom role', isDisabled: true, tooltip: "For custom roles, contact Keep team" },
+];
+
 export default function AddUserModal({ isOpen, onClose, authType, setUsers, accessToken }: AddUserModalProps) {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -28,12 +34,6 @@ export default function AddUserModal({ isOpen, onClose, authType, setUsers, acce
   const [password, setPassword] = useState('');
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
   const [addUserError, setAddUserError] = useState('');
-
-  let roleOptions: RoleOption[] = [
-    { value: 'admin', label: 'Admin', tooltip: "Admin has read/write/update/delete for every resource" },
-    { value: 'noc', label: 'NOC', tooltip: "NOC has the ability to view alerts and assign to alerts" },
-    { value: 'create_new', label: 'Create custom role', isDisabled: true, tooltip: "For custom roles, contact Keep team" },
-];
 
 const CustomOption = (props: any) => {
     const isHovered = hoveredOption === props.data.value;
@@ -101,11 +101,7 @@ const CustomOption = (props: any) => {
       const newUser = await response.json();
       setUsers(currentUsers => [...currentUsers, newUser]);
       // Reset form and close modal on successful addition
-      setEmail('');
-      setSelectedRole(null);
-      setPassword('');
-      setAddUserError('');
-      onClose();
+      handleOnClose();
     } else {
       const errorData = await response.json();
       setAddUserError(errorData.message || errorData.detail || 'Failed to add user (unknown error)');
