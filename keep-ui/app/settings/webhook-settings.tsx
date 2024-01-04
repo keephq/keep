@@ -5,6 +5,7 @@ import { Button, Card, Icon, Subtitle, Title } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
 import { CopyBlock, a11yLight } from "react-code-blocks";
+import { CopyBlockProps } from "react-code-blocks/dist/components/CopyBlock";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
@@ -32,7 +33,7 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   if (!data || isLoading) return <Loading />;
   if (error) return <div>{error.message}</div>;
 
-  const example = data.modelSchema.examples[0] as any;
+  const [example] = data.modelSchema.examples;
   example.lastReceived = new Date().toISOString();
 
   const code = `curl --location '${data.webhookApi}' \\
@@ -41,7 +42,7 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   --header 'X-API-KEY: ${data.apiKey}' \\
   --data '${JSON.stringify(example, null, 2)}'`;
 
-  const copyBlockProps = {
+  const copyBlockProps: Partial<CopyBlockProps> = {
     theme: { ...a11yLight },
     customStyle: {
       overflowY: "scroll",
@@ -91,11 +92,11 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
           </Button>
         </div>
         <div className="flex divide-x">
-          <div className="w-4/5 mr-1">
+          <div className="flex-1 mr-1">
             <Title className="mt-6">URL: {data?.webhookApi}</Title>
             <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
           </div>
-          <div className="w-full">
+          <div className="flex-1 w-full">
             <CopyBlock {...copyBlockProps} />
           </div>
         </div>
