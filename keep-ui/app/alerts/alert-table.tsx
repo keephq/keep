@@ -27,7 +27,6 @@ import {
   getPaginationRowModel,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
-import moment from "moment";
 import Image from "next/image";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
@@ -49,19 +48,7 @@ import AlertFatigueMeter from "./alert-fatigue-meter";
 import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
 import AlertPagination from "./alert-pagination";
-
-const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
-  let lastReceived = "unknown";
-  if (lastRecievedFromAlert) {
-    lastReceived = lastRecievedFromAlert.toString();
-    try {
-      lastReceived = moment(lastRecievedFromAlert).fromNow();
-    } catch {}
-  }
-  return (
-    <span title={lastRecievedFromAlert.toISOString()}>{lastReceived}</span>
-  );
-};
+import { getAlertLastReceieved } from "utils/helpers";
 
 const columnHelper = createColumnHelper<AlertDto>();
 
@@ -228,7 +215,11 @@ export function AlertTable({
     }),
     columnHelper.accessor("lastReceived", {
       header: "Last Received",
-      cell: (context) => getAlertLastReceieved(context.getValue()),
+      cell: (context) => (
+        <span title={context.getValue().toISOString()}>
+          {getAlertLastReceieved(context.getValue())}
+        </span>
+      ),
     }),
     columnHelper.accessor("source", {
       header: "Source",
