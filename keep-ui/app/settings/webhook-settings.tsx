@@ -57,7 +57,7 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   --data '${JSON.stringify(example, null, 2)}'`;
 
   const languages = [
-    { title: "Bash (curl)", language: "shell", code: code },
+    { title: "Bash", language: "shell", code: code },
     { title: "Python", language: "python", code: code },
     { title: "Node", language: "javascript", code: code },
   ] as const;
