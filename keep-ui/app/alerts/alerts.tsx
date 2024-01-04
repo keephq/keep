@@ -55,6 +55,7 @@ export default function Alerts({
 
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
+  const [lastReceivedAlertDate, setLastReceivedAlertDate] = useState<Date>();
 
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
@@ -150,6 +151,7 @@ export default function Alerts({
       const channel = pusher.subscribe(channelName);
 
       channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        setLastReceivedAlertDate(new Date());
         const decompressedAlert = zlib.inflateSync(
           Buffer.from(base64CompressedAlert, "base64")
         );
@@ -353,7 +355,9 @@ export default function Alerts({
             </Badge>
             <Subtitle className="text-[10px]">
               Last received:{" "}
-              {getAlertLastReceieved(currentStateAlerts[0]?.lastReceived)}
+              {lastReceivedAlertDate
+                ? getAlertLastReceieved(lastReceivedAlertDate)
+                : "N/A"}
             </Subtitle>
           </div>
         )}
