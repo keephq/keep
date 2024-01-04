@@ -1,6 +1,7 @@
 import { toast } from "react-toastify";
 import { getApiURL } from "./apiUrl";
 import { Provider } from "../app/providers/providers";
+import moment from "moment";
 
 export function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
@@ -42,4 +43,15 @@ export async function installWebhook(provider: Provider, accessToken: string) {
       position: toast.POSITION.TOP_LEFT,
     }
   );
+}
+
+export function getAlertLastReceieved(lastRecievedFromAlert: Date) {
+  let lastReceived = "unknown";
+  if (lastRecievedFromAlert) {
+    lastReceived = lastRecievedFromAlert.toString();
+    try {
+      lastReceived = moment(lastRecievedFromAlert).fromNow();
+    } catch {}
+  }
+  return lastReceived;
 }
