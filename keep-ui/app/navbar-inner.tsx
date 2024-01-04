@@ -120,7 +120,7 @@ export default function NavbarInner({ session }: { session: any }) {
                   </a>
                 </div>
                 <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                  {currNavigation.map((item) => (
+                  {(isNocRole ? nocNavigation : navigation).map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
