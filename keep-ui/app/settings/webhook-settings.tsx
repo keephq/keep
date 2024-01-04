@@ -1,14 +1,25 @@
 "use client";
 
-import { GlobeAltIcon, PlayIcon } from "@heroicons/react/24/outline";
-import { Button, Card, Icon, Subtitle, Title } from "@tremor/react";
+import { useState } from "react";
+import { PlayIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import {
+  Button,
+  Card,
+  Subtitle,
+  TabGroup,
+  TabList,
+  Tab,
+  Title,
+  TabPanels,
+  TabPanel,
+} from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
-import { CopyBlock, a11yLight } from "react-code-blocks";
-import { CopyBlockProps } from "react-code-blocks/dist/components/CopyBlock";
+import { CodeBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
+import { toast } from "react-toastify";
 
 interface Webhook {
   webhookApi: string;
@@ -22,7 +33,10 @@ interface Props {
 }
 
 export default function WebhookSettings({ accessToken, selectedTab }: Props) {
+  const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
+
   const apiUrl = getApiURL();
+
   const { data, error, isLoading } = useSWR<Webhook>(
     selectedTab === "webhook" ? `${apiUrl}/settings/webhook` : null,
     (url) => fetcher(url, accessToken),
@@ -42,16 +56,11 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   --header 'X-API-KEY: ${data.apiKey}' \\
   --data '${JSON.stringify(example, null, 2)}'`;
 
-  const copyBlockProps: Partial<CopyBlockProps> = {
-    theme: { ...a11yLight },
-    customStyle: {
-      overflowY: "scroll",
-    },
-    language: "shell",
-    text: code,
-    codeBlock: true,
-    showLineNumbers: false,
-  };
+  const languages = [
+    { title: "Bash (curl)", language: "shell", code: code },
+    { title: "Python", language: "python", code: code },
+    { title: "Node", language: "javascript", code: code },
+  ] as const;
 
   const tryNow = async () => {
     var requestHeaders = new Headers();
@@ -75,30 +84,69 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
     }
   };
 
+  const onCopyCode = () => {
+    const currentCode = languages.at(codeTabIndex);
+
+    if (currentCode !== undefined) {
+      return window.navigator.clipboard.writeText(currentCode.code).then(() =>
+        toast("Code copied to clipboard!", {
+          position: "top-left",
+          type: "success",
+        })
+      );
+    }
+  };
+
   return (
     <div className="mt-10">
       <Title>Webhook Settings</Title>
       <Subtitle>View your tenant webhook settings</Subtitle>
       <Card className="mt-2.5">
-        <div className="flex justify-between">
-          <Icon variant="light" icon={GlobeAltIcon} size="lg" color="orange" />
-          <Button
-            variant="primary"
-            icon={PlayIcon}
-            color="orange"
-            onClick={tryNow}
-          >
-            Try now
-          </Button>
-        </div>
         <div className="flex divide-x">
-          <div className="flex-1 mr-1">
-            <Title className="mt-6">URL: {data?.webhookApi}</Title>
-            <Subtitle className="mt-2">API Key: {data?.apiKey}</Subtitle>
+          <div className="flex-1 pr-2 flex flex-col gap-y-2">
+            <Title>URL: {data.webhookApi}</Title>
+            <Subtitle>API Key: {data.apiKey}</Subtitle>
+            <div>
+              <Button icon={PlayIcon} color="orange" onClick={tryNow}>
+                Try an example webhook in the browser
+              </Button>
+            </div>
           </div>
-          <div className="flex-1 w-full">
-            <CopyBlock {...copyBlockProps} />
-          </div>
+          <TabGroup
+            className="flex-1 pl-2"
+            index={codeTabIndex}
+            onIndexChange={setCodeTabIndex}
+          >
+            <div className="flex justify-between items-center">
+              <TabList variant="solid" color="orange">
+                {languages.map(({ title }) => (
+                  <Tab key={title}>{title}</Tab>
+                ))}
+              </TabList>
+              <Button
+                icon={ClipboardDocumentIcon}
+                size="xs"
+                color="orange"
+                onClick={onCopyCode}
+              >
+                Copy code
+              </Button>
+            </div>
+            <TabPanels>
+              {languages.map(({ title, language, code }) => (
+                <TabPanel key={title}>
+                  <CodeBlock
+                    language={language}
+                    theme={a11yLight}
+                    // @ts-ignore - `text` isn't a valid prop, but it appears in the docs
+                    text={code}
+                    customStyle={{ overflowY: "scroll" }}
+                    showLineNumbers={false}
+                  />
+                </TabPanel>
+              ))}
+            </TabPanels>
+          </TabGroup>
         </div>
       </Card>
     </div>
