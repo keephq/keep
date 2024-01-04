@@ -6,6 +6,7 @@ import {
   TabPanels,
   TabPanel,
   Badge,
+  Subtitle,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -25,6 +26,7 @@ import AlertPresets, { Option } from "./alert-presets";
 import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
 import { GlobeIcon } from "@radix-ui/react-icons";
+import { getAlertLastReceieved } from "utils/helpers";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -53,6 +55,7 @@ export default function Alerts({
 
   const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
+  const [lastReceivedAlertDate, setLastReceivedAlertDate] = useState<Date>();
 
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
@@ -148,6 +151,7 @@ export default function Alerts({
       const channel = pusher.subscribe(channelName);
 
       channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        setLastReceivedAlertDate(new Date());
         const decompressedAlert = zlib.inflateSync(
           Buffer.from(base64CompressedAlert, "base64")
         );
@@ -340,15 +344,22 @@ export default function Alerts({
     <>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         {!pusherDisabled && (
-          <Badge
-            icon={GlobeIcon}
-            color="orange"
-            tooltip="Live alerts are streamlining from Keep"
-            size="xs"
-            className="absolute right-9"
-          >
-            &nbsp;Live
-          </Badge>
+          <div className="flex flex-col items-end absolute right-9 top-5">
+            <Badge
+              icon={GlobeIcon}
+              color="orange"
+              tooltip="Live alerts are streamlining from Keep"
+              size="xs"
+            >
+              &nbsp;Live
+            </Badge>
+            <Subtitle className="text-[10px]">
+              Last received:{" "}
+              {lastReceivedAlertDate
+                ? getAlertLastReceieved(lastReceivedAlertDate)
+                : "N/A"}
+            </Subtitle>
+          </div>
         )}
         <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
           <TabList variant="line" color="orange">
