@@ -61,6 +61,8 @@ export default function UsersSettings({
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthenticationType;
+  // The add user disabled if authType is none
+  const addUserEnabled = authType !== AuthenticationType.NO_AUTH;
 
   if (!data || isLoading) return <Loading />;
 
@@ -81,6 +83,8 @@ export default function UsersSettings({
             size="md"
             icon={UserPlusIcon}
             onClick={() => setAddUserModalOpen(true)}
+            disabled={!addUserEnabled}
+            tooltip={!addUserEnabled? "Add user is disabled because Keep is running in NO_AUTH mode.": "Add user"}
           >
             Add User
           </Button>

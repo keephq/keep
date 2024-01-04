@@ -295,10 +295,10 @@ def AuthVerifier(scopes: list[str] = []):
     auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 
     # Return the appropriate verifier based on the auth type
-    if auth_type == AuthenticationType.SINGLE_TENANT.value:
-        return AuthVerifierSingleTenant(scopes)
-    else:
+    if auth_type == AuthenticationType.MULTI_TENANT.value:
         return AuthVerifierMultiTenant(scopes)
+    else:
+        return AuthVerifierSingleTenant(scopes)
 
 
 class AuthVerifierMultiTenant:
