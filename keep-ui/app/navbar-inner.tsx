@@ -100,10 +100,6 @@ export default function NavbarInner({ session }: { session: any }) {
   const user = session?.user as User;
   const isNocRole = session?.userRole === "noc";
 
-  let currNavigation = navigation;
-  if (session.userRole === "noc") {
-    currNavigation = nocNavigation;
-  };
 
   return (
     <Disclosure as="nav" className="bg-white shadow-sm">
