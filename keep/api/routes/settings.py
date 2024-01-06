@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from keep.api.core.config import AuthenticationType, config
@@ -34,9 +34,12 @@ logger = logging.getLogger(__name__)
 
 
 class CreateUserRequest(BaseModel):
-    email: str
+    email: str = Field(alias="username")
     password: Optional[str] = None  # for auth0 we don't need a password
     role: str
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 @router.get(

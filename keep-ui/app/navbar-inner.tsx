@@ -217,32 +217,32 @@ export default function NavbarInner({ session }: { session: any }) {
                       leaveTo="transform opacity-0 scale-95"
                     >
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                          {!isNocRole && <Menu.Item>
-                            {({ active }) => (
-                              <>
-                                <a
-                                  className={classNames(
-                                    "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                  )}
-                                  href="/settings"
-                                >
-                                  Settings
-                                </a>
-                                {authType != AuthenticationType.NO_AUTH ? (
-                                  <button
-                                    className={classNames(
-                                      "flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                    )}
-                                    onClick={() => signOut()}
-                                  >
-                                    Sign out
-                                  </button>
-                                ) : null}
-                              </>
-                            )}
-                          </Menu.Item>
-                        }
-                      </Menu.Items>
+                        {!isNocRole && (
+                            <Menu.Item>
+                                {({ active }) => (
+                                    <a
+                                        className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        href="/settings"
+                                    >
+                                        Settings
+                                    </a>
+                                )}
+                            </Menu.Item>
+                        )}
+                        {authType !== AuthenticationType.NO_AUTH && (
+                            <Menu.Item>
+                                {({ active }) => (
+                                    <button
+                                        className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={() => signOut()}
+                                    >
+                                        Sign out
+                                    </button>
+                                )}
+                            </Menu.Item>
+                        )}
+                    </Menu.Items>
+
                     </Transition>
                   </Menu>
                 ) : null}

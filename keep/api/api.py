@@ -249,7 +249,9 @@ def get_app(
     async def log_middeware(request: Request, call_next):
         logger.info(f"Request started: {request.method} {request.url.path}")
         response = await call_next(request)
-        logger.info(f"Request finished: {request.method} {request.url.path}")
+        logger.info(
+            f"Request finished: {request.method} {request.url.path} {response.status_code}"
+        )
         return response
 
     keep.api.observability.setup(app)

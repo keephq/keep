@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@floating-ui/react-dom": "^2.0.4",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-brands-svg-icons": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
@@ -305,6 +306,7 @@
     "react": "^18.2.0",
     "react-code-blocks": "^0.1.3",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.2",
     "react-icons": "^4.9.0",
     "react-is": "^16.13.1",
     "react-lifecycles-compat": "^3.0.4",

@@ -1,13 +1,7 @@
+import React from 'react';
+import { useForm, Controller, SubmitHandler, FieldValues } from 'react-hook-form';
 import { Dialog } from "@headlessui/react";
-import { useState } from "react";
-import {
-  TextInput,
-  Button,
-  Subtitle,
-  Icon,
-  SearchSelect,
-  SearchSelectItem,
-} from "@tremor/react";
+import { TextInput, Button, Subtitle, SearchSelect, SearchSelectItem, Icon } from "@tremor/react";
 import { AuthenticationType } from "utils/authenticationType";
 import { User } from "./models";
 import { getApiURL } from "utils/apiUrl";
@@ -29,6 +23,7 @@ interface AddUserModalProps {
   accessToken: string;
 }
 
+
 const roleOptions: RoleOption[] = [
   {
     value: "admin",
@@ -48,190 +43,163 @@ const roleOptions: RoleOption[] = [
   },
 ];
 
-export default function AddUserModal({
-  isOpen,
-  onClose,
-  authType,
-  setUsers,
-  accessToken,
-}: AddUserModalProps) {
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>();
-  const [password, setPassword] = useState("");
-  const [addUserError, setAddUserError] = useState("");
+export default function AddUserModal({ isOpen, onClose, authType, setUsers, accessToken }: AddUserModalProps) {
+    const { handleSubmit, control, setError, clearErrors, reset, formState: { errors } } = useForm();
 
-  const validateEmail = (email: string) => {
-    const re = /\S+@\S+\.\S+/;
-    return re.test(email);
-  };
+    const onSubmit: SubmitHandler<FieldValues> = async (data) => {
+      try {
+        const response = await fetch(`${getApiURL()}/settings/users`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
 
-  const isFormValid = () => {
-    // if multi tenant, we need to validate email, else just validate password
-    if (authType === AuthenticationType.MULTI_TENANT) {
-      return validateEmail(email) && selectedRole;
-    } else {
-      return email && selectedRole && password;
-    }
-  };
+        if (response.ok) {
+          const newUser = await response.json();
+          setUsers(prevUsers => [...prevUsers, newUser]);
+          handleClose();
+        } else {
+          const errorData = await response.json();
+          // if 'detail' in errorData:
+          if (errorData.detail) {
+            setError('apiError', { type: 'manual', message: errorData.detail });
+          }
+          else{
+            setError('apiError', { type: 'manual', message: errorData.message || 'Failed to add user' });
+          }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+        }
+      } catch (error) {
+        setError('apiError', { type: 'manual', message: 'An unexpected error occurred' });
+      }
+    };
 
-    // Validate form
-    if (!isFormValid()) {
-      setAddUserError("Please fill out all fields");
-      return;
-    }
-    // Validate selected role
-    if (!selectedRole) {
-      setAddUserError("Please select a role");
-      return;
-    }
+    const handleClose = () => {
+        clearErrors('apiError');
+        reset();
+        onClose();
+      };
 
-    // Make the API call to add the user
-    const response = await fetch(`${getApiURL()}/settings/users`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, role: selectedRole, password }),
-    });
-
-    if (response.ok) {
-      const newUser = await response.json();
-      setUsers((currentUsers) => [...currentUsers, newUser]);
-      // Reset form and close modal on successful addition
-      handleOnClose();
-    } else {
-      const errorData = await response.json();
-      setAddUserError(
-        errorData.message ||
-          errorData.detail ||
-          "Failed to add user (unknown error)"
-      );
-    }
-  };
-
-  const handleOnClose = () => {
-    onClose();
-    setEmail("");
-    setSelectedRole("");
-    setPassword("");
-    setAddUserError("");
-  };
-
-  const handleEmailChange = (email: string) => {
-    setEmail(email);
-    if (validateEmail(email)) {
-      setEmailError("");
-    } else {
-      setEmailError("Please enter a valid email address.");
-    }
-  };
-
-  return (
-    <Dialog
-      as="div"
-      className="fixed inset-0 z-10 overflow-y-auto"
-      open={isOpen}
-      onClose={handleOnClose}
-    >
-      <div className="flex items-center justify-center min-h-screen">
-        <Dialog.Panel
-          className="bg-white p-4 rounded"
-          style={{ width: "400px", maxWidth: "90%" }}
-        >
-          <Dialog.Title>Add User</Dialog.Title>
-          <form onSubmit={handleSubmit}>
-            {/* If authType is email, user email, otherwise just username */}
-            {authType === AuthenticationType.MULTI_TENANT ? (
-              <div className="mt-4">
-                <Subtitle>Email</Subtitle>
-                <TextInput
-                  value={email}
-                  onChange={(e) => handleEmailChange(e.target.value)}
-                  error={!!emailError && !!email}
-                  errorMessage={emailError}
-                />
-              </div>
-            ) : (
-              <div className="mt-4">
-                <Subtitle>Username</Subtitle>
-                <TextInput
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            )}
-
-            <div className="mt-4">
-              <Subtitle>Role</Subtitle>
-              <SearchSelect
-                value={selectedRole}
-                onValueChange={(val) => setSelectedRole(val)}
-                className="mt-2"
-                placeholder="Select role"
-              >
-                {roleOptions.map((role) => (
-                  <SearchSelectItem
-                    key={role.value}
-                    value={role.value}
-                    className={
-                      role.isDisabled ? "text-gray-400 cursor-not-allowed" : ""
-                    }
-                    onClick={(e) => {
-                      if (role.isDisabled) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    <div className="flex items-center">
-                      {role.label}
-                      {role.tooltip && (
-                        <Icon
-                          icon={InfoCircledIcon}
-                          className="role-tooltip"
-                          tooltip={role.tooltip}
-                          color="gray"
-                          size="xs"
-                        />
+    return (
+      <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isOpen} onClose={handleClose}>
+        <div className="flex items-center justify-center min-h-screen">
+          <Dialog.Panel className="bg-white p-4 rounded" style={{ width: "400px", maxWidth: "90%" }}>
+            <Dialog.Title>Add User</Dialog.Title>
+            <form
+                onSubmit={e => {
+                    clearErrors()
+                    handleSubmit(onSubmit)(e)
+                }}
+            >
+              {/* Email/Username Field */}
+              {authType === AuthenticationType.MULTI_TENANT ? (
+                <div className="mt-4">
+                  <Subtitle>Email</Subtitle>
+                  <Controller
+                    name="email"
+                    control={control}
+                    rules={{ required: 'Email is required', pattern: { value: /\S+@\S+\.\S+/, message: 'Invalid email format' } }}
+                    render={({ field }) => (
+                        <>
+                          <TextInput {...field} error={!!errors.email} errorMessage={errors.email && typeof errors.email.message === 'string' ? errors.email.message : undefined}/>
+                        </>
                       )}
-                    </div>
-                  </SearchSelectItem>
-                ))}
-              </SearchSelect>
-            </div>
+                  />
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Subtitle>Username</Subtitle>
+                  <Controller
+                    name="username"
+                    control={control}
+                    rules={{ required: 'Username is required' }}
+                    render={({ field }) => <TextInput {...field} error={!!errors.username} errorMessage={errors.username && typeof errors.username.message === 'string' ? errors.username.message : undefined}/>}
+                  />
+                </div>
+              )}
 
-            {authType === AuthenticationType.SINGLE_TENANT && (
+              {/* Role Field */}
               <div className="mt-4">
-                <Subtitle>Password</Subtitle>
-                <TextInput
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <Subtitle>Role</Subtitle>
+                <Controller
+                    name="role"
+                    control={control}
+                    rules={{ required: 'Role is required' }}
+                    render={({ field: { onChange, value, ref } }) => (
+                        <>
+                        <SearchSelect
+                            placeholder="Select role"
+                            value={value}
+                            onValueChange={onChange}
+                            className={`rounded-lg border ${
+                            errors.role ? "border-red-500" : "border-transparent"
+                            }`}
+                            ref={ref}
+                        >
+                            {roleOptions.map(role => (
+                            <SearchSelectItem
+                                key={role.value}
+                                value={role.value}
+                                className={
+                                role.isDisabled ? "text-gray-400 cursor-not-allowed" : ""
+                                }
+                                onClick={(e) => {
+                                if (role.isDisabled) {
+                                    e.preventDefault();
+                                }
+                                }}
+                            >
+                                <div className="flex items-center">
+                                {role.label}
+                                {role.tooltip && (
+                                    <Icon
+                                    icon={InfoCircledIcon}
+                                    className="role-tooltip"
+                                    tooltip={role.tooltip}
+                                    color="gray"
+                                    size="xs"
+                                    />
+                                )}
+                                </div>
+                            </SearchSelectItem>
+                            ))}
+                        </SearchSelect>
+                        {errors.role && <div className="text-sm text-rose-500 mt-1">{errors.role.message?.toString()}</div>}
+                        </>
+                    )}
+                    />
+
               </div>
-            )}
-            {addUserError && (
-              <div className="text-red-500 mt-2">{addUserError}</div> // Display error message
-            )}
-            <div className="mt-6 flex gap-2">
-              <Button color="orange" type="submit" disabled={!isFormValid()}>
-                Add User
-              </Button>
-              <Button
-                onClick={handleOnClose}
-                variant="secondary"
-                className="border border-orange-500 text-orange-500"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Dialog.Panel>
-      </div>
-    </Dialog>
-  );
-}
+
+              {/* Password Field */}
+              {authType === AuthenticationType.SINGLE_TENANT && (
+                <div className="mt-4">
+                  <Subtitle>Password</Subtitle>
+                  <Controller
+                    name="password"
+                    control={control}
+                    rules={{ required: 'Password is required' }}
+                    render={({ field }) => <TextInput type="password" {...field} error={!!errors.password} errorMessage={errors.password && typeof errors.password.message === 'string' ? errors.password.message : undefined}/>}
+                  />
+                </div>
+              )}
+
+              {/* Display API Error */}
+              {errors.apiError && typeof errors.apiError.message === 'string' && (
+                <div className="text-red-500 mt-2">{errors.apiError.message}</div>
+              )}
+
+              {/* Submit and Cancel Buttons */}
+              <div className="mt-6 flex gap-2">
+                <Button color="orange" type="submit">Add User</Button>
+                <Button onClick={handleClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
+              </div>
+            </form>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    );
+  }

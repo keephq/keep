@@ -13,7 +13,7 @@ import { useFloating } from "@floating-ui/react-dom";
 
 
 interface Props {
-  user: User;
+user: User;
   currentUser?: AuthUser;
 }
 
