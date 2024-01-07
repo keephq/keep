@@ -132,12 +132,12 @@ class IlertProvider(BaseProvider):
         self.logger.info("Scopes validated", extra=scopes)
         return scopes
 
-    def _query(
+    def _notify(
         self,
         summary: str,
         status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
         message: str = "",
-        affectedServices: str = "[]",
+        affectedServices: str | list = "[]",
         id: str = "0",
         **kwargs: dict,
     ):
