@@ -1,0 +1,46 @@
+---
+title: "ILert"
+sidebarTitle: "ILert Provider"
+description: "ILert provider allows you to create, update, and resolve incidents in ILert for effective incident management and response."
+---
+
+## Inputs
+
+- `summary`: str: A brief summary of the incident or situation you're reporting.
+- `status`: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING: The current status of the incident (e.g., INVESTIGATING, RESOLVED, MONITORING, IDENTIFIED).
+- `message`: str = "": A detailed message describing the incident or situation.
+- `affectedServices`: str = "[]": A JSON string representing the list of affected services and their statuses.
+- `id`: str = "0": The ID of the incident to update. If set to "0", a new incident will be created.
+
+## Outputs
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+
+## Authentication Parameters
+
+The `ilert_token` is required for connecting to the ILert provider. This should be a valid API token provided by ILert.
+
+## Connecting with the Provider
+
+### API Token
+
+To obtain the ILert API token, follow these steps:
+
+1. Log in to your ILert account.
+2. Navigate to the "API Tokens" section under your user profile or account settings.
+3. Generate a new API token.
+
+Ensure you have the necessary permissions assigned to the token for creating and updating incidents.
+
+## Scopes
+
+ILert integration does not require specific scopes to be set for API token as permissions are managed directly within ILert's platform.
+
+## Notes
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
+
+## Useful Links
+
+- [ILert API Documentation](https://api.ilert.com/api-docs/)
+- [ILert Incident Management](https://www.ilert.com/incident-management/)
