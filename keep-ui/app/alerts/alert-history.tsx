@@ -6,36 +6,56 @@ import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
 import AlertHistoryCharts from "./alert-history-charts";
+import useSWR from "swr";
+import { getApiURL } from "utils/apiUrl";
+import { fetcher } from "utils/fetcher";
+import Loading from "app/loading";
 
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
-  data: AlertDto[];
+  selectedAlert: AlertDto | null;
   users?: User[];
   currentUser: NextUser;
+  accessToken?: string;
 }
 
 export function AlertHistory({
   isOpen,
   closeModal,
-  data,
+  selectedAlert,
   users = [],
   currentUser,
+  accessToken,
 }: Props) {
-  if (!data || data.length === 0) {
+  const apiUrl = getApiURL();
+  const {
+    data: alerts,
+    error,
+    isLoading,
+  } = useSWR<AlertDto[]>(
+    selectedAlert && accessToken
+      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history`
+      : null,
+    (url) => fetcher(url, accessToken!)
+  );
+
+  if (!selectedAlert || isLoading) {
     return <></>;
   }
 
-  const lastReceivedData = data.map((alert) => alert.lastReceived);
+  if (!alerts || error) {
+    return <Loading />;
+  }
+  alerts.forEach(
+    (alert) => (alert.lastReceived = new Date(alert.lastReceived))
+  );
+  const lastReceivedData = alerts.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
   );
   const minLastReceived: Date = new Date(
     Math.min(...lastReceivedData.map((date) => date.getTime()))
-  );
-
-  const currentStateAlerts = data.sort(
-    (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
   );
 
   return (
@@ -69,8 +89,8 @@ export function AlertHistory({
               >
                 <Flex alignItems="center" justifyContent="between">
                   <div>
-                    <Title>History of: {data[0]?.name}</Title>
-                    <Subtitle>Total alerts: {data.length}</Subtitle>
+                    <Title>History of: {alerts[0]?.name}</Title>
+                    <Subtitle>Total alerts: {alerts.length}</Subtitle>
                     <Subtitle>
                       First Occurence: {minLastReceived.toString()}
                     </Subtitle>
@@ -89,14 +109,14 @@ export function AlertHistory({
                 <AlertHistoryCharts
                   maxLastReceived={maxLastReceived}
                   minLastReceived={minLastReceived}
-                  alerts={currentStateAlerts}
+                  alerts={alerts}
                 />
                 <Divider />
                 <AlertTable
-                  alerts={[...data]}
+                  alerts={alerts}
                   users={users}
                   currentUser={currentUser}
-                  columnsToExclude={["fatigueMeter", "description"]}
+                  columnsToExclude={["description"]}
                 />
               </Dialog.Panel>
             </Transition.Child>

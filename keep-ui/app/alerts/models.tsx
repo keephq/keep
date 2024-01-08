@@ -50,7 +50,6 @@ export const AlertKnownKeys = [
   "message",
   "description",
   "severity",
-  "fatigueMeter",
   "pushed",
   "url",
   "event_id",

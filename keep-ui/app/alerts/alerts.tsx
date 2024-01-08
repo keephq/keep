@@ -33,7 +33,6 @@ const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
   { name: "Deleted", options: [] },
 ];
-const groupBy = "fingerprint"; // TODO: in the future, we'll allow to modify this
 
 export default function Alerts({
   accessToken,
@@ -49,21 +48,15 @@ export default function Alerts({
   pusherDisabled: boolean;
 }) {
   const apiUrl = getApiURL();
+  const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<AlertDto[]>([]);
   const [tabIndex, setTabIndex] = useState<number>(0);
-
-  const [aggregatedAlerts, setAggregatedAlerts] = useState<AlertDto[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [lastReceivedAlertDate, setLastReceivedAlertDate] = useState<Date>();
-
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
   );
-  const [groupedByAlerts, setGroupedByAlerts] = useState<{
-    [key: string]: AlertDto[];
-  }>({});
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, isLoading, mutate } = useSWR<AlertDto[]>(
     `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
@@ -101,106 +94,71 @@ export default function Alerts({
   );
 
   useEffect(() => {
-    let groupedByAlerts = {} as { [key: string]: AlertDto[] };
-
-    // Fix the date format (it is received as text)
-    alerts.forEach((alert) => {
-      if (typeof alert.lastReceived === "string")
-        alert.lastReceived = new Date(alert.lastReceived);
-    });
-
-    let aggregatedAlerts = alerts;
-
-    if (groupBy) {
-      // Group alerts by the groupBy key
-      groupedByAlerts = alerts.reduce((acc, alert) => {
-        const key = (alert as any)[groupBy] as string;
-        if (!acc[key]) {
-          acc[key] = [alert];
-        } else {
-          acc[key].push(alert);
-        }
-        return acc;
-      }, groupedByAlerts);
-      // Sort by last received
-      Object.keys(groupedByAlerts).forEach((key) =>
-        groupedByAlerts[key].sort(
-          (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
-        )
-      );
-      // Only the last state of each alert is shown if we group by something
-      aggregatedAlerts = Object.keys(groupedByAlerts).map(
-        (key) => groupedByAlerts[key][0]
-      );
-    }
-
-    setGroupedByAlerts(groupedByAlerts);
-    setAggregatedAlerts(aggregatedAlerts);
-  }, [alerts]);
-
-  useEffect(() => {
     if (data) {
-      setAlerts((prevAlerts) => Array.from(new Set([...data, ...prevAlerts])));
+      data.forEach(
+        (alert) => (alert.lastReceived = new Date(alert.lastReceived))
+      );
+      setAlerts(data);
       if (pusherDisabled) setIsAsyncLoading(false);
     }
   }, [data, pusherDisabled]);
 
-  useEffect(() => {
-    if (!pusherDisabled && pusher) {
-      console.log("Connecting to pusher");
-      const channelName = `private-${tenantId}`;
-      const channel = pusher.subscribe(channelName);
+  if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
-      channel.bind("async-alerts", function (base64CompressedAlert: string) {
-        setLastReceivedAlertDate(new Date());
-        const decompressedAlert = zlib.inflateSync(
-          Buffer.from(base64CompressedAlert, "base64")
-        );
-        const newAlerts = JSON.parse(
-          new TextDecoder().decode(decompressedAlert)
-        ) as AlertDto[];
-        newAlerts.forEach((alert) => {
-          if (typeof alert.lastReceived === "string")
-            alert.lastReceived = new Date(alert.lastReceived);
-        });
-        setAlerts((prevAlerts) => {
-          const combinedAlerts = [...prevAlerts, ...newAlerts];
-          const uniqueObjectsMap = new Map();
-          combinedAlerts.forEach((alert) => {
-            let alertKey = "";
-            try {
-              alertKey = `${
-                alert.fingerprint
-              }-${alert.lastReceived.toISOString()}`;
-            } catch {
-              alertKey = alert.fingerprint;
-            }
-            uniqueObjectsMap.set(alertKey, alert);
-          });
-          return Array.from(new Set(uniqueObjectsMap.values()));
-        });
-      });
+  // useEffect(() => {
+  //   if (!pusherDisabled && pusher) {
+  //     console.log("Connecting to pusher");
+  //     const channelName = `private-${tenantId}`;
+  //     const channel = pusher.subscribe(channelName);
 
-      channel.bind("async-done", function () {
-        setIsAsyncLoading(false);
-      });
+  //     channel.bind("async-alerts", function (base64CompressedAlert: string) {
+  //       setLastReceivedAlertDate(new Date());
+  //       const decompressedAlert = zlib.inflateSync(
+  //         Buffer.from(base64CompressedAlert, "base64")
+  //       );
+  //       const newAlerts = JSON.parse(
+  //         new TextDecoder().decode(decompressedAlert)
+  //       ) as AlertDto[];
+  //       newAlerts.forEach((alert) => {
+  //         if (typeof alert.lastReceived === "string")
+  //           alert.lastReceived = new Date(alert.lastReceived);
+  //       });
+  //       setAlerts((prevAlerts) => {
+  //         const combinedAlerts = [...prevAlerts, ...newAlerts];
+  //         const uniqueObjectsMap = new Map();
+  //         combinedAlerts.forEach((alert) => {
+  //           let alertKey = "";
+  //           try {
+  //             alertKey = `${
+  //               alert.fingerprint
+  //             }-${alert.lastReceived.toISOString()}`;
+  //           } catch {
+  //             alertKey = alert.fingerprint;
+  //           }
+  //           uniqueObjectsMap.set(alertKey, alert);
+  //         });
+  //         return Array.from(new Set(uniqueObjectsMap.values()));
+  //       });
+  //     });
 
-      setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
+  //     channel.bind("async-done", function () {
+  //       setIsAsyncLoading(false);
+  //     });
 
-      console.log("Connected to pusher");
-      return () => {
-        pusher.unsubscribe(channelName);
-      };
-    } else {
-      console.log("Pusher disabled");
-    }
-  }, [pusher, tenantId, pusherDisabled]);
+  //     setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
+
+  //     console.log("Connected to pusher");
+  //     return () => {
+  //       pusher.unsubscribe(channelName);
+  //     };
+  //   } else {
+  //     console.log("Pusher disabled");
+  //   }
+  // }, [pusher, tenantId, pusherDisabled]);
 
   // Get a new searchParams string by merging the current
   // searchParams with a provided key/value pair
   // https://nextjs.org/docs/app/api-reference/functions/use-search-params
-
-  if (isLoading) return <Loading slowLoading={isSlowLoading} />;
 
   const onDelete = (
     fingerprint: string,
@@ -229,15 +187,32 @@ export default function Alerts({
     );
   };
 
+  const setAssignee = (
+    fingerprint: string,
+    lastReceived: Date,
+    unassign: boolean // Currently unused
+  ) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.map((alert) => {
+        if (alert.fingerprint === fingerprint) {
+          if (alert.assignees !== undefined) {
+            alert.assignees[lastReceived.toISOString()] = user.email;
+          } else {
+            alert.assignees = { [lastReceived.toISOString()]: user.email };
+          }
+        }
+        return alert;
+      })
+    );
+  };
+
   const AlertTableTabPanel = ({ preset }: { preset: Preset }) => {
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-
     const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
       (acc, [alertId, isSelected]) => {
         if (isSelected) {
           return acc.concat(alertId);
         }
-
         return acc;
       },
       []
@@ -267,8 +242,6 @@ export default function Alerts({
         )}
         <AlertTable
           alerts={currentStateAlerts}
-          groupedByAlerts={groupedByAlerts}
-          groupBy="fingerprint"
           workflows={workflows}
           providers={providers?.installed_providers}
           mutate={mutate}
@@ -280,27 +253,9 @@ export default function Alerts({
           rowSelection={rowSelection}
           setRowSelection={setRowSelection}
           presetName={preset.name}
+          accessToken={accessToken}
         />
       </TabPanel>
-    );
-  };
-
-  const setAssignee = (
-    fingerprint: string,
-    lastReceived: Date,
-    unassign: boolean
-  ) => {
-    setAlerts((prevAlerts) =>
-      prevAlerts.map((alert) => {
-        if (alert.fingerprint === fingerprint) {
-          if (alert.assignees !== undefined) {
-            alert.assignees[lastReceived.toISOString()] = user.email;
-          } else {
-            alert.assignees = { [lastReceived.toISOString()]: user.email };
-          }
-        }
-        return alert;
-      })
     );
   };
 
@@ -325,7 +280,7 @@ export default function Alerts({
     });
   }
 
-  const currentStateAlerts = aggregatedAlerts
+  const currentStateAlerts = alerts
     .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 

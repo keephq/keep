@@ -10,10 +10,9 @@ from sqlmodel import Session
 
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
-from keep.api.core.db import get_alerts as get_alerts_from_db
-from keep.api.core.db import get_enrichment
+from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment
 from keep.api.core.db import get_enrichments as get_enrichments_from_db
-from keep.api.core.db import get_session
+from keep.api.core.db import get_last_alerts, get_session
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
     AuthVerifier,
@@ -58,6 +57,42 @@ def __send_compressed_alerts(
         "async-alerts",
         compressed_alerts_data,
     )
+
+
+def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
+    """
+    Enriches the alerts with the enrichment data.
+
+    Args:
+        alerts (list[Alert]): The alerts to enrich.
+
+    Returns:
+        list[AlertDto]: The enriched alerts.
+    """
+    alerts_dto = []
+    with tracer.start_as_current_span("alerts_enrichment"):
+        # enrich the alerts with the enrichment data
+        for alert in alerts:
+            if alert.alert_enrichment:
+                alert.event.update(alert.alert_enrichment.enrichments)
+
+            # todo: what is this? :O
+            if alert.provider_type == "rules":
+                try:
+                    alert_dto = AlertDto(**alert.event)
+                except Exception:
+                    # should never happen but just in case
+                    logger.exception(
+                        "Failed to parse group alert",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    continue
+            else:
+                alert_dto = AlertDto(**alert.event)
+            alerts_dto.append(alert_dto)
+    return alerts_dto
 
 
 def pull_alerts_from_providers(
@@ -215,7 +250,7 @@ def pull_alerts_from_providers(
 
 @router.get(
     "",
-    description="Get alerts",
+    description="Get last alerts occurrence",
 )
 def get_all_alerts(
     background_tasks: BackgroundTasks,
@@ -230,31 +265,8 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    alerts_dto = []
-    db_alerts = get_alerts_from_db(tenant_id=tenant_id)
-    with tracer.start_as_current_span("alerts_enrichment"):
-        # enrich the alerts with the enrichment data
-        for alert in db_alerts:
-            if alert.alert_enrichment:
-                alert.event.update(alert.alert_enrichment.enrichments)
-
-            # todo: what is this? :O
-            if alert.provider_type == "rules":
-                try:
-                    alert_dto = AlertDto(**alert.event)
-                except Exception:
-                    # should never happen but just in case
-                    logger.exception(
-                        "Failed to parse group alert",
-                        extra={
-                            "alert": alert,
-                            "tenant_id": tenant_id,
-                        },
-                    )
-                    continue
-            else:
-                alert_dto = AlertDto(**alert.event)
-            alerts_dto.append(alert_dto)
+    db_alerts = get_last_alerts(tenant_id=tenant_id)
+    enriched_alerts_dto = __enrich_alerts(db_alerts)
 
     logger.info(
         "Fetched alerts from DB",
@@ -263,17 +275,41 @@ def get_all_alerts(
         },
     )
 
-    if sync:
-        logger.info("Syncronusly pulling alerts from providers")
-        alerts_dto.extend(
-            pull_alerts_from_providers(tenant_id, pusher_client, sync=True)
-        )
-    else:
-        logger.info("Adding task to async fetch alerts from providers")
-        background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
-        logger.info("Added task to async fetch alerts from providers")
+    # if sync:
+    #     logger.info("Syncronusly pulling alerts from providers")
+    #     alerts_dto.extend(
+    #         pull_alerts_from_providers(tenant_id, pusher_client, sync=True)
+    #     )
+    # else:
+    #     logger.info("Adding task to async fetch alerts from providers")
+    #     background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
+    #     logger.info("Added task to async fetch alerts from providers")
 
-    return alerts_dto
+    return enriched_alerts_dto
+
+
+@router.get("/{fingerprint}/history", description="Get alert history")
+def get_alert_history(
+    fingerprint: str,
+    tenant_id: str = Depends(verify_token_or_key),
+) -> list[AlertDto]:
+    logger.info(
+        "Fetching alert history",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+    db_alerts = get_alerts_by_fingerprint(tenant_id=tenant_id, fingerprint=fingerprint)
+    enriched_alerts_dto = __enrich_alerts(db_alerts)
+    logger.info(
+        "Fetched alert history",
+        extra={
+            "tenant_id": tenant_id,
+            "fingerprint": fingerprint,
+        },
+    )
+    return enriched_alerts_dto
 
 
 @router.delete("", description="Delete alert by name")
