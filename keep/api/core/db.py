@@ -18,6 +18,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.core.config import config
+from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -151,7 +152,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
                 os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
             ).hexdigest()
             default_user = User(
-                username=default_username, password_hash=default_password
+                username=default_username,
+                password_hash=default_password,
+                role=AdminRole.get_name(),
             )
             session.add(default_user)
             session.commit()
@@ -687,7 +690,7 @@ def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
     return alerts
 
 
-def get_api_key(api_key: str):
+def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
@@ -746,16 +749,16 @@ def delete_user(username):
             session.commit()
 
 
-def create_user(username, password):
-    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+def create_user(tenant_id, username, password, role):
     from keep.api.models.db.user import User
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     with Session(engine) as session:
         user = User(
-            tenant_id=SINGLE_TENANT_UUID,
+            tenant_id=tenant_id,
             username=username,
             password_hash=password_hash,
+            role=role,
         )
         session.add(user)
         session.commit()

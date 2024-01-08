@@ -12,12 +12,7 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import (
-    get_user_email,
-    verify_api_key,
-    verify_bearer_token,
-    verify_token_or_key,
-)
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
@@ -59,8 +54,11 @@ def _is_localhost():
     "",
 )
 def get_providers(
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersFactory.get_all_providers()
     installed_providers = ProvidersFactory.get_installed_providers(
@@ -91,8 +89,11 @@ def get_providers(
 def get_alerts_configuration(
     provider_type: str,
     provider_id: str,
-    tenant_id: str = Depends(verify_api_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
 ) -> list:
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Getting provider alerts",
         extra={
@@ -120,9 +121,12 @@ def get_logs(
     provider_type: str,
     provider_id: str,
     limit: int = 5,
-    tenant_id: str = Depends(verify_api_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
 ) -> list:
     try:
+        tenant_id = authenticated_entity.tenant_id
         logger.info(
             "Getting provider logs",
             extra={
@@ -180,8 +184,9 @@ def add_alert(
     provider_id: str,
     alert: dict,
     alert_id: Optional[str] = None,
-    tenant_id: str = Depends(verify_api_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> JSONResponse:
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Adding alert to provider",
         extra={
@@ -212,11 +217,14 @@ def add_alert(
 )
 def test_provider(
     provider_info: dict = Body(...),
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
 ) -> JSONResponse:
     # Extract parameters from the provider_info dictionary
     # For now, we support only 1:1 provider_type:provider_id
     # In the future, we might want to support multiple providers of the same type
+    tenant_id = authenticated_entity.tenant_id
     provider_id = provider_info.pop("provider_id")
     provider_type = provider_info.pop("provider_type", None) or provider_id
     logger.info(
@@ -252,9 +260,12 @@ def test_provider(
 def delete_provider(
     provider_type: str,
     provider_id: str,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["delete:providers"])
+    ),
     session: Session = Depends(get_session),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Deleting provider",
         extra={
@@ -339,9 +350,12 @@ def validate_scopes(
 )
 def validate_provider_scopes(
     provider_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:providers"])
+    ),
     session: Session = Depends(get_session),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Validating provider scopes", extra={"provider_id": provider_id})
     provider = session.exec(
         select(Provider).where(
@@ -375,10 +389,13 @@ def validate_provider_scopes(
 async def update_provider(
     provider_id: str,
     request: Request,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["update:providers"])
+    ),
     session: Session = Depends(get_session),
-    updated_by: str = Depends(get_user_email),
 ):
+    tenant_id = authenticated_entity.tenant_id
+    updated_by = authenticated_entity.email
     logger.info(
         "Updating provider",
         extra={
@@ -440,11 +457,14 @@ async def update_provider(
 @router.post("/install")
 async def install_provider(
     request: Request,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:providers"])
+    ),
     session: Session = Depends(get_session),
-    installed_by: str = Depends(get_user_email),
 ):
     # Try to parse as JSON first
+    tenant_id = authenticated_entity.tenant_id
+    installed_by = authenticated_entity.email
     try:
         provider_info = await request.json()
     except ValueError:
@@ -546,10 +566,13 @@ async def install_provider(
 async def install_provider_oauth2(
     provider_type: str,
     provider_info: dict = Body(...),
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:providers"])
+    ),
     session: Session = Depends(get_session),
-    installed_by: str = Depends(get_user_email),
 ):
+    tenant_id = authenticated_entity.tenant_id
+    installed_by = authenticated_entity.email
     # Extract parameters from the provider_info dictionary
     provider_name = f"{provider_type}-oauth2"
 
@@ -614,9 +637,12 @@ def invoke_provider_method(
     provider_id: str,
     method: str,
     method_params: dict,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:providers"])
+    ),
     session: Session = Depends(get_session),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Invoking provider method", extra={"provider_id": provider_id, "method": method}
     )
@@ -663,9 +689,12 @@ def invoke_provider_method(
 def install_provider_webhook(
     provider_type: str,
     provider_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:providers"])
+    ),
     session: Session = Depends(get_session),
 ):
+    tenant_id = authenticated_entity.tenant_id
     context_manager = ContextManager(
         tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
     )
@@ -701,9 +730,12 @@ def install_provider_webhook(
 @router.get("/{provider_type}/webhook")
 def get_webhook_settings(
     provider_type: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
     session: Session = Depends(get_session),
 ) -> ProviderWebhookSettings:
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Getting webhook settings", extra={"provider_type": provider_type})
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event/{provider_type}"

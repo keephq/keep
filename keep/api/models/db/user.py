@@ -18,6 +18,9 @@ class User(SQLModel, table=True):
     # Hashed password (never store plain-text passwords)
     password_hash: str
 
+    # Role
+    role: str
+
     # Timestamp for the last sign-in of the user
     last_sign_in: datetime = Field(default=None)
 

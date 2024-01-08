@@ -1,0 +1,4 @@
+.role-tooltip [role="tooltip"] {
+  max-width: 24rem;
+  @apply break-words;
+}
