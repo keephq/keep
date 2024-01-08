@@ -132,7 +132,7 @@ def delete_user(
         os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value).lower()
         == AuthenticationType.MULTI_TENANT.value.lower()
     ):
-        return _delete_user_auth0(tenant_id)
+        return _delete_user_auth0(user_email, tenant_id)
 
     return _delete_user_db(user_email, tenant_id)
 
