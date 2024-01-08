@@ -1,3 +1,5 @@
+# TODO: this whole file needs to get refactored
+# mainly: pusher stuff, enrichment stuff and async stuff
 import base64
 import json
 import logging
@@ -10,9 +12,12 @@ from sqlmodel import Session
 
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
-from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment
-from keep.api.core.db import get_enrichments as get_enrichments_from_db
-from keep.api.core.db import get_last_alerts, get_session
+from keep.api.core.db import (
+    get_alerts_by_fingerprint,
+    get_enrichment,
+    get_last_alerts,
+    get_session,
+)
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
     AuthVerifier,
@@ -29,34 +34,6 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 router = APIRouter()
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
-
-
-def __send_compressed_alerts(
-    compressed_alerts_data: str,
-    number_of_alerts_in_batch: int,
-    tenant_id: str,
-    pusher_client: Pusher,
-):
-    """
-    Sends a batch of pulled alerts via pusher.
-
-    Args:
-        compressed_alerts_data (str): The compressed data to send.
-        number_of_alerts_in_batch (int): The number of alerts in the batch.
-        tenant_id (str): The tenant id.
-        pusher_client (Pusher): The pusher client.
-    """
-    logger.info(
-        f"Sending batch of pulled alerts via pusher (alerts: {number_of_alerts_in_batch})",
-        extra={
-            "number_of_alerts": number_of_alerts_in_batch,
-        },
-    )
-    pusher_client.trigger(
-        f"private-{tenant_id}",
-        "async-alerts",
-        compressed_alerts_data,
-    )
 
 
 def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
@@ -97,22 +74,36 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
 
 def pull_alerts_from_providers(
     tenant_id: str, pusher_client: Pusher | None, sync: bool = False
-) -> list[AlertDto] | None:
+) -> list[AlertDto]:
+    """
+    Pulls alerts from the installed providers.
+    tb: THIS FUNCTION NEEDS TO BE REFACTORED!
+
+    Args:
+        tenant_id (str): The tenant id.
+        pusher_client (Pusher | None): The pusher client.
+        sync (bool, optional): Whether the process is sync or not. Defaults to False.
+
+    Raises:
+        HTTPException: If the pusher client is None and the process is not sync.
+
+    Returns:
+        list[AlertDto]: The pulled alerts.
+    """
     if pusher_client is None and sync is False:
         raise HTTPException(500, "Cannot pull alerts async when pusher is disabled.")
-    all_providers = ProvidersFactory.get_all_providers()
+
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
     )
-    installed_providers = ProvidersFactory.get_installed_providers(
-        tenant_id=tenant_id, all_providers=all_providers
-    )
+
     logger.info(
         f"{'Asynchronously' if sync is False else 'Synchronously'} pulling alerts from installed providers"
     )
+
     sync_alerts = []  # if we're running in sync mode
-    for provider in installed_providers:
+    for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider.id,
@@ -128,56 +119,30 @@ def pull_alerts_from_providers(
                     "tenant_id": tenant_id,
                 },
             )
-            alerts = provider_class.get_alerts()
+            sorted_provider_alerts_by_fingerprint = (
+                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+            )
             logger.info(
                 f"Pulled alerts from provider {provider.type} ({provider.id})",
                 extra={
                     "provider_type": provider.type,
                     "provider_id": provider.id,
                     "tenant_id": tenant_id,
-                    "num_of_alerts": len(alerts),
+                    "number_of_fingerprints": len(
+                        sorted_provider_alerts_by_fingerprint.keys()
+                    ),
                 },
             )
 
-            if alerts:
-                # enrich also the pulled alerts:
-                pulled_alerts_fingerprints = list(
-                    set([alert.fingerprint for alert in alerts])
-                )
-                pulled_alerts_enrichments = get_enrichments_from_db(
-                    tenant_id=tenant_id, fingerprints=pulled_alerts_fingerprints
-                )
-                logger.info(
-                    "Enriching pulled alerts",
-                    extra={
-                        "provider_type": provider.type,
-                        "provider_id": provider.id,
-                        "tenant_id": tenant_id,
-                    },
-                )
-                for alert_enrichment in pulled_alerts_enrichments:
-                    for alert in alerts:
-                        if alert_enrichment.alert_fingerprint == alert.fingerprint:
-                            # enrich
-                            for enrichment in alert_enrichment.enrichments:
-                                # set the enrichment
-                                setattr(
-                                    alert,
-                                    enrichment,
-                                    alert_enrichment.enrichments[enrichment],
-                                )
-                logger.info(
-                    "Enriched pulled alerts",
-                    extra={
-                        "provider_type": provider.type,
-                        "provider_id": provider.id,
-                        "tenant_id": tenant_id,
-                    },
-                )
+            if sorted_provider_alerts_by_fingerprint:
+                last_alerts = [
+                    alerts[0]
+                    for alerts in sorted_provider_alerts_by_fingerprint.values()
+                ]
                 if sync:
-                    sync_alerts.extend(alerts)
+                    sync_alerts.extend(last_alerts)
                     logger.info(
-                        f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(alerts)})",
+                        f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                         extra={
                             "provider_type": provider.type,
                             "provider_id": provider.id,
@@ -192,7 +157,7 @@ def pull_alerts_from_providers(
                 new_compressed_batch = ""
                 number_of_alerts_in_batch = 0
                 # tb: this might be too slow in the future and we might need to refactor
-                for alert in alerts:
+                for alert in last_alerts:
                     alert_dict = alert.dict()
                     batch_send.append(alert_dict)
                     new_compressed_batch = base64.b64encode(
@@ -202,11 +167,10 @@ def pull_alerts_from_providers(
                         number_of_alerts_in_batch += 1
                         previous_compressed_batch = new_compressed_batch
                     else:
-                        __send_compressed_alerts(
+                        pusher_client.trigger(
+                            f"private-{tenant_id}",
+                            "async-alerts",
                             previous_compressed_batch,
-                            number_of_alerts_in_batch,
-                            tenant_id,
-                            pusher_client,
                         )
                         batch_send = [alert_dict]
                         new_compressed_batch = ""
@@ -215,16 +179,14 @@ def pull_alerts_from_providers(
                 # this means we didn't get to this ^ else statement and loop ended
                 #   so we need to send the rest of the alerts
                 if new_compressed_batch and len(new_compressed_batch) < 10240:
-                    __send_compressed_alerts(
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
                         new_compressed_batch,
-                        number_of_alerts_in_batch,
-                        tenant_id,
-                        pusher_client,
                     )
-
                 logger.info("Sent batch of pulled alerts via pusher")
             logger.info(
-                f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(alerts)})",
+                f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                 extra={
                     "provider_type": provider.type,
                     "provider_id": provider.id,
@@ -244,8 +206,7 @@ def pull_alerts_from_providers(
     if sync is False:
         pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
     logger.info("Fetched alerts from installed providers")
-    if sync is True:
-        return sync_alerts
+    return sync_alerts
 
 
 @router.get(
@@ -267,7 +228,6 @@ def get_all_alerts(
     )
     db_alerts = get_last_alerts(tenant_id=tenant_id)
     enriched_alerts_dto = __enrich_alerts(db_alerts)
-
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -275,15 +235,14 @@ def get_all_alerts(
         },
     )
 
-    # if sync:
-    #     logger.info("Syncronusly pulling alerts from providers")
-    #     alerts_dto.extend(
-    #         pull_alerts_from_providers(tenant_id, pusher_client, sync=True)
-    #     )
-    # else:
-    #     logger.info("Adding task to async fetch alerts from providers")
-    #     background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
-    #     logger.info("Added task to async fetch alerts from providers")
+    if sync:
+        enriched_alerts_dto.extend(
+            pull_alerts_from_providers(tenant_id, pusher_client, sync=True)
+        )
+    else:
+        logger.info("Adding task to async fetch alerts from providers")
+        background_tasks.add_task(pull_alerts_from_providers, tenant_id, pusher_client)
+        logger.info("Added task to async fetch alerts from providers")
 
     return enriched_alerts_dto
 
@@ -291,6 +250,8 @@ def get_all_alerts(
 @router.get("/{fingerprint}/history", description="Get alert history")
 def get_alert_history(
     fingerprint: str,
+    provider_id: str | None = None,
+    provider_type: str | None = None,
     tenant_id: str = Depends(verify_token_or_key),
 ) -> list[AlertDto]:
     logger.info(
@@ -302,6 +263,28 @@ def get_alert_history(
     )
     db_alerts = get_alerts_by_fingerprint(tenant_id=tenant_id, fingerprint=fingerprint)
     enriched_alerts_dto = __enrich_alerts(db_alerts)
+
+    if provider_id is not None and provider_type is not None:
+        try:
+            installed_provider = ProvidersFactory.get_installed_provider(
+                tenant_id=tenant_id,
+                provider_id=provider_id,
+                provider_type=provider_type,
+            )
+            pulled_alerts_history = installed_provider.get_alerts_by_fingerprint(
+                tenant_id=tenant_id
+            ).get(fingerprint, [])
+            enriched_alerts_dto.extend(pulled_alerts_history)
+        except Exception:
+            logger.warn(
+                "Failed to pull alerts history from installed provider",
+                extra={
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "tenant_id": tenant_id,
+                },
+            )
+
     logger.info(
         "Fetched alert history",
         extra={
@@ -475,17 +458,15 @@ def handle_formatted_events(
             session.add(alert)
             formatted_event.event_id = alert.id
             alert_event_copy = {**alert.event}
-            alert_enrichments = get_enrichments_from_db(
-                tenant_id=tenant_id, fingerprints=[formatted_event.fingerprint]
+            alert_enrichment = get_enrichment(
+                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
             )
-            if alert_enrichments:
-                # enrich
-                for alert_enrichment in alert_enrichments:
-                    for enrichment in alert_enrichment.enrichments:
-                        # set the enrichment
-                        alert_event_copy[enrichment] = alert_enrichment.enrichments[
-                            enrichment
-                        ]
+            if alert_enrichment:
+                for enrichment in alert_enrichment.enrichments:
+                    # set the enrichment
+                    alert_event_copy[enrichment] = alert_enrichment.enrichments[
+                        enrichment
+                    ]
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",

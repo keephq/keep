@@ -355,19 +355,10 @@ class ProvidersFactory:
         initialized_consumer_providers = []
         for provider in installed_consumer_providers:
             try:
-                context_manager = ContextManager(tenant_id=provider.tenant_id)
-                secret_manager = SecretManagerFactory.get_secret_manager(
-                    context_manager
-                )
-                provider_config = secret_manager.read_secret(
-                    secret_name=f"{provider.tenant_id}_{provider.type}_{provider.id}",
-                    is_json=True,
-                )
-                provider_class = ProvidersFactory.get_provider(
-                    context_manager=context_manager,
+                provider_class = ProvidersFactory.get_installed_provider(
+                    tenant_id=provider.tenant_id,
                     provider_id=provider.id,
                     provider_type=provider.type,
-                    provider_config=provider_config,
                 )
                 initialized_consumer_providers.append(provider_class)
             except Exception:
@@ -376,3 +367,32 @@ class ProvidersFactory:
                 )
                 continue
         return initialized_consumer_providers
+
+    @staticmethod
+    def get_installed_provider(
+        tenant_id: str, provider_id: str, provider_type: str
+    ) -> BaseProvider:
+        """
+        Get the instantiated provider class according to the provider type.
+
+        Args:
+            tenant_id (str): The tenant id.
+            provider_id (str): The provider id.
+            provider_type (str): The provider type.
+
+        Returns:
+            BaseProvider: The instantiated provider class.
+        """
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_config = secret_manager.read_secret(
+            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            is_json=True,
+        )
+        provider_class = ProvidersFactory.get_provider(
+            context_manager=context_manager,
+            provider_id=provider_id,
+            provider_type=provider_type,
+            provider_config=provider_config,
+        )
+        return provider_class

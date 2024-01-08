@@ -29,6 +29,12 @@ export function AlertHistory({
   accessToken,
 }: Props) {
   const apiUrl = getApiURL();
+  const url =
+    selectedAlert && accessToken
+      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history?provider_id=${
+          selectedAlert.providerId
+        }&provider_type=${selectedAlert.source![0]}`
+      : null;
   const {
     data: alerts,
     error,
@@ -37,7 +43,10 @@ export function AlertHistory({
     selectedAlert && accessToken
       ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history`
       : null,
-    (url) => fetcher(url, accessToken!)
+    (url) => fetcher(url, accessToken!),
+    {
+      revalidateOnFocus: false,
+    }
   );
 
   if (!selectedAlert || isLoading) {

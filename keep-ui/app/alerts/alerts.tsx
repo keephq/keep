@@ -103,62 +103,52 @@ export default function Alerts({
     }
   }, [data, pusherDisabled]);
 
+  useEffect(() => {
+    if (!pusherDisabled && pusher) {
+      console.log("Connecting to pusher");
+      const channelName = `private-${tenantId}`;
+      const channel = pusher.subscribe(channelName);
+
+      channel.bind("async-alerts", function (base64CompressedAlert: string) {
+        setLastReceivedAlertDate(new Date());
+        const decompressedAlert = zlib.inflateSync(
+          Buffer.from(base64CompressedAlert, "base64")
+        );
+        const newAlerts = JSON.parse(
+          new TextDecoder().decode(decompressedAlert)
+        ) as AlertDto[];
+        newAlerts.forEach((alert) => {
+          if (typeof alert.lastReceived === "string")
+            alert.lastReceived = new Date(alert.lastReceived);
+        });
+        const fingerprints = newAlerts.map((alert) => alert.fingerprint);
+        setAlerts((prevAlerts) => {
+          return [
+            // Remove the fingerprints that are already in the list
+            ...prevAlerts.filter(
+              (alert) => !fingerprints.includes(alert.fingerprint)
+            ),
+            ...newAlerts,
+          ];
+        });
+      });
+
+      channel.bind("async-done", function () {
+        setIsAsyncLoading(false);
+      });
+
+      setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
+
+      console.log("Connected to pusher");
+      return () => {
+        pusher.unsubscribe(channelName);
+      };
+    } else {
+      console.log("Pusher disabled");
+    }
+  }, [pusher, tenantId, pusherDisabled]);
+
   if (isLoading) return <Loading slowLoading={isSlowLoading} />;
-
-  // useEffect(() => {
-  //   if (!pusherDisabled && pusher) {
-  //     console.log("Connecting to pusher");
-  //     const channelName = `private-${tenantId}`;
-  //     const channel = pusher.subscribe(channelName);
-
-  //     channel.bind("async-alerts", function (base64CompressedAlert: string) {
-  //       setLastReceivedAlertDate(new Date());
-  //       const decompressedAlert = zlib.inflateSync(
-  //         Buffer.from(base64CompressedAlert, "base64")
-  //       );
-  //       const newAlerts = JSON.parse(
-  //         new TextDecoder().decode(decompressedAlert)
-  //       ) as AlertDto[];
-  //       newAlerts.forEach((alert) => {
-  //         if (typeof alert.lastReceived === "string")
-  //           alert.lastReceived = new Date(alert.lastReceived);
-  //       });
-  //       setAlerts((prevAlerts) => {
-  //         const combinedAlerts = [...prevAlerts, ...newAlerts];
-  //         const uniqueObjectsMap = new Map();
-  //         combinedAlerts.forEach((alert) => {
-  //           let alertKey = "";
-  //           try {
-  //             alertKey = `${
-  //               alert.fingerprint
-  //             }-${alert.lastReceived.toISOString()}`;
-  //           } catch {
-  //             alertKey = alert.fingerprint;
-  //           }
-  //           uniqueObjectsMap.set(alertKey, alert);
-  //         });
-  //         return Array.from(new Set(uniqueObjectsMap.values()));
-  //       });
-  //     });
-
-  //     channel.bind("async-done", function () {
-  //       setIsAsyncLoading(false);
-  //     });
-
-  //     setTimeout(() => setIsAsyncLoading(false), 10000); // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
-
-  //     console.log("Connected to pusher");
-  //     return () => {
-  //       pusher.unsubscribe(channelName);
-  //     };
-  //   } else {
-  //     console.log("Pusher disabled");
-  //   }
-  // }, [pusher, tenantId, pusherDisabled]);
-
-  // Get a new searchParams string by merging the current
-  // searchParams with a provided key/value pair
-  // https://nextjs.org/docs/app/api-reference/functions/use-search-params
 
   const onDelete = (
     fingerprint: string,

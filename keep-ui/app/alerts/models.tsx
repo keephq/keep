@@ -30,6 +30,7 @@ export interface AlertDto {
   assignees?: { [lastReceived: string]: string };
   ticket_url: string;
   playbook_url?: string;
+  providerId?: string;
 }
 
 export interface Preset {
@@ -58,4 +59,5 @@ export const AlertKnownKeys = [
   "ack_status",
   "deleted",
   "assignees",
+  "providerId",
 ];
