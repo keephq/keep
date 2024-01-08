@@ -119,6 +119,7 @@ class RulesEngine:
                         "id": fingerprint,
                         "status": "firing",
                         "pushed": True,
+                        "fingerprint": fingerprint,
                     },
                     fingerprint=fingerprint,
                 )

@@ -27,6 +27,7 @@ import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
 import { GlobeIcon } from "@radix-ui/react-icons";
 import { getAlertLastReceieved } from "utils/helpers";
+import "./alerts.css";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -351,7 +352,7 @@ export default function Alerts({
               tooltip="Live alerts are streamlining from Keep"
               size="xs"
             >
-              &nbsp;Live
+              <span className="animate-ping">&nbsp;Live</span>
             </Badge>
             <Subtitle className="text-[10px]">
               Last received:{" "}
