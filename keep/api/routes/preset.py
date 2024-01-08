@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import verify_token_or_key
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 
 router = APIRouter()
@@ -17,9 +17,10 @@ logger = logging.getLogger(__name__)
     description="Get all presets for tenant",
 )
 def get_presets(
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ) -> list[PresetDto]:
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
     statement = select(Preset).where(Preset.tenant_id == tenant_id)
     presets = session.exec(statement).all()
@@ -35,9 +36,10 @@ class CreateOrUpdatePresetDto(BaseModel):
 @router.post("", description="Create a preset for tenant")
 def create_preset(
     body: CreateOrUpdatePresetDto,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ) -> PresetDto:
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Creating preset")
     if not body.options or not body.name:
         raise HTTPException(400, "Options and name are required")
@@ -58,9 +60,10 @@ def create_preset(
 )
 def delete_preset(
     uuid: str,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Deleting preset", extra={"uuid": uuid})
     statement = (
         select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
@@ -81,9 +84,10 @@ def delete_preset(
 def update_preset(
     uuid: str,
     body: CreateOrUpdatePresetDto,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ) -> PresetDto:
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Updating preset", extra={"uuid": uuid})
     statement = (
         select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)

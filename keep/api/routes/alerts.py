@@ -15,11 +15,9 @@ from keep.api.core.db import get_enrichment
 from keep.api.core.db import get_enrichments as get_enrichments_from_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
     get_pusher_client,
-    get_user_email,
-    verify_api_key,
-    verify_bearer_token,
-    verify_token_or_key,
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert
@@ -222,9 +220,10 @@ def pull_alerts_from_providers(
 def get_all_alerts(
     background_tasks: BackgroundTasks,
     sync: bool = False,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
         extra={
@@ -280,9 +279,11 @@ def get_all_alerts(
 @router.delete("", description="Delete alert by name")
 def delete_alert(
     delete_alert: DeleteRequestBody,
-    tenant_id: str = Depends(verify_bearer_token),
-    user_email: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:alert"])),
 ) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
+    user_email = authenticated_entity.email
+
     logger.info(
         "Deleting alert",
         extra={
@@ -341,9 +342,10 @@ def assign_alert(
     fingerprint: str,
     last_received: str,
     unassign: bool = False,
-    tenant_id: str = Depends(verify_bearer_token),
-    user_email: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
+    user_email = authenticated_entity.email
     logger.info(
         "Assigning alert",
         extra={
@@ -546,7 +548,7 @@ def handle_formatted_events(
 async def receive_generic_event(
     alert: AlertDto | list[AlertDto],
     bg_tasks: BackgroundTasks,
-    tenant_id: str = Depends(verify_api_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ):
@@ -559,6 +561,7 @@ async def receive_generic_event(
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
         session (Session, optional): Defaults to Depends(get_session).
     """
+    tenant_id = authenticated_entity.tenant_id
     if isinstance(alert, AlertDto):
         alert = [alert]
     bg_tasks.add_task(
@@ -580,10 +583,11 @@ async def receive_event(
     request: Request,
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
-    tenant_id: str = Depends(verify_api_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     # if this request is just to confirm the sns subscription, return ok
     # TODO: think of a more elegant way to do this
@@ -669,9 +673,10 @@ async def receive_event(
 )
 def get_alert(
     fingerprint: str,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
     session: Session = Depends(get_session),
 ) -> AlertDto:
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alert",
         extra={
@@ -694,8 +699,9 @@ def get_alert(
 )
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Enriching alert",
         extra={

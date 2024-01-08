@@ -6,11 +6,7 @@ from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
-from keep.api.core.dependencies import (
-    get_user_email,
-    verify_bearer_token,
-    verify_token_or_key,
-)
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 
 router = APIRouter()
 
@@ -22,8 +18,9 @@ logger = logging.getLogger(__name__)
     description="Get Rules",
 )
 def get_rules(
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info("Getting rules")
     rules = get_rules_db(tenant_id=tenant_id)
     logger.info("Got rules")
@@ -37,9 +34,10 @@ def get_rules(
 )
 async def create_rule(
     request: Request,
-    tenant_id: str = Depends(verify_token_or_key),
-    created_by: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
 ):
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
     logger.info("Creating rule")
     try:
         body = await request.json()
@@ -90,8 +88,9 @@ async def create_rule(
 async def delete_rule(
     rule_id: str,
     request: Request,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:rules"])),
 ):
+    tenant_id = authenticated_entity.tenant_id
     logger.info(f"Deleting rule {rule_id}")
     if delete_rule_db(tenant_id=tenant_id, rule_id=rule_id):
         logger.info(f"Rule {rule_id} deleted")
@@ -108,9 +107,10 @@ async def delete_rule(
 async def update_rule(
     rule_id: str,
     request: Request,
-    tenant_id: str = Depends(verify_token_or_key),
-    updated_by: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["update:rules"])),
 ):
+    tenant_id = authenticated_entity.tenant_id
+    updated_by = authenticated_entity.email
     logger.info(f"Updating rule {rule_id}")
     try:
         body = await request.json()

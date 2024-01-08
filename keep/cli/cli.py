@@ -273,7 +273,9 @@ def api(multi_tenant: bool):
     else:
         auth_type = "NO_AUTH"
     app = api.get_app(auth_type=auth_type)
-    logger.info(f"App initialized, multi tenancy: {multi_tenant}")
+    logger.info(
+        f"App initialized, multi tenancy flag from user [overriden by AUTH_TYPE env var]: {multi_tenant}"
+    )
     app.dependency_overrides[click.get_current_context] = lambda: ctx
     api.run(app)
 
