@@ -187,8 +187,7 @@ To turn PostHog off, set the `DISABLE_POSTHOG=true` environment variable and rem
 #### Spinning up Keep with docker-compose
 The easiest way to start with Keep is to run it via docker-compose:
 ```shell
-wget -O docker-compose.yml https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml
-docker-compose -f docker-compose.yml up
+curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
 #### Local development
