@@ -9,7 +9,6 @@ from fastapi.security import (
     APIKeyHeader,
     HTTPAuthorizationCredentials,
     HTTPBasic,
-    HTTPDigest,
     OAuth2PasswordBearer,
 )
 from pusher import Pusher
@@ -23,9 +22,6 @@ from keep.api.core.rbac import get_role_by_role_name
 logger = logging.getLogger(__name__)
 
 auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key", auto_error=False)
-http_digest = HTTPDigest(
-    auto_error=False
-)  # hack for grafana, they don't support api key header
 http_basic = HTTPBasic(auto_error=False)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -60,7 +56,7 @@ def get_user_email(request: Request) -> str | None:
             )
 
 
-def __extract_api_key(
+def extract_api_key(
     request: Request, api_key: str, authorization: HTTPAuthorizationCredentials
 ) -> str:
     """
@@ -137,7 +133,7 @@ def _verify_api_key(
     Returns:
         str: The tenant id.
     """
-    api_key = __extract_api_key(request, api_key, authorization)
+    api_key = extract_api_key(request, api_key, authorization)
 
     tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:
@@ -272,9 +268,6 @@ def _verify_api_key_single_tenant(
         return AuthenticatedEntity(
             tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
         )
-
-    api_key = __extract_api_key(request, api_key, authorization)
-
     tenant_api_key = get_api_key(api_key)
     if not tenant_api_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
@@ -314,19 +307,6 @@ class AuthVerifierMultiTenant:
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
     ) -> AuthenticatedEntity:
-        # Attempt to verify API Key first
-        if api_key:
-            try:
-                return _verify_api_key(request, self.scopes, api_key, authorization)
-            # specific exceptions
-            except HTTPException:
-                raise
-            # generic exception
-            except Exception:
-                logger.exception("Failed to validate API Key")
-                raise HTTPException(
-                    status_code=401, detail="Invalid authentication credentials"
-                )
         # If API Key is not present or not valid, attempt to verify the token
         if token:
             try:
@@ -336,6 +316,21 @@ class AuthVerifierMultiTenant:
                 raise
             except Exception:
                 logger.exception("Failed to validate token")
+                raise HTTPException(
+                    status_code=401, detail="Invalid authentication credentials"
+                )
+
+        # Attempt to verify API Key
+        api_key = extract_api_key(request, api_key, authorization)
+        if api_key:
+            try:
+                return _verify_api_key(request, self.scopes, api_key, authorization)
+            # specific exceptions
+            except HTTPException:
+                raise
+            # generic exception
+            except Exception:
+                logger.exception("Failed to validate API Key")
                 raise HTTPException(
                     status_code=401, detail="Invalid authentication credentials"
                 )
@@ -357,7 +352,20 @@ class AuthVerifierSingleTenant:
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
     ) -> str:
+        # If API Key is not present or not valid, attempt to verify the token
+        if token:
+            try:
+                return _verify_bearer_token_single_tenant(self.scopes, token)
+            # authorization error
+            except HTTPException:
+                raise
+            except Exception:
+                logger.exception("Failed to validate token")
+                raise HTTPException(
+                    status_code=401, detail="Invalid authentication credentials"
+                )
         # Attempt to verify API Key first
+        api_key = extract_api_key(request, api_key, authorization)
         if api_key:
             try:
                 return _verify_api_key_single_tenant(
@@ -368,18 +376,6 @@ class AuthVerifierSingleTenant:
                 raise
             except Exception:
                 logger.exception("Failed to validate API Key")
-                raise HTTPException(
-                    status_code=401, detail="Invalid authentication credentials"
-                )
-        # If API Key is not present or not valid, attempt to verify the token
-        if token:
-            try:
-                return _verify_bearer_token_single_tenant(self.scopes, token)
-            # authorization error
-            except HTTPException:
-                raise
-            except Exception:
-                logger.exception("Failed to validate token")
                 raise HTTPException(
                     status_code=401, detail="Invalid authentication credentials"
                 )
