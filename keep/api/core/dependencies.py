@@ -307,7 +307,7 @@ class AuthVerifierMultiTenant:
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
     ) -> AuthenticatedEntity:
-        # If API Key is not present or not valid, attempt to verify the token
+        # Attempt to verify the token first
         if token:
             try:
                 return _verify_bearer_token(self.scopes, token)
@@ -352,7 +352,7 @@ class AuthVerifierSingleTenant:
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
     ) -> str:
-        # If API Key is not present or not valid, attempt to verify the token
+        # Attempt to verify the token first
         if token:
             try:
                 return _verify_bearer_token_single_tenant(self.scopes, token)
