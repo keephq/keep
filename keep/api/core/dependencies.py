@@ -334,7 +334,7 @@ class AuthVerifierSingleTenant:
         api_key: Optional[str] = Security(auth_header),
         authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
         token: Optional[str] = Depends(oauth2_scheme),
-    ) -> str:
+    ) -> AuthenticatedEntity:
         # Attempt to verify the token first
         if token:
             try:
