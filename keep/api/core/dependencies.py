@@ -115,172 +115,11 @@ def extract_api_key(
     return api_key
 
 
-def _verify_api_key(
-    request: Request,
-    scopes: list[str] = [],
-    api_key: str = Security(auth_header),
-    authorization: HTTPAuthorizationCredentials = Security(http_basic),
-) -> AuthenticatedEntity:
-    """
-    Verifies that a customer is allowed to access the API.
-
-    Args:
-        api_key (str, optional): The API key extracted from X-API-KEY header. Defaults to Security(auth_header).
-
-    Raises:
-        HTTPException: 401 if the user is unauthorized.
-
-    Returns:
-        str: The tenant id.
-    """
-    api_key = extract_api_key(request, api_key, authorization)
-
-    tenant_api_key = get_api_key(api_key)
-    if not tenant_api_key:
-        raise HTTPException(status_code=401, detail="Invalid API Key")
-
-    # validate scopes
-    role = get_role_by_role_name(tenant_api_key.role)
-    if not role.has_scopes(scopes):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You don't have the required scopes to access this resource [required scoopes: {scopes}]",
-        )
-    request.state.tenant_id = tenant_api_key.tenant_id
-    return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
-
-
 # init once so the cache will actually work
 auth_domain = os.environ.get("AUTH0_DOMAIN")
 if auth_domain:
     jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
     jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
-
-
-def _verify_bearer_token(
-    scopes: list[str] = [], token: str = Depends(oauth2_scheme)
-) -> str:
-    # Took the implementation from here:
-    #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
-    from opentelemetry import trace
-
-    tracer = trace.get_tracer(__name__)
-    with tracer.start_as_current_span("verify_bearer_token"):
-        if not token:
-            raise HTTPException(status_code=401, detail="No token provided 👈")
-        try:
-            auth_audience = os.environ.get("AUTH0_AUDIENCE")
-            issuer = f"https://{auth_domain}/"
-            jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
-            payload = jwt.decode(
-                token,
-                jwt_signing_key,
-                algorithms="RS256",
-                audience=auth_audience,
-                issuer=issuer,
-                leeway=60,
-            )
-            tenant_id = payload.get("keep_tenant_id")
-            role_name = payload.get(
-                "keep_role", AdminRole.get_name()
-            )  # default to admin for backwards compatibility
-            email = payload.get("email")
-            role = get_role_by_role_name(role_name)
-            # validate scopes
-            if not role.has_scopes(scopes):
-                raise HTTPException(
-                    status_code=403,
-                    detail="You don't have the required permissions to access this resource",
-                )
-            return AuthenticatedEntity(tenant_id, email)
-        # authorization error
-        except HTTPException:
-            raise
-        except jwt.exceptions.DecodeError:
-            logger.exception("Failed to decode token")
-            raise HTTPException(status_code=401, detail="Token is not a valid JWT")
-        except Exception as e:
-            logger.exception("Failed to validate token")
-            raise HTTPException(status_code=401, detail=str(e))
-
-
-def get_user_email_single_tenant(request: Request) -> str:
-    # if we don't want to use authentication, return the single tenant id
-    if (
-        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-        == AuthenticationType.NO_AUTH.value
-    ):
-        return SINGLE_TENANT_UUID
-
-    return get_user_email(request)
-
-
-def _verify_bearer_token_single_tenant(
-    scopes: list[str] = [], token: str = Depends(oauth2_scheme)
-) -> AuthenticatedEntity:
-    # if we don't want to use authentication, return the single tenant id
-    if (
-        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-        == AuthenticationType.NO_AUTH.value
-    ):
-        return AuthenticatedEntity(SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL)
-
-    # else, validate the token
-    jwt_secret = os.environ.get("KEEP_JWT_SECRET")
-    if not jwt_secret:
-        raise HTTPException(status_code=401, detail="Missing JWT secret")
-
-    try:
-        payload = jwt.decode(
-            token,
-            jwt_secret,
-            algorithms="HS256",
-        )
-        tenant_id = payload.get("tenant_id")
-        email = payload.get("email")
-        role_name = payload.get(
-            "role", str(AdminRole)
-        )  # default to admin for backwards compatibility
-        role = get_role_by_role_name(role_name)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid JWT token")
-    # validate scopes
-    if not role.has_scopes(scopes):
-        raise HTTPException(
-            status_code=403,
-            detail="You don't have the required permissions to access this resource",
-        )
-    return AuthenticatedEntity(tenant_id, email)
-
-
-def _verify_api_key_single_tenant(
-    request: Request,
-    scopes: list[str] = [],
-    api_key: str = Security(auth_header),
-    authorization: HTTPAuthorizationCredentials = Security(http_basic),
-    session: Session = Depends(get_session),
-) -> AuthenticatedEntity:
-    # if we don't want to use authentication, return the single tenant id
-    if (
-        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-        == AuthenticationType.NO_AUTH.value
-    ):
-        return AuthenticatedEntity(
-            tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
-        )
-    tenant_api_key = get_api_key(api_key)
-    if not tenant_api_key:
-        raise HTTPException(status_code=401, detail="Invalid API Key")
-
-    role = get_role_by_role_name(tenant_api_key.role)
-    # validate scopes
-    if not role.has_scopes(scopes):
-        raise HTTPException(
-            status_code=403,
-            detail=f"You don't have the required scopes to access this resource [required scoopes: {scopes}]",
-        )
-    request.state.tenant_id = tenant_api_key.tenant_id
-    return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
 
 
 def AuthVerifier(scopes: list[str] = []):
@@ -300,6 +139,84 @@ class AuthVerifierMultiTenant:
     def __init__(self, scopes: list[str] = []) -> None:
         self.scopes = scopes
 
+    def _verify_bearer_token(
+        self, token: str = Depends(oauth2_scheme)
+    ) -> AuthenticatedEntity:
+        # Took the implementation from here:
+        #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("verify_bearer_token"):
+            if not token:
+                raise HTTPException(status_code=401, detail="No token provided 👈")
+            try:
+                auth_audience = os.environ.get("AUTH0_AUDIENCE")
+                issuer = f"https://{auth_domain}/"
+                jwt_signing_key = jwks_client.get_signing_key_from_jwt(token).key
+                payload = jwt.decode(
+                    token,
+                    jwt_signing_key,
+                    algorithms="RS256",
+                    audience=auth_audience,
+                    issuer=issuer,
+                    leeway=60,
+                )
+                tenant_id = payload.get("keep_tenant_id")
+                role_name = payload.get(
+                    "keep_role", AdminRole.get_name()
+                )  # default to admin for backwards compatibility
+                email = payload.get("email")
+                role = get_role_by_role_name(role_name)
+                # validate scopes
+                if not role.has_scopes(self.scopes):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You don't have the required permissions to access this resource",
+                    )
+                return AuthenticatedEntity(tenant_id, email)
+            # authorization error
+            except HTTPException:
+                raise
+            except jwt.exceptions.DecodeError:
+                logger.exception("Failed to decode token")
+                raise HTTPException(status_code=401, detail="Token is not a valid JWT")
+            except Exception as e:
+                logger.exception("Failed to validate token")
+                raise HTTPException(status_code=401, detail=str(e))
+
+    def _verify_api_key(
+        self,
+        request: Request,
+        api_key: str = Security(auth_header),
+        authorization: HTTPAuthorizationCredentials = Security(http_basic),
+    ) -> AuthenticatedEntity:
+        """
+        Verifies that a customer is allowed to access the API.
+
+        Args:
+            api_key (str, optional): The API key extracted from X-API-KEY header. Defaults to Security(auth_header).
+
+        Raises:
+            HTTPException: 401 if the user is unauthorized.
+
+        Returns:
+            str: The tenant id.
+        """
+        tenant_api_key = get_api_key(api_key)
+        if not tenant_api_key:
+            raise HTTPException(status_code=401, detail="Invalid API Key")
+
+        # validate scopes
+        role = get_role_by_role_name(tenant_api_key.role)
+        if not role.has_scopes(self.scopes):
+            raise HTTPException(
+                status_code=403,
+                detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
+            )
+        request.state.tenant_id = tenant_api_key.tenant_id
+        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+
     def __call__(
         self,
         request: Request,
@@ -310,7 +227,7 @@ class AuthVerifierMultiTenant:
         # Attempt to verify the token first
         if token:
             try:
-                return _verify_bearer_token(self.scopes, token)
+                return self._verify_bearer_token(token)
             # specific exceptions
             except HTTPException:
                 raise
@@ -324,7 +241,7 @@ class AuthVerifierMultiTenant:
         api_key = extract_api_key(request, api_key, authorization)
         if api_key:
             try:
-                return _verify_api_key(request, self.scopes, api_key, authorization)
+                return self._verify_api_key(request, api_key, authorization)
             # specific exceptions
             except HTTPException:
                 raise
@@ -345,6 +262,72 @@ class AuthVerifierSingleTenant:
     def __init__(self, scopes: list[str] = []) -> None:
         self.scopes = scopes
 
+    def _verify_api_key(
+        self,
+        request: Request,
+        api_key: str = Security(auth_header),
+        authorization: HTTPAuthorizationCredentials = Security(http_basic),
+        session: Session = Depends(get_session),
+    ) -> AuthenticatedEntity:
+        # if we don't want to use authentication, return the single tenant id
+        if (
+            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+            == AuthenticationType.NO_AUTH.value
+        ):
+            return AuthenticatedEntity(
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
+            )
+        tenant_api_key = get_api_key(api_key)
+        if not tenant_api_key:
+            raise HTTPException(status_code=401, detail="Invalid API Key")
+
+        role = get_role_by_role_name(tenant_api_key.role)
+        # validate scopes
+        if not role.has_scopes(self.scopes):
+            raise HTTPException(
+                status_code=403,
+                detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
+            )
+        request.state.tenant_id = tenant_api_key.tenant_id
+        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+
+    def _verify_bearer_token(
+        self, token: str = Depends(oauth2_scheme)
+    ) -> AuthenticatedEntity:
+        # if we don't want to use authentication, return the single tenant id
+        if (
+            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+            == AuthenticationType.NO_AUTH.value
+        ):
+            return AuthenticatedEntity(SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL)
+
+        # else, validate the token
+        jwt_secret = os.environ.get("KEEP_JWT_SECRET")
+        if not jwt_secret:
+            raise HTTPException(status_code=401, detail="Missing JWT secret")
+
+        try:
+            payload = jwt.decode(
+                token,
+                jwt_secret,
+                algorithms="HS256",
+            )
+            tenant_id = payload.get("tenant_id")
+            email = payload.get("email")
+            role_name = payload.get(
+                "role", str(AdminRole)
+            )  # default to admin for backwards compatibility
+            role = get_role_by_role_name(role_name)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid JWT token")
+        # validate scopes
+        if not role.has_scopes(self.scopes):
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have the required permissions to access this resource",
+            )
+        return AuthenticatedEntity(tenant_id, email)
+
     def __call__(
         self,
         request: Request,
@@ -355,7 +338,7 @@ class AuthVerifierSingleTenant:
         # Attempt to verify the token first
         if token:
             try:
-                return _verify_bearer_token_single_tenant(self.scopes, token)
+                return self._verify_bearer_token(token)
             # authorization error
             except HTTPException:
                 raise
@@ -368,9 +351,7 @@ class AuthVerifierSingleTenant:
         api_key = extract_api_key(request, api_key, authorization)
         if api_key:
             try:
-                return _verify_api_key_single_tenant(
-                    request, self.scopes, api_key, authorization
-                )
+                return self._verify_api_key(request, api_key, authorization)
             # authorization error
             except HTTPException:
                 raise
