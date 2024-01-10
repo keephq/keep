@@ -67,7 +67,9 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     )
                     continue
             else:
-                alert_dto = AlertDto(**alert.event, providerId=alert.provider_id)
+                alert_dto = AlertDto(**alert.event)
+                if alert_dto.providerId is None:
+                    alert_dto.providerId = alert.provider_id
             alerts_dto.append(alert_dto)
     return alerts_dto
 

@@ -29,25 +29,19 @@ export function AlertHistory({
   accessToken,
 }: Props) {
   const apiUrl = getApiURL();
-  const url =
+  const historyUrl =
     selectedAlert && accessToken
-      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history?provider_id=${
+      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history/?provider_id=${
           selectedAlert.providerId
-        }&provider_type=${selectedAlert.source![0]}`
+        }&provider_type=${selectedAlert.source ? selectedAlert.source[0] : ""}`
       : null;
   const {
     data: alerts,
     error,
     isLoading,
-  } = useSWR<AlertDto[]>(
-    selectedAlert && accessToken
-      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history`
-      : null,
-    (url) => fetcher(url, accessToken!),
-    {
-      revalidateOnFocus: false,
-    }
-  );
+  } = useSWR<AlertDto[]>(historyUrl, (url) => fetcher(url, accessToken!), {
+    revalidateOnFocus: false,
+  });
 
   if (!selectedAlert || isLoading) {
     return <></>;
@@ -59,6 +53,7 @@ export function AlertHistory({
   alerts.forEach(
     (alert) => (alert.lastReceived = new Date(alert.lastReceived))
   );
+  alerts.sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
   const lastReceivedData = alerts.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
