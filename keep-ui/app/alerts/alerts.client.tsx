@@ -30,10 +30,8 @@ export default function AlertsPage() {
       pusherClient === null
     ) {
       const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
-        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
-          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
-          : undefined,
+        wsHost: configData?.PUSHER_HOST || "localhost",
+        wsPort: configData?.PUSHER_PORT || 6001,
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
