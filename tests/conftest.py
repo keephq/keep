@@ -129,13 +129,14 @@ def db_session(request, mysql_container):
     # Few tests require a mysql database (mainly rules)
     if request and hasattr(request, "param") and request.param == "mysql":
         db_connection_string = "mysql+pymysql://root:keep@localhost:3306/keep"
+        mock_engine = create_engine(db_connection_string)
     else:
         db_connection_string = "sqlite:///:memory:"
-    mock_engine = create_engine(
-        db_connection_string,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+        mock_engine = create_engine(
+            db_connection_string,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
     SQLModel.metadata.create_all(mock_engine)
 
     # Mock the environment variables so db.py will use it
