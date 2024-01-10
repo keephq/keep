@@ -122,6 +122,7 @@ export function AlertTable({
               checked={context.table.getIsAllRowsSelected()}
               indeterminate={context.table.getIsSomeRowsSelected()}
               onChange={context.table.getToggleAllRowsSelectedHandler()}
+              disabled={alerts.length === 0}
             />
           ),
           cell: (context) => (
