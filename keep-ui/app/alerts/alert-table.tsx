@@ -242,6 +242,7 @@ export function AlertTable({
     }),
     columnHelper.display({
       id: "extraPayload",
+      header: "Extra Payload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
     ...menuColumn,
