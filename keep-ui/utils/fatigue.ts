@@ -18,7 +18,7 @@ export const calculateFatigue = (
   }
 
   // Sort alerts by timestamp
-  const sortedAlerts = [...alerts].sort(
+  const sortedAlerts = alerts.toSorted(
     (a, b) => a.lastReceived.getTime() - b.lastReceived.getTime()
   );
 

@@ -274,7 +274,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Get alerts from the provider.
         """
         with tracer.start_as_current_span(f"{self.__class__.__name__}-get_alerts"):
-            return self._get_alerts()
+            alerts = self._get_alerts()
+            # enrich alerts with provider id
+            for alert in alerts:
+                alert.providerId = self.provider_id
+            return alerts
 
     def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
         """

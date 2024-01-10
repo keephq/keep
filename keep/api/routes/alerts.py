@@ -67,7 +67,7 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     )
                     continue
             else:
-                alert_dto = AlertDto(**alert.event)
+                alert_dto = AlertDto(**alert.event, providerId=alert.provider_id)
             alerts_dto.append(alert_dto)
     return alerts_dto
 
@@ -252,27 +252,29 @@ def get_alert_history(
     fingerprint: str,
     provider_id: str | None = None,
     provider_type: str | None = None,
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching alert history",
         extra={
             "fingerprint": fingerprint,
-            "tenant_id": tenant_id,
+            "tenant_id": authenticated_entity.tenant_id,
         },
     )
-    db_alerts = get_alerts_by_fingerprint(tenant_id=tenant_id, fingerprint=fingerprint)
+    db_alerts = get_alerts_by_fingerprint(
+        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint
+    )
     enriched_alerts_dto = __enrich_alerts(db_alerts)
 
     if provider_id is not None and provider_type is not None:
         try:
             installed_provider = ProvidersFactory.get_installed_provider(
-                tenant_id=tenant_id,
+                tenant_id=authenticated_entity.tenant_id,
                 provider_id=provider_id,
                 provider_type=provider_type,
             )
             pulled_alerts_history = installed_provider.get_alerts_by_fingerprint(
-                tenant_id=tenant_id
+                tenant_id=authenticated_entity.tenant_id
             ).get(fingerprint, [])
             enriched_alerts_dto.extend(pulled_alerts_history)
         except Exception:
@@ -281,14 +283,14 @@ def get_alert_history(
                 extra={
                     "provider_id": provider_id,
                     "provider_type": provider_type,
-                    "tenant_id": tenant_id,
+                    "tenant_id": authenticated_entity.tenant_id,
                 },
             )
 
     logger.info(
         "Fetched alert history",
         extra={
-            "tenant_id": tenant_id,
+            "tenant_id": authenticated_entity.tenant_id,
             "fingerprint": fingerprint,
         },
     )
