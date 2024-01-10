@@ -4,4 +4,5 @@ export interface InternalConfig {
   PUSHER_HOST: string;
   PUSHER_PORT: number;
   PUSHER_APP_KEY: string;
+  PUSHER_CLUSTER?: string;
 }

@@ -10,6 +10,7 @@ export default async function handler(
     PUSHER_HOST: process.env.PUSHER_HOST,
     PUSHER_PORT: parseInt(process.env.PUSHER_PORT || "6001"),
     PUSHER_APP_KEY: process.env.PUSHER_APP_KEY,
+    PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
     API_URL: process.env.API_URL,
   });
 }

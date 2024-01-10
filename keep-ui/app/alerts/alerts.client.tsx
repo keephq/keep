@@ -36,7 +36,7 @@ export default function AlertsPage() {
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
+        cluster: configData.PUSHER_CLUSTER || "local",
         channelAuthorization: {
           transport: "ajax",
           endpoint: `${getApiURL()}/pusher/auth`,
