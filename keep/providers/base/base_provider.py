@@ -313,15 +313,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 fingerprints=grouped_alerts.keys(),
             )
             for alert_enrichment in pulled_alerts_enrichments:
-                alerts_to_enrich = grouped_alerts.get(alert_enrichment.fingerprint)
-                for alert_to_enrich in alerts_to_enrich:
-                    for enrichment in alert_enrichment.enrichments:
-                        # set the enrichment
-                        setattr(
-                            alert_to_enrich,
-                            enrichment,
-                            alert_enrichment.enrichments[enrichment],
-                        )
+                if alert_enrichment:
+                    alerts_to_enrich = grouped_alerts.get(
+                        alert_enrichment.alert_fingerprint
+                    )
+                    for alert_to_enrich in alerts_to_enrich:
+                        for enrichment in alert_enrichment.enrichments:
+                            # set the enrichment
+                            setattr(
+                                alert_to_enrich,
+                                enrichment,
+                                alert_enrichment.enrichments[enrichment],
+                            )
 
         return grouped_alerts
 
