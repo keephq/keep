@@ -315,7 +315,7 @@ class AuthVerifierSingleTenant:
             tenant_id = payload.get("tenant_id")
             email = payload.get("email")
             role_name = payload.get(
-                "role", str(AdminRole)
+                "role", AdminRole.get_name()
             )  # default to admin for backwards compatibility
             role = get_role_by_role_name(role_name)
         except Exception:
