@@ -165,7 +165,7 @@ req.end();
             <Subtitle>API Key: {data.apiKey}</Subtitle>
             <div>
               <Button icon={PlayIcon} color="orange" onClick={tryNow}>
-                Try an example webhook in the browser
+                Click to create an example Alert
               </Button>
             </div>
           </div>

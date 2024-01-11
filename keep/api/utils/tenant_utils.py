@@ -5,6 +5,9 @@ from uuid import uuid4
 
 from sqlmodel import Session, select
 
+from keep.api.core.rbac import Admin as AdminRole
+from keep.api.core.rbac import Role
+from keep.api.core.rbac import Webhook as WebhookRole
 from keep.api.models.db.tenant import TenantApiKey
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -18,6 +21,7 @@ def create_api_key(
     unique_api_key_id: str,
     is_system: bool,
     created_by: str,
+    role: Role,
     commit: bool = True,
     system_description: Optional[str] = None,
 ) -> str:
@@ -56,6 +60,7 @@ def create_api_key(
         is_system=is_system,
         system_description=system_description,
         created_by=created_by,
+        role=role.get_name(),
     )
     session.add(new_installation_api_key)
     if commit:
@@ -97,10 +102,17 @@ def get_or_create_api_key(
     )
     tenant_api_key_entry = session.exec(statement).first()
     if not tenant_api_key_entry:
+        # TODO: make it more robust
+        if unique_api_key_id == "webhook":
+            role = WebhookRole
+        else:
+            role = AdminRole
+
         tenant_api_key = create_api_key(
             session,
             tenant_id,
             unique_api_key_id,
+            role=role,
             created_by=created_by,
             is_system=True,
             system_description=system_description,

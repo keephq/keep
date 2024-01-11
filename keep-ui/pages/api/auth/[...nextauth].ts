@@ -48,6 +48,9 @@ const multiTenantAuthOptions = {
       if ((profile as any)?.keep_tenant_id) {
         token.keep_tenant_id = (profile as any).keep_tenant_id;
       }
+      if ((profile as any)?.keep_role){
+        token.keep_role = (profile as any).keep_role;
+      }
 
       return token;
     },
@@ -55,6 +58,7 @@ const multiTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
       session.tenantId = token.keep_tenant_id as string;
+      session.userRole = token.keep_role as string;
       return session;
     },
   },
@@ -87,12 +91,14 @@ const singleTenantAuthOptions = {
           const user = await response.json();
           const accessToken = user.accessToken as string;
           const tenantId = user.tenantId as string;
+          const role = user.role as string;
           // Assuming the response contains the user's data if authentication was successful
           if (user && user.accessToken) {
             return {
               ...user,
               accessToken,
               tenantId,
+              role
             };
           } else {
             return null;
@@ -124,6 +130,7 @@ const singleTenantAuthOptions = {
         token.accessToken = user.accessToken;
         token.tenantId = user.tenantId;
         token.email = user.email;
+        token.role = user.role;
       }
       return token;
     },
@@ -131,6 +138,7 @@ const singleTenantAuthOptions = {
       // https://next-auth.js.org/configuration/callbacks#session-callback
       session.accessToken = token.accessToken as string;
       session.tenantId = token.tenantId as string;
+      session.userRole = token.role as string;
       return session;
     },
   },
@@ -161,12 +169,14 @@ const noAuthOptions = {
         token.accessToken = user.accessToken;
         token.tenantId = user.tenantId;
         token.email = user.email;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.tenantId = token.tenantId as string;
+      session.userRole = token.role as string;
       return session;
     },
   },

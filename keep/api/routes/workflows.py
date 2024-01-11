@@ -24,11 +24,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.db import get_workflow_id_by_name
-from keep.api.core.dependencies import (
-    get_user_email,
-    verify_bearer_token,
-    verify_token_or_key,
-)
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -50,8 +46,11 @@ logger = logging.getLogger(__name__)
     description="Get workflows",
 )
 def get_workflows(
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
 ) -> list[WorkflowDTO]:
+    tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     parser = Parser()
     workflows_dto = []
@@ -140,9 +139,12 @@ def get_workflows(
 def run_workflow(
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
-    tenant_id: str = Depends(verify_token_or_key),
-    created_by: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:workflows"])
+    ),
 ) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
@@ -203,9 +205,12 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
 async def create_workflow(
     request: Request,
     file: UploadFile = None,
-    tenant_id: str = Depends(verify_token_or_key),
-    created_by: str = Depends(get_user_email),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:workflows"])
+    ),
 ) -> WorkflowCreateOrUpdateDTO:
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
     workflow = await __get_workflow_raw_data(request, file)
     workflowstore = WorkflowStore()
     # Create the workflow
@@ -230,7 +235,9 @@ async def create_workflow(
 async def update_workflow_by_id(
     workflow_id: str,
     request: Request,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:workflows"])
+    ),
     session: Session = Depends(get_session),
 ) -> WorkflowCreateOrUpdateDTO:
     """
@@ -249,6 +256,7 @@ async def update_workflow_by_id(
     Returns:
         Workflow: The updated workflow
     """
+    tenant_id = authenticated_entity.tenant_id
     logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
     workflow_from_db = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow_from_db:
@@ -273,8 +281,11 @@ async def update_workflow_by_id(
 @router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
 def get_raw_workflow_by_id(
     workflow_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
 ) -> str:
+    tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     return JSONResponse(
         status_code=200,
@@ -289,8 +300,11 @@ def get_raw_workflow_by_id(
 @router.get("/{workflow_id}", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
 ) -> List[WorkflowExecutionDTO]:
+    tenant_id = authenticated_entity.tenant_id
     workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
     workflow_executions_dtos = []
     for workflow_execution in workflow_executions:
@@ -312,8 +326,11 @@ def get_workflow_by_id(
 @router.delete("/{workflow_id}", description="Delete workflow")
 def delete_workflow_by_id(
     workflow_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["delete:workflows"])
+    ),
 ):
+    tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflowstore.delete_workflow(workflow_id=workflow_id, tenant_id=tenant_id)
     return {"workflow_id": workflow_id, "status": "deleted"}
@@ -326,8 +343,11 @@ def delete_workflow_by_id(
 def get_workflow_execution_status(
     workflow_id: str,
     workflow_execution_id: str,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
 ) -> WorkflowExecutionDTO:
+    tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
     workflow_execution = workflowstore.get_workflow_execution(
         workflow_execution_id=workflow_execution_id,
@@ -362,11 +382,14 @@ def get_workflow_execution_status(
     description="List last workflow executions",
 )
 def get_workflow_executions(
-    tenant_id: str = Depends(verify_token_or_key),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
     workflow_execution_id: Optional[str] = Query(
         None, description="Workflow execution ID"
     ),
 ) -> List[WorkflowExecutionDTO]:
+    tenant_id = authenticated_entity.tenant_id
     # if specific execution
     if workflow_execution_id:
         workflowstore = WorkflowStore()

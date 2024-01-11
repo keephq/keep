@@ -7,13 +7,14 @@ sidebarTitle: "Getting started"
 
 ### Spin up Keep with docker-compose latest images
 The easiest way to start keep is is with docker-compose:
-```
-curl -s https://raw.githubusercontent.com/keephq/keep/main/docker-compose.yml | docker-compose -f - up
+```shell
+curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```
 
 The docker-compose.yml contains two services:
 - keep-backend - a fastapi service that as the API server.
 - keep-frontend - a nextjs app that serves as Keep UI interface.
+- keep-websocket-server - Soketi (a pusher compatible websocket server).
 
 ### Docker-compose dev images
 You can use `docker-compose.dev.yaml` to start Keep in a development mode.

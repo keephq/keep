@@ -19,6 +19,7 @@ class TenantApiKey(SQLModel, table=True):
     is_system: bool = False
     system_description: Optional[str] = None
     created_by: str
+    role: str
 
     class Config:
         orm_mode = True
