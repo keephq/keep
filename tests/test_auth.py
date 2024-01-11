@@ -34,6 +34,7 @@ def mock_get_signing_key_from_jwt(token):
 def test_app(monkeypatch, request):
     auth_type = request.param
     monkeypatch.setenv("AUTH_TYPE", auth_type)
+    monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
     # Ok this is bit complex so stay with me:
     #   We need to reload the app to make sure the AuthVerifier is instantiated with the correct environment variable
     #   However, we can't just reload the module because the app is instantiated in the get_app() function
@@ -155,6 +156,7 @@ def test_bearer_token(client, db_session, test_app):
     # Test bearer tokens
     from keep.api.core import dependencies
 
+    # Patch the jwks client (otherwise it will be None)
     dependencies.jwks_client = MockJWKClient()
     with patch("jwt.decode", side_effect=get_mock_jwt_payload), patch(
         "jwt.PyJWKClient.get_signing_key_from_jwt",
