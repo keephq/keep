@@ -13,12 +13,12 @@ interface Props {
 
 export default function AlertPagination({ table, mutate }: Props) {
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
-
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
   return (
     <div className="flex justify-between items-center">
       <Text>
-        Showing {table.getState().pagination.pageIndex + 1} of{" "}
-        {table.getPageCount()}
+        Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
       </Text>
       <div className="flex">
         <Select

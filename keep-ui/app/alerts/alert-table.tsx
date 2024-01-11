@@ -43,8 +43,6 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-import { MAX_ALERTS_PER_WINDOW } from "utils/fatigue";
-import AlertFatigueMeter from "./alert-fatigue-meter";
 import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
 import AlertPagination from "./alert-pagination";
@@ -54,8 +52,6 @@ const columnHelper = createColumnHelper<AlertDto>();
 
 interface Props {
   alerts: AlertDto[];
-  groupBy?: string;
-  groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
   mutate?: KeyedMutator<AlertDto[]>;
@@ -76,12 +72,11 @@ interface Props {
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
   columnsToExclude?: string[];
+  accessToken?: string;
 }
 
 export function AlertTable({
   alerts,
-  groupedByAlerts = {},
-  groupBy,
   workflows = [],
   providers = [],
   mutate,
@@ -94,22 +89,16 @@ export function AlertTable({
   rowSelection,
   setRowSelection,
   columnsToExclude = [],
+  accessToken,
 }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedAlertHistory, setSelectedAlertHistory] = useState<AlertDto[]>(
-    []
-  );
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
 
-  const openModal = (alert: AlertDto): any => {
-    setSelectedAlertHistory(groupedByAlerts[(alert as any)[groupBy!]]);
+  const openModal = (alert: AlertDto) => {
+    setSelectedAlert(alert);
     setIsOpen(true);
   };
-
-  const enabledRowSelection =
-    presetName === "Deleted" || (isOpen && !presetName)
-      ? undefined
-      : rowSelection;
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -118,6 +107,11 @@ export function AlertTable({
       router.push("workflows");
     }
   };
+
+  const enabledRowSelection =
+    presetName === "Deleted" || (isOpen && !presetName)
+      ? undefined
+      : rowSelection;
 
   const checkboxColumn = enabledRowSelection
     ? [
@@ -128,6 +122,7 @@ export function AlertTable({
               checked={context.table.getIsAllRowsSelected()}
               indeterminate={context.table.getIsSomeRowsSelected()}
               onChange={context.table.getToggleAllRowsSelectedHandler()}
+              disabled={alerts.length === 0}
             />
           ),
           cell: (context) => (
@@ -152,9 +147,6 @@ export function AlertTable({
           cell: (context) => (
             <AlertMenu
               alert={context.row.original}
-              canOpenHistory={
-                !groupedByAlerts![(context.row.original as any)[groupBy!]]
-              }
               openHistory={() => openModal(context.row.original)}
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
@@ -250,24 +242,8 @@ export function AlertTable({
       ),
     }),
     columnHelper.display({
-      id: "fatigueMeter",
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span>Fatigue Meter</span>
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            tooltip={`Calculated based on the number of alerts / ${MAX_ALERTS_PER_WINDOW} in 1 hour`}
-            variant="simple"
-            color="gray"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <AlertFatigueMeter alerts={groupedByAlerts[row.original.fingerprint]} />
-      ),
-    }),
-    columnHelper.display({
       id: "extraPayload",
+      header: "Extra Payload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
     ...menuColumn,
@@ -385,10 +361,11 @@ export function AlertTable({
       <AlertPagination table={table} mutate={mutate} />
       <AlertHistory
         isOpen={isOpen}
+        selectedAlert={selectedAlert}
         closeModal={() => setIsOpen(false)}
-        data={selectedAlertHistory}
         users={users}
         currentUser={currentUser}
+        accessToken={accessToken}
       />
     </>
   );

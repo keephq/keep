@@ -20,7 +20,6 @@ import { KeyedMutator } from "swr";
 
 interface Props {
   alert: AlertDto;
-  canOpenHistory: boolean;
   openHistory: () => void;
   provider?: Provider;
   mutate: KeyedMutator<AlertDto[]>;
@@ -40,7 +39,6 @@ interface Props {
 export default function AlertMenu({
   alert,
   provider,
-  canOpenHistory,
   openHistory,
   mutate,
   callDelete,
@@ -198,7 +196,6 @@ export default function AlertMenu({
                       <Menu.Item>
                         {({ active }) => (
                           <button
-                            disabled={canOpenHistory}
                             onClick={openHistory}
                             className={`${
                               active ? "bg-slate-200" : "text-gray-900"

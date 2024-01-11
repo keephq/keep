@@ -6,7 +6,8 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 
 # This import is required to create the tables
-from keep.api.core.dependencies import get_session, verify_bearer_token
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier, get_session
+from keep.api.core.rbac import Webhook as WebhookRole
 from keep.api.models.db.tenant import TenantInstallation
 from keep.api.utils.tenant_utils import create_api_key
 
@@ -18,9 +19,10 @@ router = APIRouter()
     description="Check if a tenant is onboarded (meaning - installed github bot)",
 )
 def is_onboarded(
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ) -> JSONResponse:
+    tenant_id = authenticated_entity.tenant_id
     logging.getLogger().info(f"Serving request for onboarded [tenant_id: {tenant_id}]")
     statement = select(TenantInstallation).where(
         TenantInstallation.tenant_id == tenant_id
@@ -38,10 +40,11 @@ def is_onboarded(
 @router.post("/github", status_code=204)
 async def save_github_installation_id(
     request: Request,
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     session: Session = Depends(get_session),
 ) -> None:
     try:
+        tenant_id = authenticated_entity.tenant_id
         # Get the installation_id and action from the request body
         data = await request.json()
         installation_id = data.get("installation_id")
@@ -66,6 +69,7 @@ async def save_github_installation_id(
             session,
             tenant_id,
             str(installation_id),
+            role=str(WebhookRole),
             is_system=True,
             system_description="GitHub application",
             commit=False,

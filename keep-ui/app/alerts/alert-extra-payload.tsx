@@ -1,5 +1,6 @@
 import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "./models";
+import { useEffect, useRef, useState } from "react";
 
 export const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
   const extraPayload = Object.entries(alert).filter(
@@ -17,6 +18,19 @@ interface Props {
 }
 
 export default function AlertExtraPayload({ alert }: Props) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  function handleAccordionToggle() {
+    setIsExpanded(!isExpanded);
+  }
+
+  useEffect(() => {
+    if (isExpanded && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [isExpanded]);
+
   const { extraPayload, extraPayloadLength } =
     getExtraPayloadNoKnownKeys(alert);
 
@@ -27,8 +41,10 @@ export default function AlertExtraPayload({ alert }: Props) {
   return (
     <div>
       <Accordion>
-        <AccordionHeader>Extra Payload</AccordionHeader>
-        <AccordionBody>
+        <AccordionHeader onClick={handleAccordionToggle}>
+          Extra Payload
+        </AccordionHeader>
+        <AccordionBody ref={ref}>
           <pre className="overflow-y-scroll">
             {JSON.stringify(extraPayload, null, 2)}
           </pre>
