@@ -153,10 +153,13 @@ def test_bearer_token(client, db_session, test_app):
     """Tests the bearer token authentication"""
     auth_type = os.getenv("AUTH_TYPE")
     # Test bearer tokens
+    from keep.api.core import dependencies
+
+    dependencies.jwks_client = MockJWKClient()
     with patch("jwt.decode", side_effect=get_mock_jwt_payload), patch(
         "jwt.PyJWKClient.get_signing_key_from_jwt",
         side_effect=mock_get_signing_key_from_jwt,
-    ), patch("jwt.PyJWKClient", MockJWKClient):
+    ):
         response = client.get(
             "/providers", headers={"Authorization": f"Bearer {MOCK_TOKEN}"}
         )

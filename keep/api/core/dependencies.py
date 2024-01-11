@@ -120,6 +120,8 @@ auth_domain = os.environ.get("AUTH0_DOMAIN")
 if auth_domain:
     jwks_uri = f"https://{auth_domain}/.well-known/jwks.json"
     jwks_client = jwt.PyJWKClient(jwks_uri, cache_keys=True)
+else:
+    jwks_client = None
 
 
 def AuthVerifier(scopes: list[str] = []):
