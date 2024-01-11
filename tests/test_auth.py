@@ -18,6 +18,12 @@ class MockSigningKey:
         self.key = key
 
 
+class MockJWKClient:
+    def get_signing_key_from_jwt(self, token):
+        # Return a mock key. Adjust the value as needed for your tests.
+        return MockSigningKey(key="mock_key")
+
+
 # Function to return the mock signing key
 def mock_get_signing_key_from_jwt(token):
     # Return a mock key. Adjust the value as needed for your tests.
@@ -51,7 +57,9 @@ def test_app(monkeypatch, request):
 
 # Fixture for TestClient using the test_app fixture
 @pytest.fixture
-def client(test_app, db_session):
+def client(test_app, db_session, monkeypatch):
+    # disable pusher
+    monkeypatch.setenv("PUSHER_DISABLED", "true")
     return TestClient(test_app)
 
 
@@ -148,7 +156,7 @@ def test_bearer_token(client, db_session, test_app):
     with patch("jwt.decode", side_effect=get_mock_jwt_payload), patch(
         "jwt.PyJWKClient.get_signing_key_from_jwt",
         side_effect=mock_get_signing_key_from_jwt,
-    ):
+    ), patch("jwt.PyJWKClient", MockJWKClient):
         response = client.get(
             "/providers", headers={"Authorization": f"Bearer {MOCK_TOKEN}"}
         )
