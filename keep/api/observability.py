@@ -21,7 +21,6 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.sampling import ALWAYS_ON
 
 
 def setup(app: FastAPI):
@@ -39,7 +38,7 @@ def setup(app: FastAPI):
         OTLPSpanExporter = HTTPOTLPSpanExporter
 
     resource = Resource.create({"service.name": service_name})
-    provider = TracerProvider(resource=resource, sampler=ALWAYS_ON)
+    provider = TracerProvider(resource=resource)
     if otlp_collector_endpoint:
         logger.info(f"OTLP endpoint set to {otlp_collector_endpoint}")
         processor = BatchSpanProcessor(
