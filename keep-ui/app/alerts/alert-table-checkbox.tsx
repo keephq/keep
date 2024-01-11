@@ -4,11 +4,13 @@ import { useEffect, useRef, HTMLProps } from "react";
 
 interface Props extends HTMLProps<HTMLInputElement> {
   indeterminate?: boolean;
+  disabled?: boolean;
 }
 
 export default function AlertTableCheckbox({
   indeterminate,
   className = "",
+  disabled = false,
   ...rest
 }: Props) {
   const ref = useRef<HTMLInputElement>(null!);
@@ -23,7 +25,10 @@ export default function AlertTableCheckbox({
     <input
       type="checkbox"
       ref={ref}
-      className={className + " cursor-pointer"}
+      disabled={disabled}
+      className={
+        className + `${disabled ? "cursor-not-allowed" : "cursor-pointer"}`
+      }
       {...rest}
     />
   );

@@ -73,11 +73,11 @@ frontend:
       value: development
     - name: HOSTNAME
       value: 0.0.0.0
-    - name: NEXT_PUBLIC_PUSHER_HOST
+    - name: PUSHER_HOST
       value: localhost
-    - name: NEXT_PUBLIC_PUSHER_PORT
+    - name: PUSHER_PORT
       value: 6001
-    - name: NEXT_PUBLIC_PUSHER_APP_KEY
+    - name: PUSHER_APP_KEY
       value: "keepappkey"
   replicaCount: 1
   image:
