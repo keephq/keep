@@ -48,31 +48,88 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   if (error) return <div>{error.message}</div>;
 
   const [example] = data.modelSchema.examples;
-  example.lastReceived = new Date().toISOString();
+
+  const exampleJson = JSON.stringify(
+    {
+      ...example,
+      lastReceived: new Date().toISOString(),
+    },
+    null,
+    2
+  );
 
   const code = `curl --location '${data.webhookApi}' \\
   --header 'Content-Type: application/json' \\
   --header 'Accept: application/json' \\
   --header 'X-API-KEY: ${data.apiKey}' \\
-  --data '${JSON.stringify(example, null, 2)}'`;
+  --data '${exampleJson}'`;
 
   const languages = [
     { title: "Bash", language: "shell", code: code },
-    { title: "Python", language: "python", code: code },
-    { title: "Node", language: "javascript", code: code },
+    {
+      title: "Python",
+      language: "python",
+      code: `
+import requests
+
+response = requests.post("https://api.keephq.dev/alerts/event", 
+headers={
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "X-API-KEY": "${data.apiKey}"
+}, 
+json=${exampleJson})
+      `,
+    },
+    {
+      title: "Node",
+      language: "javascript",
+      code: `
+const https = require('https');
+
+const data = JSON.stringify(${exampleJson});
+    
+const options = {
+  hostname: 'api.keephq.dev',
+  port: 443,
+  path: '/alerts/event',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-API-KEY': '${data.apiKey}',
+    'Content-Length': data.length
+  }
+};
+    
+const req = https.request(options, (res) => {
+  console.log(\`statusCode: $\{res.statusCode}\`);
+
+  res.on('data', (d) => {
+    process.stdout.write(d);
+  });
+});
+  
+req.on('error', (error) => {
+  console.error(error);
+});
+
+req.write(data);
+req.end();
+    `,
+    },
   ] as const;
 
   const tryNow = async () => {
-    var requestHeaders = new Headers();
-    requestHeaders.append("Content-Type", "application/json");
-    requestHeaders.append("Accept", "application/json");
-    requestHeaders.append("X-API-KEY", data.apiKey);
+    const raw = JSON.stringify(example);
 
-    var raw = JSON.stringify(example);
-
-    const requestOptions = {
+    const requestOptions: RequestInit = {
       method: "POST",
-      headers: requestHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-API-KEY": data.apiKey,
+      },
       body: raw,
     };
 
