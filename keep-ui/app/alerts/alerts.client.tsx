@@ -25,19 +25,18 @@ export default function AlertsPage() {
   useEffect(() => {
     if (
       !isLoading &&
-      configData?.PUSHER_DISABLED !== true &&
+      configData &&
+      configData.PUSHER_DISABLED !== true &&
       session &&
       pusherClient === null
     ) {
-      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_APP_KEY!, {
-        wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST,
-        wsPort: process.env.NEXT_PUBLIC_PUSHER_PORT
-          ? parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT)
-          : undefined,
+      const pusher = new Pusher(configData.PUSHER_APP_KEY, {
+        wsHost: configData.PUSHER_HOST || "localhost",
+        wsPort: configData.PUSHER_PORT || 6001,
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "local",
+        cluster: configData.PUSHER_CLUSTER || "local",
         channelAuthorization: {
           transport: "ajax",
           endpoint: `${getApiURL()}/pusher/auth`,

@@ -36,9 +36,7 @@ export default function AlertHistoryCharts({
     timeUnit = "Hours";
   }
 
-  const alertsReversed = [...alerts].reverse();
-
-  const rawChartData = alertsReversed.reduce((prev, curr) => {
+  const rawChartData = [...alerts].reverse().reduce((prev, curr) => {
     const date = curr.lastReceived;
     const dateKey = getDateKey(date, timeUnit);
     if (!prev[dateKey]) {
