@@ -670,7 +670,63 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
     return alerts
 
 
-def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
+def get_last_alerts(tenant_id, provider_id=None) -> list[Alert]:
+    """
+    Get the last alert for each fingerprint.
+
+    Args:
+        tenant_id (_type_): The tenant_id to filter the alerts by.
+        provider_id (_type_, optional): The provider id to filter by. Defaults to None.
+
+    Returns:
+        List[Alert]: A list of Alert objects.
+    """
+    with Session(engine) as session:
+        # Start with a subquery that selects the max timestamp for each fingerprint.
+        subquery = (
+            session.query(
+                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+            )
+            .filter(Alert.tenant_id == tenant_id)
+            .group_by(Alert.fingerprint)
+            .subquery()
+        )
+
+        query = (
+            session.query(Alert)
+            .join(
+                subquery,
+                and_(
+                    Alert.fingerprint == subquery.c.fingerprint,
+                    Alert.timestamp == subquery.c.max_timestamp,
+                ),
+            )
+            .options(subqueryload(Alert.alert_enrichment))
+        )
+
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
+
+        if provider_id:
+            query = query.filter(Alert.provider_id == provider_id)
+
+        # Execute the query
+        alerts = query.all()
+
+    return alerts
+
+
+def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
+    """
+    Get all alerts for a given fingerprint.
+
+    Args:
+        tenant_id (str): The tenant_id to filter the alerts by.
+        fingerprint (str): The fingerprint to filter the alerts by.
+
+    Returns:
+        List[Alert]: A list of Alert objects.
+    """
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -681,8 +737,9 @@ def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
 
-        if provider_id:
-            query = query.filter(Alert.provider_id == provider_id)
+        query = query.filter(Alert.fingerprint == fingerprint)
+
+        query = query.order_by(Alert.timestamp.desc())
 
         # Execute the query
         alerts = query.all()

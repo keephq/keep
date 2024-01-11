@@ -22,6 +22,7 @@ class AlertDto(BaseModel):
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
     deleted: list[str] = []  # Whether the alert is deleted or not
+    providerId: str | None = None  # The provider id
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):

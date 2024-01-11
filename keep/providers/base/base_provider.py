@@ -5,7 +5,9 @@ import abc
 import copy
 import datetime
 import hashlib
+import itertools
 import json
+import operator
 import os
 import re
 import uuid
@@ -14,7 +16,7 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 
-from keep.api.core.db import enrich_alert
+from keep.api.core.db import enrich_alert, get_enrichments
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -261,18 +263,70 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("deploy_alert() method not implemented")
 
-    def _get_alerts(self):
+    def _get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from the provider.
         """
         raise NotImplementedError("get_alerts() method not implemented")
 
-    def get_alerts(self):
+    def get_alerts(self) -> list[AlertDto]:
         """
         Get alerts from the provider.
         """
         with tracer.start_as_current_span(f"{self.__class__.__name__}-get_alerts"):
-            return self._get_alerts()
+            alerts = self._get_alerts()
+            # enrich alerts with provider id
+            for alert in alerts:
+                alert.providerId = self.provider_id
+            return alerts
+
+    def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
+        """
+        Get alerts from the provider grouped by fingerprint, sorted by lastReceived.
+
+        Returns:
+            dict[str, list[AlertDto]]: A dict of alerts grouped by fingerprint, sorted by lastReceived.
+        """
+        alerts = self.get_alerts()
+
+        if not alerts:
+            return {}
+
+        # get alerts, group by fingerprint and sort them by lastReceived
+        with tracer.start_as_current_span(f"{self.__class__.__name__}-get_last_alerts"):
+            get_attr = operator.attrgetter("fingerprint")
+            grouped_alerts = {
+                fingerprint: list(alerts)
+                for fingerprint, alerts in itertools.groupby(
+                    sorted(
+                        alerts,
+                        key=get_attr,
+                    ),
+                    get_attr,
+                )
+            }
+
+        # enrich alerts
+        with tracer.start_as_current_span(f"{self.__class__.__name__}-enrich_alerts"):
+            pulled_alerts_enrichments = get_enrichments(
+                tenant_id=tenant_id,
+                fingerprints=grouped_alerts.keys(),
+            )
+            for alert_enrichment in pulled_alerts_enrichments:
+                if alert_enrichment:
+                    alerts_to_enrich = grouped_alerts.get(
+                        alert_enrichment.alert_fingerprint
+                    )
+                    for alert_to_enrich in alerts_to_enrich:
+                        for enrichment in alert_enrichment.enrichments:
+                            # set the enrichment
+                            setattr(
+                                alert_to_enrich,
+                                enrichment,
+                                alert_enrichment.enrichments[enrichment],
+                            )
+
+        return grouped_alerts
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True

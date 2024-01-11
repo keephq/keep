@@ -1,7 +1,7 @@
 import { AlertDto } from "app/alerts/models";
 
 const WINDOW_SIZE = 60 * 60 * 1000; // 60 minutes in milliseconds
-export const MAX_ALERTS_PER_WINDOW = 50; // This number might come from historical data or whatever we decide
+const MAX_ALERTS_PER_WINDOW = 50; // This number might come from historical data or whatever we decide
 
 export const calculateFatigue = (
   alerts: AlertDto[],
@@ -18,7 +18,7 @@ export const calculateFatigue = (
   }
 
   // Sort alerts by timestamp
-  const sortedAlerts = alerts.sort(
+  const sortedAlerts = [...alerts].sort(
     (a, b) => a.lastReceived.getTime() - b.lastReceived.getTime()
   );
 

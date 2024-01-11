@@ -11,7 +11,7 @@ services:
       - ./state:/state
     depends_on:
       - keep-backend
-  
+
   keep-backend:
     extends:
       file: docker-compose.common.yml
@@ -19,9 +19,12 @@ services:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=SINGLE_TENANT
+      - KEEP_JWT_SECRET=verysecretkey
+      - KEEP_DEFAULT_USERNAME=keep
+      - KEEP_DEFAULT_PASSWORD=keep
     volumes:
       - ./state:/state
-  
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml

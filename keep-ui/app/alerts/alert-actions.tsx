@@ -28,8 +28,8 @@ export default function AlertActions({
       const session = await getSession();
       const apiUrl = getApiURL();
 
-      const selectedAlerts = alerts.filter(({ id }) =>
-        selectedRowIds.includes(id)
+      const selectedAlerts = alerts.filter((_alert, index) =>
+        selectedRowIds.includes(index.toString())
       );
 
       for await (const alert of selectedAlerts) {
