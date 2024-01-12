@@ -4,6 +4,7 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
+from pkg_resources import packaging
 
 import pydantic
 import requests
@@ -217,39 +218,78 @@ class GrafanaProvider(BaseProvider):
             if webhook_exists.get("name") == webhook_name
             or webhook_exists.get("uid") == webhook_name
         ]
-        if webhook_exists:
-            webhook = webhook_exists[0]
-            webhook["settings"]["url"] = keep_api_url
-            webhook["settings"]["authorization_scheme"] = "digest"
-            webhook["settings"]["authorization_credentials"] = api_key
-            requests.put(
-                f'{contacts_api}/{webhook["uid"]}',
-                verify=False,
-                json=webhook,
-                headers=headers,
-            )
-            self.logger.info(f'Updated webhook {webhook["uid"]}')
+
+        # grafana version lesser then 9.4.7 do not send their authentication correctly
+        # therefor we need to add the api_key as a query param instead of the normal digest token
+        health_api = f"{self.authentication_config.host}/api/health"
+        health_response = requests.get(health_api, verify=False, headers=headers).json()
+        grafana_version = health_response["version"]
+
+        if packaging.version.parse(grafana_version) > packaging.version.parse("9.4.7"):
+            if webhook_exists:
+                webhook = webhook_exists[0]
+                webhook["settings"]["url"] = keep_api_url
+                webhook["settings"]["authorization_scheme"] = "digest"
+                webhook["settings"]["authorization_credentials"] = api_key
+                requests.put(
+                    f'{contacts_api}/{webhook["uid"]}',
+                    verify=False,
+                    json=webhook,
+                    headers=headers,
+                )
+                self.logger.info(f'Updated webhook {webhook["uid"]}')
+            else:
+                self.logger.info('Creating webhook with name "{webhook_name}"')
+                webhook = {
+                    "name": webhook_name,
+                    "type": "webhook",
+                    "settings": {
+                        "httpMethod": "POST",
+                        "url": keep_api_url,
+                        "authorization_scheme": "digest",
+                        "authorization_credentials": api_key,
+                    },
+                }
+                response = requests.post(
+                    contacts_api,
+                    verify=False,
+                    json=webhook,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
+                if not response.ok:
+                    raise Exception(response.json())
+                self.logger.info(f"Created webhook {webhook_name}")
         else:
-            self.logger.info('Creating webhook with name "{webhook_name}"')
-            webhook = {
-                "name": webhook_name,
-                "type": "webhook",
-                "settings": {
-                    "httpMethod": "POST",
-                    "url": keep_api_url,
-                    "authorization_scheme": "digest",
-                    "authorization_credentials": api_key,
-                },
-            }
-            response = requests.post(
-                contacts_api,
-                verify=False,
-                json=webhook,
-                headers={**headers, "X-Disable-Provenance": "true"},
-            )
-            if not response.ok:
-                raise Exception(response.json())
-            self.logger.info(f"Created webhook {webhook_name}")
+            if webhook_exists:
+                webhook = webhook_exists[0]
+                webhook["settings"]["url"] = f"{keep_api_url}?api_key={api_key}"
+                requests.put(
+                    f'{contacts_api}/{webhook["uid"]}',
+                    verify=False,
+                    json=webhook,
+                    headers=headers,
+                )
+                self.logger.info(f'Updated webhook {webhook["uid"]}')
+            else:
+                self.logger.info('Creating webhook with name "{webhook_name}"')
+                webhook = {
+                    "name": webhook_name,
+                    "type": "webhook",
+                    "settings": {
+                        "httpMethod": "POST",
+                        "url": f"{keep_api_url}?api_key={api_key}",
+                    },
+                }
+                response = requests.post(
+                    contacts_api,
+                    verify=False,
+                    json=webhook,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
+                if not response.ok:
+                    raise Exception(response.json())
+                self.logger.info(f"Created webhook {webhook_name}")
+
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
