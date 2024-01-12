@@ -283,7 +283,7 @@ class JiraProvider(BaseProvider):
             if components:
                 fields["components"] = [{"name": component} for component in components]
 
-            if custom_field_value:
+            if custom_fields:
                 fields.update(custom_fields)
 
             request_body = {"fields": fields}
