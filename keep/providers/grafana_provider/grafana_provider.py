@@ -4,7 +4,6 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
-import random
 
 import pydantic
 import requests
@@ -179,22 +178,25 @@ class GrafanaProvider(BaseProvider):
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:
-            formatted_alerts.append(
-                AlertDto(
-                    id=alert.get("fingerprint"),
-                    fingerprint=alert.get("fingerprint"),
-                    name=event.get("title"),
-                    status=event.get("status"),
-                    severity=alert.get("severity", None),
-                    lastReceived=datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    ).isoformat(),
-                    fatigueMeter=random.randint(0, 100),
-                    description=alert.get("annotations", {}).get("summary", ""),
-                    source=["grafana"],
-                    labels=alert.get("labels", {}),
-                )
+            labels = alert.get("labels", {})
+            alert_dto = AlertDto(
+                id=alert.get("fingerprint"),
+                fingerprint=alert.get("fingerprint"),
+                name=event.get("title"),
+                status=event.get("status"),
+                severity=alert.get("severity", None),
+                lastReceived=datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat(),
+                description=alert.get("annotations", {}).get("summary", ""),
+                source=["grafana"],
+                labels=labels,
             )
+            # enrich extra payload with labels
+            for label in labels:
+                if getattr(alert_dto, label, None) is None:
+                    setattr(alert_dto, label, labels[label])
+            formatted_alerts.append(alert_dto)
         return formatted_alerts
 
     def setup_webhook(
@@ -348,9 +350,7 @@ class GrafanaProvider(BaseProvider):
         now = int(datetime.datetime.now().timestamp())
         api_endpoint = f"{self.authentication_config.host}/api/v1/rules/history?from={week_ago}&to={now}&limit=0"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        response = response = requests.get(
-            api_endpoint, verify=False, headers=headers, timeout=3
-        )
+        response = requests.get(api_endpoint, verify=False, headers=headers, timeout=3)
         if not response.ok:
             raise ProviderException("Failed to get alerts from Grafana")
         events_history = response.json()

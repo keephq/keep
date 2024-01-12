@@ -16,13 +16,13 @@ import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
 import { User as NextUser } from "next-auth";
 import { useFloating } from "@floating-ui/react-dom";
+import { KeyedMutator } from "swr";
 
 interface Props {
   alert: AlertDto;
-  canOpenHistory: boolean;
   openHistory: () => void;
   provider?: Provider;
-  mutate?: () => void;
+  mutate: KeyedMutator<AlertDto[]>;
   callDelete?: (
     fingerprint: string,
     lastReceived: Date,
@@ -39,7 +39,6 @@ interface Props {
 export default function AlertMenu({
   alert,
   provider,
-  canOpenHistory,
   openHistory,
   mutate,
   callDelete,
@@ -197,7 +196,6 @@ export default function AlertMenu({
                       <Menu.Item>
                         {({ active }) => (
                           <button
-                            disabled={canOpenHistory}
                             onClick={openHistory}
                             className={`${
                               active ? "bg-slate-200" : "text-gray-900"

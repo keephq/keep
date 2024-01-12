@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, Form, HTTPException
 from pusher import Pusher
 
-from keep.api.core.dependencies import get_pusher_client, verify_bearer_token
+from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
+    get_pusher_client,
+)
 
 router = APIRouter()
 
@@ -10,7 +14,7 @@ router = APIRouter()
 def pusher_authentication(
     channel_name=Form(...),
     socket_id=Form(...),
-    tenant_id: str = Depends(verify_bearer_token),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict:
     """
@@ -27,6 +31,7 @@ def pusher_authentication(
     Returns:
         dict: The authentication response.
     """
+    tenant_id = authenticated_entity.tenant_id
     if not pusher_client:
         raise HTTPException(
             status_code=500,

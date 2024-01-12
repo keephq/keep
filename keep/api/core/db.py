@@ -18,6 +18,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.core.config import config
+from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -151,7 +152,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
                 os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
             ).hexdigest()
             default_user = User(
-                username=default_username, password_hash=default_password
+                username=default_username,
+                password_hash=default_password,
+                role=AdminRole.get_name(),
             )
             session.add(default_user)
             session.commit()
@@ -667,13 +670,39 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
     return alerts
 
 
-def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
-    with Session(engine) as session:
-        # Create the query
-        query = session.query(Alert)
+def get_last_alerts(tenant_id, provider_id=None) -> list[Alert]:
+    """
+    Get the last alert for each fingerprint.
 
-        # Apply subqueryload to force-load the alert_enrichment relationship
-        query = query.options(subqueryload(Alert.alert_enrichment))
+    Args:
+        tenant_id (_type_): The tenant_id to filter the alerts by.
+        provider_id (_type_, optional): The provider id to filter by. Defaults to None.
+
+    Returns:
+        List[Alert]: A list of Alert objects.
+    """
+    with Session(engine) as session:
+        # Start with a subquery that selects the max timestamp for each fingerprint.
+        subquery = (
+            session.query(
+                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+            )
+            .filter(Alert.tenant_id == tenant_id)
+            .group_by(Alert.fingerprint)
+            .subquery()
+        )
+
+        query = (
+            session.query(Alert)
+            .join(
+                subquery,
+                and_(
+                    Alert.fingerprint == subquery.c.fingerprint,
+                    Alert.timestamp == subquery.c.max_timestamp,
+                ),
+            )
+            .options(subqueryload(Alert.alert_enrichment))
+        )
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
@@ -687,7 +716,38 @@ def get_alerts(tenant_id, provider_id=None) -> List[Alert]:
     return alerts
 
 
-def get_api_key(api_key: str):
+def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
+    """
+    Get all alerts for a given fingerprint.
+
+    Args:
+        tenant_id (str): The tenant_id to filter the alerts by.
+        fingerprint (str): The fingerprint to filter the alerts by.
+
+    Returns:
+        List[Alert]: A list of Alert objects.
+    """
+    with Session(engine) as session:
+        # Create the query
+        query = session.query(Alert)
+
+        # Apply subqueryload to force-load the alert_enrichment relationship
+        query = query.options(subqueryload(Alert.alert_enrichment))
+
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
+
+        query = query.filter(Alert.fingerprint == fingerprint)
+
+        query = query.order_by(Alert.timestamp.desc())
+
+        # Execute the query
+        alerts = query.all()
+
+    return alerts
+
+
+def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
@@ -746,16 +806,16 @@ def delete_user(username):
             session.commit()
 
 
-def create_user(username, password):
-    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+def create_user(tenant_id, username, password, role):
     from keep.api.models.db.user import User
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     with Session(engine) as session:
         user = User(
-            tenant_id=SINGLE_TENANT_UUID,
+            tenant_id=tenant_id,
             username=username,
             password_hash=password_hash,
+            role=role,
         )
         session.add(user)
         session.commit()

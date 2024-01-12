@@ -16,7 +16,6 @@ def test_alert_dto_fingerprint_none():
         message="Alert message",
         description="Alert description",
         severity="critical",
-        fatigueMeter=0,
         pushed=True,
         event_id="1234",
         url="https://www.google.com/search?q=open+source+alert+management",

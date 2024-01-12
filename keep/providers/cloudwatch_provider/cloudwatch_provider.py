@@ -8,7 +8,6 @@ import hashlib
 import json
 import logging
 import os
-import random
 import time
 from urllib.parse import urlparse
 
@@ -475,7 +474,6 @@ class CloudwatchProvider(BaseProvider):
             lastReceived=str(
                 datetime.datetime.fromisoformat(alert.get("StateChangeTime"))
             ),
-            fatigueMeter=random.randint(0, 100),
             description=alert.get("AlarmDescription"),
             source=["cloudwatch"],
             **alert,

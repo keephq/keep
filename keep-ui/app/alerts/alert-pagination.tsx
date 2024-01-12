@@ -1,54 +1,30 @@
 import { ArrowPathIcon, TableCellsIcon } from "@heroicons/react/24/outline";
 import { ArrowLeftIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 import { Button, Select, SelectItem, Text } from "@tremor/react";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertDto } from "./models";
+import { Table } from "@tanstack/react-table";
+import { KeyedMutator } from "swr";
 
 interface Props {
-  alerts: AlertDto[];
-  mutate?: () => void;
-  deletedCount: number;
-  setStartIndex: Dispatch<SetStateAction<number>>;
-  setEndIndex: Dispatch<SetStateAction<number>>;
+  table: Table<AlertDto>;
+  mutate?: KeyedMutator<AlertDto[]>;
 }
 
-export default function AlertPagination({
-  alerts,
-  deletedCount,
-  mutate,
-  setStartIndex,
-  setEndIndex,
-}: Props) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [defaultPageSize, setDefaultPageSize] = useState(10);
+export default function AlertPagination({ table, mutate }: Props) {
   const [reloadLoading, setReloadLoading] = useState<boolean>(false);
-  const totalPages = Math.ceil(alerts.length / defaultPageSize);
-  const startItem = (currentPage - 1) * defaultPageSize + 1;
-  const endItem = Math.min(currentPage * defaultPageSize, alerts.length);
-  const startIndex = (currentPage - 1) * defaultPageSize;
-
-  useEffect(() => {
-    setStartIndex(startIndex);
-    setEndIndex(startIndex + defaultPageSize);
-  }, [startIndex, defaultPageSize, setStartIndex, setEndIndex]);
-
-  if (!defaultPageSize) return null;
-
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
   return (
     <div className="flex justify-between items-center">
       <Text>
-        Showing {alerts.length === 0 ? 0 : startItem} – {endItem} of{" "}
-        {alerts.length}{" "}
-        {deletedCount > 0 && `(there are ${deletedCount} deleted alerts)`}
+        Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
       </Text>
       <div className="flex">
         <Select
-          value={defaultPageSize.toString()}
+          value={table.getState().pagination.pageSize.toString()}
           enableClear={false}
-          onValueChange={(value) => {
-            setDefaultPageSize(parseInt(value));
-            setCurrentPage(1);
-          }}
+          onValueChange={(newValue) => table.setPageSize(Number(newValue))}
           className="mr-2"
           icon={TableCellsIcon}
         >
@@ -59,22 +35,22 @@ export default function AlertPagination({
         </Select>
         <Button
           icon={ArrowLeftIcon}
-          onClick={() => setCurrentPage(currentPage - 1)}
+          onClick={table.previousPage}
+          disabled={!table.getCanPreviousPage()}
           size="xs"
           color="orange"
           variant="secondary"
           className="mr-1"
-          disabled={currentPage === 1}
         />
         <Button
           icon={ArrowRightIcon}
-          onClick={() => setCurrentPage(currentPage + 1)}
+          onClick={table.nextPage}
+          disabled={!table.getCanNextPage()}
           size="xs"
-          disabled={currentPage === totalPages}
           color="orange"
           variant="secondary"
         />
-        {mutate !== undefined && (
+        {mutate && (
           <Button
             icon={ArrowPathIcon}
             color="orange"
@@ -84,11 +60,11 @@ export default function AlertPagination({
             loading={reloadLoading}
             onClick={async () => {
               setReloadLoading(true);
-              await mutate!();
+              await mutate();
               setReloadLoading(false);
             }}
             title="Refresh"
-          ></Button>
+          />
         )}
       </div>
     </div>

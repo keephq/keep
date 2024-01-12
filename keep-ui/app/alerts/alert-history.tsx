@@ -1,110 +1,66 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
-import {
-  Button,
-  Flex,
-  LineChart,
-  Subtitle,
-  Title,
-  Divider,
-} from "@tremor/react";
+import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import { User } from "app/settings/models";
 import { User as NextUser } from "next-auth";
+import AlertHistoryCharts from "./alert-history-charts";
+import useSWR from "swr";
+import { getApiURL } from "utils/apiUrl";
+import { fetcher } from "utils/fetcher";
 import Loading from "app/loading";
-import AlertPagination from "./alert-pagination";
 
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
-  data: AlertDto[];
+  selectedAlert: AlertDto | null;
   users?: User[];
   currentUser: NextUser;
+  accessToken?: string;
 }
 
 export function AlertHistory({
   isOpen,
   closeModal,
-  data,
+  selectedAlert,
   users = [],
   currentUser,
+  accessToken,
 }: Props) {
-  const [chartData, setChartData] = useState<any[] | null>(null);
-  const [categoriesByStatus, setCategoriesByStatus] = useState<string[]>([]);
-  const [startIndex, setStartIndex] = useState<number>(0);
-  const [endIndex, setEndIndex] = useState<number>(0);
+  const apiUrl = getApiURL();
+  const historyUrl =
+    selectedAlert && accessToken
+      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history/?provider_id=${
+          selectedAlert.providerId
+        }&provider_type=${selectedAlert.source ? selectedAlert.source[0] : ""}`
+      : null;
+  const {
+    data: alerts,
+    error,
+    isLoading,
+  } = useSWR<AlertDto[]>(historyUrl, (url) => fetcher(url, accessToken!), {
+    revalidateOnFocus: false,
+  });
 
-  const lastReceivedData = data.map((alert) => alert.lastReceived);
+  if (!selectedAlert || isLoading) {
+    return <></>;
+  }
+
+  if (!alerts || error) {
+    return <Loading />;
+  }
+  alerts.forEach(
+    (alert) => (alert.lastReceived = new Date(alert.lastReceived))
+  );
+  alerts.sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
+  const lastReceivedData = alerts.map((alert) => alert.lastReceived);
   const maxLastReceived: Date = new Date(
     Math.max(...lastReceivedData.map((date) => date.getTime()))
   );
   const minLastReceived: Date = new Date(
     Math.min(...lastReceivedData.map((date) => date.getTime()))
   );
-  const timeDifference: number =
-    maxLastReceived.getTime() - minLastReceived.getTime();
-  let timeUnit = "Days";
-  if (timeDifference < 3600000) {
-    // Less than 1 hour (in milliseconds)
-    timeUnit = "Minutes";
-  } else if (timeDifference < 86400000) {
-    // Less than 24 hours (in milliseconds)
-    timeUnit = "Hours";
-  }
-
-  useEffect(() => {
-    if (data) {
-      const categoriesByStatus: string[] = [];
-      const rawChartData = data
-        .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
-        .reduce((prev, curr) => {
-          const date = curr.lastReceived;
-          let dateKey: string;
-          if (timeUnit === "Minutes") {
-            dateKey = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-          } else if (timeUnit === "Hours") {
-            dateKey = `${date.getHours()}:${date.getMinutes()}`;
-          } else {
-            dateKey = `${date.getDate()}/${
-              date.getMonth() + 1
-            }/${date.getFullYear()}`;
-          }
-          if (!prev[dateKey]) {
-            prev[dateKey] = {
-              [curr.status]: 1,
-            };
-          } else {
-            prev[dateKey][curr.status]
-              ? (prev[dateKey][curr.status] += 1)
-              : (prev[dateKey][curr.status] = 1);
-          }
-          if (categoriesByStatus.includes(curr.status) === false) {
-            categoriesByStatus.push(curr.status);
-          }
-          return prev;
-        }, {} as { [date: string]: any });
-
-      setCategoriesByStatus(categoriesByStatus);
-      setChartData(
-        Object.keys(rawChartData).map((key) => {
-          return { ...rawChartData[key], date: key };
-        })
-      );
-    }
-  }, [data, timeUnit]);
-
-  if (!data) {
-    return <></>;
-  }
-
-  const currentStateAlerts = data.sort(
-    (a, b) => b.lastReceived.getTime() - a.lastReceived.getTime()
-  );
-
-  const deletedCount = data.filter((alert) =>
-    alert.deleted.includes(alert.lastReceived.toISOString())
-  ).length;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -137,13 +93,13 @@ export function AlertHistory({
               >
                 <Flex alignItems="center" justifyContent="between">
                   <div>
-                    <Title>History of: &quot;{data[0]?.name}&quot;</Title>
-                    <Subtitle>Total alerts: {data.length}</Subtitle>
+                    <Title>History of: {alerts[0]?.name}</Title>
+                    <Subtitle>Total alerts: {alerts.length}</Subtitle>
                     <Subtitle>
-                      First alert: {minLastReceived.toString()}
+                      First Occurence: {minLastReceived.toString()}
                     </Subtitle>
                     <Subtitle>
-                      Last alert: {maxLastReceived.toString()}
+                      Last Occurence: {maxLastReceived.toString()}
                     </Subtitle>
                   </div>
                   <Button
@@ -154,28 +110,17 @@ export function AlertHistory({
                   </Button>
                 </Flex>
                 <Divider />
-                {chartData === null ? (
-                  <Loading />
-                ) : (
-                  <LineChart
-                    className="mt-6 max-h-56"
-                    data={chartData!}
-                    index="date"
-                    categories={categoriesByStatus}
-                    yAxisWidth={40}
-                  />
-                )}
+                <AlertHistoryCharts
+                  maxLastReceived={maxLastReceived}
+                  minLastReceived={minLastReceived}
+                  alerts={alerts}
+                />
                 <Divider />
                 <AlertTable
-                  alerts={currentStateAlerts.slice(startIndex, endIndex)}
+                  alerts={alerts}
                   users={users}
                   currentUser={currentUser}
-                />
-                <AlertPagination
-                  alerts={data}
-                  setEndIndex={setEndIndex}
-                  setStartIndex={setStartIndex}
-                  deletedCount={deletedCount}
+                  columnsToExclude={["description"]}
                 />
               </Dialog.Panel>
             </Transition.Child>

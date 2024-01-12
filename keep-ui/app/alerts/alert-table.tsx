@@ -5,7 +5,6 @@ import {
   TableHeaderCell,
   Icon,
   Callout,
-  CategoryBar,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -25,9 +24,9 @@ import {
   getCoreRowModel,
   useReactTable,
   VisibilityState,
+  getPaginationRowModel,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
-import moment from "moment";
 import Image from "next/image";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
@@ -44,27 +43,18 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-
-const getAlertLastReceieved = (lastRecievedFromAlert: Date) => {
-  let lastReceived = "unknown";
-  if (lastRecievedFromAlert) {
-    lastReceived = lastRecievedFromAlert.toString();
-    try {
-      lastReceived = moment(lastRecievedFromAlert).fromNow();
-    } catch {}
-  }
-  return lastReceived;
-};
+import { KeyedMutator } from "swr";
+import { AlertHistory } from "./alert-history";
+import AlertPagination from "./alert-pagination";
+import { getAlertLastReceieved } from "utils/helpers";
 
 const columnHelper = createColumnHelper<AlertDto>();
 
 interface Props {
   alerts: AlertDto[];
-  groupBy?: string;
-  groupedByAlerts?: { [key: string]: AlertDto[] };
   workflows?: any[];
   providers?: Provider[];
-  mutate?: () => void;
+  mutate?: KeyedMutator<AlertDto[]>;
   isAsyncLoading?: boolean;
   onDelete?: (
     fingerprint: string,
@@ -78,16 +68,15 @@ interface Props {
   ) => void;
   users?: User[];
   currentUser: NextUser;
-  openModal?: (alert: AlertDto) => void;
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
+  columnsToExclude?: string[];
+  accessToken?: string;
 }
 
 export function AlertTable({
   alerts,
-  groupedByAlerts = {},
-  groupBy,
   workflows = [],
   providers = [],
   mutate,
@@ -96,12 +85,20 @@ export function AlertTable({
   setAssignee,
   users = [],
   currentUser,
-  openModal,
   presetName,
   rowSelection,
   setRowSelection,
+  columnsToExclude = [],
+  accessToken,
 }: Props) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+
+  const openModal = (alert: AlertDto) => {
+    setSelectedAlert(alert);
+    setIsOpen(true);
+  };
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
@@ -111,7 +108,12 @@ export function AlertTable({
     }
   };
 
-  const checkboxColumn = rowSelection
+  const enabledRowSelection =
+    presetName === "Deleted" || (isOpen && !presetName)
+      ? undefined
+      : rowSelection;
+
+  const checkboxColumn = enabledRowSelection
     ? [
         columnHelper.display({
           id: "checkbox",
@@ -120,6 +122,7 @@ export function AlertTable({
               checked={context.table.getIsAllRowsSelected()}
               indeterminate={context.table.getIsSomeRowsSelected()}
               onChange={context.table.getToggleAllRowsSelectedHandler()}
+              disabled={alerts.length === 0}
             />
           ),
           cell: (context) => (
@@ -133,7 +136,7 @@ export function AlertTable({
       ]
     : [];
 
-  const menuColumn = openModal
+  const menuColumn = presetName
     ? [
         columnHelper.display({
           id: "alertMenu",
@@ -144,14 +147,11 @@ export function AlertTable({
           cell: (context) => (
             <AlertMenu
               alert={context.row.original}
-              canOpenHistory={
-                !groupedByAlerts![(context.row.original as any)[groupBy!]]
-              }
-              openHistory={() => openModal!(context.row.original)}
+              openHistory={() => openModal(context.row.original)}
               provider={providers.find(
                 (p) => p.type === context.row.original.source![0]
               )}
-              mutate={mutate}
+              mutate={mutate ?? (async () => undefined)}
               callDelete={onDelete}
               setAssignee={setAssignee}
               currentUser={currentUser}
@@ -206,8 +206,12 @@ export function AlertTable({
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
-      header: "When",
-      cell: (context) => getAlertLastReceieved(context.getValue()),
+      header: "Last Received",
+      cell: (context) => (
+        <span title={context.getValue().toISOString()}>
+          {getAlertLastReceieved(context.getValue())}
+        </span>
+      ),
     }),
     columnHelper.accessor("source", {
       header: "Source",
@@ -237,30 +241,9 @@ export function AlertTable({
         />
       ),
     }),
-    columnHelper.accessor("fatigueMeter", {
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span>Fatigue Meter</span>
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            tooltip="Calculated based on various factors"
-            variant="simple"
-            color="gray"
-          />
-        </div>
-      ),
-      cell: (context) => (
-        <CategoryBar
-          values={[40, 30, 20, 10]}
-          colors={["emerald", "yellow", "orange", "rose"]}
-          markerValue={context.getValue() ?? 0}
-          tooltip={(context.getValue() ?? 0).toString() ?? "0"}
-          className="min-w-[192px]"
-        />
-      ),
-    }),
     columnHelper.display({
       id: "extraPayload",
+      header: "Extra Payload",
       cell: (context) => <AlertExtraPayload alert={context.row.original} />,
     }),
     ...menuColumn,
@@ -271,7 +254,7 @@ export function AlertTable({
       alerts
         .map((alert) => {
           const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload);
+          return Object.keys(extraPayload).concat(columnsToExclude);
         })
         .reduce((acc, keys) => [...acc, ...keys], [])
     )
@@ -290,6 +273,7 @@ export function AlertTable({
       },
     })
   );
+
   const columnsToHideFromLocalStorage = localStorage.getItem(
     getHiddenColumnsLocalStorageKey(presetName)
   );
@@ -303,7 +287,7 @@ export function AlertTable({
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     // Defaultly exclude the extra payload columns from the default visibility
-    columnsToHideFromLocalStorage
+    !!columnsToHideFromLocalStorage
       ? JSON.parse(columnsToHideFromLocalStorage)
       : extraPayloadKeys.reduce((obj, key) => {
           obj[key] = false;
@@ -315,26 +299,31 @@ export function AlertTable({
     columns: columns,
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       columnVisibility,
       columnOrder,
-      rowSelection,
+      rowSelection: enabledRowSelection,
+    },
+    initialState: {
+      pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
-    getRowId: (row) => row.id,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
   });
 
   return (
     <>
-      <AlertColumnsSelect
-        table={table}
-        presetName={presetName}
-        setColumnVisibility={setColumnVisibility}
-        isLoading={isAsyncLoading}
-        columnOrder={columnOrder}
-      />
+      {presetName && (
+        <AlertColumnsSelect
+          table={table}
+          presetName={presetName}
+          setColumnVisibility={setColumnVisibility}
+          isLoading={isAsyncLoading}
+          columnOrder={columnOrder}
+        />
+      )}
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."
@@ -352,7 +341,7 @@ export function AlertTable({
               {headerGroup.headers.map((header) => (
                 <TableHeaderCell
                   key={header.id}
-                  className={`bg-white ${
+                  className={`bg-white pb-0 ${
                     header.column.columnDef.meta?.thClassName
                       ? header.column.columnDef.meta?.thClassName
                       : ""
@@ -369,6 +358,15 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
+      <AlertPagination table={table} mutate={mutate} />
+      <AlertHistory
+        isOpen={isOpen}
+        selectedAlert={selectedAlert}
+        closeModal={() => setIsOpen(false)}
+        users={users}
+        currentUser={currentUser}
+        accessToken={accessToken}
+      />
     </>
   );
 }
