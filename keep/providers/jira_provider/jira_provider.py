@@ -253,6 +253,9 @@ class JiraProvider(BaseProvider):
         summary: str,
         description: str = "",
         issue_type: str = "",
+        labels: List[str] = None,
+        components: List[str] = None,
+        custom_field_value: str = "",
         **kwargs: dict,
     ):
         """
@@ -267,14 +270,23 @@ class JiraProvider(BaseProvider):
 
             url = self.__get_url(paths=["issue"])
 
-            request_body = {
-                "fields": {
-                    "summary": summary,
-                    "description": description,
-                    "project": {"key": project_key},
-                    "issuetype": {"name": issue_type},
-                }
+            fields = {
+                "summary": summary,
+                "description": description,
+                "project": {"key": project_key},
+                "issuetype": {"name": issue_type},
             }
+
+            if labels:
+                fields["labels"] = labels
+
+            if components:
+                fields["components"] = [{"name": component} for component in components]
+
+            if custom_field_value:
+                fields["customfield_10021"] = custom_field_value
+
+            request_body = {"fields": fields}
 
             response = requests.post(
                 url=url, json=request_body, auth=self.__get_auth(), verify=False
