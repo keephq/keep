@@ -255,7 +255,7 @@ class JiraProvider(BaseProvider):
         issue_type: str = "",
         labels: List[str] = None,
         components: List[str] = None,
-        custom_field_value: str = "",
+        custom_fields: dict = None,
         **kwargs: dict,
     ):
         """
@@ -284,7 +284,7 @@ class JiraProvider(BaseProvider):
                 fields["components"] = [{"name": component} for component in components]
 
             if custom_field_value:
-                fields["customfield_10021"] = custom_field_value
+                fields.update(custom_fields)
 
             request_body = {"fields": fields}
 

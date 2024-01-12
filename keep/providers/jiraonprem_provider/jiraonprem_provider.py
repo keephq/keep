@@ -267,7 +267,7 @@ class JiraonpremProvider(BaseProvider):
         issue_type: str = "",
         labels: List[str] = None,
         components: List[str] = None,
-        custom_field_value: str = "",
+        custom_fields: dict = None,
         **kwargs: dict,
     ):
         """
@@ -296,7 +296,7 @@ class JiraonpremProvider(BaseProvider):
                 fields["components"] = [{"name": component} for component in components]
 
             if custom_field_value:
-                fields["customfield_10027"] = custom_field_value
+                fields.update(custom_fields);
 
             request_body = {"fields": fields}
 
