@@ -209,23 +209,35 @@ class GrafanaProvider(BaseProvider):
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
-        all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
-        all_contact_points.raise_for_status()
-        all_contact_points = all_contact_points.json()
+        try:
+            self.logger.info(f"Getting contact points")
+            all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
+            all_contact_points.raise_for_status()
+            all_contact_points = all_contact_points.json()
+        except Exception:
+            self.logger.exception("Failed to get contact points")
+            raise
+        # check if webhook already exists
         webhook_exists = [
             webhook_exists
             for webhook_exists in all_contact_points
             if webhook_exists.get("name") == webhook_name
             or webhook_exists.get("uid") == webhook_name
         ]
-
         # grafana version lesser then 9.4.7 do not send their authentication correctly
         # therefor we need to add the api_key as a query param instead of the normal digest token
-        health_api = f"{self.authentication_config.host}/api/health"
-        health_response = requests.get(health_api, verify=False, headers=headers).json()
-        grafana_version = health_response["version"]
-
+        self.logger.info("Getting Grafana version")
+        try:
+            health_api = f"{self.authentication_config.host}/api/health"
+            health_response = requests.get(health_api, verify=False, headers=headers).json()
+            grafana_version = health_response["version"]
+        except Exception:
+            self.logger.exception("Failed to get Grafana version")
+            raise
+        self.logger.info(f"Grafana version is {grafana_version}")
+        # if grafana version is greater then 9.4.7 we can use the digest token
         if packaging.version.parse(grafana_version) > packaging.version.parse("9.4.7"):
+            self.logger.info("Installing Grafana version > 9.4.7")
             if webhook_exists:
                 webhook = webhook_exists[0]
                 webhook["settings"]["url"] = keep_api_url
@@ -259,10 +271,12 @@ class GrafanaProvider(BaseProvider):
                 if not response.ok:
                     raise Exception(response.json())
                 self.logger.info(f"Created webhook {webhook_name}")
+        # if grafana version is lesser then 9.4.7 we need to add the api_key as a query param
         else:
+            self.logger.info("Installing Grafana version < 9.4.7")
             if webhook_exists:
                 webhook = webhook_exists[0]
-                webhook["settings"]["url"] = f"{keep_api_url}?api_key={api_key}"
+                webhook["settings"]["url"] = f"{keep_api_url}&api_key={api_key}"
                 requests.put(
                     f'{contacts_api}/{webhook["uid"]}',
                     verify=False,
@@ -289,7 +303,7 @@ class GrafanaProvider(BaseProvider):
                 if not response.ok:
                     raise Exception(response.json())
                 self.logger.info(f"Created webhook {webhook_name}")
-
+        # Finally, we need to update the policies to match the webhook
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
