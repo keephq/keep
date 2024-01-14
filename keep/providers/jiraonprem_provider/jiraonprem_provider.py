@@ -295,8 +295,8 @@ class JiraonpremProvider(BaseProvider):
             if components:
                 fields["components"] = [{"name": component} for component in components]
 
-            if custom_field_value:
-                fields.update(custom_fields);
+            if custom_fields:
+                fields.update(custom_fields)
 
             request_body = {"fields": fields}
 
