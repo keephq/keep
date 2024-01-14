@@ -61,7 +61,7 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
                 [
                     handler
                     for handler in self.logger.parent.handlers
-                    if handler.__class__.__name__ == "WorkflowDBHandler"
+                    if isinstance(handler, WorkflowDBHandler)
                 ]
             ),
             None,
