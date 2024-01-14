@@ -117,27 +117,35 @@ export default function Alerts({
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
         ) as AlertDto[];
-        newAlerts.forEach((alert) => {
-          if (typeof alert.lastReceived === "string")
-            alert.lastReceived = new Date(alert.lastReceived);
-        });
-        const receivedFingerprints = newAlerts.reduce((curr, alert) => {
-          if (!Object.keys(curr).includes(alert.fingerprint)) {
-            curr[alert.fingerprint] = alert.lastReceived;
-          }
-          return curr;
-        }, {} as { [key: string]: Date });
         setAlerts((prevAlerts) => {
-          // Remove alerts that are already in the list and have a more recent lastReceived
-          const filteredPrevAlerts = prevAlerts.filter((alert) => {
-            if (receivedFingerprints[alert.fingerprint]) {
-              return (
-                alert.lastReceived > receivedFingerprints[alert.fingerprint]
-              );
-            }
-            return true;
+          // Create a map of the latest received times for the new alerts
+          const latestReceivedTimes = new Map();
+          newAlerts.forEach((alert) => {
+            if (typeof alert.lastReceived === "string")
+              alert.lastReceived = new Date(alert.lastReceived);
+            latestReceivedTimes.set(alert.fingerprint, alert.lastReceived);
           });
-          return [...newAlerts, ...filteredPrevAlerts];
+
+          // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
+          const filteredPrevAlerts = prevAlerts.filter((prevAlert) => {
+            const newAlertReceivedTime = latestReceivedTimes.get(
+              prevAlert.fingerprint
+            );
+            return (
+              !newAlertReceivedTime ||
+              prevAlert.lastReceived > newAlertReceivedTime
+            );
+          });
+
+          // Filter out new alerts if their fingerprint is already in the filtered previous alerts
+          const filteredNewAlerts = newAlerts.filter((newAlert) => {
+            return !filteredPrevAlerts.some(
+              (prevAlert) => prevAlert.fingerprint === newAlert.fingerprint
+            );
+          });
+
+          // Combine the filtered lists
+          return [...filteredNewAlerts, ...filteredPrevAlerts];
         });
       });
 
