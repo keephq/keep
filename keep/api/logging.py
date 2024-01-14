@@ -69,6 +69,18 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         if workflow_db_handler:
             workflow_db_handler.push_logs_to_db()
         else:
+            # print recursive of all handlers
+            for handler in self.handlers:
+                print(handler)
+
+            for handler in self.logger.parent.handlers:
+                print(handler)
+
+            try:
+                for handler in self.logger.parent.parent.handlers:
+                    print(handler)
+            except Exception:
+                self.logger.warning("No parent parent found")
             self.logger.warning("No WorkflowDBHandler found")
         self.logger.info("Workflow logs dumped")
 
