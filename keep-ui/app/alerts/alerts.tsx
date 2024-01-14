@@ -121,15 +121,23 @@ export default function Alerts({
           if (typeof alert.lastReceived === "string")
             alert.lastReceived = new Date(alert.lastReceived);
         });
-        const fingerprints = newAlerts.map((alert) => alert.fingerprint);
+        const receivedFingerprints = newAlerts.reduce((curr, alert) => {
+          if (!Object.keys(curr).includes(alert.fingerprint)) {
+            curr[alert.fingerprint] = alert.lastReceived;
+          }
+          return curr;
+        }, {} as { [key: string]: Date });
         setAlerts((prevAlerts) => {
-          return [
-            // Remove the fingerprints that are already in the list
-            ...prevAlerts.filter(
-              (alert) => !fingerprints.includes(alert.fingerprint)
-            ),
-            ...newAlerts,
-          ];
+          // Remove alerts that are already in the list and have a more recent lastReceived
+          const filteredPrevAlerts = prevAlerts.filter((alert) => {
+            if (receivedFingerprints[alert.fingerprint]) {
+              return (
+                alert.lastReceived > receivedFingerprints[alert.fingerprint]
+              );
+            }
+            return true;
+          });
+          return [...newAlerts, ...filteredPrevAlerts];
         });
       });
 
