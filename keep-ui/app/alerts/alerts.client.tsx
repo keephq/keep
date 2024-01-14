@@ -31,8 +31,8 @@ export default function AlertsPage() {
       pusherClient === null
     ) {
       const pusher = new Pusher(configData.PUSHER_APP_KEY, {
-        wsHost: configData.PUSHER_HOST || "localhost",
-        wsPort: configData.PUSHER_PORT || 6001,
+        wsHost: configData.PUSHER_HOST,
+        wsPort: configData.PUSHER_PORT,
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
