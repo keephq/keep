@@ -56,7 +56,20 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         # TODO - we should:
         # TODO - 1. find the right handler to push the logs to the DB
         # TODO - 2. find a better way to push the logs async (maybe another service)
-        self.logger.parent.handlers[1].push_logs_to_db()
+        workflow_db_handler = next(
+            iter(
+                [
+                    handler
+                    for handler in self.logger.parent.handlers
+                    if isinstance(handler, WorkflowDBHandler)
+                ]
+            ),
+            None,
+        )
+        if workflow_db_handler:
+            workflow_db_handler.push_logs_to_db()
+        else:
+            self.logger.warning("No WorkflowDBHandler found")
         self.logger.info("Workflow logs dumped")
 
 
