@@ -210,7 +210,7 @@ class GrafanaProvider(BaseProvider):
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
         try:
-            self.logger.info(f"Getting contact points")
+            self.logger.info("Getting contact points")
             all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
             all_contact_points.raise_for_status()
             all_contact_points = all_contact_points.json()
