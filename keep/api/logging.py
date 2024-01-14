@@ -4,7 +4,13 @@ import logging
 import logging.config
 import os
 
+# tb: small hack to avoid the InsecureRequestWarning logs
+import urllib3
+
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.db import push_logs_to_db
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class WorkflowDBHandler(logging.Handler):
@@ -60,7 +66,13 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
             iter(
                 [
                     handler
-                    for handler in self.logger.parent.handlers
+                    for handler in (
+                        # tb: for some reason, when running in cloud run, the handler is nested in another handler
+                        #   this needs to be handled in a better way
+                        self.logger.parent.parent.handlers
+                        if RUNNING_IN_CLOUD_RUN
+                        else self.logger.parent.handlers
+                    )
                     if isinstance(handler, WorkflowDBHandler)
                 ]
             ),
@@ -111,6 +123,11 @@ CONFIG = {
             "propagate": False,
         },
         "Evaluator": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        "NameContainer": {
             "handlers": [],
             "level": "CRITICAL",
             "propagate": False,

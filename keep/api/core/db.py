@@ -17,6 +17,7 @@ from sqlalchemy.orm import joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
@@ -25,8 +26,6 @@ from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
-
-running_in_cloud_run = os.environ.get("K_SERVICE") is not None
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +90,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 
-if running_in_cloud_run:
+if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
         "mysql+pymysql://",
         creator=__get_conn,
