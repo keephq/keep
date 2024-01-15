@@ -72,12 +72,12 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
       code: `
 import requests
 
-response = requests.post("https://api.keephq.dev/alerts/event", 
+response = requests.post("https://api.keephq.dev/alerts/event",
 headers={
   "Content-Type": "application/json",
   "Accept": "application/json",
   "X-API-KEY": "${data.apiKey}"
-}, 
+},
 json=${exampleJson})
       `,
     },
@@ -88,7 +88,7 @@ json=${exampleJson})
 const https = require('https');
 
 const data = JSON.stringify(${exampleJson});
-    
+
 const options = {
   hostname: 'api.keephq.dev',
   port: 443,
@@ -101,7 +101,7 @@ const options = {
     'Content-Length': data.length
   }
 };
-    
+
 const req = https.request(options, (res) => {
   console.log(\`statusCode: $\{res.statusCode}\`);
 
@@ -109,7 +109,7 @@ const req = https.request(options, (res) => {
     process.stdout.write(d);
   });
 });
-  
+
 req.on('error', (error) => {
   console.error(error);
 });
@@ -121,8 +121,6 @@ req.end();
   ] as const;
 
   const tryNow = async () => {
-    const raw = JSON.stringify(example);
-
     const requestOptions: RequestInit = {
       method: "POST",
       headers: {
@@ -130,7 +128,7 @@ req.end();
         Accept: "application/json",
         "X-API-KEY": data.apiKey,
       },
-      body: raw,
+      body: exampleJson,
     };
 
     const resp = await fetch(data.webhookApi, requestOptions);
