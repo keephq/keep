@@ -161,18 +161,19 @@ class IlertProvider(BaseProvider):
             "message": message,
             **kwargs,
         }
-        if affectedServices:
-            try:
-                payload["affectedServices"] = (
-                    json.loads(affectedServices)
-                    if isinstance(affectedServices, str)
-                    else affectedServices
-                )
-            except Exception:
-                self.logger.warning(
-                    "Failed to parse affectedServices",
-                    extra={"affectedServices": affectedServices},
-                )
+
+        try:
+            payload["affectedServices"] = (
+                json.loads(affectedServices)
+                if isinstance(affectedServices, str)
+                else affectedServices
+            )
+        except Exception:
+            self.logger.warning(
+                "Failed to parse affectedServices",
+                extra={"affectedServices": affectedServices},
+            )
+            raise
 
         # if id is set, we update the incident, otherwise we create a new one
         should_update = id and id != "0"
@@ -204,6 +205,7 @@ class IlertProvider(BaseProvider):
             "Ilert incident created/updated",
             extra={"status_code": response.status_code},
         )
+        return response.json()
 
 
 if __name__ == "__main__":
