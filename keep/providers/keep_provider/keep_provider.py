@@ -37,10 +37,10 @@ class KeepProvider(BaseProvider):
         alerts = []
         if db_alerts:
             for alert in db_alerts:
-                alert_dict = alert.dict()
+                alert_event = alert.event
                 if alert.alert_enrichment:
-                    alert_dict["enrichments"] = alert.alert_enrichment.enrichments
-                alerts.append(alert_dict)
+                    alert_event["enrichments"] = alert.alert_enrichment.enrichments
+                alerts.append(alert_event)
         return alerts
 
     def validate_config(self):

@@ -122,7 +122,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self._enrich_alert(enrich_alert, results)
         return results
 
-    def _enrich_alert(self, fingerprint, enrichments, results):
+    def _enrich_alert(self, enrichments, results):
         """
         Enrich alert with provider specific data.
 
@@ -130,6 +130,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.debug("Extracting the fingerprint from the alert")
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
+        elif self.context_manager.foreach_context.get("value", {}):
+            fingerprint = self.context_manager.foreach_context.get("value", {}).get(
+                "fingerprint"
+            )
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
