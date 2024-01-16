@@ -13,7 +13,7 @@ from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import String, and_, bindparam, case, desc, func, select, text, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -102,9 +102,7 @@ elif db_connection_string == "impersonate":
         creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(
-        db_connection_string,
-    )
+    engine = create_engine(db_connection_string, echo=True)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
@@ -1065,3 +1063,53 @@ def delete_rule(tenant_id, rule_id):
             session.commit()
             return True
         return False
+
+
+def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint):
+    # checks if group with the group critiria exists, if not it creates it
+    #   and then assign the alert to the group
+    with Session(engine) as session:
+        group = session.exec(
+            select(Group)
+            .where(Group.tenant_id == tenant_id)
+            .where(Group.rule_id == rule_id)
+            .where(Group.group_fingerprint == group_fingerprint)
+        ).first()
+        # if the group does not exist
+        if not group:
+            group = Group(
+                tenant_id=tenant_id,
+                rule_id=rule_id,
+                group_fingerprint=group_fingerprint,
+            )
+            session.add(group)
+            session.commit()
+            session.refresh(group)
+
+        alert_group = AlertToGroup(
+            tenant_id=tenant_id,
+            alert_id=str(alert_id),
+            group_id=str(group.id),
+        )
+        session.add(alert_group)
+        session.commit()
+        session.refresh(alert_group)
+        return alert_group
+
+
+def get_groups(tenant_id):
+    with Session(engine) as session:
+        groups = session.exec(
+            select(Group)
+            .options(selectinload(Group.alerts))
+            .where(Group.tenant_id == tenant_id)
+        ).all()
+    return groups
+
+
+def get_rule(tenant_id, rule_id):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+        ).first()
+    return rule
