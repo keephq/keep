@@ -11,12 +11,24 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import String, and_, bindparam, case, desc, func, select, text, update
+from sqlalchemy import (
+    String,
+    and_,
+    bindparam,
+    case,
+    desc,
+    func,
+    null,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
@@ -25,8 +37,6 @@ from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
-
-running_in_cloud_run = os.environ.get("K_SERVICE") is not None
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +101,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 
-if running_in_cloud_run:
+if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
         "mysql+pymysql://",
         creator=__get_conn,
@@ -639,7 +649,7 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
+def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -657,9 +667,37 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None):
         if filters:
             for f in filters:
                 filter_key, filter_value = f.get("key"), f.get("value")
-                query = query.filter(
-                    AlertEnrichment.enrichments[filter_key] == filter_value
-                )
+                if isinstance(filter_value, bool) and filter_value is True:
+                    # If the filter value is True, we want to filter by the existence of the enrichment
+                    #   e.g.: all the alerts that have ticket_id
+                    query = query.filter(
+                        func.json_type(AlertEnrichment.enrichments, f"$.{filter_key}")
+                        != null()
+                    )
+                elif isinstance(filter_value, (str, int)):
+                    if session.bind.dialect.name == "mysql":
+                        query = query.filter(
+                            func.json_unquote(
+                                func.json_extract(
+                                    AlertEnrichment.enrichments, f"$.{filter_key}"
+                                )
+                            )
+                            == filter_value
+                        )
+                    elif session.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            func.json_extract(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
+                            == filter_value
+                        )
+                    else:
+                        logger.warning(
+                            "Unsupported dialect",
+                            extra={"dialect": session.bind.dialect.name},
+                        )
+                else:
+                    logger.warning("Unsupported filter type", extra={"filter": f})
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)

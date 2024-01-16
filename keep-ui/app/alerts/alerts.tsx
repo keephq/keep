@@ -117,19 +117,35 @@ export default function Alerts({
         const newAlerts = JSON.parse(
           new TextDecoder().decode(decompressedAlert)
         ) as AlertDto[];
-        newAlerts.forEach((alert) => {
-          if (typeof alert.lastReceived === "string")
-            alert.lastReceived = new Date(alert.lastReceived);
-        });
-        const fingerprints = newAlerts.map((alert) => alert.fingerprint);
         setAlerts((prevAlerts) => {
-          return [
-            // Remove the fingerprints that are already in the list
-            ...prevAlerts.filter(
-              (alert) => !fingerprints.includes(alert.fingerprint)
-            ),
-            ...newAlerts,
-          ];
+          // Create a map of the latest received times for the new alerts
+          const latestReceivedTimes = new Map();
+          newAlerts.forEach((alert) => {
+            if (typeof alert.lastReceived === "string")
+              alert.lastReceived = new Date(alert.lastReceived);
+            latestReceivedTimes.set(alert.fingerprint, alert.lastReceived);
+          });
+
+          // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
+          const filteredPrevAlerts = prevAlerts.filter((prevAlert) => {
+            const newAlertReceivedTime = latestReceivedTimes.get(
+              prevAlert.fingerprint
+            );
+            return (
+              !newAlertReceivedTime ||
+              prevAlert.lastReceived > newAlertReceivedTime
+            );
+          });
+
+          // Filter out new alerts if their fingerprint is already in the filtered previous alerts
+          const filteredNewAlerts = newAlerts.filter((newAlert) => {
+            return !filteredPrevAlerts.some(
+              (prevAlert) => prevAlert.fingerprint === newAlert.fingerprint
+            );
+          });
+
+          // Combine the filtered lists
+          return [...filteredNewAlerts, ...filteredPrevAlerts];
         });
       });
 
