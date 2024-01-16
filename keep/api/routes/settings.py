@@ -23,8 +23,15 @@ from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
+from keep.api.models.apikey import APIKeyDTO
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key
+from keep.api.utils.tenant_utils import (
+    get_or_create_api_key,
+    create_api_key as create_api_key_in_db,
+    get_api_keys as get_api_keys_from_db,
+    update_api_key as update_api_key_in_db,
+    delete_api_key as delete_api_key_in_db,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -350,24 +357,93 @@ class PatchedSMTP(smtplib.SMTP):
         else:
             super()._print_debug(*args)
 
-
-@router.get("/apikey")
-def get_api_key(
+@router.get("/apikey", response_model=list[APIKeyDTO], description="Get all API keys")
+def get_api_keys(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:settings"])
     ),
     session: Session = Depends(get_session),
 ):
-    logger.info("Getting API key")
+    logger.info("Getting API keys")
+    tenant_id = authenticated_entity.tenant_id
+    api_keys = get_api_keys_from_db(session, tenant_id)
+    api_keys_dto = [
+        APIKeyDTO(
+            key_name=api_key.name,
+            description=api_key.details,
+            created_at=str(api_key.created_at),
+        )
+        for api_key in api_keys
+    ]
+    return api_keys_dto
+
+@router.post("/apikey", response_model=APIKeyDTO, description="Create an API key")
+async def create_api_key(
+    key_name: str,
+    description: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
     tenant_id = authenticated_entity.tenant_id
     user_name = authenticated_entity.email
-    # get the api key for the CLI
-    api_key = get_or_create_api_key(
+    api_key = create_api_key_in_db(
         session=session,
         tenant_id=tenant_id,
+        name=key_name,
+        details=description,
+        role=None,  # Specify the appropriate role for the API key creation
         created_by=user_name,
-        unique_api_key_id="cli",
-        system_description="API key",
+        commit=True,
     )
-    logger.info("API key retrieved successfully")
-    return {"apiKey": api_key}
+    api_key_dto = APIKeyDTO(
+        key_name=api_key.name,
+        description=api_key.details,
+        created_at=str(api_key.created_at),
+    )
+    return api_key_dto
+
+@router.put("/apikey/{key_name}", response_model=APIKeyDTO, description="Update an API key")
+async def update_api_key(
+    key_name: str,
+    description: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    user_name = authenticated_entity.email
+    api_key = update_api_key_in_db(
+        session=session,
+        tenant_id=tenant_id,
+        name=key_name,
+        details=description,
+        commit=True,
+    )
+    if api_key:
+        api_key_dto = APIKeyDTO(
+            key_name=api_key.name,
+            description=api_key.details,
+            created_at=str(api_key.created_at),
+        )
+        return api_key_dto
+    else:
+        raise HTTPException(status_code=404, detail=f"API key '{key_name}' not found")
+
+@router.delete("/apikey/{key_name}", response_model=dict, description="Delete an API key")
+async def delete_api_key(
+    key_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["delete:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    user_name = authenticated_entity.email
+    success = delete_api_key_in_db(session, tenant_id, key_name, commit=True)
+    if success:
+        return {"status": "OK"}
+    else:
+        raise HTTPException(status_code=404, detail=f"API key '{key_name}' not found")
