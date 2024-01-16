@@ -5,7 +5,7 @@ services:
       service: keep-frontend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
     environment:
-      - AUTH_TYPE=SINGLE_TENANT
+      - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
     volumes:
       - ./state:/state
@@ -18,9 +18,7 @@ services:
       service: keep-backend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
-      - AUTH_TYPE=SINGLE_TENANT
-      - KEEP_JWT_SECRET=keepsecret
-      - KEEP_API_URL=https://a30e-2a02-14f-82-e398-1d28-ed36-592-67be.ngrok-free.app
+      - AUTH_TYPE=NO_AUTH
     volumes:
       - ./state:/state
   keep-websocket-server:
