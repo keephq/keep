@@ -30,9 +30,17 @@ class KeepProvider(BaseProvider):
         """
         Query Keep for alerts.
         """
-        alerts = get_alerts_with_filters(
+        db_alerts = get_alerts_with_filters(
             self.context_manager.tenant_id, filters=filters
         )
+
+        alerts = []
+        if db_alerts:
+            for alert in db_alerts:
+                alert_event = alert.event
+                if alert.alert_enrichment:
+                    alert_event["enrichments"] = alert.alert_enrichment.enrichments
+                alerts.append(alert_event)
         return alerts
 
     def validate_config(self):
