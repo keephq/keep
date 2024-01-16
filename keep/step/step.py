@@ -77,21 +77,25 @@ class Step:
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
-    def _get_foreach_items(self):
+    def _get_foreach_items(self) -> list | list[list]:
         """Get the items to iterate over, when using the `foreach` attribute (see foreach.md)"""
         # TODO: this should be part of iohandler?
 
         # the item holds the value we are going to iterate over
         # TODO: currently foreach will support only {{ a.b.c }} and not functions and other things (which make sense)
-        index = (
-            self.config.get("foreach").replace("{{", "").replace("}}", "").split(".")
-        )
-        index = [i.strip() for i in index]
-        items = self.context_manager.get_full_context()
-        for i in index:
-            # try to get it as a dict
-            items = items.get(i, {})
-        return items
+        foreach_split = self.config.get("foreach").split("&&")
+        foreach_items = []
+        for foreach in foreach_split:
+            index = foreach.replace("{{", "").replace("}}", "").split(".")
+            index = [i.strip() for i in index]
+            items = self.context_manager.get_full_context()
+            for i in index:
+                # try to get it as a dict
+                items = items.get(i, {})
+            foreach_items.append(items)
+        if not foreach_items:
+            return []
+        return len(foreach_items) == 1 and foreach_items[0] or zip(*foreach_items)
 
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
@@ -197,7 +201,7 @@ class Step:
             self.logger.info(
                 "Action %s evaluated NOT to run, Reason: %s evaluated to false.",
                 self.config.get("name"),
-                if_conf,
+                if_met,
             )
             return
 
@@ -205,7 +209,7 @@ class Step:
             self.logger.info(
                 "Action %s evaluated to run! Reason: %s evaluated to true.",
                 self.config.get("name"),
-                if_conf,
+                if_met,
             )
         else:
             self.logger.info(

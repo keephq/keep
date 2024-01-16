@@ -131,6 +131,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
+            # TODO: if it's zipped, we need to extract the fingerprint from the zip (i.e. multiple foreach)
             fingerprint = self.context_manager.foreach_context.get("value", {}).get(
                 "fingerprint"
             )
