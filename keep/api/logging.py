@@ -92,7 +92,7 @@ CONFIG = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s",
+            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
             "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
         }
     },
@@ -128,6 +128,11 @@ CONFIG = {
             "propagate": False,
         },
         "NameContainer": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        "evaluation": {
             "handlers": [],
             "level": "CRITICAL",
             "propagate": False,

@@ -1,8 +1,10 @@
 # TODO: this whole file needs to get refactored
 # mainly: pusher stuff, enrichment stuff and async stuff
 import base64
+import copy
 import json
 import logging
+import os
 import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -24,7 +26,7 @@ from keep.api.core.dependencies import (
     get_pusher_client,
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
-from keep.api.models.db.alert import Alert
+from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -436,6 +438,7 @@ def handle_formatted_events(
     tenant_id,
     provider_type,
     session: Session,
+    non_formatter_events: list[dict],
     formatted_events: list[AlertDto],
     pusher_client: Pusher,
     provider_id: str | None = None,
@@ -450,6 +453,14 @@ def handle_formatted_events(
         },
     )
     try:
+        # keep raw events in the DB if the user wants to
+        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
+            for non_formatted_event in non_formatter_events:
+                alert = AlertRaw(
+                    tenant_id=tenant_id,
+                    raw_alert=non_formatted_event,
+                )
+                session.add(alert)
         for formatted_event in formatted_events:
             formatted_event.pushed = True
             alert = Alert(
@@ -570,6 +581,7 @@ async def receive_generic_event(
         alert[0].source[0] or "keep",
         session,
         alert,
+        alert,
         pusher_client,
     )
     return alert
@@ -601,6 +613,7 @@ async def receive_event(
     # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
     try:
         event = json.loads(body.decode())
+        event_copy = copy.copy(event)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
@@ -647,6 +660,7 @@ async def receive_event(
                 tenant_id,
                 provider_type,
                 session,
+                event_copy if isinstance(event_copy, list) else [event_copy],
                 formatted_events,
                 pusher_client,
                 provider_id,
