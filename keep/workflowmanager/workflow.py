@@ -42,23 +42,13 @@ class Workflow:
         self.io_nandler = IOHandler(context_manager)
         self.logger = self.context_manager.get_logger()
 
-    def run_step(self, step: Step):
-        self.logger.info("Running step %s", step.step_id)
-        if step.foreach:
-            rendered_foreach = self.io_nandler.render(step.foreach)
-            for f in rendered_foreach:
-                self.logger.debug("Step is a foreach step")
-                self.context_manager.set_for_each_context(f)
-                step.run()
-        else:
-            step.run()
-        self.logger.info("Step %s ran successfully", step.step_id)
-
     def run_steps(self):
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
         for step in self.workflow_steps:
             try:
-                self.run_step(step)
+                self.logger.info("Running step %s", step.step_id)
+                step.run()
+                self.logger.info("Step %s ran successfully", step.step_id)
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 raise

@@ -295,7 +295,7 @@ class Parser:
     def parse_provider_parameters(provider_parameters: dict) -> dict:
         parsed_provider_parameters = {}
         for parameter in provider_parameters:
-            if isinstance(provider_parameters[parameter], str):
+            if isinstance(provider_parameters[parameter], (str, list, int, bool)):
                 parsed_provider_parameters[parameter] = provider_parameters[parameter]
             elif isinstance(provider_parameters[parameter], dict):
                 try:

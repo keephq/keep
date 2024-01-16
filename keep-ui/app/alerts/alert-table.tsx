@@ -37,7 +37,7 @@ import AlertSeverity from "./alert-severity";
 import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
@@ -75,6 +75,37 @@ interface Props {
   accessToken?: string;
 }
 
+const getExtraPayloadKeys = (
+  alerts: AlertDto[],
+  columnsToExclude: string[]
+) => {
+  return Array.from(
+    new Set(
+      alerts
+        .map((alert) => {
+          const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
+          return Object.keys(extraPayload).concat(columnsToExclude);
+        })
+        .reduce((acc, keys) => [...acc, ...keys], [])
+    )
+  );
+};
+
+const getColumnsToHide = (
+  presetName: string | undefined,
+  extraPayloadKeys: string[]
+): { [key: string]: boolean } => {
+  const columnsToHideFromLocalStorage = localStorage.getItem(
+    getHiddenColumnsLocalStorageKey(presetName)
+  );
+  return columnsToHideFromLocalStorage
+    ? JSON.parse(columnsToHideFromLocalStorage)
+    : extraPayloadKeys.reduce((obj, key) => {
+        obj[key] = false;
+        return obj;
+      }, {} as { [key: string]: boolean });
+};
+
 export function AlertTable({
   alerts,
   workflows = [],
@@ -94,6 +125,9 @@ export function AlertTable({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const columnOrderLocalStorage = localStorage.getItem(
+    getColumnsOrderLocalStorageKey(presetName)
+  );
 
   const openModal = (alert: AlertDto) => {
     setSelectedAlert(alert);
@@ -249,16 +283,7 @@ export function AlertTable({
     ...menuColumn,
   ];
 
-  const extraPayloadKeys = Array.from(
-    new Set(
-      alerts
-        .map((alert) => {
-          const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload).concat(columnsToExclude);
-        })
-        .reduce((acc, keys) => [...acc, ...keys], [])
-    )
-  );
+  const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
   // Create all the necessary columns
   const extraPayloadColumns = extraPayloadKeys.map((key) =>
     columnHelper.display({
@@ -274,26 +299,20 @@ export function AlertTable({
     })
   );
 
-  const columnsToHideFromLocalStorage = localStorage.getItem(
-    getHiddenColumnsLocalStorageKey(presetName)
-  );
-  const columnOrderLocalStorage = localStorage.getItem(
-    getColumnsOrderLocalStorageKey(presetName)
-  );
-
   const columns = [...defaultColumns, ...extraPayloadColumns];
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     // Defaultly exclude the extra payload columns from the default visibility
-    !!columnsToHideFromLocalStorage
-      ? JSON.parse(columnsToHideFromLocalStorage)
-      : extraPayloadKeys.reduce((obj, key) => {
-          obj[key] = false;
-          return obj;
-        }, {} as any)
+    getColumnsToHide(presetName, extraPayloadKeys)
   );
+
+  useEffect(() => {
+    const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
+    setColumnVisibility(getColumnsToHide(presetName, extraPayloadKeys));
+  }, [alerts]);
+
   const table = useReactTable({
     data: alerts,
     columns: columns,
