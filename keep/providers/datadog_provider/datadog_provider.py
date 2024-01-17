@@ -8,6 +8,7 @@ import os
 import time
 
 import pydantic
+import requests
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
 from datadog_api_client.exceptions import (
@@ -51,7 +52,8 @@ class DatadogProviderAuthConfig:
             "description": "Datadog Api Key",
             "hint": "https://docs.datadoghq.com/account_management/api-app-keys/#api-keys",
             "sensitive": True,
-        }
+        },
+        default="",
     )
     app_key: str = dataclasses.field(
         metadata={
@@ -59,12 +61,25 @@ class DatadogProviderAuthConfig:
             "description": "Datadog App Key",
             "hint": "https://docs.datadoghq.com/account_management/api-app-keys/#application-keys",
             "sensitive": True,
-        }
+        },
+        default="",
+    )
+    oauth_token: dict = dataclasses.field(
+        metadata={
+            "description": "For OAuth flow",
+            "required": False,
+            "sensitive": True,
+            "hidden": True,
+        },
+        default_factory=lambda x: {},
     )
 
 
 class DatadogProvider(BaseProvider):
     """Pull/push alerts from Datadog."""
+
+    OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
+    DATADOG_CLIENT_SECRET = os.environ.get("DATADOG_CLIENT_SECRET")
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -174,11 +189,55 @@ class DatadogProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
         self.configuration = Configuration(request_timeout=5)
-        self.configuration.api_key["apiKeyAuth"] = self.authentication_config.api_key
-        self.configuration.api_key["appKeyAuth"] = self.authentication_config.app_key
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            self.configuration.api_key[
+                "apiKeyAuth"
+            ] = self.authentication_config.api_key
+            self.configuration.api_key[
+                "appKeyAuth"
+            ] = self.authentication_config.app_key
+        elif self.authentication_config.oauth_token:
+            self.configuration.access_token = (
+                self.authentication_config.oauth_token.get("refresh_token")
+            )
+        else:
+            raise Exception("No authentication provided")
         # to be exposed
         self.to = None
         self._from = None
+
+    @staticmethod
+    def oauth2_logic(**payload) -> dict:
+        """
+        Logic for handling oauth2 callback.
+
+        Returns:
+            dict: access token to Datadog.
+        """
+        verifier = payload.pop("verifier", None)
+        if not verifier:
+            raise Exception("No verifier provided")
+        code = payload.pop("code", None)
+        if not code:
+            raise Exception("No code provided")
+
+        token = requests.post(
+            "https://api.datadoghq.com/oauth2/v1/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": payload["client_id"],
+                "client_secret": DatadogProvider.DATADOG_CLIENT_SECRET,
+                "redirect_uri": payload["redirect_uri"],
+                "code_verifier": verifier,
+                "code": code,
+            },
+        ).json()
+
+        access_token = token.get("access_token")
+        if not access_token:
+            raise Exception("No access token provided")
+
+        return {"oauth_token": token}
 
     def mute_monitor(
         self,
