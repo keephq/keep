@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { User } from "app/settings/models";
 import { NameInitialsAvatar } from "react-name-initials-avatar";
+import { useUsers } from "utils/hooks/useUsers";
 
-export default function AlertAssignee({
-  assignee,
-  users,
-}: {
+interface Props {
   assignee: string | undefined;
-  users: User[];
-}) {
+}
+
+export default function AlertAssignee({ assignee }: Props) {
   const [imageError, setImageError] = useState(false);
+  const { data: users = [] } = useUsers();
 
   if (!assignee || users.length < 1) {
     return null;
