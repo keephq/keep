@@ -9,7 +9,7 @@ from datetime import datetime
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
@@ -90,6 +90,18 @@ class NewrelicProvider(BaseProvider):
             alias="Rules Writer",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "open": AlertStatus.FIRING,
+        "closed": AlertStatus.RESOLVED,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

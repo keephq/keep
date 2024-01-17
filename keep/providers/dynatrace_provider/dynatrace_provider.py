@@ -11,7 +11,7 @@ import os
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -75,6 +75,19 @@ class DynatraceProvider(BaseProvider):
         ),
     ]
     FINGERPRINT_FIELDS = ["id"]
+
+    SEVERITIES_MAP = {
+        "AVAILABILITY": AlertSeverity.HIGH,
+        "ERROR": AlertSeverity.CRITICAL,
+        "PERFORMANCE": AlertSeverity.MEDIUM,
+        "RESOURCE": AlertSeverity.WARNING,
+        "CUSTOM": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "OPEN": AlertStatus.FIRING,
+        "RESOLVED": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

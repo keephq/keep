@@ -1,10 +1,41 @@
+from enum import Enum
+
 from pydantic import AnyHttpUrl, BaseModel, Extra, validator
+
+
+class AlertSeverity(Enum):
+    # Requires immediate action
+    CRITICAL = "critical"
+    # Needs to be addressed soon
+    HIGH = "high"
+    # Indicates a potential problem
+    WARNING = "warning"
+    # Provides information, no immediate action required
+    INFO = "info"
+    # Minor issues or lowest priority
+    LOW = "low"
+
+
+class AlertStatus(Enum):
+    # Active alert
+    FIRING = "firing"
+    # Alert has been resolved
+    RESOLVED = "resolved"
+    # Alert has been acknowledged but not resolved
+    ACKNOWLEDGED = "acknowledged"
+    # Alert condition is met, but not yet firing
+    TRIGGERED = "triggered"
+    # Alert is suppressed due to various reasons
+    SUPPRESSED = "suppressed"
+    # No Data
+    PENDING = "pending"
 
 
 class AlertDto(BaseModel):
     id: str
     name: str
-    status: str
+    status: AlertStatus
+    severity: AlertSeverity
     lastReceived: str
     environment: str = "undefined"
     isDuplicate: bool | None = None
@@ -13,7 +44,6 @@ class AlertDto(BaseModel):
     source: list[str] | None = []
     message: str | None = None
     description: str | None = None
-    severity: str | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None

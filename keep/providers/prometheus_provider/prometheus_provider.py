@@ -10,7 +10,7 @@ import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -61,6 +61,18 @@ receivers:
       basic_auth:
         username: api_key
         password: {api_key}"""
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+        "low": AlertSeverity.LOW,
+    }
+
+    STATUS_MAP = {
+        "firing": AlertStatus.FIRING,
+        "resolved": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

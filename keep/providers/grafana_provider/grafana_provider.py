@@ -4,13 +4,13 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
-from pkg_resources import packaging
 
 import pydantic
 import requests
 from grafana_api.model import APIEndpoints
+from pkg_resources import packaging
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -75,6 +75,21 @@ class GrafanaProvider(BaseProvider):
             alias="Access to alert rules provisioning API",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "ok": AlertStatus.RESOLVED,
+        "paused": AlertStatus.SUPPRESSED,
+        "alerting": AlertStatus.FIRING,
+        "pending": AlertStatus.PENDING,
+        "no_data": AlertStatus.PENDING,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -211,7 +226,9 @@ class GrafanaProvider(BaseProvider):
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
         try:
             self.logger.info("Getting contact points")
-            all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
+            all_contact_points = requests.get(
+                contacts_api, verify=False, headers=headers
+            )
             all_contact_points.raise_for_status()
             all_contact_points = all_contact_points.json()
         except Exception:
@@ -229,7 +246,9 @@ class GrafanaProvider(BaseProvider):
         self.logger.info("Getting Grafana version")
         try:
             health_api = f"{self.authentication_config.host}/api/health"
-            health_response = requests.get(health_api, verify=False, headers=headers).json()
+            health_response = requests.get(
+                health_api, verify=False, headers=headers
+            ).json()
             grafana_version = health_response["version"]
         except Exception:
             self.logger.exception("Failed to get Grafana version")

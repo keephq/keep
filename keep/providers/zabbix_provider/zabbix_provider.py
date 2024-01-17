@@ -11,7 +11,7 @@ from typing import Literal
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import ProviderMethodException
@@ -153,6 +153,20 @@ class ZabbixProvider(BaseProvider):
             type="view",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "not_classified": AlertSeverity.LOW,
+        "information": AlertSeverity.INFO,
+        "warning": AlertSeverity.WARNING,
+        "average": AlertSeverity.MEDIUM,
+        "high": AlertSeverity.HIGH,
+        "disaster": AlertSeverity.CRITICAL,
+    }
+
+    STATUS_MAP = {
+        "problem": AlertStatus.FIRING,
+        "ok": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

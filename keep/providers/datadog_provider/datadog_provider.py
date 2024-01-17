@@ -32,6 +32,7 @@ from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
+from keep.providers.models.alert import AlertSeverity, AlertStatus
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -151,6 +152,17 @@ class DatadogProvider(BaseProvider):
             "monitor_id": "$ALERT_ID",
         }
     )
+
+    SEVERITIES_MAP = {
+        "info": AlertSeverity.INFO,
+        "warning": AlertSeverity.WARNING,
+        "critical": AlertSeverity.CRITICAL,
+    }
+
+    STATUS_MAP = {
+        "triggered": AlertStatus.FIRING,
+        "resolved": AlertStatus.RESOLVED,
+    }
 
     def convert_to_seconds(s):
         seconds_per_unit = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}

@@ -15,7 +15,7 @@ import boto3
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -132,6 +132,15 @@ class CloudwatchProvider(BaseProvider):
         "Tags",
         "ThresholdMetricId",
     }
+
+    STATUS_MAP = {
+        "ALARM": AlertStatus.FIRING,
+        "OK": AlertStatus.RESOLVED,
+        "INSUFFICIENT_DATA": AlertStatus.PENDING,
+    }
+
+    # CloudWatch doesn't have built-in severities
+    SEVERITIES_MAP = {}
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

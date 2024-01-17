@@ -12,7 +12,7 @@ import pydantic
 import requests
 from fastapi import HTTPException
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -129,6 +129,13 @@ class KibanaProvider(BaseProvider):
             alias="Write Connectors",
         ),
     ]
+
+    SEVERITIES_MAP = {}
+
+    STATUS_MAP = {
+        "active": AlertStatus.FIRING,
+        "recovered": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
