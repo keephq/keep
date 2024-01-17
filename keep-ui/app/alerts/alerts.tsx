@@ -5,8 +5,6 @@ import {
   Tab,
   TabPanels,
   TabPanel,
-  Badge,
-  Subtitle,
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "utils/fetcher";
@@ -15,7 +13,7 @@ import { AlertDto, Preset } from "./models";
 import { getApiURL } from "utils/apiUrl";
 import { useEffect, useState } from "react";
 import Loading from "app/loading";
-import Pusher from "pusher-js";
+import Pusher, { Channel } from "pusher-js";
 import { Workflow } from "app/workflows/models";
 import { ProvidersResponse } from "app/providers/providers";
 import zlib from "zlib";
@@ -25,9 +23,7 @@ import { User } from "app/settings/models";
 import AlertPresets, { Option } from "./alert-presets";
 import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
-import { GlobeIcon } from "@radix-ui/react-icons";
-import { getAlertLastReceieved } from "utils/helpers";
-import "./alerts.css";
+import AlertStreamline from "./alert-streamline";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -57,6 +53,7 @@ export default function Alerts({
   const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
     defaultPresets[0] // Feed
   );
+  const [channel, setChannel] = useState<Channel | null>(null);
   const [isAsyncLoading, setIsAsyncLoading] = useState<boolean>(true);
   const { data, isLoading, mutate } = useSWR<AlertDto[]>(
     `${apiUrl}/alerts?sync=${pusherDisabled ? "true" : "false"}`,
@@ -107,49 +104,52 @@ export default function Alerts({
     if (!pusherDisabled && pusher) {
       console.log("Connecting to pusher");
       const channelName = `private-${tenantId}`;
-      const channel = pusher.subscribe(channelName);
+      const pusherChannel = pusher.subscribe(channelName);
+      setChannel(pusherChannel);
+      pusherChannel.bind(
+        "async-alerts",
+        function (base64CompressedAlert: string) {
+          setLastReceivedAlertDate(new Date());
+          const decompressedAlert = zlib.inflateSync(
+            Buffer.from(base64CompressedAlert, "base64")
+          );
+          const newAlerts = JSON.parse(
+            new TextDecoder().decode(decompressedAlert)
+          ) as AlertDto[];
+          setAlerts((prevAlerts) => {
+            // Create a map of the latest received times for the new alerts
+            const latestReceivedTimes = new Map();
+            newAlerts.forEach((alert) => {
+              if (typeof alert.lastReceived === "string")
+                alert.lastReceived = new Date(alert.lastReceived);
+              latestReceivedTimes.set(alert.fingerprint, alert.lastReceived);
+            });
 
-      channel.bind("async-alerts", function (base64CompressedAlert: string) {
-        setLastReceivedAlertDate(new Date());
-        const decompressedAlert = zlib.inflateSync(
-          Buffer.from(base64CompressedAlert, "base64")
-        );
-        const newAlerts = JSON.parse(
-          new TextDecoder().decode(decompressedAlert)
-        ) as AlertDto[];
-        setAlerts((prevAlerts) => {
-          // Create a map of the latest received times for the new alerts
-          const latestReceivedTimes = new Map();
-          newAlerts.forEach((alert) => {
-            if (typeof alert.lastReceived === "string")
-              alert.lastReceived = new Date(alert.lastReceived);
-            latestReceivedTimes.set(alert.fingerprint, alert.lastReceived);
+            // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
+            const filteredPrevAlerts = prevAlerts.filter((prevAlert) => {
+              const newAlertReceivedTime = latestReceivedTimes.get(
+                prevAlert.fingerprint
+              );
+              return (
+                !newAlertReceivedTime ||
+                prevAlert.lastReceived > newAlertReceivedTime
+              );
+            });
+
+            // Filter out new alerts if their fingerprint is already in the filtered previous alerts
+            const filteredNewAlerts = newAlerts.filter((newAlert) => {
+              return !filteredPrevAlerts.some(
+                (prevAlert) => prevAlert.fingerprint === newAlert.fingerprint
+              );
+            });
+
+            // Combine the filtered lists
+            return [...filteredNewAlerts, ...filteredPrevAlerts];
           });
+        }
+      );
 
-          // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
-          const filteredPrevAlerts = prevAlerts.filter((prevAlert) => {
-            const newAlertReceivedTime = latestReceivedTimes.get(
-              prevAlert.fingerprint
-            );
-            return (
-              !newAlertReceivedTime ||
-              prevAlert.lastReceived > newAlertReceivedTime
-            );
-          });
-
-          // Filter out new alerts if their fingerprint is already in the filtered previous alerts
-          const filteredNewAlerts = newAlerts.filter((newAlert) => {
-            return !filteredPrevAlerts.some(
-              (prevAlert) => prevAlert.fingerprint === newAlert.fingerprint
-            );
-          });
-
-          // Combine the filtered lists
-          return [...filteredNewAlerts, ...filteredPrevAlerts];
-        });
-      });
-
-      channel.bind("async-done", function () {
+      pusherChannel.bind("async-done", function () {
         setIsAsyncLoading(false);
       });
 
@@ -279,7 +279,9 @@ export default function Alerts({
       const optionSplit = option.value.split("=");
       const key = optionSplit[0];
       const value = optionSplit[1]?.toLowerCase();
-      if (typeof value === "string") {
+      if (key === "source") {
+        return alert.source?.every((v) => value.split(",").includes(v));
+      } else if (typeof value === "string") {
         return ((alert as any)[key] as string)?.toLowerCase().includes(value);
       }
       return false;
@@ -306,22 +308,10 @@ export default function Alerts({
     <>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         {!pusherDisabled && (
-          <div className="flex flex-col items-end absolute right-9 top-5">
-            <Badge
-              icon={GlobeIcon}
-              color="orange"
-              tooltip="Live alerts are streamlining from Keep"
-              size="xs"
-            >
-              <span className="animate-ping">&nbsp;Live</span>
-            </Badge>
-            <Subtitle className="text-[10px]">
-              Last received:{" "}
-              {lastReceivedAlertDate
-                ? getAlertLastReceieved(lastReceivedAlertDate)
-                : "N/A"}
-            </Subtitle>
-          </div>
+          <AlertStreamline
+            channel={channel}
+            lastReceivedAlertDate={lastReceivedAlertDate}
+          />
         )}
         <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
           <TabList variant="line" color="orange">
