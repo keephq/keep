@@ -116,16 +116,25 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_alert = kwargs.get("enrich_alert", [])
-        if not enrich_alert:
-            return results
+        if not enrich_alert or not results:
+            return results if results else None
 
-        if not results:
-            return
+        self._enrich_alert(enrich_alert, results)
+        return results
 
-        # Now try to enrich the alert
+    def _enrich_alert(self, enrichments, results):
+        """
+        Enrich alert with provider specific data.
+
+        """
         self.logger.debug("Extracting the fingerprint from the alert")
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
+        elif self.context_manager.foreach_context.get("value", {}):
+            # TODO: if it's zipped, we need to extract the fingerprint from the zip (i.e. multiple foreach)
+            fingerprint = self.context_manager.foreach_context.get("value", {}).get(
+                "fingerprint"
+            )
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
@@ -145,14 +154,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             )
             raise Exception("No fingerprint found for alert enrichment")
         self.logger.debug("Fingerprint extracted", extra={"fingerprint": fingerprint})
-        self._enrich_alert(fingerprint, enrich_alert, results)
-        return results
 
-    def _enrich_alert(self, fingerprint, enrichments, results):
-        """
-        Enrich alert with provider specific data.
-
-        """
         _enrichments = {}
         # enrich only the requested fields
         for enrichment in enrichments:
@@ -212,6 +214,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             self.context_manager.dependencies.add(results[0].__class__)
         elif results:
             self.context_manager.dependencies.add(results.__class__)
+
+        enrich_alert = kwargs.get("enrich_alert", [])
+        if enrich_alert:
+            self._enrich_alert(enrich_alert, results)
         # and return the results
         return results
 

@@ -35,6 +35,7 @@ class WorkflowDTO(BaseModel):
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
+    invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
 
     @property
     def workflow_raw_id(self):

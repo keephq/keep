@@ -71,8 +71,12 @@ def get_workflows(
     for _workflow in workflows:
         # extract the providers
         workflow, workflow_last_run_time, workflow_last_run_status = _workflow
-        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
-        providers = parser.get_providers_from_workflow(workflow_yaml)
+        try:
+            workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+            providers = parser.get_providers_from_workflow(workflow_yaml)
+        except Exception:
+            logger.exception("Failed to parse workflow", extra={"workflow": workflow})
+            continue
         providers_dto = []
         # get the provider details
         for provider in providers:
