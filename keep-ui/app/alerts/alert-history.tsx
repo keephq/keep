@@ -3,64 +3,43 @@ import { Fragment } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
-import { User } from "app/settings/models";
-import { User as NextUser } from "next-auth";
 import AlertHistoryCharts from "./alert-history-charts";
-import useSWR from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
 import Loading from "app/loading";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   isOpen: boolean;
   closeModal: () => void;
-  selectedAlert: AlertDto | null;
-  users?: User[];
-  currentUser: NextUser;
-  accessToken?: string;
+  selectedAlert: AlertDto;
 }
 
-export function AlertHistory({
-  isOpen,
-  closeModal,
-  selectedAlert,
-  users = [],
-  currentUser,
-  accessToken,
-}: Props) {
-  const apiUrl = getApiURL();
-  const historyUrl =
-    selectedAlert && accessToken
-      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history/?provider_id=${
-          selectedAlert.providerId
-        }&provider_type=${selectedAlert.source ? selectedAlert.source[0] : ""}`
-      : null;
+export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
+  const { useAlertHistory } = useAlerts();
   const {
-    data: alerts,
-    error,
+    data: alertHistory = [],
     isLoading,
-  } = useSWR<AlertDto[]>(historyUrl, (url) => fetcher(url, accessToken!), {
-    revalidateOnFocus: false,
-  });
+    error,
+  } = useAlertHistory(selectedAlert);
 
   if (!selectedAlert || isLoading) {
     return <></>;
   }
 
-  if (!alerts || error) {
+  if (!alertHistory || error) {
     return <Loading />;
   }
-  alerts.forEach(
-    (alert) => (alert.lastReceived = new Date(alert.lastReceived))
-  );
-  alerts.sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
-  const lastReceivedData = alerts.map((alert) => alert.lastReceived);
-  const maxLastReceived: Date = new Date(
-    Math.max(...lastReceivedData.map((date) => date.getTime()))
-  );
-  const minLastReceived: Date = new Date(
-    Math.min(...lastReceivedData.map((date) => date.getTime()))
-  );
+
+  const alertsHistoryWithDate = alertHistory.map((alert) => ({
+    ...alert,
+    lastReceived: new Date(alert.lastReceived),
+  }));
+
+  const sortedHistoryAlert = alertsHistoryWithDate
+    .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
+    .map((alert) => alert.lastReceived.getTime());
+
+  const maxLastReceived = new Date(Math.max(...sortedHistoryAlert));
+  const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -93,8 +72,10 @@ export function AlertHistory({
               >
                 <Flex alignItems="center" justifyContent="between">
                   <div>
-                    <Title>History of: {alerts[0]?.name}</Title>
-                    <Subtitle>Total alerts: {alerts.length}</Subtitle>
+                    <Title>History of: {alertsHistoryWithDate[0]?.name}</Title>
+                    <Subtitle>
+                      Total alerts: {alertsHistoryWithDate.length}
+                    </Subtitle>
                     <Subtitle>
                       First Occurence: {minLastReceived.toString()}
                     </Subtitle>
@@ -113,13 +94,11 @@ export function AlertHistory({
                 <AlertHistoryCharts
                   maxLastReceived={maxLastReceived}
                   minLastReceived={minLastReceived}
-                  alerts={alerts}
+                  alerts={alertsHistoryWithDate}
                 />
                 <Divider />
                 <AlertTable
-                  alerts={alerts}
-                  users={users}
-                  currentUser={currentUser}
+                  alerts={alertsHistoryWithDate}
                   columnsToExclude={["description"]}
                 />
               </Dialog.Panel>
