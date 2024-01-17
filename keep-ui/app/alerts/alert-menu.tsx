@@ -8,20 +8,19 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
-import { getSession } from "next-auth/react";
+import { getSession, useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
-import { Provider, ProviderMethod } from "app/providers/providers";
+import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
-import { User as NextUser } from "next-auth";
 import { useFloating } from "@floating-ui/react-dom";
 import { KeyedMutator } from "swr";
+import { useProviders } from "utils/hooks/useProviders";
 
 interface Props {
   alert: AlertDto;
   openHistory: () => void;
-  provider?: Provider;
   mutate: KeyedMutator<AlertDto[]>;
   callDelete?: (
     fingerprint: string,
@@ -33,24 +32,31 @@ interface Props {
     lastReceived: Date,
     unassign: boolean
   ) => void;
-  currentUser: NextUser;
 }
 
 export default function AlertMenu({
   alert,
-  provider,
   openHistory,
   mutate,
   callDelete,
   setAssignee,
-  currentUser,
 }: Props) {
+  const apiUrl = getApiURL();
+  const {
+    data: { installed_providers: installedProviders } = {
+      installed_providers: [],
+    },
+  } = useProviders();
+  const { data: session } = useSession();
+
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
   const { refs, x, y } = useFloating();
   const alertName = alert.name;
   const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
+
+  const provider = installedProviders.find((p) => p.type === alert.source![0]);
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -80,8 +86,6 @@ export default function AlertMenu({
       } this alert?`
     );
     if (confirmed) {
-      const session = await getSession();
-      const apiUrl = getApiURL();
       const restore = alert.deleted.includes(alert.lastReceived.toISOString());
       const body = {
         fingerprint: fingerprint,
@@ -108,8 +112,6 @@ export default function AlertMenu({
         "After assiging this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
       )
     ) {
-      const session = await getSession();
-      const apiUrl = getApiURL();
       const res = await fetch(
         `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
         {
@@ -209,7 +211,7 @@ export default function AlertMenu({
                           </button>
                         )}
                       </Menu.Item>
-                      {assignee !== currentUser.email && (
+                      {assignee !== session?.user.email && (
                         <Menu.Item>
                           {({ active }) => (
                             <button
