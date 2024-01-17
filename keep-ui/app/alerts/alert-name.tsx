@@ -8,6 +8,8 @@ import {
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "./models";
 import { Workflow } from "app/workflows/models";
+import { useRouter } from "next/navigation";
+import { useWorkflows } from "utils/hooks/useWorkflows";
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
   Object.fromEntries(
@@ -37,15 +39,12 @@ const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
 
 interface Props {
   alert: AlertDto;
-  workflows: Workflow[];
-  handleWorkflowClick: (workflows: Workflow[]) => void;
 }
 
-export default function AlertName({
-  alert,
-  workflows,
-  handleWorkflowClick,
-}: Props) {
+export default function AlertName({ alert }: Props) {
+  const router = useRouter();
+  const { data: workflows = [] } = useWorkflows();
+
   const {
     name,
     url,
@@ -56,6 +55,14 @@ export default function AlertName({
     ticket_status: ticketStatus,
     playbook_url,
   } = alert;
+
+  const handleWorkflowClick = (workflows: Workflow[]) => {
+    if (workflows.length === 1) {
+      return router.push(`workflows/${workflows[0].id}`);
+    }
+
+    return router.push("workflows");
+  };
 
   const relevantWorkflows = getRelevantWorkflows(alert, workflows);
 
