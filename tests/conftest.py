@@ -6,8 +6,8 @@ import mysql.connector
 import pytest
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
@@ -17,6 +17,7 @@ from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
+from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
 from keep.contextmanager.contextmanager import ContextManager
 
@@ -128,9 +129,14 @@ def db_session(request, mysql_container):
     # Few tests require a mysql database (mainly rules)
     if request and hasattr(request, "param") and request.param == "mysql":
         db_connection_string = "mysql+pymysql://root:keep@localhost:3306/keep"
+        mock_engine = create_engine(db_connection_string)
     else:
         db_connection_string = "sqlite:///:memory:"
-    mock_engine = create_engine(db_connection_string)
+        mock_engine = create_engine(
+            db_connection_string,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
     SQLModel.metadata.create_all(mock_engine)
 
     # Mock the environment variables so db.py will use it

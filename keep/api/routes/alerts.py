@@ -585,10 +585,15 @@ async def receive_generic_event(
     tenant_id = authenticated_entity.tenant_id
     if isinstance(alert, AlertDto):
         alert = [alert]
+
+    for _alert in alert:
+        # if not source, set it to keep
+        if not _alert.source:
+            _alert.source = ["keep"]
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert[0].source[0] or "keep",
+        alert[0].source[0],
         session,
         alert,
         pusher_client,

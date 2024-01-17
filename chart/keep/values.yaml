@@ -42,6 +42,16 @@ backend:
   service:
     type: ClusterIP
     port: 8080
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+      - host: chart-example-backend.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
   resources: {}
   autoscaling:
     enabled: false

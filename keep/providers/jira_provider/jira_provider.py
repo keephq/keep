@@ -2,6 +2,7 @@
 JiracloudProvider is a class that implements the BaseProvider interface for Jira updates.
 """
 import dataclasses
+import json
 from typing import List
 from urllib.parse import urlencode, urljoin
 
@@ -253,6 +254,9 @@ class JiraProvider(BaseProvider):
         summary: str,
         description: str = "",
         issue_type: str = "",
+        labels: List[str] = None,
+        components: List[str] = None,
+        custom_fields: dict = None,
         **kwargs: dict,
     ):
         """
@@ -267,14 +271,23 @@ class JiraProvider(BaseProvider):
 
             url = self.__get_url(paths=["issue"])
 
-            request_body = {
-                "fields": {
-                    "summary": summary,
-                    "description": description,
-                    "project": {"key": project_key},
-                    "issuetype": {"name": issue_type},
-                }
+            fields = {
+                "summary": summary,
+                "description": description,
+                "project": {"key": project_key},
+                "issuetype": {"name": issue_type},
             }
+
+            if labels:
+                fields["labels"] = labels
+
+            if components:
+                fields["components"] = [{"name": component} for component in components]
+
+            if custom_fields:
+                fields.update(custom_fields)
+
+            request_body = {"fields": fields}
 
             response = requests.post(
                 url=url, json=request_body, auth=self.__get_auth(), verify=False
@@ -318,26 +331,29 @@ class JiraProvider(BaseProvider):
 
     def _notify(
         self,
+        summary: str,
+        description: str = "",
+        issue_type: str = "",
+        project_key: str = "",
+        board_name: str = "",
+        labels: List[str] = None,
+        components: List[str] = None,
+        custom_fields: dict = None,
         **kwargs: dict,
     ):
         """
         Notify jira by creating an issue.
         """
-        # extracrt the required params
-        project_key = kwargs.get("project_key", "")
         # if the user didn't provider a project_key, try to extract it from the board name
         if not project_key:
-            board_name = kwargs.get("board_name", "")
             project_key = self._extract_project_key_from_board_name(board_name)
-        summary = kwargs.get("summary", "")
-        description = kwargs.get("description", "")
-        # issuetype/issue_type is the same thing, so we support both
-        issue_type = kwargs.get("issuetype", kwargs.get("issue_type", ""))
-
+        issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
         if not project_key or not summary or not issue_type or not description:
             raise ProviderException(
                 f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
             )
+        if labels and isinstance(labels, str):
+            labels = json.loads(labels.replace("'", '"'))
         try:
             self.logger.info("Notifying jira...")
             result = self.__create_issue(
@@ -345,6 +361,10 @@ class JiraProvider(BaseProvider):
                 summary=summary,
                 description=description,
                 issue_type=issue_type,
+                labels=labels,
+                components=components,
+                custom_fields=custom_fields,
+                **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
             self.logger.info("Notified jira!")
@@ -359,7 +379,7 @@ class JiraProvider(BaseProvider):
             }
             raise ProviderException(f"Failed to notify jira: {e} - Params: {context}")
 
-    def _query(self, board_id="", **kwargs: dict):
+    def _query(self, ticket_id="", board_id="", **kwargs: dict):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
@@ -367,18 +387,26 @@ class JiraProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self.logger.debug("Fetching data from Jira")
-
-        request_url = f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
-        response = requests.get(request_url, auth=self.__get_auth(), verify=False)
-        if not response.ok:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+        if not ticket_id:
+            request_url = (
+                f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             )
-        self.logger.debug("Fetched data from Jira")
-
-        issues = response.json()
-        return {"number_of_issues": issues["total"]}
+            response = requests.get(request_url, auth=self.__get_auth(), verify=False)
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                )
+            issues = response.json()
+            return {"number_of_issues": issues["total"]}
+        else:
+            request_url = self.__get_url(paths=["issue", ticket_id])
+            response = requests.get(request_url, auth=self.__get_auth(), verify=False)
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                )
+            issue = response.json()
+            return {"issue": issue}
 
 
 if __name__ == "__main__":

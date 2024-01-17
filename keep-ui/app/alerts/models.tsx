@@ -29,6 +29,7 @@ export interface AlertDto {
   deleted: string[];
   assignees?: { [lastReceived: string]: string };
   ticket_url: string;
+  ticket_status?: string;
   playbook_url?: string;
   providerId?: string;
 }

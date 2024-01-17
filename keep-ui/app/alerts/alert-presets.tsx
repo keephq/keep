@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
@@ -35,26 +35,25 @@ export default function AlertPresets({
   const [options, setOptions] = useState<Option[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [uniqueValuesMap, setUniqueValuesMap] = useState(
-    new Map<string, Set<string>>()
-  );
-
-  useEffect(() => {
+  const uniqueValuesMap = useMemo(() => {
     const newUniqueValuesMap = new Map<string, Set<string>>();
     if (alerts) {
       // Populating the map with keys and values
       alerts.forEach((alert) => {
         Object.entries(alert).forEach(([key, value]) => {
-          if (typeof value !== "string") return;
+          if (typeof value !== "string" && key !== "source") return;
           if (!newUniqueValuesMap.has(key)) {
             newUniqueValuesMap.set(key, new Set());
+          }
+          if (key === "source") {
+            value = value?.join(",");
           }
           if (!newUniqueValuesMap.get(key)?.has(value?.trim()))
             newUniqueValuesMap.get(key)?.add(value?.toString().trim());
         });
       });
     }
-    setUniqueValuesMap(newUniqueValuesMap);
+    return newUniqueValuesMap;
   }, [alerts]);
 
   // Initially, set options to keys

@@ -132,9 +132,42 @@ class IlertProvider(BaseProvider):
         self.logger.info("Scopes validated", extra=scopes)
         return scopes
 
+    def _query(self, incident_id: str, **kwargs):
+        """
+        Query Ilert incident.
+        """
+        self.logger.info(
+            "Querying Ilert incident",
+            extra={
+                "incident_id": incident_id,
+                **kwargs,
+            },
+        )
+        headers = {"Authorization": self.authentication_config.ilert_token}
+        response = requests.get(
+            f"{self.authentication_config.ilert_host}/incidents/{incident_id}",
+            headers=headers,
+        )
+        if not response.ok:
+            self.logger.error(
+                "Failed to query Ilert incident",
+                extra={
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to query Ilert incident: {response.status_code} {response.text}"
+            )
+        self.logger.info(
+            "Ilert incident queried",
+            extra={"status_code": response.status_code},
+        )
+        return response.json()
+
     def _notify(
         self,
-        summary: str,
+        summary: str = "",
         status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
         message: str = "",
         affectedServices: str | list = "[]",
@@ -156,12 +189,14 @@ class IlertProvider(BaseProvider):
         # Create or update incident
         payload = {
             "id": id,
-            "summary": summary,
             "status": str(status),
             "message": message,
             **kwargs,
         }
-        if affectedServices:
+
+        # if id is set, we update the incident, otherwise we create a new one
+        should_update = id and id != "0"
+        if not should_update:
             try:
                 payload["affectedServices"] = (
                     json.loads(affectedServices)
@@ -173,20 +208,24 @@ class IlertProvider(BaseProvider):
                     "Failed to parse affectedServices",
                     extra={"affectedServices": affectedServices},
                 )
-
-        # if id is set, we update the incident, otherwise we create a new one
-        should_update = id and id != "0"
-        if not should_update:
+                raise
+            if not summary:
+                raise Exception("summary is required")
+            payload["summary"] = summary
             response = requests.post(
                 f"{self.authentication_config.ilert_host}/incidents",
                 headers=headers,
                 json=payload,
             )
         else:
+            incident = requests.get(
+                f"{self.authentication_config.ilert_host}/incidents/{id}",
+                headers=headers,
+            ).json()
             response = requests.put(
                 f"{self.authentication_config.ilert_host}/incidents/{id}",
                 headers=headers,
-                json=payload,
+                json={**incident, **payload},
             )
 
         if not response.ok:
@@ -204,6 +243,7 @@ class IlertProvider(BaseProvider):
             "Ilert incident created/updated",
             extra={"status_code": response.status_code},
         )
+        return response.json()
 
 
 if __name__ == "__main__":

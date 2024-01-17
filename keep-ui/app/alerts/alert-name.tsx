@@ -53,6 +53,7 @@ export default function AlertName({
     deleted,
     lastReceived,
     ticket_url: ticketUrl,
+    ticket_status: ticketStatus,
     playbook_url,
   } = alert;
 
@@ -81,7 +82,9 @@ export default function AlertName({
             <a href={ticketUrl} target="_blank">
               <Icon
                 icon={TicketIcon}
-                tooltip="Ticket Assigned"
+                tooltip={`Ticket Assigned ${
+                  ticketStatus ? `(status: ${ticketStatus})` : ``
+                }`}
                 size="xs"
                 color="gray"
                 className="ml-1"

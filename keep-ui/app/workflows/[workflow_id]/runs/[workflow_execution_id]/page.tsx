@@ -153,7 +153,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
                           className={`overflow-hidden transition-max-height duration-300 ${expandedRows[index] ? 'max-h-screen' : 'max-h-24'}`}>
                           <pre className="whitespace-pre-wrap">{JSON.stringify(log.context, null, 2)}</pre>
                         </div>
-                        <button
+                        {/* <button
                           className="ml-4 mt-8"
                           onClick={(e) => {
                             e.stopPropagation();  // prevent the TableCell click event from being triggered
@@ -167,7 +167,7 @@ export default function WorkflowExecutionPage({ params }: { params: { workflow_i
                             className="grayscale hover:grayscale-0"
                             tooltip="Show more"
                           />
-                        </button>
+                        </button> */}
                       </div>
                     </TableCell>
 
