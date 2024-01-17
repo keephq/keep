@@ -6,3 +6,5 @@ class APIKeyDTO(BaseModel, extra=Extra.ignore):
     key_name: str
     description: str
     created_at: str
+    role: str
+    last_used: str

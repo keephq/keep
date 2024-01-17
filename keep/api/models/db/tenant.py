@@ -20,6 +20,7 @@ class TenantApiKey(SQLModel, table=True):
     system_description: Optional[str] = None
     created_by: str
     role: str
+    last_used: str
 
     class Config:
         orm_mode = True
