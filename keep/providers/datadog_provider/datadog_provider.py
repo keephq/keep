@@ -79,6 +79,7 @@ class DatadogProvider(BaseProvider):
     """Pull/push alerts from Datadog."""
 
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
+    DATADOG_CLIENT_ID = os.environ.get("DATADOG_CLIENT_ID")
     DATADOG_CLIENT_SECRET = os.environ.get("DATADOG_CLIENT_SECRET")
 
     PROVIDER_SCOPES = [
@@ -197,8 +198,28 @@ class DatadogProvider(BaseProvider):
                 "appKeyAuth"
             ] = self.authentication_config.app_key
         elif self.authentication_config.oauth_token:
+            response = requests.post(
+                "https://api.datadoghq.com/oauth2/v1/token",
+                data={
+                    "grant_type": "refresh_token",
+                    "client_id": DatadogProvider.DATADOG_CLIENT_ID,
+                    "client_secret": DatadogProvider.DATADOG_CLIENT_SECRET,
+                    "redirect_uri": self.authentication_config.oauth_token.get(
+                        "redirect_uri"
+                    ),
+                    "code_verifier": self.authentication_config.oauth_token.get(
+                        "verifier"
+                    ),
+                    "code": self.authentication_config.oauth_token.get("code"),
+                    "refresh_token": self.authentication_config.oauth_token.get(
+                        "refresh_token"
+                    ),
+                },
+            ).json()
             self.configuration.access_token = (
-                self.authentication_config.oauth_token.get("refresh_token")
+                response.get("access_token")
+                if response.ok
+                else self.authentication_config.oauth_token.get("access_token")
             )
         else:
             raise Exception("No authentication provided")
@@ -237,7 +258,14 @@ class DatadogProvider(BaseProvider):
         if not access_token:
             raise Exception("No access token provided")
 
-        return {"oauth_token": token}
+        return {
+            "oauth_token": {
+                **token,
+                "verifier": verifier,
+                "code": code,
+                "redirect_uri": payload["redirect_uri"],
+            }
+        }
 
     def mute_monitor(
         self,
