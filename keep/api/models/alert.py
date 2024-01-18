@@ -1,6 +1,9 @@
+import logging
 from enum import Enum
 
 from pydantic import AnyHttpUrl, BaseModel, Extra, validator
+
+logger = logging.getLogger(__name__)
 
 
 class AlertSeverity(Enum):
@@ -67,6 +70,24 @@ class AlertDto(BaseModel):
             return []
         return deleted
 
+    @validator("severity", pre=True)
+    def set_default_severity(cls, v):
+        try:
+            return AlertSeverity(v)
+        except ValueError:
+            logging.warning(f"Invalid severity value: {v}")
+            # Default value
+            return AlertSeverity.INFO
+
+    @validator("status", pre=True)
+    def set_default_status(cls, v):
+        try:
+            return AlertStatus(v)
+        except ValueError:
+            logging.warning(f"Invalid status value: {v}")
+            # Default value
+            return AlertStatus.FIRING
+
     class Config:
         extra = Extra.allow
         schema_extra = {
@@ -92,6 +113,11 @@ class AlertDto(BaseModel):
                     "fingerprint": "1234",
                 }
             ]
+        }
+        use_enum_values = True
+        json_encoders = {
+            # Converts enums to their values for JSON serialization
+            Enum: lambda v: v.value,
         }
 
 

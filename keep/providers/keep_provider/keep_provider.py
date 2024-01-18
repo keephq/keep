@@ -51,7 +51,7 @@ class KeepProvider(BaseProvider):
         pass
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         return AlertDto(
             **event,
         )

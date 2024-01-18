@@ -79,7 +79,7 @@ class DynatraceProvider(BaseProvider):
     SEVERITIES_MAP = {
         "AVAILABILITY": AlertSeverity.HIGH,
         "ERROR": AlertSeverity.CRITICAL,
-        "PERFORMANCE": AlertSeverity.MEDIUM,
+        "PERFORMANCE": AlertSeverity.WARNING,
         "RESOURCE": AlertSeverity.WARNING,
         "CUSTOM": AlertSeverity.INFO,
     }
@@ -208,7 +208,7 @@ class DynatraceProvider(BaseProvider):
         return scopes
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
             tags = event.get("Tags", [])
@@ -221,12 +221,19 @@ class DynatraceProvider(BaseProvider):
             pid = event.get("PID", "")
             names_of_impacted_entities = event.get("NamesOfImpactedEntities", "")
             event.get("ProblemDetails", "")
+            # format severity and status to keep's format
+            severity = DynatraceProvider.SEVERITIES_MAP.get(
+                event.get("ProblemSeverity"), AlertSeverity.INFO
+            )
+            status = DynatraceProvider.STATUS_MAP.get(
+                event.get("State"), AlertStatus.FIRING
+            )
 
             alert_dto = AlertDto(
                 id=event.get("ProblemID"),
                 name=event.get("ProblemTitle"),
-                status=event.get("State"),
-                severity=event.get("ProblemSeverity", None),
+                status=status,
+                severity=severity,
                 lastReceived=datetime.datetime.now().isoformat(),
                 description=json.dumps(
                     event.get("ImpactedEntities", {})
@@ -248,8 +255,13 @@ class DynatraceProvider(BaseProvider):
         else:
             _id = event.pop("problemId")
             name = event.pop("displayId")
-            status = event.pop("status")
-            severity = event.pop("severityLevel", None)
+            # format severity and status to keep's format
+            severity = DynatraceProvider.SEVERITIES_MAP.get(
+                event.pop("severityLevel", None), AlertSeverity.INFO
+            )
+            status = DynatraceProvider.STATUS_MAP.get(
+                event.pop("status"), AlertStatus.FIRING
+            )
             description = event.pop("title")
             impact = event.pop("impactLevel")
             tags = event.pop("entityTags")

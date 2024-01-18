@@ -12,7 +12,7 @@ import pydantic
 import requests
 from fastapi import HTTPException
 
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -446,19 +446,26 @@ class KibanaProvider(BaseProvider):
             "triggered_time",
             datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         )
-        status = event.pop("status", "Alert")
+        # map status to keep status
+        status = KibanaProvider.STATUS_MAP.get(
+            event.pop("status", None), AlertStatus.FIRING
+        )
+        # kibana watcher doesn't have severity, so we'll use default (INFO)
+        severity = AlertSeverity.INFO
+
         return AlertDto(
             id=alert_id,
             name=alert_name,
             fingerprint=payload.get("watch_id", alert_id),
             status=status,
+            severity=severity,
             lastReceived=last_received,
             source=["kibana"],
             **event,
         )
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         """
         Formats an alert from Kibana to a standard format.
 
@@ -493,6 +500,14 @@ class KibanaProvider(BaseProvider):
             pass
 
         environment = labels.get("environment", "undefined")
+
+        # format status and severity to Keep format
+        event["status"] = KibanaProvider.STATUS_MAP.get(
+            event.get("status"), AlertStatus.FIRING
+        )
+        event["severity"] = KibanaProvider.SEVERITIES_MAP.get(
+            event.get("severity"), AlertSeverity.INFO
+        )
         return AlertDto(
             environment=environment, labels=labels, source=["kibana"], **event
         )

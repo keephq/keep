@@ -188,7 +188,7 @@ class SentryProvider(BaseProvider):
         return validated_scopes
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.info(
             "Formatting Sentry alert",
@@ -210,11 +210,18 @@ class SentryProvider(BaseProvider):
             if "received" in event_data
             else datetime.datetime.now(tz=datetime.timezone.utc)
         )
+        # map severity and status to keep's format
+        severity = event.pop("level", tags_as_dict.get("level"))
+        severity = SentryProvider.SEVERITIES_MAP.get(
+            severity.lower(), AlertSeverity.INFO
+        )
+        status = event.get("action")
+        status = SentryProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
         logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(
             id=event_data.pop("event_id"),
             name=event_data.get("title"),
-            status=event.get("action", "triggered"),
+            status=status,
             lastReceived=str(last_received),
             service=tags_as_dict.get("server_name"),
             source=["sentry"],
@@ -224,7 +231,7 @@ class SentryProvider(BaseProvider):
             message=event_data.get("metadata", {}).get("value"),
             description=event.get("culprit", ""),
             pushed=True,
-            severity=event.pop("level", tags_as_dict.get("level", "high")),
+            severity=severity,
             url=event_data.pop("url", tags_as_dict.pop("url", event.get("url", None))),
             fingerprint=event.get("id"),
             tags=tags_as_dict,
@@ -441,18 +448,23 @@ class SentryProvider(BaseProvider):
                 last_received = datetime.datetime.fromisoformat(
                     event.get("dateCreated")
                 ) + datetime.timedelta(minutes=1)
+                # format severity and status
+                severity = SentryProvider.SEVERITIES_MAP.get(
+                    tags.get("level"), AlertSeverity.INFO
+                )
+                status = related_issue.get("status", event.get("event.type", None))
+                status = SentryProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+
                 formatted_issues.append(
                     AlertDto(
                         id=id,
                         name=event.pop("title"),
                         description=event.pop("culprit", ""),
                         message=event.get("message", ""),
-                        status=related_issue.get(
-                            "status", event.get("event.type", "unknown")
-                        ),
+                        status=status,
                         lastReceived=last_received.isoformat(),
                         environment=tags.get("environment", "unknown"),
-                        severity=tags.get("level", None),
+                        severity=severity,
                         url=event.pop("permalink", None),
                         project=project,
                         source=["sentry"],

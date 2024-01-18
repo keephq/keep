@@ -7,7 +7,7 @@ import uuid
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
@@ -42,6 +42,17 @@ class PagerdutyProvider(BaseProvider):
 
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
     PROVIDER_DISPLAY_NAME = "PagerDuty"
+    SEVERITIES_MAP = {
+        "P1": AlertSeverity.CRITICAL,
+        "P2": AlertSeverity.HIGH,
+        "P3": AlertSeverity.WARNING,
+        "P4": AlertSeverity.INFO,
+    }
+    STATUS_MAP = {
+        "triggered": AlertStatus.FIRING,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+        "resolved": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -234,28 +245,21 @@ class PagerdutyProvider(BaseProvider):
         return incidents
 
     @staticmethod
-    def __get_priorty(priority):
-        if priority == "P1":
-            return "critical"
-        elif priority == "P2":
-            return "high"
-        elif priority == "P3":
-            return "medium"
-        elif priority == "P4":
-            return "low"
-        return "lowest"
-
-    @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url"))
-        status = data.pop("status")
+        # format status and severity to Keep format
+        status = PagerdutyProvider.STATUS_MAP.get(
+            data.pop("status"), AlertStatus.FIRING
+        )
+        priority_summary = (data.get("priority", {}) or {}).get("summary")
+        priority = PagerdutyProvider.SEVERITIES_MAP.get(
+            priority_summary, AlertSeverity.INFO
+        )
         last_received = data.pop("created_at")
         name = data.pop("title")
         service = data.pop("service", {}).get("summary", "unknown")
-        priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.__get_priorty(priority_summary)
         environment = next(
             iter(
                 [

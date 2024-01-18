@@ -223,8 +223,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
+
+    @classmethod
+    def format_alert(cls, event: dict) -> AlertDto | list[AlertDto]:
+        logger = logging.getLogger(__name__)
+        logger.debug("Formatting alert")
+        formatted_alert = cls._format_alert(event)
+        logger.debug("Alert formatted")
+        return formatted_alert
 
     @staticmethod
     def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
@@ -477,7 +485,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         alert_model = AlertDto(
             id=alert_data.get("id", str(uuid.uuid4())),
             name=alert_data.get("name", "alert-from-event-queue"),
-            status=alert_data.get("status", "alert-from-event-queue"),
+            status=alert_data.get("status", AlertStatus.FIRING),
             lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
             environment=alert_data.get("environment", "alert-from-event-queue"),
             isDuplicate=alert_data.get("isDuplicate", False),
@@ -486,7 +494,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             source=alert_data.get("source", [self.provider_type]),
             message=alert_data.get("message", "alert-from-event-queue"),
             description=alert_data.get("description", "alert-from-event-queue"),
-            severity=alert_data.get("severity", "alert-from-event-queue"),
+            severity=alert_data.get("severity", AlertSeverity.INFO),
             pushed=alert_data.get("pushed", False),
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),
@@ -507,26 +515,3 @@ class BaseProvider(metaclass=abc.ABCMeta):
             self.logger.error(
                 f"Failed to push alert to {self.provider_id}: {response.content}"
             )
-
-    @staticmethod
-    def map_status(provider_class, provider_status: str) -> AlertStatus:
-        default_status = AlertStatus.FIRING
-        status = getattr(provider_class, "STATUS_MAP", {}).get(provider_status.lower())
-        if not status:
-            logging.warning(
-                f"Unmapped status: {provider_status}. Defaulting to {default_status}."
-            )
-            status = default_status
-        return status
-
-    @staticmethod
-    def map_severity(provider_class, provider_severity: str) -> AlertSeverity:
-        default_severity = AlertSeverity.INFO
-        severity = getattr(provider_class, "SEVERITIES_MAP", {}).get(
-            provider_severity.lower(), default_severity
-        )
-        if severity == default_severity:
-            logging.warning(
-                f"Unmapped severity: {provider_severity}. Defaulting to {default_severity}."
-            )
-        return severity

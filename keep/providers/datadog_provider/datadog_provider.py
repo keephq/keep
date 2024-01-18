@@ -25,14 +25,13 @@ from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
 )
-from keep.providers.models.alert import AlertSeverity, AlertStatus
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -154,14 +153,16 @@ class DatadogProvider(BaseProvider):
     )
 
     SEVERITIES_MAP = {
-        "info": AlertSeverity.INFO,
-        "warning": AlertSeverity.WARNING,
-        "critical": AlertSeverity.CRITICAL,
+        "P4": AlertSeverity.INFO,
+        "P3": AlertSeverity.WARNING,
+        "P2": AlertSeverity.HIGH,
+        "P1": AlertSeverity.CRITICAL,
     }
 
     STATUS_MAP = {
-        "triggered": AlertStatus.FIRING,
-        "resolved": AlertStatus.RESOLVED,
+        "Triggered": AlertStatus.FIRING,
+        "Recovered": AlertStatus.RESOLVED,
+        "Muted": AlertStatus.SUPPRESSED,
     }
 
     def convert_to_seconds(s):
@@ -446,17 +447,6 @@ class DatadogProvider(BaseProvider):
                 )
         return monitors
 
-    @staticmethod
-    def __get_parsed_severity(priority):
-        if priority == "P1":
-            return "critical"
-        elif priority == "P2":
-            return "high"
-        elif priority == "P3":
-            return "medium"
-        elif priority == "P4":
-            return "low"
-
     def _get_alerts(self) -> list[AlertDto]:
         formatted_alerts = []
         with ApiClient(self.configuration) as api_client:
@@ -487,8 +477,9 @@ class DatadogProvider(BaseProvider):
                         )
                     }
                     severity, status, title = event.title.split(" ", 2)
-                    severity = self.__get_parsed_severity(
-                        severity.lstrip("[").rstrip("]")
+                    severity = severity.lstrip("[").rstrip("]")
+                    severity = DatadogProvider.SEVERITIES_MAP.get(
+                        severity, AlertSeverity.INFO
                     )
                     status = status.lstrip("[").rstrip("]")
                     received = datetime.datetime.fromtimestamp(
@@ -503,10 +494,17 @@ class DatadogProvider(BaseProvider):
                             or downtime.scope == ["*"]
                         ]
                     )
+
+                    status = (
+                        DatadogProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+                        if not is_muted
+                        else AlertStatus.SUPPRESSED
+                    )
+
                     alert = AlertDto(
                         id=event.id,
                         name=title,
-                        status=status if not is_muted else "Muted",
+                        status=status,
                         lastReceived=received.isoformat(),
                         severity=severity,
                         message=event.text,
@@ -638,7 +636,7 @@ class DatadogProvider(BaseProvider):
                         )
                 self.logger.info("Monitors updated")
 
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
         tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
@@ -646,8 +644,14 @@ class DatadogProvider(BaseProvider):
             int(event.get("last_updated")) / 1000, tz=datetime.timezone.utc
         )
         title = event.get("title")
-        status = event.get("alert_transition")
-        severity = event.get("severity")
+        # format status and severity to Keep's format
+        status = DatadogProvider.STATUS_MAP.get(
+            event.get("alert_transition"), AlertStatus.FIRING
+        )
+        severity = DatadogProvider.SEVERITIES_MAP.get(
+            event.get("severity"), AlertSeverity.INFO
+        )
+
         url = event.pop("url", None)
 
         # https://docs.datadoghq.com/integrations/webhooks/#variables
@@ -665,7 +669,7 @@ class DatadogProvider(BaseProvider):
             source=["datadog"],
             message=event.get("body"),
             groups=groups,
-            severity=DatadogProvider.__get_parsed_severity(severity),
+            severity=severity,
             url=url,
             tags=tags,
             monitor_id=event.get("monitor_id"),

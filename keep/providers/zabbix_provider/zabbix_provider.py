@@ -158,7 +158,7 @@ class ZabbixProvider(BaseProvider):
         "not_classified": AlertSeverity.LOW,
         "information": AlertSeverity.INFO,
         "warning": AlertSeverity.WARNING,
-        "average": AlertSeverity.MEDIUM,
+        "average": AlertSeverity.WARNING,
         "high": AlertSeverity.HIGH,
         "disaster": AlertSeverity.CRITICAL,
     }
@@ -166,6 +166,8 @@ class ZabbixProvider(BaseProvider):
     STATUS_MAP = {
         "problem": AlertStatus.FIRING,
         "ok": AlertStatus.RESOLVED,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+        "suppressed": AlertStatus.SUPPRESSED,
     }
 
     def __init__(
@@ -343,15 +345,17 @@ class ZabbixProvider(BaseProvider):
         for problem in problems.get("result", []):
             name = problem.pop("name")
             problem.pop("source")
-            status = "PROBLEM"
-            if problem.pop("acknowledged") != "0":
-                status = "ACKED"
-            elif problem.pop("suppressed") != "0":
-                status = "SURPRESSED"
 
             environment = problem.pop("environment", None)
             if environment is None:
                 environment = "unknown"
+
+            severity = ZabbixProvider.SEVERITIES_MAP.get(
+                problem.pop("severity", "").lower(), AlertSeverity.INFO
+            )
+            status = ZabbixProvider.STATUS_MAP.get(
+                problem.pop("status", "").lower(), AlertStatus.FIRING
+            )
 
             formatted_alerts.append(
                 AlertDto(
@@ -364,7 +368,7 @@ class ZabbixProvider(BaseProvider):
                     ).isoformat(),
                     source=["zabbix"],
                     message=name,
-                    severity=self.__get_severity(problem.pop("severity")),
+                    severity=severity,
                     environment=environment,
                     problem=problem,
                 )
@@ -550,18 +554,7 @@ class ZabbixProvider(BaseProvider):
         self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def __get_severity(priority: str):
-        if priority == "disaster" or priority == "5":
-            return "critical"
-        elif priority == "high" or priority == "4":
-            return "high"
-        elif priority == "average" or priority == "3":
-            return "medium"
-        else:
-            return "low"
-
-    @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         environment = "unknown"
         tags = {
             tag.get("tag"): tag.get("value")
@@ -572,7 +565,6 @@ class ZabbixProvider(BaseProvider):
             # environment exists in tags but is None
             if environment is None:
                 environment = "unknown"
-        severity = ZabbixProvider.__get_severity(event.pop("severity", "").lower())
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("ZABBIX.URL", None)
@@ -581,12 +573,20 @@ class ZabbixProvider(BaseProvider):
             url = (
                 f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
             )
+
+        severity = ZabbixProvider.SEVERITIES_MAP.get(
+            event.pop("severity", "").lower(), AlertSeverity.INFO
+        )
+        status = ZabbixProvider.STATUS_MAP.get(
+            event.pop("status", "").lower(), AlertStatus.FIRING
+        )
         return AlertDto(
             **event,
             environment=environment,
             pushed=True,
             source=["zabbix"],
             severity=severity,
+            status=status,
             url=url,
             tags=tags,
         )

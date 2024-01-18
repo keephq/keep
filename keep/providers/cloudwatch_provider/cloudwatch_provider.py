@@ -15,7 +15,7 @@ import boto3
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -456,7 +456,7 @@ class CloudwatchProvider(BaseProvider):
         self.logger.info("Webhook setup completed!")
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
         if event.get("Type") == "SubscriptionConfirmation":
@@ -474,12 +474,20 @@ class CloudwatchProvider(BaseProvider):
         except Exception:
             logger.exception("Error parsing cloudwatch alert", extra={"event": event})
             return
+
+        # Map the status to Keep status
+        status = CloudwatchProvider.STATUS_MAP.get(
+            alert.get("NewStateValue"), AlertStatus.FIRING
+        )
+        # AWS Cloudwatch doesn't have severity
+        severity = AlertSeverity.INFO
+
         return AlertDto(
             # there is no unique id in the alarm so let's hash the alarm
             id=hashlib.sha256(event.get("Message").encode()).hexdigest(),
             name=alert.get("AlarmName"),
-            status=alert.get("NewStateValue"),
-            severity=None,  # AWS Cloudwatch doesn't have severity
+            status=status,
+            severity=severity,
             lastReceived=str(
                 datetime.datetime.fromisoformat(alert.get("StateChangeTime"))
             ),
