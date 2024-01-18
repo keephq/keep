@@ -83,8 +83,10 @@ class GrafanaProvider(BaseProvider):
         "info": AlertSeverity.INFO,
     }
 
+    # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
     STATUS_MAP = {
         "ok": AlertStatus.RESOLVED,
+        "normal": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
         "pending": AlertStatus.PENDING,
