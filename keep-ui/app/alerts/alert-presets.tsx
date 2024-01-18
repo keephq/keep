@@ -13,6 +13,16 @@ export interface Option {
   readonly value: string;
 }
 
+interface Props {
+  preset: Preset | null;
+  alerts: AlertDto[];
+  selectedOptions: Option[];
+  setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
+  accessToken: string;
+  presetsMutator: () => void;
+  isLoading: boolean;
+}
+
 export default function AlertPresets({
   preset,
   alerts,
@@ -21,15 +31,7 @@ export default function AlertPresets({
   setSelectedOptions,
   presetsMutator,
   isLoading,
-}: {
-  preset: Preset | null;
-  alerts: AlertDto[];
-  selectedOptions: Option[];
-  setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
-  accessToken: string;
-  presetsMutator: () => void;
-  isLoading: boolean;
-}) {
+}: Props) {
   const apiUrl = getApiURL();
   const selectRef = useRef(null);
   const [options, setOptions] = useState<Option[]>([]);
