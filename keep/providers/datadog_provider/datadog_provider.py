@@ -215,9 +215,9 @@ class DatadogProvider(BaseProvider):
                         "refresh_token"
                     ),
                 },
-            ).json()
+            )
             self.configuration.access_token = (
-                response.get("access_token")
+                response.json().get("access_token")
                 if response.ok
                 else self.authentication_config.oauth_token.get("access_token")
             )
