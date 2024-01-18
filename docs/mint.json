@@ -28,6 +28,7 @@
       "pages": [
         "overview/introduction",
         "overview/keyconcepts",
+        "overview/alertseverityandstatus",
         "overview/usecases",
         "overview/ruleengine",
         "overview/examples",
