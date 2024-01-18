@@ -75,6 +75,7 @@ gunicorn = "^21.2.0"
 cel-python = "^0.1.5"
 pymongo = "^4.6.1"
 google-cloud-trace = "1.11.3"
+hvac = "^2.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
