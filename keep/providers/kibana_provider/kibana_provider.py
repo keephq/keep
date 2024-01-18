@@ -134,6 +134,7 @@ class KibanaProvider(BaseProvider):
 
     STATUS_MAP = {
         "active": AlertStatus.FIRING,
+        "Alert": AlertStatus.FIRING,
         "recovered": AlertStatus.RESOLVED,
     }
 
