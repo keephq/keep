@@ -216,11 +216,14 @@ class DatadogProvider(BaseProvider):
                     ),
                 },
             )
-            self.configuration.access_token = (
-                response.json().get("access_token")
-                if response.ok
-                else self.authentication_config.oauth_token.get("access_token")
-            )
+            if not response.ok:
+                raise Exception("Could not refresh token, need to re-authenticate")
+            response_json = response.json()
+            self.configuration.access_token = response_json.get("access_token")
+            # update the oauth_token refresh_token for next run
+            self.config.authentication["oauth_token"]["refresh_token"] = response_json[
+                "refresh_token"
+            ]
         else:
             raise Exception("No authentication provided")
         # to be exposed

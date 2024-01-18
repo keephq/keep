@@ -1,8 +1,10 @@
 """
 The providers factory module.
 """
+import copy
 import importlib
 import inspect
+import json
 import logging
 import os
 from dataclasses import fields
@@ -72,11 +74,10 @@ class ProvidersFactory:
             BaseProvider: The provider class.
         """
         provider_class = ProvidersFactory.get_provider_class(provider_type)
-        # backward compatibility issues
-        # when providers.yaml could have 'type' too
-        if "type" in provider_config:
-            del provider_config["type"]
-        provider_config = ProviderConfig(**provider_config)
+        # we keep a copy of the auth config so we can check if the provider has changed it and we need to update it
+        #   an example for that is the Datadog provider that uses OAuth and needs to save the fresh new refresh token.
+        provider_config_copy = copy.deepcopy(provider_config)
+        provider_config: ProviderConfig = ProviderConfig(**provider_config)
 
         try:
             provider = provider_class(
@@ -91,6 +92,20 @@ class ProvidersFactory:
             raise ProviderConfigurationException(exc)
         except Exception as exc:
             raise exc
+        finally:
+            # if the provider has changed the auth config, we need to update it, even if the provider failed to initialize
+            if (
+                provider_config_copy.get("authentication")
+                != provider_config.authentication
+            ):
+                provider_config_copy["authentication"] = provider_config.authentication
+                secret_manager = SecretManagerFactory.get_secret_manager(
+                    context_manager
+                )
+                secret_manager.write_secret(
+                    secret_name=f"{context_manager.tenant_id}_{provider_type}_{provider_id}",
+                    secret_value=json.dumps(provider_config_copy),
+                )
 
     @staticmethod
     def get_provider_required_config(provider_type: str) -> dict:
