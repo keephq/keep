@@ -16,7 +16,10 @@ import {
   Divider,
   TextInput,
 } from "@tremor/react";
-import { ExclamationCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/20/solid";
+import {
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/20/solid";
 import {
   QuestionMarkCircleIcon,
   ArrowLongRightIcon,
@@ -29,9 +32,8 @@ import {
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
-import Link from 'next/link'
-
-
+import Link from "next/link";
+import cookieCutter from "@boiseitguru/cookie-cutter";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -49,6 +51,33 @@ type ProviderFormProps = {
   onDelete?: (provider: Provider) => void;
   isLocalhost?: boolean;
 };
+
+function dec2hex(dec) {
+  return ("0" + dec.toString(16)).substr(-2);
+}
+
+function generateRandomString() {
+  var array = new Uint32Array(56 / 2);
+  window.crypto.getRandomValues(array);
+  return Array.from(array, dec2hex).join("");
+}
+
+function sha256(plain) {
+  // returns promise ArrayBuffer
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return window.crypto.subtle.digest("SHA-256", data);
+}
+
+function base64urlencode(a) {
+  var str = "";
+  var bytes = new Uint8Array(a);
+  var len = bytes.byteLength;
+  for (var i = 0; i < len; i++) {
+    str += String.fromCharCode(bytes[i]);
+  }
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 const ProviderForm = ({
   provider,
@@ -97,6 +126,16 @@ const ProviderForm = ({
     await installWebhook(provider, accessToken!);
     e.preventDefault();
   };
+
+  async function handleOauth(e: MouseEvent) {
+    e.preventDefault();
+    const verifier = generateRandomString();
+    cookieCutter.set("verifier", verifier);
+    const verifierChallenge = base64urlencode(await sha256(verifier));
+    window.location.assign(
+      `${provider.oauth2_url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`
+    );
+  }
 
   useEffect(() => {
     if (triggerRevalidateScope !== 0) {
@@ -312,11 +351,11 @@ const ProviderForm = ({
     <div className="flex flex-col h-full justify-between p-5">
       <div>
         <div className="flex flex-row">
-        <Title>
-          Connect to{" "}
-          {provider.display_name}
-        </Title>
-          <Link href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`} target="_blank">
+          <Title>Connect to {provider.display_name}</Title>
+          <Link
+            href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`}
+            target="_blank"
+          >
             <Icon
               icon={DocumentTextIcon}
               variant="simple"
@@ -377,12 +416,7 @@ const ProviderForm = ({
                   color="orange"
                   variant="secondary"
                   icon={ArrowTopRightOnSquareIcon}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.location.assign(
-                      `${provider.oauth2_url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}`
-                    );
-                  }}
+                  onClick={handleOauth}
                 >
                   Install with OAuth2
                 </Button>
@@ -486,7 +520,7 @@ const ProviderForm = ({
           })}
           <div className="w-full mt-2" key="install_webhook">
             {provider.can_setup_webhook && !installedProvidersMode && (
-              <div className={`${isLocalhost ? 'bg-gray-100 p-2' : ''}`}>
+              <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -494,10 +528,15 @@ const ProviderForm = ({
                     name="install_webhook"
                     className="mr-2.5"
                     onChange={handleWebhookChange}
-                    checked={(formValues["install_webhook"] || false) && !isLocalhost}
+                    checked={
+                      (formValues["install_webhook"] || false) && !isLocalhost
+                    }
                     disabled={isLocalhost}
                   />
-                  <label htmlFor="install_webhook" className="flex items-center">
+                  <label
+                    htmlFor="install_webhook"
+                    className="flex items-center"
+                  >
                     <Text className="capitalize">Install Webhook</Text>
                     <Icon
                       icon={QuestionMarkCircleIcon}
@@ -510,13 +549,22 @@ const ProviderForm = ({
                 </div>
                 {isLocalhost && (
                   <span className="text-sm">
-                    <Callout className="mt-4" icon={ExclamationTriangleIcon} color="gray">
-                        <a href="https://docs.keephq.dev/development/external-url" target="_blank" rel="noopener noreferrer">
-                        Webhook installation is disabled because Keep is running without an external URL.
-                        <br/><br/>
+                    <Callout
+                      className="mt-4"
+                      icon={ExclamationTriangleIcon}
+                      color="gray"
+                    >
+                      <a
+                        href="https://docs.keephq.dev/development/external-url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Webhook installation is disabled because Keep is running
+                        without an external URL.
+                        <br />
+                        <br />
                         Click to learn more
-                        </a>
-
+                      </a>
                     </Callout>
                   </span>
                 )}

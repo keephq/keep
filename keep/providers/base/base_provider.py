@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import itertools
 import json
+import logging
 import operator
 import os
 import re
@@ -17,7 +18,7 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.core.db import enrich_alert, get_enrichments
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
@@ -222,8 +223,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
+
+    @classmethod
+    def format_alert(cls, event: dict) -> AlertDto | list[AlertDto]:
+        logger = logging.getLogger(__name__)
+        logger.debug("Formatting alert")
+        formatted_alert = cls._format_alert(event)
+        logger.debug("Alert formatted")
+        return formatted_alert
 
     @staticmethod
     def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
@@ -476,7 +485,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         alert_model = AlertDto(
             id=alert_data.get("id", str(uuid.uuid4())),
             name=alert_data.get("name", "alert-from-event-queue"),
-            status=alert_data.get("status", "alert-from-event-queue"),
+            status=alert_data.get("status", AlertStatus.FIRING),
             lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
             environment=alert_data.get("environment", "alert-from-event-queue"),
             isDuplicate=alert_data.get("isDuplicate", False),
@@ -485,7 +494,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             source=alert_data.get("source", [self.provider_type]),
             message=alert_data.get("message", "alert-from-event-queue"),
             description=alert_data.get("description", "alert-from-event-queue"),
-            severity=alert_data.get("severity", "alert-from-event-queue"),
+            severity=alert_data.get("severity", AlertSeverity.INFO),
             pushed=alert_data.get("pushed", False),
             event_id=alert_data.get("event_id", str(uuid.uuid4())),
             url=alert_data.get("url", None),

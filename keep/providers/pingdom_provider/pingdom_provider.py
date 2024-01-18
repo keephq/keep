@@ -4,7 +4,7 @@ import datetime
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderScope
@@ -42,6 +42,13 @@ class PingdomProvider(BaseProvider):
             mandatory=True,
         ),
     ]
+    # N/A
+    SEVERITIES_MAP = {}
+    STATUS_MAP = {
+        "down": AlertStatus.FIRING,
+        "up": AlertStatus.RESOLVED,
+        "paused": AlertStatus.SUPPRESSED,
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,12 +115,21 @@ class PingdomProvider(BaseProvider):
                 ),
                 None,
             )
+            # map severity and status to keep's format
+            status = PingdomProvider.STATUS_MAP.get(
+                alert.get("status"), AlertStatus.FIRING
+            )
+            # its N/A but maybe in the future we will have it
+            severity = PingdomProvider.SEVERITIES_MAP.get(
+                alert.get("severity"), AlertSeverity.INFO
+            )
+
             alert_dto = AlertDto(
                 id=alert.get("checkid"),
                 fingerprint=alert.get("checkid"),
                 name=check_name,
-                severity="N/A",
-                status=alert.get("status"),
+                severity=severity,
+                status=status,
                 lastReceived=datetime.datetime.now().isoformat(),
                 description=alert.get("messagefull"),
                 charged=alert.get("charged"),
@@ -127,8 +143,11 @@ class PingdomProvider(BaseProvider):
         return alerts_dtos
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
+
+        # map severity and status to keep's format
+
         alert = AlertDto(
             id=event.get("check_id"),
             fingerprint=event.get("check_id"),

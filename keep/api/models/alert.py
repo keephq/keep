@@ -1,10 +1,43 @@
-from pydantic import AnyHttpUrl, BaseModel, Extra, validator
+import logging
+from enum import Enum
+from typing import Any, Dict
+
+from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
+
+logger = logging.getLogger(__name__)
+
+
+class AlertSeverity(Enum):
+    # Requires immediate action
+    CRITICAL = "critical"
+    # Needs to be addressed soon
+    HIGH = "high"
+    # Indicates a potential problem
+    WARNING = "warning"
+    # Provides information, no immediate action required
+    INFO = "info"
+    # Minor issues or lowest priority
+    LOW = "low"
+
+
+class AlertStatus(Enum):
+    # Active alert
+    FIRING = "firing"
+    # Alert has been resolved
+    RESOLVED = "resolved"
+    # Alert has been acknowledged but not resolved
+    ACKNOWLEDGED = "acknowledged"
+    # Alert is suppressed due to various reasons
+    SUPPRESSED = "suppressed"
+    # No Data
+    PENDING = "pending"
 
 
 class AlertDto(BaseModel):
     id: str
     name: str
-    status: str
+    status: AlertStatus
+    severity: AlertSeverity
     lastReceived: str
     environment: str = "undefined"
     isDuplicate: bool | None = None
@@ -13,7 +46,6 @@ class AlertDto(BaseModel):
     source: list[str] | None = []
     message: str | None = None
     description: str | None = None
-    severity: str | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
     event_id: str | None = None  # Database alert id
     url: AnyHttpUrl | None = None
@@ -36,6 +68,32 @@ class AlertDto(BaseModel):
         if isinstance(deleted, bool):
             return []
         return deleted
+
+    @root_validator(pre=True)
+    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set default severity
+        severity = values.get("severity")
+        try:
+            values["severity"] = AlertSeverity(severity)
+        except ValueError:
+            logging.warning(
+                f"Invalid severity value: {severity}, setting default.",
+                extra={"event": values},
+            )
+            values["severity"] = AlertSeverity.INFO
+
+        # Check and set default status
+        status = values.get("status")
+        try:
+            values["status"] = AlertStatus(status)
+        except ValueError:
+            logging.warning(
+                f"Invalid status value: {status}, setting default.",
+                extra={"event": values},
+            )
+            values["status"] = AlertStatus.FIRING
+
+        return values
 
     class Config:
         extra = Extra.allow
@@ -62,6 +120,11 @@ class AlertDto(BaseModel):
                     "fingerprint": "1234",
                 }
             ]
+        }
+        use_enum_values = True
+        json_encoders = {
+            # Converts enums to their values for JSON serialization
+            Enum: lambda v: v.value,
         }
 
 

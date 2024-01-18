@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { getApiURL } from "utils/apiUrl";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 export default async function InstallFromOAuth({
   params,
@@ -12,6 +13,8 @@ export default async function InstallFromOAuth({
 }) {
   const accessToken = await getServerSession(authOptions);
   const apiUrl = getApiURL();
+  const cookieStore = cookies();
+  const verifier = cookieStore.get("verifier");
 
   const response = await fetch(
     `${apiUrl}/providers/install/oauth2/${params.providerType}`,
@@ -24,6 +27,7 @@ export default async function InstallFromOAuth({
       body: JSON.stringify({
         ...searchParams,
         redirect_uri: `${process.env.NEXTAUTH_URL}/providers/oauth2/${params.providerType}`,
+        verifier: verifier ? verifier.value : null,
       }),
       cache: "no-store",
     }
