@@ -1,7 +1,8 @@
 import logging
 from enum import Enum
+from typing import Any, Dict
 
-from pydantic import AnyHttpUrl, BaseModel, Extra, validator
+from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,6 @@ class AlertStatus(Enum):
     RESOLVED = "resolved"
     # Alert has been acknowledged but not resolved
     ACKNOWLEDGED = "acknowledged"
-    # Alert condition is met, but not yet firing
-    TRIGGERED = "triggered"
     # Alert is suppressed due to various reasons
     SUPPRESSED = "suppressed"
     # No Data
@@ -70,23 +69,31 @@ class AlertDto(BaseModel):
             return []
         return deleted
 
-    @validator("severity", pre=True)
-    def set_default_severity(cls, v):
+    @root_validator(pre=True)
+    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set default severity
+        severity = values.get("severity")
         try:
-            return AlertSeverity(v)
+            values["severity"] = AlertSeverity(severity)
         except ValueError:
-            logging.warning(f"Invalid severity value: {v}")
-            # Default value
-            return AlertSeverity.INFO
+            logging.warning(
+                f"Invalid severity value: {severity}, setting default.",
+                extra={"event": values},
+            )
+            values["severity"] = AlertSeverity.INFO
 
-    @validator("status", pre=True)
-    def set_default_status(cls, v):
+        # Check and set default status
+        status = values.get("status")
         try:
-            return AlertStatus(v)
+            values["status"] = AlertStatus(status)
         except ValueError:
-            logging.warning(f"Invalid status value: {v}")
-            # Default value
-            return AlertStatus.FIRING
+            logging.warning(
+                f"Invalid status value: {status}, setting default.",
+                extra={"event": values},
+            )
+            values["status"] = AlertStatus.FIRING
+
+        return values
 
     class Config:
         extra = Extra.allow
