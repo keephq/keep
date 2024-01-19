@@ -85,31 +85,28 @@ export const useAlerts = () => {
     selectedAlert?: AlertDto,
     options?: SWRConfiguration
   ) => {
-    const url = selectedAlert
-      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history/?provider_id=${
-          selectedAlert.providerId
-        }&provider_type=${selectedAlert.source ? selectedAlert.source[0] : ""}`
-      : null;
-
     return useSWR<AlertDto[]>(
-      url,
+      () =>
+        selectedAlert && session
+          ? `${apiUrl}/alerts/${
+              selectedAlert.fingerprint
+            }/history/?provider_id=${selectedAlert.providerId}&provider_type=${
+              selectedAlert.source ? selectedAlert.source[0] : ""
+            }`
+          : null,
       (url) => fetcher(url, session?.accessToken),
       options
     );
   };
 
   const useAllAlerts = (options?: SWRConfiguration) => {
-    if (configData === undefined) {
-      throw new Error("configData is undefined!");
-    }
-
-    const { PUSHER_DISABLED: isPusherDisabled } = configData;
-
     return useSWR<AlertDto[]>(
-      "alerts",
+      () => (configData && session ? "alerts" : null),
       () =>
         fetcher(
-          `${apiUrl}/alerts?sync=${isPusherDisabled ? "true" : "false"}`,
+          `${apiUrl}/alerts?sync=${
+            configData?.PUSHER_DISABLED ? "true" : "false"
+          }`,
           session?.accessToken
         ),
       options
@@ -117,24 +114,19 @@ export const useAlerts = () => {
   };
 
   const useAllAlertsWithSubscription = () => {
-    if (configData === undefined) {
-      throw new Error("configData is undefined!");
-    }
-
-    const { PUSHER_DISABLED: isPusherDisabled } = configData;
-
     return useSWRSubscription(
-      "alerts",
+      () => (configData && session ? "alerts" : null),
       (_, { next }: SWRSubscriptionOptions<AlertSubscription, Error>) => {
-        if (isPusherDisabled) {
+        if (configData === undefined) {
           console.log("Pusher disabled");
 
-          return next(null, {
-            alerts: [],
-            isAsyncLoading: false,
-            lastSubscribedDate: new Date(),
-            pusherChannel: null,
-          });
+          return () =>
+            next(null, {
+              alerts: [],
+              isAsyncLoading: false,
+              lastSubscribedDate: new Date(),
+              pusherChannel: null,
+            });
         }
 
         console.log("Connecting to pusher");
@@ -166,7 +158,7 @@ export const useAlerts = () => {
             new TextDecoder().decode(decompressedAlert)
           );
 
-          return next(null, {
+          next(null, {
             alerts: newAlerts,
             lastSubscribedDate: new Date(),
             isAsyncLoading: false,
