@@ -19,7 +19,7 @@ export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
     data: alertHistory = [],
     isLoading,
     error,
-  } = useAlertHistory(selectedAlert);
+  } = useAlertHistory(selectedAlert, { revalidateOnFocus: false });
 
   if (!selectedAlert || isLoading) {
     return <></>;
