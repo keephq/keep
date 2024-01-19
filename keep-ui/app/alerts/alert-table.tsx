@@ -12,9 +12,6 @@ import {
   CircleStackIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Provider } from "app/providers/providers";
-import { User } from "app/settings/models";
-import { User as NextUser } from "next-auth";
 import {
   ColumnOrderState,
   OnChangeFn,
@@ -28,8 +25,6 @@ import {
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import Image from "next/image";
-import { Workflow } from "app/workflows/models";
-import { useRouter } from "next/navigation";
 import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertMenu from "./alert-menu";
@@ -43,7 +38,6 @@ import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
 import AlertTableCheckbox from "./alert-table-checkbox";
-import { KeyedMutator } from "swr";
 import { AlertHistory } from "./alert-history";
 import AlertPagination from "./alert-pagination";
 import { getAlertLastReceieved } from "utils/helpers";
@@ -52,9 +46,6 @@ const columnHelper = createColumnHelper<AlertDto>();
 
 interface Props {
   alerts: AlertDto[];
-  workflows?: any[];
-  providers?: Provider[];
-  mutate?: KeyedMutator<AlertDto[]>;
   isAsyncLoading?: boolean;
   onDelete?: (
     fingerprint: string,
@@ -66,13 +57,10 @@ interface Props {
     lastReceived: Date,
     unassign: boolean
   ) => void;
-  users?: User[];
-  currentUser: NextUser;
   presetName?: string;
   rowSelection?: RowSelectionState;
   setRowSelection?: OnChangeFn<RowSelectionState>;
   columnsToExclude?: string[];
-  accessToken?: string;
 }
 
 const getExtraPayloadKeys = (
@@ -108,23 +96,16 @@ const getColumnsToHide = (
 
 export function AlertTable({
   alerts,
-  workflows = [],
-  providers = [],
-  mutate,
   isAsyncLoading = false,
-  onDelete,
-  setAssignee,
-  users = [],
-  currentUser,
   presetName,
   rowSelection,
   setRowSelection,
   columnsToExclude = [],
-  accessToken,
 }: Props) {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | undefined>(
+    undefined
+  );
   const columnOrderLocalStorage = localStorage.getItem(
     getColumnsOrderLocalStorageKey(presetName)
   );
@@ -132,14 +113,6 @@ export function AlertTable({
   const openModal = (alert: AlertDto) => {
     setSelectedAlert(alert);
     setIsOpen(true);
-  };
-
-  const handleWorkflowClick = (workflows: Workflow[]) => {
-    if (workflows.length === 1) {
-      router.push(`workflows/${workflows[0].id}`);
-    } else {
-      router.push("workflows");
-    }
   };
 
   const enabledRowSelection =
@@ -182,13 +155,6 @@ export function AlertTable({
             <AlertMenu
               alert={context.row.original}
               openHistory={() => openModal(context.row.original)}
-              provider={providers.find(
-                (p) => p.type === context.row.original.source![0]
-              )}
-              mutate={mutate ?? (async () => undefined)}
-              callDelete={onDelete}
-              setAssignee={setAssignee}
-              currentUser={currentUser}
             />
           ),
         }),
@@ -203,13 +169,7 @@ export function AlertTable({
     }),
     columnHelper.accessor("name", {
       header: () => "Name",
-      cell: (context) => (
-        <AlertName
-          alert={context.row.original}
-          workflows={workflows}
-          handleWorkflowClick={handleWorkflowClick}
-        />
-      ),
+      cell: (context) => <AlertName alert={context.row.original} />,
     }),
     columnHelper.accessor("description", {
       header: () => "Description",
@@ -271,7 +231,6 @@ export function AlertTable({
               context.row.original.lastReceived?.toISOString()
             ]
           }
-          users={users}
         />
       ),
     }),
@@ -377,15 +336,17 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
-      <AlertPagination table={table} mutate={mutate} />
-      <AlertHistory
-        isOpen={isOpen}
-        selectedAlert={selectedAlert}
-        closeModal={() => setIsOpen(false)}
-        users={users}
-        currentUser={currentUser}
-        accessToken={accessToken}
+      <AlertPagination
+        table={table}
+        // hide with history
       />
+      {selectedAlert && (
+        <AlertHistory
+          isOpen={isOpen}
+          selectedAlert={selectedAlert}
+          closeModal={() => setIsOpen(false)}
+        />
+      )}
     </>
   );
 }
