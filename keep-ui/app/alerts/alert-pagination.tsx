@@ -1,20 +1,21 @@
 import { ArrowPathIcon, TableCellsIcon } from "@heroicons/react/24/outline";
 import { ArrowLeftIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 import { Button, Select, SelectItem, Text } from "@tremor/react";
-import { useState } from "react";
 import { AlertDto } from "./models";
 import { Table } from "@tanstack/react-table";
-import { KeyedMutator } from "swr";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   table: Table<AlertDto>;
-  mutate?: KeyedMutator<AlertDto[]>;
 }
 
-export default function AlertPagination({ table, mutate }: Props) {
-  const [reloadLoading, setReloadLoading] = useState<boolean>(false);
+export default function AlertPagination({ table }: Props) {
+  const { useAllAlerts } = useAlerts();
+  const { mutate, isValidating } = useAllAlerts();
+
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
+
   return (
     <div className="flex justify-between items-center">
       <Text>
@@ -50,22 +51,17 @@ export default function AlertPagination({ table, mutate }: Props) {
           color="orange"
           variant="secondary"
         />
-        {mutate && (
-          <Button
-            icon={ArrowPathIcon}
-            color="orange"
-            size="xs"
-            className="ml-2.5"
-            disabled={reloadLoading}
-            loading={reloadLoading}
-            onClick={async () => {
-              setReloadLoading(true);
-              await mutate();
-              setReloadLoading(false);
-            }}
-            title="Refresh"
-          />
-        )}
+
+        <Button
+          icon={ArrowPathIcon}
+          color="orange"
+          size="xs"
+          className="ml-2.5"
+          disabled={isValidating}
+          loading={isValidating}
+          onClick={async () => await mutate()}
+          title="Refresh"
+        />
       </div>
     </div>
   );
