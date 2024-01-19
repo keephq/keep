@@ -9,7 +9,7 @@ export const usePresets = (options?: SWRConfiguration) => {
   const { data: session } = useSession();
 
   return useSWR<Preset[]>(
-    `${apiUrl}/preset`,
+    () => (session ? `${apiUrl}/preset` : null),
     async (url) => fetcher(url, session?.accessToken),
     options
   );

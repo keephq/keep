@@ -9,7 +9,7 @@ export const useWorkflows = () => {
   const apiUrl = getApiURL();
 
   return useSWR<Workflow[]>(
-    `${apiUrl}/workflows`,
+    () => (session ? `${apiUrl}/workflows` : null),
     (url) => fetcher(url, session?.accessToken),
     { revalidateOnFocus: false }
   );

@@ -9,7 +9,7 @@ export const useProviders = () => {
   const apiUrl = getApiURL();
 
   return useSWR<ProvidersResponse>(
-    `${apiUrl}/providers`,
+    () => (session ? `${apiUrl}/providers` : null),
     (url) => fetcher(url, session?.accessToken),
     { revalidateOnFocus: false }
   );
