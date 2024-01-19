@@ -8,7 +8,7 @@ interface Props {
 
 export default function AlertAssignee({ assignee }: Props) {
   const [imageError, setImageError] = useState(false);
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUsers({ revalidateOnFocus: false });
 
   if (!assignee || users.length < 1) {
     return null;
