@@ -8,39 +8,21 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
-import { getSession, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
 import { useFloating } from "@floating-ui/react-dom";
-import { KeyedMutator } from "swr";
 import { useProviders } from "utils/hooks/useProviders";
 
 interface Props {
   alert: AlertDto;
   openHistory: () => void;
-  mutate: KeyedMutator<AlertDto[]>;
-  callDelete?: (
-    fingerprint: string,
-    lastReceived: Date,
-    restore?: boolean
-  ) => void;
-  setAssignee?: (
-    fingerprint: string,
-    lastReceived: Date,
-    unassign: boolean
-  ) => void;
 }
 
-export default function AlertMenu({
-  alert,
-  openHistory,
-  mutate,
-  callDelete,
-  setAssignee,
-}: Props) {
+export default function AlertMenu({ alert, openHistory }: Props) {
   const apiUrl = getApiURL();
   const {
     data: { installed_providers: installedProviders } = {
@@ -56,7 +38,7 @@ export default function AlertMenu({
   const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
 
-  const provider = installedProviders.find((p) => p.type === alert.source![0]);
+  const provider = installedProviders.find((p) => p.type === alert.source[0]);
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -101,7 +83,7 @@ export default function AlertMenu({
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint, alert.lastReceived, restore);
+        // TODO: endpoint needs to delete alerts
       }
     }
   };
@@ -123,16 +105,19 @@ export default function AlertMenu({
         }
       );
       if (res.ok) {
-        setAssignee!(fingerprint, alert.lastReceived, unassign);
+        // TODO: endpoint needs to change assignees
       }
     }
   };
 
   const isMethodEnabled = (method: ProviderMethod) => {
-    return method.scopes.every(
-      (scope) =>
-        provider?.validatedScopes && provider.validatedScopes[scope] === true
-    );
+    if (provider) {
+      return method.scopes.every(
+        (scope) => provider.validatedScopes[scope] === true
+      );
+    }
+
+    return false;
   };
 
   const openMethodTransition = (method: ProviderMethod) => {
@@ -310,7 +295,6 @@ export default function AlertMenu({
           }}
           method={method}
           alert={alert}
-          mutate={mutate}
           provider={provider}
         />
       ) : (
