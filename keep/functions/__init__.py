@@ -69,3 +69,7 @@ def datetime_compare(t1, t2) -> float:
 
 def encode(string) -> str:
     return urllib.parse.quote(string)
+
+
+def dict_to_key_value_list(d: dict) -> list:
+    return [f"{k}:{v}" for k, v in d.items()]

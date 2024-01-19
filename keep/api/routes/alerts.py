@@ -67,7 +67,17 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     )
                     continue
             else:
-                alert_dto = AlertDto(**alert.event)
+                try:
+                    alert_dto = AlertDto(**alert.event)
+                except Exception:
+                    # should never happen but just in case
+                    logger.exception(
+                        "Failed to parse alert",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    continue
                 if alert_dto.providerId is None:
                     alert_dto.providerId = alert.provider_id
             alerts_dto.append(alert_dto)
@@ -585,10 +595,15 @@ async def receive_generic_event(
     tenant_id = authenticated_entity.tenant_id
     if isinstance(alert, AlertDto):
         alert = [alert]
+
+    for _alert in alert:
+        # if not source, set it to keep
+        if not _alert.source:
+            _alert.source = ["keep"]
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert[0].source[0] or "keep",
+        alert[0].source[0],
         session,
         alert,
         pusher_client,

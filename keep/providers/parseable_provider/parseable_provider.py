@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import pydantic
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -82,6 +82,21 @@ class ParseableProvider(BaseProvider):
     ]
 }}"""
 
+    SEVERITIES_MAP = {
+        "disaster": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "average": AlertSeverity.WARNING,
+        "low": AlertSeverity.LOW,
+    }
+
+    STATUS_MAP = {
+        "firing": AlertStatus.FIRING,
+        "resolved": AlertStatus.RESOLVED,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+        "pending": AlertStatus.PENDING,
+        "suppressed": AlertStatus.SUPPRESSED,
+    }
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -103,28 +118,24 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def __get_priorty(priority):
-        if priority == "disaster":
-            return "critical"
-        elif priority == "high":
-            return "high"
-        elif priority == "average":
-            return "medium"
-        else:
-            return "low"
-
-    @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")
-        status = event.pop("status", "firing")
+        # map severity and status to keep's format
+        status = ParseableProvider.STATUS_MAP.get(
+            event.pop("status", None), AlertStatus.FIRING
+        )
+        severity = ParseableProvider.SEVERITIES_MAP.get(
+            event.pop("severity", "").lower(), AlertSeverity.INFO
+        )
+
         lastReceived = event.pop("last_received", datetime.datetime.now().isoformat())
         decription = event.pop("failing_condition", "")
         tags = event.get("tags", {})
         if isinstance(tags, dict):
             environment = tags.get("environment", "unknown")
-        severity = ParseableProvider.__get_priorty(event.pop("severity", "").lower())
+
         return AlertDto(
             **event,
             id=id,

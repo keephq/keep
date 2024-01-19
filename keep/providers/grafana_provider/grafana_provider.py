@@ -8,8 +8,9 @@ import datetime
 import pydantic
 import requests
 from grafana_api.model import APIEndpoints
+from pkg_resources import packaging
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -74,6 +75,23 @@ class GrafanaProvider(BaseProvider):
             alias="Access to alert rules provisioning API",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+    }
+
+    # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
+    STATUS_MAP = {
+        "ok": AlertStatus.RESOLVED,
+        "normal": AlertStatus.RESOLVED,
+        "paused": AlertStatus.SUPPRESSED,
+        "alerting": AlertStatus.FIRING,
+        "pending": AlertStatus.PENDING,
+        "no_data": AlertStatus.PENDING,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -174,17 +192,25 @@ class GrafanaProvider(BaseProvider):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:
             labels = alert.get("labels", {})
+            # map status and severity to Keep format:
+            status = GrafanaProvider.STATUS_MAP.get(
+                event.get("status"), AlertStatus.FIRING
+            )
+            severity = GrafanaProvider.SEVERITIES_MAP.get(
+                labels.get("severity"), AlertSeverity.INFO
+            )
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=alert.get("fingerprint"),
                 name=event.get("title"),
-                status=event.get("status"),
-                severity=alert.get("severity", None),
+                status=status,
+                severity=severity,
                 lastReceived=datetime.datetime.now(
                     tz=datetime.timezone.utc
                 ).isoformat(),
@@ -208,48 +234,105 @@ class GrafanaProvider(BaseProvider):
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
-        all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
-        all_contact_points.raise_for_status()
-        all_contact_points = all_contact_points.json()
+        try:
+            self.logger.info("Getting contact points")
+            all_contact_points = requests.get(
+                contacts_api, verify=False, headers=headers
+            )
+            all_contact_points.raise_for_status()
+            all_contact_points = all_contact_points.json()
+        except Exception:
+            self.logger.exception("Failed to get contact points")
+            raise
+        # check if webhook already exists
         webhook_exists = [
             webhook_exists
             for webhook_exists in all_contact_points
             if webhook_exists.get("name") == webhook_name
             or webhook_exists.get("uid") == webhook_name
         ]
-        if webhook_exists:
-            webhook = webhook_exists[0]
-            webhook["settings"]["url"] = keep_api_url
-            webhook["settings"]["authorization_scheme"] = "digest"
-            webhook["settings"]["authorization_credentials"] = api_key
-            requests.put(
-                f'{contacts_api}/{webhook["uid"]}',
-                verify=False,
-                json=webhook,
-                headers=headers,
-            )
-            self.logger.info(f'Updated webhook {webhook["uid"]}')
+        # grafana version lesser then 9.4.7 do not send their authentication correctly
+        # therefor we need to add the api_key as a query param instead of the normal digest token
+        self.logger.info("Getting Grafana version")
+        try:
+            health_api = f"{self.authentication_config.host}/api/health"
+            health_response = requests.get(
+                health_api, verify=False, headers=headers
+            ).json()
+            grafana_version = health_response["version"]
+        except Exception:
+            self.logger.exception("Failed to get Grafana version")
+            raise
+        self.logger.info(f"Grafana version is {grafana_version}")
+        # if grafana version is greater then 9.4.7 we can use the digest token
+        if packaging.version.parse(grafana_version) > packaging.version.parse("9.4.7"):
+            self.logger.info("Installing Grafana version > 9.4.7")
+            if webhook_exists:
+                webhook = webhook_exists[0]
+                webhook["settings"]["url"] = keep_api_url
+                webhook["settings"]["authorization_scheme"] = "digest"
+                webhook["settings"]["authorization_credentials"] = api_key
+                requests.put(
+                    f'{contacts_api}/{webhook["uid"]}',
+                    verify=False,
+                    json=webhook,
+                    headers=headers,
+                )
+                self.logger.info(f'Updated webhook {webhook["uid"]}')
+            else:
+                self.logger.info('Creating webhook with name "{webhook_name}"')
+                webhook = {
+                    "name": webhook_name,
+                    "type": "webhook",
+                    "settings": {
+                        "httpMethod": "POST",
+                        "url": keep_api_url,
+                        "authorization_scheme": "digest",
+                        "authorization_credentials": api_key,
+                    },
+                }
+                response = requests.post(
+                    contacts_api,
+                    verify=False,
+                    json=webhook,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
+                if not response.ok:
+                    raise Exception(response.json())
+                self.logger.info(f"Created webhook {webhook_name}")
+        # if grafana version is lesser then 9.4.7 we need to add the api_key as a query param
         else:
-            self.logger.info('Creating webhook with name "{webhook_name}"')
-            webhook = {
-                "name": webhook_name,
-                "type": "webhook",
-                "settings": {
-                    "httpMethod": "POST",
-                    "url": keep_api_url,
-                    "authorization_scheme": "digest",
-                    "authorization_credentials": api_key,
-                },
-            }
-            response = requests.post(
-                contacts_api,
-                verify=False,
-                json=webhook,
-                headers={**headers, "X-Disable-Provenance": "true"},
-            )
-            if not response.ok:
-                raise Exception(response.json())
-            self.logger.info(f"Created webhook {webhook_name}")
+            self.logger.info("Installing Grafana version < 9.4.7")
+            if webhook_exists:
+                webhook = webhook_exists[0]
+                webhook["settings"]["url"] = f"{keep_api_url}&api_key={api_key}"
+                requests.put(
+                    f'{contacts_api}/{webhook["uid"]}',
+                    verify=False,
+                    json=webhook,
+                    headers=headers,
+                )
+                self.logger.info(f'Updated webhook {webhook["uid"]}')
+            else:
+                self.logger.info('Creating webhook with name "{webhook_name}"')
+                webhook = {
+                    "name": webhook_name,
+                    "type": "webhook",
+                    "settings": {
+                        "httpMethod": "POST",
+                        "url": f"{keep_api_url}?api_key={api_key}",
+                    },
+                }
+                response = requests.post(
+                    contacts_api,
+                    verify=False,
+                    json=webhook,
+                    headers={**headers, "X-Disable-Provenance": "true"},
+                )
+                if not response.ok:
+                    raise Exception(response.json())
+                self.logger.info(f"Created webhook {webhook_name}")
+        # Finally, we need to update the policies to match the webhook
         if setup_alerts:
             self.logger.info("Setting up alerts")
             policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
@@ -320,11 +403,15 @@ class GrafanaProvider(BaseProvider):
                         k.lower(): v for k, v in alert.get("annotations", {}).items()
                     }
                     try:
+                        status = alert.get("state", rule.get("state"))
+                        status = GrafanaProvider.STATUS_MAP.get(
+                            status, AlertStatus.FIRING
+                        )
                         alert_dto = AlertDto(
                             id=alert_id,
                             name=rule.get("name"),
                             description=description,
-                            status=alert.get("state", rule.get("state")),
+                            status=status,
                             lastReceived=alert.get("activeAt"),
                             source=source,
                             **labels,
@@ -366,7 +453,13 @@ class GrafanaProvider(BaseProvider):
                     event_labels = event.get("labels", {})
                     alert_name = event_labels.get("alertname")
                     alert_status = event_labels.get("alertstate", event.get("current"))
-                    alert_severity = event_labels.get("severity", "info")
+                    alert_status = GrafanaProvider.STATUS_MAP.get(
+                        alert_status, AlertStatus.FIRING
+                    )
+                    alert_severity = event_labels.get("severity")
+                    alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
+                        alert_severity, AlertSeverity.INFO
+                    )
                     environment = event_labels.get("environment", "unknown")
                     fingerprint = event_labels.get("fingerprint")
                     description = event.get("error", "")
