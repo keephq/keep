@@ -18,7 +18,7 @@ export interface AlertDto {
   isDuplicate?: boolean;
   duplicateReason?: string;
   service?: string;
-  source?: string[];
+  source: string[];
   message?: string;
   description?: string;
   severity?: Severity;
