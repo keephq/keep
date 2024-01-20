@@ -1,0 +1,17 @@
+{{- if .Values.frontend.route.enabled -}}
+{{- $fullName := include "keep.fullname" . -}}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $fullName }}
+  labels: {{- include "keep.labels" . | nindent 4 }}
+spec:
+  host: {{ .Values.frontend.route.host }}
+  to:
+    kind: Service
+    name: {{ $fullName }}-frontend
+  port: 
+    targetPort: {{ .Values.frontend.service.port }}
+  tls: 
+  {{ toYaml .Values.frontend.route.tls | indent 4 }} 
+{{- end}}

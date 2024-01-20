@@ -106,7 +106,7 @@ frontend:
     type: ClusterIP
     port: 3000
   ingress:
-    enabled: false
+    enabled: true
     className: ""
     annotations: {}
     hosts:
@@ -114,6 +114,11 @@ frontend:
         paths:
           - path: /
             pathType: ImplementationSpecific
+    tls: []
+  route:
+    enabled: false
+    host: chart-example.local
+    path: /
     tls: []
   resources: {}
   autoscaling:
