@@ -25,3 +25,9 @@ class Rule(SQLModel, table=True):
     creation_time: datetime
     updated_by: str = None
     update_time: datetime = None
+    # list of "group_by" attributes - when to break the rule into groups
+    grouping_criteria: list = Field(sa_column=Column(JSON), default=[])
+    # e.g.  The {{ labels.queue }} is more than third full on {{ num_of_alerts }} queue managers | {{ start_time }} || {{ last_update_time }}
+    group_description: str = None
+    # e.g. The {{ labels.queue }} is more than third full on {{ num_of_alerts }} queue managers
+    item_description: str = None
