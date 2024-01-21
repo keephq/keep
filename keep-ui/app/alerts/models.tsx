@@ -49,7 +49,6 @@ export const AlertKnownKeys = [
   "isDuplicate",
   "duplicateReason",
   "source",
-  "message",
   "description",
   "severity",
   "pushed",
