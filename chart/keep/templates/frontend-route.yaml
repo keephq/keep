@@ -10,8 +10,10 @@ spec:
   to:
     kind: Service
     name: {{ $fullName }}-frontend
+    weight: 100
   port: 
     targetPort: {{ .Values.frontend.service.port }}
+  wildcardPolicy: {{ .Values.frontend.route.wildcardPolicy }}
   tls: 
   {{ toYaml .Values.frontend.route.tls | indent 4 }} 
 {{- end}}

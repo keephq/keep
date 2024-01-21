@@ -52,6 +52,12 @@ backend:
           - path: /
             pathType: ImplementationSpecific
     tls: []
+  route:
+    enabled: false
+    host: chart-example-backend.local
+    path: /
+    tls: []
+    wildcardPolicy: None
   resources: {}
   autoscaling:
     enabled: false
@@ -120,6 +126,7 @@ frontend:
     host: chart-example.local
     path: /
     tls: []
+    wildcardPolicy: None
   resources: {}
   autoscaling:
     enabled: false
