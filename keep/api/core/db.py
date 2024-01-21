@@ -2,7 +2,6 @@ import hashlib
 import json
 import logging
 import os
-import re
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -11,20 +10,9 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import (
-    String,
-    and_,
-    bindparam,
-    case,
-    desc,
-    func,
-    null,
-    select,
-    text,
-    update,
-)
+from sqlalchemy import and_, desc, func, null, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -112,9 +100,7 @@ elif db_connection_string == "impersonate":
         creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(
-        db_connection_string,
-    )
+    engine = create_engine(db_connection_string)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
@@ -947,136 +933,6 @@ def get_rules(tenant_id):
     return rules
 
 
-def run_rule(tenant_id, rule):
-    """This function implements the rule engine logic.
-
-    We currently support two sql engines: mysql and sqlite.
-
-    The complexity of this function derives from the fact that we need to support nested JSON attributes.
-
-
-    Args:
-        tenant_id (str): the tenant_id
-        rule (Rule): the rule
-
-    """
-    with Session(engine) as session:
-        # get all the alerts that are not already in the rule
-        sql = rule.definition.get("sql")
-        params = rule.definition.get("params")
-
-        timeframe_datetime = datetime.utcnow() - timedelta(seconds=rule.timeframe)
-
-        groups = re.split(r"\s+and\s+(?![^()]*\))", sql)
-
-        results_per_group = {}
-        for group in groups:
-            # Removing outer parentheses and spaces
-            group = group.strip().strip("()").strip()
-
-            # Building the text object for the filter part
-            filter_text = text(group)
-            # find the params it needs
-            bind_names = [str(p) for p in filter_text._bindparams]
-
-            # Applying bindparams with expanding for lists
-            filters = []
-            for bind in bind_names:
-                value = params.get(bind)
-                # TODO: we use 'like' and 'json_contains' but
-                #       we need to support other operators like =, !=, >, <, etc
-                #       down the road we will need to adjust this to support other types (dict?)
-                #       the problem is that we need to know upfront what's the type of the attribute in nested JSON
-                #       which is not trivial
-
-                # source_1 => source, severity_2 => severity
-                attribute_name = bind.split("_")[0]
-                json_path = f"$.{attribute_name}"
-                # Handling different SQL dialects
-                if session.bind.dialect.name == "mysql":
-                    json_extracted = func.json_extract(Alert.event, json_path)
-                    json_type = func.json_type(json_extracted)
-
-                    condition = case(
-                        [
-                            (
-                                json_type == "ARRAY",
-                                func.json_contains(
-                                    json_extracted,
-                                    func.json_array(bindparam(bind, value)),
-                                )
-                                == 1,
-                            ),
-                            (
-                                json_type == "STRING",
-                                json_extracted.like("%" + bindparam(bind, value) + "%"),
-                            ),
-                            (
-                                json_type == "OBJECT",
-                                func.cast(json_extracted, String).like(value),
-                            ),
-                        ],
-                        else_=False,
-                    )
-                    filters.append(condition)
-                # else, sqlite
-                elif session.bind.dialect.name == "sqlite":
-                    json_extracted = func.json_extract(Alert.event, json_path)
-                    # Determine the type of the JSON field
-                    json_type = func.json_type(Alert.event, json_path)
-
-                    # This example assumes that the value you are looking for is a simple scalar value (like a string or a number).
-                    # Adjust the logic if you need to support complex nested objects.
-                    condition = case(
-                        [
-                            # If the field is an array, use LIKE operator for matching
-                            (
-                                json_type == "array",
-                                json_extracted.like(
-                                    '%"' + bindparam(bind, value) + '"%'
-                                ),
-                            ),
-                            # If the field is an object, use string matching. This is a workaround and has limitations.
-                            (
-                                json_type == "object",
-                                json_extracted.like(
-                                    '%"' + bindparam(bind, value) + '"%'
-                                ),
-                            ),
-                        ],
-                        else_=json_extracted.like(
-                            bindparam(bind, value)
-                        ),  # Default case for other types like string
-                    )
-                    filters.append(condition)
-                else:
-                    raise Exception(
-                        f"Unsupported SQL dialect for Rules Engine: {session.bind.dialect.name}"
-                    )
-
-            # add the tenant_id and timeframe filters
-            filters.append(Alert.tenant_id == tenant_id)
-            # TODO: maybe timeframe should support lastReceived? but idk if there is a use case for that
-            filters.append(Alert.timestamp >= timeframe_datetime)
-            # Exclude events created by the rule engine itself
-            filters.append(Alert.provider_type != "rules")
-            # Construct and execute the ORM query
-            query = session.query(Alert).filter(*filters)
-            # Shahar: to get the RAW query -
-            #         from sqlalchemy.sql import compiler
-            #         from sqlalchemy.dialects import mysql, sqlite
-            #         str(query.params(params).statement.compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True}))
-            result = query.all()
-            results_per_group[group] = result
-
-        # if each group have at least one alert, than the run applies
-        if all(results_per_group.values()):
-            return results_per_group
-
-        # otherwise, it doesn't
-        return None
-
-
 def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
     with Session(engine) as session:
         alert = Alert(
@@ -1103,3 +959,53 @@ def delete_rule(tenant_id, rule_id):
             session.commit()
             return True
         return False
+
+
+def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint):
+    # checks if group with the group critiria exists, if not it creates it
+    #   and then assign the alert to the group
+    with Session(engine) as session:
+        group = session.exec(
+            select(Group)
+            .where(Group.tenant_id == tenant_id)
+            .where(Group.rule_id == rule_id)
+            .where(Group.group_fingerprint == group_fingerprint)
+        ).first()
+        # if the group does not exist
+        if not group:
+            group = Group(
+                tenant_id=tenant_id,
+                rule_id=rule_id,
+                group_fingerprint=group_fingerprint,
+            )
+            session.add(group)
+            session.commit()
+            session.refresh(group)
+
+        alert_group = AlertToGroup(
+            tenant_id=tenant_id,
+            alert_id=str(alert_id),
+            group_id=str(group.id),
+        )
+        session.add(alert_group)
+        session.commit()
+        session.refresh(alert_group)
+        return alert_group
+
+
+def get_groups(tenant_id):
+    with Session(engine) as session:
+        groups = session.exec(
+            select(Group)
+            .options(selectinload(Group.alerts))
+            .where(Group.tenant_id == tenant_id)
+        ).all()
+    return groups
+
+
+def get_rule(tenant_id, rule_id):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+        ).first()
+    return rule

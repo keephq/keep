@@ -1,12 +1,10 @@
-import datetime
-import hashlib
+import json
 import logging
 
 import celpy
 
-from keep.api.core.db import create_alert as create_alert_db
+from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.core.db import run_rule as run_rule_db
 from keep.api.models.alert import AlertDto
 
 
@@ -48,8 +46,7 @@ class RulesEngine:
         self.logger.info("Running rules")
         rules = get_rules_db(tenant_id=self.tenant_id)
 
-        # first, we need to understand which rules are actually relevant for the events that arrived
-        relevent_rules_for_events = []
+        groups = []
         for rule in rules:
             self.logger.info(f"Evaluating rule {rule.name}")
             for event in events:
@@ -67,69 +64,23 @@ class RulesEngine:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
-                    relevent_rules_for_events.append(rule)
+                    group_fingerprint = self._calc_group_fingerprint(event, rule)
+                    # Add relation between this event and the group
+                    updated_group = assign_alert_to_group_db(
+                        tenant_id=self.tenant_id,
+                        alert_id=event.event_id,
+                        rule_id=str(rule.id),
+                        group_fingerprint=group_fingerprint,
+                    )
+                    groups.append(updated_group)
                 else:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is not relevant"
                     )
-
-        self.logger.info("Rules ran, creating alerts")
-        # Create the alerts if needed
-        grouped_alerts = []
-        for rule in relevent_rules_for_events:
-            self.logger.info(f"Running relevant rule {rule.name}")
-            rule_results = self._run_rule(rule)
-            if rule_results:
-                self.logger.info("Rule applies, creating grouped alert")
-                # create grouped alert
-                event_payload = []
-                fingerprints = []
-                for group in rule_results:
-                    # todo: we take here the first but we should take all of them down the road
-                    group_payload = rule_results[group][0].dict().get("event")
-                    event_payload.append(group_payload)
-                    fingerprints.append(rule_results[group][0].fingerprint)
-                # TODO: should be calculated somehow else
-                fingerprint = hashlib.sha256(
-                    "".join(fingerprints).encode("utf-8")
-                ).hexdigest()
-                group_alert_name = f"Group alert {rule.name}: " + ", ".join(
-                    [event["name"] for event in event_payload]
-                )
-                # calc the group severity
-                severity = self._calc_max_severity(
-                    [event.get("severity", "info") for event in event_payload]
-                )
-                alert = create_alert_db(
-                    tenant_id=self.tenant_id,
-                    provider_type="rules",
-                    provider_id=rule.id,
-                    # todo: event should support list?
-                    event={
-                        "events": event_payload,
-                        "name": group_alert_name,
-                        "lastReceived": datetime.datetime.now(
-                            tz=datetime.timezone.utc
-                        ).isoformat(),
-                        "severity": severity,
-                        "source": list(
-                            set([event["source"][0] for event in event_payload])
-                        ),
-                        # TODO: should be calculated somehow else
-                        "id": fingerprint,
-                        "status": "firing",
-                        "pushed": True,
-                        "fingerprint": fingerprint,
-                    },
-                    fingerprint=fingerprint,
-                )
-                # Now add it the the
-                grouped_alerts.append(alert)
-                self.logger.info("Created alert")
-
-        self.logger.info(f"Rules ran, {len(grouped_alerts)} alerts created")
-        alerts_dto = [AlertDto(**alert.event) for alert in grouped_alerts]
-        return alerts_dto
+        self.logger.info("Rules ran successfully")
+        # todo: do something with the groups
+        #       such as trigger webhook with the group ids
+        pass
 
     def _extract_subrules(self, expression):
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'
@@ -159,19 +110,42 @@ class RulesEngine:
         for sub_rule in sub_rules:
             ast = env.compile(sub_rule)
             prgm = env.program(ast)
-            r = prgm.evaluate(payload)
+            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+            r = prgm.evaluate(activation)
             if r:
                 return True
         # no subrules matched
         return False
 
-    def _run_rule(self, rule):
-        # prepare the rule
-        rule_results = run_rule_db(tenant_id=self.tenant_id, rule=rule)
-        if not rule_results:
-            self.logger.info(f"Rule {rule.name} does not apply.")
-            return
-
-        self.logger.info(f"Rule {rule.name} applies.")
-        # create aggregated alert from the results
-        return rule_results
+    def _calc_group_fingerprint(self, event: AlertDto, rule):
+        # extract all the grouping criteria from the event
+        # e.g. if the grouping criteria is ["event.labels.queue", "event.labels.cluster"]
+        #     and the event is:
+        #    {
+        #      "labels": {
+        #        "queue": "queue1",
+        #        "cluster": "cluster1",
+        #        "foo": "bar"
+        #      }
+        #    }
+        # than the group_fingerprint will be "queue1,cluster1"
+        event_payload = event.dict()
+        grouping_criteria = rule.grouping_criteria
+        group_fingerprint = []
+        for criteria in grouping_criteria:
+            # we need to extract the value from the event
+            # e.g. if the criteria is "event.labels.queue"
+            # than we need to extract the value of event["labels"]["queue"]
+            criteria_parts = criteria.split(".")
+            value = event_payload
+            for part in criteria_parts:
+                value = value.get(part)
+            group_fingerprint.append(value)
+        # if, for example, the event should have labels.X but it doesn't,
+        # than we will have None in the group_fingerprint
+        if not group_fingerprint:
+            self.logger.warning(
+                f"Failed to calculate group fingerprint for event {event.id} and rule {rule.name}"
+            )
+            return "none"
+        return ",".join(group_fingerprint)

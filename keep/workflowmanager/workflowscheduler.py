@@ -55,7 +55,7 @@ class WorkflowScheduler:
             self.logger.error(f"Error getting workflows that should run: {e}")
             pass
         for workflow in workflows:
-            self.logger.info("Running workflow on background")
+            self.logger.debug("Running workflow on background")
             try:
                 workflow_execution_id = workflow.get("workflow_execution_id")
                 tenant_id = workflow.get("tenant_id")
