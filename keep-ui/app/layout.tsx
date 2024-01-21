@@ -2,6 +2,7 @@ import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
 import { Intercom } from "@/components/ui/Intercom";
 import { Mulish } from "next/font/google";
+import { Card } from "@tremor/react";
 
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
@@ -33,8 +34,16 @@ export default async function RootLayout({
           <ErrorBoundary>{children}</ErrorBoundary>
         </NextAuthProvider>
         <ToastContainer />
+
+        {/** footer */}
+        {process.env.GIT_COMMIT_HASH ? (
+          <div className="fixed right-2.5 bottom-2.5 text-gray-500 text-sm">
+            Build: {process.env.GIT_COMMIT_HASH}
+          </div>
+        ) : (
+          <Intercom />
+        )}
       </body>
-      <Intercom />
     </html>
   );
 }
