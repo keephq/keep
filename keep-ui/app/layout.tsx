@@ -36,7 +36,7 @@ export default async function RootLayout({
         <ToastContainer />
 
         {/** footer */}
-        {process.env.GIT_HASH?(
+        {process.env.GIT_COMMIT_HASH?(
             <div style={{
               position: 'fixed',
               right: '10px',
