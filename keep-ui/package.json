@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@boiseitguru/cookie-cutter": "^0.2.3",
     "@floating-ui/react-dom": "^2.0.4",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-brands-svg-icons": "^6.4.0",

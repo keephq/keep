@@ -69,7 +69,17 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     )
                     continue
             else:
-                alert_dto = AlertDto(**alert.event)
+                try:
+                    alert_dto = AlertDto(**alert.event)
+                except Exception:
+                    # should never happen but just in case
+                    logger.exception(
+                        "Failed to parse alert",
+                        extra={
+                            "alert": alert,
+                        },
+                    )
+                    continue
                 if alert_dto.providerId is None:
                     alert_dto.providerId = alert.provider_id
             alerts_dto.append(alert_dto)

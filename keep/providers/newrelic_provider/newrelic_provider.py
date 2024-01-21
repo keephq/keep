@@ -9,7 +9,7 @@ from datetime import datetime
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
@@ -90,6 +90,18 @@ class NewrelicProvider(BaseProvider):
             alias="Rules Writer",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "open": AlertStatus.FIRING,
+        "closed": AlertStatus.RESOLVED,
+        "acknowledged": AlertStatus.ACKNOWLEDGED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -406,7 +418,7 @@ class NewrelicProvider(BaseProvider):
         return formatted_alerts
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         lastReceived = event["lastReceived"] if "lastReceived" in event else None
         if lastReceived:
@@ -414,6 +426,13 @@ class NewrelicProvider(BaseProvider):
                 "%Y-%m-%d %H:%M:%S"
             )
             event["lastReceived"] = lastReceived
+        # format status and severity to Keep format
+        status = NewrelicProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
+        severity = NewrelicProvider.SEVERITIES_MAP.get(
+            event["severity"], AlertSeverity.INFO
+        )
+        event["status"] = status
+        event["severity"] = severity
         return AlertDto(**event)
 
     def __get_all_policy_ids(

@@ -4,13 +4,13 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
-from pkg_resources import packaging
 
 import pydantic
 import requests
 from grafana_api.model import APIEndpoints
+from pkg_resources import packaging
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
@@ -75,6 +75,23 @@ class GrafanaProvider(BaseProvider):
             alias="Access to alert rules provisioning API",
         ),
     ]
+
+    SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "high": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
+    }
+
+    # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
+    STATUS_MAP = {
+        "ok": AlertStatus.RESOLVED,
+        "normal": AlertStatus.RESOLVED,
+        "paused": AlertStatus.SUPPRESSED,
+        "alerting": AlertStatus.FIRING,
+        "pending": AlertStatus.PENDING,
+        "no_data": AlertStatus.PENDING,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -175,17 +192,25 @@ class GrafanaProvider(BaseProvider):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
-    def format_alert(event: dict) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:
             labels = alert.get("labels", {})
+            # map status and severity to Keep format:
+            status = GrafanaProvider.STATUS_MAP.get(
+                event.get("status"), AlertStatus.FIRING
+            )
+            severity = GrafanaProvider.SEVERITIES_MAP.get(
+                labels.get("severity"), AlertSeverity.INFO
+            )
+
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=alert.get("fingerprint"),
                 name=event.get("title"),
-                status=event.get("status"),
-                severity=alert.get("severity", None),
+                status=status,
+                severity=severity,
                 lastReceived=datetime.datetime.now(
                     tz=datetime.timezone.utc
                 ).isoformat(),
@@ -211,7 +236,9 @@ class GrafanaProvider(BaseProvider):
         contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
         try:
             self.logger.info("Getting contact points")
-            all_contact_points = requests.get(contacts_api, verify=False, headers=headers)
+            all_contact_points = requests.get(
+                contacts_api, verify=False, headers=headers
+            )
             all_contact_points.raise_for_status()
             all_contact_points = all_contact_points.json()
         except Exception:
@@ -229,7 +256,9 @@ class GrafanaProvider(BaseProvider):
         self.logger.info("Getting Grafana version")
         try:
             health_api = f"{self.authentication_config.host}/api/health"
-            health_response = requests.get(health_api, verify=False, headers=headers).json()
+            health_response = requests.get(
+                health_api, verify=False, headers=headers
+            ).json()
             grafana_version = health_response["version"]
         except Exception:
             self.logger.exception("Failed to get Grafana version")
@@ -374,11 +403,15 @@ class GrafanaProvider(BaseProvider):
                         k.lower(): v for k, v in alert.get("annotations", {}).items()
                     }
                     try:
+                        status = alert.get("state", rule.get("state"))
+                        status = GrafanaProvider.STATUS_MAP.get(
+                            status, AlertStatus.FIRING
+                        )
                         alert_dto = AlertDto(
                             id=alert_id,
                             name=rule.get("name"),
                             description=description,
-                            status=alert.get("state", rule.get("state")),
+                            status=status,
                             lastReceived=alert.get("activeAt"),
                             source=source,
                             **labels,
@@ -420,7 +453,13 @@ class GrafanaProvider(BaseProvider):
                     event_labels = event.get("labels", {})
                     alert_name = event_labels.get("alertname")
                     alert_status = event_labels.get("alertstate", event.get("current"))
-                    alert_severity = event_labels.get("severity", "info")
+                    alert_status = GrafanaProvider.STATUS_MAP.get(
+                        alert_status, AlertStatus.FIRING
+                    )
+                    alert_severity = event_labels.get("severity")
+                    alert_severity = GrafanaProvider.SEVERITIES_MAP.get(
+                        alert_severity, AlertSeverity.INFO
+                    )
                     environment = event_labels.get("environment", "unknown")
                     fingerprint = event_labels.get("fingerprint")
                     description = event.get("error", "")
