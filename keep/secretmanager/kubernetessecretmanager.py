@@ -74,31 +74,6 @@ class KubernetesSecretManager(BaseSecretManager):
             )
             raise
 
-    def list_secrets(self, prefix: str) -> list:
-        """
-        List all secrets in the Kubernetes Secret with the given prefix.
-
-        Args:
-            prefix (str): The prefix to filter secrets by.
-
-        Returns:
-            list: A list of secret names.
-        """
-        self.logger.info("Listing secrets", extra={"prefix": prefix})
-        try:
-            secrets = self.api.list_namespaced_secret(namespace=self.namespace)
-            secret_names = [secret.metadata.name for secret in secrets.items]
-            filtered_secrets = [
-                name for name in secret_names if name.startswith(prefix)
-            ]
-            self.logger.info("Listed secrets successfully", extra={"prefix": prefix})
-            return filtered_secrets
-        except ApiException as e:
-            self.logger.error(
-                "Error listing secrets", extra={"prefix": prefix, "error": str(e)}
-            )
-            raise
-
     def delete_secret(self, secret_name: str) -> None:
         self.logger.info("Deleting secret", extra={"secret_name": secret_name})
         try:

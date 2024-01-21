@@ -84,27 +84,6 @@ class GcpSecretManager(BaseSecretManager):
             )
             return secret_value
 
-    def list_secrets(self, prefix) -> list:
-        """
-        List all secrets with the given prefix.
-
-        Args:
-            prefix (str): The prefix to filter secrets by.
-
-        Returns:
-            list: A list of secret names.
-        """
-        with tracer.start_as_current_span("list_secrets"):
-            self.logger.info("Listing secrets", extra={"prefix": prefix})
-            parent = f"projects/{self.project_id}"
-            secrets = []
-            for secret in self.client.list_secrets(request={"parent": parent}):
-                name = secret.name.split("/")[-1]
-                if name.startswith(prefix):
-                    secrets.append(name)
-            self.logger.info("Listed secrets successfully", extra={"prefix": prefix})
-            return secrets
-
     def delete_secret(self, secret_name: str) -> None:
         with tracer.start_as_current_span("delete_secret"):
             # Construct the resource name
