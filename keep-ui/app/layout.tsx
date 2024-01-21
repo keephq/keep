@@ -36,21 +36,13 @@ export default async function RootLayout({
         <ToastContainer />
 
         {/** footer */}
-        {process.env.GIT_COMMIT_HASH?(
-            <div style={{
-              position: 'fixed',
-              right: '10px',
-              bottom: '10px',
-              color: 'gray',
-              fontSize: 'small'
-          }}>
+        {process.env.GIT_COMMIT_HASH ? (
+          <div className="fixed right-2.5 bottom-2.5 text-gray-500 text-sm">
             Build: {process.env.GIT_COMMIT_HASH}
           </div>
-        ):
-          (
-            <Intercom />
-          )
-        }
+        ) : (
+          <Intercom />
+        )}
       </body>
     </html>
   );
