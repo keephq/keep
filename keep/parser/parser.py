@@ -201,7 +201,7 @@ class Parser:
                 # map also the name of the provider, not only the id
                 # so that we can use the name to reference the provider
                 context_manager.providers_context[provider_name] = provider.details
-                self.logger.info(f"Provider {provider.id} loaded successfully")
+                self.logger.debug(f"Provider {provider.id} loaded successfully")
             except Exception as e:
                 self.logger.error(
                     f"Error loading provider {provider.id}", extra={"exception": e}
