@@ -189,3 +189,6 @@ storage
 
 # otel files
 tempo-data/
+
+# simulation
+simulate*
