@@ -10,7 +10,9 @@ export default function AlertsPage() {
 
   const router = useRouter();
 
-  if (status === "loading") return <Loading />;
+  if (status === "loading") {
+    return <Loading />;
+  }
 
   if (status === "unauthenticated") {
     return router.push("/signin");
@@ -20,5 +22,5 @@ export default function AlertsPage() {
     return router.push("/signin");
   }
 
-  return <Alerts accessToken={session?.accessToken!} />;
+  return <Alerts />;
 }
