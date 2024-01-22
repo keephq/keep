@@ -1,19 +1,7 @@
-import {
-  Card,
-  TabGroup,
-  TabList,
-  Tab,
-  TabPanels,
-  TabPanel,
-} from "@tremor/react";
-import { AlertTable } from "./alert-table";
-import { AlertDto, Preset } from "./models";
-import { useMemo, useState } from "react";
-import Loading from "app/loading";
+import { Card, TabGroup, TabList, Tab, TabPanels } from "@tremor/react";
+import { Preset } from "./models";
+import { useMemo } from "react";
 import "./alerts.client.css";
-import AlertPresets, { Option } from "./alert-presets";
-import AlertActions from "./alert-actions";
-import { RowSelectionState } from "@tanstack/react-table";
 import AlertStreamline from "./alert-streamline";
 import {
   getDefaultSubscriptionObj,
@@ -21,31 +9,18 @@ import {
   useAlerts,
 } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
+import AlertTableTabPanel from "./alert-table-tab-panel";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
   { name: "Deleted", options: [] },
 ];
 
-interface Props {
-  accessToken: string;
-}
-
-export default function Alerts({ accessToken }: Props) {
-  const [showDeleted, setShowDeleted] = useState<boolean>(false);
-  const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
-  const [tabIndex, setTabIndex] = useState<number>(0);
-  const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
-
-  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
-    defaultPresets[0] // Feed
-  );
+export default function Alerts() {
   const { useAllAlerts, useAllAlertsWithSubscription } = useAlerts();
 
-  const { data: endpointAlerts = [], isLoading } = useAllAlerts({
+  const { data: endpointAlerts = [] } = useAllAlerts({
     revalidateOnFocus: false,
-    onLoadingSlow: () => setIsSlowLoading(true),
-    loadingTimeout: 5000,
   });
 
   const { data: alertSubscription = getDefaultSubscriptionObj(true) } =
@@ -57,115 +32,16 @@ export default function Alerts({ accessToken }: Props) {
     pusherChannel,
   } = alertSubscription;
 
-  const { data: savedPresets = [], mutate: presetsMutate } = usePresets({
+  const { data: savedPresets = [] } = usePresets({
     revalidateOnFocus: false,
   });
-  const presets: Preset[] = [...defaultPresets, ...savedPresets];
+  const presets = [...defaultPresets, ...savedPresets] as const;
 
   const alerts = useMemo(
     () =>
       getFormatAndMergePusherWithEndpointAlerts(endpointAlerts, pusherAlerts),
     [endpointAlerts, pusherAlerts]
   );
-
-  if (isLoading) return <Loading slowLoading={isSlowLoading} />;
-
-  const AlertTableTabPanel = ({ preset }: { preset: Preset }) => {
-    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-    const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
-      (acc, [alertId, isSelected]) => {
-        if (isSelected) {
-          return acc.concat(alertId);
-        }
-        return acc;
-      },
-      []
-    );
-
-    return (
-      <TabPanel className="mt-4">
-        {selectedRowIds.length ? (
-          <AlertActions
-            selectedRowIds={selectedRowIds}
-            alerts={currentStateAlerts}
-          />
-        ) : (
-          <AlertPresets
-            preset={preset}
-            alerts={currentStateAlerts}
-            selectedOptions={selectedOptions}
-            setSelectedOptions={setSelectedOptions}
-            accessToken={accessToken}
-            presetsMutator={() => {
-              onIndexChange(0);
-              presetsMutate();
-            }}
-            isLoading={isAsyncLoading}
-          />
-        )}
-        <AlertTable
-          alerts={currentStateAlerts}
-          isAsyncLoading={isAsyncLoading}
-          rowSelection={rowSelection}
-          setRowSelection={setRowSelection}
-          presetName={preset.name}
-        />
-      </TabPanel>
-    );
-  };
-
-  function showDeletedAlert(alert: AlertDto): boolean {
-    return (
-      showDeleted === alert.deleted.includes(alert.lastReceived.toISOString())
-    );
-  }
-
-  const getPresetAlerts = (alert: AlertDto, preset: Preset): boolean => {
-    if (selectedOptions.length === 0) {
-      return true;
-    }
-
-    if (preset.name === "Deleted") {
-      return alert.deleted.includes(alert.lastReceived.toISOString());
-    }
-
-    return preset.options.every((option) => {
-      const [key, value] = option.value.split("=");
-
-      if (key && value) {
-        const lowercaseKey = key.toLowerCase() as keyof AlertDto;
-        const lowercaseValue = value.toLowerCase();
-
-        const alertValue = alert[lowercaseKey];
-
-        if (Array.isArray(alertValue)) {
-          return alertValue.every((v) => lowercaseValue.split(",").includes(v));
-        }
-
-        if (typeof alertValue === "string") {
-          return alertValue.toLowerCase().includes(lowercaseValue);
-        }
-      }
-
-      return false;
-    });
-  };
-
-  const currentStateAlerts = alerts
-    .filter((alert) => getPresetAlerts(alert, selectedPreset))
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
-
-  function onIndexChange(index: number) {
-    setTabIndex(index);
-    const preset = presets![index];
-    if (preset.name === "Deleted") {
-      setShowDeleted(true);
-    } else {
-      setShowDeleted(false);
-    }
-    setSelectedOptions(preset.options);
-    setSelectedPreset(preset);
-  }
 
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
@@ -175,7 +51,8 @@ export default function Alerts({ accessToken }: Props) {
           lastSubscribedDate={lastSubscribedDate}
         />
       )}
-      <TabGroup onIndexChange={onIndexChange} index={tabIndex}>
+      {/* key is necessary to re-render tabs on preset delete */}
+      <TabGroup key={presets.length}>
         <TabList variant="line" color="orange">
           {presets.map((preset, index) => (
             <Tab key={preset.name} tabIndex={index}>
@@ -185,7 +62,12 @@ export default function Alerts({ accessToken }: Props) {
         </TabList>
         <TabPanels>
           {presets.map((preset) => (
-            <AlertTableTabPanel key={preset.name} preset={preset} />
+            <AlertTableTabPanel
+              key={preset.name}
+              preset={preset}
+              alerts={alerts}
+              isAsyncLoading={isAsyncLoading}
+            />
           ))}
         </TabPanels>
       </TabGroup>
