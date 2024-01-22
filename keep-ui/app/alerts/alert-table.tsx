@@ -32,7 +32,7 @@ import AlertSeverity from "./alert-severity";
 import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
@@ -47,20 +47,14 @@ const columnHelper = createColumnHelper<AlertDto>();
 interface Props {
   alerts: AlertDto[];
   isAsyncLoading?: boolean;
-  onDelete?: (
-    fingerprint: string,
-    lastReceived: Date,
-    restore?: boolean
-  ) => void;
-  setAssignee?: (
-    fingerprint: string,
-    lastReceived: Date,
-    unassign: boolean
-  ) => void;
   presetName?: string;
-  rowSelection?: RowSelectionState;
-  setRowSelection?: OnChangeFn<RowSelectionState>;
   columnsToExclude?: string[];
+  isMenuColDisplayed?: boolean;
+  isRefreshAllowed?: boolean;
+  rowSelection?: {
+    state: RowSelectionState;
+    onChange: OnChangeFn<RowSelectionState>;
+  };
 }
 
 const getExtraPayloadKeys = (
@@ -99,7 +93,8 @@ export function AlertTable({
   isAsyncLoading = false,
   presetName,
   rowSelection,
-  setRowSelection,
+  isMenuColDisplayed = true,
+  isRefreshAllowed = true,
   columnsToExclude = [],
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
@@ -115,132 +110,138 @@ export function AlertTable({
     setIsOpen(true);
   };
 
-  const enabledRowSelection =
-    presetName === "Deleted" || (isOpen && !presetName)
-      ? undefined
-      : rowSelection;
+  const checkboxColumn = useMemo(
+    () =>
+      rowSelection
+        ? [
+            columnHelper.display({
+              id: "checkbox",
+              header: (context) => (
+                <AlertTableCheckbox
+                  checked={context.table.getIsAllRowsSelected()}
+                  indeterminate={context.table.getIsSomeRowsSelected()}
+                  onChange={context.table.getToggleAllRowsSelectedHandler()}
+                  disabled={alerts.length === 0}
+                />
+              ),
+              cell: (context) => (
+                <AlertTableCheckbox
+                  checked={context.row.getIsSelected()}
+                  indeterminate={context.row.getIsSomeSelected()}
+                  onChange={context.row.getToggleSelectedHandler()}
+                />
+              ),
+            }),
+          ]
+        : [],
+    [rowSelection, alerts.length]
+  );
 
-  const checkboxColumn = enabledRowSelection
-    ? [
-        columnHelper.display({
-          id: "checkbox",
-          header: (context) => (
-            <AlertTableCheckbox
-              checked={context.table.getIsAllRowsSelected()}
-              indeterminate={context.table.getIsSomeRowsSelected()}
-              onChange={context.table.getToggleAllRowsSelectedHandler()}
-              disabled={alerts.length === 0}
-            />
-          ),
-          cell: (context) => (
-            <AlertTableCheckbox
-              checked={context.row.getIsSelected()}
-              indeterminate={context.row.getIsSomeSelected()}
-              onChange={context.row.getToggleSelectedHandler()}
-            />
-          ),
-        }),
-      ]
-    : [];
+  const menuColumn = useMemo(
+    () =>
+      isMenuColDisplayed
+        ? [
+            columnHelper.display({
+              id: "alertMenu",
+              meta: {
+                thClassName: "sticky right-0",
+                tdClassName: "sticky right-0",
+              },
+              cell: (context) => (
+                <AlertMenu
+                  alert={context.row.original}
+                  openHistory={() => openModal(context.row.original)}
+                />
+              ),
+            }),
+          ]
+        : [],
+    [isMenuColDisplayed]
+  );
 
-  const menuColumn = presetName
-    ? [
-        columnHelper.display({
-          id: "alertMenu",
-          meta: {
-            thClassName: "sticky right-0",
-            tdClassName: "sticky right-0",
-          },
-          cell: (context) => (
-            <AlertMenu
-              alert={context.row.original}
-              openHistory={() => openModal(context.row.original)}
+  const defaultColumns = useMemo(
+    () => [
+      ...checkboxColumn,
+      columnHelper.accessor("severity", {
+        header: () => "Severity",
+        cell: (context) => <AlertSeverity severity={context.getValue()} />,
+      }),
+      columnHelper.accessor("name", {
+        header: () => "Name",
+        cell: (context) => <AlertName alert={context.row.original} />,
+      }),
+      columnHelper.accessor("description", {
+        header: () => "Description",
+        cell: (context) => (
+          <div
+            className="max-w-[340px] flex items-center"
+            title={context.getValue()}
+          >
+            <div className="truncate">{context.getValue()}</div>
+          </div>
+        ),
+      }),
+      columnHelper.accessor("pushed", {
+        header: () => (
+          <div className="flex items-center gap-1">
+            <span>Pushed</span>
+            <Icon
+              icon={QuestionMarkCircleIcon}
+              tooltip="Whether the alert was pushed or pulled from the alert source"
+              variant="simple"
+              color="gray"
             />
-          ),
-        }),
-      ]
-    : [];
-
-  const defaultColumns = [
-    ...checkboxColumn,
-    columnHelper.accessor("severity", {
-      header: () => "Severity",
-      cell: (context) => <AlertSeverity severity={context.getValue()} />,
-    }),
-    columnHelper.accessor("name", {
-      header: () => "Name",
-      cell: (context) => <AlertName alert={context.row.original} />,
-    }),
-    columnHelper.accessor("description", {
-      header: () => "Description",
-      cell: (context) => (
-        <div
-          className="max-w-[340px] flex items-center"
-          title={context.getValue()}
-        >
-          <div className="truncate">{context.getValue()}</div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor("pushed", {
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span>Pushed</span>
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            tooltip="Whether the alert was pushed or pulled from the alert source"
-            variant="simple"
-            color="gray"
+          </div>
+        ),
+        cell: (context) => <PushPullBadge pushed={context.getValue()} />,
+      }),
+      columnHelper.accessor("status", {
+        header: "Status",
+      }),
+      columnHelper.accessor("lastReceived", {
+        header: "Last Received",
+        cell: (context) => (
+          <span title={context.getValue().toISOString()}>
+            {getAlertLastReceieved(context.getValue())}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("source", {
+        header: "Source",
+        cell: (context) =>
+          (context.getValue() ?? []).map((source, index) => (
+            <Image
+              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+              key={source}
+              alt={source}
+              height={24}
+              width={24}
+              title={source}
+              src={`/icons/${source}-icon.png`}
+            />
+          )),
+      }),
+      columnHelper.accessor("assignees", {
+        header: "Assignee",
+        cell: (context) => (
+          <AlertAssignee
+            assignee={
+              (context.getValue() ?? {})[
+                context.row.original.lastReceived?.toISOString()
+              ]
+            }
           />
-        </div>
-      ),
-      cell: (context) => <PushPullBadge pushed={context.getValue()} />,
-    }),
-    columnHelper.accessor("status", {
-      header: "Status",
-    }),
-    columnHelper.accessor("lastReceived", {
-      header: "Last Received",
-      cell: (context) => (
-        <span title={context.getValue().toISOString()}>
-          {getAlertLastReceieved(context.getValue())}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("source", {
-      header: "Source",
-      cell: (context) =>
-        (context.getValue() ?? []).map((source, index) => (
-          <Image
-            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={source}
-            alt={source}
-            height={24}
-            width={24}
-            title={source}
-            src={`/icons/${source}-icon.png`}
-          />
-        )),
-    }),
-    columnHelper.accessor("assignees", {
-      header: "Assignee",
-      cell: (context) => (
-        <AlertAssignee
-          assignee={
-            (context.getValue() ?? {})[
-              context.row.original.lastReceived?.toISOString()
-            ]
-          }
-        />
-      ),
-    }),
-    columnHelper.display({
-      id: "extraPayload",
-      header: "Extra Payload",
-      cell: (context) => <AlertExtraPayload alert={context.row.original} />,
-    }),
-    ...menuColumn,
-  ];
+        ),
+      }),
+      columnHelper.display({
+        id: "extraPayload",
+        header: "Extra Payload",
+        cell: (context) => <AlertExtraPayload alert={context.row.original} />,
+      }),
+      ...menuColumn,
+    ],
+    [checkboxColumn, menuColumn]
+  );
 
   const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
   // Create all the necessary columns
@@ -267,11 +268,6 @@ export function AlertTable({
     getColumnsToHide(presetName, extraPayloadKeys)
   );
 
-  useEffect(() => {
-    const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
-    setColumnVisibility(getColumnsToHide(presetName, extraPayloadKeys));
-  }, [alerts]);
-
   const table = useReactTable({
     data: alerts,
     columns: columns,
@@ -281,14 +277,14 @@ export function AlertTable({
     state: {
       columnVisibility,
       columnOrder,
-      rowSelection: enabledRowSelection,
+      rowSelection: rowSelection ? rowSelection.state : undefined,
     },
     initialState: {
       pagination: { pageSize: 10 },
     },
     onColumnVisibilityChange: setColumnVisibility,
     enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: rowSelection ? rowSelection.onChange : undefined,
   });
 
   return (
@@ -336,10 +332,7 @@ export function AlertTable({
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
-      <AlertPagination
-        table={table}
-        // hide with history
-      />
+      <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       {selectedAlert && (
         <AlertHistory
           isOpen={isOpen}

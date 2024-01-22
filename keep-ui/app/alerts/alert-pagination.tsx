@@ -7,9 +7,10 @@ import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   table: Table<AlertDto>;
+  isRefreshAllowed: boolean;
 }
 
-export default function AlertPagination({ table }: Props) {
+export default function AlertPagination({ table, isRefreshAllowed }: Props) {
   const { useAllAlerts } = useAlerts();
   const { mutate, isValidating } = useAllAlerts();
 
@@ -51,17 +52,18 @@ export default function AlertPagination({ table }: Props) {
           color="orange"
           variant="secondary"
         />
-
-        <Button
-          icon={ArrowPathIcon}
-          color="orange"
-          size="xs"
-          className="ml-2.5"
-          disabled={isValidating}
-          loading={isValidating}
-          onClick={async () => await mutate()}
-          title="Refresh"
-        />
+        {isRefreshAllowed && (
+          <Button
+            icon={ArrowPathIcon}
+            color="orange"
+            size="xs"
+            className="ml-2.5"
+            disabled={isValidating}
+            loading={isValidating}
+            onClick={async () => await mutate()}
+            title="Refresh"
+          />
+        )}
       </div>
     </div>
   );
