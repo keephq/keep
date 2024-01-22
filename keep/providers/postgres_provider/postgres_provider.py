@@ -10,7 +10,7 @@ import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -40,11 +40,37 @@ class PostgresProviderAuthConfig:
 class PostgresProvider(BaseProvider):
     """Enrich alerts with data from Postgres."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="connect_to_server",
+            description="The user can connect to the server",
+            mandatory=True,
+            alias="Connect to the server",
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.conn = None
+
+    def validate_scopes(self):
+        """
+        Validates that the user has the required scopes to use the provider.
+        """
+        try:
+            conn = self.__init_connection()
+            conn.close()
+            scopes = {
+                "connect_to_server": True,
+            }
+        except Exception as e:
+            self.logger.exception("Error validating scopes")
+            scopes = {
+                "connect_to_server": str(e),
+            }
+        return scopes
 
     def __init_connection(self):
         """

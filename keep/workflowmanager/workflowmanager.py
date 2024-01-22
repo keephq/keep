@@ -219,7 +219,7 @@ class WorkflowManager:
                     )
 
     def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
-        self.logger.info(f"Running workflow {workflow.workflow_id}")
+        self.logger.debug(f"Running workflow {workflow.workflow_id}")
         errors = []
         try:
             self._check_premium_providers(workflow)

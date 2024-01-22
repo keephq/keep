@@ -24,11 +24,5 @@ class FileSecretManager(BaseSecretManager):
         with open(path, "w") as f:
             f.write(secret_value)
 
-    def list_secrets(self, prefix: str) -> list[str]:
-        lst = os.listdir(self.directory)
-        if prefix:
-            lst = [x for x in lst if x.startswith(prefix)]
-        return lst
-
     def delete_secret(self, secret_name: str) -> None:
         os.remove(os.path.join(self.directory, secret_name))

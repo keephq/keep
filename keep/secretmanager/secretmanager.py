@@ -35,19 +35,6 @@ class BaseSecretManager(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def list_secrets(self, prefix: str) -> list[str]:
-        """
-        List all secrets in the secret manager.
-
-        Raises:
-            NotImplementedError
-
-        Returns:
-            list[str]: A list of secret names.
-        """
-        raise NotImplementedError("list_secrets() method not implemented")
-
-    @abc.abstractmethod
     def delete_secret(self, secret_name: str) -> None:
         """
         Delete a secret from the secret manager.

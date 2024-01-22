@@ -173,6 +173,8 @@ receivers:
                 labels=labels,
                 annotations=annotations,  # annotations can be used either by alert.annotations.some_annotation or by alert.some_annotation
                 payload=alert,
+                fingerprint=alert.pop("fingerprint", None),
+                **alert,  # rest of the fields
             )
             for label in labels:
                 if getattr(alert_dto, label, None) is not None:
