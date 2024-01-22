@@ -115,9 +115,10 @@ export const useAlerts = () => {
 
   const useAllAlertsWithSubscription = () => {
     return useSWRSubscription(
-      () => (configData && session ? "alerts" : null),
+      () =>
+        configData?.PUSHER_DISABLED === false && session ? "alerts" : null,
       (_, { next }: SWRSubscriptionOptions<AlertSubscription, Error>) => {
-        if (configData === undefined) {
+        if (configData === undefined || session === null) {
           console.log("Pusher disabled");
 
           return () =>
@@ -141,12 +142,12 @@ export const useAlerts = () => {
             transport: "ajax",
             endpoint: `${apiUrl}/pusher/auth`,
             headers: {
-              Authorization: `Bearer ${session?.accessToken!}`,
+              Authorization: `Bearer ${session.accessToken!}`,
             },
           },
         });
 
-        const channelName = `private-${session?.tenantId}`;
+        const channelName = `private-${session.tenantId}`;
         const pusherChannel = pusher.subscribe(channelName);
 
         pusherChannel.bind("async-alerts", (base64CompressedAlert: string) => {
