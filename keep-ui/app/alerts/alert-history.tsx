@@ -4,8 +4,8 @@ import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
-import Loading from "app/loading";
 import { useAlerts } from "utils/hooks/useAlerts";
+import Loading from "app/loading";
 
 interface Props {
   isOpen: boolean;
@@ -15,17 +15,14 @@ interface Props {
 
 export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
   const { useAlertHistory } = useAlerts();
-  const {
-    data: alertHistory = [],
-    isLoading,
-    error,
-  } = useAlertHistory(selectedAlert, { revalidateOnFocus: false });
+  const { data: alertHistory = [], isLoading } = useAlertHistory(
+    selectedAlert,
+    {
+      revalidateOnFocus: false,
+    }
+  );
 
-  if (!selectedAlert || isLoading) {
-    return <></>;
-  }
-
-  if (!alertHistory || error) {
+  if (isLoading) {
     return <Loading />;
   }
 
@@ -100,6 +97,8 @@ export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
                 <AlertTable
                   alerts={alertsHistoryWithDate}
                   columnsToExclude={["description"]}
+                  isMenuColDisplayed={false}
+                  isRefreshAllowed={false}
                 />
               </Dialog.Panel>
             </Transition.Child>
