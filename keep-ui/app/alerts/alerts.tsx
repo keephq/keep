@@ -10,9 +10,7 @@ import { AlertTable } from "./alert-table";
 import { AlertDto, Preset } from "./models";
 import { useMemo, useState } from "react";
 import Loading from "app/loading";
-import Pusher from "pusher-js";
 import "./alerts.client.css";
-import { User as NextUser } from "next-auth";
 import AlertPresets, { Option } from "./alert-presets";
 import AlertActions from "./alert-actions";
 import { RowSelectionState } from "@tanstack/react-table";
@@ -93,7 +91,7 @@ export default function Alerts({ accessToken }: Props) {
           />
         ) : (
           <AlertPresets
-            preset={selectedPreset}
+            preset={preset}
             alerts={currentStateAlerts}
             selectedOptions={selectedOptions}
             setSelectedOptions={setSelectedOptions}
@@ -122,25 +120,39 @@ export default function Alerts({ accessToken }: Props) {
     );
   }
 
-  function filterAlerts(alert: AlertDto): boolean {
+  const getPresetAlerts = (alert: AlertDto, preset: Preset): boolean => {
     if (selectedOptions.length === 0) {
       return true;
     }
-    return selectedOptions.every((option) => {
-      const optionSplit = option.value.split("=");
-      const key = optionSplit[0];
-      const value = optionSplit[1]?.toLowerCase();
-      if (key === "source") {
-        return alert.source?.every((v) => value.split(",").includes(v));
-      } else if (typeof value === "string") {
-        return ((alert as any)[key] as string)?.toLowerCase().includes(value);
+
+    if (preset.name === "Deleted") {
+      return alert.deleted.includes(alert.lastReceived.toISOString());
+    }
+
+    return preset.options.every((option) => {
+      const [key, value] = option.value.split("=");
+
+      if (key && value) {
+        const lowercaseKey = key.toLowerCase() as keyof AlertDto;
+        const lowercaseValue = value.toLowerCase();
+
+        const alertValue = alert[lowercaseKey];
+
+        if (Array.isArray(alertValue)) {
+          return alertValue.every((v) => lowercaseValue.split(",").includes(v));
+        }
+
+        if (typeof alertValue === "string") {
+          return alertValue.toLowerCase().includes(lowercaseValue);
+        }
       }
+
       return false;
     });
-  }
+  };
 
   const currentStateAlerts = alerts
-    .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
+    .filter((alert) => getPresetAlerts(alert, selectedPreset))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   function onIndexChange(index: number) {
