@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
-import { GroupBase, OptionsOrGroups } from "react-select/dist/declarations/src";
 import { Button, Subtitle } from "@tremor/react";
 import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
+import { useSession } from "next-auth/react";
+import { usePresets } from "utils/hooks/usePresets";
 
 export interface Option {
   readonly label: string;
@@ -18,8 +19,6 @@ interface Props {
   alerts: AlertDto[];
   selectedOptions: Option[];
   setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
-  accessToken: string;
-  presetsMutator: () => void;
   isLoading: boolean;
 }
 
@@ -27,12 +26,13 @@ export default function AlertPresets({
   preset,
   alerts,
   selectedOptions,
-  accessToken,
   setSelectedOptions,
-  presetsMutator,
   isLoading,
 }: Props) {
   const apiUrl = getApiURL();
+  const { mutate: presetsMutator } = usePresets({ revalidateOnFocus: false });
+  const { data: session } = useSession();
+
   const selectRef = useRef(null);
   const [options, setOptions] = useState<Option[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -68,15 +68,7 @@ export default function AlertPresets({
     );
   }, [uniqueValuesMap]);
 
-  const isValidNewOption = (
-    inputValue: string,
-    selectValue: OptionsOrGroups<Option, GroupBase<Option>>,
-    selectOptions: OptionsOrGroups<Option, GroupBase<Option>>,
-    accessors: {
-      getOptionValue: (option: Option) => string;
-      getOptionLabel: (option: Option) => string;
-    }
-  ) => {
+  const isValidNewOption = () => {
     // Only allow creating new options if the input includes '='
     return inputValue.includes("=");
   };
@@ -157,7 +149,7 @@ export default function AlertPresets({
       const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
       });
       if (response.ok) {
@@ -187,7 +179,7 @@ export default function AlertPresets({
         {
           method: preset?.id ? "PUT" : "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ name: presetName, options: options }),
