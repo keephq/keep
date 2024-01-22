@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertTable } from "./alert-table";
@@ -83,8 +83,11 @@ export default function AlertTableTabPanel({
       <AlertTable
         alerts={presetAlerts}
         isAsyncLoading={isAsyncLoading}
-        rowSelection={rowSelection}
-        setRowSelection={setRowSelection}
+        rowSelection={
+          preset.name !== "Deleted"
+            ? { state: rowSelection, onChange: setRowSelection }
+            : undefined
+        }
         presetName={preset.name}
       />
     </Tab.Panel>
