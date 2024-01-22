@@ -1,8 +1,10 @@
 # TODO: this whole file needs to get refactored
 # mainly: pusher stuff, enrichment stuff and async stuff
 import base64
+import copy
 import json
 import logging
+import os
 import zlib
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -24,7 +26,7 @@ from keep.api.core.dependencies import (
     get_pusher_client,
 )
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
-from keep.api.models.db.alert import Alert
+from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -446,6 +448,7 @@ def handle_formatted_events(
     tenant_id,
     provider_type,
     session: Session,
+    non_formatter_events: list[dict],
     formatted_events: list[AlertDto],
     pusher_client: Pusher,
     provider_id: str | None = None,
@@ -460,6 +463,14 @@ def handle_formatted_events(
         },
     )
     try:
+        # keep raw events in the DB if the user wants to
+        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
+            for non_formatted_event in non_formatter_events:
+                alert = AlertRaw(
+                    tenant_id=tenant_id,
+                    raw_alert=non_formatted_event,
+                )
+                session.add(alert)
         for formatted_event in formatted_events:
             formatted_event.pushed = True
             alert = Alert(
@@ -536,28 +547,7 @@ def handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        grouped_alerts = rules_engine.run_rules(formatted_events)
-        # if new grouped alerts were created, we need to push them to the client
-        if grouped_alerts:
-            logger.info("Adding group alerts to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, grouped_alerts)
-            logger.info("Added group alerts to the workflow manager queue")
-            # Now send the grouped alerts to the client
-            logger.info("Sending grouped alerts to the client")
-            for grouped_alert in grouped_alerts:
-                try:
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
-                        base64.b64encode(
-                            zlib.compress(
-                                json.dumps([grouped_alert.dict()]).encode(), level=9
-                            )
-                        ).decode(),
-                    )
-                except Exception:
-                    logger.exception("Failed to push alert to the client")
-            logger.info("Sent grouped alerts to the client")
+        rules_engine.run_rules(formatted_events)
     except Exception:
         logger.exception(
             "Failed to run rules engine",
@@ -606,6 +596,7 @@ async def receive_generic_event(
         alert[0].source[0],
         session,
         alert,
+        alert,
         pusher_client,
     )
     return alert
@@ -637,6 +628,7 @@ async def receive_event(
     # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
     try:
         event = json.loads(body.decode())
+        event_copy = copy.copy(event)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
@@ -683,6 +675,7 @@ async def receive_event(
                 tenant_id,
                 provider_type,
                 session,
+                event_copy if isinstance(event_copy, list) else [event_copy],
                 formatted_events,
                 pusher_client,
                 provider_id,
@@ -721,7 +714,9 @@ def get_alert(
         },
     )
     # TODO: once pulled alerts will be in the db too, this should be changed
-    all_alerts = get_all_alerts(background_tasks=None, tenant_id=tenant_id, sync=True)
+    all_alerts = get_all_alerts(
+        background_tasks=None, authenticated_entity=authenticated_entity, sync=True
+    )
     alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
     if alert:
         return alert[0]

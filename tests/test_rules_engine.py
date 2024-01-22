@@ -1,3 +1,6 @@
+"""
+Shahar: We rewritten the Grouping logic, tests will be rewritten
+        once we complete the new grouping logic
 import datetime
 
 import pytest
@@ -333,3 +336,4 @@ def test_dict_and_startswith(db_session):
 
 # TODO: add tests for all operators (IMPORTANT)
 # TODO: add tests for every datatype e.g. source (list), severity (string), tags (dict), etc.
+"""

@@ -1,3 +1,5 @@
+ARG GIT_COMMIT_HASH
+
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
@@ -29,7 +31,7 @@ ENV NEXT_PUBLIC_POSTHOG_HOST https://app.posthog.com
 ENV PUSHER_HOST=localhost
 ENV PUSHER_PORT=6001
 ENV PUSHER_APP_KEY=keepappkey
-
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 
 RUN npm run build
 
