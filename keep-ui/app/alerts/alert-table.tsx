@@ -22,269 +22,311 @@ import {
   useReactTable,
   VisibilityState,
   getPaginationRowModel,
+  PaginationState,
+  ColumnDef,
 } from "@tanstack/react-table";
 import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import Image from "next/image";
 import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
-import AlertMenu from "./alert-menu";
 import AlertSeverity from "./alert-severity";
-import AlertExtraPayload, {
-  getExtraPayloadNoKnownKeys,
-} from "./alert-extra-payload";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
 } from "./alert-columns-select";
-import AlertTableCheckbox from "./alert-table-checkbox";
-import { AlertHistory } from "./alert-history";
 import AlertPagination from "./alert-pagination";
 import { getAlertLastReceieved } from "utils/helpers";
+import AlertTableCheckbox from "./alert-table-checkbox";
+import AlertExtraPayload from "./alert-extra-payload";
+import AlertMenu from "./alert-menu";
+import { useRouter } from "next/navigation";
 
-const columnHelper = createColumnHelper<AlertDto>();
+export const getDefaultColumnVisibility = (
+  columnVisibilityState: VisibilityState = {},
+  columnsToExclude: string[]
+) => {
+  const visibilityStateFromExcludedColumns =
+    columnsToExclude.reduce<VisibilityState>(
+      (acc, column) => ({ ...acc, [column]: false }),
+      {}
+    );
+
+  return {
+    ...columnVisibilityState,
+    ...visibilityStateFromExcludedColumns,
+  };
+};
+
+export const getColumnsOrder = (presetName?: string): ColumnOrderState => {
+  if (presetName === undefined) {
+    return [];
+  }
+
+  const columnOrderLocalStorage = localStorage.getItem(
+    getColumnsOrderLocalStorageKey(presetName)
+  );
+
+  if (columnOrderLocalStorage) {
+    return JSON.parse(columnOrderLocalStorage);
+  }
+
+  return [];
+};
+
+export const getHiddenColumns = (presetName?: string): VisibilityState => {
+  if (presetName === undefined) {
+    return getDefaultColumnVisibility({}, ["playbook_url", "ack_status"]);
+  }
+
+  const hiddenColumnsFromLocalStorage = localStorage.getItem(
+    getHiddenColumnsLocalStorageKey(presetName)
+  );
+
+  if (hiddenColumnsFromLocalStorage) {
+    return JSON.parse(hiddenColumnsFromLocalStorage);
+  }
+
+  return getDefaultColumnVisibility({}, ["playbook_url", "ack_status"]);
+};
+
+const getPaginatedData = (
+  alerts: AlertDto[],
+  { pageIndex, pageSize }: PaginationState
+) => alerts.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+
+const getDataPageCount = (dataLength: number, { pageSize }: PaginationState) =>
+  Math.ceil(dataLength / pageSize);
+
+export const columnHelper = createColumnHelper<AlertDto>();
+
+interface UseAlertTableCols {
+  isCheckboxDisplayed?: boolean;
+  isMenuDisplayed?: boolean;
+}
+
+export const useAlertTableCols = ({
+  isCheckboxDisplayed,
+  isMenuDisplayed,
+}: UseAlertTableCols = {}) => {
+  const router = useRouter();
+  const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+
+  return [
+    ...(isCheckboxDisplayed
+      ? [
+          columnHelper.display({
+            id: "checkbox",
+            header: (context) => (
+              <AlertTableCheckbox
+                checked={context.table.getIsAllRowsSelected()}
+                indeterminate={context.table.getIsSomeRowsSelected()}
+                onChange={context.table.getToggleAllRowsSelectedHandler()}
+              />
+            ),
+            cell: (context) => (
+              <AlertTableCheckbox
+                checked={context.row.getIsSelected()}
+                indeterminate={context.row.getIsSomeSelected()}
+                onChange={context.row.getToggleSelectedHandler()}
+              />
+            ),
+          }),
+        ]
+      : ([] as ColumnDef<AlertDto>[])),
+    columnHelper.accessor("severity", {
+      header: "Severity",
+      cell: (context) => <AlertSeverity severity={context.getValue()} />,
+    }),
+    columnHelper.display({
+      id: "name",
+      header: "Name",
+      cell: (context) => <AlertName alert={context.row.original} />,
+    }),
+    columnHelper.accessor("description", {
+      header: "Description",
+      cell: (context) => (
+        <div
+          className="max-w-[340px] flex items-center"
+          title={context.getValue()}
+        >
+          <div className="truncate">{context.getValue()}</div>
+        </div>
+      ),
+    }),
+    columnHelper.accessor("pushed", {
+      id: "pushed",
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Pushed</span>
+          <Icon
+            icon={QuestionMarkCircleIcon}
+            tooltip="Whether the alert was pushed or pulled from the alert source"
+            variant="simple"
+            color="gray"
+          />
+        </div>
+      ),
+      cell: (context) => <PushPullBadge pushed={context.getValue()} />,
+    }),
+    columnHelper.accessor("status", {
+      header: "Status",
+    }),
+    columnHelper.accessor("lastReceived", {
+      header: "Last Received",
+      cell: (context) => (
+        <span title={context.getValue().toISOString()}>
+          {getAlertLastReceieved(context.getValue())}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("source", {
+      header: "Source",
+      cell: (context) =>
+        (context.getValue() ?? []).map((source, index) => (
+          <Image
+            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+            key={source}
+            alt={source}
+            height={24}
+            width={24}
+            title={source}
+            src={`/icons/${source}-icon.png`}
+          />
+        )),
+    }),
+    columnHelper.accessor("assignees", {
+      header: "Assignee",
+      cell: (context) => (
+        <AlertAssignee
+          assignee={
+            (context.getValue() ?? {})[
+              context.row.original.lastReceived?.toISOString()
+            ]
+          }
+        />
+      ),
+    }),
+    columnHelper.display({
+      id: "extraPayload",
+      header: "Extra Payload",
+      cell: (context) => (
+        <AlertExtraPayload
+          alert={context.row.original}
+          isToggled={expandedToggles[context.row.original.id]}
+          setIsToggled={(newValue) =>
+            setExpandedToggles({
+              ...expandedToggles,
+              [context.row.original.id]: newValue,
+            })
+          }
+        />
+      ),
+    }),
+    ...((isMenuDisplayed
+      ? [
+          columnHelper.display({
+            id: "alertMenu",
+            meta: {
+              thClassName: "sticky right-0",
+              tdClassName: "sticky right-0",
+            },
+            cell: (context) => (
+              <AlertMenu
+                alert={context.row.original}
+                openHistory={() =>
+                  router.replace(`/alerts?id=${context.row.original.id}`, {
+                    scroll: false,
+                  })
+                }
+              />
+            ),
+          }),
+        ]
+      : []) as ColumnDef<AlertDto>[]),
+  ] as ColumnDef<AlertDto>[];
+};
 
 interface Props {
   alerts: AlertDto[];
+  columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName?: string;
-  columnsToExclude?: string[];
+  columnsToExclude?: (keyof AlertDto)[];
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
   rowSelection?: {
     state: RowSelectionState;
     onChange: OnChangeFn<RowSelectionState>;
   };
+  rowPagination?: {
+    state: PaginationState;
+    onChange: OnChangeFn<PaginationState>;
+  };
 }
-
-const getExtraPayloadKeys = (
-  alerts: AlertDto[],
-  columnsToExclude: string[]
-) => {
-  return Array.from(
-    new Set(
-      alerts
-        .map((alert) => {
-          const { extraPayload } = getExtraPayloadNoKnownKeys(alert);
-          return Object.keys(extraPayload).concat(columnsToExclude);
-        })
-        .reduce((acc, keys) => [...acc, ...keys], [])
-    )
-  );
-};
-
-const getColumnsToHide = (
-  presetName: string | undefined,
-  extraPayloadKeys: string[]
-): { [key: string]: boolean } => {
-  const columnsToHideFromLocalStorage = localStorage.getItem(
-    getHiddenColumnsLocalStorageKey(presetName)
-  );
-  return columnsToHideFromLocalStorage
-    ? JSON.parse(columnsToHideFromLocalStorage)
-    : extraPayloadKeys.reduce((obj, key) => {
-        obj[key] = false;
-        return obj;
-      }, {} as { [key: string]: boolean });
-};
 
 export function AlertTable({
   alerts,
+  columns,
   isAsyncLoading = false,
   presetName,
   rowSelection,
-  isMenuColDisplayed = true,
+  rowPagination,
   isRefreshAllowed = true,
   columnsToExclude = [],
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<AlertDto | undefined>(
-    undefined
-  );
-  const columnOrderLocalStorage = localStorage.getItem(
-    getColumnsOrderLocalStorageKey(presetName)
-  );
-
-  const openModal = (alert: AlertDto) => {
-    setSelectedAlert(alert);
-    setIsOpen(true);
-  };
-
-  const checkboxColumn = useMemo(
-    () =>
-      rowSelection
-        ? [
-            columnHelper.display({
-              id: "checkbox",
-              header: (context) => (
-                <AlertTableCheckbox
-                  checked={context.table.getIsAllRowsSelected()}
-                  indeterminate={context.table.getIsSomeRowsSelected()}
-                  onChange={context.table.getToggleAllRowsSelectedHandler()}
-                  disabled={alerts.length === 0}
-                />
-              ),
-              cell: (context) => (
-                <AlertTableCheckbox
-                  checked={context.row.getIsSelected()}
-                  indeterminate={context.row.getIsSomeSelected()}
-                  onChange={context.row.getToggleSelectedHandler()}
-                />
-              ),
-            }),
-          ]
-        : [],
-    [rowSelection, alerts.length]
-  );
-
-  const menuColumn = useMemo(
-    () =>
-      isMenuColDisplayed
-        ? [
-            columnHelper.display({
-              id: "alertMenu",
-              meta: {
-                thClassName: "sticky right-0",
-                tdClassName: "sticky right-0",
-              },
-              cell: (context) => (
-                <AlertMenu
-                  alert={context.row.original}
-                  openHistory={() => openModal(context.row.original)}
-                />
-              ),
-            }),
-          ]
-        : [],
-    [isMenuColDisplayed]
-  );
-
-  const defaultColumns = useMemo(
-    () => [
-      ...checkboxColumn,
-      columnHelper.accessor("severity", {
-        header: () => "Severity",
-        cell: (context) => <AlertSeverity severity={context.getValue()} />,
-      }),
-      columnHelper.accessor("name", {
-        header: () => "Name",
-        cell: (context) => <AlertName alert={context.row.original} />,
-      }),
-      columnHelper.accessor("description", {
-        header: () => "Description",
-        cell: (context) => (
-          <div
-            className="max-w-[340px] flex items-center"
-            title={context.getValue()}
-          >
-            <div className="truncate">{context.getValue()}</div>
-          </div>
-        ),
-      }),
-      columnHelper.accessor("pushed", {
-        header: () => (
-          <div className="flex items-center gap-1">
-            <span>Pushed</span>
-            <Icon
-              icon={QuestionMarkCircleIcon}
-              tooltip="Whether the alert was pushed or pulled from the alert source"
-              variant="simple"
-              color="gray"
-            />
-          </div>
-        ),
-        cell: (context) => <PushPullBadge pushed={context.getValue()} />,
-      }),
-      columnHelper.accessor("status", {
-        header: "Status",
-      }),
-      columnHelper.accessor("lastReceived", {
-        header: "Last Received",
-        cell: (context) => (
-          <span title={context.getValue().toISOString()}>
-            {getAlertLastReceieved(context.getValue())}
-          </span>
-        ),
-      }),
-      columnHelper.accessor("source", {
-        header: "Source",
-        cell: (context) =>
-          (context.getValue() ?? []).map((source, index) => (
-            <Image
-              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-              key={source}
-              alt={source}
-              height={24}
-              width={24}
-              title={source}
-              src={`/icons/${source}-icon.png`}
-            />
-          )),
-      }),
-      columnHelper.accessor("assignees", {
-        header: "Assignee",
-        cell: (context) => (
-          <AlertAssignee
-            assignee={
-              (context.getValue() ?? {})[
-                context.row.original.lastReceived?.toISOString()
-              ]
-            }
-          />
-        ),
-      }),
-      columnHelper.display({
-        id: "extraPayload",
-        header: "Extra Payload",
-        cell: (context) => <AlertExtraPayload alert={context.row.original} />,
-      }),
-      ...menuColumn,
-    ],
-    [checkboxColumn, menuColumn]
-  );
-
-  const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
-  // Create all the necessary columns
-  const extraPayloadColumns = extraPayloadKeys.map((key) =>
-    columnHelper.display({
-      id: key,
-      header: key,
-      cell: (context) => {
-        const val = (context.row.original as any)[key];
-        if (typeof val === "object") {
-          return JSON.stringify(val);
-        }
-        return (context.row.original as any)[key]?.toString() ?? "";
-      },
-    })
-  );
-
-  const columns = [...defaultColumns, ...extraPayloadColumns];
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
-    columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
+    getColumnsOrder(presetName)
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    // Defaultly exclude the extra payload columns from the default visibility
-    getColumnsToHide(presetName, extraPayloadKeys)
+    getHiddenColumns(presetName)
   );
 
+  // const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
+  // // Create all the necessary columns
+  // const extraPayloadColumns = extraPayloadKeys.map((key) =>
+  //   columnHelper.display({
+  //     id: key,
+  //     header: key,
+  //     cell: (context) => {
+  //       const val = (context.row.original as any)[key];
+  //       if (typeof val === "object") {
+  //         return JSON.stringify(val);
+  //       }
+  //       return (context.row.original as any)[key]?.toString() ?? "";
+  //     },
+  //   })
+  // );
+
   const table = useReactTable({
-    data: alerts,
+    data: rowPagination
+      ? getPaginatedData(alerts, rowPagination.state)
+      : alerts,
     columns: columns,
-    onColumnOrderChange: setColumnOrder,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     state: {
-      columnVisibility,
-      columnOrder,
-      rowSelection: rowSelection ? rowSelection.state : undefined,
+      columnVisibility: getDefaultColumnVisibility(
+        columnVisibility,
+        columnsToExclude
+      ),
+      columnOrder: columnOrder,
+      rowSelection: rowSelection?.state,
+      pagination: rowPagination?.state,
     },
     initialState: {
       pagination: { pageSize: 10 },
     },
+    getCoreRowModel: getCoreRowModel(),
+    pageCount: rowPagination
+      ? getDataPageCount(alerts.length, rowPagination.state)
+      : undefined,
+    getPaginationRowModel: rowPagination ? undefined : getPaginationRowModel(),
+    enableRowSelection: rowSelection !== undefined,
+    manualPagination: rowPagination !== undefined,
+    onPaginationChange: rowPagination?.onChange,
+    onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
-    enableRowSelection: true,
-    onRowSelectionChange: rowSelection ? rowSelection.onChange : undefined,
+    onRowSelectionChange: rowSelection?.onChange,
+    getRowId: (row) => row.id,
   });
 
   return (
@@ -293,9 +335,7 @@ export function AlertTable({
         <AlertColumnsSelect
           table={table}
           presetName={presetName}
-          setColumnVisibility={setColumnVisibility}
           isLoading={isAsyncLoading}
-          columnOrder={columnOrder}
         />
       )}
       {isAsyncLoading && (
@@ -315,7 +355,7 @@ export function AlertTable({
               {headerGroup.headers.map((header) => (
                 <TableHeaderCell
                   key={header.id}
-                  className={`bg-white pb-0 ${
+                  className={`bg-white pb-0 capitalize ${
                     header.column.columnDef.meta?.thClassName
                       ? header.column.columnDef.meta?.thClassName
                       : ""
@@ -333,13 +373,6 @@ export function AlertTable({
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
       </Table>
       <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
-      {selectedAlert && (
-        <AlertHistory
-          isOpen={isOpen}
-          selectedAlert={selectedAlert}
-          closeModal={() => setIsOpen(false)}
-        />
-      )}
     </>
   );
 }
