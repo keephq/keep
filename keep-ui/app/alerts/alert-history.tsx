@@ -1,7 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { AlertDto } from "./models";
-import { AlertTable, getAlertTableColumns } from "./alert-table";
+import { AlertTable, useAlertTableCols } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -34,7 +34,7 @@ export function AlertHistory({ alerts }: Props) {
     }
   );
 
-  const alertTableColumns = useMemo(() => getAlertTableColumns(), []);
+  const alertTableColumns = useAlertTableCols();
 
   if (isLoading) {
     return <Loading />;

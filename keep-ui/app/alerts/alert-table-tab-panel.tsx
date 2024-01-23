@@ -1,17 +1,10 @@
-import { useMemo, useState } from "react";
-import {
-  ColumnDef,
-  PaginationState,
-  RowSelectionState,
-} from "@tanstack/react-table";
+import { useState } from "react";
+import { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
-import { AlertTable, columnHelper, getAlertTableColumns } from "./alert-table";
+import { AlertTable, useAlertTableCols } from "./alert-table";
 import { AlertDto, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { Tab } from "@headlessui/react";
-import AlertTableCheckbox from "./alert-table-checkbox";
-import AlertMenu from "./alert-menu";
-import { useRouter } from "next/navigation";
 
 const getPresetAlerts = (alert: AlertDto, preset: Preset): boolean => {
   if (preset.options.length === 0) {
@@ -55,8 +48,6 @@ export default function AlertTableTabPanel({
   preset,
   isAsyncLoading,
 }: Props) {
-  const router = useRouter();
-
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
   );
@@ -77,71 +68,33 @@ export default function AlertTableTabPanel({
     []
   );
 
-  const presetAlerts = alerts
+  const sortedPresetAlerts = alerts
     .filter((alert) => getPresetAlerts(alert, preset))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
-  const alertTableColumns: ColumnDef<AlertDto>[] = useMemo(
-    () => [
-      ...(preset.name !== "Deleted"
-        ? [
-            columnHelper.display({
-              id: "checkbox",
-              header: (context) => (
-                <AlertTableCheckbox
-                  checked={context.table.getIsAllRowsSelected()}
-                  indeterminate={context.table.getIsSomeRowsSelected()}
-                  onChange={context.table.getToggleAllRowsSelectedHandler()}
-                  disabled={alerts.length === 0}
-                />
-              ),
-              cell: (context) => (
-                <AlertTableCheckbox
-                  checked={context.row.getIsSelected()}
-                  indeterminate={context.row.getIsSomeSelected()}
-                  onChange={context.row.getToggleSelectedHandler()}
-                />
-              ),
-            }),
-          ]
-        : ([] as ColumnDef<AlertDto>[])),
-      ...(getAlertTableColumns() as ColumnDef<AlertDto>[]),
-      columnHelper.display({
-        id: "alertMenu",
-        meta: {
-          thClassName: "sticky right-0",
-          tdClassName: "sticky right-0",
-        },
-        cell: (context) => (
-          <AlertMenu
-            alert={context.row.original}
-            openHistory={() =>
-              router.replace(`/alerts?id=${context.row.original.id}`, {
-                scroll: false,
-              })
-            }
-          />
-        ),
-      }) as ColumnDef<AlertDto>,
-    ],
-    [alerts.length, router, preset.name]
-  );
+  const alertTableColumns = useAlertTableCols({
+    isCheckboxDisplayed: preset.name !== "Deleted",
+    isMenuDisplayed: true,
+  });
 
   return (
     <Tab.Panel className="mt-4">
       {selectedRowIds.length ? (
-        <AlertActions selectedRowIds={selectedRowIds} alerts={presetAlerts} />
+        <AlertActions
+          selectedRowIds={selectedRowIds}
+          alerts={sortedPresetAlerts}
+        />
       ) : (
         <AlertPresets
           preset={preset}
-          alerts={presetAlerts}
+          alerts={sortedPresetAlerts}
           selectedOptions={selectedOptions}
           setSelectedOptions={setSelectedOptions}
           isLoading={isAsyncLoading}
         />
       )}
       <AlertTable
-        alerts={presetAlerts}
+        alerts={sortedPresetAlerts}
         columns={alertTableColumns}
         isAsyncLoading={isAsyncLoading}
         rowSelection={{ state: rowSelection, onChange: setRowSelection }}
