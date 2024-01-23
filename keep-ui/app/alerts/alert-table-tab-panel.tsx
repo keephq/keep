@@ -4,7 +4,7 @@ import AlertPresets, { Option } from "./alert-presets";
 import { AlertTable, useAlertTableCols } from "./alert-table";
 import { AlertDto, Preset } from "./models";
 import AlertActions from "./alert-actions";
-import { Tab } from "@headlessui/react";
+import { TabPanel } from "@tremor/react";
 
 const getPresetAlerts = (
   alert: AlertDto,
@@ -82,7 +82,7 @@ export default function AlertTableTabPanel({
   });
 
   return (
-    <Tab.Panel className="mt-4">
+    <TabPanel className="mt-4">
       {selectedRowIds.length ? (
         <AlertActions
           selectedRowIds={selectedRowIds}
@@ -108,6 +108,6 @@ export default function AlertTableTabPanel({
         }}
         presetName={preset.name}
       />
-    </Tab.Panel>
+    </TabPanel>
   );
 }
