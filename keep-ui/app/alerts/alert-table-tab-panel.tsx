@@ -6,16 +6,20 @@ import { AlertDto, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { Tab } from "@headlessui/react";
 
-const getPresetAlerts = (alert: AlertDto, preset: Preset): boolean => {
-  if (preset.options.length === 0) {
+const getPresetAlerts = (
+  alert: AlertDto,
+  options: Option[],
+  presetName: string
+): boolean => {
+  if (options.length === 0) {
     return true;
   }
 
-  if (preset.name === "Deleted") {
+  if (presetName === "Deleted") {
     return alert.deleted.includes(alert.lastReceived.toISOString());
   }
 
-  return preset.options.every((option) => {
+  return options.every((option) => {
     const [key, value] = option.value.split("=");
 
     if (key && value) {
@@ -69,7 +73,7 @@ export default function AlertTableTabPanel({
   );
 
   const sortedPresetAlerts = alerts
-    .filter((alert) => getPresetAlerts(alert, preset))
+    .filter((alert) => getPresetAlerts(alert, selectedOptions, preset.name))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   const alertTableColumns = useAlertTableCols({

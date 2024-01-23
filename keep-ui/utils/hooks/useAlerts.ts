@@ -182,7 +182,7 @@ export const useAlerts = () => {
           });
         });
 
-        // If we don't receive any alert in 10 seconds, we assume that the async process is done (#641)
+        // If we don't receive any alert in 3.5 seconds, we assume that the async process is done (#641)
         setTimeout(() => {
           next(null, (data) => {
             if (data) {
@@ -196,8 +196,14 @@ export const useAlerts = () => {
               pusherChannel,
             };
           });
-        }, 10000);
+        }, 3500);
 
+        next(null, {
+          alerts: [],
+          lastSubscribedDate: new Date(),
+          isAsyncLoading: false,
+          pusherChannel,
+        });
         console.log("Connected to pusher");
 
         return () => pusher.unsubscribe(channelName);
