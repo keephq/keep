@@ -28,6 +28,7 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -54,34 +55,23 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
         for alert in alerts:
             if alert.alert_enrichment:
                 alert.event.update(alert.alert_enrichment.enrichments)
-
-            # todo: what is this? :O
-            if alert.provider_type == "rules":
-                try:
-                    alert_dto = AlertDto(**alert.event)
-                except Exception:
-                    # should never happen but just in case
-                    logger.exception(
-                        "Failed to parse group alert",
-                        extra={
-                            "alert": alert,
-                        },
-                    )
-                    continue
-            else:
-                try:
-                    alert_dto = AlertDto(**alert.event)
-                except Exception:
-                    # should never happen but just in case
-                    logger.exception(
-                        "Failed to parse alert",
-                        extra={
-                            "alert": alert,
-                        },
-                    )
-                    continue
-                if alert_dto.providerId is None:
-                    alert_dto.providerId = alert.provider_id
+            try:
+                alert_dto = AlertDto(**alert.event)
+                parse_and_enrich_deleted_and_assignees(
+                    alert_dto, alert.alert_enrichment.enrichments
+                )
+            except Exception:
+                # should never happen but just in case
+                logger.exception(
+                    "Failed to parse alert",
+                    extra={
+                        "alert": alert,
+                    },
+                )
+                continue
+            # enrich provider id when it's possible
+            if alert_dto.providerId is None:
+                alert_dto.providerId = alert.provider_id
             alerts_dto.append(alert_dto)
     return alerts_dto
 
@@ -333,7 +323,7 @@ def delete_alert(
     assignees_last_receievd = {}  # the last received(s) that are assigned to someone
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
-        deleted_last_received = enrichment.enrichments.get("deleted", [])
+        deleted_last_received = enrichment.enrichments.get("deletedAt", [])
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
         # TODO: this is due to legacy deleted field that was a bool, remove in the future
         if isinstance(deleted_last_received, bool):
