@@ -54,7 +54,7 @@ To learn more about Keep's helm chart, see https://github.com/keephq/keep/blob/m
 ## Openshift
 Keep's Helm Chart also supports Openshift installation.
 
-Simply follow the Kubernetes set-up guide, but make sure to modify the following lines in the values.yaml file as follows:
+Simply follow the Kubernetes set-up guide, but make sure to modify the following lines under frontend(/backend).route in the values.yaml file as follows:
 ```
 enabled: true
 host: <desired-hostname>
