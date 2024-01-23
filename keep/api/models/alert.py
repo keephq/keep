@@ -8,16 +8,24 @@ logger = logging.getLogger(__name__)
 
 
 class AlertSeverity(Enum):
-    # Requires immediate action
-    CRITICAL = "critical"
-    # Needs to be addressed soon
-    HIGH = "high"
-    # Indicates a potential problem
-    WARNING = "warning"
-    # Provides information, no immediate action required
-    INFO = "info"
-    # Minor issues or lowest priority
-    LOW = "low"
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
+
+    def __new__(cls, severity_name, severity_order):
+        obj = object.__new__(cls)
+        obj._value_ = severity_name
+        obj.severity_order = severity_order
+        return obj
+
+    @property
+    def order(self):
+        return self.severity_order
+
+    def __str__(self):
+        return self._value_
 
 
 class AlertStatus(Enum):

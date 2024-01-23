@@ -1,11 +1,16 @@
+import hashlib
+import itertools
 import json
 import logging
 
 import celpy
+import chevron
 
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
+from keep.api.core.db import create_alert as create_alert_db
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.group import GroupDto
 
 
 class RulesEngine:
@@ -14,33 +19,15 @@ class RulesEngine:
         self.logger = logging.getLogger(__name__)
 
     def _calc_max_severity(self, severities):
-        # TODO: this is a naive implementation, we should normaliaze all the severities from all providers and calculate the max
-        # TODO 2: this could be also be configured by the user ("more than 5 highs => critical")
-
-        # if we don't have any severities, we fallback to info
         if not severities:
             self.logger.info(
                 "Could not calculate max severity from empty list - fallbacking to info"
             )
-            return "info"
-        severities_lower = [severity.lower() for severity in severities]
-        # fatal is the highest severity
-        if "fatal" in severities_lower:
-            return "fatal"
-        # critical is the second highest severity
-        if "critical" in severities_lower:
-            return "critical"
-        if "high" in severities_lower:
-            return "high"
-        if "medium" in severities_lower:
-            return "medium"
-        if "low" in severities_lower:
-            return "low"
-        # if none of the severities are fatal, critical, high, medium or low, we fallback to the first severity
-        self.logger.info(
-            f"Could not calculate max severity from {severities} - fallbacking"
-        )
-        return severities[0]
+            return str(AlertSeverity.INFO)
+
+        severities = [AlertSeverity(severity) for severity in severities]
+        max_severity = max(severities, key=lambda severity: severity.order)
+        return str(max_severity)
 
     def run_rules(self, events: list[AlertDto]):
         self.logger.info("Running rules")
@@ -78,9 +65,74 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is not relevant"
                     )
         self.logger.info("Rules ran successfully")
-        # todo: do something with the groups
-        #       such as trigger webhook with the group ids
-        pass
+        # if we don't have any updated groups, we don't need to create any alerts
+        if not groups:
+            return
+        # get the rules of the groups
+        updated_group_rule_ids = [group.rule_id for group in groups]
+        updated_rules = get_rules_db(
+            tenant_id=self.tenant_id, ids=updated_group_rule_ids
+        )
+        # more convenient to work with a dict
+        updated_rules_dict = {str(rule.id): rule for rule in updated_rules}
+        # Now let's create a new alert for each group
+        grouped_alerts = []
+        for group in groups:
+            rule = updated_rules_dict.get(group.rule_id)
+            group_fingerprint = hashlib.sha256(
+                "|".join([str(group.id), group.group_fingerprint]).encode()
+            ).hexdigest()
+            group_attributes = GroupDto.get_group_attributes(group.alerts)
+            context = {
+                "group": group_attributes,
+                # Shahar: first, group have at least one alert.
+                #         second, the only supported {{ }} are the ones in the group
+                #          attributes, so we can use the first alert because they are the same for any other alert in the group
+                **group.alerts[0].event,
+            }
+            group_description = chevron.render(rule.group_description, context)
+            group_severity = self._calc_max_severity(
+                [alert.event["severity"] for alert in group.alerts]
+            )
+            # group all the sources from all the alerts
+            group_source = list(
+                set(
+                    itertools.chain.from_iterable(
+                        [alert.event["source"] for alert in group.alerts]
+                    )
+                )
+            )
+            # if the group has "group by", add it to the group name
+            if rule.grouping_criteria:
+                group_name = f"Alert group genereted by rule {rule.name} | group:{group.group_fingerprint}"
+            else:
+                group_name = f"Alert group genereted by rule {rule.name}"
+
+            # create the alert
+            group_alert = create_alert_db(
+                tenant_id=self.tenant_id,
+                provider_type="group",
+                provider_id=rule.id,
+                # todo: event should support list?
+                event={
+                    "name": group_name,
+                    "id": group_fingerprint,
+                    "description": group_description,
+                    "lastReceived": group_attributes.get("last_update_time"),
+                    "severity": group_severity,
+                    "source": group_source,
+                    # TODO: status should be calculated from the alerts
+                    "status": AlertStatus.FIRING.value,
+                    "pushed": True,
+                    **group_attributes,
+                },
+                fingerprint=group_fingerprint,
+            )
+            grouped_alerts.append(group_alert)
+            self.logger.info(f"Created alert {group_alert.id} for group {group.id}")
+        self.logger.info(f"Rules ran, {len(grouped_alerts)} alerts created")
+        alerts_dto = [AlertDto(**alert.event) for alert in grouped_alerts]
+        return alerts_dto
 
     def _extract_subrules(self, expression):
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'
