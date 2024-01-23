@@ -16,6 +16,11 @@ Keep's Helm Chart supports the following `values.yaml`:
 - frontend.internalApiUrl: the frontend will use this URL as a backend from the container ("server components") default: http://keep-backend:8080
   frontend.env: development
 
+# Openshift
+Keep's Helm Chart also supports installation on Openshift. 
+Simply set up the keys under fronend(/backend).route:
+ - route.host: your desired hostname
+
 # Local Kubernetes
 For local kubernetes without external IP (such as NodePort or LoadBalancer), you'll need to run port forwarding:
 
