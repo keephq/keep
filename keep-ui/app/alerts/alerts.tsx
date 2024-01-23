@@ -10,6 +10,7 @@ import {
 } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
+import { AlertHistory } from "./alert-history";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -70,6 +71,7 @@ export default function Alerts() {
             />
           ))}
         </TabPanels>
+        <AlertHistory alerts={alerts} />
       </TabGroup>
     </Card>
   );

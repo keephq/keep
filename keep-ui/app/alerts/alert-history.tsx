@@ -1,19 +1,31 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { AlertDto } from "./models";
-import { AlertTable } from "./alert-table";
+import { AlertTable, getAlertTableColumns } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
 import { useAlerts } from "utils/hooks/useAlerts";
 import Loading from "app/loading";
+import { PaginationState } from "@tanstack/react-table";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Props {
-  isOpen: boolean;
-  closeModal: () => void;
-  selectedAlert: AlertDto;
+  alerts: AlertDto[];
 }
 
-export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
+export function AlertHistory({ alerts }: Props) {
+  const [rowPagination, setRowPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+  const router = useRouter();
+
+  const searchParams = useSearchParams();
+  const selectedAlert = alerts.find((alert) =>
+    searchParams ? searchParams.get("id") === alert.id : undefined
+  );
+
   const { useAlertHistory } = useAlerts();
   const { data: alertHistory = [], isLoading } = useAlertHistory(
     selectedAlert,
@@ -21,6 +33,8 @@ export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
       revalidateOnFocus: false,
     }
   );
+
+  const alertTableColumns = useMemo(() => getAlertTableColumns(), []);
 
   if (isLoading) {
     return <Loading />;
@@ -39,8 +53,12 @@ export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
   const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={closeModal}>
+    <Transition appear show={selectedAlert !== undefined} as={Fragment}>
+      <Dialog
+        as="div"
+        className="relative z-50"
+        onClose={() => router.replace("/alerts", { scroll: false })}
+      >
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -82,23 +100,30 @@ export function AlertHistory({ isOpen, closeModal, selectedAlert }: Props) {
                   </div>
                   <Button
                     className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-                    onClick={closeModal}
+                    onClick={() => router.replace("/alerts", { scroll: false })}
                   >
                     Close
                   </Button>
                 </Flex>
                 <Divider />
-                <AlertHistoryCharts
-                  maxLastReceived={maxLastReceived}
-                  minLastReceived={minLastReceived}
-                  alerts={alertsHistoryWithDate}
-                />
+                {selectedAlert && (
+                  <AlertHistoryCharts
+                    maxLastReceived={maxLastReceived}
+                    minLastReceived={minLastReceived}
+                    alerts={alertsHistoryWithDate}
+                  />
+                )}
                 <Divider />
                 <AlertTable
                   alerts={alertsHistoryWithDate}
+                  columns={alertTableColumns}
                   columnsToExclude={["description"]}
                   isMenuColDisplayed={false}
                   isRefreshAllowed={false}
+                  rowPagination={{
+                    state: rowPagination,
+                    onChange: setRowPagination,
+                  }}
                 />
               </Dialog.Panel>
             </Transition.Child>
