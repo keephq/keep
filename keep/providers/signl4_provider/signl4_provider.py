@@ -12,7 +12,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 class S4Status(str, enum.Enum):
     """
-    Ilert incident status.
+    SIGNL4 alert status.
     """
 
     NEW = "new"
@@ -21,7 +21,7 @@ class S4Status(str, enum.Enum):
 
 class S4AlertingScenario(str, enum.Enum):
     """
-    Ilert incident status.
+    SIGNL4 alerting scenario.
     """
 
     DEFAULT = ""
