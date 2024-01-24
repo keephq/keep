@@ -694,7 +694,7 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
     return alerts
 
 
-def get_last_alerts(tenant_id, provider_id=None) -> list[Alert]:
+def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
     """
     Get the last alert for each fingerprint.
 
@@ -734,6 +734,8 @@ def get_last_alerts(tenant_id, provider_id=None) -> list[Alert]:
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
+        # Order by timestamp in descending order and limit the results
+        query = query.order_by(Alert.timestamp.desc()).limit(limit)
         # Execute the query
         alerts = query.all()
 
@@ -927,10 +929,18 @@ def update_rule(
             return None
 
 
-def get_rules(tenant_id):
+def get_rules(tenant_id, ids=None):
     with Session(engine) as session:
-        rules = session.exec(select(Rule).where(Rule.tenant_id == tenant_id)).all()
-    return rules
+        # Start building the query
+        query = select(Rule).where(Rule.tenant_id == tenant_id)
+
+        # Apply additional filters if ids are provided
+        if ids is not None:
+            query = query.where(Rule.id.in_(ids))
+
+        # Execute the query
+        rules = session.exec(query).all()
+        return rules
 
 
 def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
@@ -961,18 +971,20 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint):
+def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Group:
     # checks if group with the group critiria exists, if not it creates it
     #   and then assign the alert to the group
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         group = session.exec(
             select(Group)
+            .options(selectinload(Group.alerts))
             .where(Group.tenant_id == tenant_id)
             .where(Group.rule_id == rule_id)
             .where(Group.group_fingerprint == group_fingerprint)
         ).first()
-        # if the group does not exist
+
         if not group:
+            # Create and add a new group if it doesn't exist
             group = Group(
                 tenant_id=tenant_id,
                 rule_id=rule_id,
@@ -980,8 +992,10 @@ def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint):
             )
             session.add(group)
             session.commit()
+            # Refresh to update instance with DB state, including generated IDs
             session.refresh(group)
 
+        # Create a new AlertToGroup instance and add it
         alert_group = AlertToGroup(
             tenant_id=tenant_id,
             alert_id=str(alert_id),
@@ -989,8 +1003,10 @@ def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint):
         )
         session.add(alert_group)
         session.commit()
-        session.refresh(alert_group)
-        return alert_group
+        # To reflect the newly added alert we expire its state to force a refresh on access
+        session.expire(group, ["alerts"])
+        session.refresh(group)
+        return group
 
 
 def get_groups(tenant_id):
