@@ -15,6 +15,7 @@ import { AlertHistory } from "./alert-history";
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
   { name: "Deleted", options: [] },
+  { name: "Groups", options: []}
 ];
 
 export default function Alerts() {
@@ -43,7 +44,7 @@ export default function Alerts() {
       getFormatAndMergePusherWithEndpointAlerts(endpointAlerts, pusherAlerts),
     [endpointAlerts, pusherAlerts]
   );
-
+  
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       {pusherChannel && (

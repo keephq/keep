@@ -543,7 +543,28 @@ def handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        rules_engine.run_rules(formatted_events)
+        grouped_alerts = rules_engine.run_rules(formatted_events)
+        # if new grouped alerts were created, we need to push them to the client
+        if grouped_alerts:
+            logger.info("Adding group alerts to the workflow manager queue")
+            workflow_manager.insert_events(tenant_id, grouped_alerts)
+            logger.info("Added group alerts to the workflow manager queue")
+            # Now send the grouped alerts to the client
+            logger.info("Sending grouped alerts to the client")
+            for grouped_alert in grouped_alerts:
+                try:
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
+                        base64.b64encode(
+                            zlib.compress(
+                                json.dumps([grouped_alert.dict()]).encode(), level=9
+                            )
+                        ).decode(),
+                    )
+                except Exception:
+                    logger.exception("Failed to push alert to the client")
+            logger.info("Sent grouped alerts to the client")
     except Exception:
         logger.exception(
             "Failed to run rules engine",
