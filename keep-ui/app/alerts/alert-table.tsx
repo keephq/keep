@@ -37,7 +37,7 @@ import AlertSeverity from "./alert-severity";
 import AlertExtraPayload, {
   getExtraPayloadNoKnownKeys,
 } from "./alert-extra-payload";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
@@ -195,111 +195,114 @@ export function AlertTable({
       ]
     : [];
 
-  const defaultColumns = [
-    ...checkboxColumn,
-    columnHelper.accessor("severity", {
-      header: () => "Severity",
-      cell: (context) => <AlertSeverity severity={context.getValue()} />,
-    }),
-    columnHelper.accessor("name", {
-      header: () => "Name",
-      cell: (context) => (
-        <AlertName
-          alert={context.row.original}
-          workflows={workflows}
-          handleWorkflowClick={handleWorkflowClick}
-        />
-      ),
-    }),
-    columnHelper.accessor("description", {
-      header: () => "Description",
-      cell: (context) => (
-        <div
-          className="max-w-[340px] flex items-center"
-          title={context.getValue()}
-        >
-          <div className="truncate">{context.getValue()}</div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor("pushed", {
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span>Pushed</span>
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            tooltip="Whether the alert was pushed or pulled from the alert source"
-            variant="simple"
-            color="gray"
+    const defaultColumns = useMemo(() => ([
+      ...checkboxColumn,
+      columnHelper.accessor("severity", {
+        header: () => "Severity",
+        cell: (context) => <AlertSeverity severity={context.getValue()} />,
+      }),
+      columnHelper.accessor("name", {
+        header: () => "Name",
+        cell: (context) => (
+          <AlertName
+            alert={context.row.original}
+            workflows={workflows}
+            handleWorkflowClick={handleWorkflowClick}
           />
-        </div>
-      ),
-      cell: (context) => <PushPullBadge pushed={context.getValue()} />,
-    }),
-    columnHelper.accessor("status", {
-      header: "Status",
-    }),
-    columnHelper.accessor("lastReceived", {
-      header: "Last Received",
-      cell: (context) => (
-        <span title={context.getValue().toISOString()}>
-          {getAlertLastReceieved(context.getValue())}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("source", {
-      header: "Source",
-      cell: (context) =>
-        (context.getValue() ?? []).map((source, index) => (
-          <Image
-            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={source}
-            alt={source}
-            height={24}
-            width={24}
-            title={source}
-            src={`/icons/${source}-icon.png`}
+        ),
+      }),
+      columnHelper.accessor("description", {
+        header: () => "Description",
+        cell: (context) => (
+          <div
+            className="max-w-[340px] flex items-center"
+            title={context.getValue()}
+          >
+            <div className="truncate">{context.getValue()}</div>
+          </div>
+        ),
+      }),
+      columnHelper.accessor("pushed", {
+        header: () => (
+          <div className="flex items-center gap-1">
+            <span>Pushed</span>
+            <Icon
+              icon={QuestionMarkCircleIcon}
+              tooltip="Whether the alert was pushed or pulled from the alert source"
+              variant="simple"
+              color="gray"
+            />
+          </div>
+        ),
+        cell: (context) => <PushPullBadge pushed={context.getValue()} />,
+      }),
+      columnHelper.accessor("status", {
+        header: "Status",
+      }),
+      columnHelper.accessor("lastReceived", {
+        header: "Last Received",
+        cell: (context) => (
+          <span title={context.getValue().toISOString()}>
+            {getAlertLastReceieved(context.getValue())}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("source", {
+        header: "Source",
+        cell: (context) =>
+          (context.getValue() ?? []).map((source, index) => (
+            <Image
+              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+              key={source}
+              alt={source}
+              height={24}
+              width={24}
+              title={source}
+              src={`/icons/${source}-icon.png`}
+            />
+          )),
+      }),
+      columnHelper.accessor("assignees", {
+        header: "Assignee",
+        cell: (context) => (
+          <AlertAssignee
+            assignee={
+              (context.getValue() ?? {})[
+                context.row.original.lastReceived?.toISOString()
+              ]
+            }
+            users={users}
           />
-        )),
-    }),
-    columnHelper.accessor("assignees", {
-      header: "Assignee",
-      cell: (context) => (
-        <AlertAssignee
-          assignee={
-            (context.getValue() ?? {})[
-              context.row.original.lastReceived?.toISOString()
-            ]
-          }
-          users={users}
-        />
-      ),
-    }),
-    columnHelper.display({
-      id: "extraPayload",
-      header: "Extra Payload",
-      cell: (context) => <AlertExtraPayload alert={context.row.original} />,
-    }),
-    ...menuColumn,
-  ];
+        ),
+      }),
+      columnHelper.display({
+        id: "extraPayload",
+        header: "Extra Payload",
+        cell: (context) => <AlertExtraPayload alert={context.row.original} />,
+      }),
+      ...menuColumn,
+    ]), [checkboxColumn, menuColumn, columnHelper]);
 
-  const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
-  // Create all the necessary columns
-  const extraPayloadColumns = extraPayloadKeys.map((key) =>
-    columnHelper.display({
-      id: key,
-      header: key,
-      cell: (context) => {
-        const val = (context.row.original as any)[key];
-        if (typeof val === "object") {
-          return JSON.stringify(val);
-        }
-        return (context.row.original as any)[key]?.toString() ?? "";
-      },
-    })
-  );
+    const extraPayloadKeys = useMemo(() => getExtraPayloadKeys(alerts, columnsToExclude), [alerts, columnsToExclude]);
 
-  const columns = [...defaultColumns, ...extraPayloadColumns];
+    const extraPayloadColumns = useMemo(() => (
+      extraPayloadKeys.map((key) =>
+        columnHelper.display({
+          id: key,
+          header: key,
+          cell: (context) => {
+            const val = (context.row.original as any)[key];
+            return typeof val === "object" ? JSON.stringify(val) : val?.toString() ?? "";
+          },
+        })
+      )
+    ), [extraPayloadKeys, columnHelper]);
+
+    const columns = useMemo(() => (
+      [...defaultColumns, ...extraPayloadColumns]
+    ), [defaultColumns, extraPayloadColumns]);
+
+
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columnOrderLocalStorage ? JSON.parse(columnOrderLocalStorage) : []
   );
