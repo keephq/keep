@@ -10,10 +10,12 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     #
     # THIS IS MAINLY BECAUSE WE ALSO HAVE THE PULLED ALERTS,
     # OTHERWISE, WE COULD'VE JUST UPDATE THE ALERT IN THE DB
-    deleted_last_received = enrichments.pop("deletedAt", [])
+    deleted_last_received = enrichments.get(
+        "deletedAt", enrichments.get("deleted", [])
+    )  # "deleted" is for backward compatibility
     if alert.lastReceived in deleted_last_received:
         alert.deleted = True
-    assignees: dict = enrichments.pop("assignees", {})
+    assignees: dict = enrichments.get("assignees", {})
     assignee = assignees.get(alert.lastReceived)
     if assignee:
         alert.assignee = assignee

@@ -62,17 +62,14 @@ export default function AlertMenu({ alert, openHistory }: Props) {
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to ${
-        alert.deleted.includes(alert.lastReceived.toISOString())
-          ? "restore"
-          : "delete"
+        alert.deleted ? "restore" : "delete"
       } this alert?`
     );
     if (confirmed) {
-      const restore = alert.deleted.includes(alert.lastReceived.toISOString());
       const body = {
         fingerprint: fingerprint,
         lastReceived: alert.lastReceived,
-        restore: restore,
+        restore: alert.deleted,
       };
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
@@ -125,7 +122,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
     setIsOpen(true);
   };
 
-  const assignee = alert.assignees ? [alert.lastReceived.toISOString()] : "";
+  const assignee = !!alert.assignee;
 
   return (
     <>
@@ -270,11 +267,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
                               className="mr-2 h-4 w-4"
                               aria-hidden="true"
                             />
-                            {alert.deleted.includes(
-                              alert.lastReceived.toISOString()
-                            )
-                              ? "Restore"
-                              : "Delete"}
+                            {alert.deleted ? "Restore" : "Delete"}
                           </button>
                         )}
                       </Menu.Item>

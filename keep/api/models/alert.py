@@ -63,6 +63,13 @@ class AlertDto(BaseModel):
             return values.get("name", "")
         return fingerprint
 
+    @validator("deleted", pre=True, always=True)
+    def validate_deleted(cls, deleted, values):
+        if isinstance(deleted, bool):
+            return deleted
+        if isinstance(deleted, list):
+            return values.get("lastReceived") in deleted
+
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         # Check and set default severity

@@ -26,8 +26,8 @@ export interface AlertDto {
   pushed: boolean;
   generatorURL?: string;
   fingerprint: string;
-  deleted: string[];
-  assignees?: { [lastReceived: string]: string };
+  deleted: boolean;
+  assignee?: string;
   ticket_url: string;
   ticket_status?: string;
   playbook_url?: string;
@@ -58,6 +58,8 @@ export const AlertKnownKeys = [
   "playbook_url",
   "ack_status",
   "deleted",
-  "assignees",
+  "assignee",
   "providerId",
+  "checkbox",
+  "alertMenu"
 ];

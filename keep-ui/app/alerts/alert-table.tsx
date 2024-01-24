@@ -30,7 +30,7 @@ import Image from "next/image";
 import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertSeverity from "./alert-severity";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AlertColumnsSelect, {
   getColumnsOrderLocalStorageKey,
   getHiddenColumnsLocalStorageKey,
@@ -79,8 +79,9 @@ export const getHiddenColumns = (
   columns?: ColumnDef<AlertDto>[]
 ): VisibilityState => {
   const defaultHidden =
-    columns?.filter((c) => !AlertKnownKeys.includes(c.id!)).map((c) => c.id!) ??
-    [];
+    columns
+      ?.filter((c) => c.id && !AlertKnownKeys.includes(c.id))
+      .map((c) => c.id!) ?? [];
   if (presetName === undefined) {
     return getDefaultColumnVisibility({}, [
       "playbook_url",
@@ -231,17 +232,9 @@ export const useAlertTableCols = ({
           />
         )),
     }),
-    columnHelper.accessor("assignees", {
+    columnHelper.accessor("assignee", {
       header: "Assignee",
-      cell: (context) => (
-        <AlertAssignee
-          assignee={
-            (context.getValue() ?? {})[
-              context.row.original.lastReceived?.toISOString()
-            ]
-          }
-        />
-      ),
+      cell: (context) => <AlertAssignee assignee={context.getValue()} />,
     }),
     columnHelper.display({
       id: "extraPayload",

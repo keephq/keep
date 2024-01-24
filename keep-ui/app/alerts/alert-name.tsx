@@ -111,7 +111,7 @@ export default function AlertName({ alert }: Props) {
               />
             </a>
           )}
-          {deleted.includes(lastReceived.toISOString()) && (
+          {deleted && (
             <Icon
               icon={TrashIcon}
               tooltip="This alert has been deleted"

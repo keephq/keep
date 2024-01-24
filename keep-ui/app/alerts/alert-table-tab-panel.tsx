@@ -16,7 +16,7 @@ const getPresetAlerts = (
   }
 
   if (presetName === "Deleted") {
-    return alert.deleted.includes(alert.lastReceived.toISOString());
+    return alert.deleted === true;
   }
 
   return options.every((option) => {
