@@ -3,6 +3,7 @@ import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { AlertDto } from "./models";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   selectedRowIds: string[];
@@ -10,6 +11,9 @@ interface Props {
 }
 
 export default function AlertActions({ selectedRowIds, alerts }: Props) {
+  const { useAllAlerts } = useAlerts();
+  const { mutate } = useAllAlerts();
+
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to delete ${selectedRowIds.length} alert(s)?`
@@ -41,7 +45,7 @@ export default function AlertActions({ selectedRowIds, alerts }: Props) {
           body: JSON.stringify(body),
         });
         if (res.ok) {
-          // TODO: endpoint needs to delete alerts
+          await mutate();
         }
       }
     }

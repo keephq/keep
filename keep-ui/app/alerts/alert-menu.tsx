@@ -16,6 +16,7 @@ import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
 import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   alert: AlertDto;
@@ -29,6 +30,10 @@ export default function AlertMenu({ alert, openHistory }: Props) {
       installed_providers: [],
     },
   } = useProviders();
+
+  const { useAllAlerts } = useAlerts();
+  const { mutate } = useAllAlerts();
+
   const { data: session } = useSession();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -80,7 +85,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        // TODO: endpoint needs to delete alerts
+        await mutate();
       }
     }
   };
@@ -102,7 +107,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
         }
       );
       if (res.ok) {
-        // TODO: endpoint needs to change assignees
+        await mutate();
       }
     }
   };
@@ -193,7 +198,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
                           </button>
                         )}
                       </Menu.Item>
-                      {assignee !== session?.user.email && (
+                      {assignee && (
                         <Menu.Item>
                           {({ active }) => (
                             <button
