@@ -154,15 +154,28 @@ class ProvidersFactory:
                     mandatory = False
                     default = str(params[param].default)
                 expected_values = list(get_args(params[param].annotation))
-                func_params.append(
-                    ProviderMethodParam(
-                        name=param,
-                        type=params[param].annotation.__name__,
-                        mandatory=mandatory,
-                        default=default,
-                        expected_values=expected_values,
+                try:
+                    func_params.append(
+                        ProviderMethodParam(
+                            name=param,
+                            type=params[param].annotation.__name__,
+                            mandatory=mandatory,
+                            default=default,
+                            expected_values=expected_values,
+                        )
                     )
-                )
+                except AttributeError:
+                    # e.g. on attributes such as "user: str | None = None" 
+                    #      params[param].annotation.__name__, throws "'types.UnionType' object has no attribute '__name__'"
+                    func_params.append(
+                        ProviderMethodParam(
+                            name=param,
+                            type=str(params[param].annotation),
+                            mandatory=mandatory,
+                            default=default,
+                            expected_values=[str(e) for e in expected_values],
+                        )
+                    )
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
         return methods
 
