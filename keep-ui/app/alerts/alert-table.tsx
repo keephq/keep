@@ -7,7 +7,7 @@ import {
   Callout,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "./models";
+import { AlertDto, AlertKnownKeys } from "./models";
 import {
   CircleStackIcon,
   QuestionMarkCircleIcon,
@@ -74,9 +74,19 @@ export const getColumnsOrder = (presetName?: string): ColumnOrderState => {
   return [];
 };
 
-export const getHiddenColumns = (presetName?: string): VisibilityState => {
+export const getHiddenColumns = (
+  presetName?: string,
+  columns?: ColumnDef<AlertDto>[]
+): VisibilityState => {
+  const defaultHidden =
+    columns?.filter((c) => !AlertKnownKeys.includes(c.id!)).map((c) => c.id!) ??
+    [];
   if (presetName === undefined) {
-    return getDefaultColumnVisibility({}, ["playbook_url", "ack_status"]);
+    return getDefaultColumnVisibility({}, [
+      "playbook_url",
+      "ack_status",
+      ...defaultHidden,
+    ]);
   }
 
   const hiddenColumnsFromLocalStorage = localStorage.getItem(
@@ -87,7 +97,11 @@ export const getHiddenColumns = (presetName?: string): VisibilityState => {
     return JSON.parse(hiddenColumnsFromLocalStorage);
   }
 
-  return getDefaultColumnVisibility({}, ["playbook_url", "ack_status"]);
+  return getDefaultColumnVisibility({}, [
+    "playbook_url",
+    "ack_status",
+    ...defaultHidden,
+  ]);
 };
 
 const getPaginatedData = (
@@ -302,7 +316,7 @@ export function AlertTable({
     getColumnsOrder(presetName)
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    getHiddenColumns(presetName)
+    getHiddenColumns(presetName, columns)
   );
 
   const table = useReactTable({
