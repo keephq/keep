@@ -127,7 +127,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
     setIsOpen(true);
   };
 
-  const assignee = !!alert.assignee;
+  const canAssign = !alert.assignee;
 
   return (
     <>
@@ -198,7 +198,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
                           </button>
                         )}
                       </Menu.Item>
-                      {assignee && (
+                      {canAssign && (
                         <Menu.Item>
                           {({ active }) => (
                             <button

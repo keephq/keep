@@ -340,7 +340,7 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: rowSelection?.onChange,
-    getRowId: (row) => row.id,
+    getRowId: (row) => row.fingerprint,
   });
 
   return (
