@@ -46,7 +46,6 @@ export function AlertHistory({ alerts }: Props) {
   }));
 
   const sortedHistoryAlert = alertsHistoryWithDate
-    .sort((a, b) => a.lastReceived.getTime() - b.lastReceived.getTime())
     .map((alert) => alert.lastReceived.getTime());
 
   const maxLastReceived = new Date(Math.max(...sortedHistoryAlert));
