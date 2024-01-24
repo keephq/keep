@@ -1,5 +1,4 @@
 import dataclasses
-import typing
 import enum
 
 import pydantic
@@ -7,7 +6,7 @@ import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 class S4Status(str, enum.Enum):
@@ -16,7 +15,7 @@ class S4Status(str, enum.Enum):
     """
 
     NEW = "new"
-    ACKNOWLEDGES = "acknowledged"
+    ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
 
 class S4AlertingScenario(str, enum.Enum):
@@ -46,6 +45,15 @@ class Signl4Provider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "SIGNL4"
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="signl4:create",
+            description="Create SIGNL4 alerts",
+            mandatory=True,
+            alias="Create alerts",
+        ),
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -55,6 +63,21 @@ class Signl4Provider(BaseProvider):
         self.authentication_config = Signl4ProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self):
+        scopes = {}
+        self.logger.info("Validating scopes")
+        try:
+            self._notify(
+                user="John Doe",
+                title="Simple test alert from Keep",
+                message="Simple alert showing context with name: John Doe. Please ignore.",
+            )
+            scopes["signl4:create"] = True
+        except Exception as e:
+            self.logger.exception("Failed to create SIGNL4 alert")
+            scopes["signl4:create"] = str(e)
+        return scopes
 
     def dispose(self):
         """
@@ -88,12 +111,12 @@ class Signl4Provider(BaseProvider):
             'title': title,
             'message': message,
             'user': user,
-            "X-S4-ExternalID": s4_external_id,
-            "X-S4-Status": s4_status,
-            "X-S4-Service": s4_service,
-            "X-S4-Location": s4_location,
-            "X-S4-AlertingScenario": s4_alerting_scenario,
-            "X-S4-Filtering": s4_filtering,
+            'X-S4-ExternalID': s4_external_id,
+            'X-S4-Status': s4_status,
+            'X-S4-Service': s4_service,
+            'X-S4-Location': s4_location,
+            'X-S4-AlertingScenario': s4_alerting_scenario,
+            'X-S4-Filtering': s4_filtering,
             'X-S4-SourceSystem': 'Keep',
             **kwargs,
         }
@@ -109,7 +132,8 @@ class Signl4Provider(BaseProvider):
                 self.logger.info(result.text)
             else:
                 # Error
-                self.logger.error('Error: ' + str(result.status_code))
+                self.logger.exception('Error: ' + str(result.status_code))
+                raise Exception('Error: ' + str(result.status_code))
 
         except:
             self.logger.exception("Failed to create SIGNL4 alert")
