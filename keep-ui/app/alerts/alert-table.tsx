@@ -101,16 +101,38 @@ const getDataPageCount = (dataLength: number, { pageSize }: PaginationState) =>
 export const columnHelper = createColumnHelper<AlertDto>();
 
 interface UseAlertTableCols {
+  additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
   isMenuDisplayed?: boolean;
 }
 
 export const useAlertTableCols = ({
+  additionalColsToGenerate = [],
   isCheckboxDisplayed,
   isMenuDisplayed,
 }: UseAlertTableCols = {}) => {
   const router = useRouter();
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+
+  const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
+    columnHelper.display({
+      id: colName,
+      header: colName,
+      cell: (context) => {
+        const alertValue = context.row.original[colName as keyof AlertDto];
+
+        if (typeof alertValue === "object") {
+          return JSON.stringify(alertValue);
+        }
+
+        if (alertValue) {
+          return alertValue.toString();
+        }
+
+        return "";
+      },
+    })
+  ) as ColumnDef<AlertDto>[];
 
   return [
     ...(isCheckboxDisplayed
@@ -223,6 +245,7 @@ export const useAlertTableCols = ({
         />
       ),
     }),
+    ...filteredAndGeneratedCols,
     ...((isMenuDisplayed
       ? [
           columnHelper.display({
@@ -281,22 +304,6 @@ export function AlertTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     getHiddenColumns(presetName)
   );
-
-  // const extraPayloadKeys = getExtraPayloadKeys(alerts, columnsToExclude);
-  // // Create all the necessary columns
-  // const extraPayloadColumns = extraPayloadKeys.map((key) =>
-  //   columnHelper.display({
-  //     id: key,
-  //     header: key,
-  //     cell: (context) => {
-  //       const val = (context.row.original as any)[key];
-  //       if (typeof val === "object") {
-  //         return JSON.stringify(val);
-  //       }
-  //       return (context.row.original as any)[key]?.toString() ?? "";
-  //     },
-  //   })
-  // );
 
   const table = useReactTable({
     data: rowPagination

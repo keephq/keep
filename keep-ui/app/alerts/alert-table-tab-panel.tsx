@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertTable, useAlertTableCols } from "./alert-table";
-import { AlertDto, Preset } from "./models";
+import { AlertDto, AlertKnownKeys, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { TabPanel } from "@tremor/react";
 
@@ -76,7 +76,16 @@ export default function AlertTableTabPanel({
     .filter((alert) => getPresetAlerts(alert, selectedOptions, preset.name))
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
+  const additionalColsToGenerate = [
+    ...new Set(
+      alerts
+        .flatMap((alert) => Object.keys(alert))
+        .filter((key) => AlertKnownKeys.includes(key) === false)
+    ),
+  ];
+
   const alertTableColumns = useAlertTableCols({
+    additionalColsToGenerate: additionalColsToGenerate,
     isCheckboxDisplayed: preset.name !== "Deleted",
     isMenuDisplayed: true,
   });
