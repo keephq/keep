@@ -57,9 +57,10 @@ def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
                 alert.event.update(alert.alert_enrichment.enrichments)
             try:
                 alert_dto = AlertDto(**alert.event)
-                parse_and_enrich_deleted_and_assignees(
-                    alert_dto, alert.alert_enrichment.enrichments
-                )
+                if alert.alert_enrichment:
+                    parse_and_enrich_deleted_and_assignees(
+                        alert_dto, alert.alert_enrichment.enrichments
+                    )
             except Exception:
                 # should never happen but just in case
                 logger.exception(
