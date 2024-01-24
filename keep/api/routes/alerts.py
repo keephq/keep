@@ -301,7 +301,7 @@ def get_alert_history(
     return enriched_alerts_dto
 
 
-@router.delete("", description="Delete alert by name")
+@router.delete("", description="Delete alert by finerprint and last received time")
 def delete_alert(
     delete_alert: DeleteRequestBody,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:alert"])),
@@ -321,30 +321,36 @@ def delete_alert(
 
     deleted_last_received = []  # the last received(s) that are deleted
     assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+
+    # If we enriched before, get the enrichment
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
         deleted_last_received = enrichment.enrichments.get("deletedAt", [])
         assignees_last_receievd = enrichment.enrichments.get("assignees", {})
-        # TODO: this is due to legacy deleted field that was a bool, remove in the future
-        if isinstance(deleted_last_received, bool):
-            deleted_last_received = []
 
     if (
         delete_alert.restore is True
         and delete_alert.lastReceived in deleted_last_received
     ):
+        # Restore deleted alert
         deleted_last_received.remove(delete_alert.lastReceived)
-    elif delete_alert.restore is False:
+    elif (
+        delete_alert.restore is False
+        and delete_alert.lastReceived not in deleted_last_received
+    ):
+        # Delete the alert if it's not already deleted (wtf basically, shouldn't happen)
         deleted_last_received.append(delete_alert.lastReceived)
 
     if delete_alert.lastReceived not in assignees_last_receievd:
+        # auto-assign the deleting user to the alert
         assignees_last_receievd[delete_alert.lastReceived] = user_email
 
+    # overwrite the enrichment
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=delete_alert.fingerprint,
         enrichments={
-            "deleted": deleted_last_received,
+            "deletedAt": deleted_last_received,
             "assignees": assignees_last_receievd,
         },
     )
