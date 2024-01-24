@@ -6,27 +6,24 @@ import { AlertDto, AlertKnownKeys, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { TabPanel } from "@tremor/react";
 
-const getPresetAlerts = (
-  alert: AlertDto,
-  options: Option[],
-  presetName: string
-): boolean => {
-  // Conditional filtering based on selectedPreset.name
+const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
   if (presetName === "Deleted") {
     return alert.deleted === true;
   }
+
   if (presetName === "Groups") {
     return alert.group === true;
   }
+
   if (presetName === "Feed") {
     return alert.deleted === false;
   }
 
-  if (options.length === 0) {
-    return true;
-  }
+  return true;
+};
 
-  return options.every((option) => {
+const getOptionAlerts = (alert: AlertDto, options: Option[]): boolean =>
+  options.every((option) => {
     const [key, value] = option.value.split("=");
 
     if (key && value) {
@@ -44,9 +41,14 @@ const getPresetAlerts = (
       }
     }
 
-    return false;
+    return true;
   });
-};
+
+const getPresetAndOptionsAlerts = (
+  alert: AlertDto,
+  options: Option[],
+  presetName: string
+) => getPresetAlerts(alert, presetName) && getOptionAlerts(alert, options);
 
 interface Props {
   alerts: AlertDto[];
@@ -80,8 +82,10 @@ export default function AlertTableTabPanel({
   );
 
   const sortedPresetAlerts = alerts
-    .filter((alert) => getPresetAlerts(alert, selectedOptions, preset.name))
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
+    .filter((alert) =>
+      getPresetAndOptionsAlerts(alert, selectedOptions, preset.name)
+    )
+    .toSorted((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   const additionalColsToGenerate = [
     ...new Set(
