@@ -127,6 +127,7 @@ class RulesEngine:
                     "status": AlertStatus.FIRING.value,
                     "pushed": True,
                     "group": True,
+                    "fingerprint": group_fingerprint,
                     **group_attributes,
                 },
                 fingerprint=group_fingerprint,
