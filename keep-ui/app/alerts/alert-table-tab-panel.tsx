@@ -18,6 +18,9 @@ const getPresetAlerts = (
   if (presetName === "Groups") {
     return alert.group === true;
   }
+  if (presetName === "Feed") {
+    return alert.deleted === false;
+  }
 
   if (options.length === 0) {
     return true;

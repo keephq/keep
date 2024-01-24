@@ -62,5 +62,6 @@ export const AlertKnownKeys = [
   "assignee",
   "providerId",
   "checkbox",
-  "alertMenu"
+  "alertMenu",
+  "group",
 ];
