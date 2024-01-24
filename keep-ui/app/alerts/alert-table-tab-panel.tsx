@@ -11,12 +11,16 @@ const getPresetAlerts = (
   options: Option[],
   presetName: string
 ): boolean => {
-  if (options.length === 0) {
-    return true;
-  }
-
+  // Conditional filtering based on selectedPreset.name
   if (presetName === "Deleted") {
     return alert.deleted === true;
+  }
+  if (presetName === "Groups") {
+    return alert.group === true;
+  }
+
+  if (options.length === 0) {
+    return true;
   }
 
   return options.every((option) => {
