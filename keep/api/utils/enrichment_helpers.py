@@ -26,6 +26,8 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     if javascript_iso_format(alert.lastReceived) in deleted_last_received:
         alert.deleted = True
     assignees: dict = enrichments.get("assignees", {})
-    assignee = assignees.get(alert.lastReceived)
+    assignee = assignees.get(alert.lastReceived) or assignees.get(
+        javascript_iso_format(alert.lastReceived)
+    )
     if assignee:
         alert.assignee = assignee
