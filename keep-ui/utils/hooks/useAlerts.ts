@@ -113,10 +113,21 @@ export const useAlerts = () => {
     );
   };
 
+  /**
+   * A hook that creates a Pusher websocket connection and listens to incoming alerts.
+   *
+   * Only the latest alerts are returned
+   * @returns {\{ data, error }
+   */
   const useAllAlertsWithSubscription = () => {
     return useSWRSubscription(
+      // this check allows conditional fetching. If it is false, the hook doesn't run
       () =>
         configData?.PUSHER_DISABLED === false && session ? "alerts" : null,
+      // next is responsible for pushing/overwriting data to the subscription cache
+      // the first arg is for any errors, which is returned by the {error} property
+      // and the second arg accepts either a new AlertSubscription object that overwrites any existing data
+      // or a function with a {data} arg that allows access to the existing cache
       (_, { next }: SWRSubscriptionOptions<AlertSubscription, Error>) => {
         if (configData === undefined || session === null) {
           console.log("Pusher disabled");
