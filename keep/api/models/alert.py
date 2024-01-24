@@ -63,6 +63,7 @@ class AlertDto(BaseModel):
     )
     deleted: list[str] = []  # Whether the alert is deleted or not
     providerId: str | None = None  # The provider id
+    group: bool = False  # Whether the alert is a group alert
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
