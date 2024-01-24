@@ -106,7 +106,7 @@ class Signl4Provider(BaseProvider):
 
             if result.status_code == 201:
                 # Success
-                print(result.text)
+                self.logger.info(result.text)
             else:
                 # Error
                 self.logger.error('Error: ' + str(result.status_code))
