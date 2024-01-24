@@ -28,6 +28,7 @@ import AlertStreamline from "./alert-streamline";
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
   { name: "Deleted", options: [] },
+  { name: "Groups", options: []}
 ];
 
 export default function Alerts({
@@ -50,7 +51,7 @@ export default function Alerts({
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [selectedOptions, setSelectedOptions] = useState<Option[]>([]);
   const [lastReceivedAlertDate, setLastReceivedAlertDate] = useState<Date>();
-  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(
+  const [selectedPreset, setSelectedPreset] = useState<Preset>(
     defaultPresets[0] // Feed
   );
   const [channel, setChannel] = useState<Channel | null>(null);
@@ -289,7 +290,19 @@ export default function Alerts({
   }
 
   const currentStateAlerts = alerts
-    .filter((alert) => showDeletedAlert(alert) && filterAlerts(alert))
+    .filter((alert) => {
+        // Common condition to show deleted alerts
+        if (!showDeletedAlert(alert)) {
+            return false;
+        }
+
+        // Conditional filtering based on selectedPreset.name
+        if (selectedPreset.name === "Groups") {
+            return alert.group === true; // Filter for grouped alerts
+        } else {
+            return filterAlerts(alert); // Use the original filterAlerts function
+        }
+    })
     .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   function onIndexChange(index: number) {
