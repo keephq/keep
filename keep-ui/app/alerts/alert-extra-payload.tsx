@@ -15,21 +15,26 @@ export const getExtraPayloadNoKnownKeys = (alert: AlertDto) => {
 
 interface Props {
   alert: AlertDto;
+  isToggled: boolean;
+  setIsToggled: (newValue: boolean) => void;
 }
 
-export default function AlertExtraPayload({ alert }: Props) {
+export default function AlertExtraPayload({
+  alert,
+  isToggled = false,
+  setIsToggled,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  function handleAccordionToggle() {
-    setIsExpanded(!isExpanded);
-  }
+  const onAccordionToggle = () => {
+    setIsToggled(!isToggled);
+  };
 
   useEffect(() => {
-    if (isExpanded && ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (isToggled && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [isExpanded]);
+  }, [isToggled]);
 
   const { extraPayload, extraPayloadLength } =
     getExtraPayloadNoKnownKeys(alert);
@@ -39,17 +44,15 @@ export default function AlertExtraPayload({ alert }: Props) {
   }
 
   return (
-    <div>
-      <Accordion>
-        <AccordionHeader onClick={handleAccordionToggle}>
-          Extra Payload
-        </AccordionHeader>
-        <AccordionBody ref={ref}>
-          <pre className="overflow-y-scroll">
-            {JSON.stringify(extraPayload, null, 2)}
-          </pre>
-        </AccordionBody>
-      </Accordion>
-    </div>
+    <Accordion defaultOpen={isToggled}>
+      <AccordionHeader onClick={onAccordionToggle}>
+        Extra Payload
+      </AccordionHeader>
+      <AccordionBody ref={ref}>
+        <pre className="overflow-y-scroll">
+          {JSON.stringify(extraPayload, null, 2)}
+        </pre>
+      </AccordionBody>
+    </Accordion>
   );
 }
