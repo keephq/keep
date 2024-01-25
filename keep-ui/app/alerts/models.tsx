@@ -64,4 +64,5 @@ export const AlertKnownKeys = [
   "checkbox",
   "alertMenu",
   "group",
+  "extraPayload",
 ];
