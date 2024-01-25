@@ -18,12 +18,27 @@ class VaultSecretManager(BaseSecretManager):
     def __init__(self, context_manager, **kwargs):
         super().__init__(context_manager)
         vault_token = os.environ.get("HASHICORP_VAULT_TOKEN")
+        vault_use_k8s = os.environ.get("HASHICORP_VAULT_USE_K8S", False)
         if vault_token:
             self.client = hvac.Client(
                 url=self.HASHICORP_VAULT_ADDR,
                 namespace=self.HASHICORP_VALUT_NAMESPACE,
                 token=vault_token,
             )
+        elif vault_use_k8s:
+            k8s_role = os.environ.get("HASHICORP_VAULT_K8S_ROLE")
+            if not k8s_role:
+                raise Exception(
+                    "HASHICORP_VAULT_K8S_ROLE is required when using k8s auth method"
+                )
+            from hvac.api.auth_methods import Kubernetes
+
+            self.client = hvac.Client(
+                url=self.HASHICORP_VAULT_ADDR, namespace=self.HASHICORP_VALUT_NAMESPACE
+            )
+            f = open("/var/run/secrets/kubernetes.io/serviceaccount/token")
+            jwt = f.read()
+            Kubernetes(self.client.adapter).login(role=k8s_role, jwt=jwt)
         else:
             raise Exception("Unsupported vault login method")
         self.logger.info("Using Vault Secret Manager")
