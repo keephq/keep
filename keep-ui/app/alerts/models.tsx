@@ -32,6 +32,7 @@ export interface AlertDto {
   ticket_status?: string;
   playbook_url?: string;
   providerId?: string;
+  group?: boolean;
 }
 
 export interface Preset {
