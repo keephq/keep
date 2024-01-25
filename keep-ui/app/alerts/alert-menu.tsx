@@ -8,49 +8,42 @@ import {
   TrashIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
-import { getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
-import { Provider, ProviderMethod } from "app/providers/providers";
+import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
 import { AlertMethodTransition } from "./alert-method-transition";
-import { User as NextUser } from "next-auth";
 import { useFloating } from "@floating-ui/react-dom";
-import { KeyedMutator } from "swr";
+import { useProviders } from "utils/hooks/useProviders";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   alert: AlertDto;
   openHistory: () => void;
-  provider?: Provider;
-  mutate: KeyedMutator<AlertDto[]>;
-  callDelete?: (
-    fingerprint: string,
-    lastReceived: Date,
-    restore?: boolean
-  ) => void;
-  setAssignee?: (
-    fingerprint: string,
-    lastReceived: Date,
-    unassign: boolean
-  ) => void;
-  currentUser: NextUser;
 }
 
-export default function AlertMenu({
-  alert,
-  provider,
-  openHistory,
-  mutate,
-  callDelete,
-  setAssignee,
-  currentUser,
-}: Props) {
+export default function AlertMenu({ alert, openHistory }: Props) {
+  const apiUrl = getApiURL();
+  const {
+    data: { installed_providers: installedProviders } = {
+      installed_providers: [],
+    },
+  } = useProviders();
+
+  const { useAllAlerts } = useAlerts();
+  const { mutate } = useAllAlerts({ revalidateOnMount: false });
+
+  const { data: session } = useSession();
+
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
   const { refs, x, y } = useFloating();
   const alertName = alert.name;
   const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
+
+  const provider = installedProviders.find((p) => p.type === alert.source[0]);
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -74,19 +67,14 @@ export default function AlertMenu({
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to ${
-        alert.deleted.includes(alert.lastReceived.toISOString())
-          ? "restore"
-          : "delete"
+        alert.deleted ? "restore" : "delete"
       } this alert?`
     );
     if (confirmed) {
-      const session = await getSession();
-      const apiUrl = getApiURL();
-      const restore = alert.deleted.includes(alert.lastReceived.toISOString());
       const body = {
         fingerprint: fingerprint,
         lastReceived: alert.lastReceived,
-        restore: restore,
+        restore: alert.deleted,
       };
       const res = await fetch(`${apiUrl}/alerts`, {
         method: "DELETE",
@@ -97,7 +85,7 @@ export default function AlertMenu({
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        callDelete!(fingerprint, alert.lastReceived, restore);
+        await mutate();
       }
     }
   };
@@ -108,8 +96,6 @@ export default function AlertMenu({
         "After assiging this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
       )
     ) {
-      const session = await getSession();
-      const apiUrl = getApiURL();
       const res = await fetch(
         `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
         {
@@ -121,16 +107,19 @@ export default function AlertMenu({
         }
       );
       if (res.ok) {
-        setAssignee!(fingerprint, alert.lastReceived, unassign);
+        await mutate();
       }
     }
   };
 
   const isMethodEnabled = (method: ProviderMethod) => {
-    return method.scopes.every(
-      (scope) =>
-        provider?.validatedScopes && provider.validatedScopes[scope] === true
-    );
+    if (provider) {
+      return method.scopes.every(
+        (scope) => provider.validatedScopes[scope] === true
+      );
+    }
+
+    return false;
   };
 
   const openMethodTransition = (method: ProviderMethod) => {
@@ -138,7 +127,7 @@ export default function AlertMenu({
     setIsOpen(true);
   };
 
-  const assignee = alert.assignees ? [alert.lastReceived.toISOString()] : "";
+  const canAssign = !alert.assignee;
 
   return (
     <>
@@ -209,7 +198,7 @@ export default function AlertMenu({
                           </button>
                         )}
                       </Menu.Item>
-                      {assignee !== currentUser.email && (
+                      {canAssign && (
                         <Menu.Item>
                           {({ active }) => (
                             <button
@@ -283,11 +272,7 @@ export default function AlertMenu({
                               className="mr-2 h-4 w-4"
                               aria-hidden="true"
                             />
-                            {alert.deleted.includes(
-                              alert.lastReceived.toISOString()
-                            )
-                              ? "Restore"
-                              : "Delete"}
+                            {alert.deleted ? "Restore" : "Delete"}
                           </button>
                         )}
                       </Menu.Item>
@@ -308,7 +293,6 @@ export default function AlertMenu({
           }}
           method={method}
           alert={alert}
-          mutate={mutate}
           provider={provider}
         />
       ) : (

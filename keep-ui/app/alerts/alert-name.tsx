@@ -8,6 +8,9 @@ import {
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "./models";
 import { Workflow } from "app/workflows/models";
+import { useRouter } from "next/navigation";
+import { useWorkflows } from "utils/hooks/useWorkflows";
+import { useMemo } from "react";
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
   Object.fromEntries(
@@ -37,15 +40,12 @@ const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
 
 interface Props {
   alert: AlertDto;
-  workflows: Workflow[];
-  handleWorkflowClick: (workflows: Workflow[]) => void;
 }
 
-export default function AlertName({
-  alert,
-  workflows,
-  handleWorkflowClick,
-}: Props) {
+export default function AlertName({ alert }: Props) {
+  const router = useRouter();
+  const { data: workflows = [] } = useWorkflows();
+
   const {
     name,
     url,
@@ -57,7 +57,18 @@ export default function AlertName({
     playbook_url,
   } = alert;
 
-  const relevantWorkflows = getRelevantWorkflows(alert, workflows);
+  const handleWorkflowClick = (workflows: Workflow[]) => {
+    if (workflows.length === 1) {
+      return router.push(`workflows/${workflows[0].id}`);
+    }
+
+    return router.push("workflows");
+  };
+
+  const relevantWorkflows = useMemo(
+    () => getRelevantWorkflows(alert, workflows),
+    [alert, workflows]
+  );
 
   return (
     <div className="max-w-[340px]">
@@ -104,7 +115,7 @@ export default function AlertName({
               />
             </a>
           )}
-          {deleted.includes(lastReceived.toISOString()) && (
+          {deleted && (
             <Icon
               icon={TrashIcon}
               tooltip="This alert has been deleted"
