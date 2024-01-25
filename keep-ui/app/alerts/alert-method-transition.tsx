@@ -19,7 +19,7 @@ import {
   DatePicker,
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
-import { KeyedMutator } from "swr";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   isOpen: boolean;
@@ -27,7 +27,6 @@ interface Props {
   method: ProviderMethod | null;
   alert: AlertDto;
   provider?: Provider;
-  mutate: KeyedMutator<AlertDto[]>;
 }
 
 export function AlertMethodTransition({
@@ -36,12 +35,14 @@ export function AlertMethodTransition({
   method,
   provider,
   alert,
-  mutate,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [autoParams, setAutoParams] = useState<{ [key: string]: string }>({});
   const [userParams, setUserParams] = useState<{ [key: string]: string }>({});
   const [results, setResults] = useState<string[] | object[] | null>(null);
+
+  const { useAllAlerts } = useAlerts();
+  const { mutate } = useAllAlerts();
 
   const validateAndSetUserParams = (
     key: string,
@@ -119,8 +120,7 @@ export function AlertMethodTransition({
     method: ProviderMethod,
     methodParams: { [key: string]: string },
     userParams: { [key: string]: string },
-    closeModal: () => void,
-    mutate: KeyedMutator<AlertDto[]>
+    closeModal: () => void
   ) => {
     const session = await getSession();
     const apiUrl = getApiURL();
@@ -189,12 +189,12 @@ export function AlertMethodTransition({
         )
       ) {
         // This means all method params are auto populated
-        invokeMethod(provider!, method!, newAutoParams, {}, closeModal, mutate);
+        invokeMethod(provider!, method!, newAutoParams, {}, closeModal);
       } else {
         setIsLoading(false);
       }
     }
-  }, [method, alert, provider, mutate, closeModal]);
+  }, [method, alert, provider, closeModal]);
 
   if (!method || !provider) {
     return <></>;
@@ -258,8 +258,7 @@ export function AlertMethodTransition({
                           method!,
                           autoParams,
                           userParams,
-                          closeModal,
-                          mutate
+                          closeModal
                         )
                       }
                       disabled={!buttonEnabled()}

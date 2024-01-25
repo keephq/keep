@@ -8,16 +8,24 @@ logger = logging.getLogger(__name__)
 
 
 class AlertSeverity(Enum):
-    # Requires immediate action
-    CRITICAL = "critical"
-    # Needs to be addressed soon
-    HIGH = "high"
-    # Indicates a potential problem
-    WARNING = "warning"
-    # Provides information, no immediate action required
-    INFO = "info"
-    # Minor issues or lowest priority
-    LOW = "low"
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
+
+    def __new__(cls, severity_name, severity_order):
+        obj = object.__new__(cls)
+        obj._value_ = severity_name
+        obj.severity_order = severity_order
+        return obj
+
+    @property
+    def order(self):
+        return self.severity_order
+
+    def __str__(self):
+        return self._value_
 
 
 class AlertStatus(Enum):
@@ -53,8 +61,10 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: list[str] = []  # Whether the alert is deleted or not
+    deleted: bool = False  # Whether the alert has been deleted
+    assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
+    group: bool = False  # Whether the alert is a group alert
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
@@ -63,11 +73,11 @@ class AlertDto(BaseModel):
         return fingerprint
 
     @validator("deleted", pre=True, always=True)
-    def validate_old_deleted(cls, deleted, values):
-        """This is a temporary validator to handle the old deleted field"""
+    def validate_deleted(cls, deleted, values):
         if isinstance(deleted, bool):
-            return []
-        return deleted
+            return deleted
+        if isinstance(deleted, list):
+            return values.get("lastReceived") in deleted
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -93,6 +103,8 @@ class AlertDto(BaseModel):
             )
             values["status"] = AlertStatus.FIRING
 
+        values.pop("assignees", None)
+        values.pop("deletedAt", None)
         return values
 
     class Config:

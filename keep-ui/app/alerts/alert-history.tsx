@@ -1,70 +1,63 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { AlertDto } from "./models";
-import { AlertTable } from "./alert-table";
+import { AlertTable, useAlertTableCols } from "./alert-table";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
-import { User } from "app/settings/models";
-import { User as NextUser } from "next-auth";
 import AlertHistoryCharts from "./alert-history-charts";
-import useSWR from "swr";
-import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
+import { useAlerts } from "utils/hooks/useAlerts";
 import Loading from "app/loading";
+import { PaginationState } from "@tanstack/react-table";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Props {
-  isOpen: boolean;
-  closeModal: () => void;
-  selectedAlert: AlertDto | null;
-  users?: User[];
-  currentUser: NextUser;
-  accessToken?: string;
+  alerts: AlertDto[];
 }
 
-export function AlertHistory({
-  isOpen,
-  closeModal,
-  selectedAlert,
-  users = [],
-  currentUser,
-  accessToken,
-}: Props) {
-  const apiUrl = getApiURL();
-  const historyUrl =
-    selectedAlert && accessToken
-      ? `${apiUrl}/alerts/${selectedAlert.fingerprint}/history/?provider_id=${
-          selectedAlert.providerId
-        }&provider_type=${selectedAlert.source ? selectedAlert.source[0] : ""}`
-      : null;
-  const {
-    data: alerts,
-    error,
-    isLoading,
-  } = useSWR<AlertDto[]>(historyUrl, (url) => fetcher(url, accessToken!), {
-    revalidateOnFocus: false,
+export function AlertHistory({ alerts }: Props) {
+  const [rowPagination, setRowPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
   });
 
-  if (!selectedAlert || isLoading) {
-    return <></>;
-  }
+  const router = useRouter();
 
-  if (!alerts || error) {
+  const searchParams = useSearchParams();
+  const selectedAlert = alerts.find((alert) =>
+    searchParams ? searchParams.get("id") === alert.id : undefined
+  );
+
+  const { useAlertHistory } = useAlerts();
+  const { data: alertHistory = [], isLoading } = useAlertHistory(
+    selectedAlert,
+    {
+      revalidateOnFocus: false,
+    }
+  );
+
+  const alertTableColumns = useAlertTableCols();
+
+  if (isLoading) {
     return <Loading />;
   }
-  alerts.forEach(
-    (alert) => (alert.lastReceived = new Date(alert.lastReceived))
-  );
-  alerts.sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
-  const lastReceivedData = alerts.map((alert) => alert.lastReceived);
-  const maxLastReceived: Date = new Date(
-    Math.max(...lastReceivedData.map((date) => date.getTime()))
-  );
-  const minLastReceived: Date = new Date(
-    Math.min(...lastReceivedData.map((date) => date.getTime()))
-  );
+
+  const alertsHistoryWithDate = alertHistory.map((alert) => ({
+    ...alert,
+    lastReceived: new Date(alert.lastReceived),
+  }));
+
+  const sortedHistoryAlert = alertsHistoryWithDate
+    .map((alert) => alert.lastReceived.getTime());
+
+  const maxLastReceived = new Date(Math.max(...sortedHistoryAlert));
+  const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={closeModal}>
+    <Transition appear show={selectedAlert !== undefined} as={Fragment}>
+      <Dialog
+        as="div"
+        className="relative z-50"
+        onClose={() => router.replace("/alerts", { scroll: false })}
+      >
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -93,8 +86,10 @@ export function AlertHistory({
               >
                 <Flex alignItems="center" justifyContent="between">
                   <div>
-                    <Title>History of: {alerts[0]?.name}</Title>
-                    <Subtitle>Total alerts: {alerts.length}</Subtitle>
+                    <Title>History of: {alertsHistoryWithDate[0]?.name}</Title>
+                    <Subtitle>
+                      Total alerts: {alertsHistoryWithDate.length}
+                    </Subtitle>
                     <Subtitle>
                       First Occurence: {minLastReceived.toString()}
                     </Subtitle>
@@ -104,23 +99,30 @@ export function AlertHistory({
                   </div>
                   <Button
                     className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-                    onClick={closeModal}
+                    onClick={() => router.replace("/alerts", { scroll: false })}
                   >
                     Close
                   </Button>
                 </Flex>
                 <Divider />
-                <AlertHistoryCharts
-                  maxLastReceived={maxLastReceived}
-                  minLastReceived={minLastReceived}
-                  alerts={alerts}
-                />
+                {selectedAlert && (
+                  <AlertHistoryCharts
+                    maxLastReceived={maxLastReceived}
+                    minLastReceived={minLastReceived}
+                    alerts={alertsHistoryWithDate}
+                  />
+                )}
                 <Divider />
                 <AlertTable
-                  alerts={alerts}
-                  users={users}
-                  currentUser={currentUser}
+                  alerts={alertsHistoryWithDate}
+                  columns={alertTableColumns}
                   columnsToExclude={["description"]}
+                  isMenuColDisplayed={false}
+                  isRefreshAllowed={false}
+                  rowPagination={{
+                    state: rowPagination,
+                    onChange: setRowPagination,
+                  }}
                 />
               </Dialog.Panel>
             </Transition.Child>
