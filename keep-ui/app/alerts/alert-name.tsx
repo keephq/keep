@@ -10,6 +10,7 @@ import { AlertDto, AlertKnownKeys } from "./models";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
 import { useWorkflows } from "utils/hooks/useWorkflows";
+import { useMemo } from "react";
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
   Object.fromEntries(
@@ -64,7 +65,10 @@ export default function AlertName({ alert }: Props) {
     return router.push("workflows");
   };
 
-  const relevantWorkflows = getRelevantWorkflows(alert, workflows);
+  const relevantWorkflows = useMemo(
+    () => getRelevantWorkflows(alert, workflows),
+    [alert, workflows]
+  );
 
   return (
     <div className="max-w-[340px]">

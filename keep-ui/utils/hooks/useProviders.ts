@@ -11,6 +11,6 @@ export const useProviders = () => {
   return useSWR<ProvidersResponse>(
     () => (session ? `${apiUrl}/providers` : null),
     (url) => fetcher(url, session?.accessToken),
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false, revalidateOnMount: false }
   );
 };

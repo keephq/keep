@@ -32,7 +32,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
   } = useProviders();
 
   const { useAllAlerts } = useAlerts();
-  const { mutate } = useAllAlerts();
+  const { mutate } = useAllAlerts({ revalidateOnMount: false });
 
   const { data: session } = useSession();
 

@@ -312,6 +312,10 @@ export function AlertTable({
     getHiddenColumns(presetName, columns)
   );
 
+  useEffect(() => {
+    setColumnVisibility(getHiddenColumns(presetName, columns));
+  }, [presetName, columns]);
+
   const table = useReactTable({
     data: rowPagination
       ? getPaginatedData(alerts, rowPagination.state)

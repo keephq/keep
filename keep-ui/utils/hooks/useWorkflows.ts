@@ -11,6 +11,6 @@ export const useWorkflows = () => {
   return useSWR<Workflow[]>(
     () => (session ? `${apiUrl}/workflows` : null),
     (url) => fetcher(url, session?.accessToken),
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false, revalidateOnMount: false }
   );
 };

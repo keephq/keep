@@ -1,7 +1,7 @@
-import useSWR from "swr";
+import useSWRImmutable from "swr/immutable";
 import { InternalConfig } from "types/internal-config";
 import { fetcher } from "utils/fetcher";
 
 export const useConfig = () => {
-  return useSWR<InternalConfig>("/api/config", fetcher);
+  return useSWRImmutable<InternalConfig>("/api/config", fetcher);
 };
