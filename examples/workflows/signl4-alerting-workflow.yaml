@@ -1,0 +1,18 @@
+id: signl4-alerting-workflow
+description: handle alerts
+triggers:
+- filters:
+  - key: source
+    value: r".*"
+  type: alert
+owners: []
+services: []
+steps: []
+actions:
+- name: signl4-action
+  provider:
+    config: '{{ providers.SIGNL4 Alerting }}'
+    type: signl4
+    with:
+      message: Test.
+      title: Keep Alert
