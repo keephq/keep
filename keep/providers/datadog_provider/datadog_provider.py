@@ -71,7 +71,7 @@ class DatadogProviderAuthConfig:
             "sensitive": True,
             "hidden": True,
         },
-        default_factory=lambda x: {},
+        default_factory=dict,
     )
 
 

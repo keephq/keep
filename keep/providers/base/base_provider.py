@@ -19,6 +19,7 @@ import requests
 
 from keep.api.core.db import enrich_alert, get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
@@ -333,6 +334,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
                         alert_enrichment.alert_fingerprint
                     )
                     for alert_to_enrich in alerts_to_enrich:
+                        parse_and_enrich_deleted_and_assignees(
+                            alert_to_enrich, alert_enrichment.enrichments
+                        )
                         for enrichment in alert_enrichment.enrichments:
                             # set the enrichment
                             setattr(

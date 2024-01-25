@@ -75,7 +75,7 @@ export interface Provider {
   provider_description?: string;
   oauth2_url?: string;
   scopes?: ProviderScope[];
-  validatedScopes?: { [scopeName: string]: boolean | string };
+  validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
   tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
 }
@@ -92,4 +92,5 @@ export const defaultProvider: Provider = {
   can_query: false,
   type: "",
   tags: [],
+  validatedScopes: {},
 };
