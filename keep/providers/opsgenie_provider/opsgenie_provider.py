@@ -136,9 +136,6 @@ class OpsgenieProvider(BaseProvider):
     def close_alert(
         self,
         alert_id: str,
-        user: str | None = None,
-        note: str | None = None,
-        source: str | None = None,
     ):
         """
         Close OpsGenie Alert.
@@ -146,11 +143,7 @@ class OpsgenieProvider(BaseProvider):
         """
         self.logger.info("Closing Opsgenie alert", extra={"alert_id": alert_id})
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
-        close_alert_payload = opsgenie_sdk.CloseAlertPayload(
-            user=user,
-            note=note,
-            source=source,
-        )
+        close_alert_payload = opsgenie_sdk.CloseAlertPayload()
         try:
             api_instance.close_alert(alert_id, close_alert_payload=close_alert_payload)
             self.logger.info("Opsgenie Alert Closed", extra={"alert_id": alert_id})
@@ -163,8 +156,6 @@ class OpsgenieProvider(BaseProvider):
         self,
         alert_id: str,
         note: str,
-        user: str | None = None,
-        source: str | None = None,
     ):
         """
         Add comment or note to an OpsGenie Alert.
@@ -173,9 +164,7 @@ class OpsgenieProvider(BaseProvider):
         self.logger.info("Commenting Opsgenie alert", extra={"alert_id": alert_id})
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
         add_note_to_alert_payload = opsgenie_sdk.AddNoteToAlertPayload(
-            user=user,
             note=note,
-            source=source,
         )
         try:
             api_instance.add_note(alert_id, add_note_to_alert_payload)
