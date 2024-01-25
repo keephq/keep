@@ -15,11 +15,11 @@ export default function AlertsPage() {
   }
 
   if (status === "unauthenticated") {
-    return router.push("/signin");
+    router.push("/signin");
   }
 
   if (session && !session.tenantId) {
-    return router.push("/signin");
+    router.push("/signin");
   }
 
   return <Alerts />;
