@@ -795,6 +795,40 @@ class DatadogProvider(BaseProvider):
     def get_alert_schema():
         return DatadogAlertFormatDescription.schema()
 
+    @staticmethod
+    def simulate_alert() -> dict:
+        # Choose a random alert type
+        import hashlib
+        import random
+
+        from keep.providers.datadog_provider.alerts_mock import ALERTS
+
+        alert_type = random.choice(list(ALERTS.keys()))
+        alert_data = ALERTS[alert_type]
+
+        # Start with the base payload
+        simulated_alert = alert_data["payload"].copy()
+
+        # Apply variability based on parameters
+        for param, choices in alert_data.get("parameters", {}).items():
+            # Split param on '.' for nested parameters (if any)
+            param_parts = param.split(".")
+            target = simulated_alert
+            for part in param_parts[:-1]:
+                target = target.setdefault(part, {})
+
+            # Choose a random value for the parameter
+            target[param_parts[-1]] = random.choice(choices)
+
+        simulated_alert["last_updated"] = int(time.time() * 1000)
+        simulated_alert["alert_transition"] = random.choice(
+            list(DatadogProvider.STATUS_MAP.keys())
+        )
+        simulated_alert["id"] = hashlib.sha256(
+            str(simulated_alert).encode()
+        ).hexdigest()
+        return simulated_alert
+
 
 if __name__ == "__main__":
     # Output debug messages
