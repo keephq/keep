@@ -74,6 +74,14 @@ export const getColumnsOrder = (presetName?: string): ColumnOrderState => {
   return [];
 };
 
+const hardcodedDefaultHidden = [
+  "playbook_url",
+  "ack_status",
+  "deletedAt",
+  "created_by",
+  "assignees",
+];
+
 export const getHiddenColumns = (
   presetName?: string,
   columns?: ColumnDef<AlertDto>[]
@@ -84,8 +92,7 @@ export const getHiddenColumns = (
       .map((c) => c.id!) ?? [];
   if (presetName === undefined) {
     return getDefaultColumnVisibility({}, [
-      "playbook_url",
-      "ack_status",
+      ...hardcodedDefaultHidden,
       ...defaultHidden,
     ]);
   }
@@ -99,8 +106,7 @@ export const getHiddenColumns = (
   }
 
   return getDefaultColumnVisibility({}, [
-    "playbook_url",
-    "ack_status",
+    ...hardcodedDefaultHidden,
     ...defaultHidden,
   ]);
 };
@@ -344,7 +350,6 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: rowSelection?.onChange,
-    getRowId: (row) => row.fingerprint,
   });
 
   return (
