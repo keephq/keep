@@ -7,7 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from typing import Optional, Tuple
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
@@ -353,19 +353,25 @@ class PatchedSMTP(smtplib.SMTP):
 
 @router.post("/apikey", description="Create API key")
 def create_key(
+    request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
     ),
     session: Session = Depends(get_session),
 ):
+    try:
+        body = await request.json()
+        unique_api_key_id = body['apiKeyId']
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
     api_key = create_api_key(
         session=session,
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
-        unique_api_key_id="cli",
+        unique_api_key_id=unique_api_key_id,
         role=AdminRole,
-        is_system=True
-        system_description="API key",
+        is_system=True,
     )
 
     return {"apiKey": api_key}
@@ -395,48 +401,57 @@ def get_api_key(
 
 @router.put("/apikey", description="Update API key secret")
 def update_api_key(
+    request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
     ),
     session: Session = Depends(get_session),
 ):
+
+    try:
+        body = await request.json()
+        unique_api_key_id = body['apiKeyId']
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
     tenant_id = authenticated_entity.tenant_id
 
     logger.info(
-        "Updating API key secret",
-        extra={"tenant_id": tenant_id, "unique_api_key_id": 'cli'},
+        f"Updating API key ({unique_api_key_id}) secret",
+        extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
     )
 
     api_key = update_api_key_internal(
         session=session,
         tenant_id=tenant_id,
-        unique_api_key_id="cli",
+        unique_api_key_id=unique_api_key_id,
     )
 
     if api_key:
-        logger.info(f"Api key ({'cli'}) secret updated")
+        logger.info(f"Api key ({unique_api_key_id}) secret updated")
         return {"message": "API key secret updated", "old-secret": api_key.old_api_key_secret, "new-secret": api_key.new_api_key}
     else:
-        logger.info(f"Api key ({'cli'}) not found")
-        raise HTTPException(status_code=404, detail=f"API key ({'cli'}) not found")
+        logger.info(f"Api key ({unique_api_key_id}) not found")
+        raise HTTPException(status_code=404, detail=f"API key ({unique_api_key_id}) not found")
 
 
-@router.delete("/apikey", description="Delete API key")
+@router.delete("/apikey/{unique_api_key_id}", description="Delete API key")
 def delete_api_key(
+    unique_api_key: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
     ),
     session: Session = Depends(get_session),
 ):
-    logger.info(f"Deleting api key ({'cli'})")
+    logger.info(f"Deleting api key ({unique_api_key})")
 
     if delete_api_key_internal(
         session=session,
         tenant_id=authenticated_entity.tenant_id,
-        unique_api_key_id="cli",
+        unique_api_key_id=unique_api_key,
     ):
-        logger.info(f"Api key ({'cli'}) deleted")
+        logger.info(f"Api key ({unique_api_key}) deleted")
         return {"message": "Api key deleted"}
     else:
-        logger.info(f"Api key ({'cli'}) not found")
-        raise HTTPException(status_code=404, detail=f"Api key ({'cli'}) not found")
+        logger.info(f"Api key ({unique_api_key}) not found")
+        raise HTTPException(status_code=404, detail=f"Api key ({unique_api_key}) not found")
