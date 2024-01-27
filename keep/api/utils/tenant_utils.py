@@ -170,7 +170,7 @@ def create_api_key(
 def get_api_keys(
     session: Session,
     tenant_id: str,
-) -> str:
+) -> [TenantApiKey]:
     """
     Gets all active API keys for the given tenant.
 
@@ -186,11 +186,27 @@ def get_api_keys(
         .where(TenantApiKey.tenant_id == tenant_id)
     )
 
-    api_keys = session.exec(statement)
+    api_keys = session.exec(statement).all()
 
-    if api_keys:
-        return api_keys
-    return False
+    return api_keys
+
+
+def get_api_keys_secret(
+    tenant_id,
+    api_keys,
+):
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    api_keys_with_secret = []
+    for api_key in api_keys:
+        if api_key.reference_id == "webhook":
+            return
+        secret = secret_manager.read_secret(
+                f"{api_key.tenant_id}-{api_key.reference_id}"
+        )
+        api_keys_with_secret.append({**vars(api_key), "secret": secret})
+
+    return api_keys_with_secret
 
 
 def get_or_create_api_key(

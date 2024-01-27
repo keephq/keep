@@ -24,7 +24,7 @@ from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal, delete_api_key_internal, create_api_key, get_api_keys
+from keep.api.utils.tenant_utils import get_api_keys_secret, get_or_create_api_key, update_api_key_internal, delete_api_key_internal, create_api_key, get_api_keys
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -387,13 +387,22 @@ def get_keys(
     tenant_id = authenticated_entity.tenant_id
 
     logger.info(f"Getting active API keys for tenant {tenant_id}")
-    # get the api key for the CLI
+
     api_keys = get_api_keys(
         session=session,
         tenant_id=tenant_id,
     )
 
-    logger.info(f"Active API keys for tenant {tenant_id} retrieved successfully")
+    if api_keys:
+        api_keys = get_api_keys_secret(
+            tenant_id=tenant_id,
+            api_keys=api_keys
+        )
+
+    logger.info(
+        f"Active API keys for tenant {tenant_id} retrieved successfully",
+    )
+
     return {"apiKeys": api_keys}
 
 
