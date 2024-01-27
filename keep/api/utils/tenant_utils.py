@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.core.rbac import Role
@@ -13,6 +13,48 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
+
+
+def delete_api_key_internal(
+    session: Session,
+    tenant_id: str,
+    unique_api_key_id: str,
+) -> str:
+    """
+    Deletes API key for the given tenant.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    # Find API key
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    api_key = session.exec(statement).first()
+
+    if api_key:
+        # Delete from database
+        session.delete(api_key)
+        session.commit()
+
+        # Delete from secret manager
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+
+        secret_manager.delete_secret(
+            secret_name=f"{tenant_id}-{unique_api_key_id}",
+        )
+
+        return True
+    return False
 
 
 def update_api_key_internal(

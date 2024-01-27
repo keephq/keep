@@ -24,7 +24,7 @@ from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal
+from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal, delete_api_key_internal 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -391,3 +391,24 @@ def update_api_key(
     )
     logger.info("HAHAHA")
     return {"test": api_key}
+
+
+@router.delete("/apikey", description="Delete API key")
+def delete_api_key(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    logger.info(f"Deleting api key ({'cli'})")
+
+    if delete_api_key_internal(
+        session=session,
+        tenant_id=authenticated_entity.tenant_id,
+        unique_api_key_id="cli",
+    ):
+        logger.info(f"Api key ({'cli'}) deleted")
+        return {"message": "Api key deleted"}
+    else:
+        logger.info(f"Api key ({'cli'}) not found")
+        raise HTTPException(status_code=404, detail=f"Api key ({'cli'}) not found")
