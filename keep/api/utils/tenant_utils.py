@@ -61,8 +61,6 @@ def update_api_key_internal(
     session: Session,
     tenant_id: str,
     unique_api_key_id: str,
-    created_by: str,
-    system_description: Optional[str] = None,
 ) -> str:
     """
     Updates API key secret for the given tenant.
@@ -71,20 +69,10 @@ def update_api_key_internal(
         session (Session): _description_
         tenant_id (str): _description_
         unique_api_key_id (str): _description_
-        is_system (bool): _description_
-        commit (bool, optional): _description_. Defaults to True.
-        system_description (Optional[str], optional): _description_. Defaults to None.
 
     Returns:
         str: _description_
     """
-    logger.info(
-        "Updating API key",
-        extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
-    )
-
-    # I need to find the key object and update
-
 
     # Get API Key from database
     statement = (
@@ -97,7 +85,7 @@ def update_api_key_internal(
 
     # If no APIkey is found return
     if not tenant_api_key_entry:
-        return {}
+        return False
     else:
         # Find current API key in secret_manager
         context_manager = ContextManager(tenant_id=tenant_id)
@@ -117,11 +105,6 @@ def update_api_key_internal(
         # Update API key in DB
         tenant_api_key_entry.key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         session.commit()
-
-        logger.info(
-            "Updated API key secret.",
-            extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
-        )
 
         return {"old_api_key_secret": old_api_key_secret, "new_api_key": api_key}
 

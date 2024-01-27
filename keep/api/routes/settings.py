@@ -381,16 +381,24 @@ def update_api_key(
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    user_name = authenticated_entity.email
+
+    logger.info(
+        "Updating API key secret",
+        extra={"tenant_id": tenant_id, "unique_api_key_id": 'cli'},
+    )
+
     api_key = update_api_key_internal(
         session=session,
         tenant_id=tenant_id,
-        created_by=user_name,
         unique_api_key_id="cli",
-        system_description="API key",
     )
-    logger.info("HAHAHA")
-    return {"test": api_key}
+
+    if api_key:
+        logger.info(f"Api key ({'cli'}) secret updated")
+        return {"message": "API key secret updated", "old-secret": api_key.old_api_key_secret, "new-secret": api_key.new_api_key}
+    else:
+        logger.info(f"Api key ({'cli'}) not found")
+        raise HTTPException(status_code=404, detail=f"API key ({'cli'}) not found")
 
 
 @router.delete("/apikey", description="Delete API key")
