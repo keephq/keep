@@ -352,7 +352,7 @@ class PatchedSMTP(smtplib.SMTP):
 
 
 @router.post("/apikey", description="Create API key")
-def create_key(
+async def create_key(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
@@ -398,7 +398,7 @@ def get_keys(
 
 
 @router.put("/apikey", description="Update API key secret")
-def update_api_key(
+async def update_api_key(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
