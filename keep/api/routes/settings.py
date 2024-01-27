@@ -24,7 +24,7 @@ from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal, delete_api_key_internal, create_api_key 
+from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal, delete_api_key_internal, create_api_key, get_api_keys
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -377,26 +377,24 @@ def create_key(
     return {"apiKey": api_key}
 
 
-@router.get("/apikey", description="Get API key")
-def get_api_key(
+@router.get("/apikeys", description="Get API keys")
+def get_keys(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:settings"])
     ),
     session: Session = Depends(get_session),
 ):
-    logger.info("Getting API key")
     tenant_id = authenticated_entity.tenant_id
-    user_name = authenticated_entity.email
+
+    logger.info(f"Getting active API keys for tenant {tenant_id}")
     # get the api key for the CLI
-    api_key = get_or_create_api_key(
+    api_keys = get_api_keys(
         session=session,
         tenant_id=tenant_id,
-        created_by=user_name,
-        unique_api_key_id="cli",
-        system_description="API key",
     )
-    logger.info("API key retrieved successfully")
-    return {"apiKey": api_key}
+
+    logger.info(f"Active API keys for tenant {tenant_id} retrieved successfully")
+    return {"apiKeys": api_keys}
 
 
 @router.put("/apikey", description="Update API key secret")
@@ -449,6 +447,7 @@ def delete_api_key(
         session=session,
         tenant_id=authenticated_entity.tenant_id,
         unique_api_key_id=unique_api_key,
+
     ):
         logger.info(f"Api key ({unique_api_key}) deleted")
         return {"message": "Api key deleted"}

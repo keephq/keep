@@ -167,6 +167,32 @@ def create_api_key(
     return api_key
 
 
+def get_api_keys(
+    session: Session,
+    tenant_id: str,
+) -> str:
+    """
+    Gets all active API keys for the given tenant.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    api_keys = session.exec(statement)
+
+    if api_keys:
+        return api_keys
+    return False
+
+
 def get_or_create_api_key(
     session: Session,
     tenant_id: str,
