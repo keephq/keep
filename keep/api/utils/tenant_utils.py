@@ -139,6 +139,7 @@ def create_api_key(
     )
     api_key = str(uuid4())
     hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
     # Save the api key in the secret manager
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -160,11 +161,24 @@ def create_api_key(
 
     if commit:
         session.commit()
+
     logger.info(
         "Created API key",
         extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
     )
-    return api_key
+
+    if is_system:
+        return api_key
+
+    else:
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.reference_id == new_installation_api_key.reference_id)
+        )
+
+        new_api_key = session.exec(statement).first()
+        return {**vars(new_api_key), "secret": api_key}
 
 
 def get_api_keys(
@@ -200,7 +214,7 @@ def get_api_keys_secret(
     api_keys_with_secret = []
     for api_key in api_keys:
         if api_key.reference_id == "webhook":
-            return
+            continue
         secret = secret_manager.read_secret(
                 f"{api_key.tenant_id}-{api_key.reference_id}"
         )
@@ -215,7 +229,7 @@ def get_or_create_api_key(
     created_by: str,
     unique_api_key_id: str,
     system_description: Optional[str] = None,
-) -> str:
+):
     """
     Gets or creates an API key for the given tenant.
 

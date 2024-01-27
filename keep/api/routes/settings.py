@@ -361,7 +361,7 @@ async def create_key(
 ):
     try:
         body = await request.json()
-        unique_api_key_id = body['apiKeyId']
+        unique_api_key_id = body['name']
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -371,10 +371,10 @@ async def create_key(
         created_by=authenticated_entity.email,
         unique_api_key_id=unique_api_key_id,
         role=AdminRole,
-        is_system=True,
+        is_system=False,
     )
 
-    return {"apiKey": api_key}
+    return api_key
 
 
 @router.get("/apikeys", description="Get API keys")
@@ -442,24 +442,24 @@ async def update_api_key(
         raise HTTPException(status_code=404, detail=f"API key ({unique_api_key_id}) not found")
 
 
-@router.delete("/apikey/{unique_api_key_id}", description="Delete API key")
+@router.delete("/apikey/{keyId}", description="Delete API key")
 def delete_api_key(
-    unique_api_key: str,
+    keyId: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:settings"])
     ),
     session: Session = Depends(get_session),
 ):
-    logger.info(f"Deleting api key ({unique_api_key})")
+    logger.info(f"Deleting api key ({keyId})")
 
     if delete_api_key_internal(
         session=session,
         tenant_id=authenticated_entity.tenant_id,
-        unique_api_key_id=unique_api_key,
+        unique_api_key_id=keyId,
 
     ):
-        logger.info(f"Api key ({unique_api_key}) deleted")
+        logger.info(f"Api key ({keyId}) deleted")
         return {"message": "Api key deleted"}
     else:
-        logger.info(f"Api key ({unique_api_key}) not found")
-        raise HTTPException(status_code=404, detail=f"Api key ({unique_api_key}) not found")
+        logger.info(f"Api key ({keyId}) not found")
+        raise HTTPException(status_code=404, detail=f"Api key ({keyId}) not found")
