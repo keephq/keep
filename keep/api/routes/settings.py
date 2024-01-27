@@ -24,7 +24,7 @@ from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key
+from keep.api.utils.tenant_utils import get_or_create_api_key, update_api_key_internal
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -351,7 +351,7 @@ class PatchedSMTP(smtplib.SMTP):
             super()._print_debug(*args)
 
 
-@router.get("/apikey")
+@router.get("/apikey", description="Get API key")
 def get_api_key(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:settings"])
@@ -371,3 +371,23 @@ def get_api_key(
     )
     logger.info("API key retrieved successfully")
     return {"apiKey": api_key}
+
+
+@router.put("/apikey", description="Update API key")
+def update_api_key(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    user_name = authenticated_entity.email
+    api_key = update_api_key_internal(
+        session=session,
+        tenant_id=tenant_id,
+        created_by=user_name,
+        unique_api_key_id="cli",
+        system_description="API key",
+    )
+    logger.info("HAHAHA")
+    return {"test": api_key}
