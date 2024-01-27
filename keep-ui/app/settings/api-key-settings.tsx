@@ -19,7 +19,7 @@ interface Props {
 export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
-    selectedTab === "api-key" ? `${apiUrl}/settings/apikey` : null,
+    selectedTab === "api-key" ? `${apiUrl}/settings/apikeys` : null,
     (url) => fetcher(url, accessToken),
     { revalidateOnFocus: false }
   );
@@ -30,14 +30,15 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const copyBlockApiKeyProps = {
     theme: { ...a11yLight },
     language: "text",
-    text: data?.apiKey || "",
+    text: data?.apiKeys ? data.apiKeys[0].key_hash : "You have no active API Keys.",
     codeBlock: true,
     showLineNumbers: false,
   };
 
+
   return (
     <div className="mt-10">
-      <Title>API Key</Title>
+      <Title>API Keys</Title>
       <Card className="mt-2.5">
         {/* Ensure CopyBlock is the only element within the card for proper spacing */}
         <CopyBlock {...copyBlockApiKeyProps} />
