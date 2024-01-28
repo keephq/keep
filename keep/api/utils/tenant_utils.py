@@ -102,11 +102,11 @@ def update_api_key_internal(
             secret_value=api_key,
         )
 
-        # Update API key in DB
+        # Update API key hash in DB
         tenant_api_key_entry.key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         session.commit()
 
-        return {"old_api_key_secret": old_api_key_secret, "new_api_key": api_key}
+        return api_key
 
 
 def create_api_key(

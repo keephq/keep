@@ -436,7 +436,7 @@ async def update_api_key(
 
     if api_key:
         logger.info(f"Api key ({unique_api_key_id}) secret updated")
-        return {"message": "API key secret updated", "old-secret": api_key.old_api_key_secret, "new-secret": api_key.new_api_key}
+        return {"message": "API key secret updated", "apiKey": api_key}
     else:
         logger.info(f"Api key ({unique_api_key_id}) not found")
         raise HTTPException(status_code=404, detail=f"API key ({unique_api_key_id}) not found")
