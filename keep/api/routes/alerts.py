@@ -607,10 +607,12 @@ async def receive_generic_event(
     for _alert in alert:
         # if not source, set it to keep
         if not _alert.source:
-            _alert.source = ["keep"]
-        if authenticated_entity.api_key_name:
-            _alert.source.append(authenticated_entity.api_key_name)
-            _alert.usedApiKey = True
+            if authenticated_entity.api_key_name:
+                _alert.source = [authenticated_entity.api_key_name]
+                _alert.usedApiKey = True
+            else:
+                _alert.source = ["keep"]
+
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
