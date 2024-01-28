@@ -587,7 +587,7 @@ def handle_formatted_events(
 async def receive_generic_event(
     alert: AlertDto | list[AlertDto],
     bg_tasks: BackgroundTasks,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"], True)),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ):
@@ -608,6 +608,9 @@ async def receive_generic_event(
         # if not source, set it to keep
         if not _alert.source:
             _alert.source = ["keep"]
+        if authenticated_entity.api_key_name:
+            _alert.source.append(authenticated_entity.api_key_name)
+            _alert.usedApiKey = True
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
