@@ -1,6 +1,18 @@
 "use client";
 
-import { Card, Title, Subtitle, Button} from "@tremor/react";
+import { 
+    Card, 
+    Title, 
+    Subtitle, 
+    Button,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeaderCell,
+    TableRow,
+    Text
+} from "@tremor/react";
 import Loading from "app/loading";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
@@ -45,13 +57,15 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   if (isLoading) return <Loading />;
   if (error) return <div>{error.message}</div>;
 
-  const copyBlockApiKeyProps = {
-    theme: { ...a11yLight },
-    language: "text",
-    text: apiKeys.length ? apiKeys[0].key_hash : "You have no active API Keys.",
-    codeBlock: true,
-    showLineNumbers: false,
-  };
+  const getCopyBlockProps = (secret: string) => {
+    return {
+        theme: { ...a11yLight },
+        language: "text",
+        text: secret,
+        codeBlock: true,
+        showLineNumbers: false,
+      }; 
+  }
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthenticationType;
@@ -80,8 +94,39 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         </div>
       </div>
       <Card className="mt-2.5">
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>Name</TableHeaderCell>
+              <TableHeaderCell className="text-right">Key</TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                Created At
+              </TableHeaderCell>
+              <TableHeaderCell className="text-right">
+                Last Used 
+              </TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {apiKeys.map((key) => (
+              <TableRow
+                key={key.reference_id}
+              >
+                <TableCell>{key.reference_id}</TableCell>
+                <TableCell className="text-right">
+                  <CopyBlock {...getCopyBlockProps(key.secret)} />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Text>{key.created_at}</Text>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Text>{key.last_used ?? "Never"}</Text>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         {/* Ensure CopyBlock is the only element within the card for proper spacing */}
-        <CopyBlock {...copyBlockApiKeyProps} />
       </Card>
       <CreateApiKeyModal
         isOpen={isApiKeyModalOpen}
