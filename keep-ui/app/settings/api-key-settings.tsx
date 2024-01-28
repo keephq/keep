@@ -94,6 +94,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         </div>
       </div>
       <Card className="mt-2.5">
+       {apiKeys.length ? (
         <Table>
           <TableHead>
             <TableRow>
@@ -126,6 +127,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
             ))}
           </TableBody>
         </Table>
+        ) : <div> There are no active api keys </div>}
         {/* Ensure CopyBlock is the only element within the card for proper spacing */}
       </Card>
       <CreateApiKeyModal
