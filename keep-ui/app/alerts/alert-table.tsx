@@ -8,10 +8,7 @@ import {
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto, AlertKnownKeys } from "./models";
-import {
-  CircleStackIcon,
-  QuestionMarkCircleIcon,
-} from "@heroicons/react/24/outline";
+import { CircleStackIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import {
   ColumnOrderState,
   OnChangeFn,
@@ -25,37 +22,33 @@ import {
   PaginationState,
   ColumnDef,
 } from "@tanstack/react-table";
-import PushPullBadge from "@/components/ui/push-pulled-badge/push-pulled-badge";
 import Image from "next/image";
 import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertSeverity from "./alert-severity";
-import { useEffect, useState } from "react";
-import AlertColumnsSelect, {
-  getColumnsOrderLocalStorageKey,
-  getHiddenColumnsLocalStorageKey,
-} from "./alert-columns-select";
+import { useEffect, useRef, useState } from "react";
 import AlertPagination from "./alert-pagination";
 import { getAlertLastReceieved } from "utils/helpers";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { useRouter } from "next/navigation";
+import AlertColumnsSelect, {
+  getHiddenColumnsLocalStorageKey,
+} from "./alert-columns-select";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-export const getDefaultColumnVisibility = (
-  columnVisibilityState: VisibilityState = {},
-  columnsToExclude: string[]
-) => {
-  const visibilityStateFromExcludedColumns =
-    columnsToExclude.reduce<VisibilityState>(
-      (acc, column) => ({ ...acc, [column]: false }),
-      {}
-    );
+const getColumnsOrderLocalStorageKey = (presetName: string = "default") => {
+  return `columnsOrder-${presetName}`;
+};
 
-  return {
-    ...columnVisibilityState,
-    ...visibilityStateFromExcludedColumns,
-  };
+export const staticColumns = ["checkbox", "alertMenu"];
+
+export const toVisibilityState = (columnsToHide: string[]) => {
+  return columnsToHide.reduce<VisibilityState>(
+    (acc, column) => ({ ...acc, [column]: false }),
+    {}
+  );
 };
 
 export const getColumnsOrder = (presetName?: string): ColumnOrderState => {
@@ -74,41 +67,33 @@ export const getColumnsOrder = (presetName?: string): ColumnOrderState => {
   return [];
 };
 
-const hardcodedDefaultHidden = [
-  "playbook_url",
-  "ack_status",
-  "deletedAt",
-  "created_by",
-  "assignees",
-];
-
 export const getHiddenColumns = (
-  presetName?: string,
-  columns?: ColumnDef<AlertDto>[]
+  columns: ColumnDef<AlertDto>[],
+  presetName?: string
 ): VisibilityState => {
-  const defaultHidden =
-    columns
-      ?.filter((c) => c.id && !AlertKnownKeys.includes(c.id))
-      .map((c) => c.id!) ?? [];
-  if (presetName === undefined) {
-    return getDefaultColumnVisibility({}, [
-      ...hardcodedDefaultHidden,
-      ...defaultHidden,
-    ]);
-  }
-
-  const hiddenColumnsFromLocalStorage = localStorage.getItem(
+  const savedColumnsToShow = localStorage.getItem(
     getHiddenColumnsLocalStorageKey(presetName)
   );
 
-  if (hiddenColumnsFromLocalStorage) {
-    return JSON.parse(hiddenColumnsFromLocalStorage);
+  if (!savedColumnsToShow || !presetName) {
+    return toVisibilityState(
+      columns
+        .filter(
+          (c) =>
+            c.id &&
+            AlertKnownKeys.includes(c.id) === false &&
+            staticColumns.includes(c.id) === false
+        )
+        .map((c) => c.id!) ?? []
+    );
   }
 
-  return getDefaultColumnVisibility({}, [
-    ...hardcodedDefaultHidden,
-    ...defaultHidden,
-  ]);
+  const columnsToShow = JSON.parse(savedColumnsToShow) as string[];
+  return toVisibilityState(
+    columns
+      .filter((c) => c.id && columnsToShow.includes(c.id) === false)
+      .map((c) => c.id!)
+  );
 };
 
 const getPaginatedData = (
@@ -178,6 +163,7 @@ export const useAlertTableCols = ({
         ]
       : ([] as ColumnDef<AlertDto>[])),
     columnHelper.accessor("severity", {
+      id: "severity",
       header: "Severity",
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
     }),
@@ -187,6 +173,7 @@ export const useAlertTableCols = ({
       cell: (context) => <AlertName alert={context.row.original} />,
     }),
     columnHelper.accessor("description", {
+      id: "description",
       header: "Description",
       cell: (context) => (
         <div
@@ -197,25 +184,12 @@ export const useAlertTableCols = ({
         </div>
       ),
     }),
-    columnHelper.accessor("pushed", {
-      id: "pushed",
-      header: () => (
-        <div className="flex items-center gap-1">
-          <span>Pushed</span>
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            tooltip="Whether the alert was pushed or pulled from the alert source"
-            variant="simple"
-            color="gray"
-          />
-        </div>
-      ),
-      cell: (context) => <PushPullBadge pushed={context.getValue()} />,
-    }),
     columnHelper.accessor("status", {
+      id: "status",
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
+      id: "lastReceived",
       header: "Last Received",
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
@@ -224,6 +198,7 @@ export const useAlertTableCols = ({
       ),
     }),
     columnHelper.accessor("source", {
+      id: "source",
       header: "Source",
       cell: (context) =>
         (context.getValue() ?? []).map((source, index) => (
@@ -239,6 +214,7 @@ export const useAlertTableCols = ({
         )),
     }),
     columnHelper.accessor("assignee", {
+      id: "assignee",
       header: "Assignee",
       cell: (context) => <AlertAssignee assignee={context.getValue()} />,
     }),
@@ -263,10 +239,6 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "alertMenu",
-            meta: {
-              thClassName: "sticky right-0",
-              tdClassName: "sticky right-0",
-            },
             cell: (context) => (
               <AlertMenu
                 alert={context.row.original}
@@ -288,7 +260,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName?: string;
-  columnsToExclude?: (keyof AlertDto)[];
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
   rowSelection?: {
@@ -309,17 +280,16 @@ export function AlertTable({
   rowSelection,
   rowPagination,
   isRefreshAllowed = true,
-  columnsToExclude = [],
 }: Props) {
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     getColumnsOrder(presetName)
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    getHiddenColumns(presetName, columns)
+    getHiddenColumns(columns, presetName)
   );
 
   useEffect(() => {
-    setColumnVisibility(getHiddenColumns(presetName, columns));
+    setColumnVisibility(getHiddenColumns(columns, presetName));
   }, [presetName, columns]);
 
   const table = useReactTable({
@@ -328,13 +298,14 @@ export function AlertTable({
       : alerts,
     columns: columns,
     state: {
-      columnVisibility: getDefaultColumnVisibility(
-        columnVisibility,
-        columnsToExclude
-      ),
+      columnVisibility: columnVisibility,
       columnOrder: columnOrder,
       rowSelection: rowSelection?.state,
       pagination: rowPagination?.state,
+      columnPinning: {
+        left: ["checkbox"],
+        right: ["alertMenu"],
+      },
     },
     initialState: {
       pagination: { pageSize: 10 },
@@ -350,14 +321,17 @@ export function AlertTable({
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: rowSelection?.onChange,
+    enableColumnPinning: true,
   });
+
+  const currentColOrder = useRef<string[]>();
 
   return (
     <>
       {presetName && (
         <AlertColumnsSelect
-          table={table}
           presetName={presetName}
+          table={table}
           isLoading={isAsyncLoading}
         />
       )}
@@ -374,23 +348,97 @@ export function AlertTable({
       <Table>
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHeaderCell
-                  key={header.id}
-                  className={`bg-white pb-0 capitalize ${
-                    header.column.columnDef.meta?.thClassName
-                      ? header.column.columnDef.meta?.thClassName
-                      : ""
-                  }`}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeaderCell>
-              ))}
-            </TableRow>
+            <DragDropContext
+              key={headerGroup.id}
+              onDragStart={() => {
+                currentColOrder.current = table
+                  .getAllColumns()
+                  .map((o) => o.id);
+              }}
+              onDragUpdate={(dragUpdateObj) => {
+                const colOrder = currentColOrder.current
+                  ? [...currentColOrder.current]
+                  : [];
+                const sIndex = dragUpdateObj.source.index;
+                const dIndex =
+                  dragUpdateObj.destination && dragUpdateObj.destination.index;
+                if (typeof sIndex === "number" && typeof dIndex === "number") {
+                  colOrder.splice(sIndex, 1);
+                  colOrder.splice(dIndex, 0, dragUpdateObj.draggableId);
+                  setColumnOrder(colOrder);
+                  if (presetName)
+                    localStorage.setItem(
+                      getColumnsOrderLocalStorageKey(presetName),
+                      JSON.stringify(colOrder)
+                    );
+                }
+              }}
+              onDragEnd={() => {}}
+            >
+              <Droppable droppableId="droppable" direction="horizontal">
+                {(droppableProvided) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    ref={droppableProvided.innerRef}
+                  >
+                    {headerGroup.headers.map((header, index) => (
+                      <Draggable
+                        key={header.id}
+                        draggableId={header.id}
+                        index={index}
+                        // isDragDisabled={!column.accessor}
+                      >
+                        {(provided) => {
+                          return (
+                            <TableHeaderCell
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              ref={provided.innerRef}
+                            >
+                              <div className="flex items-center">
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                                {presetName &&
+                                  staticColumns.includes(header.id) ===
+                                    false && (
+                                    <Icon
+                                      size="xs"
+                                      icon={XMarkIcon}
+                                      color="orange"
+                                      className="cursor-pointer"
+                                      onClick={() => {
+                                        header.column.toggleVisibility();
+                                        localStorage.setItem(
+                                          getHiddenColumnsLocalStorageKey(
+                                            presetName
+                                          ),
+                                          JSON.stringify(
+                                            table
+                                              .getAllColumns()
+                                              .filter(
+                                                (c) =>
+                                                  c.getIsVisible() &&
+                                                  c.id !== header.column.id
+                                              )
+                                              .map((c) => c.id)
+                                          )
+                                        );
+                                      }}
+                                    />
+                                  )}
+                              </div>
+                            </TableHeaderCell>
+                          );
+                        }}
+                      </Draggable>
+                    ))}
+                    {/* {droppableProvided.placeholder} */}
+                  </TableRow>
+                )}
+              </Droppable>
+            </DragDropContext>
           ))}
         </TableHead>
         <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />

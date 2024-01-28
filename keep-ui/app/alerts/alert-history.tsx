@@ -116,7 +116,6 @@ export function AlertHistory({ alerts }: Props) {
                 <AlertTable
                   alerts={alertsHistoryWithDate}
                   columns={alertTableColumns}
-                  columnsToExclude={["description"]}
                   isMenuColDisplayed={false}
                   isRefreshAllowed={false}
                   rowPagination={{

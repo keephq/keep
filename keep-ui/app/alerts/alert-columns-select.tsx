@@ -1,21 +1,9 @@
 import { Table } from "@tanstack/table-core";
 import { Subtitle } from "@tremor/react";
 import { AlertDto } from "./models";
-import { MouseEventHandler } from "react";
-import Select, {
-  components,
-  MultiValueGenericProps,
-  MultiValueProps,
-  Props,
-} from "react-select";
-import {
-  SortableContainer,
-  SortableContainerProps,
-  SortableElement,
-  SortEndHandler,
-  SortableHandle,
-} from "react-sortable-hoc";
-import { Column } from "@tanstack/react-table";
+import Select, { components, ValueContainerProps } from "react-select";
+import { staticColumns } from "./alert-table";
+import React from "react";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
@@ -27,48 +15,38 @@ export interface Option {
   readonly value: string;
   readonly label: string;
   readonly color: string;
-  readonly isFixed?: boolean;
   readonly isDisabled?: boolean;
 }
 
-function arrayMove<T>(array: readonly T[], from: number, to: number) {
-  const slicedArray = array.slice();
-  slicedArray.splice(
-    to < 0 ? array.length + to : to,
-    0,
-    slicedArray.splice(from, 1)[0]
+const ValueContainer = (props: ValueContainerProps<unknown, boolean>) => {
+  const { children, getValue, ...rest } = props;
+
+  var values = getValue();
+  var valueLabel = "";
+
+  if (values.length > 0)
+    valueLabel += props.selectProps.getOptionLabel(values[0]);
+  if (values.length > 1) valueLabel += ` & ${values.length - 1} more`;
+
+  // Keep standard placeholder and input from react-select
+  var childsToRender = React.Children.toArray(children).filter(
+    (child) =>
+      React.isValidElement(child) && // Ensure child is a ReactElement
+      ["Input", "DummyInput", "Placeholder"].includes((child.type as any).name)
   );
-  return slicedArray;
-}
 
-const columnsWithFixedPosition = ["alertMenu", "checkbox"];
-
-const SortableMultiValue = SortableElement((props: MultiValueProps<Option>) => {
-  // this prevents the menu from being opened/closed when the user clicks
-  // on a value to begin dragging it. ideally, detecting a click (instead of
-  // a drag) would still focus the control and toggle the menu, but that
-  // requires some magic with refs that are out of scope for this example
-  const onMouseDown: MouseEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const innerProps = { ...props.innerProps, onMouseDown };
-  return <components.MultiValue {...props} innerProps={innerProps} />;
-});
-
-const SortableMultiValueLabel = SortableHandle(
-  (props: MultiValueGenericProps) => <components.MultiValueLabel {...props} />
-);
-
-const SortableSelect = SortableContainer(Select) as React.ComponentClass<
-  Props<Option, true> & SortableContainerProps
->;
+  return (
+    <components.ValueContainer {...props}>
+      {!props.selectProps.inputValue && valueLabel}
+      {childsToRender}
+    </components.ValueContainer>
+  );
+};
 
 const convertColumnToOption = (column: any) => {
   return {
     label: column.id,
     value: column.id,
-    isFixed: columnsWithFixedPosition.includes(column.id),
   } as Option;
 };
 
@@ -78,99 +56,58 @@ export const getHiddenColumnsLocalStorageKey = (
   return `hiddenFields-${presetName}`;
 };
 
-export const getColumnsOrderLocalStorageKey = (
-  presetName: string = "default"
-) => {
-  return `columnsOrder-${presetName}`;
-};
-
-const filterFixedPositionColumns = (column: Column<AlertDto, unknown>) => {
-  return !columnsWithFixedPosition.includes(column.id);
-};
-
 export default function AlertColumnsSelect({
   table,
   presetName,
   isLoading,
 }: AlertColumnsSelectProps) {
   const columnsOptions = table
-    .getAllLeafColumns()
-    .filter(filterFixedPositionColumns)
+    .getAllColumns()
+    .filter((c) => c.getIsVisible() === false)
     .map(convertColumnToOption);
   const selectedColumns = table
     .getAllColumns()
-    .filter((col) => col.getIsVisible() && filterFixedPositionColumns(col))
-    .map(convertColumnToOption)
-    .sort(
-      (a, b) =>
-        table.getState().columnOrder.indexOf(a.label) -
-        table.getState().columnOrder.indexOf(b.label)
-    );
+    .filter(
+      (col) => col.getIsVisible() && staticColumns.includes(col.id) === false
+    )
+    .map(convertColumnToOption);
 
   const onChange = (valueKeys: string[]) => {
-    const hiddenColumns = table
+    table
       .getAllColumns()
-      .filter((col) => !valueKeys.includes(col.id))
-      .map((col) => col.id)
-      .reduce((obj, key) => {
-        // { "columnX": false, "columnY": false }
-        obj[key] = false;
-        return obj;
-      }, {} as any);
+      .filter((c) => c.getIsVisible() === false && valueKeys.includes(c.id))
+      .forEach((c) => c.toggleVisibility());
     // This is where visibility is being actually saved
     localStorage.setItem(
       getHiddenColumnsLocalStorageKey(presetName),
-      JSON.stringify(hiddenColumns)
+      JSON.stringify([...valueKeys, ...staticColumns])
     );
-    table.setColumnVisibility(hiddenColumns);
-    saveColumnsOrder(valueKeys);
-  };
-
-  const saveColumnsOrder = (newColumnsOrder: string[]) => {
-    table.setColumnOrder(newColumnsOrder);
-    // This is where ordering is being actually saved
-    localStorage.setItem(
-      getColumnsOrderLocalStorageKey(presetName),
-      JSON.stringify(newColumnsOrder)
-    );
-  };
-
-  const onSortEnd: SortEndHandler = ({ oldIndex, newIndex }) => {
-    const newColumnsOrder = arrayMove(selectedColumns, oldIndex, newIndex);
-    // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns in fixed positions
-    const newColumnsByKey = [
-      "checkbox",
-      ...newColumnsOrder.map((v) => v.value),
-      "alertMenu",
-    ];
-    saveColumnsOrder(newColumnsByKey);
   };
 
   return (
-    <>
+    <div className="w-96">
       <Subtitle>Columns</Subtitle>
-      <SortableSelect
+      <Select
         isMulti
         isClearable={false}
-        axis="xy"
-        useDragHandle
         value={selectedColumns}
+        styles={{
+          multiValue: (base, state) => {
+            return { ...base, backgroundColor: "white" };
+          },
+          multiValueRemove: (base, state) => {
+            return { ...base, display: "none" };
+          },
+        }}
         options={columnsOptions}
         isDisabled={isLoading}
         closeMenuOnSelect={false}
-        getHelperDimensions={({ node }) => node.getBoundingClientRect()}
-        components={{
-          // @ts-ignore We're failing to provide a required index prop to SortableElement
-          MultiValue: SortableMultiValue,
-          // @ts-ignore same as above
-          MultiValueLabel: SortableMultiValueLabel,
-        }}
-        onSortEnd={onSortEnd}
+        components={{ ValueContainer: ValueContainer as any }}
         onChange={(value) =>
           // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns displayed
-          onChange(["checkbox", ...value.map((v) => v.value), "alertMenu"])
+          onChange(value.map((v) => v.value))
         }
       />
-    </>
+    </div>
   );
 }

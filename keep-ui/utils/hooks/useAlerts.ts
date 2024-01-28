@@ -80,7 +80,7 @@ export const useAlerts = () => {
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
-    options?: SWRConfiguration
+    options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
       () =>
@@ -96,7 +96,9 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlerts = (options?: SWRConfiguration) => {
+  const useAllAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
     return useSWR<AlertDto[]>(
       () => (configData && session ? "alerts" : null),
       () =>
@@ -224,7 +226,8 @@ export const useAlerts = () => {
         console.log("Connected to pusher");
 
         return () => pusher.unsubscribe(channelName);
-      }
+      },
+      { revalidateOnFocus: false }
     );
   };
 

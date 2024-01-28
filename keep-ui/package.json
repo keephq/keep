@@ -305,6 +305,7 @@
     "pusher-js": "^8.3.0",
     "queue-microtask": "^1.2.3",
     "react": "^18.2.0",
+    "react-beautiful-dnd": "^13.1.1",
     "react-code-blocks": "^0.1.3",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.2",
@@ -321,7 +322,6 @@
     "react-select": "^5.8.0",
     "react-sliding-side-panel": "^2.0.3",
     "react-smooth": "^2.0.2",
-    "react-sortable-hoc": "^2.0.0",
     "react-toastify": "^9.1.3",
     "react-transition-group": "^4.4.5",
     "react-zlib-js": "^1.0.5",
@@ -412,6 +412,7 @@
     "@types/js-cookie": "^3.0.3",
     "@types/js-yaml": "^4.0.5",
     "@types/node": "20.2.1",
+    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-modal": "^3.16.0",
     "@types/uuid": "^9.0.1"
   },
