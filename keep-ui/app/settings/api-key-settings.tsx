@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { AuthenticationType } from "utils/authenticationType";
 import { Config } from "./users-settings";
 import CreateApiKeyModal from "./create-api-key-modal";
+import ApiKeysMenu from "./api-key-menu";
 
 interface ApiKeyResponse {
   apiKey: string;
@@ -106,6 +107,9 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
               <TableHeaderCell className="text-right">
                 Last Used 
               </TableHeaderCell>
+              <TableHeaderCell>
+              {/* Menu */}
+              </TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -122,6 +126,9 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
                 </TableCell>
                 <TableCell className="text-right">
                   <Text>{key.last_used ?? "Never"}</Text>
+                </TableCell>
+                <TableCell>
+                    <ApiKeysMenu apiKeyId={key.reference_id}/>
                 </TableCell>
               </TableRow>
             ))}
