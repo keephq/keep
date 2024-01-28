@@ -35,6 +35,7 @@ SINGLE_TENANT_EMAIL = "admin@keephq"
 class AuthenticatedEntity:
     tenant_id: str
     email: str
+    api_key_name: Optional[str] = None
 
 
 def get_user_email(request: Request) -> str | None:
@@ -124,22 +125,23 @@ else:
     jwks_client = None
 
 
-def AuthVerifier(scopes: list[str] = []):
+def AuthVerifier(scopes: list[str] = [], returnApiKeyName: bool = False):
     # Determine the authentication type from the environment variable
     auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 
     # Return the appropriate verifier based on the auth type
     if auth_type == AuthenticationType.MULTI_TENANT.value:
-        return AuthVerifierMultiTenant(scopes)
+        return AuthVerifierMultiTenant(scopes, returnApiKeyName)
     else:
-        return AuthVerifierSingleTenant(scopes)
+        return AuthVerifierSingleTenant(scopes, returnApiKeyName)
 
 
 class AuthVerifierMultiTenant:
     """Handles authentication and authorization for multi tenant mode"""
 
-    def __init__(self, scopes: list[str] = []) -> None:
+    def __init__(self, scopes: list[str] = [], returnApiKeyName: bool = False) -> None:
         self.scopes = scopes
+        self.returnApiKeyName = returnApiKeyName
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -217,6 +219,10 @@ class AuthVerifierMultiTenant:
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
         request.state.tenant_id = tenant_api_key.tenant_id
+
+        if self.returnApiKeyName:
+            return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
+
         return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
 
     def __call__(
@@ -261,8 +267,9 @@ class AuthVerifierMultiTenant:
 class AuthVerifierSingleTenant:
     """Handles authentication and authorization for single tenant mode"""
 
-    def __init__(self, scopes: list[str] = []) -> None:
+    def __init__(self, scopes: list[str] = [], returnApiKeyName: bool = False) -> None:
         self.scopes = scopes
+        self.returnApiKeyName = returnApiKeyName
 
     def _verify_api_key(
         self,
@@ -291,6 +298,10 @@ class AuthVerifierSingleTenant:
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
         request.state.tenant_id = tenant_api_key.tenant_id
+
+        if self.returnApiKeyName:
+            return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
+
         return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
 
     def _verify_bearer_token(
