@@ -99,7 +99,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Name</TableHeaderCell>
+              <TableHeaderCell className="text-left">Name</TableHeaderCell>
               <TableHeaderCell className="text-right">Key</TableHeaderCell>
               <TableHeaderCell className="text-right">
                 Created By
