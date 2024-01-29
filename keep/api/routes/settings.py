@@ -391,6 +391,8 @@ def get_keys(
     api_keys = get_api_keys(
         session=session,
         tenant_id=tenant_id,
+        email=authenticated_entity.email,
+        role=authenticated_entity.role
     )
 
     if api_keys:

@@ -216,6 +216,8 @@ def create_api_key(
 def get_api_keys(
     session: Session,
     tenant_id: str,
+    role: str,
+    email: str
 ) -> [TenantApiKey]:
     """
     Gets all active API keys for the given tenant.
@@ -227,10 +229,21 @@ def get_api_keys(
     Returns:
         str: _description_
     """
-    statement = (
-        select(TenantApiKey)
-        .where(TenantApiKey.tenant_id == tenant_id)
-    )
+
+    statement = None
+
+    if role != 'admin':
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.created_by == email)
+        )
+
+    else:
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.tenant_id == tenant_id)
+        )
 
     api_keys = session.exec(statement).all()
 
