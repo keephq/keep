@@ -7,6 +7,8 @@ import inspect
 import json
 import logging
 import os
+import types
+import typing
 from dataclasses import fields
 from typing import get_args
 
@@ -136,6 +138,41 @@ class ProvidersFactory:
             )
             return {}
 
+    def __get_method_param_type(param: inspect.Parameter) -> str:
+        """
+        Get the type name from a function parameter annotation.
+        Handles generic types like Union by returning the first non-NoneType arg.
+        Falls back to 'str' if it can't determine the type.
+
+        Args:
+            param (inspect.Parameter): The parameter to get the type from.
+
+        Returns:
+            str: The type name.
+
+        """
+        annotation_type = param.annotation
+        if isinstance(annotation_type, type):
+            # it's a simple type
+            return annotation_type.__name__
+
+        annotation_type_origin = typing.get_origin(annotation_type)
+        annotation_type_args = typing.get_args(annotation_type)
+        if annotation_type_args and annotation_type_origin in [
+            typing.Union,
+            types.UnionType,
+        ]:
+            # get the first annotation type argument which type is not NoneType
+            arg_type = next(
+                item.__name__
+                for item in annotation_type_args
+                if item.__name__ != "NoneType"
+            )
+            return arg_type
+        else:
+            # otherwise fallback to str
+            return "str"
+
     def __get_methods(provider_class: BaseProvider) -> list[ProviderMethodDTO]:
         methods = []
         for method in provider_class.PROVIDER_METHODS:
@@ -154,28 +191,15 @@ class ProvidersFactory:
                     mandatory = False
                     default = str(params[param].default)
                 expected_values = list(get_args(params[param].annotation))
-                try:
-                    func_params.append(
-                        ProviderMethodParam(
-                            name=param,
-                            type=params[param].annotation.__name__,
-                            mandatory=mandatory,
-                            default=default,
-                            expected_values=expected_values,
-                        )
+                func_params.append(
+                    ProviderMethodParam(
+                        name=param,
+                        type=ProvidersFactory.__get_method_param_type(params[param]),
+                        mandatory=mandatory,
+                        default=default,
+                        expected_values=expected_values,
                     )
-                except AttributeError:
-                    # e.g. on attributes such as "user: str | None = None" 
-                    #      params[param].annotation.__name__, throws "'types.UnionType' object has no attribute '__name__'"
-                    func_params.append(
-                        ProviderMethodParam(
-                            name=param,
-                            type=str(params[param].annotation),
-                            mandatory=mandatory,
-                            default=default,
-                            expected_values=[str(e) for e in expected_values],
-                        )
-                    )
+                )
             methods.append(ProviderMethodDTO(**method.dict(), func_params=func_params))
         return methods
 
