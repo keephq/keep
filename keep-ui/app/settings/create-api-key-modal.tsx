@@ -9,9 +9,14 @@ import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 const roleOptions: RoleOption[] = [
   {
+    value: "webhook",
+    label: "webhook",
+    tooltip: "Webhook role has ability to write alerts",
+  },
+  {
     value: "cli",
     label: "CLI",
-    tooltip: "CLI has write alert ability",
+    tooltip: " CLI has admin ability for Keep management purposes (configure from API, etc)"
   },
   {
     value: "create_new",
