@@ -192,13 +192,6 @@
           "pages": ["api-ref/healthcheck/healthcheck"]
         },
         {
-          "group": "Tenant",
-          "pages": [
-            "api-ref/tenant/is-onboarded",
-            "api-ref/tenant/save-github-installation-id"
-          ]
-        },
-        {
           "group": "Alerts",
           "pages": ["api-ref/alerts/get-alerts", "api-ref/alerts/receive-event"]
         },
