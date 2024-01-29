@@ -138,7 +138,7 @@ class ProvidersFactory:
             )
             return {}
 
-    def __get_method_param_type(param: inspect.Parameter) -> str:
+    def _get_method_param_type(param: inspect.Parameter) -> str:
         """
         Get the type name from a function parameter annotation.
         Handles generic types like Union by returning the first non-NoneType arg.
@@ -152,6 +152,10 @@ class ProvidersFactory:
 
         """
         annotation_type = param.annotation
+        if annotation_type is inspect.Parameter.empty:
+            # if no annotation, defaults to str
+            return "str"
+
         if isinstance(annotation_type, type):
             # it's a simple type
             return annotation_type.__name__
@@ -194,7 +198,7 @@ class ProvidersFactory:
                 func_params.append(
                     ProviderMethodParam(
                         name=param,
-                        type=ProvidersFactory.__get_method_param_type(params[param]),
+                        type=ProvidersFactory._get_method_param_type(params[param]),
                         mandatory=mandatory,
                         default=default,
                         expected_values=expected_values,
