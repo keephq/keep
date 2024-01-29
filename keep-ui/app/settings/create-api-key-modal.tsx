@@ -2,9 +2,6 @@ import React from 'react';
 import { useForm, Controller, SubmitHandler, FieldValues } from 'react-hook-form';
 import { Dialog } from "@headlessui/react";
 import { TextInput, Button, Subtitle, SearchSelect, SearchSelectItem, Icon } from "@tremor/react";
-import { AuthenticationType } from "utils/authenticationType";
-import { User } from "./models";
-import { getApiURL } from "utils/apiUrl";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 const roleOptions: RoleOption[] = [
@@ -14,7 +11,7 @@ const roleOptions: RoleOption[] = [
     tooltip: "Webhook role has ability to write alerts",
   },
   {
-    value: "cli",
+    value: "admin",
     label: "CLI",
     tooltip: " CLI has admin ability for Keep management purposes (configure from API, etc)"
   },

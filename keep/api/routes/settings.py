@@ -362,6 +362,7 @@ async def create_key(
     try:
         body = await request.json()
         unique_api_key_id = body['name']
+        role = body['role']
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -370,7 +371,7 @@ async def create_key(
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
         unique_api_key_id=unique_api_key_id,
-        role=AdminRole,
+        role=role,
         is_system=False,
     )
 
