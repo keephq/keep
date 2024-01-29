@@ -2,8 +2,9 @@ import hashlib
 import logging
 from typing import Optional
 from uuid import uuid4
+from datetime import datetime
 
-from sqlmodel import Session, select, delete
+from sqlmodel import Session, select
 
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.core.rbac import Role
@@ -55,6 +56,37 @@ def delete_api_key_internal(
 
         return True
     return False
+
+
+def update_key_last_used(
+    session: Session,
+    tenant_id: str,
+    unique_api_key_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    # Get API Key from database
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    tenant_api_key_entry = session.exec(statement).first()
+
+    # Update last used
+    tenant_api_key_entry.last_used = datetime.utcnow()
+    session.commit()
 
 
 def update_api_key_internal(
