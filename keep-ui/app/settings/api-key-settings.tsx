@@ -102,6 +102,9 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
               <TableHeaderCell>Name</TableHeaderCell>
               <TableHeaderCell className="text-right">Key</TableHeaderCell>
               <TableHeaderCell className="text-right">
+                Created By
+              </TableHeaderCell>
+              <TableHeaderCell className="text-right">
                 Created At
               </TableHeaderCell>
               <TableHeaderCell className="text-right">
@@ -121,9 +124,14 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
                 <TableCell className="text-right">
                   <CopyBlock {...getCopyBlockProps(key.secret)} />
                 </TableCell>
+
+                <TableCell className="text-right">
+                  <Text>{key.created_by}</Text>
+                </TableCell>
                 <TableCell className="text-right">
                   <Text>{key.created_at}</Text>
                 </TableCell>
+
                 <TableCell className="text-right">
                   <Text>{key.last_used ?? "Never"}</Text>
                 </TableCell>
