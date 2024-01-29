@@ -624,13 +624,13 @@ async def receive_generic_event(
     )
 
     if authenticated_entity.api_key_name:
-        logger.info("Updating API Key last used")
+        logger.debug("Updating API Key last used")
         update_key_last_used(
             session,
             tenant_id,
             unique_api_key_id=authenticated_entity.api_key_name
         )
-        logger.info("Successfully updated API Key last used")
+        logger.debug("Successfully updated API Key last used")
 
     return alert
 
