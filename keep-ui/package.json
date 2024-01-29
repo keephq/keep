@@ -316,6 +316,7 @@
     "react-modal": "^3.16.1",
     "react-name-initials-avatar": "^0.0.7",
     "react-querybuilder": "^6.5.4",
+    "react-quill": "^2.0.0",
     "react-resize-detector": "^8.1.0",
     "react-router": "^6.11.1",
     "react-select": "^5.8.0",

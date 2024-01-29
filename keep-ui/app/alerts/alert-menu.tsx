@@ -29,7 +29,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
     },
-  } = useProviders();
+  } = useProviders({ revalidateOnMount: false, revalidateOnFocus: false});
 
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnMount: false });
