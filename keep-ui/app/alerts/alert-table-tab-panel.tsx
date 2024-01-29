@@ -85,7 +85,7 @@ export default function AlertTableTabPanel({
     .filter((alert) =>
       getPresetAndOptionsAlerts(alert, selectedOptions, preset.name)
     )
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
+    .toSorted((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
 
   const additionalColsToGenerate = [
     ...new Set(
