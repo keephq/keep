@@ -170,11 +170,20 @@ export const useAlerts = () => {
             new TextDecoder().decode(decompressedAlert)
           );
 
-          next(null, {
-            alerts: newAlerts,
-            lastSubscribedDate: new Date(),
-            isAsyncLoading: false,
-            pusherChannel,
+          next(null, (data) => {
+            if (data) {
+              return {
+                ...data,
+                alerts: [...newAlerts, ...data.alerts],
+              };
+            }
+
+            return {
+              alerts: newAlerts,
+              lastSubscribedDate: new Date(),
+              isAsyncLoading: false,
+              pusherChannel,
+            };
           });
         });
 
@@ -212,7 +221,7 @@ export const useAlerts = () => {
         next(null, {
           alerts: [],
           lastSubscribedDate: new Date(),
-          isAsyncLoading: false,
+          isAsyncLoading: true,
           pusherChannel,
         });
         console.log("Connected to pusher");
