@@ -1,0 +1,15 @@
+---
+title: "Openshift"
+sidebarTitle: "Openshift"
+---
+
+Keep's Helm Chart also supports Openshift installation.
+
+Simply follow the Kubernetes set-up guide, but make sure to modify the following lines under frontend(/backend).route in the values.yaml file as follows:
+```
+enabled: true
+host: <desired-hostname>
+path: <desired-path> # should be / for default
+tls: <desired-tls-configs>
+wildcardPolicy: <desired-wildcardPolicy>
+```
