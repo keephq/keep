@@ -36,6 +36,7 @@ class AuthenticatedEntity:
     tenant_id: str
     email: str
     api_key_name: Optional[str] = None
+    role: Optional[str] = None
 
 
 def get_user_email(request: Request) -> str | None:
@@ -125,23 +126,22 @@ else:
     jwks_client = None
 
 
-def AuthVerifier(scopes: list[str] = [], returnApiKeyName: bool = False):
+def AuthVerifier(scopes: list[str] = []):
     # Determine the authentication type from the environment variable
     auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 
     # Return the appropriate verifier based on the auth type
     if auth_type == AuthenticationType.MULTI_TENANT.value:
-        return AuthVerifierMultiTenant(scopes, returnApiKeyName)
+        return AuthVerifierMultiTenant(scopes)
     else:
-        return AuthVerifierSingleTenant(scopes, returnApiKeyName)
+        return AuthVerifierSingleTenant(scopes)
 
 
 class AuthVerifierMultiTenant:
     """Handles authentication and authorization for multi tenant mode"""
 
-    def __init__(self, scopes: list[str] = [], returnApiKeyName: bool = False) -> None:
+    def __init__(self, scopes: list[str] = []) -> None:
         self.scopes = scopes
-        self.returnApiKeyName = returnApiKeyName
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -178,7 +178,7 @@ class AuthVerifierMultiTenant:
                         status_code=403,
                         detail="You don't have the required permissions to access this resource",
                     )
-                return AuthenticatedEntity(tenant_id, email)
+                return AuthenticatedEntity(tenant_id, email, None, role_name)
             # authorization error
             except HTTPException:
                 raise
@@ -220,10 +220,7 @@ class AuthVerifierMultiTenant:
             )
         request.state.tenant_id = tenant_api_key.tenant_id
 
-        if self.returnApiKeyName:
-            return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
-
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
 
     def __call__(
         self,
@@ -267,9 +264,8 @@ class AuthVerifierMultiTenant:
 class AuthVerifierSingleTenant:
     """Handles authentication and authorization for single tenant mode"""
 
-    def __init__(self, scopes: list[str] = [], returnApiKeyName: bool = False) -> None:
+    def __init__(self, scopes: list[str] = []) -> None:
         self.scopes = scopes
-        self.returnApiKeyName = returnApiKeyName
 
     def _verify_api_key(
         self,
@@ -299,10 +295,7 @@ class AuthVerifierSingleTenant:
             )
         request.state.tenant_id = tenant_api_key.tenant_id
 
-        if self.returnApiKeyName:
-            return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
-
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -339,7 +332,7 @@ class AuthVerifierSingleTenant:
                 status_code=403,
                 detail="You don't have the required permissions to access this resource",
             )
-        return AuthenticatedEntity(tenant_id, email)
+        return AuthenticatedEntity(tenant_id, email, None, role_name)
 
     def __call__(
         self,
