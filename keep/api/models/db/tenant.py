@@ -18,6 +18,7 @@ class TenantApiKey(SQLModel, table=True):
     key_hash: str = Field(primary_key=True)
     tenant: Tenant = Relationship()
     is_system: bool = False
+    is_deleted: bool = False
     system_description: Optional[str] = None
     created_by: str
     role: str

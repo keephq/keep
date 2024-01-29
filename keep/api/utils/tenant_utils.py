@@ -43,7 +43,7 @@ def delete_api_key_internal(
 
     if api_key:
         # Delete from database
-        session.delete(api_key)
+        api_key.is_deleted = True
         session.commit()
 
         # Delete from secret manager
@@ -237,12 +237,14 @@ def get_api_keys(
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
             .where(TenantApiKey.created_by == email)
+            .where(TenantApiKey.is_deleted == False)
         )
 
     else:
         statement = (
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.is_deleted == False)
         )
 
     api_keys = session.exec(statement).all()
