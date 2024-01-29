@@ -91,14 +91,6 @@ export default function AlertColumnsSelect({
         isMulti
         isClearable={false}
         value={selectedColumns}
-        styles={{
-          multiValue: (base, state) => {
-            return { ...base, backgroundColor: "white" };
-          },
-          multiValueRemove: (base, state) => {
-            return { ...base, display: "none" };
-          },
-        }}
         options={columnsOptions}
         isDisabled={isLoading}
         closeMenuOnSelect={false}
