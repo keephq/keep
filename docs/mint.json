@@ -28,11 +28,28 @@
       "pages": [
         "overview/introduction",
         "overview/keyconcepts",
-        "overview/alertseverityandstatus",
         "overview/usecases",
         "overview/ruleengine",
         "overview/examples",
-        "overview/alternatives"
+        "overview/comparison"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": [
+        "development/getting-started",
+        "development/authentication",
+        "development/external-url"
+      ]
+    },
+    {
+      "group": "Deployment",
+      "pages": [
+        "deployment/authentication",
+        "deployment/secret-manager",
+        "deployment/docker",
+        "deployment/kubernetes",
+        "deployment/openshift"
       ]
     },
     {
@@ -41,6 +58,7 @@
         "platform/overview",
         "platform/providers",
         "platform/alerts",
+        "platform/alertseverityandstatus",
         "platform/workflows",
         "platform/workflowbuilder",
         "platform/settings"
@@ -51,8 +69,9 @@
       "pages": [
         "providers/overview",
         "providers/fingerprints",
+        "providers/adding-a-new-provider",
         {
-          "group": "Supported providers",
+          "group": "Supported Providers",
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
@@ -247,15 +266,6 @@
 
           ]
         }
-      ]
-    },
-    {
-      "group": "Development",
-      "pages": [
-        "development/getting-started",
-        "development/authentication",
-        "development/external-url",
-        "development/adding-a-new-provider"
       ]
     }
   ],
