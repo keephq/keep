@@ -52,7 +52,7 @@ class AlertDto(BaseModel):
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []
-    usedApiKey: bool = False
+    apiKeyRef: str | None = None
     message: str | None = None
     description: str | None = None
     pushed: bool = False  # Whether the alert was pushed or pulled from the provider
