@@ -4,6 +4,9 @@ import {
   TableRow,
   TableHeaderCell,
   Callout,
+  AccordionBody,
+  AccordionHeader,
+  Accordion,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto, AlertKnownKeys } from "./models";
@@ -117,6 +120,19 @@ interface UseAlertTableCols {
   isMenuDisplayed?: boolean;
 }
 
+export const jsonColumn = (jsonObject: object) => {
+  return (
+    <Accordion>
+      <AccordionHeader>Value</AccordionHeader>
+      <AccordionBody>
+        <pre className="overflow-y-scroll">
+          {JSON.stringify(jsonObject, null, 2)}
+        </pre>
+      </AccordionBody>
+    </Accordion>
+  );
+};
+
 export const useAlertTableCols = ({
   additionalColsToGenerate = [],
   isCheckboxDisplayed,
@@ -132,11 +148,11 @@ export const useAlertTableCols = ({
       cell: (context) => {
         const alertValue = context.row.original[colName as keyof AlertDto];
 
-        if (typeof alertValue === "object") {
-          return JSON.stringify(alertValue);
+        if (typeof alertValue === "object" && alertValue !== null) {
+          return jsonColumn(alertValue);
         }
 
-        if (alertValue) {
+        if (alertValue && alertValue !== null) {
           return alertValue.toString();
         }
 
