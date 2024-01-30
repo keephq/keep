@@ -1,5 +1,5 @@
 import { Table } from "@tanstack/table-core";
-import { Subtitle } from "@tremor/react";
+import { Subtitle, MultiSelect, MultiSelectItem } from "@tremor/react";
 import { AlertDto } from "./models";
 import Select, { components, ValueContainerProps } from "react-select";
 import { staticColumns } from "./alert-table";
@@ -56,6 +56,14 @@ export const getHiddenColumnsLocalStorageKey = (
   return `hiddenFields-${presetName}`;
 };
 
+export const saveColumns = (presetName: string, columns: string[]) => {
+  // This is where visibility is being actually saved
+  localStorage.setItem(
+    getHiddenColumnsLocalStorageKey(presetName),
+    JSON.stringify([...columns, ...staticColumns])
+  );
+};
+
 export default function AlertColumnsSelect({
   table,
   presetName,
@@ -63,31 +71,38 @@ export default function AlertColumnsSelect({
 }: AlertColumnsSelectProps) {
   const columnsOptions = table
     .getAllColumns()
-    .filter((c) => c.getIsVisible() === false)
-    .map(convertColumnToOption);
+    .filter((c) => staticColumns.includes(c.id) === false)
+    .map((c) => c.id);
   const selectedColumns = table
     .getAllColumns()
     .filter(
       (col) => col.getIsVisible() && staticColumns.includes(col.id) === false
     )
-    .map(convertColumnToOption);
+    .map((c) => c.id);
 
   const onChange = (valueKeys: string[]) => {
-    table
+    const columnsToShow = table
       .getAllColumns()
-      .filter((c) => c.getIsVisible() === false && valueKeys.includes(c.id))
-      .forEach((c) => c.toggleVisibility());
-    // This is where visibility is being actually saved
-    localStorage.setItem(
-      getHiddenColumnsLocalStorageKey(presetName),
-      JSON.stringify([...valueKeys, ...staticColumns])
-    );
+      .filter((c) => c.getIsVisible() === false && valueKeys.includes(c.id));
+    const columnsToHide = table
+      .getAllColumns()
+      .filter((c) => c.getIsVisible() && !valueKeys.includes(c.id));
+    columnsToShow.forEach((c) => c.toggleVisibility(true));
+    columnsToHide.forEach((c) => c.toggleVisibility(false));
+    if (presetName) saveColumns(presetName, valueKeys);
   };
 
   return (
     <div className="w-96">
       <Subtitle>Columns</Subtitle>
-      <Select
+      <MultiSelect value={selectedColumns} onValueChange={onChange}>
+        {columnsOptions.map((column) => (
+          <MultiSelectItem key={column} value={column}>
+            {column}
+          </MultiSelectItem>
+        ))}
+      </MultiSelect>
+      {/* <Select
         isMulti
         isClearable={false}
         value={selectedColumns}
@@ -99,7 +114,7 @@ export default function AlertColumnsSelect({
           // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns displayed
           onChange(value.map((v) => v.value))
         }
-      />
+      /> */}
     </div>
   );
 }

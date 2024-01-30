@@ -21,12 +21,13 @@ import {
   getPaginationRowModel,
   PaginationState,
   ColumnDef,
+  Header,
 } from "@tanstack/react-table";
 import Image from "next/image";
 import AlertName from "./alert-name";
 import AlertAssignee from "./alert-assignee";
 import AlertSeverity from "./alert-severity";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import AlertPagination from "./alert-pagination";
 import { getAlertLastReceieved } from "utils/helpers";
 import AlertTableCheckbox from "./alert-table-checkbox";
@@ -35,8 +36,14 @@ import AlertMenu from "./alert-menu";
 import { useRouter } from "next/navigation";
 import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
+  saveColumns,
 } from "./alert-columns-select";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DragUpdate,
+} from "react-beautiful-dnd";
 
 const getColumnsOrderLocalStorageKey = (presetName: string = "default") => {
   return `columnsOrder-${presetName}`;
@@ -272,6 +279,10 @@ interface Props {
   };
 }
 
+const displayRemoveColumnIcon = (columnId: string, presetName?: string) => {
+  return staticColumns.includes(columnId) === false && presetName;
+};
+
 export function AlertTable({
   alerts,
   columns,
@@ -284,13 +295,6 @@ export function AlertTable({
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     getColumnsOrder(presetName)
   );
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    getHiddenColumns(columns, presetName)
-  );
-
-  useEffect(() => {
-    setColumnVisibility(getHiddenColumns(columns, presetName));
-  }, [presetName, columns]);
 
   const table = useReactTable({
     data: rowPagination
@@ -298,7 +302,7 @@ export function AlertTable({
       : alerts,
     columns: columns,
     state: {
-      columnVisibility: columnVisibility,
+      columnVisibility: getHiddenColumns(columns, presetName),
       columnOrder: columnOrder,
       rowSelection: rowSelection?.state,
       pagination: rowPagination?.state,
@@ -319,12 +323,66 @@ export function AlertTable({
     manualPagination: rowPagination !== undefined,
     onPaginationChange: rowPagination?.onChange,
     onColumnOrderChange: setColumnOrder,
-    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: rowSelection?.onChange,
     enableColumnPinning: true,
   });
 
+  function AlertTableColumn({
+    index,
+    header,
+  }: {
+    index: number;
+    header: Header<AlertDto, unknown>;
+  }) {
+    return (
+      <Draggable
+        key={header.id}
+        draggableId={header.id}
+        index={index}
+        // isDragDisabled={!column.accessor}
+      >
+        {(provided) => {
+          return (
+            <TableHeaderCell
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              ref={provided.innerRef}
+            >
+              <div className="flex items-center">
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext()
+                )}
+              </div>
+            </TableHeaderCell>
+          );
+        }}
+      </Draggable>
+    );
+  }
+
   const currentColOrder = useRef<string[]>();
+  const onDragUpdate = (dragUpdateObj: DragUpdate) => {
+    const colOrder = currentColOrder.current
+      ? [...currentColOrder.current]
+      : [];
+    const sIndex = dragUpdateObj.source.index;
+    const dIndex = dragUpdateObj.destination && dragUpdateObj.destination.index;
+    if (typeof sIndex === "number" && typeof dIndex === "number") {
+      colOrder.splice(sIndex, 1);
+      colOrder.splice(dIndex, 0, dragUpdateObj.draggableId);
+      setColumnOrder(colOrder);
+      if (presetName)
+        localStorage.setItem(
+          getColumnsOrderLocalStorageKey(presetName),
+          JSON.stringify(colOrder)
+        );
+    }
+  };
+  const onDragStart = () => {
+    currentColOrder.current = table.getAllColumns().map((o) => o.id);
+  };
+  const onDragEnd = () => {};
 
   return (
     <>
@@ -350,30 +408,9 @@ export function AlertTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <DragDropContext
               key={headerGroup.id}
-              onDragStart={() => {
-                currentColOrder.current = table
-                  .getAllColumns()
-                  .map((o) => o.id);
-              }}
-              onDragUpdate={(dragUpdateObj) => {
-                const colOrder = currentColOrder.current
-                  ? [...currentColOrder.current]
-                  : [];
-                const sIndex = dragUpdateObj.source.index;
-                const dIndex =
-                  dragUpdateObj.destination && dragUpdateObj.destination.index;
-                if (typeof sIndex === "number" && typeof dIndex === "number") {
-                  colOrder.splice(sIndex, 1);
-                  colOrder.splice(dIndex, 0, dragUpdateObj.draggableId);
-                  setColumnOrder(colOrder);
-                  if (presetName)
-                    localStorage.setItem(
-                      getColumnsOrderLocalStorageKey(presetName),
-                      JSON.stringify(colOrder)
-                    );
-                }
-              }}
-              onDragEnd={() => {}}
+              onDragStart={onDragStart}
+              onDragUpdate={onDragUpdate}
+              onDragEnd={onDragEnd}
             >
               <Droppable droppableId="droppable" direction="horizontal">
                 {(droppableProvided) => (
@@ -382,59 +419,12 @@ export function AlertTable({
                     ref={droppableProvided.innerRef}
                   >
                     {headerGroup.headers.map((header, index) => (
-                      <Draggable
-                        key={header.id}
-                        draggableId={header.id}
+                      <AlertTableColumn
+                        key={index}
                         index={index}
-                        // isDragDisabled={!column.accessor}
-                      >
-                        {(provided) => {
-                          return (
-                            <TableHeaderCell
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              ref={provided.innerRef}
-                            >
-                              <div className="flex items-center">
-                                {flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                                {presetName &&
-                                  staticColumns.includes(header.id) ===
-                                    false && (
-                                    <Icon
-                                      size="xs"
-                                      icon={XMarkIcon}
-                                      color="orange"
-                                      className="cursor-pointer"
-                                      onClick={() => {
-                                        header.column.toggleVisibility();
-                                        localStorage.setItem(
-                                          getHiddenColumnsLocalStorageKey(
-                                            presetName
-                                          ),
-                                          JSON.stringify(
-                                            table
-                                              .getAllColumns()
-                                              .filter(
-                                                (c) =>
-                                                  c.getIsVisible() &&
-                                                  c.id !== header.column.id
-                                              )
-                                              .map((c) => c.id)
-                                          )
-                                        );
-                                      }}
-                                    />
-                                  )}
-                              </div>
-                            </TableHeaderCell>
-                          );
-                        }}
-                      </Draggable>
+                        header={header}
+                      />
                     ))}
-                    {/* {droppableProvided.placeholder} */}
                   </TableRow>
                 )}
               </Droppable>
