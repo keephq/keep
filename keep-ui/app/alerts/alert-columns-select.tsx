@@ -18,38 +18,6 @@ export interface Option {
   readonly isDisabled?: boolean;
 }
 
-const ValueContainer = (props: ValueContainerProps<unknown, boolean>) => {
-  const { children, getValue, ...rest } = props;
-
-  var values = getValue();
-  var valueLabel = "";
-
-  if (values.length > 0)
-    valueLabel += props.selectProps.getOptionLabel(values[0]);
-  if (values.length > 1) valueLabel += ` & ${values.length - 1} more`;
-
-  // Keep standard placeholder and input from react-select
-  var childsToRender = React.Children.toArray(children).filter(
-    (child) =>
-      React.isValidElement(child) && // Ensure child is a ReactElement
-      ["Input", "DummyInput", "Placeholder"].includes((child.type as any).name)
-  );
-
-  return (
-    <components.ValueContainer {...props}>
-      {!props.selectProps.inputValue && valueLabel}
-      {childsToRender}
-    </components.ValueContainer>
-  );
-};
-
-const convertColumnToOption = (column: any) => {
-  return {
-    label: column.id,
-    value: column.id,
-  } as Option;
-};
-
 export const getHiddenColumnsLocalStorageKey = (
   presetName: string = "default"
 ) => {
@@ -67,7 +35,6 @@ export const saveColumns = (presetName: string, columns: string[]) => {
 export default function AlertColumnsSelect({
   table,
   presetName,
-  isLoading,
 }: AlertColumnsSelectProps) {
   const columnsOptions = table
     .getAllColumns()
@@ -102,19 +69,6 @@ export default function AlertColumnsSelect({
           </MultiSelectItem>
         ))}
       </MultiSelect>
-      {/* <Select
-        isMulti
-        isClearable={false}
-        value={selectedColumns}
-        options={columnsOptions}
-        isDisabled={isLoading}
-        closeMenuOnSelect={false}
-        components={{ ValueContainer: ValueContainer as any }}
-        onChange={(value) =>
-          // todo (tb): this is a stupid hack to keep the checkbox and alertMenu columns displayed
-          onChange(value.map((v) => v.value))
-        }
-      /> */}
     </div>
   );
 }

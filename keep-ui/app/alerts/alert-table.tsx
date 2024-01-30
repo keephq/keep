@@ -3,12 +3,11 @@ import {
   TableHead,
   TableRow,
   TableHeaderCell,
-  Icon,
   Callout,
 } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto, AlertKnownKeys } from "./models";
-import { CircleStackIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CircleStackIcon } from "@heroicons/react/24/outline";
 import {
   ColumnOrderState,
   OnChangeFn,
@@ -36,7 +35,6 @@ import AlertMenu from "./alert-menu";
 import { useRouter } from "next/navigation";
 import AlertColumnsSelect, {
   getHiddenColumnsLocalStorageKey,
-  saveColumns,
 } from "./alert-columns-select";
 import {
   DragDropContext,
@@ -278,10 +276,6 @@ interface Props {
     onChange: OnChangeFn<PaginationState>;
   };
 }
-
-const displayRemoveColumnIcon = (columnId: string, presetName?: string) => {
-  return staticColumns.includes(columnId) === false && presetName;
-};
 
 export function AlertTable({
   alerts,
