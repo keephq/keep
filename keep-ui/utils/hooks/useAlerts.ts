@@ -19,10 +19,15 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   endpointAlerts: AlertDto[],
   pusherAlerts: AlertDto[]
 ): AlertDto[] => {
-  const pusherAlertsWithLastReceivedDate = pusherAlerts.map((pusherAlert) => ({
-    ...pusherAlert,
-    lastReceived: new Date(pusherAlert.lastReceived),
-  }));
+  // Create a map of the latest received times for the new alerts
+  const uniquePusherAlerts = new Map<string, AlertDto>(
+    pusherAlerts.map((alert) => [
+      alert.fingerprint,
+      { ...alert, lastReceived: new Date(alert.lastReceived) },
+    ])
+  );
+
+  const pusherAlertsWithLastReceivedDate = [...uniquePusherAlerts.values()];
 
   const endpointAlertsWithLastReceivedDate = endpointAlerts.map(
     (endpointAlert) => ({
@@ -31,26 +36,18 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
     })
   );
 
-  // Create a map of the latest received times for the new alerts
-  const latestReceivedTimes = new Map(
-    pusherAlertsWithLastReceivedDate.map((alert) => [
-      alert.fingerprint,
-      alert.lastReceived,
-    ])
-  );
-
   // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
   const filteredEndpointAlerts = endpointAlertsWithLastReceivedDate.filter(
     (endpointAlert) => {
-      const newAlertReceivedTime = latestReceivedTimes.get(
+      const pusherAlertByFingerprint = uniquePusherAlerts.get(
         endpointAlert.fingerprint
       );
 
-      if (newAlertReceivedTime === undefined) {
+      if (pusherAlertByFingerprint === undefined) {
         return true;
       }
 
-      return endpointAlert.lastReceived > newAlertReceivedTime;
+      return endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived;
     }
   );
 
@@ -174,7 +171,7 @@ export const useAlerts = () => {
             if (data) {
               return {
                 ...data,
-                alerts: [...newAlerts, ...data.alerts],
+                alerts: [...data.alerts, ...newAlerts],
               };
             }
 

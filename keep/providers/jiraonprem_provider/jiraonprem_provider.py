@@ -2,6 +2,7 @@
 JiraonpremProvider is a class that implements the BaseProvider interface for Jira updates.
 """
 import dataclasses
+import json
 from typing import List
 from urllib.parse import urlencode, urljoin
 
@@ -380,26 +381,29 @@ class JiraonpremProvider(BaseProvider):
 
     def _notify(
         self,
+        summary: str,
+        description: str = "",
+        issue_type: str = "",
+        project_key: str = "",
+        board_name: str = "",
+        labels: List[str] = None,
+        components: List[str] = None,
+        custom_fields: dict = None,
         **kwargs: dict,
     ):
         """
         Notify jira by creating an issue.
         """
-        # extracrt the required params
-        project_key = kwargs.get("project_key", "")
         # if the user didn't provider a project_key, try to extract it from the board name
         if not project_key:
-            board_name = kwargs.get("board_name", "")
             project_key = self._extract_project_key_from_board_name(board_name)
-        summary = kwargs.get("summary", "")
-        description = kwargs.get("description", "")
-        # issue_type, issuetype - both are supported
-        issue_type = kwargs.get("issuetype", kwargs.get("issue_type", ""))
-
+        issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
         if not project_key or not summary or not issue_type or not description:
             raise ProviderException(
                 f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
             )
+        if labels and isinstance(labels, str):
+            labels = json.loads(labels.replace("'", '"'))
         try:
             self.logger.info("Notifying jira...")
             result = self.__create_issue(
@@ -407,6 +411,10 @@ class JiraonpremProvider(BaseProvider):
                 summary=summary,
                 description=description,
                 issue_type=issue_type,
+                labels=labels,
+                components=components,
+                custom_fields=custom_fields,
+                **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
             self.logger.info("Notified jira!")

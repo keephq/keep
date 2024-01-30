@@ -220,7 +220,6 @@ class ProvidersFactory:
                 )
                 supports_webhook = (
                     issubclass(provider_class, BaseProvider)
-                    and provider_class.__dict__.get("format_alert") is not None
                     and provider_class.__dict__.get("webhook_template") is not None
                 )
                 can_notify = (

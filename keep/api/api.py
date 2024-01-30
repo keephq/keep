@@ -32,7 +32,6 @@ from keep.api.routes import (
     rules,
     settings,
     status,
-    tenant,
     whoami,
     workflows,
 )
@@ -149,7 +148,6 @@ def get_app(
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
-    app.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
