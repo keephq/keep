@@ -51,7 +51,7 @@ export default function AlertName({ alert }: Props) {
   const router = useRouter();
   const { data: workflows = [] } = useWorkflows();
   // get providers
-  const { data: providersData = { installed_providers: [] }} = useProviders({ revalidateOnFocus: false});
+  const { data: providersData = { installed_providers: [] }} = useProviders({ revalidateOnFocus: false, revalidateOnMount: false});
 
   const ticketingProviders = useMemo(() =>
     providersData.installed_providers.filter(provider => provider.tags.includes('ticketing')),
