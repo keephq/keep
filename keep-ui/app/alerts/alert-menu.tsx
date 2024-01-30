@@ -43,17 +43,12 @@ export default function AlertMenu({ alert, openHistory, isMenuOpen, setIsMenuOpe
 
 
   const { refs, x, y } = useFloating();
-  const [localIsMenuOpen, setLocalIsMenuOpen] = useState(false);
 
   const alertName = alert.name;
   const fingerprint = alert.fingerprint;
   const alertSource = alert.source![0];
 
   const provider = installedProviders.find((p) => p.type === alert.source[0]);
-
-  useEffect(() => {
-    setLocalIsMenuOpen(isMenuOpen);
-  }, [isMenuOpen]);
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -140,13 +135,10 @@ export default function AlertMenu({ alert, openHistory, isMenuOpen, setIsMenuOpe
   const canAssign = !alert.assignee;
 
   const handleMenuToggle = () => {
-    const newIsMenuOpen = !localIsMenuOpen;
-    setLocalIsMenuOpen(newIsMenuOpen);
-    setIsMenuOpen(newIsMenuOpen ? alert.fingerprint : '');
+    setIsMenuOpen(alert.fingerprint);
   };
 
   const handleCloseMenu = () => {
-    setLocalIsMenuOpen(false);
     setIsMenuOpen('');
   }
 
