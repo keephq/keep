@@ -16,6 +16,7 @@ import { useMemo, useState, createContext, useContext} from "react";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from './alert-note-modal';
 import { ModalProvider, useModal } from './modal-context';
+import { set } from "date-fns";
 
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
@@ -48,8 +49,10 @@ interface Props {
   alert: AlertDto;
   isNoteModalOpen: boolean;
   setNoteModalOpen: (key: string) => void;
+  isTicketModalOpen: boolean;
+  setTicketModalOpen: (key: string) => void;
 }
-export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen }: Props) {
+export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, isTicketModalOpen, setTicketModalOpen}: Props) {
   const router = useRouter();
   const { data: workflows = [] } = useWorkflows();
   // get providers
@@ -60,13 +63,11 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen }: 
     [providersData.installed_providers]
   );
 
-  const [isAssignTicketModalOpen, setIsAssignTicketModalOpen] = useState(false);
-
   const handleNoteClick = () => {
     setNoteModalOpen(alert.fingerprint);
   };
 
-  const closeAssignTicketModal = () => setIsAssignTicketModalOpen(false);
+  const closeAssignTicketModal = () => setTicketModalOpen('');
 
   const {
     name,
@@ -95,7 +96,7 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen }: 
 
   const handleIconClick = () => {
     if (!ticketUrl) {
-      setIsAssignTicketModalOpen(true);
+      setTicketModalOpen(alert.fingerprint);
     } else {
       window.open(ticketUrl, '_blank'); // Open the ticket URL in a new tab
     }
@@ -205,7 +206,7 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen }: 
           </div>
         </div>
         <AlertAssignTicketModal
-          isOpen={isAssignTicketModalOpen}
+          isOpen={isTicketModalOpen}
           onClose={closeAssignTicketModal}
           ticketingProviders={ticketingProviders}
           alertFingerprint={alert.fingerprint}

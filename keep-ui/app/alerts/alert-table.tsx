@@ -135,6 +135,7 @@ export const useAlertTableCols = ({
   const router = useRouter();
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [noteModalOpen, setNoteModalOpen] = useState('');
+  const [ticketModalOpen, setTicketModalOpen] = useState('');
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -188,6 +189,8 @@ export const useAlertTableCols = ({
       cell: (context) => <AlertName alert={context.row.original}
                             isNoteModalOpen={noteModalOpen === context.row.original.fingerprint}
                             setNoteModalOpen={setNoteModalOpen}
+                            isTicketModalOpen={ticketModalOpen === context.row.original.fingerprint}
+                            setTicketModalOpen={setTicketModalOpen}
       />,
     }),
     columnHelper.accessor("description", {
