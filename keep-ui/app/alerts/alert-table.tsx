@@ -333,11 +333,16 @@ export function AlertTable({
         key={header.id}
         draggableId={header.id}
         index={index}
-        // isDragDisabled={!column.accessor}
+        isDragDisabled={staticColumns.includes(header.id)}
       >
         {(provided) => {
           return (
             <TableHeaderCell
+              className={
+                staticColumns.includes(header.id) === false
+                  ? `hover:bg-slate-100`
+                  : ""
+              }
               {...provided.draggableProps}
               {...provided.dragHandleProps}
               ref={provided.innerRef}
