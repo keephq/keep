@@ -61,7 +61,8 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: list[str] = []  # Whether the alert is deleted or not
+    deleted: bool = False  # Whether the alert has been deleted
+    assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
 
@@ -72,11 +73,11 @@ class AlertDto(BaseModel):
         return fingerprint
 
     @validator("deleted", pre=True, always=True)
-    def validate_old_deleted(cls, deleted, values):
-        """This is a temporary validator to handle the old deleted field"""
+    def validate_deleted(cls, deleted, values):
         if isinstance(deleted, bool):
-            return []
-        return deleted
+            return deleted
+        if isinstance(deleted, list):
+            return values.get("lastReceived") in deleted
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,6 +103,8 @@ class AlertDto(BaseModel):
             )
             values["status"] = AlertStatus.FIRING
 
+        values.pop("assignees", None)
+        values.pop("deletedAt", None)
         return values
 
     class Config:

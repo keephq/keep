@@ -19,10 +19,8 @@ import { Column } from "@tanstack/react-table";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
-  columnOrder: string[];
   presetName?: string;
   isLoading: boolean;
-  setColumnVisibility: any;
 }
 
 export interface Option {
@@ -93,9 +91,7 @@ const filterFixedPositionColumns = (column: Column<AlertDto, unknown>) => {
 export default function AlertColumnsSelect({
   table,
   presetName,
-  setColumnVisibility,
   isLoading,
-  columnOrder,
 }: AlertColumnsSelectProps) {
   const columnsOptions = table
     .getAllLeafColumns()
@@ -106,7 +102,9 @@ export default function AlertColumnsSelect({
     .filter((col) => col.getIsVisible() && filterFixedPositionColumns(col))
     .map(convertColumnToOption)
     .sort(
-      (a, b) => columnOrder.indexOf(a.label) - columnOrder.indexOf(b.label)
+      (a, b) =>
+        table.getState().columnOrder.indexOf(a.label) -
+        table.getState().columnOrder.indexOf(b.label)
     );
 
   const onChange = (valueKeys: string[]) => {
@@ -124,7 +122,7 @@ export default function AlertColumnsSelect({
       getHiddenColumnsLocalStorageKey(presetName),
       JSON.stringify(hiddenColumns)
     );
-    setColumnVisibility(hiddenColumns);
+    table.setColumnVisibility(hiddenColumns);
     saveColumnsOrder(valueKeys);
   };
 

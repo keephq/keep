@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "es6",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -25,9 +21,7 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/components/*": [
-        "./components/*"
-      ]
+      "@/components/*": ["./components/*"]
     }
   },
   "include": [
@@ -37,7 +31,5 @@
     ".next/types/**/*.ts",
     "pages/signin.tsx"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

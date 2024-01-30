@@ -1,4 +1,4 @@
-export const fetcher = async (url: string, accessToken: string) => {
+export const fetcher = async (url: string, accessToken: string | undefined) => {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -7,7 +7,7 @@ export const fetcher = async (url: string, accessToken: string) => {
 
   // Ensure that the fetch was successful
   if (!response.ok) {
-    throw new Error('An error occurred while fetching the data.');
+    throw new Error("An error occurred while fetching the data.");
   }
 
   // Parse and return the JSON data

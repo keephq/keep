@@ -3,22 +3,17 @@ import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { AlertDto } from "./models";
+import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
   selectedRowIds: string[];
-  onDelete: (
-    fingerprint: string,
-    lastReceived: Date,
-    restore?: boolean
-  ) => void;
   alerts: AlertDto[];
 }
 
-export default function AlertActions({
-  selectedRowIds,
-  onDelete: callDelete,
-  alerts,
-}: Props) {
+export default function AlertActions({ selectedRowIds, alerts }: Props) {
+  const { useAllAlerts } = useAlerts();
+  const { mutate } = useAllAlerts();
+
   const onDelete = async () => {
     const confirmed = confirm(
       `Are you sure you want to delete ${selectedRowIds.length} alert(s)?`
@@ -50,7 +45,7 @@ export default function AlertActions({
           body: JSON.stringify(body),
         });
         if (res.ok) {
-          callDelete(fingerprint, alert.lastReceived);
+          await mutate();
         }
       }
     }
