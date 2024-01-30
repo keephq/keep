@@ -136,6 +136,8 @@ export const useAlertTableCols = ({
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [noteModalOpen, setNoteModalOpen] = useState('');
   const [ticketModalOpen, setTicketModalOpen] = useState('');
+  const [currentOpenMenu, setCurrentOpenMenu] = useState('');
+
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -282,6 +284,8 @@ export const useAlertTableCols = ({
                     scroll: false,
                   })
                 }
+                isMenuOpen={context.row.original.fingerprint === currentOpenMenu}
+                setIsMenuOpen={setCurrentOpenMenu}
               />
             ),
           }),

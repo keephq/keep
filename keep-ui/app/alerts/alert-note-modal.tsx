@@ -34,14 +34,14 @@ const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
       'bullet',
       'link',
       'align',
-      'blockquote', // Add quote format
-      'code-block', // Add code block format
-      'color', // Add color format
+      'blockquote',
+      'code-block',
+      'color',
     ];
 
     const modules = {
       toolbar: [
-        [{ header: '1' }, { header: '2' }, { font: [] }],
+        [{ header: '1' }, { header: '2' }],
         [{ list: 'ordered' }, { list: 'bullet' }],
         ['bold', 'italic', 'underline'],
         ['link'],
