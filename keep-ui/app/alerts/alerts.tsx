@@ -12,6 +12,7 @@ import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
 import { usePathname, useRouter } from "next/navigation";
+import { ModalProvider } from './modal-context';
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -58,38 +59,40 @@ export default function Alerts() {
     presets.findIndex((preset) => preset.name === currentSelectedPreset) ?? 0;
 
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
-      {pusherChannel && (
-        <AlertStreamline
-          pusherChannel={pusherChannel}
-          lastSubscribedDate={lastSubscribedDate}
-        />
-      )}
-      {/* key is necessary to re-render tabs on preset delete */}
-      <TabGroup key={presets.length} index={selectedPresetIndex}>
-        <TabList variant="line" color="orange">
-          {presets.map((preset, index) => (
-            <Tab
-              key={preset.name}
-              tabIndex={index}
-              onClick={() => selectPreset(preset.name)}
-            >
-              {preset.name}
-            </Tab>
-          ))}
-        </TabList>
-        <TabPanels>
-          {presets.map((preset) => (
-            <AlertTableTabPanel
-              key={preset.name}
-              preset={preset}
-              alerts={alerts}
-              isAsyncLoading={isAsyncLoading}
-            />
-          ))}
-        </TabPanels>
-        <AlertHistory alerts={alerts} />
-      </TabGroup>
-    </Card>
+    <ModalProvider>
+      <Card className="mt-10 p-4 md:p-10 mx-auto">
+        {pusherChannel && (
+          <AlertStreamline
+            pusherChannel={pusherChannel}
+            lastSubscribedDate={lastSubscribedDate}
+          />
+        )}
+        {/* key is necessary to re-render tabs on preset delete */}
+        <TabGroup key={presets.length} index={selectedPresetIndex}>
+          <TabList variant="line" color="orange">
+            {presets.map((preset, index) => (
+              <Tab
+                key={preset.name}
+                tabIndex={index}
+                onClick={() => selectPreset(preset.name)}
+              >
+                {preset.name}
+              </Tab>
+            ))}
+          </TabList>
+          <TabPanels>
+            {presets.map((preset) => (
+              <AlertTableTabPanel
+                key={preset.name}
+                preset={preset}
+                alerts={alerts}
+                isAsyncLoading={isAsyncLoading}
+              />
+            ))}
+          </TabPanels>
+          <AlertHistory alerts={alerts} />
+        </TabGroup>
+      </Card>
+    </ModalProvider>
   );
 }

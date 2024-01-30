@@ -6,16 +6,17 @@ import {
   TrashIcon,
   PencilSquareIcon
 } from "@heroicons/react/24/outline";
-import { PencilIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertKnownKeys } from "./models";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useProviders } from "utils/hooks/useProviders";
-import { useMemo, useState } from "react";
+import { useMemo, useState, createContext, useContext} from "react";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from './alert-note-modal';
+import { ModalProvider, useModal } from './modal-context';
+
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
   Object.fromEntries(
@@ -46,7 +47,6 @@ const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
 interface Props {
   alert: AlertDto;
 }
-
 export default function AlertName({ alert }: Props) {
   const router = useRouter();
   const { data: workflows = [] } = useWorkflows();
@@ -59,8 +59,13 @@ export default function AlertName({ alert }: Props) {
   );
 
   const [isAssignTicketModalOpen, setIsAssignTicketModalOpen] = useState(false);
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  const closeNoteModal = () => setIsNoteModalOpen(false);
+  const { openModal } = useModal();
+
+  const noteModalKey = `notes-${alert.fingerprint}`;
+
+  const handleNoteClick = () => {
+    openModal(noteModalKey);
+  };
 
   const closeAssignTicketModal = () => setIsAssignTicketModalOpen(false);
 
@@ -97,128 +102,120 @@ export default function AlertName({ alert }: Props) {
     }
   };
 
-  const handleNoteClick = () => {
-    setIsNoteModalOpen(true);
-  };
-
-  const handleNoteSave = (noteContent: string) => {
-    console.log('Note content saved:', noteContent);
-  };
 
   return (
-    <div className="max-w-[340px]">
-      <div className="flex items-center justify-between">
-        <div className="truncate" title={alert.name}>
-          {name}{" "}
-        </div>
-        <div>
-          {(url ?? generatorURL) && (
-            <a href={url || generatorURL} target="_blank">
-              <Icon
-                icon={ArrowTopRightOnSquareIcon}
-                tooltip="Open Original Alert"
-                color="gray"
-                variant="solid"
-                size="xs"
-                className="ml-1"
-              />
-            </a>
-          )}
-          <Icon
-            icon={TicketIcon}
-            tooltip={ticketUrl ? `Ticket Assigned ${ticketStatus ? `(status: ${ticketStatus})` : ''}` : "Click to assign Ticket"}
-            size="xs"
-            color={ticketUrl ? "green" : "gray"}
-            className="ml-1 cursor-pointer"
-            variant="solid"
-            onClick={handleIconClick}
-          />
-          {playbook_url && (
-            <a href={playbook_url} target="_blank">
-              <Icon
-                icon={BookOpenIcon}
-                tooltip="Playbook"
-                size="xs"
-                color="gray"
-                className="ml-1"
-                variant="solid"
-              />
-            </a>
-          )}
-          <Icon
-            icon={PencilSquareIcon}
-            tooltip="Click to add note"
-            size="xs"
-            color="gray"
-            className="ml-1 cursor-pointer"
-            variant="solid"
-            onClick={handleNoteClick}
-          />
-          {deleted && (
+      <div className="max-w-[340px]">
+        <div className="flex items-center justify-between">
+          <div className="truncate" title={alert.name}>
+            {name}{" "}
+          </div>
+          <div>
+            {(url ?? generatorURL) && (
+              <a href={url || generatorURL} target="_blank">
+                <Icon
+                  icon={ArrowTopRightOnSquareIcon}
+                  tooltip="Open Original Alert"
+                  color="gray"
+                  variant="solid"
+                  size="xs"
+                  className="ml-1"
+                />
+              </a>
+            )}
             <Icon
-              icon={TrashIcon}
-              tooltip="This alert has been deleted"
+              icon={TicketIcon}
+              tooltip={ticketUrl ? `Ticket Assigned ${ticketStatus ? `(status: ${ticketStatus})` : ''}` : "Click to assign Ticket"}
               size="xs"
-              color="gray"
-              className="ml-1"
-              variant="solid"
-            />
-          )}
-          {relevantWorkflows.length > 0 && (
-            <Icon
-              icon={Cog8ToothIcon}
-              size="xs"
-              color={`${
-                relevantWorkflows.every(
-                  (wf) => wf.last_execution_status === "success"
-                )
-                  ? "green"
-                  : relevantWorkflows.some(
-                      (wf) => wf.last_execution_status === "error"
-                    )
-                  ? "red"
-                  : relevantWorkflows.some(
-                      (wf) =>
-                        wf.last_execution_status === "providers_not_configured"
-                    )
-                  ? "amber"
-                  : "gray"
-              }`}
-              tooltip={`${
-                relevantWorkflows.every(
-                  (wf) => wf.last_execution_status === "success"
-                )
-                  ? "All workflows executed successfully"
-                  : relevantWorkflows.some(
-                      (wf) => wf.last_execution_status === "error"
-                    )
-                  ? "Some workflows failed to execute"
-                  : relevantWorkflows.some(
-                      (wf) =>
-                        wf.last_execution_status === "providers_not_configured"
-                    )
-                  ? "Some workflows are not configured"
-                  : "Workflows have yet to execute"
-              }`}
-              onClick={() => handleWorkflowClick(relevantWorkflows)}
+              color={ticketUrl ? "green" : "gray"}
               className="ml-1 cursor-pointer"
               variant="solid"
+              onClick={handleIconClick}
             />
-          )}
+            {playbook_url && (
+              <a href={playbook_url} target="_blank">
+                <Icon
+                  icon={BookOpenIcon}
+                  tooltip="Playbook"
+                  size="xs"
+                  color="gray"
+                  className="ml-1"
+                  variant="solid"
+                />
+              </a>
+            )}
+            <Icon
+              icon={PencilSquareIcon}
+              tooltip="Click to add note"
+              size="xs"
+              color="gray"
+              className="ml-1 cursor-pointer"
+              variant="solid"
+              onClick={handleNoteClick}
+            />
+            {deleted && (
+              <Icon
+                icon={TrashIcon}
+                tooltip="This alert has been deleted"
+                size="xs"
+                color="gray"
+                className="ml-1"
+                variant="solid"
+              />
+            )}
+            {relevantWorkflows.length > 0 && (
+              <Icon
+                icon={Cog8ToothIcon}
+                size="xs"
+                color={`${
+                  relevantWorkflows.every(
+                    (wf) => wf.last_execution_status === "success"
+                  )
+                    ? "green"
+                    : relevantWorkflows.some(
+                        (wf) => wf.last_execution_status === "error"
+                      )
+                    ? "red"
+                    : relevantWorkflows.some(
+                        (wf) =>
+                          wf.last_execution_status === "providers_not_configured"
+                      )
+                    ? "amber"
+                    : "gray"
+                }`}
+                tooltip={`${
+                  relevantWorkflows.every(
+                    (wf) => wf.last_execution_status === "success"
+                  )
+                    ? "All workflows executed successfully"
+                    : relevantWorkflows.some(
+                        (wf) => wf.last_execution_status === "error"
+                      )
+                    ? "Some workflows failed to execute"
+                    : relevantWorkflows.some(
+                        (wf) =>
+                          wf.last_execution_status === "providers_not_configured"
+                      )
+                    ? "Some workflows are not configured"
+                    : "Workflows have yet to execute"
+                }`}
+                onClick={() => handleWorkflowClick(relevantWorkflows)}
+                className="ml-1 cursor-pointer"
+                variant="solid"
+              />
+            )}
+          </div>
         </div>
+        <AlertAssignTicketModal
+          isOpen={isAssignTicketModalOpen}
+          onClose={closeAssignTicketModal}
+          ticketingProviders={ticketingProviders}
+          alertFingerprint={alert.fingerprint}
+        />
+          <AlertNoteModal
+            isOpenKey={noteModalKey}
+            initialContent={note || ''}
+            alertFingerprint={alert.fingerprint}
+          />
       </div>
-      <AlertAssignTicketModal
-        isOpen={isAssignTicketModalOpen}
-        onClose={closeAssignTicketModal}
-        ticketingProviders={ticketingProviders}
-        alertFingerprint={alert.fingerprint}
-      />
-      <AlertNoteModal
-        isOpen={isNoteModalOpen}
-        onClose={closeNoteModal}
-        initialContent={note || ''}
-        alertFingerprint={alert.fingerprint}
-      />
-    </div>
   );
 }

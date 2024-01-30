@@ -1,26 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 const ReactQuill = typeof window === 'object' ? require('react-quill') : () => false;
 import 'react-quill/dist/quill.snow.css';
 import { Button } from '@tremor/react';
 import { getApiURL } from '../../utils/apiUrl';
 import { useSession } from 'next-auth/react';
+import { useModal } from './modal-context';
 
 interface AlertNoteModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpenKey: string;
   initialContent: string;
   alertFingerprint: string;
 }
 
 const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
-    isOpen,
-    onClose,
+    isOpenKey,
     initialContent,
     alertFingerprint
   }) => {
     const [noteContent, setNoteContent] = useState<string>(initialContent);
+    const { modals, closeModal } = useModal();
+    const isOpen = modals[isOpenKey];
+
+    const handleClose = () => {
+        closeModal(isOpenKey);
+      };
     // get the session
     const { data: session } = useSession();
 
@@ -71,7 +76,7 @@ const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
         if (response.ok) {
           // Handle success
           console.log('Note saved successfully');
-          onClose(); // Close the modal on success
+          handleClose(); // Close the modal on success
         } else {
           // Handle error
           console.error('Failed to save note');
@@ -105,7 +110,7 @@ const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
                 Save
               </Button>
               <Button // Use Tremor button for Cancel
-                onClick={onClose}
+                onClick={handleClose}
                 variant="secondary"
               >
                 Cancel

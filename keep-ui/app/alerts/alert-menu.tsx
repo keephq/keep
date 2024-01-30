@@ -29,7 +29,7 @@ export default function AlertMenu({ alert, openHistory }: Props) {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
     },
-  } = useProviders({ revalidateOnMount: false, revalidateOnFocus: false});
+  } = useProviders();
 
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnMount: false });
@@ -38,6 +38,12 @@ export default function AlertMenu({ alert, openHistory }: Props) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
+
+  function buttonClicked() {
+    setCustomOpen(prev => !prev);
+  }
+
   const { refs, x, y } = useFloating();
   const alertName = alert.name;
   const fingerprint = alert.fingerprint;
@@ -134,14 +140,14 @@ export default function AlertMenu({ alert, openHistory }: Props) {
       <Menu>
         {({ open }) => (
           <>
-            <Menu.Button ref={refs.setReference}>
+            <Menu.Button onClick={buttonClicked} ref={refs.setReference}>
               <Icon
                 icon={EllipsisHorizontalIcon}
                 className="hover:bg-gray-100"
                 color="gray"
               />
             </Menu.Button>
-            {open && (
+            {customOpen && (
               <Portal>
                 {/* when menu is opened, prevent scrolling with fixed div */}
                 <div className="fixed inset-0" aria-hidden="true" />
