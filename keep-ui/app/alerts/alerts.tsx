@@ -12,7 +12,6 @@ import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
 import { usePathname, useRouter } from "next/navigation";
-import { ModalProvider } from './modal-context';
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -59,7 +58,6 @@ export default function Alerts() {
     presets.findIndex((preset) => preset.name === currentSelectedPreset) ?? 0;
 
   return (
-    <ModalProvider>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         {pusherChannel && (
           <AlertStreamline
@@ -93,6 +91,5 @@ export default function Alerts() {
           <AlertHistory alerts={alerts} />
         </TabGroup>
       </Card>
-    </ModalProvider>
   );
 }

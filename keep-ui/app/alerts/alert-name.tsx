@@ -46,8 +46,10 @@ const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
 
 interface Props {
   alert: AlertDto;
+  isNoteModalOpen: boolean;
+  setNoteModalOpen: (key: string) => void;
 }
-export default function AlertName({ alert }: Props) {
+export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen }: Props) {
   const router = useRouter();
   const { data: workflows = [] } = useWorkflows();
   // get providers
@@ -59,12 +61,9 @@ export default function AlertName({ alert }: Props) {
   );
 
   const [isAssignTicketModalOpen, setIsAssignTicketModalOpen] = useState(false);
-  const { openModal } = useModal();
-
-  const noteModalKey = `notes-${alert.fingerprint}`;
 
   const handleNoteClick = () => {
-    openModal(noteModalKey);
+    setNoteModalOpen(alert.fingerprint);
   };
 
   const closeAssignTicketModal = () => setIsAssignTicketModalOpen(false);
@@ -147,7 +146,7 @@ export default function AlertName({ alert }: Props) {
               icon={PencilSquareIcon}
               tooltip="Click to add note"
               size="xs"
-              color="gray"
+              color={note ? "green" : "gray"}
               className="ml-1 cursor-pointer"
               variant="solid"
               onClick={handleNoteClick}
@@ -212,7 +211,8 @@ export default function AlertName({ alert }: Props) {
           alertFingerprint={alert.fingerprint}
         />
           <AlertNoteModal
-            isOpenKey={noteModalKey}
+            isOpen={isNoteModalOpen}
+            handleClose={() => setNoteModalOpen('')}
             initialContent={note || ''}
             alertFingerprint={alert.fingerprint}
           />

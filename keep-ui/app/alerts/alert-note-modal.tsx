@@ -6,26 +6,22 @@ import 'react-quill/dist/quill.snow.css';
 import { Button } from '@tremor/react';
 import { getApiURL } from '../../utils/apiUrl';
 import { useSession } from 'next-auth/react';
-import { useModal } from './modal-context';
 
 interface AlertNoteModalProps {
-  isOpenKey: string;
+  isOpen: boolean;
+  handleClose: () => void;
   initialContent: string;
   alertFingerprint: string;
 }
 
 const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
-    isOpenKey,
+    isOpen,
+    handleClose,
     initialContent,
     alertFingerprint
   }) => {
     const [noteContent, setNoteContent] = useState<string>(initialContent);
-    const { modals, closeModal } = useModal();
-    const isOpen = modals[isOpenKey];
 
-    const handleClose = () => {
-        closeModal(isOpenKey);
-      };
     // get the session
     const { data: session } = useSession();
 
