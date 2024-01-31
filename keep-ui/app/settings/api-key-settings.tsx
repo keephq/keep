@@ -100,14 +100,14 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
           <TableHead>
             <TableRow>
               <TableHeaderCell className="text-left">Name</TableHeaderCell>
-              <TableHeaderCell className="text-right">Key</TableHeaderCell>
-              <TableHeaderCell className="text-right">
+              <TableHeaderCell className="text-left">Key</TableHeaderCell>
+              <TableHeaderCell className="text-left">
                 Created By
               </TableHeaderCell>
-              <TableHeaderCell className="text-right">
+              <TableHeaderCell className="text-left">
                 Created At
               </TableHeaderCell>
-              <TableHeaderCell className="text-right">
+              <TableHeaderCell className="text-left">
                 Last Used 
               </TableHeaderCell>
               <TableHeaderCell>
@@ -121,21 +121,23 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
                 key={key.reference_id}
               >
                 <TableCell>{key.reference_id}</TableCell>
-                <TableCell className="text-right">
-                  <CopyBlock {...getCopyBlockProps(key.secret)} />
+                <TableCell className="text-left">
+                  <CopyBlock 
+                    {...getCopyBlockProps(key.secret)} 
+                  />
                 </TableCell>
 
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <Text>{key.created_by}</Text>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <Text>{key.created_at}</Text>
                 </TableCell>
 
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <Text>{key.last_used ?? "Never"}</Text>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-left">
                     <ApiKeysMenu apiKeyId={key.reference_id}/>
                 </TableCell>
               </TableRow>
