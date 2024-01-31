@@ -69,7 +69,7 @@ export const useAlertTableCols = ({
             <Accordion>
               <AccordionHeader>Value</AccordionHeader>
               <AccordionBody>
-                <pre className="overflow-y-scroll">
+                <pre className="overflow-scroll max-w-lg">
                   {JSON.stringify(alertValue, null, 2)}
                 </pre>
               </AccordionBody>
