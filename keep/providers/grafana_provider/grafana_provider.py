@@ -487,6 +487,54 @@ class GrafanaProvider(BaseProvider):
                 return alerts
         return []
 
+    @staticmethod
+    def simulate_alert(**kwargs) -> dict:
+        import hashlib
+        import json
+        import random
+
+        from keep.providers.grafana_provider.alerts_mock import ALERTS
+
+        alert_type = kwargs.get("alert_type")
+        if not alert_type:
+            alert_type = random.choice(list(ALERTS.keys()))
+
+        alert_payload = ALERTS[alert_type]["payload"]
+        alert_parameters = ALERTS[alert_type].get("parameters", {})
+        # Generate random data for parameters
+        for parameter, parameter_options in alert_parameters.items():
+            if "." in parameter:
+                parameter = parameter.split(".")
+                if parameter[0] not in alert_payload:
+                    alert_payload[parameter[0]] = {}
+                alert_payload[parameter[0]][parameter[1]] = random.choice(
+                    parameter_options
+                )
+            else:
+                alert_payload[parameter] = random.choice(parameter_options)
+
+        # Implement specific Grafana alert structure here
+        # For example:
+        alert_payload["state"] = AlertStatus.FIRING.value
+        alert_payload["evalMatches"] = [
+            {
+                "value": random.randint(0, 100),
+                "metric": "some_metric",
+                "tags": alert_payload.get("labels", {}),
+            }
+        ]
+
+        # Generate fingerprint
+        fingerprint_src = json.dumps(alert_payload, sort_keys=True)
+        fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
+        alert_payload["fingerprint"] = fingerprint
+
+        return {
+            "alerts": [alert_payload],
+            "severity": alert_payload.get("labels", {}).get("severity"),
+            "title": "Grafana Alert - {}".format(alert_type),
+        }
+
 
 if __name__ == "__main__":
     # Output debug messages
