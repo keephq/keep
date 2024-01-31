@@ -11,8 +11,6 @@ from fastapi import (
 from pydantic import BaseModel, Field
 
 from keep.api.core.db import (
-    get_user as get_user_from_db,
-    get_user_by_api_key as get_user_by_api_key_from_db,
     get_users as get_users_from_db,
     create_user as create_user_in_db,
     delete_user as delete_user_from_db
