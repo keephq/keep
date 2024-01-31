@@ -61,12 +61,16 @@ interface Props {
   alerts: AlertDto[];
   preset: Preset;
   isAsyncLoading: boolean;
+  setTicketModalAlert: (alert: AlertDto | null) => void;
+  setNoteModalAlert: (alert: AlertDto | null) => void;
 }
 
 export default function AlertTableTabPanel({
   alerts,
   preset,
   isAsyncLoading,
+  setTicketModalAlert,
+  setNoteModalAlert,
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
@@ -106,6 +110,8 @@ export default function AlertTableTabPanel({
     additionalColsToGenerate: additionalColsToGenerate,
     isCheckboxDisplayed: preset.name !== "Deleted",
     isMenuDisplayed: true,
+    setTicketModalAlert: setTicketModalAlert,
+    setNoteModalAlert: setNoteModalAlert,
   });
 
   return (
