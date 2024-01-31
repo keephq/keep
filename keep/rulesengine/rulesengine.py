@@ -82,9 +82,16 @@ class RulesEngine:
             group_fingerprint = hashlib.sha256(
                 "|".join([str(group.id), group.group_fingerprint]).encode()
             ).hexdigest()
-            group_attributes = GroupDto.get_group_attributes(group.alerts)
+            try:
+                group_attributes = GroupDto.get_group_attributes(group.alerts)
+            except Exception:
+                # should not happen since I fixed the assign_alert_to_group_db
+                self.logger.exception(
+                    f"Failed to calculate group attributes for group {group.id}"
+                )
+                continue
             context = {
-                "group": group_attributes,
+                "group_attributes": group_attributes,
                 # Shahar: first, group have at least one alert.
                 #         second, the only supported {{ }} are the ones in the group
                 #          attributes, so we can use the first alert because they are the same for any other alert in the group

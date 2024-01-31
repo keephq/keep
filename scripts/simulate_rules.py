@@ -29,6 +29,8 @@ def simulate_rules():
         definition=definition_template,
         definition_cel=definition_cel_template,
         created_by=created_by,
+        grouping_criteria=["labels.instance"],
+        group_description="CPU usage exceeded on {{ group_attributes.num_of_alerts }} pods of {{ labels.instance }} || {{ group_attributes.start_time }} | {{ group_attributes.last_update_time }}",
     )
 
     # Rule #2 - CPU (no grouping)
@@ -53,6 +55,8 @@ def simulate_rules():
         definition=mq_definition_template,
         definition_cel=mq_definition_cel_template,
         created_by=created_by,
+        grouping_criteria=["labels.queue"],
+        group_description="The {{ labels.queue }} is more than third full on {{ group_attributes.num_of_alerts }} queue managers | {{ group_attributes.start_time }} || {{ group_attributes.last_update_time }}",
     )
     logger.info("Rules inserted successfully")
 
