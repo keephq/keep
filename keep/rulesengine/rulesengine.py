@@ -78,7 +78,7 @@ class RulesEngine:
         # Now let's create a new alert for each group
         grouped_alerts = []
         for group in groups:
-            rule = updated_rules_dict.get(group.rule_id)
+            rule = updated_rules_dict.get(str(group.rule_id))
             group_fingerprint = hashlib.sha256(
                 "|".join([str(group.id), group.group_fingerprint]).encode()
             ).hexdigest()

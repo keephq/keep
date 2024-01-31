@@ -17,7 +17,7 @@ class AlertToGroup(SQLModel, table=True):
 class Group(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    rule_id: str = Field(foreign_key="rule.id")
+    rule_id: UUID = Field(foreign_key="rule.id")
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
     group_fingerprint: str
