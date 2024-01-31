@@ -33,6 +33,7 @@ export interface AlertDto {
   playbook_url?: string;
   providerId?: string;
   group?: boolean;
+  note?: string;
 }
 
 export interface Preset {
@@ -65,4 +66,5 @@ export const AlertKnownKeys = [
   "alertMenu",
   "group",
   "extraPayload",
+  "note",
 ];

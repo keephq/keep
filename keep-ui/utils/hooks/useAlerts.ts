@@ -47,16 +47,21 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
         return true;
       }
 
-      return endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived;
+      return (
+        endpointAlert.lastReceived >= pusherAlertByFingerprint.lastReceived
+      );
     }
+  );
+
+  const filteredEndpointAlertsFingerprints = filteredEndpointAlerts.map(
+    (endpointAlert) => endpointAlert.fingerprint
   );
 
   // Filter out new alerts if their fingerprint is already in the filtered previous alerts
   const filteredPusherAlerts = pusherAlertsWithLastReceivedDate.filter(
     (pusherAlert) =>
-      filteredEndpointAlerts.some(
-        (endpointAlert) => endpointAlert.fingerprint !== pusherAlert.fingerprint
-      )
+      filteredEndpointAlertsFingerprints.includes(pusherAlert.fingerprint) ===
+      false
   );
 
   return filteredPusherAlerts.concat(filteredEndpointAlerts);
@@ -80,7 +85,7 @@ export const useAlerts = () => {
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
-    options?: SWRConfiguration
+    options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
       () =>
@@ -96,7 +101,9 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlerts = (options?: SWRConfiguration) => {
+  const useAllAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
     return useSWR<AlertDto[]>(
       () => (configData && session ? "alerts" : null),
       () =>
@@ -224,7 +231,8 @@ export const useAlerts = () => {
         console.log("Connected to pusher");
 
         return () => pusher.unsubscribe(channelName);
-      }
+      },
+      { revalidateOnFocus: false }
     );
   };
 
