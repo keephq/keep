@@ -9,6 +9,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import Loading from "app/loading";
 import { PaginationState } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toDateObjectWithFallback } from "utils/helpers";
 
 interface Props {
   alerts: AlertDto[];
@@ -43,7 +44,7 @@ export function AlertHistory({ alerts }: Props) {
 
   const alertsHistoryWithDate = alertHistory.map((alert) => ({
     ...alert,
-    lastReceived: new Date(alert.lastReceived),
+    lastReceived: toDateObjectWithFallback(alert.lastReceived),
   }));
 
   const sortedHistoryAlert = alertsHistoryWithDate.map((alert) =>
