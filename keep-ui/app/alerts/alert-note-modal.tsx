@@ -1,30 +1,36 @@
 'use client';
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 // https://github.com/zenoamaro/react-quill/issues/292
 const ReactQuill = typeof window === 'object' ? require('react-quill') : () => false;
 import 'react-quill/dist/quill.snow.css';
 import { Button } from '@tremor/react';
 import { getApiURL } from '../../utils/apiUrl';
 import { useSession } from 'next-auth/react';
+import { Alert } from 'app/workflows/builder/alert';
+import { AlertDto } from './models';
 
 interface AlertNoteModalProps {
-  isOpen: boolean;
   handleClose: () => void;
-  initialContent: string;
-  alertFingerprint: string;
+  alert: AlertDto | null;
 }
 
 const AlertNoteModal = ({
-    isOpen,
     handleClose,
-    initialContent,
-    alertFingerprint
+    alert
   }: AlertNoteModalProps) => {
-    const [noteContent, setNoteContent] = useState<string>(initialContent);
+    const [noteContent, setNoteContent] = useState<string>('');
 
+    useEffect(() => {
+      if (alert) {
+        setNoteContent(alert.note || '');
+      }
+    }, [alert]);
     // get the session
     const { data: session } = useSession();
+
+    // if this modal should not be open, do nothing
+    if(!alert) return null;
 
     const formats = [
       'header',
@@ -59,7 +65,7 @@ const AlertNoteModal = ({
           enrichments: {
             note: noteContent,
           },
-          fingerprint: alertFingerprint,
+          fingerprint: alert.fingerprint,
         };
         const response = await fetch(`${getApiURL()}/alerts/enrich`, {
           method: 'POST',
@@ -73,7 +79,7 @@ const AlertNoteModal = ({
         if (response.ok) {
           // Handle success
           console.log('Note saved successfully');
-          handleClose(); // Close the modal on success
+          handleNoteClose()
         } else {
           // Handle error
           console.error('Failed to save note');
@@ -83,6 +89,14 @@ const AlertNoteModal = ({
         console.error('An unexpected error occurred');
       }
     };
+
+    const isOpen = alert !== null;
+
+    const handleNoteClose = () => {
+      alert.note = noteContent;
+      setNoteContent('');
+      handleClose();
+    }
 
     return (
       <div className={`fixed inset-0 z-10 ${isOpen ? 'block' : 'hidden'}`}>
@@ -107,7 +121,7 @@ const AlertNoteModal = ({
                 Save
               </Button>
               <Button // Use Tremor button for Cancel
-                onClick={handleClose}
+                onClick={handleNoteClose}
                 variant="secondary"
               >
                 Cancel
