@@ -26,7 +26,8 @@ const defaultPresets: Preset[] = [
 export default function Alerts() {
   const { useAllAlerts, useAllAlertsWithSubscription } = useAlerts();
   // get providers
-  const { data: providersData = { installed_providers: [] }} = useProviders({ revalidateOnFocus: false});
+  // providers doesnt change often so we can use a longer deduping interval
+  const { data: providersData = { installed_providers: [] }} = useProviders({ dedupingInterval: 10000 });
 
   const ticketingProviders = useMemo(() =>
     providersData.installed_providers.filter(provider => provider.tags.includes('ticketing')),
