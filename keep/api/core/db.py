@@ -892,7 +892,16 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             return None
 
 
-def create_rule(tenant_id, name, timeframe, definition, definition_cel, created_by):
+def create_rule(
+    tenant_id,
+    name,
+    timeframe,
+    definition,
+    definition_cel,
+    created_by,
+    grouping_criteria=[],
+    group_description=None,
+):
     with Session(engine) as session:
         rule = Rule(
             tenant_id=tenant_id,
@@ -902,6 +911,8 @@ def create_rule(tenant_id, name, timeframe, definition, definition_cel, created_
             definition_cel=definition_cel,
             created_by=created_by,
             creation_time=datetime.utcnow(),
+            grouping_criteria=grouping_criteria,
+            group_description=group_description,
         )
         session.add(rule)
         session.commit()
@@ -994,8 +1005,12 @@ def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Gr
             )
             session.add(group)
             session.commit()
-            # Refresh to update instance with DB state, including generated IDs
-            session.refresh(group)
+            # Re-query the group with selectinload to set up future automatic loading of alerts
+            group = session.exec(
+                select(Group)
+                .options(selectinload(Group.alerts))
+                .where(Group.id == group.id)
+            ).first()
 
         # Create a new AlertToGroup instance and add it
         alert_group = AlertToGroup(
