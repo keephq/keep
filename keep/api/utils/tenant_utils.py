@@ -34,11 +34,6 @@ def delete_api_key_from_secret_manager(
     """
 
     # Delete from secret manager
-    context_manager = ContextManager(tenant_id=tenant_id)
-    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    t = secret_manager.delete_secret(
-        secret_name=f"{tenant_id}-{unique_api_key_id}s",
-    )
 
     logger.info("TTTT", extra={"s": t})
 
@@ -251,14 +246,12 @@ def get_api_keys(
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
             .where(TenantApiKey.created_by == email)
-            .where(TenantApiKey.is_deleted == False)
         )
 
     else:
         statement = (
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
-            .where(TenantApiKey.is_deleted == False)
         )
 
     api_keys = session.exec(statement).all()
@@ -276,6 +269,11 @@ def get_api_keys_secret(
     for api_key in api_keys:
         if api_key.reference_id == "webhook":
             continue
+
+        if api_key.is_deleted == True:
+            api_keys_with_secret.append({**vars(api_key), "secret": "Key has been deactivated"})
+            continue
+
         secret = secret_manager.read_secret(
                 f"{api_key.tenant_id}-{api_key.reference_id}"
         )

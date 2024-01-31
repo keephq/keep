@@ -122,9 +122,15 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
               >
                 <TableCell>{key.reference_id}</TableCell>
                 <TableCell className="text-left">
-                  <CopyBlock 
-                    {...getCopyBlockProps(key.secret)} 
-                  />
+                  {
+                    key.is_deleted ? 
+                      key.secret 
+                    : (
+                          <CopyBlock 
+                            {...getCopyBlockProps(key.secret)} 
+                          />
+                      )
+                  }
                 </TableCell>
 
                 <TableCell className="text-left">
