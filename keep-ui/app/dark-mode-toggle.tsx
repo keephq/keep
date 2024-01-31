@@ -28,7 +28,7 @@ export default function DarkModeToggle() {
     setDarkMode(!darkMode);
     let q = document.querySelectorAll("#nightify");
     if (q.length) {
-      q[0]!.parentNode?.removeChild(q[0]);
+      q.forEach((q) => q.parentNode?.removeChild(q));
       return false;
     }
     applyDarkModeStyles();
