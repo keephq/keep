@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ColumnDef,
   PaginationState,
@@ -48,17 +48,20 @@ interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
   isMenuDisplayed?: boolean;
+  setNoteModalAlert?: (alert: AlertDto) => void;
+  setTicketModalAlert?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = ({
   additionalColsToGenerate = [],
   isCheckboxDisplayed,
   isMenuDisplayed,
+  setNoteModalAlert,
+  setTicketModalAlert
 }: GenerateAlertTableColsArg = {}) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
-  const [noteModalOpen, setNoteModalOpen] = useState('');
-  const [ticketModalOpen, setTicketModalOpen] = useState('');
   const [currentOpenMenu, setCurrentOpenMenu] = useState('');
+
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -120,10 +123,8 @@ export const useAlertTableCols = ({
       id: "name",
       header: "Name",
       cell: (context) => <AlertName alert={context.row.original}
-                            isNoteModalOpen={noteModalOpen === context.row.original.fingerprint}
-                            setNoteModalOpen={setNoteModalOpen}
-                            isTicketModalOpen={ticketModalOpen === context.row.original.fingerprint}
-                            setTicketModalOpen={setTicketModalOpen}/>
+                            setNoteModalAlert={setNoteModalAlert}
+                            setTicketModalAlert={setTicketModalAlert}/>
     }),
     columnHelper.accessor("description", {
       id: "description",

@@ -7,12 +7,12 @@ import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { Providers } from "./../providers/providers";
 import { useSession } from "next-auth/react";
 import { getApiURL } from 'utils/apiUrl';
+import { AlertDto } from './models';
 
 interface AlertAssignTicketModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  ticketingProviders: Providers; // Replace 'ProviderType' with the actual type of ticketingProviders
-  alertFingerprint: string; // Replace 'string' with the actual type of alertFingerprint
+  handleClose: () => void;
+  ticketingProviders: Providers;
+  alert: AlertDto | null;
 }
 
 interface OptionType {
@@ -33,10 +33,14 @@ interface FormData {
   ticket_url: string;
 }
 
-const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFingerprint }: AlertAssignTicketModalProps) => {
+const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: AlertAssignTicketModalProps) => {
+
   const { handleSubmit, control, formState: { errors } } = useForm<FormData>();
   // get the token
   const { data: session } = useSession();
+
+  // if this modal should not be open, do nothing
+  if(!alert) return null;
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
@@ -47,7 +51,7 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
           ticket_url: data.ticket_url,
           ticket_provider_id: data.provider.value,
         },
-        fingerprint: alertFingerprint,
+        fingerprint: alert.fingerprint,
       };
 
 
@@ -63,7 +67,8 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
       if (response.ok) {
         // Handle success
         console.log("Ticket assigned successfully");
-        onClose();
+        alert.ticket_url = data.ticket_url;
+        handleClose();
       } else {
         // Handle error
         console.error("Failed to assign ticket");
@@ -135,8 +140,11 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
     );
   };
 
+  // if alert is not null, open the modal
+  const isOpen = alert !== null;
+
   return (
-    <Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-10 overflow-y-auto">
+    <Dialog open={isOpen} onClose={handleClose} className="fixed inset-0 z-10 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4">
         <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
         <div className="relative bg-white p-6 rounded-lg" style={{ width: "400px", maxWidth: "90%" }}>
@@ -176,7 +184,7 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
               </div>
               <div className="mt-6 flex gap-2">
                 <Button color="orange" type="submit">Assign Ticket</Button>
-                <Button onClick={onClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
+                <Button onClick={handleClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
               </div>
             </form>
           ) : (
@@ -187,7 +195,7 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
               <Button onClick={() => window.open('/providers?labels=ticketing', '_blank')} color="orange" className="mt-4 mr-4">
                 Connect Ticketing Provider
               </Button>
-              <Button onClick={onClose} variant="secondary" className="mt-4 border border-orange-500 text-orange-500">Close</Button>
+              <Button onClick={handleClose} variant="secondary" className="mt-4 border border-orange-500 text-orange-500">Close</Button>
             </div>
           )}
         </div>
