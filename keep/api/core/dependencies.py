@@ -275,14 +275,16 @@ class AuthVerifierSingleTenant:
         session: Session = Depends(get_session),
     ) -> AuthenticatedEntity:
         # if we don't want to use authentication, return the single tenant id
+        tenant_api_key = get_api_key(api_key)
+
         if (
             os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role="admin"
             )
-        tenant_api_key = get_api_key(api_key)
+
         if not tenant_api_key:
             raise HTTPException(status_code=401, detail="Invalid API Key")
 
@@ -305,7 +307,9 @@ class AuthVerifierSingleTenant:
             os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
             == AuthenticationType.NO_AUTH.value
         ):
-            return AuthenticatedEntity(SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL)
+            return AuthenticatedEntity(
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role="admin"
+            )
 
         # else, validate the token
         jwt_secret = os.environ.get("KEEP_JWT_SECRET")
