@@ -13,11 +13,10 @@ export default function Navbar() {
   if (status === "unauthenticated") return <></>;
   if (!session) return <></>;
 
-
   return (
-    <PHProvider>
-      <NavbarInner session={session}/>
-      <CMDK />
-    </PHProvider>
+      <PHProvider>
+        <NavbarInner session={session} />
+        <CMDK />
+      </PHProvider>
   );
 }

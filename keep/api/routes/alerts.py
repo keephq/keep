@@ -748,6 +748,8 @@ def get_alert(
 )
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
+    background_tasks: BackgroundTasks,
+    pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
@@ -765,7 +767,30 @@ def enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
         )
+        # get the alert with the new enrichment
+        alert = get_alerts_by_fingerprint(
+            authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+        )
+        if not alert:
+            logger.warning(
+                "Alert not found", extra={"fingerprint": enrich_data.fingerprint}
+            )
+            return {"status": "failed"}
 
+        enriched_alerts_dto = __enrich_alerts(alert)
+        # use pusher to push the enriched alert to the client
+        if pusher_client:
+            logger.info("Pushing enriched alert to the client")
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "async-alerts",
+                base64.b64encode(
+                    zlib.compress(
+                        json.dumps([enriched_alerts_dto[0].dict()]).encode(),
+                    )
+                ).decode(),
+            )
+            logger.info("Pushed enriched alert to the client")
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
