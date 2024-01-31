@@ -742,7 +742,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
     return alerts
 
 
-def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
+def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
 
@@ -767,6 +767,8 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
 
         query = query.order_by(Alert.timestamp.desc())
 
+        if limit:
+            query = query.limit(limit)
         # Execute the query
         alerts = query.all()
 

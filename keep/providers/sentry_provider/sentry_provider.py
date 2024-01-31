@@ -211,7 +211,7 @@ class SentryProvider(BaseProvider):
             else datetime.datetime.now(tz=datetime.timezone.utc)
         )
         # map severity and status to keep's format
-        severity = event.pop("level", tags_as_dict.get("level"))
+        severity = event.pop("level", tags_as_dict.get("level", "")).lower()
         severity = SentryProvider.SEVERITIES_MAP.get(
             severity.lower(), AlertSeverity.INFO
         )
