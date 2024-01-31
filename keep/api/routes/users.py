@@ -209,7 +209,28 @@ def _get_user_by_api_key_auth0(api_key, tenant_id):
     # need to check how auth0 provider stores users
     pass
 
-def _get_user_by_api_key_db(user_api_key):
+def _get_user_by_api_key_db(user_api_key, tenant_id):
     user = get_user_by_api_key_from_db(user_api_key)
     return user
+
+@router.get(
+    "/user",
+    description="Get user with username and pass")
+def get_user(
+    username: str,
+    password: str, 
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:settings"])
+    ),
+) -> User:
+    tenant_id = authenticated_entity.tenant_id
+    if (
+        os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        == AuthenticationType.SINGLE_TENANT.value
+    ):
+        return _get_user_db(username, password)
+
+def _get_user_db(username, password):
+    return get_user_from_db(username, password, update_sign_in=False)
+
 

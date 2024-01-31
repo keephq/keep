@@ -33,6 +33,7 @@ from keep.api.routes import (
     settings,
     status,
     whoami,
+    users,
     workflows,
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
@@ -159,25 +160,25 @@ def get_app(
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
     app.include_router(groups.router, prefix="/groups", tags=["groups"])
+    app.include_router(users.router, prefix="/users", tags=["users"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
-    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
-
+    if AUTH_TYPE == "SINGLE_TENANT":
         @app.post("/signin")
         def signin(body: dict):
             # validate the user/password
             user = get_user(body.get("username"), body.get("password"))
 
-            if not user:
-                return JSONResponse(
+            if not user:                return JSONResponse(
                     status_code=401,
                     content={"message": "Invalid username or password"},
                 )
             # generate a JWT secret
             jwt_secret = os.environ.get("KEEP_JWT_SECRET")
             if not jwt_secret:
+                logger.info("invalid jwt token")
                 raise HTTPException(status_code=401, detail="Missing JWT secret")
             token = jwt.encode(
                 {
