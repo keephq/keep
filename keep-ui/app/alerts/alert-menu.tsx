@@ -17,6 +17,7 @@ import { AlertMethodTransition } from "./alert-method-transition";
 import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { useRouter } from "next/navigation";
 
 interface Props {
   alert: AlertDto;
@@ -25,7 +26,9 @@ interface Props {
   setIsMenuOpen: (key: string) => void;
 }
 
-export default function AlertMenu({ alert, openHistory, isMenuOpen, setIsMenuOpen}: Props) {
+export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
+  const router = useRouter();
+
   const apiUrl = getApiURL();
   const {
     data: { installed_providers: installedProviders } = {
@@ -197,7 +200,11 @@ export default function AlertMenu({ alert, openHistory, isMenuOpen, setIsMenuOpe
                   <Menu.Item>
                     {({ active }) => (
                       <button
-                        onClick={openHistory}
+                        onClick={() =>
+                          router.replace(`/alerts?id=${alert.id}`, {
+                            scroll: false,
+                          })
+                        }
                         className={`${
                           active ? "bg-slate-200" : "text-gray-900"
                         } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
