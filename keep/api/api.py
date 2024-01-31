@@ -165,20 +165,21 @@ def get_app(
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
-    if AUTH_TYPE == "SINGLE_TENANT":
+    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
         @app.post("/signin")
         def signin(body: dict):
             # validate the user/password
             user = get_user(body.get("username"), body.get("password"))
 
-            if not user:                return JSONResponse(
+            if not user:                
+                return JSONResponse(
                     status_code=401,
                     content={"message": "Invalid username or password"},
                 )
             # generate a JWT secret
             jwt_secret = os.environ.get("KEEP_JWT_SECRET")
             if not jwt_secret:
-                logger.info("invalid jwt token")
+                logger.info("missing KEEP_JWT_SECRET environment variable")
                 raise HTTPException(status_code=401, detail="Missing JWT secret")
             token = jwt.encode(
                 {
