@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
-import { AlertTable, useAlertTableCols } from "./alert-table";
+import { AlertTable } from "./alert-table";
+import { useAlertTableCols } from "./alert-table-utils";
 import { AlertDto, AlertKnownKeys, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { TabPanel } from "@tremor/react";
