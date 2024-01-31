@@ -68,7 +68,7 @@ export default function CreateApiKeyModal({ isOpen, onClose, apiUrl, setApiKeys,
       <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isOpen} onClose={handleClose}>
         <div className="flex items-center justify-center min-h-screen">
           <Dialog.Panel className="bg-white p-4 rounded" style={{ width: "400px", maxWidth: "90%" }}>
-            <Dialog.Title>Add User</Dialog.Title>
+            <Dialog.Title>Create API Key</Dialog.Title>
             <form
                 onSubmit={e => {
                     clearErrors()
