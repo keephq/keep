@@ -47,16 +47,21 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
         return true;
       }
 
-      return endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived;
+      return (
+        endpointAlert.lastReceived >= pusherAlertByFingerprint.lastReceived
+      );
     }
+  );
+
+  const filteredEndpointAlertsFingerprints = filteredEndpointAlerts.map(
+    (endpointAlert) => endpointAlert.fingerprint
   );
 
   // Filter out new alerts if their fingerprint is already in the filtered previous alerts
   const filteredPusherAlerts = pusherAlertsWithLastReceivedDate.filter(
     (pusherAlert) =>
-      filteredEndpointAlerts.some(
-        (endpointAlert) => endpointAlert.fingerprint !== pusherAlert.fingerprint
-      )
+      filteredEndpointAlertsFingerprints.includes(pusherAlert.fingerprint) ===
+      false
   );
 
   return filteredPusherAlerts.concat(filteredEndpointAlerts);
