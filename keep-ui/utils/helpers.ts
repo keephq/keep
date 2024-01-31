@@ -7,6 +7,27 @@ export function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
 }
 
+export function toDateObjectWithFallback(date: string | Date) {
+  /**
+   * Since we have a weak typing validation in the backend today (lastReceived is just a string),
+   * we need to make sure that we have a valid date object before we can use it.
+   *
+   * Having invalid dates from the backend will cause the frontend to crash.
+   * (new Date(invalidDate) throws an exception)
+   */
+  if (date instanceof Date) {
+    return date;
+  }
+
+  try {
+    // If the date is not a valid date, it will return a date object with the given date string
+    return new Date(date);
+  } catch {
+    // If the date is not a valid date, it will return a date object with the current date time
+    return new Date();
+  }
+}
+
 export async function installWebhook(provider: Provider, accessToken: string) {
   toast.promise(
     fetch(
