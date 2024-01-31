@@ -16,13 +16,42 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 logger = logging.getLogger(__name__)
 
 
-def delete_api_key_internal(
+def delete_api_key_from_secret_manager(
     session: Session,
     tenant_id: str,
     unique_api_key_id: str,
 ) -> str:
     """
     Deletes API key for the given tenant.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    # Delete from secret manager
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    t = secret_manager.delete_secret(
+        secret_name=f"{tenant_id}-{unique_api_key_id}s",
+    )
+
+    logger.info("TTTT", extra={"s": t})
+
+    return "hey"
+
+
+def get_api_key(
+    session: Session,
+    unique_api_key_id: str,
+    tenant_id: str
+) -> TenantApiKey:
+    """
+    Retrieves API key.
 
     Args:
         session (Session): _description_
@@ -40,22 +69,7 @@ def delete_api_key_internal(
     )
 
     api_key = session.exec(statement).first()
-
-    if api_key:
-        # Delete from database
-        api_key.is_deleted = True
-        session.commit()
-
-        # Delete from secret manager
-        context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-
-        secret_manager.delete_secret(
-            secret_name=f"{tenant_id}-{unique_api_key_id}",
-        )
-
-        return True
-    return False
+    return api_key
 
 
 def update_key_last_used(
@@ -147,7 +161,7 @@ def create_api_key(
     unique_api_key_id: str,
     is_system: bool,
     created_by: str,
-    role: str,
+    role: Role,
     commit: bool = True,
     system_description: Optional[str] = None,
 ) -> str:
@@ -187,7 +201,7 @@ def create_api_key(
         is_system=is_system,
         system_description=system_description,
         created_by=created_by,
-        role=role,
+        role=role.get_name(),
     )
     session.add(new_installation_api_key)
 
@@ -216,7 +230,7 @@ def create_api_key(
 def get_api_keys(
     session: Session,
     tenant_id: str,
-    role: str,
+    role: Role,
     email: str
 ) -> [TenantApiKey]:
     """
@@ -232,7 +246,7 @@ def get_api_keys(
 
     statement = None
 
-    if role != 'admin':
+    if role != AdminRole:
         statement = (
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
@@ -276,7 +290,7 @@ def get_or_create_api_key(
     created_by: str,
     unique_api_key_id: str,
     system_description: Optional[str] = None,
-):
+) -> str:
     """
     Gets or creates an API key for the given tenant.
 
