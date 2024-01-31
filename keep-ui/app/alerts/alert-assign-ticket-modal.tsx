@@ -18,6 +18,8 @@ interface AlertAssignTicketModalProps {
 interface OptionType {
   value: string;
   label: string;
+  id: string;
+  type: string;
   icon?: string;
   isAddProvider?: boolean;
 }
@@ -73,6 +75,7 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
   };
 
   const providerOptions: OptionType[] = ticketingProviders.map((provider) => ({
+    id: provider.id,
     value: provider.id,
     label: provider.details.name || '',
     type: provider.type,
@@ -85,16 +88,19 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
       label: 'Add another ticketing provider',
       icon: 'plus',
       isAddProvider: true,
+      id: 'add_provider',
+      type: '',
     },
   ];
 
-  const handleOnChange = option => {
+  const handleOnChange = (option: any) => {
     if (option.value === 'add_provider') {
       window.open('/providers?labels=ticketing', '_blank');
     }
   };
 
-  const Option = (props) => {
+
+  const Option = (props: any) => {
     // Check if the option is 'add_provider'
     const isAddProvider = props.data.isAddProvider;
 
@@ -112,7 +118,7 @@ const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFing
     );
   };
 
-  const SingleValue = (props) => {
+  const SingleValue = (props: any) => {
     const { children, data } = props;
 
     return (

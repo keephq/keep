@@ -15,8 +15,6 @@ import { useProviders } from "utils/hooks/useProviders";
 import { useMemo, useState, createContext, useContext} from "react";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from './alert-note-modal';
-import { ModalProvider, useModal } from './modal-context';
-import { set } from "date-fns";
 
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>

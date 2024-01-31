@@ -92,7 +92,7 @@ const AlertNoteModal = ({
             {/* WYSIWYG editor */}
             <ReactQuill
               value={noteContent}
-              onChange={(value) => setNoteContent(value)}
+              onChange={(value: string) => setNoteContent(value)}
               theme="snow" // Use the Snow theme
               placeholder="Add your note here..."
               modules={modules}
