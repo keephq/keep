@@ -19,10 +19,15 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   endpointAlerts: AlertDto[],
   pusherAlerts: AlertDto[]
 ): AlertDto[] => {
-  const pusherAlertsWithLastReceivedDate = pusherAlerts.map((pusherAlert) => ({
-    ...pusherAlert,
-    lastReceived: new Date(pusherAlert.lastReceived),
-  }));
+  // Create a map of the latest received times for the new alerts
+  const uniquePusherAlerts = new Map<string, AlertDto>(
+    pusherAlerts.map((alert) => [
+      alert.fingerprint,
+      { ...alert, lastReceived: new Date(alert.lastReceived) },
+    ])
+  );
+
+  const pusherAlertsWithLastReceivedDate = [...uniquePusherAlerts.values()];
 
   const endpointAlertsWithLastReceivedDate = endpointAlerts.map(
     (endpointAlert) => ({
@@ -31,35 +36,32 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
     })
   );
 
-  // Create a map of the latest received times for the new alerts
-  const latestReceivedTimes = new Map(
-    pusherAlertsWithLastReceivedDate.map((alert) => [
-      alert.fingerprint,
-      alert.lastReceived,
-    ])
-  );
-
   // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
   const filteredEndpointAlerts = endpointAlertsWithLastReceivedDate.filter(
     (endpointAlert) => {
-      const newAlertReceivedTime = latestReceivedTimes.get(
+      const pusherAlertByFingerprint = uniquePusherAlerts.get(
         endpointAlert.fingerprint
       );
 
-      if (newAlertReceivedTime === undefined) {
+      if (pusherAlertByFingerprint === undefined) {
         return true;
       }
 
-      return endpointAlert.lastReceived > newAlertReceivedTime;
+      return (
+        endpointAlert.lastReceived >= pusherAlertByFingerprint.lastReceived
+      );
     }
+  );
+
+  const filteredEndpointAlertsFingerprints = filteredEndpointAlerts.map(
+    (endpointAlert) => endpointAlert.fingerprint
   );
 
   // Filter out new alerts if their fingerprint is already in the filtered previous alerts
   const filteredPusherAlerts = pusherAlertsWithLastReceivedDate.filter(
     (pusherAlert) =>
-      filteredEndpointAlerts.some(
-        (endpointAlert) => endpointAlert.fingerprint !== pusherAlert.fingerprint
-      )
+      filteredEndpointAlertsFingerprints.includes(pusherAlert.fingerprint) ===
+      false
   );
 
   return filteredPusherAlerts.concat(filteredEndpointAlerts);
@@ -83,7 +85,7 @@ export const useAlerts = () => {
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
-    options?: SWRConfiguration
+    options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
       () =>
@@ -99,7 +101,9 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlerts = (options?: SWRConfiguration) => {
+  const useAllAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
     return useSWR<AlertDto[]>(
       () => (configData && session ? "alerts" : null),
       () =>
@@ -170,11 +174,20 @@ export const useAlerts = () => {
             new TextDecoder().decode(decompressedAlert)
           );
 
-          next(null, {
-            alerts: newAlerts,
-            lastSubscribedDate: new Date(),
-            isAsyncLoading: false,
-            pusherChannel,
+          next(null, (data) => {
+            if (data) {
+              return {
+                ...data,
+                alerts: [...data.alerts, ...newAlerts],
+              };
+            }
+
+            return {
+              alerts: newAlerts,
+              lastSubscribedDate: new Date(),
+              isAsyncLoading: false,
+              pusherChannel,
+            };
           });
         });
 
@@ -212,13 +225,14 @@ export const useAlerts = () => {
         next(null, {
           alerts: [],
           lastSubscribedDate: new Date(),
-          isAsyncLoading: false,
+          isAsyncLoading: true,
           pusherChannel,
         });
         console.log("Connected to pusher");
 
         return () => pusher.unsubscribe(channelName);
-      }
+      },
+      { revalidateOnFocus: false }
     );
   };
 

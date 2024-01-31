@@ -49,7 +49,7 @@ export default function AlertExtraPayload({
         Extra Payload
       </AccordionHeader>
       <AccordionBody ref={ref}>
-        <pre className="overflow-y-scroll">
+        <pre className="overflow-scroll max-w-lg">
           {JSON.stringify(extraPayload, null, 2)}
         </pre>
       </AccordionBody>
