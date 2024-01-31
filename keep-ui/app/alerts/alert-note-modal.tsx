@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useContext, useState } from 'react';
+// https://github.com/zenoamaro/react-quill/issues/292
 const ReactQuill = typeof window === 'object' ? require('react-quill') : () => false;
 import 'react-quill/dist/quill.snow.css';
 import { Button } from '@tremor/react';
@@ -14,12 +15,12 @@ interface AlertNoteModalProps {
   alertFingerprint: string;
 }
 
-const AlertNoteModal: React.FC<AlertNoteModalProps> = ({
+const AlertNoteModal = ({
     isOpen,
     handleClose,
     initialContent,
     alertFingerprint
-  }) => {
+  }: AlertNoteModalProps) => {
     const [noteContent, setNoteContent] = useState<string>(initialContent);
 
     // get the session
