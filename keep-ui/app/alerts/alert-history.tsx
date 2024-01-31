@@ -1,7 +1,8 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { AlertDto } from "./models";
-import { AlertTable, useAlertTableCols } from "./alert-table";
+import { AlertTable } from "./alert-table";
+import { useAlertTableCols } from "./alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -45,8 +46,9 @@ export function AlertHistory({ alerts }: Props) {
     lastReceived: new Date(alert.lastReceived),
   }));
 
-  const sortedHistoryAlert = alertsHistoryWithDate
-    .map((alert) => alert.lastReceived.getTime());
+  const sortedHistoryAlert = alertsHistoryWithDate.map((alert) =>
+    alert.lastReceived.getTime()
+  );
 
   const maxLastReceived = new Date(Math.max(...sortedHistoryAlert));
   const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
@@ -116,13 +118,13 @@ export function AlertHistory({ alerts }: Props) {
                 <AlertTable
                   alerts={alertsHistoryWithDate}
                   columns={alertTableColumns}
-                  columnsToExclude={["description"]}
                   isMenuColDisplayed={false}
                   isRefreshAllowed={false}
                   rowPagination={{
                     state: rowPagination,
                     onChange: setRowPagination,
                   }}
+                  presetName="alert-history"
                 />
               </Dialog.Panel>
             </Transition.Child>
