@@ -1,3 +1,5 @@
+// culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
+
 import { ReactNode } from "react";
 import {
   closestCenter,
