@@ -56,8 +56,12 @@ const DraggableHeaderCell = ({
   };
 
   return (
-    <TableHeaderCell style={dragStyle} ref={setNodeRef}>
-      <span className="flex" {...attributes} {...listeners}>
+    <TableHeaderCell
+      style={dragStyle}
+      className={column.getIsPinned() ? "" : `hover:bg-slate-100 cursor-grab`}
+      ref={setNodeRef}
+    >
+      <span className="flex cursor-grab" {...attributes} {...listeners}>
         {children}
       </span>
     </TableHeaderCell>
