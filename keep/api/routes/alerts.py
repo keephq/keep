@@ -2,11 +2,13 @@
 # mainly: pusher stuff, enrichment stuff and async stuff
 import base64
 import copy
+import datetime
 import json
 import logging
 import os
 import zlib
 
+import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from opentelemetry import trace
 from pusher import Pusher
@@ -446,7 +448,7 @@ def handle_formatted_events(
     tenant_id,
     provider_type,
     session: Session,
-    non_formatter_events: list[dict],
+    raw_events: list[dict],
     formatted_events: list[AlertDto],
     pusher_client: Pusher,
     provider_id: str | None = None,
@@ -463,14 +465,31 @@ def handle_formatted_events(
     try:
         # keep raw events in the DB if the user wants to
         if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
-            for non_formatted_event in non_formatter_events:
+            for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
-                    raw_alert=non_formatted_event,
+                    raw_alert=raw_event,
                 )
                 session.add(alert)
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+
+            # Make sure the lastReceived is a valid date string
+            # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
+            # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
+            if not formatted_event.lastReceived:
+                formatted_event.lastReceived = datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat()
+            else:
+                try:
+                    dateutil.parser.isoparse(formatted_event.lastReceived)
+                except ValueError:
+                    logger.warning("Invalid lastReceived date, setting to now")
+                    formatted_event.lastReceived = datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat()
+
             alert = Alert(
                 tenant_id=tenant_id,
                 provider_type=provider_type,
@@ -763,6 +782,8 @@ def get_alert(
 )
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
+    background_tasks: BackgroundTasks,
+    pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
@@ -780,7 +801,30 @@ def enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
         )
+        # get the alert with the new enrichment
+        alert = get_alerts_by_fingerprint(
+            authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+        )
+        if not alert:
+            logger.warning(
+                "Alert not found", extra={"fingerprint": enrich_data.fingerprint}
+            )
+            return {"status": "failed"}
 
+        enriched_alerts_dto = __enrich_alerts(alert)
+        # use pusher to push the enriched alert to the client
+        if pusher_client:
+            logger.info("Pushing enriched alert to the client")
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "async-alerts",
+                base64.b64encode(
+                    zlib.compress(
+                        json.dumps([enriched_alerts_dto[0].dict()]).encode(),
+                    )
+                ).decode(),
+            )
+            logger.info("Pushed enriched alert to the client")
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},

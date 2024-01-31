@@ -342,14 +342,24 @@ export default function Page() {
 
   const CustomFieldSelector = (props: any) => {
     const { options, value, handleOnChange, path, currentQuery, setFields } = props;
-
-    // Assuming path[0] is the group index and path[1] is the rule index
-    let currentGroup = currentQuery.rules[path[0]];
-    let isRuleNew = path[1] === currentGroup.rules.length - 1 && currentGroup.rules[path[1]].value === '';
-    let currentRule = currentGroup.rules[path[1]];
+    let groupIndex = 0;
+    let ruleIndex = 0;
+    let currentGroup = currentQuery.rules[groupIndex];
+    // if its a rule with one group
+    if(path.length === 1){
+      ruleIndex = path[0];
+      currentGroup = currentQuery;
+    }
+    else{
+      // Assuming path[0] is the group index and path[1] is the rule index
+      ruleIndex = path[1];
+      groupIndex = path[0];
+    }
+    let isRuleNew = ruleIndex === currentGroup.rules.length - 1 && currentGroup.rules[ruleIndex].value === '';
+    let currentRule = currentGroup.rules[ruleIndex];
     // Get other rules in the same group, excluding the current rule if it's not new
     let otherRules = currentGroup ? currentGroup.rules.filter((index: any) =>
-       isRuleNew || index !== path[1]) : [];
+       isRuleNew || index !== ruleIndex) : [];
 
     // Filter out options that are already used in other rules of the current group,
     // unless the current rule is new

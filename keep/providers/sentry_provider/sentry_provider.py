@@ -197,6 +197,10 @@ class SentryProvider(BaseProvider):
             },
         )
         event_data: dict = event.get("event", {})
+        if not event_data:
+            event_data = event.get("data", {}).get("event", {})
+            if not event_data:
+                raise Exception("Failed to get event data")
         tags_as_dict = {v[0]: v[1] for v in event_data.get("tags", [])}
 
         # Remove duplicate keys
@@ -211,9 +215,9 @@ class SentryProvider(BaseProvider):
             else datetime.datetime.now(tz=datetime.timezone.utc)
         )
         # map severity and status to keep's format
-        severity = event.pop("level", tags_as_dict.get("level"))
+        severity = event.pop("level", tags_as_dict.get("level", "")).lower()
         severity = SentryProvider.SEVERITIES_MAP.get(
-            severity.lower(), AlertSeverity.INFO
+            severity, AlertSeverity.INFO
         )
         status = event.get("action")
         status = SentryProvider.STATUS_MAP.get(status, AlertStatus.FIRING)

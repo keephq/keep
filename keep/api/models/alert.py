@@ -66,6 +66,7 @@ class AlertDto(BaseModel):
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
+    note: str | None = None  # The note of the alert
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):

@@ -519,3 +519,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
             self.logger.error(
                 f"Failed to push alert to {self.provider_id}: {response.content}"
             )
+
+    @staticmethod
+    def simulate_alert(**kwargs) -> AlertDto:
+        """
+        Simulate an alert.
+
+        Args:
+            **kwargs (dict): The provider context (with statement)
+
+        Returns:
+            AlertDto: The simulated alert.
+        """
+        raise NotImplementedError("simulate_alert() method not implemented")
