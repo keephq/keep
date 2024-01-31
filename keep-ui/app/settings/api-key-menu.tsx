@@ -113,7 +113,7 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
                         } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Delete
+                       Deactivate 
                       </button>
                     )}
                   </Menu.Item>
