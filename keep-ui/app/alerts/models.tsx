@@ -66,4 +66,5 @@ export const AlertKnownKeys = [
   "alertMenu",
   "group",
   "extraPayload",
+  "note",
 ];
