@@ -415,6 +415,15 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
         ).all()
     return workflows
 
+def get_all_workflows_yamls(tenant_id: str) -> List[str]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow.workflow_raw)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
 
 def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     with Session(engine) as session:

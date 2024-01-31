@@ -3,7 +3,10 @@ from typing import Any, Dict, List, Optional
 
 import validators
 import yaml
+import zipfile
+import io
 from fastapi import (
+    Response,
     APIRouter,
     Body,
     Depends,
@@ -135,6 +138,41 @@ def get_workflows(
         workflows_dto.append(workflow_dto)
     return workflows_dto
 
+@router.get(
+        "/export",
+        description="export all workflow Yamls",
+)
+def export_workflows(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])    
+    ),
+) -> list[str]:
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    # get all workflows
+    workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
+    return workflows
+
+@router.get(
+        "/export/zip",
+        description="get zip file of all workflow yamls"
+)
+def export_zip_workflows(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])    
+    ),
+): # add type hinting
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    # get all workflows
+    workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+        for workflow in workflows:
+            workflow_id = yaml.safe_load(workflow)["id"]
+            zip_file.writestr(f'{workflow_id}.yaml', str(workflow).encode())
+    return Response(zip_buffer.getvalue())
 
 @router.post(
     "/{workflow_id}/run",

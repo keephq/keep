@@ -12,6 +12,7 @@ from keep.api.core.db import (
     add_or_update_workflow,
     delete_workflow,
     get_all_workflows,
+    get_all_workflows_yamls,
     get_raw_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
@@ -111,6 +112,11 @@ class WorkflowStore:
         # list all tenant's workflows
         workflows = get_workflows_with_last_execution(tenant_id)
         return workflows
+    
+    def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
+        # list all tenant's workflows yamls (Workflow.workflow_raw)
+        workflow_yamls = get_all_workflows_yamls(tenant_id)
+        return workflow_yamls
 
     def get_workflows_from_path(
         self, tenant_id, workflow_path: str | tuple[str], providers_file: str = None
