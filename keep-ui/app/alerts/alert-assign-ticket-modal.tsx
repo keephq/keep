@@ -31,7 +31,7 @@ interface FormData {
   ticket_url: string;
 }
 
-const AlertAssignTicketModal: React.FC<AlertAssignTicketModalProps> = ({ isOpen, onClose, ticketingProviders, alertFingerprint }) => {
+const AlertAssignTicketModal = ({ isOpen, onClose, ticketingProviders, alertFingerprint }: AlertAssignTicketModalProps) => {
   const { handleSubmit, control, formState: { errors } } = useForm<FormData>();
   // get the token
   const { data: session } = useSession();

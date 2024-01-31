@@ -56,6 +56,9 @@ export const useAlertTableCols = ({
   isMenuDisplayed,
 }: GenerateAlertTableColsArg = {}) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
+  const [noteModalOpen, setNoteModalOpen] = useState('');
+  const [ticketModalOpen, setTicketModalOpen] = useState('');
+  const [currentOpenMenu, setCurrentOpenMenu] = useState('');
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -116,7 +119,11 @@ export const useAlertTableCols = ({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: (context) => <AlertName alert={context.row.original} />,
+      cell: (context) => <AlertName alert={context.row.original}
+                            isNoteModalOpen={noteModalOpen === context.row.original.fingerprint}
+                            setNoteModalOpen={setNoteModalOpen}
+                            isTicketModalOpen={ticketModalOpen === context.row.original.fingerprint}
+                            setTicketModalOpen={setTicketModalOpen}/>
     }),
     columnHelper.accessor("description", {
       id: "description",
@@ -185,7 +192,9 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "alertMenu",
-            cell: (context) => <AlertMenu alert={context.row.original} />,
+            cell: (context) => <AlertMenu alert={context.row.original}
+            isMenuOpen={context.row.original.fingerprint === currentOpenMenu}
+            setIsMenuOpen={setCurrentOpenMenu}/>,
           }),
         ]
       : []) as ColumnDef<AlertDto>[]),

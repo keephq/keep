@@ -21,7 +21,6 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   alert: AlertDto;
-  openHistory: () => void;
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
 }
