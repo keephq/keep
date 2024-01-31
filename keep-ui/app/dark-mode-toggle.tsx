@@ -41,7 +41,7 @@ export default function DarkModeToggle() {
   }, [darkMode]);
 
   return (
-    <div className="fixed right-2 mt-3">
+    <div className="absolute right-2 mt-3">
       <div className="flex flex-col items-center">
         <Text>Dark Mode</Text>
         <Switch
