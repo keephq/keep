@@ -96,13 +96,9 @@ export default function AlertsTableHeaders({
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    // cancel if we do not have an over id
     if (over?.id == null) return;
 
-    // get index of from
     const fromIndex = columnOrder.indexOf(active.id as string);
-
-    // get index of to
     const toIndex = columnOrder.indexOf(over.id as string);
 
     if (toIndex === -1) {
