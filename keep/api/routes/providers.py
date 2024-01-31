@@ -2,10 +2,14 @@ import json
 import logging
 import time
 import uuid
+import zipfile
+import io
+import yaml
 from typing import Callable, Optional
 
 import sqlalchemy
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from fastapi import UploadFile as fastapiuploadfile
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
@@ -80,7 +84,59 @@ def get_providers(
             "installed_providers": [],
             "is_localhost": is_localhost,
         }
+    
+@router.get (
+        "/export",
+        description="Get all installed providers",
+)
+def get_installed_providers(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
+    providers = ProvidersFactory.get_all_providers()
+    installed_providers = ProvidersFactory.get_installed_providers(
+        tenant_id, providers, include_details=True
+    )
 
+    is_localhost = _is_localhost()
+
+    try:
+        return {
+            "installed_providers": installed_providers,
+            "is_localhost": is_localhost
+        }
+    except Exception as e:
+        logger.info(f"execption in {e}")
+        logger.exception("Failed to get providers")
+        return {
+            "installed_providers": [],
+            "is_localhost": is_localhost
+        }
+
+@router.get (
+        "/installed-providers/zip",
+        description="export zip of all installed providers",
+)    
+def export_provider_zip(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
+    providers = ProvidersFactory.get_all_providers()
+    installed_providers = ProvidersFactory.get_installed_providers(
+        tenant_id, providers, include_details=True
+    )
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+        for provider in installed_providers:
+            zip_file.writestr(f'{provider.id}.yaml', str(yaml.dump(dict(provider))).encode())
+    return Response(zip_buffer.getvalue())
 
 @router.get(
     "/{provider_type}/{provider_id}/configured-alerts",
@@ -454,9 +510,22 @@ async def update_provider(
     }
 
 
+async def __get_provider_raw_data(request: Request, file: fastapiuploadfile) -> dict:
+    try:
+        if file:
+            provider_raw_data = await file.read()
+        else:
+            provider_raw_data = await request.body()
+        provider_data = yaml.safe_load(provider_raw_data)
+    except yaml.YAMLError:
+        raise HTTPException(status_code=400, detail="Invalid YAML format")
+    return provider_data
+
+
 @router.post("/install")
 async def install_provider(
     request: Request,
+    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:providers"])
     ),
@@ -465,12 +534,7 @@ async def install_provider(
     # Try to parse as JSON first
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
-    try:
-        provider_info = await request.json()
-    except ValueError:
-        # If error occurs (likely not JSON), try to get as form data
-        form_data = await request.form()
-        provider_info = dict(form_data)
+    provider_info = await __get_provider_raw_data(request, file)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
