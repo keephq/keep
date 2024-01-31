@@ -49,7 +49,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
       }
 
       return (
-        endpointAlert.lastReceived >= pusherAlertByFingerprint.lastReceived
+        endpointAlert.lastReceived <= pusherAlertByFingerprint.lastReceived
       );
     }
   );
