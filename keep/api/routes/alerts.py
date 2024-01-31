@@ -2,11 +2,13 @@
 # mainly: pusher stuff, enrichment stuff and async stuff
 import base64
 import copy
+import datetime
 import json
 import logging
 import os
 import zlib
 
+import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from opentelemetry import trace
 from pusher import Pusher
@@ -474,18 +476,18 @@ def handle_formatted_events(
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
             # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
-            # if not formatted_event.lastReceived:
-            #     formatted_event.lastReceived = datetime.datetime.now(
-            #         tz=datetime.timezone.utc
-            #     ).isoformat()
-            # else:
-            #     try:
-            #         dateutil.parser.isoparse(formatted_event.lastReceived)
-            #     except ValueError:
-            #         logger.warning("Invalid lastReceived date, setting to now")
-            #         formatted_event.lastReceived = datetime.datetime.now(
-            #             tz=datetime.timezone.utc
-            #         ).isoformat()
+            if not formatted_event.lastReceived:
+                formatted_event.lastReceived = datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat()
+            else:
+                try:
+                    dateutil.parser.isoparse(formatted_event.lastReceived)
+                except ValueError:
+                    logger.warning("Invalid lastReceived date, setting to now")
+                    formatted_event.lastReceived = datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat()
 
             alert = Alert(
                 tenant_id=tenant_id,
