@@ -38,9 +38,10 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
       });
       if (res.ok) {
         mutate(`${apiUrl}/settings/apikeys`);
-      }
+      } else {
+          alert('Something went wrong! Please try again.')
     }
-  };
+  }}
 
   const onDelete = async () => {
     const confirmed = confirm(
@@ -50,19 +51,16 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      try {
-          const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${session!.accessToken}`,
-            },
-          });
-          if (res.ok) {
-            mutate(`${apiUrl}/settings/apikeys`);
-          }
-      } catch (e) {
+      const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+        },
+      });
+      if (res.ok) {
+        mutate(`${apiUrl}/settings/apikeys`);
+      } else {
           alert("Something went wrong! Please try again.")
-
       }
     }
   };
