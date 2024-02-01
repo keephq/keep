@@ -1042,3 +1042,57 @@ def get_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
         ).first()
     return rule
+
+
+def get_rule_distribution(tenant_id, minute=False):
+    """Returns hits per hour for each rule, optionally breaking down by groups if the rule has 'group by', limited to the last 7 days."""
+    with Session(engine) as session:
+        # Get the timestamp for 7 days ago
+        seven_days_ago = datetime.utcnow() - timedelta(days=1)
+
+        # Check the dialect
+        if session.bind.dialect.name == "mysql":
+            time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
+            timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
+        elif session.bind.dialect.name == "sqlite":
+            time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
+            timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
+        else:
+            raise ValueError("Unsupported database dialect")
+        # Construct the query
+        query = (
+            session.query(
+                Rule.id.label("rule_id"),
+                Rule.name.label("rule_name"),
+                Group.id.label("group_id"),
+                Group.group_fingerprint.label("group_fingerprint"),
+                timestamp_format.label("time"),
+                func.count(AlertToGroup.alert_id).label("hits"),
+            )
+            .join(Group, Rule.id == Group.rule_id)
+            .join(AlertToGroup, Group.id == AlertToGroup.group_id)
+            .filter(AlertToGroup.timestamp >= seven_days_ago)
+            .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
+            .group_by("rule_id", "rule_name", "group_fingerprint", "time")
+            .order_by("time")
+        )
+
+        results = query.all()
+
+        # Convert the results into a dictionary
+        rule_distribution = {}
+        for result in results:
+            rule_id = result.rule_id
+            group_fingerprint = result.group_fingerprint
+            timestamp = result.time
+            hits = result.hits
+
+            if rule_id not in rule_distribution:
+                rule_distribution[rule_id] = {}
+
+            if group_fingerprint not in rule_distribution[rule_id]:
+                rule_distribution[rule_id][group_fingerprint] = {}
+
+            rule_distribution[rule_id][group_fingerprint][timestamp] = hits
+
+        return rule_distribution

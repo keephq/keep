@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon } from "@tremor/react";
+import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon, AreaChart } from "@tremor/react";
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import QueryBuilder, { add, remove, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, parseCEL, QueryValidator, findPath} from 'react-querybuilder';
@@ -12,6 +12,18 @@ import './query-builder.scss';
 import { FaRegTrashAlt } from "react-icons/fa";
 import { FaQuestionCircle } from 'react-icons/fa';
 
+interface Distribution {
+  [group: string]: {
+    [timestamp: string]: number;
+  };
+}
+
+interface CombinedData {
+  [timestamp: string]: {
+    date: any; // Assuming getDate returns a string
+    [group_id: string]: number; // Adjust the type according to your actual data structure
+  };
+}
 
 const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
   const validationMap: ValidationMap = {};
@@ -187,8 +199,8 @@ interface Rule {
   created_by: string;
   creation_time: string;
   updated_by: string;
-  update_time: string
-
+  update_time: string;
+  distribution?: { [group: string]: { [timestamp: string]: number } };
 }
 
 type ExpandedRowsType = {
@@ -683,6 +695,55 @@ export default function Page() {
     return query.rules.length > 0;
   }
 
+  /**
+  * Converts a timestamp to a formatted date string.
+ * @param {string | number} timestamp - The timestamp to convert, can be a string or number.
+ * @returns {string} - The formatted date string.
+ */
+    function getDate(timestamp: string) {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+
+      // Format: DD/MM/YYYY HH:MM:SS
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+
+    function flattenDistribution(distribution: Distribution) {
+      // Object to hold combined data for each timestamp
+      const combinedDataByTimestamp: CombinedData = {};
+
+      for (let group_id in distribution) {
+        // Replace 'none' with 'Number of Alerts'
+        const groupData = distribution[group_id];
+        if (group_id === "none") {
+          group_id = "Number of Alerts";
+        }
+
+        for (const timestamp in groupData) {
+          // Ensure we have an object for this timestamp
+          if (!combinedDataByTimestamp[timestamp]) {
+            // tell linter ignore
+            // eslint-disable-next-line
+            // @ts-ignore
+            combinedDataByTimestamp[timestamp] = { date: getDate(timestamp) };
+          }
+          // Add the current group's value to this timestamp's object
+          combinedDataByTimestamp[timestamp][group_id] = groupData[timestamp];
+        }
+      }
+
+      // Convert the combined data object back into an array
+      const flatData = Object.values(combinedDataByTimestamp);
+
+      return flatData;
+    }
+
+
+
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
         <Flex style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' }}>
@@ -804,8 +865,18 @@ export default function Page() {
                               <Subtitle>Timeframe: {rule.timeframe}</Subtitle>
                               <Subtitle className="mt-1">Created by: {rule.created_by}</Subtitle>
                               <Subtitle className="mt-1">Creation Time: {rule.creation_time}</Subtitle>
+
                               {rule.updated_by && <Subtitle className="mt-1">Updated by: {rule.updated_by}</Subtitle>}
                               {rule.update_time && <Subtitle className="mt-1">Update Time: {rule.update_time}</Subtitle>}
+                              {rule.distribution && (
+                                <AreaChart
+                                  data={flattenDistribution(rule.distribution)}
+                                  index="timestamp"
+                                  yAxisWidth={65}
+                                  categories={Object.keys(rule.distribution).map(key => key === "none" ? "Number of Alerts" : key)}
+                                  enableLegendSlider={true}
+                                />
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
