@@ -50,14 +50,19 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-        },
-      });
-      if (res.ok) {
-        mutate(`${apiUrl}/settings/apikeys`);
+      try {
+          const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${session!.accessToken}`,
+            },
+          });
+          if (res.ok) {
+            mutate(`${apiUrl}/settings/apikeys`);
+          }
+      } catch (e) {
+          alert("Something went wrong! Please try again.")
+
       }
     }
   };
