@@ -24,7 +24,7 @@ from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_api_keys_secret, get_api_key, get_or_create_api_key, update_api_key_internal, delete_api_key_from_secret_manager, create_api_key, get_api_keys
+from keep.api.utils.tenant_utils import get_api_keys_secret, get_api_key, get_or_create_api_key, update_api_key_internal, create_api_key, get_api_keys
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
