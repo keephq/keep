@@ -184,18 +184,7 @@ def create_api_key(
         extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
     )
 
-    if is_system:
-        return api_key
-
-    else:
-        statement = (
-            select(TenantApiKey)
-            .where(TenantApiKey.tenant_id == tenant_id)
-            .where(TenantApiKey.reference_id == new_installation_api_key.reference_id)
-        )
-
-        new_api_key = session.exec(statement).first()
-        return {**vars(new_api_key), "secret": api_key}
+    return api_key
 
 
 def get_api_keys(

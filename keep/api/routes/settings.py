@@ -375,7 +375,21 @@ async def create_key(
         is_system=False,
     )
 
-    return api_key
+    tenant_api_key = get_api_key(
+        session,
+        unique_api_key_id=unique_api_key_id,
+        tenant_id=authenticated_entity.tenant_id
+    )
+
+    return {
+        "reference_id": tenant_api_key.reference_id,
+        "tenant": tenant_api_key.tenant,
+        "is_deleted": tenant_api_key.is_deleted,
+        "created_at": tenant_api_key.created_at,
+        "created_by": tenant_api_key.created_by,
+        "last_used": test_smtp_settings.last_used,
+        "secret": api_key
+    }
 
 
 @router.get("/apikeys", description="Get API keys")
