@@ -10,7 +10,8 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --fetch-retries=5 --fetch-retry-factor=1 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000
+
 
 
 # Rebuild the source code only when needed
