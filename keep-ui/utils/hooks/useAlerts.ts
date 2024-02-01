@@ -7,6 +7,7 @@ import useSWRSubscription, { SWRSubscriptionOptions } from "swr/subscription";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useConfig } from "./useConfig";
+import { toDateObjectWithFallback } from "utils/helpers";
 
 type AlertSubscription = {
   alerts: AlertDto[];
@@ -23,7 +24,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   const uniquePusherAlerts = new Map<string, AlertDto>(
     pusherAlerts.map((alert) => [
       alert.fingerprint,
-      { ...alert, lastReceived: new Date(alert.lastReceived) },
+      { ...alert, lastReceived: toDateObjectWithFallback(alert.lastReceived) },
     ])
   );
 
@@ -32,7 +33,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   const endpointAlertsWithLastReceivedDate = endpointAlerts.map(
     (endpointAlert) => ({
       ...endpointAlert,
-      lastReceived: new Date(endpointAlert.lastReceived),
+      lastReceived: toDateObjectWithFallback(endpointAlert.lastReceived),
     })
   );
 
@@ -47,16 +48,21 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
         return true;
       }
 
-      return endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived;
+      return (
+        endpointAlert.lastReceived <= pusherAlertByFingerprint.lastReceived
+      );
     }
+  );
+
+  const filteredEndpointAlertsFingerprints = filteredEndpointAlerts.map(
+    (endpointAlert) => endpointAlert.fingerprint
   );
 
   // Filter out new alerts if their fingerprint is already in the filtered previous alerts
   const filteredPusherAlerts = pusherAlertsWithLastReceivedDate.filter(
     (pusherAlert) =>
-      filteredEndpointAlerts.some(
-        (endpointAlert) => endpointAlert.fingerprint !== pusherAlert.fingerprint
-      )
+      filteredEndpointAlertsFingerprints.includes(pusherAlert.fingerprint) ===
+      false
   );
 
   return filteredPusherAlerts.concat(filteredEndpointAlerts);
@@ -80,7 +86,7 @@ export const useAlerts = () => {
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
-    options?: SWRConfiguration
+    options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
       () =>
@@ -96,7 +102,9 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlerts = (options?: SWRConfiguration) => {
+  const useAllAlerts = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
     return useSWR<AlertDto[]>(
       () => (configData && session ? "alerts" : null),
       () =>
@@ -224,7 +232,8 @@ export const useAlerts = () => {
         console.log("Connected to pusher");
 
         return () => pusher.unsubscribe(channelName);
-      }
+      },
+      { revalidateOnFocus: false }
     );
   };
 

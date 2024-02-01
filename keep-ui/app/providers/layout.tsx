@@ -3,6 +3,7 @@ import { MultiSelect, MultiSelectItem, TextInput, Title } from "@tremor/react";
 import { MagnifyingGlassIcon, TagIcon } from "@heroicons/react/20/solid";
 import { useState } from "react";
 import { LayoutContext } from "./context";
+import { useSearchParams } from "next/navigation";
 
 export default function ProvidersLayout({
   children,
@@ -12,6 +13,15 @@ export default function ProvidersLayout({
   const [providersSearchString, setProvidersSearchString] =
     useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const searchParams = useSearchParams();
+  const labels = searchParams?.get("labels");
+  const labelArray = labels ? labels.split(',').filter(label => label) : [];
+
+  // update the selected tags with the labels from the url
+  if (labelArray.length > 0 && selectedTags.length === 0) {
+    setSelectedTags(labelArray);
+  }
+
   const searchProviderString = providersSearchString;
   return (
     <main className="p-4">
@@ -36,6 +46,7 @@ export default function ProvidersLayout({
           />
           <MultiSelect
             onValueChange={setSelectedTags}
+            value={selectedTags}
             placeholder="Filter by label..."
             className="max-w-xs ml-2.5"
             icon={TagIcon}
