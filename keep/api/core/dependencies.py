@@ -178,7 +178,7 @@ class AuthVerifierMultiTenant:
                         status_code=403,
                         detail="You don't have the required permissions to access this resource",
                     )
-                return AuthenticatedEntity(tenant_id, email, None, role_name)
+                return AuthenticatedEntity(tenant_id, email, role=role_name)
             # authorization error
             except HTTPException:
                 raise
@@ -282,7 +282,7 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role="admin"
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role=AdminRole
             )
 
         if not tenant_api_key:
@@ -308,7 +308,7 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role="admin"
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role=AdminRole
             )
 
         # else, validate the token
