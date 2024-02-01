@@ -12,9 +12,14 @@ import { usePathname, useRouter } from "next/navigation";
 interface Props {
   selectedRowIds: string[];
   alerts: AlertDto[];
+  clearRowSelection: () => void;
 }
 
-export default function AlertActions({ selectedRowIds, alerts }: Props) {
+export default function AlertActions({
+  selectedRowIds,
+  alerts,
+  clearRowSelection,
+}: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const { useAllAlerts } = useAlerts();
@@ -33,31 +38,55 @@ export default function AlertActions({ selectedRowIds, alerts }: Props) {
       `Are you sure you want to delete ${selectedRowIds.length} alert(s)?`
     );
 
-    if (confirmed) {
-      const session = await getSession();
-      const apiUrl = getApiURL();
+    if (!confirmed) {
+      return;
+    }
 
-      for await (const alert of selectedAlerts) {
-        const { fingerprint } = alert;
+    const session = await getSession();
+    if (!session) {
+      toast(`Session expired.`, {
+        position: "top-left",
+        type: "error",
+      });
+      return;
+    }
 
-        const body = {
-          fingerprint,
+    const apiUrl = getApiURL();
+    const headers = {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json",
+    };
+
+    const deletionPromises = selectedAlerts.map((alert) =>
+      fetch(`${apiUrl}/alerts`, {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({
+          fingerprint: alert.fingerprint,
           lastReceived: alert.lastReceived,
           restore: false,
-        };
+        }),
+      })
+    );
 
-        const res = await fetch(`${apiUrl}/alerts`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-        if (res.ok) {
-          await mutate();
-        }
-      }
+    const results = await Promise.allSettled(deletionPromises);
+
+    const allSucceeded = results.every(
+      (result) => result.status === "fulfilled" && result.value.ok
+    );
+
+    if (allSucceeded) {
+      toast(`${selectedRowIds.length} alert(s) deleted!`, {
+        position: "top-left",
+        type: "success",
+      });
+      mutate();
+      clearRowSelection();
+    } else {
+      toast(`Error deleting alerts`, {
+        position: "top-left",
+        type: "error",
+      });
     }
   };
 
@@ -86,7 +115,13 @@ export default function AlertActions({ selectedRowIds, alerts }: Props) {
           type: "success",
         });
         presetsMutator();
+        clearRowSelection();
         router.replace(`${pathname}?selectedPreset=${presetName}`);
+      } else {
+        toast(`Error creating preset ${presetName}`, {
+          position: "top-left",
+          type: "error",
+        });
       }
     }
   }
