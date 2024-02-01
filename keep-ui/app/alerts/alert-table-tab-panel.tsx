@@ -120,6 +120,7 @@ export default function AlertTableTabPanel({
         <AlertActions
           selectedRowIds={selectedRowIds}
           alerts={sortedPresetAlerts}
+          clearRowSelection={() => setRowSelection({})}
         />
       ) : (
         <AlertPresets
