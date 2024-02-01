@@ -387,7 +387,7 @@ async def create_key(
         "is_deleted": tenant_api_key.is_deleted,
         "created_at": tenant_api_key.created_at,
         "created_by": tenant_api_key.created_by,
-        "last_used": test_smtp_settings.last_used,
+        "last_used": tenant_api_key.last_used,
         "secret": api_key
     }
 
