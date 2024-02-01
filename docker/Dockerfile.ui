@@ -15,6 +15,7 @@ RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
 
 # Rebuild the source code only when needed
 FROM base AS builder
+ARG GIT_COMMIT_HASH
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -32,6 +33,8 @@ ENV PUSHER_HOST=localhost
 ENV PUSHER_PORT=6001
 ENV PUSHER_APP_KEY=keepappkey
 
+# Stop if GIT_COMMIT_HASH is not provided
+RUN if [ -z "$GIT_COMMIT_HASH" ]; then echo "GIT_COMMIT_HASH argument missing" && exit 1; fi
 RUN npm run build
 
 
