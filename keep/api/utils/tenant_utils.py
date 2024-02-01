@@ -16,30 +16,6 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 logger = logging.getLogger(__name__)
 
 
-def delete_api_key_from_secret_manager(
-    session: Session,
-    tenant_id: str,
-    unique_api_key_id: str,
-) -> str:
-    """
-    Deletes API key for the given tenant.
-
-    Args:
-        session (Session): _description_
-        tenant_id (str): _description_
-        unique_api_key_id (str): _description_
-
-    Returns:
-        str: _description_
-    """
-
-    # Delete from secret manager
-
-    logger.info("TTTT", extra={"s": t})
-
-    return "hey"
-
-
 def get_api_key(
     session: Session,
     unique_api_key_id: str,

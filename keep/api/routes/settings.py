@@ -462,8 +462,6 @@ def delete_api_key(
         tenant_id=authenticated_entity.tenant_id
     )
 
-    logger.info("API", extra={"s": api_key})
-
     if api_key:
 
         try:
@@ -480,7 +478,6 @@ def delete_api_key(
             session.commit()
         except Exception:
             raise HTTPException(status_code=500, detail=f"Unable to flag Api key ({keyId}) as deactivated")
-
 
         logger.info(f"Api key ({keyId}) has been deactivated")
         return {"message": "Api key has been deactivated"}
