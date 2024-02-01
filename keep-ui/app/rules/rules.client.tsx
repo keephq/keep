@@ -119,25 +119,26 @@ const CustomAddGroupAction = (props: any) => {
 
   return (
     <div style={{ position: 'relative', display: 'inline-block'}}>
-      <Button onClick={props.handleOnClick} color="orange">
-        Add Alerts Group
-      </Button>
-      <Icon
-        className="rules-tooltip"
-        icon={FaQuestionCircle}
-        tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
-        variant="simple"
-        size="md"
-        color="stone"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          transform: 'translate(50%, -50%)',
-          zIndex:9999
-        }}
-      />
-    </div>
+    <Button onClick={props.handleOnClick} color="orange">
+      Add Alerts Group
+    </Button>
+    <Icon
+      className="rules-tooltip"
+      icon={FaQuestionCircle}
+      tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
+      variant="simple"
+      size="md"
+      color="stone"
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        transform: 'translate(50%, -50%)',
+        zIndex:9999
+      }}
+    />
+  </div>
+
   );
 };
 
@@ -157,25 +158,20 @@ const CustomAddRuleAction = (props: any) => {
     );
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block'}}>
-      <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
-        Add Condition
-      </Button>
-      <Icon
-        className="rules-tooltip"
-        icon={FaQuestionCircle}
-        tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
-        variant="simple"
-        size="md"
-        color="stone"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          transform: 'translate(50%, -50%)'
-        }}
-      />
+    <div className="relative inline-block">
+      <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0} className="text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          Add Condition
+        </Button>
+        <Icon
+          className="rules-tooltip absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 z-50"
+          icon={FaQuestionCircle}
+          tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
+          variant="simple"
+          size="md"
+          color="stone"
+        />
     </div>
+
   );
 };
 

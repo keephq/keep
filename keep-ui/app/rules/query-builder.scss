@@ -19,6 +19,10 @@ $rqb-branch-width: $rqb-border-width !default;
 $rqb-branch-radius: $rqb-border-radius !default;
 $rqb-branch-style: $rqb-border-style !default;
 
+[role="tooltip"] {
+  z-index: 1050 !important; // Example value, adjust as needed
+  position: relative; // Ensure z-index is effective by setting position
+}
 
 // Default styles
 .ruleGroup {
