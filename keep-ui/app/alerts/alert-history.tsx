@@ -10,6 +10,7 @@ import Loading from "app/loading";
 import { PaginationState } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
+import { usePresets } from "utils/hooks/usePresets";
 
 interface Props {
   alerts: AlertDto[];
@@ -27,6 +28,7 @@ export function AlertHistory({ alerts }: Props) {
   const selectedAlert = alerts.find((alert) =>
     searchParams ? searchParams.get("id") === alert.id : undefined
   );
+  const { getCurrentPreset } = usePresets();
 
   const { useAlertHistory } = useAlerts();
   const { data: alertHistory = [], isLoading } = useAlertHistory(
@@ -59,7 +61,11 @@ export function AlertHistory({ alerts }: Props) {
       <Dialog
         as="div"
         className="relative z-50"
-        onClose={() => router.replace("/alerts", { scroll: false })}
+        onClose={() =>
+          router.replace(`/alerts?selectedPreset=${getCurrentPreset()}`, {
+            scroll: false,
+          })
+        }
       >
         <Transition.Child
           as={Fragment}
@@ -102,7 +108,12 @@ export function AlertHistory({ alerts }: Props) {
                   </div>
                   <Button
                     className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-                    onClick={() => router.replace("/alerts", { scroll: false })}
+                    onClick={() =>
+                      router.replace(
+                        `/alerts?selectedPreset=${getCurrentPreset()}`,
+                        { scroll: false }
+                      )
+                    }
                   >
                     Close
                   </Button>
