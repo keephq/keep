@@ -282,7 +282,7 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role=AdminRole
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role=AdminRole.get_name()
             )
 
         if not tenant_api_key:
@@ -308,7 +308,7 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role=AdminRole
+                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role=AdminRole.get_name()
             )
 
         # else, validate the token
