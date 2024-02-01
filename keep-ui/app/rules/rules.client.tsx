@@ -157,7 +157,7 @@ const CustomAddRuleAction = (props: any) => {
     );
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block', zIndex:1000}}>
+    <div style={{ position: 'relative', display: 'inline-block'}}>
       <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
         Add Condition
       </Button>
@@ -354,6 +354,7 @@ export default function Page() {
       // Assuming path[0] is the group index and path[1] is the rule index
       ruleIndex = path[1];
       groupIndex = path[0];
+      currentGroup = currentQuery.rules[groupIndex];
     }
     let isRuleNew = ruleIndex === currentGroup.rules.length - 1 && currentGroup.rules[ruleIndex].value === '';
     let currentRule = currentGroup.rules[ruleIndex];
@@ -567,10 +568,11 @@ export default function Page() {
     return ""; // No error
   };
 
+
   const handleEdit = (rule: Rule) => {
     let query = parseCEL(rule.definition_cel);
-    // if the query has only one rule, wrap it with a group
-    if(query.rules.length === 1){
+    // if the query has only one rule or there is only one group, wrap it with a group
+    if(query.rules.length === 1 || !("rules" in query.rules[0])){
       query = {
         combinator: 'and',
         rules: [query]
@@ -743,7 +745,7 @@ export default function Page() {
               validator={customValidator}
               controlClassnames={{
                 queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
-                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4  overflow-x-auto !important',
+                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4  !important',
                 combinators: 'bg-orange-400 text-white rounded-l-full p-1 shadow',
                 addRule: 'bg-orange-400 text-white rounded-none p-1 shadow',
                 addGroup: 'bg-orange-400 text-white rounded-r-full p-1 shadow',
