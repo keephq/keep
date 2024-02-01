@@ -195,6 +195,53 @@ receivers:
         """
         raise NotImplementedError("Prometheus provider does not support notify()")
 
+    @staticmethod
+    def simulate_alert(**kwargs) -> dict:
+        """Mock a Prometheus alert."""
+        import hashlib
+        import json
+        import random
+
+        from keep.providers.prometheus_provider.alerts_mock import ALERTS
+
+        alert_type = kwargs.get("alert_type")
+        if not alert_type:
+            alert_type = random.choice(list(ALERTS.keys()))
+
+        alert_payload = ALERTS[alert_type]["payload"]
+        alert_parameters = ALERTS[alert_type].get("parameters", [])
+        # now generate some random data
+        for parameter, parameter_options in alert_parameters.items():
+            # choose random param
+
+            # support "labels.some_label" format
+            if "." in parameter:
+                # nested parameter
+                parameter = parameter.split(".")
+                if parameter[0] not in alert_payload:
+                    alert_payload[parameter[0]] = {}
+                alert_payload[parameter[0]][parameter[1]] = random.choice(
+                    parameter_options
+                )
+            else:
+                alert_payload[parameter] = random.choice(parameter_options)
+        annotations = {"summary": alert_payload["summary"]}
+        alert_payload["labels"]["alertname"] = alert_type
+        alert_payload["status"] = AlertStatus.FIRING.value
+        alert_payload["annotations"] = annotations
+        alert_payload["startsAt"] = datetime.datetime.now(
+            tz=datetime.timezone.utc
+        ).isoformat()
+        alert_payload["endsAt"] = "0001-01-01T00:00:00Z"
+        alert_payload["generatorURL"] = "http://example.com/graph?g0.expr={}".format(
+            alert_type
+        )
+        # TODO: use BaseProvider's get_alert_fingerprint
+        fingerprint_src = json.dumps(alert_payload["labels"], sort_keys=True)
+        fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
+        alert_payload["fingerprint"] = fingerprint
+        return alert_payload
+
 
 if __name__ == "__main__":
     config = ProviderConfig(

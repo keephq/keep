@@ -30,7 +30,8 @@ export default function AlertPresets({
   isLoading,
 }: Props) {
   const apiUrl = getApiURL();
-  const { mutate: presetsMutator } = usePresets({ revalidateOnFocus: false });
+  const { useAllPresets } = usePresets();
+  const { mutate: presetsMutator } = useAllPresets({ revalidateOnFocus: false });
   const { data: session } = useSession();
 
   const selectRef = useRef(null);

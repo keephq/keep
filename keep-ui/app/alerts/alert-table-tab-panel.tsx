@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
-import { AlertTable, useAlertTableCols } from "./alert-table";
+import { AlertTable } from "./alert-table";
+import { useAlertTableCols } from "./alert-table-utils";
 import { AlertDto, AlertKnownKeys, Preset } from "./models";
 import AlertActions from "./alert-actions";
 import { TabPanel } from "@tremor/react";
@@ -23,26 +24,32 @@ const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
 };
 
 const getOptionAlerts = (alert: AlertDto, options: Option[]): boolean =>
-  options.every((option) => {
-    const [key, value] = option.value.split("=");
+  options.length > 0
+    ? options.some((option) => {
+        const [key, value] = option.value.split("=");
 
-    if (key && value) {
-      const lowercaseKey = key.toLowerCase() as keyof AlertDto;
-      const lowercaseValue = value.toLowerCase();
+        if (key && value) {
+          const attribute = key.toLowerCase() as keyof AlertDto;
+          const lowercaseAttributeValue = value.toLowerCase();
 
-      const alertValue = alert[lowercaseKey];
+          const alertAttributeValue = alert[attribute];
 
-      if (Array.isArray(alertValue)) {
-        return alertValue.every((v) => lowercaseValue.split(",").includes(v));
-      }
+          if (Array.isArray(alertAttributeValue)) {
+            return alertAttributeValue.every((v) =>
+              lowercaseAttributeValue.split(",").includes(v)
+            );
+          }
 
-      if (typeof alertValue === "string") {
-        return alertValue.toLowerCase().includes(lowercaseValue);
-      }
-    }
+          if (typeof alertAttributeValue === "string") {
+            return alertAttributeValue
+              .toLowerCase()
+              .includes(lowercaseAttributeValue);
+          }
+        }
 
-    return true;
-  });
+        return true;
+      })
+    : true;
 
 const getPresetAndOptionsAlerts = (
   alert: AlertDto,
@@ -54,12 +61,16 @@ interface Props {
   alerts: AlertDto[];
   preset: Preset;
   isAsyncLoading: boolean;
+  setTicketModalAlert: (alert: AlertDto | null) => void;
+  setNoteModalAlert: (alert: AlertDto | null) => void;
 }
 
 export default function AlertTableTabPanel({
   alerts,
   preset,
   isAsyncLoading,
+  setTicketModalAlert,
+  setNoteModalAlert,
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
@@ -99,6 +110,8 @@ export default function AlertTableTabPanel({
     additionalColsToGenerate: additionalColsToGenerate,
     isCheckboxDisplayed: preset.name !== "Deleted",
     isMenuDisplayed: true,
+    setTicketModalAlert: setTicketModalAlert,
+    setNoteModalAlert: setNoteModalAlert,
   });
 
   return (

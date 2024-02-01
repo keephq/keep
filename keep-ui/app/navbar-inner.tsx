@@ -13,7 +13,6 @@ import { LuWorkflow } from "react-icons/lu";
 import { AiOutlineAlert } from "react-icons/ai";
 import { MdOutlineEngineering } from "react-icons/md";
 
-
 import Link from "next/link";
 import { Icon } from "@tremor/react";
 import { AuthenticationType } from "utils/authenticationType";
@@ -22,14 +21,14 @@ import { fetcher } from "utils/fetcher";
 import { User } from "next-auth";
 import { InternalConfig } from "types/internal-config";
 import { NameInitialsAvatar } from "react-name-initials-avatar";
+import DarkModeToggle from "./dark-mode-toggle";
 
 const navigation = [
   { name: "Providers", href: "/providers", icon: VscDebugDisconnect },
   { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
-  { name: "Alert Groups", href: "/rules", icon: MdOutlineEngineering},
-  { name: "Workflows", href: "/workflows", icon: LuWorkflow }
+  { name: "Alert Groups", href: "/rules", icon: MdOutlineEngineering },
+  { name: "Workflows", href: "/workflows", icon: LuWorkflow },
 ];
-
 
 // noc navigation incldues only alerts
 const nocNavigation = [
@@ -100,11 +99,11 @@ export default function NavbarInner({ session }: { session: any }) {
   const user = session?.user as User;
   const isNocRole = session?.userRole === "noc";
 
-
   return (
     <Disclosure as="nav" className="bg-white shadow-sm">
       {({ open }) => (
         <>
+        <DarkModeToggle />
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between">
               <div className="flex">
@@ -218,31 +217,30 @@ export default function NavbarInner({ session }: { session: any }) {
                     >
                       <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                         {!isNocRole && (
-                            <Menu.Item>
-                                {({ active }) => (
-                                    <a
-                                        className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                        href="/settings"
-                                    >
-                                        Settings
-                                    </a>
-                                )}
-                            </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <a
+                                className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                href="/settings"
+                              >
+                                Settings
+                              </a>
+                            )}
+                          </Menu.Item>
                         )}
                         {authType !== AuthenticationType.NO_AUTH && (
-                            <Menu.Item>
-                                {({ active }) => (
-                                    <button
-                                        className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                        onClick={() => signOut()}
-                                    >
-                                        Sign out
-                                    </button>
-                                )}
-                            </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                className="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => signOut()}
+                              >
+                                Sign out
+                              </button>
+                            )}
+                          </Menu.Item>
                         )}
-                    </Menu.Items>
-
+                      </Menu.Items>
                     </Transition>
                   </Menu>
                 ) : null}
@@ -319,16 +317,16 @@ export default function NavbarInner({ session }: { session: any }) {
                     </div>
                   </div>
                   <div className="mt-3 space-y-1">
-                  {!isNocRole &&
-                    <a
-                      className={classNames(
-                        "block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                      )}
-                      href="/settings"
-                    >
-                      Settings
-                    </a>
-                    }
+                    {!isNocRole && (
+                      <a
+                        className={classNames(
+                          "block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                        )}
+                        href="/settings"
+                      >
+                        Settings
+                      </a>
+                    )}
                     {authType != AuthenticationType.NO_AUTH ? (
                       <button
                         onClick={() => signOut()}
