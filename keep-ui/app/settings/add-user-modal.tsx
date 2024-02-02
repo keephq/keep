@@ -48,7 +48,7 @@ export default function AddUserModal({ isOpen, onClose, authType, setUsers, acce
 
     const onSubmit: SubmitHandler<FieldValues> = async (data) => {
       try {
-        const response = await fetch(`${getApiURL()}/settings/users`, {
+        const response = await fetch(`${getApiURL()}/users`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,

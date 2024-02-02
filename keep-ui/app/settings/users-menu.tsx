@@ -28,7 +28,7 @@ export default function UsersMenu({ user, currentUser }: Props) {
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      const res = await fetch(`${apiUrl}/settings/users/${user.email}`, {
+      const res = await fetch(`${apiUrl}/users/${user.email}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
@@ -36,7 +36,7 @@ export default function UsersMenu({ user, currentUser }: Props) {
         },
       });
       if (res.ok) {
-        mutate(`${apiUrl}/settings/users`);
+        mutate(`${apiUrl}/users`);
       }
     }
   };
