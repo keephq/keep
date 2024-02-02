@@ -85,9 +85,9 @@ def get_providers(
             "is_localhost": is_localhost,
         }
     
-@router.get (
-        "/export",
-        description="Get all installed providers",
+@router.get(
+    "/export",
+    description="export all installed providers"
 )
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -115,28 +115,6 @@ def get_installed_providers(
             "installed_providers": [],
             "is_localhost": is_localhost
         }
-
-@router.get (
-        "/installed-providers/zip",
-        description="export zip of all installed providers",
-)    
-def export_provider_zip(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
-    providers = ProvidersFactory.get_all_providers()
-    installed_providers = ProvidersFactory.get_installed_providers(
-        tenant_id, providers, include_details=True
-    )
-
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
-        for provider in installed_providers:
-            zip_file.writestr(f'{provider.id}.yaml', str(yaml.dump(dict(provider))).encode())
-    return Response(zip_buffer.getvalue())
 
 @router.get(
     "/{provider_type}/{provider_id}/configured-alerts",

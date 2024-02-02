@@ -52,23 +52,6 @@ export default function WorkflowsPage() {
     );
   }
 
-  const DownloadZip = async () => {
-    const zip = await fetch(`${apiUrl}/workflows/export/zip`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-    });
-    const blob = await zip.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = url;
-    a.download = "workflow-yamls.zip";
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }
   const onDrop = async (files: any) => {
     const formData = new FormData();
     const file = files.target.files[0];
@@ -171,9 +154,6 @@ export default function WorkflowsPage() {
         <div>
         <Button className="mr-2.5" color="orange" size="md" variant="secondary" onClick={() => router.push('/workflows/builder')} icon={PlusCircleIcon}>
           Create a workflow
-        </Button>
-        <Button className="mr-2.5" color= "orange" size="md" variant="secondary" onClick={DownloadZip} icon={ArrowDownOnSquareIcon}>
-          Export workflows
         </Button>
         <Button color="orange" size="md" onClick={() => {setIsModalOpen(true);}} icon={ArrowDownOnSquareIcon}>
           Upload a Workflow
