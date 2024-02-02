@@ -40,7 +40,7 @@ export default function UsersSettings({
 }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<User[]>(
-    selectedTab === "users" ? `${apiUrl}/settings/users` : null,
+    selectedTab === "users" ? `${apiUrl}/users` : null,
     async (url) => {
       const response = await fetcher(url, accessToken);
       setUsers(response); // Update users state

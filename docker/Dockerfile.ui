@@ -1,4 +1,4 @@
-ARG GIT_COMMIT_HASH
+
 
 FROM node:18-alpine AS base
 
@@ -10,11 +10,12 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
 
 
 # Rebuild the source code only when needed
 FROM base AS builder
+ARG GIT_COMMIT_HASH
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -31,14 +32,20 @@ ENV NEXT_PUBLIC_POSTHOG_HOST https://app.posthog.com
 ENV PUSHER_HOST=localhost
 ENV PUSHER_PORT=6001
 ENV PUSHER_APP_KEY=keepappkey
-ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 
+# Stop if GIT_COMMIT_HASH is not provided
+RUN if [ -z "$GIT_COMMIT_HASH" ]; then echo "GIT_COMMIT_HASH argument missing" && exit 1; fi
 RUN npm run build
 
 
 # Production image, copy all the files and run next
 FROM base AS runner
+ARG GIT_COMMIT_HASH
 WORKDIR /app
+# Stop if GIT_COMMIT_HASH is not provided
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
+RUN if [ -z "$GIT_COMMIT_HASH" ]; then echo "GIT_COMMIT_HASH argument missing" && exit 1; fi
+
 
 ENV NODE_ENV production
 # Uncomment the following line in case you want to disable telemetry during runtime.
