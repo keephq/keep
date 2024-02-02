@@ -11,11 +11,7 @@ import { AlertDto, AlertKnownKeys } from "./models";
 import { Workflow } from "app/workflows/models";
 import { useRouter } from "next/navigation";
 import { useWorkflows } from "utils/hooks/useWorkflows";
-import { useProviders } from "utils/hooks/useProviders";
-import { useMemo, useState, createContext, useContext} from "react";
-import AlertAssignTicketModal from "./alert-assign-ticket-modal";
-import AlertNoteModal from './alert-note-modal';
-
+import { useMemo } from "react";
 
 const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
   Object.fromEntries(
@@ -45,27 +41,27 @@ const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
 
 interface Props {
   alert: AlertDto;
-  isNoteModalOpen: boolean;
-  setNoteModalOpen: (key: string) => void;
-  isTicketModalOpen: boolean;
-  setTicketModalOpen: (key: string) => void;
+  setNoteModalAlert?: (alert: AlertDto) => void;
+  setTicketModalAlert?: (alert: AlertDto) => void;
 }
-export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, isTicketModalOpen, setTicketModalOpen}: Props) {
+export default function AlertName({ alert, setNoteModalAlert, setTicketModalAlert}: Props) {
   const router = useRouter();
   const { data: workflows = [] } = useWorkflows();
-  // get providers
-  const { data: providersData = { installed_providers: [] }} = useProviders({ revalidateOnFocus: false, revalidateOnMount: false});
-
-  const ticketingProviders = useMemo(() =>
-    providersData.installed_providers.filter(provider => provider.tags.includes('ticketing')),
-    [providersData.installed_providers]
-  );
 
   const handleNoteClick = () => {
-    setNoteModalOpen(alert.fingerprint);
+    if(setNoteModalAlert)
+    {
+      setNoteModalAlert(alert);
+    }
   };
 
-  const closeAssignTicketModal = () => setTicketModalOpen('');
+  const handleTicketClick = () => {
+    if (!ticketUrl && setTicketModalAlert) {
+      setTicketModalAlert(alert);
+    } else {
+      window.open(ticketUrl, '_blank'); // Open the ticket URL in a new tab
+    }
+  };
 
   const {
     name,
@@ -92,13 +88,7 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, is
     [alert, workflows]
   );
 
-  const handleIconClick = () => {
-    if (!ticketUrl) {
-      setTicketModalOpen(alert.fingerprint);
-    } else {
-      window.open(ticketUrl, '_blank'); // Open the ticket URL in a new tab
-    }
-  };
+
 
 
   return (
@@ -120,15 +110,18 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, is
                 />
               </a>
             )}
-            <Icon
-              icon={TicketIcon}
-              tooltip={ticketUrl ? `Ticket Assigned ${ticketStatus ? `(status: ${ticketStatus})` : ''}` : "Click to assign Ticket"}
-              size="xs"
-              color={ticketUrl ? "green" : "gray"}
-              className="ml-1 cursor-pointer"
-              variant="solid"
-              onClick={handleIconClick}
-            />
+            { setTicketModalAlert && (
+                <Icon
+                icon={TicketIcon}
+                tooltip={ticketUrl ? `Ticket Assigned ${ticketStatus ? `(status: ${ticketStatus})` : ''}` : "Click to assign Ticket"}
+                size="xs"
+                color={ticketUrl ? "green" : "gray"}
+                className="ml-1 cursor-pointer"
+                variant="solid"
+                onClick={handleTicketClick}
+              />
+            )}
+
             {playbook_url && (
               <a href={playbook_url} target="_blank">
                 <Icon
@@ -141,15 +134,19 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, is
                 />
               </a>
             )}
-            <Icon
-              icon={PencilSquareIcon}
-              tooltip="Click to add note"
-              size="xs"
-              color={note ? "green" : "gray"}
-              className="ml-1 cursor-pointer"
-              variant="solid"
-              onClick={handleNoteClick}
-            />
+            {
+              setNoteModalAlert && (
+                <Icon
+                icon={PencilSquareIcon}
+                tooltip="Click to add note"
+                size="xs"
+                color={note ? "green" : "gray"}
+                className="ml-1 cursor-pointer"
+                variant="solid"
+                onClick={handleNoteClick}
+              />
+            )}
+
             {deleted && (
               <Icon
                 icon={TrashIcon}
@@ -203,18 +200,6 @@ export default function AlertName({ alert, isNoteModalOpen, setNoteModalOpen, is
             )}
           </div>
         </div>
-        <AlertAssignTicketModal
-          isOpen={isTicketModalOpen}
-          onClose={closeAssignTicketModal}
-          ticketingProviders={ticketingProviders}
-          alertFingerprint={alert.fingerprint}
-        />
-          <AlertNoteModal
-            isOpen={isNoteModalOpen}
-            handleClose={() => setNoteModalOpen('')}
-            initialContent={note || ''}
-            alertFingerprint={alert.fingerprint}
-          />
       </div>
   );
 }

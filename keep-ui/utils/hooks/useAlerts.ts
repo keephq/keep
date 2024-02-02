@@ -7,6 +7,7 @@ import useSWRSubscription, { SWRSubscriptionOptions } from "swr/subscription";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useConfig } from "./useConfig";
+import { toDateObjectWithFallback } from "utils/helpers";
 
 type AlertSubscription = {
   alerts: AlertDto[];
@@ -23,7 +24,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   const uniquePusherAlerts = new Map<string, AlertDto>(
     pusherAlerts.map((alert) => [
       alert.fingerprint,
-      { ...alert, lastReceived: new Date(alert.lastReceived) },
+      { ...alert, lastReceived: toDateObjectWithFallback(alert.lastReceived) },
     ])
   );
 
@@ -32,7 +33,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
   const endpointAlertsWithLastReceivedDate = endpointAlerts.map(
     (endpointAlert) => ({
       ...endpointAlert,
-      lastReceived: new Date(endpointAlert.lastReceived),
+      lastReceived: toDateObjectWithFallback(endpointAlert.lastReceived),
     })
   );
 
@@ -48,7 +49,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
       }
 
       return (
-        endpointAlert.lastReceived >= pusherAlertByFingerprint.lastReceived
+        endpointAlert.lastReceived <= pusherAlertByFingerprint.lastReceived
       );
     }
   );

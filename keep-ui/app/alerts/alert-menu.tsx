@@ -1,5 +1,5 @@
 import { Menu, Portal, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useState } from "react";
 import { Icon } from "@tremor/react";
 import {
   ArchiveBoxIcon,
@@ -18,6 +18,7 @@ import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
+import { usePresets } from "utils/hooks/usePresets";
 
 interface Props {
   alert: AlertDto;
@@ -25,7 +26,7 @@ interface Props {
   setIsMenuOpen: (key: string) => void;
 }
 
-export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
+export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
   const router = useRouter();
 
   const apiUrl = getApiURL();
@@ -33,16 +34,16 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
     },
-  } = useProviders();
+  } = useProviders({ revalidateOnFocus: false });
 
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnMount: false });
+  const { getCurrentPreset } = usePresets();
 
   const { data: session } = useSession();
 
   const [isOpen, setIsOpen] = useState(false);
   const [method, setMethod] = useState<ProviderMethod | null>(null);
-
 
   const { refs, x, y } = useFloating();
 
@@ -141,8 +142,8 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
   };
 
   const handleCloseMenu = () => {
-    setIsMenuOpen('');
-  }
+    setIsMenuOpen("");
+  };
 
   return (
     <>
@@ -157,7 +158,11 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
         {isMenuOpen && (
           <Portal>
             {/* when menu is opened, prevent scrolling with fixed div */}
-              <div className="fixed inset-0" aria-hidden="true"  onClick={() => handleCloseMenu()}/>
+            <div
+              className="fixed inset-0"
+              aria-hidden="true"
+              onClick={() => handleCloseMenu()}
+            />
             <Transition
               as={Fragment}
               show={isMenuOpen}
@@ -168,7 +173,8 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items static
+              <Menu.Items
+                static
                 ref={refs.setFloating}
                 className="z-50 absolute mt-2 divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                 style={{ left: (x ?? 0) - 50, top: y ?? 0 }}
@@ -199,11 +205,17 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
                   <Menu.Item>
                     {({ active }) => (
                       <button
-                        onClick={() =>
-                          router.replace(`/alerts?id=${alert.id}`, {
-                            scroll: false,
-                          })
-                        }
+                        onClick={() => {
+                          router.replace(
+                            `/alerts?id=${
+                              alert.id
+                            }&selectedPreset=${getCurrentPreset()}`,
+                            {
+                              scroll: false,
+                            }
+                          );
+                          handleCloseMenu();
+                        }}
                         className={`${
                           active ? "bg-slate-200" : "text-gray-900"
                         } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
@@ -220,7 +232,10 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
                     <Menu.Item>
                       {({ active }) => (
                         <button
-                          onClick={() => callAssignEndpoint()}
+                          onClick={() => {
+                            callAssignEndpoint();
+                            handleCloseMenu();
+                          }}
                           className={`${
                             active ? "bg-slate-200" : "text-gray-900"
                           } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
@@ -258,11 +273,11 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
                               } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                               disabled={!methodEnabled}
                               title={
-                                !methodEnabled
-                                  ? "Missing required scopes"
-                                  : ""
+                                !methodEnabled ? "Missing required scopes" : ""
                               }
-                              onClick={() => openMethodTransition(method)}
+                              onClick={() => {
+                                openMethodTransition(method);
+                              }}
                             >
                               {/* TODO: We can probably make this icon come from the server as well */}
                               <DynamicIcon
@@ -281,7 +296,10 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
                   <Menu.Item>
                     {({ active }) => (
                       <button
-                        onClick={onDelete}
+                        onClick={() => {
+                          onDelete();
+                          handleCloseMenu();
+                        }}
                         className={`${
                           active ? "bg-slate-200" : "text-gray-900"
                         }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
@@ -306,6 +324,7 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen}: Props) {
           closeModal={() => {
             setIsOpen(false);
             setMethod(null);
+            handleCloseMenu();
           }}
           method={method}
           alert={alert}

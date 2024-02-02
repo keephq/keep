@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertTable } from "./alert-table";
@@ -47,7 +47,7 @@ const getOptionAlerts = (alert: AlertDto, options: Option[]): boolean =>
           }
         }
 
-        return true;
+        return false;
       })
     : true;
 
@@ -61,21 +61,29 @@ interface Props {
   alerts: AlertDto[];
   preset: Preset;
   isAsyncLoading: boolean;
+  setTicketModalAlert: (alert: AlertDto | null) => void;
+  setNoteModalAlert: (alert: AlertDto | null) => void;
 }
+
+const defaultRowPaginationState = {
+  pageSize: 10,
+  pageIndex: 0,
+};
 
 export default function AlertTableTabPanel({
   alerts,
   preset,
   isAsyncLoading,
+  setTicketModalAlert,
+  setNoteModalAlert,
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
   );
 
-  const [rowPagination, setRowPagination] = useState<PaginationState>({
-    pageSize: 10,
-    pageIndex: 0,
-  });
+  const [rowPagination, setRowPagination] = useState<PaginationState>(
+    defaultRowPaginationState
+  );
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
@@ -106,7 +114,13 @@ export default function AlertTableTabPanel({
     additionalColsToGenerate: additionalColsToGenerate,
     isCheckboxDisplayed: preset.name !== "Deleted",
     isMenuDisplayed: true,
+    setTicketModalAlert: setTicketModalAlert,
+    setNoteModalAlert: setNoteModalAlert,
   });
+
+  useEffect(() => {
+    setRowPagination(defaultRowPaginationState);
+  }, [selectedOptions]);
 
   return (
     <TabPanel className="mt-4">
@@ -114,6 +128,7 @@ export default function AlertTableTabPanel({
         <AlertActions
           selectedRowIds={selectedRowIds}
           alerts={sortedPresetAlerts}
+          clearRowSelection={() => setRowSelection({})}
         />
       ) : (
         <AlertPresets
