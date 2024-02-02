@@ -423,6 +423,7 @@ def validate_provider_scopes(
 async def update_provider(
     provider_id: str,
     request: Request,
+    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["update:providers"])
     ),
@@ -436,13 +437,7 @@ async def update_provider(
             "provider_id": provider_id,
         },
     )
-    # Try to parse as JSON first
-    try:
-        provider_info = await request.json()
-    except ValueError:
-        # If error occurs (likely not JSON), try to get as form data
-        form_data = await request.form()
-        provider_info = dict(form_data)
+    provider_info = await __get_provider_raw_data(request, file)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
@@ -509,7 +504,6 @@ async def install_provider(
     ),
     session: Session = Depends(get_session),
 ):
-    # Try to parse as JSON first
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
     provider_info = await __get_provider_raw_data(request, file)
