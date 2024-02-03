@@ -211,12 +211,14 @@ def get_api_keys(
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
             .where(TenantApiKey.created_by == email)
+            .where(TenantApiKey.is_deleted != True)
         )
 
     else:
         statement = (
             select(TenantApiKey)
             .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.is_deleted != True)
         )
 
     api_keys = session.exec(statement).all()
