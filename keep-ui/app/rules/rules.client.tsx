@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon, AreaChart } from "@tremor/react";
+import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon, AreaChart, Text } from "@tremor/react";
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import QueryBuilder, { add, remove, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, parseCEL, QueryValidator, findPath} from 'react-querybuilder';
@@ -868,15 +868,26 @@ export default function Page() {
 
                               {rule.updated_by && <Subtitle className="mt-1">Updated by: {rule.updated_by}</Subtitle>}
                               {rule.update_time && <Subtitle className="mt-1">Update Time: {rule.update_time}</Subtitle>}
-                              {rule.distribution && (
-                                <AreaChart
-                                  data={flattenDistribution(rule.distribution)}
-                                  index="timestamp"
-                                  yAxisWidth={65}
-                                  categories={Object.keys(rule.distribution).map(key => key === "none" ? "Number of Alerts" : key)}
-                                  enableLegendSlider={true}
-                                />
-                              )}
+                              {
+                                rule.distribution && Object.keys(rule.distribution).length > 0 ? (
+                                  <>
+                                    <div className="text-center">
+                                      <AreaChart
+                                        data={flattenDistribution(rule.distribution)}
+                                        index="timestamp"
+                                        yAxisWidth={65}
+                                        categories={Object.keys(rule.distribution).map(key => key === "none" ? "Number of Alerts" : key)}
+                                        enableLegendSlider={true}
+                                      />
+                                      <div className="mt-2"> {/* Adjust margin-top as needed */}
+                                        <Text color="orange" className="inline-block mx-auto">Alerts hits (24 hours)</Text>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <Text className="mt-2" color="red">No alerts matched this rule in the last 24 hours.</Text>
+                                )
+                              }
                             </div>
                           </TableCell>
                         </TableRow>
