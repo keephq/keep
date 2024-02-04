@@ -1,8 +1,8 @@
 import hashlib
 import logging
+from datetime import datetime
 from typing import Optional
 from uuid import uuid4
-from datetime import datetime
 
 from sqlmodel import Session, select
 
@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_api_key(
-    session: Session,
-    unique_api_key_id: str,
-    tenant_id: str
+    session: Session, unique_api_key_id: str, tenant_id: str
 ) -> TenantApiKey:
     """
     Retrieves API key.
@@ -107,10 +105,6 @@ def update_api_key_internal(
         # Find current API key in secret_manager
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        old_api_key_secret = secret_manager.read_secret(
-                f"{tenant_id}-{unique_api_key_id}"
-        )
-
         # Update API key in secret_manager
         api_key = str(uuid4())
 
@@ -120,7 +114,9 @@ def update_api_key_internal(
         )
 
         # Update API key hash in DB
-        tenant_api_key_entry.key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+        tenant_api_key_entry.key_hash = hashlib.sha256(
+            api_key.encode("utf-8")
+        ).hexdigest()
         session.commit()
 
         return api_key
@@ -188,10 +184,7 @@ def create_api_key(
 
 
 def get_api_keys(
-    session: Session,
-    tenant_id: str,
-    role: Role,
-    email: str
+    session: Session, tenant_id: str, role: Role, email: str
 ) -> [TenantApiKey]:
     """
     Gets all active API keys for the given tenant.
@@ -238,30 +231,34 @@ def get_api_keys_secret(
             continue
 
         if api_key.is_deleted == True:
-            api_keys_with_secret.append({
+            api_keys_with_secret.append(
+                {
+                    "reference_id": api_key.reference_id,
+                    "tenant": api_key.tenant,
+                    "is_deleted": api_key.is_deleted,
+                    "created_at": api_key.created_at,
+                    "created_by": api_key.created_by,
+                    "last_used": api_key.last_used,
+                    "secret": "Key has been deactivated",
+                }
+            )
+            continue
+
+        secret = secret_manager.read_secret(
+            f"{api_key.tenant_id}-{api_key.reference_id}"
+        )
+
+        api_keys_with_secret.append(
+            {
                 "reference_id": api_key.reference_id,
                 "tenant": api_key.tenant,
                 "is_deleted": api_key.is_deleted,
                 "created_at": api_key.created_at,
                 "created_by": api_key.created_by,
                 "last_used": api_key.last_used,
-                "secret": "Key has been deactivated"
-            })
-            continue
-
-        secret = secret_manager.read_secret(
-                f"{api_key.tenant_id}-{api_key.reference_id}"
+                "secret": secret,
+            }
         )
-
-        api_keys_with_secret.append({
-            "reference_id": api_key.reference_id,
-            "tenant": api_key.tenant,
-            "is_deleted": api_key.is_deleted,
-            "created_at": api_key.created_at,
-            "created_by": api_key.created_by,
-            "last_used": api_key.last_used,
-            "secret": secret
-        })
 
     return api_keys_with_secret
 
