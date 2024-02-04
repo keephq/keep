@@ -64,9 +64,9 @@ class LinearbProvider(BaseProvider):
         provider_id: str,
         http_url: str = "",
         title: str = "",
-        teams="[]",
-        respository_urls="[]",
-        services="[]",
+        teams="",
+        respository_urls="",
+        services="",
         started_at="",
         ended_at="",
         git_ref="",
@@ -95,7 +95,7 @@ class LinearbProvider(BaseProvider):
                     self.logger.warning(
                         "Failed to delete incident", extra={**result.json()}
                     )
-                return result.json()
+                return result.text
 
             # Try to get the incident
             incident_response = requests.get(
@@ -105,6 +105,15 @@ class LinearbProvider(BaseProvider):
                 incident = incident_response.json()
 
                 payload = {**incident}
+
+                if "teams" in payload:
+                    team_names = [team["name"] for team in payload["teams"]]
+                    if teams:
+                        teams = json.loads(teams)
+                        for team in teams:
+                            if team not in team_names:
+                                team_names.append(team)
+                        payload["teams"] = team_names
 
                 if respository_urls and isinstance(respository_urls, str):
                     respository_urls = json.loads(respository_urls)
@@ -120,7 +129,7 @@ class LinearbProvider(BaseProvider):
                     payload["ended_at"] = ended_at
                 if git_ref:
                     payload["git_ref"] = git_ref
-                result = requests.put(
+                result = requests.patch(
                     f"{self.LINEARB_API}/api/v1/incidents/{provider_id}",
                     json=payload,
                     headers=headers,
@@ -160,7 +169,7 @@ class LinearbProvider(BaseProvider):
             else:
                 self.logger.warning("Failed to notify linearB", extra={**result.json()})
 
-            return result.json()
+            return result.text
         except Exception as e:
             raise ProviderException(f"Failed to notify linear: {e}")
 
@@ -191,4 +200,8 @@ if __name__ == "__main__":
         provider_id="linear",
         http_url="https://www.google.com",
         title="Test",
+        teams='["All Contributors"]',
+        respository_urls='["https://www.keephq.dev"]',
+        started_at=datetime.datetime.now().isoformat(),
+        should_delete="true",
     )
