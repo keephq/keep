@@ -264,6 +264,10 @@ class WorkflowManager:
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions
         }
+        if workflow.workflow_steps:
+            workflow_results.update(
+                {step.name: step.provider.results for step in workflow.workflow_steps}
+            )
         try:
             save_workflow_results(
                 tenant_id=workflow.context_manager.tenant_id,

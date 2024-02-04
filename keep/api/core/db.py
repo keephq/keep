@@ -547,8 +547,6 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             .options(joinedload(WorkflowExecution.logs))
             .one()
         )
-
-        return execution_with_logs
     return execution_with_logs
 
 
