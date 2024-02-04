@@ -118,6 +118,8 @@ class RulesEngine:
                 group_name = f"Alert group genereted by rule {rule.name}"
 
             group_status = self._calc_group_status(group.alerts)
+            # get the payload of the group
+            group_payload = self._generate_group_payload(group.alerts)
             # create the alert
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
@@ -134,6 +136,7 @@ class RulesEngine:
                     "status": group_status,
                     "pushed": True,
                     "group": True,
+                    "groupPayload": group_payload,
                     "fingerprint": group_fingerprint,
                     **group_attributes,
                 },
@@ -247,3 +250,35 @@ class RulesEngine:
             return AlertStatus.FIRING
         # 3. Last, just return the last status
         return alerts[-1].event["status"]
+
+    def _generate_group_payload(self, alerts):
+        # todo: group payload should be configurable
+        """This function generates the payload of the group alert.
+
+        Args:
+            alerts (list[Alert]): list of alerts related to the group
+
+        Returns:
+            dict: the payload of the group alert
+        """
+        # first, group by fingerprints
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        group_payload = {}
+        for fingerprint, alerts in alerts_by_fingerprint.items():
+            # take the latest (by timestamp) for each fingerprint:
+            alert = max(alerts, key=lambda alert: alert.event["lastReceived"])
+            group_payload[fingerprint] = {
+                "name": alert.event["name"],
+                "number_of_alerts": len(alerts),
+                "fingerprint": fingerprint,
+                "last_status": alert.event["status"],
+                "last_severity": alert.event["severity"],
+            }
+
+        return group_payload
