@@ -1073,7 +1073,9 @@ def get_rule_distribution(tenant_id, minute=False):
             .join(AlertToGroup, Group.id == AlertToGroup.group_id)
             .filter(AlertToGroup.timestamp >= seven_days_ago)
             .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
-            .group_by("rule_id", "rule_name", "group_fingerprint", "time")
+            .group_by(
+                "rule_id", "rule_name", "group_id", "group_fingerprint", "time"
+            )  # Adjusted here
             .order_by("time")
         )
 
