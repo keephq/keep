@@ -9,7 +9,7 @@ export const useUsers = (options?: SWRConfiguration) => {
   const { data: session } = useSession();
 
   return useSWR<User[]>(
-    () => (session ? `${apiUrl}/settings/users` : null),
+    () => (session ? `${apiUrl}/users` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );
