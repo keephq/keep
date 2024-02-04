@@ -14,7 +14,7 @@ const roleOptions = [
   {
     value: "admin",
     label: "CLI",
-    tooltip: " CLI has admin ability for Keep management purposes (configure from API, etc)"
+    tooltip: " CLI has admin ability for Keep management purposes"
   },
   {
     value: "create_new",
