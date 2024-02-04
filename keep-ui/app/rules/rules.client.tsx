@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon } from "@tremor/react";
+import { Card, Flex, Title, Subtitle, TextInput, Button, Table, TableCell, TableBody, TableRow, TableHead, TableHeaderCell, Icon, AreaChart, Text } from "@tremor/react";
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import QueryBuilder, { add, remove, RuleGroupTypeAny, RuleGroupType, ValidationMap, Field, formatQuery, defaultOperators, parseCEL, QueryValidator, findPath} from 'react-querybuilder';
@@ -12,6 +12,18 @@ import './query-builder.scss';
 import { FaRegTrashAlt } from "react-icons/fa";
 import { FaQuestionCircle } from 'react-icons/fa';
 
+interface Distribution {
+  [group: string]: {
+    [timestamp: string]: number;
+  };
+}
+
+interface CombinedData {
+  [timestamp: string]: {
+    date: any; // Assuming getDate returns a string
+    [group_id: string]: number; // Adjust the type according to your actual data structure
+  };
+}
 
 const customValidator: QueryValidator = (query: RuleGroupTypeAny): ValidationMap => {
   const validationMap: ValidationMap = {};
@@ -119,25 +131,26 @@ const CustomAddGroupAction = (props: any) => {
 
   return (
     <div style={{ position: 'relative', display: 'inline-block'}}>
-      <Button onClick={props.handleOnClick} color="orange">
-        Add Alerts Group
-      </Button>
-      <Icon
-        className="rules-tooltip"
-        icon={FaQuestionCircle}
-        tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
-        variant="simple"
-        size="md"
-        color="stone"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          transform: 'translate(50%, -50%)',
-          zIndex:9999
-        }}
-      />
-    </div>
+    <Button onClick={props.handleOnClick} color="orange">
+      Add Alerts Group
+    </Button>
+    <Icon
+      className="rules-tooltip"
+      icon={FaQuestionCircle}
+      tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
+      variant="simple"
+      size="md"
+      color="stone"
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        transform: 'translate(50%, -50%)',
+        zIndex:9999
+      }}
+    />
+  </div>
+
   );
 };
 
@@ -157,25 +170,20 @@ const CustomAddRuleAction = (props: any) => {
     );
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block', zIndex:1000}}>
-      <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0 ? true: false}>
-        Add Condition
-      </Button>
-      <Icon
-        className="rules-tooltip"
-        icon={FaQuestionCircle}
-        tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
-        variant="simple"
-        size="md"
-        color="stone"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          transform: 'translate(50%, -50%)'
-        }}
-      />
+    <div className="relative inline-block">
+      <Button onClick={handleAddRuleClick} color="orange" disabled={availableFields.length === 0} className="text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          Add Condition
+        </Button>
+        <Icon
+          className="rules-tooltip absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 z-50"
+          icon={FaQuestionCircle}
+          tooltip="Any group consists of one or more Conditions. Each condition is evaluated separately and the results are combined using AND combinator. For example, if you want to create a group that has a severity of 'critical' and source of 'kibana', you would create two conditions. The first condition would be severity = 'critical' and the second condition would be source = 'kibana'."
+          variant="simple"
+          size="md"
+          color="stone"
+        />
     </div>
+
   );
 };
 
@@ -191,8 +199,8 @@ interface Rule {
   created_by: string;
   creation_time: string;
   updated_by: string;
-  update_time: string
-
+  update_time: string;
+  distribution?: { [group: string]: { [timestamp: string]: number } };
 }
 
 type ExpandedRowsType = {
@@ -354,6 +362,7 @@ export default function Page() {
       // Assuming path[0] is the group index and path[1] is the rule index
       ruleIndex = path[1];
       groupIndex = path[0];
+      currentGroup = currentQuery.rules[groupIndex];
     }
     let isRuleNew = ruleIndex === currentGroup.rules.length - 1 && currentGroup.rules[ruleIndex].value === '';
     let currentRule = currentGroup.rules[ruleIndex];
@@ -567,10 +576,11 @@ export default function Page() {
     return ""; // No error
   };
 
+
   const handleEdit = (rule: Rule) => {
     let query = parseCEL(rule.definition_cel);
-    // if the query has only one rule, wrap it with a group
-    if(query.rules.length === 1){
+    // if the query has only one rule or there is only one group, wrap it with a group
+    if(query.rules.length === 1 || !("rules" in query.rules[0])){
       query = {
         combinator: 'and',
         rules: [query]
@@ -685,6 +695,55 @@ export default function Page() {
     return query.rules.length > 0;
   }
 
+  /**
+  * Converts a timestamp to a formatted date string.
+ * @param {string | number} timestamp - The timestamp to convert, can be a string or number.
+ * @returns {string} - The formatted date string.
+ */
+    function getDate(timestamp: string) {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+
+      // Format: DD/MM/YYYY HH:MM:SS
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+
+    function flattenDistribution(distribution: Distribution) {
+      // Object to hold combined data for each timestamp
+      const combinedDataByTimestamp: CombinedData = {};
+
+      for (let group_id in distribution) {
+        // Replace 'none' with 'Number of Alerts'
+        const groupData = distribution[group_id];
+        if (group_id === "none") {
+          group_id = "Number of Alerts";
+        }
+
+        for (const timestamp in groupData) {
+          // Ensure we have an object for this timestamp
+          if (!combinedDataByTimestamp[timestamp]) {
+            // tell linter ignore
+            // eslint-disable-next-line
+            // @ts-ignore
+            combinedDataByTimestamp[timestamp] = { date: getDate(timestamp) };
+          }
+          // Add the current group's value to this timestamp's object
+          combinedDataByTimestamp[timestamp][group_id] = groupData[timestamp];
+        }
+      }
+
+      // Convert the combined data object back into an array
+      const flatData = Object.values(combinedDataByTimestamp);
+
+      return flatData;
+    }
+
+
+
+
   return (
       <Card  className="mt-10 p-4 md:p-10 mx-auto">
         <Flex style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'stretch' }}>
@@ -743,7 +802,7 @@ export default function Page() {
               validator={customValidator}
               controlClassnames={{
                 queryBuilder: 'queryBuilder-branches bg-orange-300 !important rounded-lg shadow-xl',
-                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4  overflow-x-auto !important',
+                ruleGroup: 'rounded-lg bg-orange-300 bg-opacity-10 mt-4  !important',
                 combinators: 'bg-orange-400 text-white rounded-l-full p-1 shadow',
                 addRule: 'bg-orange-400 text-white rounded-none p-1 shadow',
                 addGroup: 'bg-orange-400 text-white rounded-r-full p-1 shadow',
@@ -806,8 +865,29 @@ export default function Page() {
                               <Subtitle>Timeframe: {rule.timeframe}</Subtitle>
                               <Subtitle className="mt-1">Created by: {rule.created_by}</Subtitle>
                               <Subtitle className="mt-1">Creation Time: {rule.creation_time}</Subtitle>
+
                               {rule.updated_by && <Subtitle className="mt-1">Updated by: {rule.updated_by}</Subtitle>}
                               {rule.update_time && <Subtitle className="mt-1">Update Time: {rule.update_time}</Subtitle>}
+                              {
+                                rule.distribution && Object.keys(rule.distribution).length > 0 ? (
+                                  <>
+                                    <div className="text-center">
+                                      <AreaChart
+                                        data={flattenDistribution(rule.distribution)}
+                                        index="timestamp"
+                                        yAxisWidth={65}
+                                        categories={Object.keys(rule.distribution).map(key => key === "none" ? "Number of Alerts" : key)}
+                                        enableLegendSlider={true}
+                                      />
+                                      <div className="mt-2"> {/* Adjust margin-top as needed */}
+                                        <Text color="orange" className="inline-block mx-auto">Alerts hits (24 hours)</Text>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <Text className="mt-2" color="red">No alerts matched this rule in the last 24 hours.</Text>
+                                )
+                              }
                             </div>
                           </TableCell>
                         </TableRow>
