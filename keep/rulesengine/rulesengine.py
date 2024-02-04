@@ -117,6 +117,7 @@ class RulesEngine:
             else:
                 group_name = f"Alert group genereted by rule {rule.name}"
 
+            group_status = self._calc_group_status(group.alerts)
             # create the alert
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
@@ -130,8 +131,7 @@ class RulesEngine:
                     "lastReceived": group_attributes.get("last_update_time"),
                     "severity": group_severity,
                     "source": group_source,
-                    # TODO: status should be calculated from the alerts
-                    "status": AlertStatus.FIRING.value,
+                    "status": group_status,
                     "pushed": True,
                     "group": True,
                     "fingerprint": group_fingerprint,
@@ -212,3 +212,38 @@ class RulesEngine:
             )
             return "none"
         return ",".join(group_fingerprint)
+
+    def _calc_group_status(self, alerts):
+        """This function calculates the status of a group of alerts according to the following logic:
+        1. If the last alert of each fingerprint is resolved, the group is resolved
+        2. If at least one of the alerts is firing, the group is firing
+
+
+        Args:
+            alerts (list[Alert]): list of alerts related to the group
+
+        Returns:
+            AlertStatus: the alert status (enum)
+        """
+        # take the last alert from each fingerprint
+        # if all of them are resolved, the group is resolved
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        # now take the latest (by timestamp) for each fingerprint:
+        alerts = [
+            max(alerts, key=lambda alert: alert.event["lastReceived"])
+            for alerts in alerts_by_fingerprint.values()
+        ]
+        # 1. if all alerts are with the same status, just use it
+        if len(set(alert.event["status"] for alert in alerts)) == 1:
+            return alerts[0].event["status"]
+        # 2. Else, if at least one of them is firing, the group is firing
+        if any(alert.event["status"] == AlertStatus.FIRING for alert in alerts):
+            return AlertStatus.FIRING
+        # 3. Last, just return the last status
+        return alerts[-1].event["status"]
