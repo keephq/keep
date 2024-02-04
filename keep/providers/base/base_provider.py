@@ -211,6 +211,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def query(self, **kwargs: dict):
         # just run the query
         results = self._query(**kwargs)
+        self.results.append(results)
         # now add the type of the results to the global context
         if results and isinstance(results, list):
             self.context_manager.dependencies.add(results[0].__class__)
