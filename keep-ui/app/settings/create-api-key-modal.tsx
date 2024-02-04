@@ -3,8 +3,9 @@ import { useForm, Controller, SubmitHandler, FieldValues } from 'react-hook-form
 import { Dialog } from "@headlessui/react";
 import { TextInput, Button, Subtitle, SearchSelect, SearchSelectItem, Icon } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { ApiKey } from "./api-key-settings";
 
-const roleOptions: RoleOption[] = [
+const roleOptions = [
   {
     value: "webhook",
     label: "webhook",
@@ -39,7 +40,7 @@ export default function CreateApiKeyModal({ isOpen, onClose, apiUrl, setApiKeys,
 
         if (response.ok) {
           const newApiKey = await response.json();
-          setApiKeys(prevApiKeys => [...prevApiKeys, newApiKey]);
+          setApiKeys((prevApiKeys: ApiKey[]) => [...prevApiKeys, newApiKey]);
           handleClose();
         } else {
           const errorData = await response.json();
@@ -157,5 +158,3 @@ export default function CreateApiKeyModal({ isOpen, onClose, apiUrl, setApiKeys,
       </Dialog>
     );
   }
-
-

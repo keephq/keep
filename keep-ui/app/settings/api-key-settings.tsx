@@ -1,9 +1,9 @@
 "use client";
 
-import { 
-    Card, 
-    Title, 
-    Subtitle, 
+import {
+    Card,
+    Title,
+    Subtitle,
     Button,
     Table,
     TableBody,
@@ -34,6 +34,15 @@ interface Props {
   selectedTab: string;
 }
 
+export interface ApiKey {
+  reference_id: string;
+  secret: string;
+  created_by: string;
+  created_at: string;
+  last_used?: string; // Assuming 'last_used' could be optional
+}
+
+
 export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
@@ -53,7 +62,8 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
 
 
   const [isApiKeyModalOpen, setApiKeyModalOpen] = useState(false);
-  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+
 
   if (isLoading) return <Loading />;
   if (error) return <div>{error.message}</div>;
@@ -65,7 +75,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         text: secret,
         codeBlock: true,
         showLineNumbers: false,
-      }; 
+      };
   }
 
   // Determine runtime configuration
@@ -78,7 +88,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>API Keys</Title>
-          <Subtitle>Add, edit or deactivate API keys from your tenant</Subtitle>
+          <Subtitle>Manage your tenant API keys</Subtitle>
         </div>
 
         <div>
@@ -90,7 +100,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
             disabled={!createApiKeyEnabled}
             tooltip={!createApiKeyEnabled ? "API Key creation is disabled because Keep is running in NO_AUTH mode.": "Add user"}
           >
-            Create API key 
+            Create API key
           </Button>
         </div>
       </div>
@@ -108,7 +118,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
                 Created At
               </TableHeaderCell>
               <TableHeaderCell className="text-left">
-                Last Used 
+                Last Used
               </TableHeaderCell>
               <TableHeaderCell>
               {/* Menu */}
@@ -122,8 +132,8 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
               >
                 <TableCell>{key.reference_id}</TableCell>
                 <TableCell className="text-left">
-                  <CopyBlock 
-                    {...getCopyBlockProps(key.secret)} 
+                  <CopyBlock
+                    {...getCopyBlockProps(key.secret)}
                   />
                 </TableCell>
 

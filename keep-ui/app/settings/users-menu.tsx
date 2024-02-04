@@ -19,7 +19,6 @@ user: User;
 
 export default function UsersMenu({ user, currentUser }: Props) {
   const { refs, x, y } = useFloating();
-  const [isOpen, setIsOpen] = useState(false);
 
   const onDelete = async () => {
     const confirmed = confirm(

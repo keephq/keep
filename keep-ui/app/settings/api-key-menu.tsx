@@ -1,21 +1,14 @@
 "use client";
 import { Menu, Transition, Portal } from "@headlessui/react";
-import { Fragment, useState} from "react";
+import { Fragment} from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
-import { User } from "./models";
-import { User as AuthUser } from "next-auth";
 import { mutate } from "swr";
 import { useFloating } from "@floating-ui/react-dom";
 
-
-interface Props {
-user?: User;
-  currentUser?: AuthUser;
-}
 
 export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
   const { refs, x, y } = useFloating();
@@ -103,7 +96,7 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
                         } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         <UpdateIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                       Roll key 
+                       Roll key
                       </button>
                     )}
                   </Menu.Item>
@@ -116,7 +109,7 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
                         } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                       Deactivate 
+                       Delete
                       </button>
                     )}
                   </Menu.Item>
@@ -130,4 +123,3 @@ export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
   </Menu>
   );
 }
-
