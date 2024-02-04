@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
+from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
@@ -23,8 +24,14 @@ def get_rules(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting rules")
     rules = get_rules_db(tenant_id=tenant_id)
+    # now add this:
+    rules_dist = get_rule_distribution_db(tenant_id=tenant_id, minute=True)
     logger.info("Got rules")
     # return rules
+    rules = [rule.dict() for rule in rules]
+    for rule in rules:
+        rule["distribution"] = rules_dist.get(rule["id"], [])
+
     return rules
 
 
