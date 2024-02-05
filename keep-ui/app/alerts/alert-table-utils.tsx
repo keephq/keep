@@ -178,11 +178,11 @@ export const useAlertTableCols = ({
       cell: (context) => (
         <AlertExtraPayload
           alert={context.row.original}
-          isToggled={expandedToggles[context.row.original.id]}
+          isToggled={expandedToggles[context.row.original.fingerprint]}
           setIsToggled={(newValue) =>
             setExpandedToggles({
               ...expandedToggles,
-              [context.row.original.id]: newValue,
+              [context.row.original.fingerprint]: newValue,
             })
           }
         />

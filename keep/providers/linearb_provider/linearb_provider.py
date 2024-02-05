@@ -61,7 +61,7 @@ class LinearbProvider(BaseProvider):
 
     def _notify(
         self,
-        provider_id: str,
+        incident_id: str,
         http_url: str = "",
         title: str = "",
         teams="",
@@ -86,7 +86,7 @@ class LinearbProvider(BaseProvider):
             # If should_delete is true (any string that is not false), delete the incident and return.
             if should_delete and should_delete != "false":
                 result = requests.delete(
-                    f"{self.LINEARB_API}/api/v1/incidents/{provider_id}",
+                    f"{self.LINEARB_API}/api/v1/incidents/{incident_id}",
                     headers=headers,
                 )
                 if result.ok:
@@ -95,11 +95,12 @@ class LinearbProvider(BaseProvider):
                     self.logger.warning(
                         "Failed to delete incident", extra={**result.json()}
                     )
+                    raise Exception(f"Failed to notify linearB {result.text}")
                 return result.text
 
             # Try to get the incident
             incident_response = requests.get(
-                f"{self.LINEARB_API}/api/v1/incidents/{provider_id}", headers=headers
+                f"{self.LINEARB_API}/api/v1/incidents/{incident_id}", headers=headers
             )
             if incident_response.ok:
                 incident = incident_response.json()
@@ -113,7 +114,7 @@ class LinearbProvider(BaseProvider):
                         for team in teams:
                             if team not in team_names:
                                 team_names.append(team)
-                        payload["teams"] = team_names
+                    payload["teams"] = team_names
 
                 if respository_urls and isinstance(respository_urls, str):
                     respository_urls = json.loads(respository_urls)
@@ -130,7 +131,7 @@ class LinearbProvider(BaseProvider):
                 if git_ref:
                     payload["git_ref"] = git_ref
                 result = requests.patch(
-                    f"{self.LINEARB_API}/api/v1/incidents/{provider_id}",
+                    f"{self.LINEARB_API}/api/v1/incidents/{incident_id}",
                     json=payload,
                     headers=headers,
                 )
@@ -151,7 +152,7 @@ class LinearbProvider(BaseProvider):
                 issued_at = datetime.datetime.now().isoformat()
 
                 payload = {
-                    "provider_id": provider_id,
+                    "provider_id": incident_id,
                     "http_url": http_url,
                     "title": title,
                     "issued_at": issued_at,
@@ -168,6 +169,7 @@ class LinearbProvider(BaseProvider):
                 self.logger.info("Notified LinearB successfully")
             else:
                 self.logger.warning("Failed to notify linearB", extra={**result.json()})
+                raise Exception(f"Failed to notify linearB {result.text}")
 
             return result.text
         except Exception as e:
@@ -197,7 +199,7 @@ if __name__ == "__main__":
     )
     provider = LinearbProvider(context_manager, provider_id="linear", config=config)
     provider.notify(
-        provider_id="linear",
+        incident_id="linear",
         http_url="https://www.google.com",
         title="Test",
         teams='["All Contributors"]',

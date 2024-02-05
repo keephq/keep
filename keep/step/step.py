@@ -105,7 +105,11 @@ class Step:
         # apply ALL conditions (the decision whether to run or not is made in the end)
         for item in items:
             self.context_manager.set_for_each_context(item)
-            did_action_run = self._run_single()
+            try:
+                did_action_run = self._run_single()
+            except Exception as e:
+                self.logger.error(f"Failed to run action with error {e}")
+                continue
             # If at least one item triggered an action, return True
             # TODO - do it per item
             if did_action_run:
@@ -241,12 +245,14 @@ class Step:
                             step_output = self.provider.query(
                                 **rendered_providers_parameters
                             )
-                            self.context_manager.set_step_context(
-                                self.step_id, results=step_output, foreach=self.foreach
-                            )
                         else:
-                            self.provider.notify(**rendered_providers_parameters)
+                            step_output = self.provider.notify(
+                                **rendered_providers_parameters
+                            )
                         # exiting the loop as step/action execution was successful
+                        self.context_manager.set_step_context(
+                            self.step_id, results=step_output, foreach=self.foreach
+                        )
                         break
                     except Exception as e:
                         if curr_retry_count == self.__retry_count:
