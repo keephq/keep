@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   ColumnDef,
   PaginationState,
@@ -17,6 +17,8 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 
+const DEFAULT_COLS = [...AlertKnownKeys];
+
 export const getPaginatedData = (
   alerts: AlertDto[],
   { pageIndex, pageSize }: PaginationState
@@ -30,17 +32,34 @@ export const getDataPageCount = (
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as string);
 
-export const getDefaultColumnVisibilityState = (
-  columns: ColumnDef<AlertDto>[]
-) =>
-  getColumnsIds(columns)
-    .filter(
-      (id) => [...AlertKnownKeys, "menu", "checkbox"].includes(id) === false
-    )
-    .reduce<VisibilityState>(
-      (acc, column) => ({ ...acc, [column]: false }),
-      {}
-    );
+export const getDefaultColumnVisibilityState = (columnsIds: string[]) => {
+  return columnsIds.reduce<VisibilityState>(
+    (defaultColVisibState, columnId) => {
+      if (DEFAULT_COLS.includes(columnId)) {
+        return defaultColVisibState;
+      }
+
+      return { ...defaultColVisibState, [columnId]: false };
+    },
+    {}
+  );
+};
+
+export const getOnlyVisibleCols = (
+  columnVisibility: VisibilityState,
+  columnsIds: string[]
+): VisibilityState =>
+  columnsIds.reduce<VisibilityState>((acc, columnId) => {
+    if (DEFAULT_COLS.includes(columnId)) {
+      return acc;
+    }
+
+    if (columnId in columnVisibility) {
+      return { ...acc, [columnId]: columnVisibility[columnId] };
+    }
+
+    return { ...acc, [columnId]: false };
+  }, columnVisibility);
 
 const columnHelper = createColumnHelper<AlertDto>();
 
@@ -57,11 +76,10 @@ export const useAlertTableCols = ({
   isCheckboxDisplayed,
   isMenuDisplayed,
   setNoteModalAlert,
-  setTicketModalAlert
+  setTicketModalAlert,
 }: GenerateAlertTableColsArg = {}) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
-  const [currentOpenMenu, setCurrentOpenMenu] = useState('');
-
+  const [currentOpenMenu, setCurrentOpenMenu] = useState("");
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -122,9 +140,13 @@ export const useAlertTableCols = ({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: (context) => <AlertName alert={context.row.original}
-                            setNoteModalAlert={setNoteModalAlert}
-                            setTicketModalAlert={setTicketModalAlert}/>
+      cell: (context) => (
+        <AlertName
+          alert={context.row.original}
+          setNoteModalAlert={setNoteModalAlert}
+          setTicketModalAlert={setTicketModalAlert}
+        />
+      ),
     }),
     columnHelper.accessor("description", {
       id: "description",
@@ -193,9 +215,15 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "alertMenu",
-            cell: (context) => <AlertMenu alert={context.row.original}
-            isMenuOpen={context.row.original.fingerprint === currentOpenMenu}
-            setIsMenuOpen={setCurrentOpenMenu}/>,
+            cell: (context) => (
+              <AlertMenu
+                alert={context.row.original}
+                isMenuOpen={
+                  context.row.original.fingerprint === currentOpenMenu
+                }
+                setIsMenuOpen={setCurrentOpenMenu}
+              />
+            ),
           }),
         ]
       : []) as ColumnDef<AlertDto>[]),
