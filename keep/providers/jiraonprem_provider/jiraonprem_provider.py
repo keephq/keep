@@ -222,9 +222,8 @@ class JiraonpremProvider(BaseProvider):
                 paths=["issue", "createmeta"],
                 query_params={"projectKeys": project_key},
             )
-            response = requests.get(
-                url=url, headers=self.__get_auth_header(), verify=False
-            )
+            headers = self.__get_auth_header()
+            response = requests.get(url=url, headers=headers, verify=False)
 
             response.raise_for_status()
 
@@ -429,7 +428,7 @@ class JiraonpremProvider(BaseProvider):
             }
             raise ProviderException(f"Failed to notify jira: {e} - Params: {context}")
 
-    def _query(self, board_id="", **kwargs: dict):
+    def _query(self, ticket_id="", board_id="", **kwargs: dict):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
@@ -437,20 +436,30 @@ class JiraonpremProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self.logger.debug("Fetching data from Jira")
-
-        request_url = f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
-        response = requests.get(
-            request_url, auth=self.__get_auth_header(), verify=False
-        )
-        if not response.ok:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+        if not ticket_id:
+            request_url = (
+                f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             )
-        self.logger.debug("Fetched data from Jira")
-
-        issues = response.json()
-        return {"number_of_issues": issues["total"]}
+            response = requests.get(
+                request_url, headers=self.__get_auth_header(), verify=False
+            )
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                )
+            issues = response.json()
+            return {"number_of_issues": issues["total"]}
+        else:
+            request_url = self.__get_url(paths=["issue", ticket_id])
+            response = requests.get(
+                request_url, headers=self.__get_auth_header(), verify=False
+            )
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                )
+            issue = response.json()
+            return {"issue": issue}
 
 
 if __name__ == "__main__":

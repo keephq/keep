@@ -87,6 +87,7 @@
             "providers/documentation/grafana-oncall-provider",
             "providers/documentation/http-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/linearb-provider",
             "providers/documentation/mock-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/new-relic-provider",
