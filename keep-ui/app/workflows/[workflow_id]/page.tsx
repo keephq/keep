@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import React, { useState } from "react";
 import { getApiURL } from "../../../utils/apiUrl";
-import { useSession } from "next-auth/react";;
+import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "../../../utils/fetcher";
 import {
@@ -31,7 +31,7 @@ interface WorkflowExecution {
   status: string;
   logs?: string | null;
   error?: string | null;
-  execution_time?: number | null;
+  execution_time?: number;
 }
 
 export default function WorkflowDetailPage({
@@ -67,7 +67,9 @@ export default function WorkflowDetailPage({
   if (status === "loading" || isLoading || !data) return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
 
-  const workflowExecutions = data;
+  const workflowExecutions = data.sort((a, b) => {
+    return new Date(b.started).getTime() - new Date(a.started).getTime();
+  });
 
   return (
     <div>
@@ -102,7 +104,12 @@ export default function WorkflowDetailPage({
                   <TableCell>{execution.id}</TableCell>
                   <TableCell>{execution.triggered_by}</TableCell>
                   <TableCell>{execution.status}</TableCell>
-                  <TableCell>{execution.error}</TableCell>
+                  <TableCell
+                    className="max-w-xl truncate"
+                    title={execution.error ? execution.error : ""}
+                  >
+                    {execution.error}
+                  </TableCell>
                   <TableCell>{execution.execution_time}</TableCell>
                   <TableCell>
                     <Link
