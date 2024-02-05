@@ -6,7 +6,7 @@ import {
   VisibilityState,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { AlertDto, AlertKnownKeys } from "./models";
+import { AlertDto } from "./models";
 import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertSeverity from "./alert-severity";
@@ -17,7 +17,22 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 
-const DEFAULT_COLS = [...AlertKnownKeys];
+export const DEFAULT_COLS = [
+  "checkbox",
+  "severity",
+  "name",
+  "description",
+  "status",
+  "lastReceived",
+  "source",
+  "assignee",
+  "extraPayload",
+  "alertMenu",
+];
+export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
+  (acc, colId) => ({ ...acc, [colId]: true }),
+  {}
+);
 
 export const getPaginatedData = (
   alerts: AlertDto[],
@@ -30,24 +45,11 @@ export const getDataPageCount = (
 ) => Math.ceil(dataLength / pageSize);
 
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
-  columns.map((column) => column.id as string);
-
-export const getDefaultColumnVisibilityState = (columnsIds: string[]) => {
-  return columnsIds.reduce<VisibilityState>(
-    (defaultColVisibState, columnId) => {
-      if (DEFAULT_COLS.includes(columnId)) {
-        return defaultColVisibState;
-      }
-
-      return { ...defaultColVisibState, [columnId]: false };
-    },
-    {}
-  );
-};
+  columns.map((column) => column.id as keyof AlertDto);
 
 export const getOnlyVisibleCols = (
   columnVisibility: VisibilityState,
-  columnsIds: string[]
+  columnsIds: (keyof AlertDto)[]
 ): VisibilityState =>
   columnsIds.reduce<VisibilityState>((acc, columnId) => {
     if (DEFAULT_COLS.includes(columnId)) {

@@ -21,8 +21,9 @@ import {
   getDataPageCount,
   getColumnsIds,
   getPaginatedData,
-  getDefaultColumnVisibilityState,
   getOnlyVisibleCols,
+  DEFAULT_COLS_VISIBILITY,
+  DEFAULT_COLS,
 } from "./alert-table-utils";
 
 interface Props {
@@ -55,12 +56,12 @@ export function AlertTable({
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
-    columnsIds
+    DEFAULT_COLS
   );
 
   const [columnVisibility] = useLocalStorage<VisibilityState>(
     `column-visibility-${presetName}`,
-    getDefaultColumnVisibilityState(columnsIds)
+    DEFAULT_COLS_VISIBILITY
   );
 
   const table = useReactTable({
@@ -96,11 +97,7 @@ export function AlertTable({
   return (
     <>
       {presetName && (
-        <AlertColumnsSelect
-          presetName={presetName}
-          table={table}
-          columnsIds={columnsIds}
-        />
+        <AlertColumnsSelect presetName={presetName} table={table} />
       )}
       {isAsyncLoading && (
         <Callout
