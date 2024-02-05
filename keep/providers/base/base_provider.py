@@ -118,7 +118,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_alert = kwargs.get("enrich_alert", [])
-        if not enrich_alert or not results:
+        if not enrich_alert or results is None:
             return results if results else None
 
         self._enrich_alert(enrich_alert, results)
@@ -133,10 +133,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
-            # TODO: if it's zipped, we need to extract the fingerprint from the zip (i.e. multiple foreach)
-            fingerprint = self.context_manager.foreach_context.get("value", {}).get(
-                "fingerprint"
+            foreach_context: dict | tuple = self.context_manager.foreach_context.get(
+                "value", {}
             )
+            if isinstance(foreach_context, tuple):
+                # This is when we are in a foreach context that is zipped
+                foreach_context: dict = foreach_context[0]
+            fingerprint = foreach_context.get("fingerprint")
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
