@@ -1,12 +1,16 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Accordion, AccordionBody, AccordionHeader, Card, Title } from "@tremor/react";
+import {
+  Accordion,
+  AccordionBody,
+  AccordionHeader,
+  Card,
+  Title,
+} from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "../../../../../utils/apiUrl";
 import Loading from "../../../../loading";
-import {
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
   Callout,
   Table,
@@ -151,7 +155,16 @@ export default function WorkflowExecutionPage({
               </TableHead>
               <TableBody>
                 {logs.map((log, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    className={`${
+                      log.message?.includes("NOT to run")
+                        ? "bg-red-100"
+                        : log.message?.includes("evaluated to run")
+                        ? "bg-green-100"
+                        : ""
+                    }`}
+                    key={index}
+                  >
                     <TableCell className="w-1/3 break-words whitespace-normal">
                       {log.timestamp}
                     </TableCell>
