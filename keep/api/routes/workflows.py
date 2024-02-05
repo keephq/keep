@@ -135,6 +135,20 @@ def get_workflows(
         workflows_dto.append(workflow_dto)
     return workflows_dto
 
+@router.get(
+        "/export",
+        description="export all workflow Yamls",
+)
+def export_workflows(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])    
+    ),
+) -> list[str]:
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    # get all workflows
+    workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
+    return workflows
 
 @router.post(
     "/{workflow_id}/run",
