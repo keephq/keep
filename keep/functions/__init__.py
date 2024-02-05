@@ -41,6 +41,10 @@ def utcnow() -> datetime.datetime:
     return dt
 
 
+def utcnowiso() -> str:
+    return utcnow().isoformat()
+
+
 def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
     """
     Substract minutes from a datetime object
