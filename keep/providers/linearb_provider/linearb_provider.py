@@ -18,7 +18,7 @@ class LinearbProviderAuthConfig:
     api_token: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Linear API Token",
+            "description": "LinearB API Token",
             "sensitive": True,
         }
     )
@@ -27,6 +27,7 @@ class LinearbProviderAuthConfig:
 class LinearbProvider(BaseProvider):
     """LinearB provider."""
 
+    PROVIDER_DISPLAY_NAME = "LinearB"
     LINEARB_API = "https://public-api.linearb.io"
     PROVIDER_SCOPES = [
         ProviderScope(
