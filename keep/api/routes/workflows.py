@@ -359,7 +359,6 @@ def delete_workflow_by_id(
     description="Get a workflow execution status",
 )
 def get_workflow_execution_status(
-    workflow_id: str,
     workflow_execution_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:workflows"])
@@ -371,6 +370,13 @@ def get_workflow_execution_status(
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
+
+    if not workflow_execution:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workflow execution {workflow_execution_id} not found",
+        )
+
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,

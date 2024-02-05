@@ -10,6 +10,7 @@ from keep.api.models.db.tenant import Tenant
 # many to many map between alerts and groups
 class AlertToGroup(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     group_id: UUID = Field(foreign_key="group.id", primary_key=True)
 
