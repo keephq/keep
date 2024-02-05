@@ -51,6 +51,7 @@ class PrometheusProvider(BaseProvider):
   group_wait:      15s
   group_interval:  15s
   repeat_interval: 1m
+  continue: true
 
 receivers:
 - name: "keep"
