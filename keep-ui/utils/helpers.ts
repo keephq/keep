@@ -72,12 +72,5 @@ export async function installWebhook(provider: Provider, accessToken: string) {
 }
 
 export function getAlertLastReceieved(lastRecievedFromAlert: Date) {
-  let lastReceived = "unknown";
-  if (lastRecievedFromAlert) {
-    lastReceived = lastRecievedFromAlert.toString();
-    try {
-      lastReceived = moment(lastRecievedFromAlert).fromNow();
-    } catch {}
-  }
-  return lastReceived;
+  return moment(lastRecievedFromAlert).fromNow();
 }
