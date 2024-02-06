@@ -21,7 +21,9 @@ import {
   getDataPageCount,
   getColumnsIds,
   getPaginatedData,
-  getDefaultColumnVisibilityState,
+  getOnlyVisibleCols,
+  DEFAULT_COLS_VISIBILITY,
+  DEFAULT_COLS,
 } from "./alert-table-utils";
 
 interface Props {
@@ -50,14 +52,16 @@ export function AlertTable({
   rowPagination,
   isRefreshAllowed = true,
 }: Props) {
-  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
+  const columnsIds = getColumnsIds(columns);
+
+  const [columnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
-    getColumnsIds(columns)
+    DEFAULT_COLS
   );
 
   const [columnVisibility] = useLocalStorage<VisibilityState>(
     `column-visibility-${presetName}`,
-    getDefaultColumnVisibilityState(columns)
+    DEFAULT_COLS_VISIBILITY
   );
 
   const table = useReactTable({
@@ -66,7 +70,7 @@ export function AlertTable({
       : alerts,
     columns: columns,
     state: {
-      columnVisibility: columnVisibility,
+      columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
       columnOrder: columnOrder,
       rowSelection: rowSelection?.state,
       pagination: rowPagination?.state,
@@ -86,7 +90,6 @@ export function AlertTable({
     enableRowSelection: rowSelection !== undefined,
     manualPagination: rowPagination !== undefined,
     onPaginationChange: rowPagination?.onChange,
-    onColumnOrderChange: setColumnOrder,
     onRowSelectionChange: rowSelection?.onChange,
     enableColumnPinning: true,
   });
@@ -94,11 +97,7 @@ export function AlertTable({
   return (
     <>
       {presetName && (
-        <AlertColumnsSelect
-          presetName={presetName}
-          table={table}
-          isLoading={isAsyncLoading}
-        />
+        <AlertColumnsSelect presetName={presetName} table={table} />
       )}
       {isAsyncLoading && (
         <Callout
