@@ -12,12 +12,14 @@ import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from opentelemetry import trace
 from pusher import Pusher
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session
 
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
+    get_async_session,
     get_enrichment,
     get_last_alerts,
     get_session,
@@ -443,10 +445,10 @@ def assign_alert(
 # 2. runs workflows based on the alerts
 # 3. runs the rules engine
 # TODO: add appropriate logs, trace and all of that so we can track errors
-def handle_formatted_events(
+async def handle_formatted_events(
     tenant_id,
     provider_type,
-    session: Session,
+    async_session: AsyncSession,
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     pusher_client: Pusher,
@@ -469,7 +471,7 @@ def handle_formatted_events(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
                 )
-                session.add(alert)
+                async_session.add(alert)
         for formatted_event in formatted_events:
             formatted_event.pushed = True
 
@@ -496,7 +498,7 @@ def handle_formatted_events(
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
             )
-            session.add(alert)
+            async_session.add(alert)
             formatted_event.event_id = alert.id
             alert_event_copy = {**alert.event}
             alert_enrichment = get_enrichment(
@@ -521,7 +523,7 @@ def handle_formatted_events(
                 )
             except Exception:
                 logger.exception("Failed to push alert to the client")
-        session.commit()
+        await async_session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
             extra={
@@ -563,7 +565,7 @@ def handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        grouped_alerts = rules_engine.run_rules(formatted_events)
+        grouped_alerts = await rules_engine.run_rules(formatted_events)
         # if new grouped alerts were created, we need to push them to the client
         if grouped_alerts:
             logger.info("Adding group alerts to the workflow manager queue")
@@ -607,7 +609,8 @@ async def receive_generic_event(
     alert: AlertDto | list[AlertDto],
     bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
-    session: Session = Depends(get_session),
+    # session: Session = Depends(get_session),
+    async_session: AsyncSession = Depends(get_async_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
@@ -631,7 +634,7 @@ async def receive_generic_event(
         handle_formatted_events,
         tenant_id,
         alert[0].source[0],
-        session,
+        async_session,
         alert,
         alert,
         pusher_client,

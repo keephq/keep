@@ -5,10 +5,11 @@ import logging
 
 import celpy
 import chevron
+from opentelemetry import trace
 
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
-from keep.api.core.db import create_alert as create_alert_db
-from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.db import async_create_alert as create_alert_db
+from keep.api.core.db import async_get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.group import GroupDto
 
@@ -17,6 +18,7 @@ class RulesEngine:
     def __init__(self, tenant_id=None):
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
+        self.tracer = trace.get_tracer(__name__)
 
     def _calc_max_severity(self, severities):
         if not severities:
@@ -29,9 +31,9 @@ class RulesEngine:
         max_severity = max(severities, key=lambda severity: severity.order)
         return str(max_severity)
 
-    def run_rules(self, events: list[AlertDto]):
+    async def run_rules(self, events: list[AlertDto]):
         self.logger.info("Running rules")
-        rules = get_rules_db(tenant_id=self.tenant_id)
+        rules = await get_rules_db(tenant_id=self.tenant_id)
 
         groups = []
         for rule in rules:
@@ -41,7 +43,8 @@ class RulesEngine:
                     f"Checking if rule {rule.name} apply to event {event.id}"
                 )
                 try:
-                    rule_result = self._check_if_rule_apply(rule, event)
+                    with self.tracer.start_as_current_span("check_if_rule_apply"):
+                        rule_result = self._check_if_rule_apply(rule, event)
                 except Exception:
                     self.logger.exception(
                         f"Failed to evaluate rule {rule.name} on event {event.id}"
@@ -53,12 +56,13 @@ class RulesEngine:
                     )
                     group_fingerprint = self._calc_group_fingerprint(event, rule)
                     # Add relation between this event and the group
-                    updated_group = assign_alert_to_group_db(
-                        tenant_id=self.tenant_id,
-                        alert_id=event.event_id,
-                        rule_id=str(rule.id),
-                        group_fingerprint=group_fingerprint,
-                    )
+                    with self.tracer.start_as_current_span("assign_alert_to_group_db"):
+                        updated_group = await assign_alert_to_group_db(
+                            tenant_id=self.tenant_id,
+                            alert_id=event.event_id,
+                            rule_id=str(rule.id),
+                            group_fingerprint=group_fingerprint,
+                        )
                     groups.append(updated_group)
                 else:
                     self.logger.info(
@@ -70,9 +74,10 @@ class RulesEngine:
             return
         # get the rules of the groups
         updated_group_rule_ids = [group.rule_id for group in groups]
-        updated_rules = get_rules_db(
-            tenant_id=self.tenant_id, ids=updated_group_rule_ids
-        )
+        with self.tracer.start_as_current_span("get_rules_db"):
+            updated_rules = await get_rules_db(
+                tenant_id=self.tenant_id, ids=updated_group_rule_ids
+            )
         # more convenient to work with a dict
         updated_rules_dict = {str(rule.id): rule for rule in updated_rules}
         # Now let's create a new alert for each group
@@ -121,28 +126,29 @@ class RulesEngine:
             # get the payload of the group
             group_payload = self._generate_group_payload(group.alerts)
             # create the alert
-            group_alert = create_alert_db(
-                tenant_id=self.tenant_id,
-                provider_type="group",
-                provider_id=rule.id,
-                # todo: event should support list?
-                event={
-                    "name": group_name,
-                    "id": group_fingerprint,
-                    "description": group_description,
-                    "lastReceived": group_attributes.get("last_update_time"),
-                    "severity": group_severity,
-                    "source": group_source,
-                    "status": group_status,
-                    "pushed": True,
-                    "group": True,
-                    "groupPayload": group_payload,
-                    "fingerprint": group_fingerprint,
-                    **group_attributes,
-                },
-                fingerprint=group_fingerprint,
-            )
-            grouped_alerts.append(group_alert)
+            with self.tracer.start_as_current_span("create_alert_db"):
+                group_alert = await create_alert_db(
+                    tenant_id=self.tenant_id,
+                    provider_type="group",
+                    provider_id=rule.id,
+                    # todo: event should support list?
+                    event={
+                        "name": group_name,
+                        "id": group_fingerprint,
+                        "description": group_description,
+                        "lastReceived": group_attributes.get("last_update_time"),
+                        "severity": group_severity,
+                        "source": group_source,
+                        "status": group_status,
+                        "pushed": True,
+                        "group": True,
+                        "groupPayload": group_payload,
+                        "fingerprint": group_fingerprint,
+                        **group_attributes,
+                    },
+                    fingerprint=group_fingerprint,
+                )
+                grouped_alerts.append(group_alert)
             self.logger.info(f"Created alert {group_alert.id} for group {group.id}")
         self.logger.info(f"Rules ran, {len(grouped_alerts)} alerts created")
         alerts_dto = [AlertDto(**alert.event) for alert in grouped_alerts]
@@ -172,7 +178,8 @@ class RulesEngine:
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
         #   https://github.com/google/cel-spec
-        env = celpy.Environment()
+        with self.tracer.start_as_current_span("init_env"):
+            env = celpy.Environment()
         for sub_rule in sub_rules:
             ast = env.compile(sub_rule)
             prgm = env.program(ast)

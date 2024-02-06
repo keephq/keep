@@ -53,7 +53,7 @@ def main():
         else:
             logger.info("Alert sent successfully")
 
-        time.sleep(1)  # Wait for 10 seconds before sending the next alert
+        time.sleep(0.1)  # Wait for 10 seconds before sending the next alert
 
 
 if __name__ == "__main__":
