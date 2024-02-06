@@ -2,13 +2,12 @@ import { Table } from "@tanstack/table-core";
 import { Subtitle, MultiSelect, MultiSelectItem } from "@tremor/react";
 import { AlertDto } from "./models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { VisibilityState } from "@tanstack/react-table";
-import { getDefaultColumnVisibilityState } from "./alert-table-utils";
+import { VisibilityState, ColumnOrderState } from "@tanstack/react-table";
+import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
-  presetName?: string;
-  isLoading: boolean;
+  presetName: string;
 }
 
 export default function AlertColumnsSelect({
@@ -17,11 +16,15 @@ export default function AlertColumnsSelect({
 }: AlertColumnsSelectProps) {
   const tableColumns = table.getAllColumns();
 
-  const [columnVisibility, setColumnVisibility] =
-    useLocalStorage<VisibilityState>(
-      `column-visibility-${presetName}`,
-      getDefaultColumnVisibilityState(tableColumns)
-    );
+  const [, setColumnVisibility] = useLocalStorage<VisibilityState>(
+    `column-visibility-${presetName}`,
+    DEFAULT_COLS_VISIBILITY
+  );
+
+  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
+    `column-order-${presetName}`,
+    DEFAULT_COLS
+  );
 
   const columnsOptions = tableColumns
     .filter((col) => col.getIsPinned() === false)
@@ -40,10 +43,20 @@ export default function AlertColumnsSelect({
 
         return { ...acc, [key]: false };
       },
-      columnVisibility
+      {}
     );
 
+    const originalColsOrder = columnOrder.filter((columnId) =>
+      valueKeys.includes(columnId)
+    );
+    const newlyAddedCols = valueKeys.filter(
+      (columnId) => !columnOrder.includes(columnId)
+    );
+
+    const newColumnOrder = [...originalColsOrder, ...newlyAddedCols];
+
     setColumnVisibility(newColumnVisibility);
+    setColumnOrder(newColumnOrder);
   };
 
   return (

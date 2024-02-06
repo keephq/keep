@@ -4,7 +4,7 @@ import useSWR, { SWRConfiguration } from "swr";
 import { ProvidersResponse } from "app/providers/providers";
 import { fetcher } from "../fetcher";
 
-export const useProviders =  (options?: SWRConfiguration) => {
+export const useProviders = (options?: SWRConfiguration) => {
   const { data: session } = useSession();
   const apiUrl = getApiURL();
 

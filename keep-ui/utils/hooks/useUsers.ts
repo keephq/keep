@@ -4,7 +4,12 @@ import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useUsers = (options?: SWRConfiguration) => {
+export const useUsers = (
+  options: SWRConfiguration = {
+    dedupingInterval: 10000,
+    revalidateOnFocus: false,
+  }
+) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 

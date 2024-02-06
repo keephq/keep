@@ -65,6 +65,7 @@ receivers:
 
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
+        "error": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
