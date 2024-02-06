@@ -10,6 +10,7 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry import trace
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -111,7 +112,7 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
-# SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
+SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
 def create_db_and_tables():
