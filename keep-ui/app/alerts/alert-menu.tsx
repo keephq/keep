@@ -34,7 +34,7 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
     },
-  } = useProviders({ revalidateOnFocus: false });
+  } = useProviders({ revalidateOnFocus: false, revalidateOnMount: false });
 
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnMount: false });
