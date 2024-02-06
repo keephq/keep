@@ -8,12 +8,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { NoAuthUserEmail } from "utils/authenticationType";
+import { useConfig } from "utils/hooks/useConfig";
 
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-  });
-}
+
 
 interface PHProviderProps {
   children: React.ReactNode;
@@ -23,15 +20,22 @@ const PHProvider: React.FC<PHProviderProps> = ({ children }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
+
+  if (typeof window !== "undefined" && configData && configData.POSTHOG_KEY) {
+    posthog.init(configData.POSTHOG_KEY!, {
+      api_host: configData.POSTHOG_HOST,
+    });
+  }
+
   useEffect(() => {
     const user = session?.user;
     const fetchData = () => {
       if (
-        pathname &&
-        process.env.NEXT_PUBLIC_POSTHOG_KEY &&
-        process.env.POSTHOG_DISABLED !== "true" &&
-        process.env.NEXT_PUBLIC_POSTHOG_DISABLED !== "true"
-      ) {
+        pathname && configData &&
+        configData.POSTHOG_KEY &&
+        configData.POSTHOG_DISABLED !== "true"
+        ) {
         let url = window.origin + pathname;
         if (searchParams?.toString()) {
           url = url + `?${searchParams.toString()}`;

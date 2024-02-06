@@ -14,5 +14,8 @@ export default async function handler(
     PUSHER_APP_KEY: process.env.PUSHER_APP_KEY,
     PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
     API_URL: process.env.API_URL,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
   });
 }
