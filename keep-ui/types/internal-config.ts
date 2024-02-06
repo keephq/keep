@@ -5,4 +5,7 @@ export interface InternalConfig {
   PUSHER_PORT?: number;
   PUSHER_APP_KEY: string;
   PUSHER_CLUSTER?: string;
+  POSTHOG_KEY: string;
+  POSTHOG_HOST: string;
+  POSTHOG_DISABLED: string;
 }
