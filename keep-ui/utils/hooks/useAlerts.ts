@@ -49,7 +49,7 @@ export const getFormatAndMergePusherWithEndpointAlerts = (
       }
 
       return (
-        endpointAlert.lastReceived <= pusherAlertByFingerprint.lastReceived
+        endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived
       );
     }
   );
@@ -166,15 +166,7 @@ export const useAlerts = () => {
         const channelName = `private-${session.tenantId}`;
         const pusherChannel = pusher.subscribe(channelName);
 
-        pusherChannel.bind("async-alerts", (base64CompressedAlert: string) => {
-          const decompressedAlert = zlib.inflateSync(
-            Buffer.from(base64CompressedAlert, "base64")
-          );
-
-          const newAlerts: AlertDto[] = JSON.parse(
-            new TextDecoder().decode(decompressedAlert)
-          );
-
+        pusherChannel.bind("async-alerts", (newAlerts: AlertDto[]) => {
           next(null, (data) => {
             if (data) {
               return {

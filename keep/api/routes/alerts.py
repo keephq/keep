@@ -1,12 +1,10 @@
 # TODO: this whole file needs to get refactored
 # mainly: pusher stuff, enrichment stuff and async stuff
-import base64
 import copy
 import datetime
 import json
 import logging
 import os
-import zlib
 
 import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -169,9 +167,7 @@ def pull_alerts_from_providers(
                 for alert in last_alerts:
                     alert_dict = alert.dict()
                     batch_send.append(alert_dict)
-                    new_compressed_batch = base64.b64encode(
-                        zlib.compress(json.dumps(batch_send).encode(), level=9)
-                    ).decode()
+                    new_compressed_batch = json.dumps(batch_send)
                     if len(new_compressed_batch) <= 10240:
                         number_of_alerts_in_batch += 1
                         previous_compressed_batch = new_compressed_batch
@@ -514,12 +510,7 @@ async def handle_formatted_events(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "async-alerts",
-                    base64.b64encode(
-                        zlib.compress(
-                            json.dumps([AlertDto(**alert_event_copy).dict()]).encode(),
-                            level=9,
-                        )
-                    ).decode(),
+                    json.dumps([AlertDto(**alert_event_copy).dict()]),
                 )
             except Exception:
                 logger.exception("Failed to push alert to the client")
@@ -578,11 +569,7 @@ async def handle_formatted_events(
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        base64.b64encode(
-                            zlib.compress(
-                                json.dumps([grouped_alert.dict()]).encode(), level=9
-                            )
-                        ).decode(),
+                        json.dumps([grouped_alert.dict()]),
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
@@ -806,11 +793,7 @@ def enrich_alert(
             pusher_client.trigger(
                 f"private-{tenant_id}",
                 "async-alerts",
-                base64.b64encode(
-                    zlib.compress(
-                        json.dumps([enriched_alerts_dto[0].dict()]).encode(),
-                    )
-                ).decode(),
+                json.dumps([enriched_alerts_dto[0].dict()]),
             )
             logger.info("Pushed enriched alert to the client")
         logger.info(
