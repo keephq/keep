@@ -57,6 +57,7 @@ class RulesEngine:
                         tenant_id=self.tenant_id,
                         alert_id=event.event_id,
                         rule_id=str(rule.id),
+                        timeframe=rule.timeframe,
                         group_fingerprint=group_fingerprint,
                     )
                     groups.append(updated_group)
@@ -177,7 +178,14 @@ class RulesEngine:
             ast = env.compile(sub_rule)
             prgm = env.program(ast)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
-            r = prgm.evaluate(activation)
+            try:
+                r = prgm.evaluate(activation)
+            except celpy.evaluation.CELEvalError as e:
+                # this is ok, it means that the subrule is not relevant for this event
+                if "no such member" in str(e):
+                    return False
+                # unknown
+                raise
             if r:
                 return True
         # no subrules matched
