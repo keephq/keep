@@ -10,4 +10,4 @@ alert:
       provider:
         type: console
         with:
-          alert_message: "Hello workd"
+          alert_message: "Hello world"
