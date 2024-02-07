@@ -154,10 +154,7 @@ export const useAlertTableCols = ({
       id: "description",
       header: "Description",
       cell: (context) => (
-        <div
-          className="max-w-[340px] flex items-center"
-          title={context.getValue()}
-        >
+        <div title={context.getValue()}>
           <div className="truncate">{context.getValue()}</div>
         </div>
       ),
@@ -217,6 +214,9 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "alertMenu",
+            meta: {
+              tdClassName: "flex justify-end",
+            },
             cell: (context) => (
               <AlertMenu
                 alert={context.row.original}
