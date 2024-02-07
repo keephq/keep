@@ -207,8 +207,8 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
                       <button
                         onClick={() => {
                           router.replace(
-                            `/alerts?id=${
-                              alert.id
+                            `/alerts?fingerprint=${
+                              alert.fingerprint
                             }&selectedPreset=${getCurrentPreset()}`,
                             {
                               scroll: false,
