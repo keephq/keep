@@ -7,10 +7,10 @@ import { Table, flexRender } from "@tanstack/react-table";
 
 interface Props {
   table: Table<AlertDto>;
-  showSkeleton?: boolean;
+  showSkeleton: boolean;
 }
 
-export function AlertsTableBody({ table, showSkeleton = true }: Props) {
+export function AlertsTableBody({ table, showSkeleton }: Props) {
   return (
     <TableBody>
       {table.getRowModel().rows.map((row) => (
@@ -29,36 +29,16 @@ export function AlertsTableBody({ table, showSkeleton = true }: Props) {
           ))}
         </TableRow>
       ))}
-
       {showSkeleton && (
         <TableRow>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
-          <TableCell>
-            <Skeleton />
-          </TableCell>
+          {table
+            .getAllColumns()
+            .filter((col) => col.getIsVisible())
+            .map((col) => (
+              <TableCell key={col.id}>
+                <Skeleton />
+              </TableCell>
+            ))}
         </TableRow>
       )}
     </TableBody>
