@@ -9,6 +9,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { PaginationState } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
+import Image from "next/image";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
@@ -39,7 +40,16 @@ const AlertHistoryPanel = ({
   const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
 
   if (alertsHistoryWithDate.length === 0) {
-    return null;
+    return (
+      <div className="flex justify-center">
+        <Image
+          src="/keep_loading_new.gif"
+          alt="loading"
+          width={200}
+          height={200}
+        />
+      </div>
+    );
   }
 
   return (

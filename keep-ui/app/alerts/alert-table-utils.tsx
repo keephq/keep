@@ -199,11 +199,20 @@ export const useAlertTableCols = ({
       cell: (context) => (
         <AlertExtraPayload
           alert={context.row.original}
-          isToggled={expandedToggles[context.row.original.fingerprint]}
+          isToggled={
+            // When menu is not displayed, it means we're in History mode and therefore
+            // we need to use the alert id as the key to keep the state of the toggles and not the fingerprint
+            // because all fingerprints are the same. (it's the history of that fingerprint :P)
+            isMenuDisplayed
+              ? expandedToggles[context.row.original.fingerprint]
+              : expandedToggles[context.row.original.id]
+          }
           setIsToggled={(newValue) =>
             setExpandedToggles({
               ...expandedToggles,
-              [context.row.original.fingerprint]: newValue,
+              [isMenuDisplayed
+                ? context.row.original.fingerprint
+                : context.row.original.id]: newValue,
             })
           }
         />
