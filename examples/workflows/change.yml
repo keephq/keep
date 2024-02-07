@@ -1,0 +1,13 @@
+alert:
+  id: on-field-change
+  description: demonstrates how to trigger a workflow when a field changes
+  triggers:
+    - type: alert
+      only_on_change:
+        - status
+  actions:
+    - name: echo-test
+      provider:
+        type: console
+        with:
+          alert_message: "Hello workd"
