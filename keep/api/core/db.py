@@ -159,6 +159,20 @@ def try_create_single_tenant(tenant_id: str) -> None:
             pass
         except Exception:
             pass
+    # New session since the previous might be in a bad state
+    with Session(engine) as session:
+        try:
+            # TODO: remove this once we have a migration system
+            logger.info("Migrating TenantApiKey table")
+            session.exec(
+                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
+            )
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
+            session.commit()
+            logger.info("Migrated TenantApiKey table")
+        except Exception:
+            pass
 
 
 def create_workflow_execution(
@@ -414,6 +428,7 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
             .where(Workflow.is_deleted == False)
         ).all()
     return workflows
+
 
 def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     with Session(engine) as session:
