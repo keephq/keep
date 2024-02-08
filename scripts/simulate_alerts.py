@@ -36,13 +36,15 @@ def main():
         provider = provider_classes[provider_type]
         alert = provider.simulate_alert()
 
-        logger.info("Sending alert: {}".format(alert))
+        # logger.info("Sending alert: {}".format(alert))
         try:
+            s = time.time()
             response = requests.post(
                 send_alert_url,
                 headers={"x-api-key": keep_api_key},
                 json=alert,
             )
+            e = time.time()
         except Exception as e:
             logger.error("Failed to send alert: {}".format(e))
             time.sleep(1)
@@ -51,7 +53,7 @@ def main():
         if response.status_code != 200:
             logger.error("Failed to send alert: {}".format(response.text))
         else:
-            logger.info("Alert sent successfully")
+            logger.info("Alert sent successfully in {} seconds".format(e - s))
 
         time.sleep(0.1)  # Wait for 10 seconds before sending the next alert
 
