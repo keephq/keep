@@ -1,7 +1,7 @@
+import { useState, useEffect } from "react";
 import { AlertDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import Pusher, { Channel } from "pusher-js";
-import zlib from "zlib";
 import useSWR, { SWRConfiguration } from "swr";
 import useSWRSubscription, { SWRSubscriptionOptions } from "swr/subscription";
 import { getApiURL } from "utils/apiUrl";
@@ -16,57 +16,26 @@ type AlertSubscription = {
   pusherChannel: Channel | null;
 };
 
-export const getFormatAndMergePusherWithEndpointAlerts = (
-  endpointAlerts: AlertDto[],
-  pusherAlerts: AlertDto[]
-): AlertDto[] => {
-  // Create a map of the latest received times for the new alerts
-  const uniquePusherAlerts = new Map<string, AlertDto>(
-    pusherAlerts.map((alert) => [
-      alert.fingerprint,
-      { ...alert, lastReceived: toDateObjectWithFallback(alert.lastReceived) },
-    ])
-  );
+const getFormatAndMergePusherWithEndpointAlerts = (
+  alertsMap: Map<string, AlertDto>,
+  newPusherAlerts: AlertDto[]
+) =>
+  newPusherAlerts.reduce((newAlertsMap, alertFromPusher) => {
+    const existingAlert = newAlertsMap.get(alertFromPusher.fingerprint);
 
-  const pusherAlertsWithLastReceivedDate = [...uniquePusherAlerts.values()];
-
-  const endpointAlertsWithLastReceivedDate = endpointAlerts.map(
-    (endpointAlert) => ({
-      ...endpointAlert,
-      lastReceived: toDateObjectWithFallback(endpointAlert.lastReceived),
-    })
-  );
-
-  // Filter out previous alerts if they are already in the new alerts with a more recent lastReceived
-  const filteredEndpointAlerts = endpointAlertsWithLastReceivedDate.filter(
-    (endpointAlert) => {
-      const pusherAlertByFingerprint = uniquePusherAlerts.get(
-        endpointAlert.fingerprint
-      );
-
-      if (pusherAlertByFingerprint === undefined) {
-        return true;
+    if (existingAlert) {
+      // If we already got the alert before, check if the new alert is more recent
+      if (alertFromPusher.lastReceived >= existingAlert.lastReceived) {
+        // New alert is newer, replace the old one
+        newAlertsMap.set(alertFromPusher.fingerprint, alertFromPusher);
       }
-
-      return (
-        endpointAlert.lastReceived > pusherAlertByFingerprint.lastReceived
-      );
+    } else {
+      // We haven't seen the alert before, add it to the map
+      newAlertsMap.set(alertFromPusher.fingerprint, alertFromPusher);
     }
-  );
 
-  const filteredEndpointAlertsFingerprints = filteredEndpointAlerts.map(
-    (endpointAlert) => endpointAlert.fingerprint
-  );
-
-  // Filter out new alerts if their fingerprint is already in the filtered previous alerts
-  const filteredPusherAlerts = pusherAlertsWithLastReceivedDate.filter(
-    (pusherAlert) =>
-      filteredEndpointAlertsFingerprints.includes(pusherAlert.fingerprint) ===
-      false
-  );
-
-  return filteredPusherAlerts.concat(filteredEndpointAlerts);
-};
+    return newAlertsMap;
+  }, alertsMap);
 
 export const getDefaultSubscriptionObj = (
   isAsyncLoading: boolean = false,
@@ -118,13 +87,65 @@ export const useAlerts = () => {
     );
   };
 
+  const useAllAlertsWithSubscription = () => {
+    const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
+      new Map()
+    );
+
+    const { data: alertsFromEndpoint = [], ...restOfAllAlerts } =
+      useAllAlerts();
+
+    const { data: alertSubscription = getDefaultSubscriptionObj() } =
+      useAlertsFromPusher();
+    const { alerts: alertsFromPusher, ...restOfAlertSubscription } =
+      alertSubscription;
+
+    useEffect(() => {
+      const alertsMap = new Map<string, AlertDto>(
+        alertsFromEndpoint.map((alertFromEndpoint) => [
+          alertFromEndpoint.fingerprint,
+          {
+            ...alertFromEndpoint,
+            lastReceived: toDateObjectWithFallback(
+              alertFromEndpoint.lastReceived
+            ),
+          },
+        ])
+      );
+
+      setAlertsMap(alertsMap);
+    }, [alertsFromEndpoint]);
+
+    useEffect(() => {
+      const alertsFromPusherWithLastReceivedDate = alertsFromPusher.map(
+        (alertFromPusher) => ({
+          ...alertFromPusher,
+          lastReceived: toDateObjectWithFallback(alertFromPusher.lastReceived),
+        })
+      );
+
+      setAlertsMap((previousAlertsMap) =>
+        getFormatAndMergePusherWithEndpointAlerts(
+          previousAlertsMap,
+          alertsFromPusherWithLastReceivedDate
+        )
+      );
+    }, [alertsFromPusher]);
+
+    return {
+      data: [...alertsMap.values()],
+      ...restOfAlertSubscription,
+      ...restOfAllAlerts,
+    };
+  };
+
   /**
    * A hook that creates a Pusher websocket connection and listens to incoming alerts.
    *
    * Only the latest alerts are returned
-   * @returns {\{ data, error }
+   * @returns { data, error }
    */
-  const useAllAlertsWithSubscription = () => {
+  const useAlertsFromPusher = () => {
     return useSWRSubscription(
       // this check allows conditional fetching. If it is false, the hook doesn't run
       () =>
@@ -171,7 +192,7 @@ export const useAlerts = () => {
             if (data) {
               return {
                 ...data,
-                alerts: [...data.alerts, ...newAlerts],
+                alerts: newAlerts,
               };
             }
 
@@ -229,5 +250,10 @@ export const useAlerts = () => {
     );
   };
 
-  return { useAlertHistory, useAllAlerts, useAllAlertsWithSubscription };
+  return {
+    useAlertHistory,
+    useAllAlerts,
+    useAlertsFromPusher,
+    useAllAlertsWithSubscription,
+  };
 };
