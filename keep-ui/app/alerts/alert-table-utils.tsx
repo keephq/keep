@@ -87,6 +87,7 @@ export const useAlertTableCols = ({
     columnHelper.display({
       id: colName,
       header: colName,
+      minSize: 100,
       cell: (context) => {
         const alertValue = context.row.original[colName as keyof AlertDto];
 
@@ -117,6 +118,7 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "checkbox",
+            size: 50,
             header: (context) => (
               <AlertTableCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -137,11 +139,13 @@ export const useAlertTableCols = ({
     columnHelper.accessor("severity", {
       id: "severity",
       header: "Severity",
+      minSize: 100,
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
     }),
     columnHelper.display({
       id: "name",
       header: "Name",
+      minSize: 330,
       cell: (context) => (
         <AlertName
           alert={context.row.original}
@@ -153,6 +157,7 @@ export const useAlertTableCols = ({
     columnHelper.accessor("description", {
       id: "description",
       header: "Description",
+      minSize: 100,
       cell: (context) => (
         <div title={context.getValue()}>
           <div className="truncate">{context.getValue()}</div>
@@ -161,11 +166,13 @@ export const useAlertTableCols = ({
     }),
     columnHelper.accessor("status", {
       id: "status",
+      minSize: 100,
       header: "Status",
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
       header: "Last Received",
+      minSize: 100,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
           {getAlertLastReceieved(context.getValue())}
@@ -175,6 +182,7 @@ export const useAlertTableCols = ({
     columnHelper.accessor("source", {
       id: "source",
       header: "Source",
+      minSize: 100,
       cell: (context) =>
         (context.getValue() ?? []).map((source, index) => (
           <Image
@@ -191,11 +199,13 @@ export const useAlertTableCols = ({
     columnHelper.accessor("assignee", {
       id: "assignee",
       header: "Assignee",
+      minSize: 100,
       cell: (context) => <AlertAssignee assignee={context.getValue()} />,
     }),
     columnHelper.display({
       id: "extraPayload",
       header: "Extra Payload",
+      minSize: 200,
       cell: (context) => (
         <AlertExtraPayload
           alert={context.row.original}
@@ -226,6 +236,7 @@ export const useAlertTableCols = ({
             meta: {
               tdClassName: "flex justify-end",
             },
+            size: 50,
             cell: (context) => (
               <AlertMenu
                 alert={context.row.original}
