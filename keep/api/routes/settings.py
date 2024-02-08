@@ -18,13 +18,21 @@ from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_session
 from keep.api.core.db import get_users as get_users_from_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.core.rbac import Admin as AdminRole, get_role_by_role_name
+from keep.api.core.rbac import Admin as AdminRole
+from keep.api.core.rbac import get_role_by_role_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_api_keys_secret, get_api_key, get_or_create_api_key, update_api_key_internal, create_api_key, get_api_keys
+from keep.api.utils.tenant_utils import (
+    create_api_key,
+    get_api_key,
+    get_api_keys,
+    get_api_keys_secret,
+    get_or_create_api_key,
+    update_api_key_internal,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -361,8 +369,8 @@ async def create_key(
 ):
     try:
         body = await request.json()
-        unique_api_key_id = body['name']
-        role = get_role_by_role_name(body['role'])
+        unique_api_key_id = body["name"].replace(" ", "")
+        role = get_role_by_role_name(body["role"])
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -378,7 +386,7 @@ async def create_key(
     tenant_api_key = get_api_key(
         session,
         unique_api_key_id=unique_api_key_id,
-        tenant_id=authenticated_entity.tenant_id
+        tenant_id=authenticated_entity.tenant_id,
     )
 
     return {
@@ -388,7 +396,7 @@ async def create_key(
         "created_at": tenant_api_key.created_at,
         "created_by": tenant_api_key.created_by,
         "last_used": tenant_api_key.last_used,
-        "secret": api_key
+        "secret": api_key,
     }
 
 
@@ -408,14 +416,11 @@ def get_keys(
         session=session,
         tenant_id=tenant_id,
         email=authenticated_entity.email,
-        role=role
+        role=role,
     )
 
     if api_keys:
-        api_keys = get_api_keys_secret(
-            tenant_id=tenant_id,
-            api_keys=api_keys
-        )
+        api_keys = get_api_keys_secret(tenant_id=tenant_id, api_keys=api_keys)
 
     logger.info(
         f"Active API keys for tenant {tenant_id} retrieved successfully",
@@ -432,10 +437,9 @@ async def update_api_key(
     ),
     session: Session = Depends(get_session),
 ):
-
     try:
         body = await request.json()
-        unique_api_key_id = body['apiKeyId']
+        unique_api_key_id = body["apiKeyId"]
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -457,7 +461,9 @@ async def update_api_key(
         return {"message": "API key secret updated", "apiKey": api_key}
     else:
         logger.info(f"Api key ({unique_api_key_id}) not found")
-        raise HTTPException(status_code=404, detail=f"API key ({unique_api_key_id}) not found")
+        raise HTTPException(
+            status_code=404, detail=f"API key ({unique_api_key_id}) not found"
+        )
 
 
 @router.delete("/apikey/{keyId}", description="Delete API key")
@@ -471,13 +477,10 @@ def delete_api_key(
     logger.info(f"Deleting api key ({keyId})")
     tenant_id = authenticated_entity.tenant_id
     api_key = get_api_key(
-        session,
-        unique_api_key_id=keyId,
-        tenant_id=authenticated_entity.tenant_id
+        session, unique_api_key_id=keyId, tenant_id=authenticated_entity.tenant_id
     )
 
     if api_key:
-
         try:
             context_manager = ContextManager(tenant_id=tenant_id)
             secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -485,13 +488,19 @@ def delete_api_key(
                 secret_name=f"{tenant_id}-{api_key.reference_id}",
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Unable to deactivate Api key ({keyId}) secret. Error: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unable to deactivate Api key ({keyId}) secret. Error: {str(e)}",
+            )
 
         try:
             api_key.is_deleted = True
             session.commit()
         except Exception:
-            raise HTTPException(status_code=500, detail=f"Unable to flag Api key ({keyId}) as deactivated")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unable to flag Api key ({keyId}) as deactivated",
+            )
 
         logger.info(f"Api key ({keyId}) has been deactivated")
         return {"message": "Api key has been deactivated"}
