@@ -7,7 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from typing import Optional, Tuple
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
@@ -18,13 +18,13 @@ from keep.api.core.db import delete_user as delete_user_from_db
 from keep.api.core.db import get_session
 from keep.api.core.db import get_users as get_users_from_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.core.rbac import Admin as AdminRole
+from keep.api.core.rbac import Admin as AdminRole, get_role_by_role_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.utils.tenant_utils import get_or_create_api_key
+from keep.api.utils.tenant_utils import get_api_keys_secret, get_api_key, get_or_create_api_key, update_api_key_internal, create_api_key, get_api_keys
 from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -351,23 +351,150 @@ class PatchedSMTP(smtplib.SMTP):
             super()._print_debug(*args)
 
 
-@router.get("/apikey")
-def get_api_key(
+@router.post("/apikey", description="Create API key")
+async def create_key(
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    try:
+        body = await request.json()
+        unique_api_key_id = body['name']
+        role = get_role_by_role_name(body['role'])
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    api_key = create_api_key(
+        session=session,
+        tenant_id=authenticated_entity.tenant_id,
+        created_by=authenticated_entity.email,
+        unique_api_key_id=unique_api_key_id,
+        role=role,
+        is_system=False,
+    )
+
+    tenant_api_key = get_api_key(
+        session,
+        unique_api_key_id=unique_api_key_id,
+        tenant_id=authenticated_entity.tenant_id
+    )
+
+    return {
+        "reference_id": tenant_api_key.reference_id,
+        "tenant": tenant_api_key.tenant,
+        "is_deleted": tenant_api_key.is_deleted,
+        "created_at": tenant_api_key.created_at,
+        "created_by": tenant_api_key.created_by,
+        "last_used": tenant_api_key.last_used,
+        "secret": api_key
+    }
+
+
+@router.get("/apikeys", description="Get API keys")
+def get_keys(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:settings"])
     ),
     session: Session = Depends(get_session),
 ):
-    logger.info("Getting API key")
     tenant_id = authenticated_entity.tenant_id
-    user_name = authenticated_entity.email
-    # get the api key for the CLI
-    api_key = get_or_create_api_key(
+    role = get_role_by_role_name(authenticated_entity.role)
+
+    logger.info(f"Getting active API keys for tenant {tenant_id}")
+
+    api_keys = get_api_keys(
         session=session,
         tenant_id=tenant_id,
-        created_by=user_name,
-        unique_api_key_id="cli",
-        system_description="API key",
+        email=authenticated_entity.email,
+        role=role
     )
-    logger.info("API key retrieved successfully")
-    return {"apiKey": api_key}
+
+    if api_keys:
+        api_keys = get_api_keys_secret(
+            tenant_id=tenant_id,
+            api_keys=api_keys
+        )
+
+    logger.info(
+        f"Active API keys for tenant {tenant_id} retrieved successfully",
+    )
+
+    return {"apiKeys": api_keys}
+
+
+@router.put("/apikey", description="Update API key secret")
+async def update_api_key(
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+
+    try:
+        body = await request.json()
+        unique_api_key_id = body['apiKeyId']
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        f"Updating API key ({unique_api_key_id}) secret",
+        extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+    )
+
+    api_key = update_api_key_internal(
+        session=session,
+        tenant_id=tenant_id,
+        unique_api_key_id=unique_api_key_id,
+    )
+
+    if api_key:
+        logger.info(f"Api key ({unique_api_key_id}) secret updated")
+        return {"message": "API key secret updated", "apiKey": api_key}
+    else:
+        logger.info(f"Api key ({unique_api_key_id}) not found")
+        raise HTTPException(status_code=404, detail=f"API key ({unique_api_key_id}) not found")
+
+
+@router.delete("/apikey/{keyId}", description="Delete API key")
+def delete_api_key(
+    keyId: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:settings"])
+    ),
+    session: Session = Depends(get_session),
+):
+    logger.info(f"Deleting api key ({keyId})")
+    tenant_id = authenticated_entity.tenant_id
+    api_key = get_api_key(
+        session,
+        unique_api_key_id=keyId,
+        tenant_id=authenticated_entity.tenant_id
+    )
+
+    if api_key:
+
+        try:
+            context_manager = ContextManager(tenant_id=tenant_id)
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            secret_manager.delete_secret(
+                secret_name=f"{tenant_id}-{api_key.reference_id}",
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Unable to deactivate Api key ({keyId}) secret. Error: {str(e)}")
+
+        try:
+            api_key.is_deleted = True
+            session.commit()
+        except Exception:
+            raise HTTPException(status_code=500, detail=f"Unable to flag Api key ({keyId}) as deactivated")
+
+        logger.info(f"Api key ({keyId}) has been deactivated")
+        return {"message": "Api key has been deactivated"}
+    else:
+        logger.info(f"Api key ({keyId}) not found")
+        raise HTTPException(status_code=404, detail=f"Api key ({keyId}) not found")

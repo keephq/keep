@@ -29,7 +29,7 @@ interface Props {
   currentUser?: AuthUser;
   selectedTab: string;
 }
-interface Config {
+export interface Config {
   AUTH_TYPE: string;
 }
 

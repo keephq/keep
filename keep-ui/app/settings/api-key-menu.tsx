@@ -1,41 +1,59 @@
 "use client";
 import { Menu, Transition, Portal } from "@headlessui/react";
-import { Fragment, useState} from "react";
+import { Fragment} from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
-import { User } from "./models";
-import { User as AuthUser } from "next-auth";
 import { mutate } from "swr";
 import { useFloating } from "@floating-ui/react-dom";
 
 
-interface Props {
-user: User;
-  currentUser?: AuthUser;
-}
-
-export default function UsersMenu({ user, currentUser }: Props) {
+export default function ApiKeysMenu({apiKeyId}: {apiKeyId: string}) {
   const { refs, x, y } = useFloating();
 
-  const onDelete = async () => {
+  const onRegenerate = async () => {
     const confirmed = confirm(
-      "Are you sure you want to delete this user? This is irreversible."
+      "This action cannot be undone. This will revoke the key and generate a new one. Any further requests made with this key will fail. Make sure to update any applications that use this key."
     );
+
     if (confirmed) {
       const session = await getSession();
       const apiUrl = getApiURL();
-      const res = await fetch(`${apiUrl}/users/${user.email}`, {
-        method: "DELETE",
+      const res = await fetch(`${apiUrl}/settings/apikey`, {
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${session!.accessToken}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({'apiKeyId': apiKeyId})
       });
       if (res.ok) {
-        mutate(`${apiUrl}/users`);
+        mutate(`${apiUrl}/settings/apikeys`);
+      } else {
+          alert('Something went wrong! Please try again.')
+    }
+  }}
+
+  const onDelete = async () => {
+    const confirmed = confirm(
+      "This action cannot be undone. This will permanently delete the API key and any future requests using this key will fail."
+    );
+
+    if (confirmed) {
+      const session = await getSession();
+      const apiUrl = getApiURL();
+      const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+        },
+      });
+      if (res.ok) {
+        mutate(`${apiUrl}/settings/apikeys`);
+      } else {
+          alert("Something went wrong! Please try again.")
       }
     }
   };
@@ -72,18 +90,26 @@ export default function UsersMenu({ user, currentUser }: Props) {
                   <Menu.Item>
                     {({ active }) => (
                       <button
-                        disabled={currentUser?.email === user.email}
+                        onClick={onRegenerate}
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                      >
+                        <UpdateIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                       Roll key
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
                         onClick={onDelete}
                         className={`${
                           active ? "bg-slate-200" : "text-gray-900"
-                        } group flex w-full items-center rounded-md px-2 py-2 text-sm ${
-                          currentUser?.email === user.email
-                            ? "text-slate-300 cursor-not-allowed"
-                            : ""
-                        }`}
+                        } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Delete
+                       Delete
                       </button>
                     )}
                   </Menu.Item>
