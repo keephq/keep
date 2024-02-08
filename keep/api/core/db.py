@@ -1022,6 +1022,7 @@ def assign_alert_to_group(
             .where(Group.tenant_id == tenant_id)
             .where(Group.rule_id == rule_id)
             .where(Group.group_fingerprint == group_fingerprint)
+            .order_by(Group.creation_time.desc())
         ).first()
 
         # if the last alert in the group is older than the timeframe, create a new group
