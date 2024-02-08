@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
@@ -13,6 +14,112 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)
+
+
+def get_api_key(
+    session: Session, unique_api_key_id: str, tenant_id: str
+) -> TenantApiKey:
+    """
+    Retrieves API key.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    # Find API key
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    api_key = session.exec(statement).first()
+    return api_key
+
+
+def update_key_last_used(
+    session: Session,
+    tenant_id: str,
+    unique_api_key_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    # Get API Key from database
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    tenant_api_key_entry = session.exec(statement).first()
+
+    # Update last used
+    tenant_api_key_entry.last_used = datetime.utcnow()
+    session.commit()
+
+
+def update_api_key_internal(
+    session: Session,
+    tenant_id: str,
+    unique_api_key_id: str,
+) -> str:
+    """
+    Updates API key secret for the given tenant.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        unique_api_key_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    # Get API Key from database
+    statement = (
+        select(TenantApiKey)
+        .where(TenantApiKey.reference_id == unique_api_key_id)
+        .where(TenantApiKey.tenant_id == tenant_id)
+    )
+
+    tenant_api_key_entry = session.exec(statement).first()
+
+    # If no APIkey is found return
+    if not tenant_api_key_entry:
+        return False
+    else:
+        # Find current API key in secret_manager
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        # Update API key in secret_manager
+        api_key = str(uuid4())
+
+        secret_manager.write_secret(
+            secret_name=f"{tenant_id}-{unique_api_key_id}",
+            secret_value=api_key,
+        )
+
+        # Update API key hash in DB
+        tenant_api_key_entry.key_hash = hashlib.sha256(
+            api_key.encode("utf-8")
+        ).hexdigest()
+        session.commit()
+
+        return api_key
 
 
 def create_api_key(
@@ -45,6 +152,7 @@ def create_api_key(
     )
     api_key = str(uuid4())
     hashed_api_key = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
     # Save the api key in the secret manager
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -63,13 +171,96 @@ def create_api_key(
         role=role.get_name(),
     )
     session.add(new_installation_api_key)
+
     if commit:
         session.commit()
+
     logger.info(
         "Created API key",
         extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
     )
+
     return api_key
+
+
+def get_api_keys(
+    session: Session, tenant_id: str, role: Role, email: str
+) -> [TenantApiKey]:
+    """
+    Gets all active API keys for the given tenant.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+
+    statement = None
+
+    if role != AdminRole:
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.created_by == email)
+            .where(TenantApiKey.is_deleted != True)
+        )
+
+    else:
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.tenant_id == tenant_id)
+            .where(TenantApiKey.is_deleted != True)
+        )
+
+    api_keys = session.exec(statement).all()
+
+    return api_keys
+
+
+def get_api_keys_secret(
+    tenant_id,
+    api_keys,
+):
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    api_keys_with_secret = []
+    for api_key in api_keys:
+        if api_key.reference_id == "webhook":
+            continue
+
+        if api_key.is_deleted == True:
+            api_keys_with_secret.append(
+                {
+                    "reference_id": api_key.reference_id,
+                    "tenant": api_key.tenant,
+                    "is_deleted": api_key.is_deleted,
+                    "created_at": api_key.created_at,
+                    "created_by": api_key.created_by,
+                    "last_used": api_key.last_used,
+                    "secret": "Key has been deactivated",
+                }
+            )
+            continue
+
+        secret = secret_manager.read_secret(
+            f"{api_key.tenant_id}-{api_key.reference_id}"
+        )
+
+        api_keys_with_secret.append(
+            {
+                "reference_id": api_key.reference_id,
+                "tenant": api_key.tenant,
+                "is_deleted": api_key.is_deleted,
+                "created_at": api_key.created_at,
+                "created_by": api_key.created_by,
+                "last_used": api_key.last_used,
+                "secret": secret,
+            }
+        )
+
+    return api_keys_with_secret
 
 
 def get_or_create_api_key(
