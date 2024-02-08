@@ -813,6 +813,24 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
     return alerts
 
 
+def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
+    # get the previous alert for a given fingerprint
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
+            .limit(2)
+            .all()
+        )
+    if len(alert) > 1:
+        return alert[1]
+    else:
+        # no previous alert
+        return None
+
+
 def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
@@ -1052,24 +1070,33 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-async def assign_alert_to_group(
-    tenant_id, alert_id, rule_id, group_fingerprint
+def assign_alert_to_group(
+    tenant_id, alert_id, rule_id, timeframe, group_fingerprint
 ) -> Group:
-    tracer = trace.get_tracer(__name__)
-
-    # Ensure that `async_engine` is an instance of `create_async_engine`
+    # checks if group with the group critiria exists, if not it creates it
+    #   and then assign the alert to the group
     async with AsyncSession(async_engine, expire_on_commit=False) as session:
-        result = await session.execute(
+        group = await session.execute(
             select(Group)
-            .options(selectinload(Group.alerts))
+            .options(joinedload(Group.alerts))
             .where(Group.tenant_id == tenant_id)
             .where(Group.rule_id == rule_id)
             .where(Group.group_fingerprint == group_fingerprint)
         )
         group = result.scalars().first()
 
-        if not group:
-            # Create a new group if it doesn't exist
+        # if the last alert in the group is older than the timeframe, create a new group
+        if group:
+            # group has at least one alert (o/w it wouldn't created in the first place)
+            is_group_expired = max(
+                alert.timestamp for alert in group.alerts
+            ) < datetime.utcnow() - timedelta(seconds=timeframe)
+        else:
+            is_group_expired = True
+
+        # if there is no group with the group_fingerprint, create it
+        if not group or is_group_expired:
+            # Create and add a new group if it doesn't exist
             group = Group(
                 tenant_id=tenant_id,
                 rule_id=rule_id,
@@ -1081,28 +1108,24 @@ async def assign_alert_to_group(
             # Re-query the group with selectinload to set up future automatic loading of alerts
             result = await session.execute(
                 select(Group)
-                .options(selectinload(Group.alerts))
+                .options(joinedload(Group.alerts))
                 .where(Group.id == group.id)
             )
             group = result.scalars().first()
 
         # Create a new AlertToGroup instance and add it
-        with tracer.start_as_current_span("alert_to_group"):
-            alert_group = AlertToGroup(
-                tenant_id=tenant_id,
-                alert_id=str(alert_id),
-                group_id=str(group.id),
-            )
-            with tracer.start_as_current_span("session_add"):
-                session.add(alert_group)
-                with tracer.start_as_current_span("session_commit"):
-                    # Commit inside the session's context manager will automatically commit on exit
-                    await session.commit()
+        alert_group = AlertToGroup(
+            tenant_id=tenant_id,
+            alert_id=str(alert_id),
+            group_id=str(group.id),
+        )
+        session.add(alert_group)
+        # Commit inside the session's context manager will automatically commit on exit
+        await session.commit()
 
         # Refresh and expire need to be awaited as well
-        with tracer.start_as_current_span("session_expire_and_refresh"):
-            session.expire(group, ["alerts"])
-            await session.refresh(group)
+        session.expire(group, ["alerts"])
+        await session.refresh(group)
 
     return group
 

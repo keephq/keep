@@ -229,7 +229,9 @@ receivers:
                 alert_payload[parameter] = random.choice(parameter_options)
         annotations = {"summary": alert_payload["summary"]}
         alert_payload["labels"]["alertname"] = alert_type
-        alert_payload["status"] = AlertStatus.FIRING.value
+        alert_payload["status"] = random.choice(
+            [AlertStatus.FIRING.value, AlertStatus.RESOLVED.value]
+        )
         alert_payload["annotations"] = annotations
         alert_payload["startsAt"] = datetime.datetime.now(
             tz=datetime.timezone.utc
