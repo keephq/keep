@@ -1070,13 +1070,13 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-def assign_alert_to_group(
+async def assign_alert_to_group(
     tenant_id, alert_id, rule_id, timeframe, group_fingerprint
 ) -> Group:
     # checks if group with the group critiria exists, if not it creates it
     #   and then assign the alert to the group
     async with AsyncSession(async_engine, expire_on_commit=False) as session:
-        group = await session.execute(
+        result = await session.execute(
             select(Group)
             .options(joinedload(Group.alerts))
             .where(Group.tenant_id == tenant_id)

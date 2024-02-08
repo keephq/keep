@@ -61,6 +61,7 @@ class RulesEngine:
                             tenant_id=self.tenant_id,
                             alert_id=event.event_id,
                             rule_id=str(rule.id),
+                            timeframe=rule.timeframe,
                             group_fingerprint=group_fingerprint,
                         )
                     groups.append(updated_group)
