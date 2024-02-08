@@ -638,7 +638,7 @@ async def receive_event(
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
-    session: Session = Depends(get_session),
+    async_session: AsyncSession = Depends(get_async_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
@@ -701,7 +701,7 @@ async def receive_event(
                 handle_formatted_events,
                 tenant_id,
                 provider_type,
-                session,
+                async_session,
                 event_copy if isinstance(event_copy, list) else [event_copy],
                 formatted_events,
                 pusher_client,

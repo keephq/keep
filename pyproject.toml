@@ -77,6 +77,7 @@ pymongo = "^4.6.1"
 google-cloud-trace = "1.11.3"
 hvac = "^2.1.0"
 aiosqlite = "^0.19.0"
+aiomysql = "^0.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -3,11 +3,13 @@ services:
   keep-database:
       image: mysql:latest
       container_name: keep-database-tests
+      command: --local-infile=1
       environment:
         - MYSQL_ROOT_PASSWORD=keep
         - MYSQL_DATABASE=keep
       volumes:
         - mysql-data:/var/lib/mysql
+        - ./initdb:/docker-entrypoint-initdb.d
       ports:
         - "0.0.0.0:3306:3306"
 

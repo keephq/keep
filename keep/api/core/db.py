@@ -96,20 +96,31 @@ if RUNNING_IN_CLOUD_RUN:
         "mysql+pymysql://",
         creator=__get_conn,
     )
+    async_engine = create_async_engine(
+        "mysql+aiomysql://",
+        creator=__get_conn,
+    )
 elif db_connection_string == "impersonate":
     engine = create_engine(
         "mysql+pymysql://",
         creator=__get_conn_impersonate,
     )
+    async_engine = create_async_engine(
+        "mysql+aiomysql://",
+        creator=__get_conn_impersonate,
+    )
 elif db_connection_string:
     db_connection_string_async = db_connection_string.replace(
-        "sqlite", "sqlite+aiosqlite"
-    )
+        "sqlite", "sqlite+aiosqlite", 1
+    ).replace("pymysql", "aiomysql", 1)
     engine = create_engine(db_connection_string)
     async_engine = create_async_engine(db_connection_string_async)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
+    )
+    async_engine = create_async_engine(
+        "sqlite+aiosqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
@@ -1041,53 +1052,6 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-# def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Group:
-#     # checks if group with the group critiria exists, if not it creates it
-#     #   and then assign the alert to the group
-#     tracer = trace.get_tracer(__name__)
-#     with Session(engine, expire_on_commit=False) as session:
-#         group = session.exec(
-#             select(Group)
-#             .options(selectinload(Group.alerts))
-#             .where(Group.tenant_id == tenant_id)
-#             .where(Group.rule_id == rule_id)
-#             .where(Group.group_fingerprint == group_fingerprint)
-#         ).first()
-
-#         if not group:
-#             # Create and add a new group if it doesn't exist
-#             group = Group(
-#                 tenant_id=tenant_id,
-#                 rule_id=rule_id,
-#                 group_fingerprint=group_fingerprint,
-#             )
-#             session.add(group)
-#             session.commit()
-#             # Re-query the group with selectinload to set up future automatic loading of alerts
-#             group = session.exec(
-#                 select(Group)
-#                 .options(selectinload(Group.alerts))
-#                 .where(Group.id == group.id)
-#             ).first()
-
-
-#         # Create a new AlertToGroup instance and add it
-#         with tracer.start_as_current_span("alert_to_group"):
-#             alert_group = AlertToGroup(
-#                 tenant_id=tenant_id,
-#                 alert_id=str(alert_id),
-#                 group_id=str(group.id),
-#             )
-#             with tracer.start_as_current_span("session_add"):
-#                 session.add(alert_group)
-#                 with tracer.start_as_current_span("session_commit"):
-#                     session.commit()
-#         # To reflect the newly added alert we expire its state to force a refresh on access
-#         with tracer.start_as_current_span("session_expire"):
-#             session.expire(group, ["alerts"])
-#         with tracer.start_as_current_span("session_refresh"):
-#             session.refresh(group)
-#         return group
 async def assign_alert_to_group(
     tenant_id, alert_id, rule_id, group_fingerprint
 ) -> Group:
@@ -1095,48 +1059,45 @@ async def assign_alert_to_group(
 
     # Ensure that `async_engine` is an instance of `create_async_engine`
     async with AsyncSession(async_engine, expire_on_commit=False) as session:
-        async with session.begin():
+        result = await session.execute(
+            select(Group)
+            .options(selectinload(Group.alerts))
+            .where(Group.tenant_id == tenant_id)
+            .where(Group.rule_id == rule_id)
+            .where(Group.group_fingerprint == group_fingerprint)
+        )
+        group = result.scalars().first()
+
+        if not group:
+            # Create a new group if it doesn't exist
+            group = Group(
+                tenant_id=tenant_id,
+                rule_id=rule_id,
+                group_fingerprint=group_fingerprint,
+            )
+            session.add(group)
+            await session.commit()
+
+            # Re-query the group with selectinload to set up future automatic loading of alerts
             result = await session.execute(
                 select(Group)
                 .options(selectinload(Group.alerts))
-                .where(Group.tenant_id == tenant_id)
-                .where(Group.rule_id == rule_id)
-                .where(Group.group_fingerprint == group_fingerprint)
+                .where(Group.id == group.id)
             )
             group = result.scalars().first()
 
-            if not group:
-                # Create a new group if it doesn't exist
-                group = Group(
-                    tenant_id=tenant_id,
-                    rule_id=rule_id,
-                    group_fingerprint=group_fingerprint,
-                )
-                session.add(group)
-                await session.commit()
-
-                # Re-query the group with selectinload to set up future automatic loading of alerts
-                result = await session.execute(
-                    select(Group)
-                    .options(selectinload(Group.alerts))
-                    .where(Group.id == group.id)
-                )
-                group = result.scalars().first()
-
-            # Create a new AlertToGroup instance and add it
-            with tracer.start_as_current_span("alert_to_group"):
-                alert_group = AlertToGroup(
-                    tenant_id=tenant_id,
-                    alert_id=str(alert_id),
-                    group_id=str(group.id),
-                )
-                with tracer.start_as_current_span("session_add"):
-                    session.add(alert_group)
-                    with tracer.start_as_current_span("session_commit"):
-                        # Commit inside the session's context manager will automatically commit on exit
-                        await session.commit()
-
-        # Since we're using context managers, explicit session.commit() is not required here
+        # Create a new AlertToGroup instance and add it
+        with tracer.start_as_current_span("alert_to_group"):
+            alert_group = AlertToGroup(
+                tenant_id=tenant_id,
+                alert_id=str(alert_id),
+                group_id=str(group.id),
+            )
+            with tracer.start_as_current_span("session_add"):
+                session.add(alert_group)
+                with tracer.start_as_current_span("session_commit"):
+                    # Commit inside the session's context manager will automatically commit on exit
+                    await session.commit()
 
         # Refresh and expire need to be awaited as well
         with tracer.start_as_current_span("session_expire_and_refresh"):
