@@ -3,11 +3,7 @@ import { Preset } from "./models";
 import { useMemo, useState } from "react";
 import "./alerts.client.css";
 import AlertStreamline from "./alert-streamline";
-import {
-  getDefaultSubscriptionObj,
-  getFormatAndMergePusherWithEndpointAlerts,
-  useAlerts,
-} from "utils/hooks/useAlerts";
+import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
@@ -24,7 +20,7 @@ const defaultPresets: Preset[] = [
 ];
 
 export default function Alerts() {
-  const { useAllAlerts, useAllAlertsWithSubscription } = useAlerts();
+  const { useAllAlertsWithSubscription } = useAlerts();
   // get providers
   // providers doesnt change often so we can use a longer deduping interval
   const { data: providersData = { installed_providers: [] } } = useProviders({
@@ -48,29 +44,17 @@ export default function Alerts() {
   const router = useRouter();
   const currentSelectedPreset = getCurrentPreset();
 
-  const { data: endpointAlerts = [] } = useAllAlerts({
-    revalidateOnFocus: false,
-  });
-
-  const { data: alertSubscription = getDefaultSubscriptionObj(true) } =
-    useAllAlertsWithSubscription();
   const {
-    alerts: pusherAlerts,
+    data: alerts,
     isAsyncLoading,
     lastSubscribedDate,
     pusherChannel,
-  } = alertSubscription;
+  } = useAllAlertsWithSubscription();
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
   const presets = [...defaultPresets, ...savedPresets] as const;
-
-  const alerts = useMemo(
-    () =>
-      getFormatAndMergePusherWithEndpointAlerts(endpointAlerts, pusherAlerts),
-    [endpointAlerts, pusherAlerts]
-  );
 
   const selectPreset = (presetName: string) => {
     router.replace(`${pathname}?selectedPreset=${presetName}`);
