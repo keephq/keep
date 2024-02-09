@@ -288,7 +288,7 @@ class AuthVerifierSingleTenant:
             return AuthenticatedEntity(
                 tenant_id=SINGLE_TENANT_UUID,
                 email=SINGLE_TENANT_EMAIL,
-                api_key_name=tenant_api_key.reference_id,
+                api_key_name="single_tenant_api_key",  # just a placeholder
                 role=AdminRole.get_name(),
             )
 
