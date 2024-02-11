@@ -1040,13 +1040,25 @@ def assign_alert_to_group(
         ).first()
 
         # if the last alert in the group is older than the timeframe, create a new group
+        is_group_expired = False
         if group:
             # group has at least one alert (o/w it wouldn't created in the first place)
             is_group_expired = max(
                 alert.timestamp for alert in group.alerts
             ) < datetime.utcnow() - timedelta(seconds=timeframe)
-        else:
-            is_group_expired = True
+
+        if is_group_expired and group:
+            logger.info(
+                f"Group {group.id} is expired, creating a new group for rule {rule_id}"
+            )
+            fingerprint = group.calculate_fingerprint()
+            # enrich the group with the expired flag
+            enrich_alert(
+                tenant_id,
+                fingerprint,
+                {"group_expired": True},
+            )
+            logger.info(f"Enriched group {group.id} with group_expired flag")
 
         # if there is no group with the group_fingerprint, create it
         if not group or is_group_expired:

@@ -35,7 +35,7 @@ const getFormatAndMergePusherWithEndpointAlerts = (
     }
 
     return newAlertsMap;
-  }, alertsMap);
+  }, new Map(alertsMap));
 
 export const getDefaultSubscriptionObj = (
   isAsyncLoading: boolean = false,
@@ -101,7 +101,7 @@ export const useAlerts = () => {
       alertSubscription;
 
     useEffect(() => {
-      const alertsMap = new Map<string, AlertDto>(
+      const newAlertsMap = new Map<string, AlertDto>(
         alertsFromEndpoint.map((alertFromEndpoint) => [
           alertFromEndpoint.fingerprint,
           {
@@ -113,7 +113,7 @@ export const useAlerts = () => {
         ])
       );
 
-      setAlertsMap(alertsMap);
+      setAlertsMap(newAlertsMap);
     }, [alertsFromEndpoint]);
 
     useEffect(() => {
@@ -133,7 +133,7 @@ export const useAlerts = () => {
     }, [alertsFromPusher]);
 
     return {
-      data: [...alertsMap.values()],
+      data: Array.from(alertsMap.values()),
       ...restOfAlertSubscription,
       ...restOfAllAlerts,
     };

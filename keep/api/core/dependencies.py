@@ -220,7 +220,11 @@ class AuthVerifierMultiTenant:
             )
         request.state.tenant_id = tenant_api_key.tenant_id
 
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
+        return AuthenticatedEntity(
+            tenant_api_key.tenant_id,
+            tenant_api_key.created_by,
+            tenant_api_key.reference_id,
+        )
 
     def __call__(
         self,
@@ -282,7 +286,10 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=tenant_api_key, role=AdminRole.get_name()
+                tenant_id=SINGLE_TENANT_UUID,
+                email=SINGLE_TENANT_EMAIL,
+                api_key_name="single_tenant_api_key",  # just a placeholder
+                role=AdminRole.get_name(),
             )
 
         if not tenant_api_key:
@@ -297,7 +304,11 @@ class AuthVerifierSingleTenant:
             )
         request.state.tenant_id = tenant_api_key.tenant_id
 
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by, tenant_api_key.reference_id)
+        return AuthenticatedEntity(
+            tenant_api_key.tenant_id,
+            tenant_api_key.created_by,
+            tenant_api_key.reference_id,
+        )
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -308,7 +319,10 @@ class AuthVerifierSingleTenant:
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL, api_key_name=None, role=AdminRole.get_name()
+                tenant_id=SINGLE_TENANT_UUID,
+                email=SINGLE_TENANT_EMAIL,
+                api_key_name=None,
+                role=AdminRole.get_name(),
             )
 
         # else, validate the token
