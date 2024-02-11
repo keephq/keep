@@ -1,5 +1,3 @@
-const { colors } = require('react-select/dist/declarations/src/theme');
-
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [

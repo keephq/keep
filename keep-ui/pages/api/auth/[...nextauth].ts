@@ -192,7 +192,7 @@ const keycloakAuthOptions = {
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
-      issuer: process.env.KEYCLOAK_ISSUER, // Make sure this includes the realm, e.g., "https://my-keycloak-domain.com/realms/My_Realm"
+      issuer: process.env.KEYCLOAK_ISSUER,
     }),
   ],
   pages: {

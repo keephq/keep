@@ -4,12 +4,12 @@
     "enabled": true,
     "users": [
       {
-        "username": "admin",
+        "username": "keep",
         "enabled": true,
         "credentials": [
           {
             "type": "password",
-            "value": "admin",
+            "value": "keep",
             "temporary": false
           }
         ],
@@ -23,6 +23,7 @@
         {
           "clientId": "keep",
           "name": "Keep Application",
+          "audience": "keep-aud",
           "enabled": true,
           "clientAuthenticatorType": "client-secret",
           "redirectUris": [
