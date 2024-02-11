@@ -15,6 +15,7 @@ export default function AlertAssignee({ assignee }: Props) {
   }
 
   const user = users.find((user) => user.email === assignee);
+  const userName = user?.name || "Keep";
 
   return !imageError ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -22,7 +23,7 @@ export default function AlertAssignee({ assignee }: Props) {
       className="h-8 w-8 rounded-full"
       src={
         user?.picture ||
-        `https://ui-avatars.com/api/?name=${user?.name}&background=random`
+        `https://ui-avatars.com/api/?name=${userName}&background=random`
       }
       height={24}
       width={24}
@@ -32,7 +33,7 @@ export default function AlertAssignee({ assignee }: Props) {
     />
   ) : (
     <NameInitialsAvatar
-      name={user?.name || "Unknown User"}
+      name={userName}
       bgColor="orange"
       borderWidth="1px"
       textColor="white"
