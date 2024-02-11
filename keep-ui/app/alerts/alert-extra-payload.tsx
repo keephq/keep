@@ -30,12 +30,6 @@ export default function AlertExtraPayload({
     setIsToggled(!isToggled);
   };
 
-  useEffect(() => {
-    if (isToggled && ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [isToggled]);
-
   const { extraPayload, extraPayloadLength } =
     getExtraPayloadNoKnownKeys(alert);
 

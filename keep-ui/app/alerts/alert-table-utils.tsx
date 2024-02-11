@@ -105,7 +105,7 @@ export const useAlertTableCols = ({
         }
 
         if (alertValue && alertValue !== null) {
-          return alertValue.toString();
+          return <div className="truncate">{alertValue.toString()}</div>;
         }
 
         return "";
