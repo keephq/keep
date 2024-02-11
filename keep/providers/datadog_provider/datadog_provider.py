@@ -576,13 +576,17 @@ class DatadogProvider(BaseProvider):
                         event.get("date_happened")
                     )
                     monitor = all_monitors.get(event.monitor_id)
-                    is_muted = any(
-                        [
-                            downtime
-                            for downtime in monitor.matching_downtimes
-                            if downtime.groups == event.monitor_groups
-                            or downtime.scope == ["*"]
-                        ]
+                    is_muted = (
+                        False
+                        if not monitor
+                        else any(
+                            [
+                                downtime
+                                for downtime in monitor.matching_downtimes
+                                if downtime.groups == event.monitor_groups
+                                or downtime.scope == ["*"]
+                            ]
+                        )
                     )
 
                     status = (

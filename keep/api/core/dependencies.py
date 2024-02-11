@@ -35,6 +35,8 @@ SINGLE_TENANT_EMAIL = "admin@keephq"
 class AuthenticatedEntity:
     tenant_id: str
     email: str
+    api_key_name: Optional[str] = None
+    role: Optional[str] = None
 
 
 def get_user_email(request: Request) -> str | None:
@@ -176,7 +178,7 @@ class AuthVerifierMultiTenant:
                         status_code=403,
                         detail="You don't have the required permissions to access this resource",
                     )
-                return AuthenticatedEntity(tenant_id, email)
+                return AuthenticatedEntity(tenant_id, email, role=role_name)
             # authorization error
             except HTTPException:
                 raise
@@ -217,7 +219,12 @@ class AuthVerifierMultiTenant:
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
         request.state.tenant_id = tenant_api_key.tenant_id
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+
+        return AuthenticatedEntity(
+            tenant_api_key.tenant_id,
+            tenant_api_key.created_by,
+            tenant_api_key.reference_id,
+        )
 
     def __call__(
         self,
@@ -272,14 +279,19 @@ class AuthVerifierSingleTenant:
         session: Session = Depends(get_session),
     ) -> AuthenticatedEntity:
         # if we don't want to use authentication, return the single tenant id
+        tenant_api_key = get_api_key(api_key)
+
         if (
             os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
             == AuthenticationType.NO_AUTH.value
         ):
             return AuthenticatedEntity(
-                tenant_id=SINGLE_TENANT_UUID, email=SINGLE_TENANT_EMAIL
+                tenant_id=SINGLE_TENANT_UUID,
+                email=SINGLE_TENANT_EMAIL,
+                api_key_name="single_tenant_api_key",  # just a placeholder
+                role=AdminRole.get_name(),
             )
-        tenant_api_key = get_api_key(api_key)
+
         if not tenant_api_key:
             raise HTTPException(status_code=401, detail="Invalid API Key")
 
@@ -291,7 +303,12 @@ class AuthVerifierSingleTenant:
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
         request.state.tenant_id = tenant_api_key.tenant_id
-        return AuthenticatedEntity(tenant_api_key.tenant_id, tenant_api_key.created_by)
+
+        return AuthenticatedEntity(
+            tenant_api_key.tenant_id,
+            tenant_api_key.created_by,
+            tenant_api_key.reference_id,
+        )
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -301,7 +318,12 @@ class AuthVerifierSingleTenant:
             os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
             == AuthenticationType.NO_AUTH.value
         ):
-            return AuthenticatedEntity(SINGLE_TENANT_UUID, SINGLE_TENANT_EMAIL)
+            return AuthenticatedEntity(
+                tenant_id=SINGLE_TENANT_UUID,
+                email=SINGLE_TENANT_EMAIL,
+                api_key_name=None,
+                role=AdminRole.get_name(),
+            )
 
         # else, validate the token
         jwt_secret = os.environ.get("KEEP_JWT_SECRET")
@@ -328,7 +350,7 @@ class AuthVerifierSingleTenant:
                 status_code=403,
                 detail="You don't have the required permissions to access this resource",
             )
-        return AuthenticatedEntity(tenant_id, email)
+        return AuthenticatedEntity(tenant_id, email, None, role_name)
 
     def __call__(
         self,

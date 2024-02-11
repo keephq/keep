@@ -5,7 +5,11 @@ import typing
 import uuid
 
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_enrichment, save_workflow_results
+from keep.api.core.db import (
+    get_enrichment,
+    get_previous_alert_by_fingerprint,
+    save_workflow_results,
+)
 from keep.api.models.alert import AlertDto
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -84,6 +88,7 @@ class WorkflowManager:
                     if not trigger.get("type") == "alert":
                         continue
                     should_run = True
+                    # apply filters
                     for filter in trigger.get("filters", []):
                         # TODO: more sophisticated filtering/attributes/nested, etc
                         filter_key = filter.get("key")
@@ -128,26 +133,54 @@ class WorkflowManager:
                             should_run = False
                             break
 
-                    # if we got here, it means the event should trigger the workflow
-                    if should_run:
-                        self.logger.info("Found a workflow to run")
-                        event.trigger = "alert"
-                        # prepare the alert with the enrichment
-                        self.logger.info("Enriching alert")
-                        alert_enrichment = get_enrichment(tenant_id, event.fingerprint)
-                        if alert_enrichment:
-                            for k, v in alert_enrichment.enrichments.items():
-                                setattr(event, k, v)
-                        self.logger.info("Alert enriched")
-                        self.scheduler.workflows_to_run.append(
-                            {
-                                "workflow": workflow,
-                                "workflow_id": workflow_model.id,
-                                "tenant_id": tenant_id,
-                                "triggered_by": "alert",
-                                "event": event,
-                            }
+                    if not should_run:
+                        continue
+                    # enrich the alert with more data
+                    self.logger.info("Found a workflow to run")
+                    event.trigger = "alert"
+                    # prepare the alert with the enrichment
+                    self.logger.info("Enriching alert")
+                    alert_enrichment = get_enrichment(tenant_id, event.fingerprint)
+                    if alert_enrichment:
+                        for k, v in alert_enrichment.enrichments.items():
+                            setattr(event, k, v)
+                    self.logger.info("Alert enriched")
+                    # apply only_on_change (https://github.com/keephq/keep/issues/801)
+                    fields_that_needs_to_be_change = trigger.get("only_on_change", [])
+                    # if there are fields that needs to be changed, get the previous alert
+                    if fields_that_needs_to_be_change:
+                        previous_alert = get_previous_alert_by_fingerprint(
+                            tenant_id, event.fingerprint
                         )
+                    # now compare:
+                    #   (no previous alert means that the workflow should run)
+                    if previous_alert:
+                        for field in fields_that_needs_to_be_change:
+                            # the field hasn't change
+                            if getattr(event, field) == previous_alert.event.get(field):
+                                self.logger.info(
+                                    "Skipping the workflow because the field hasn't change",
+                                    extra={
+                                        "field": field,
+                                        "event": event,
+                                        "previous_alert": previous_alert,
+                                    },
+                                )
+                                should_run = False
+                                break
+
+                    if not should_run:
+                        continue
+                    # Lastly, if the workflow should run, add it to the scheduler
+                    self.scheduler.workflows_to_run.append(
+                        {
+                            "workflow": workflow,
+                            "workflow_id": workflow_model.id,
+                            "tenant_id": tenant_id,
+                            "triggered_by": "alert",
+                            "event": event,
+                        }
+                    )
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
@@ -264,6 +297,10 @@ class WorkflowManager:
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions
         }
+        if workflow.workflow_steps:
+            workflow_results.update(
+                {step.name: step.provider.results for step in workflow.workflow_steps}
+            )
         try:
             save_workflow_results(
                 tenant_id=workflow.context_manager.tenant_id,

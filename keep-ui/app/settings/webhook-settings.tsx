@@ -20,6 +20,7 @@ import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
+import { v4 as uuidv4 } from "uuid";
 
 interface Webhook {
   webhookApi: string;
@@ -53,6 +54,8 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
     {
       ...example,
       lastReceived: new Date().toISOString(),
+      id: uuidv4(),
+      fingerprint: uuidv4(),
     },
     null,
     2

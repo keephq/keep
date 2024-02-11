@@ -95,9 +95,16 @@ def get_workflows(
                 # the provider is not installed, now we want to check:
                 # 1. if the provider requires any config - so its not instaleld
                 # 2. if the provider does not require any config - consider it as installed
-                conf = ProvidersFactory.get_provider_required_config(
-                    provider.get("type")
-                )
+                try:
+                    conf = ProvidersFactory.get_provider_required_config(
+                        provider.get("type")
+                    )
+                except ModuleNotFoundError:
+                    logger.warning(
+                        "Someone tried to use a non-existing provider in a workflow",
+                        extra={"provider": provider.get("type")},
+                    )
+                    conf = None
                 if conf:
                     provider_dto = ProviderDTO(
                         name=provider.get("name"),
@@ -134,6 +141,22 @@ def get_workflows(
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
+
+
+@router.get(
+    "/export",
+    description="export all workflow Yamls",
+)
+def export_workflows(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
+) -> list[str]:
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    # get all workflows
+    workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
+    return workflows
 
 
 @router.post(
@@ -345,7 +368,6 @@ def delete_workflow_by_id(
     description="Get a workflow execution status",
 )
 def get_workflow_execution_status(
-    workflow_id: str,
     workflow_execution_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:workflows"])
@@ -357,6 +379,13 @@ def get_workflow_execution_status(
         workflow_execution_id=workflow_execution_id,
         tenant_id=tenant_id,
     )
+
+    if not workflow_execution:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workflow execution {workflow_execution_id} not found",
+        )
+
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,

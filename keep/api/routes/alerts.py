@@ -1,12 +1,10 @@
 # TODO: this whole file needs to get refactored
 # mainly: pusher stuff, enrichment stuff and async stuff
-import base64
 import copy
 import datetime
 import json
 import logging
 import os
-import zlib
 
 import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -30,6 +28,7 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
+from keep.api.utils.tenant_utils import update_key_last_used
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -167,9 +166,7 @@ def pull_alerts_from_providers(
                 for alert in last_alerts:
                     alert_dict = alert.dict()
                     batch_send.append(alert_dict)
-                    new_compressed_batch = base64.b64encode(
-                        zlib.compress(json.dumps(batch_send).encode(), level=9)
-                    ).decode()
+                    new_compressed_batch = json.dumps(batch_send)
                     if len(new_compressed_batch) <= 10240:
                         number_of_alerts_in_batch += 1
                         previous_compressed_batch = new_compressed_batch
@@ -269,7 +266,7 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint
+        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=None
     )
     enriched_alerts_dto = __enrich_alerts(db_alerts)
 
@@ -512,12 +509,7 @@ def handle_formatted_events(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "async-alerts",
-                    base64.b64encode(
-                        zlib.compress(
-                            json.dumps([AlertDto(**alert_event_copy).dict()]).encode(),
-                            level=9,
-                        )
-                    ).decode(),
+                    json.dumps([AlertDto(**alert_event_copy).dict()]),
                 )
             except Exception:
                 logger.exception("Failed to push alert to the client")
@@ -576,11 +568,7 @@ def handle_formatted_events(
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        base64.b64encode(
-                            zlib.compress(
-                                json.dumps([grouped_alert.dict()]).encode(), level=9
-                            )
-                        ).decode(),
+                        json.dumps([grouped_alert.dict()]),
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
@@ -627,6 +615,10 @@ async def receive_generic_event(
         # if not source, set it to keep
         if not _alert.source:
             _alert.source = ["keep"]
+
+        if authenticated_entity.api_key_name:
+            _alert.apiKeyRef = authenticated_entity.api_key_name
+
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
@@ -636,6 +628,16 @@ async def receive_generic_event(
         alert,
         pusher_client,
     )
+
+    if authenticated_entity.api_key_name:
+        logger.debug("Updating API Key last used")
+        update_key_last_used(
+            session,
+            tenant_id,
+            unique_api_key_id=authenticated_entity.api_key_name
+        )
+        logger.debug("Successfully updated API Key last used")
+
     return alert
 
 
@@ -803,11 +805,7 @@ def enrich_alert(
             pusher_client.trigger(
                 f"private-{tenant_id}",
                 "async-alerts",
-                base64.b64encode(
-                    zlib.compress(
-                        json.dumps([enriched_alerts_dto[0].dict()]).encode(),
-                    )
-                ).decode(),
+                json.dumps([enriched_alerts_dto[0].dict()]),
             )
             logger.info("Pushed enriched alert to the client")
         logger.info(

@@ -66,7 +66,11 @@ class BashProvider(BaseProvider):
         if stderr:
             stderr = stderr.decode()
 
-        return {"stdout": stdout, "stderr": stderr, "return_code": return_code}
+        return {
+            "stdout": str(stdout),
+            "stderr": str(stderr),
+            "return_code": return_code,
+        }
 
     def dispose(self):
         """

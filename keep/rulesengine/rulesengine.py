@@ -1,4 +1,3 @@
-import hashlib
 import itertools
 import json
 import logging
@@ -57,6 +56,7 @@ class RulesEngine:
                         tenant_id=self.tenant_id,
                         alert_id=event.event_id,
                         rule_id=str(rule.id),
+                        timeframe=rule.timeframe,
                         group_fingerprint=group_fingerprint,
                     )
                     groups.append(updated_group)
@@ -79,9 +79,7 @@ class RulesEngine:
         grouped_alerts = []
         for group in groups:
             rule = updated_rules_dict.get(str(group.rule_id))
-            group_fingerprint = hashlib.sha256(
-                "|".join([str(group.id), group.group_fingerprint]).encode()
-            ).hexdigest()
+            group_fingerprint = group.calculate_fingerprint()
             try:
                 group_attributes = GroupDto.get_group_attributes(group.alerts)
             except Exception:
@@ -117,6 +115,9 @@ class RulesEngine:
             else:
                 group_name = f"Alert group genereted by rule {rule.name}"
 
+            group_status = self._calc_group_status(group.alerts)
+            # get the payload of the group
+            group_payload = self._generate_group_payload(group.alerts)
             # create the alert
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
@@ -130,10 +131,10 @@ class RulesEngine:
                     "lastReceived": group_attributes.get("last_update_time"),
                     "severity": group_severity,
                     "source": group_source,
-                    # TODO: status should be calculated from the alerts
-                    "status": AlertStatus.FIRING.value,
+                    "status": group_status,
                     "pushed": True,
                     "group": True,
+                    "groupPayload": group_payload,
                     "fingerprint": group_fingerprint,
                     **group_attributes,
                 },
@@ -174,7 +175,14 @@ class RulesEngine:
             ast = env.compile(sub_rule)
             prgm = env.program(ast)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
-            r = prgm.evaluate(activation)
+            try:
+                r = prgm.evaluate(activation)
+            except celpy.evaluation.CELEvalError as e:
+                # this is ok, it means that the subrule is not relevant for this event
+                if "no such member" in str(e):
+                    return False
+                # unknown
+                raise
             if r:
                 return True
         # no subrules matched
@@ -192,6 +200,9 @@ class RulesEngine:
         #      }
         #    }
         # than the group_fingerprint will be "queue1,cluster1"
+
+        # note: group_fingerprint is not a unique id, since different rules can lead to the same group_fingerprint
+        #       hence, the actual fingerprint is composed of the group_fingerprint and the group id
         event_payload = event.dict()
         grouping_criteria = rule.grouping_criteria
         group_fingerprint = []
@@ -212,3 +223,70 @@ class RulesEngine:
             )
             return "none"
         return ",".join(group_fingerprint)
+
+    def _calc_group_status(self, alerts):
+        """This function calculates the status of a group of alerts according to the following logic:
+        1. If the last alert of each fingerprint is resolved, the group is resolved
+        2. If at least one of the alerts is firing, the group is firing
+
+
+        Args:
+            alerts (list[Alert]): list of alerts related to the group
+
+        Returns:
+            AlertStatus: the alert status (enum)
+        """
+        # take the last alert from each fingerprint
+        # if all of them are resolved, the group is resolved
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        # now take the latest (by timestamp) for each fingerprint:
+        alerts = [
+            max(alerts, key=lambda alert: alert.event["lastReceived"])
+            for alerts in alerts_by_fingerprint.values()
+        ]
+        # 1. if all alerts are with the same status, just use it
+        if len(set(alert.event["status"] for alert in alerts)) == 1:
+            return alerts[0].event["status"]
+        # 2. Else, if at least one of them is firing, the group is firing
+        if any(alert.event["status"] == AlertStatus.FIRING for alert in alerts):
+            return AlertStatus.FIRING
+        # 3. Last, just return the last status
+        return alerts[-1].event["status"]
+
+    def _generate_group_payload(self, alerts):
+        # todo: group payload should be configurable
+        """This function generates the payload of the group alert.
+
+        Args:
+            alerts (list[Alert]): list of alerts related to the group
+
+        Returns:
+            dict: the payload of the group alert
+        """
+        # first, group by fingerprints
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        group_payload = {}
+        for fingerprint, alerts in alerts_by_fingerprint.items():
+            # take the latest (by timestamp) for each fingerprint:
+            alert = max(alerts, key=lambda alert: alert.event["lastReceived"])
+            group_payload[fingerprint] = {
+                "name": alert.event["name"],
+                "number_of_alerts": len(alerts),
+                "fingerprint": fingerprint,
+                "last_status": alert.event["status"],
+                "last_severity": alert.event["severity"],
+            }
+
+        return group_payload

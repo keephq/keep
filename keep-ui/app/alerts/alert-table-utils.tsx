@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   ColumnDef,
   PaginationState,
@@ -6,7 +6,7 @@ import {
   VisibilityState,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { AlertDto, AlertKnownKeys } from "./models";
+import { AlertDto } from "./models";
 import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertSeverity from "./alert-severity";
@@ -16,6 +16,23 @@ import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
+
+export const DEFAULT_COLS = [
+  "checkbox",
+  "severity",
+  "name",
+  "description",
+  "status",
+  "lastReceived",
+  "source",
+  "assignee",
+  "extraPayload",
+  "alertMenu",
+];
+export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
+  (acc, colId) => ({ ...acc, [colId]: true }),
+  {}
+);
 
 export const getPaginatedData = (
   alerts: AlertDto[],
@@ -28,19 +45,23 @@ export const getDataPageCount = (
 ) => Math.ceil(dataLength / pageSize);
 
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
-  columns.map((column) => column.id as string);
+  columns.map((column) => column.id as keyof AlertDto);
 
-export const getDefaultColumnVisibilityState = (
-  columns: ColumnDef<AlertDto>[]
-) =>
-  getColumnsIds(columns)
-    .filter(
-      (id) => [...AlertKnownKeys, "menu", "checkbox"].includes(id) === false
-    )
-    .reduce<VisibilityState>(
-      (acc, column) => ({ ...acc, [column]: false }),
-      {}
-    );
+export const getOnlyVisibleCols = (
+  columnVisibility: VisibilityState,
+  columnsIds: (keyof AlertDto)[]
+): VisibilityState =>
+  columnsIds.reduce<VisibilityState>((acc, columnId) => {
+    if (DEFAULT_COLS.includes(columnId)) {
+      return acc;
+    }
+
+    if (columnId in columnVisibility) {
+      return { ...acc, [columnId]: columnVisibility[columnId] };
+    }
+
+    return { ...acc, [columnId]: false };
+  }, columnVisibility);
 
 const columnHelper = createColumnHelper<AlertDto>();
 
@@ -57,11 +78,10 @@ export const useAlertTableCols = ({
   isCheckboxDisplayed,
   isMenuDisplayed,
   setNoteModalAlert,
-  setTicketModalAlert
+  setTicketModalAlert,
 }: GenerateAlertTableColsArg = {}) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
-  const [currentOpenMenu, setCurrentOpenMenu] = useState('');
-
+  const [currentOpenMenu, setCurrentOpenMenu] = useState("");
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -122,18 +142,19 @@ export const useAlertTableCols = ({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: (context) => <AlertName alert={context.row.original}
-                            setNoteModalAlert={setNoteModalAlert}
-                            setTicketModalAlert={setTicketModalAlert}/>
+      cell: (context) => (
+        <AlertName
+          alert={context.row.original}
+          setNoteModalAlert={setNoteModalAlert}
+          setTicketModalAlert={setTicketModalAlert}
+        />
+      ),
     }),
     columnHelper.accessor("description", {
       id: "description",
       header: "Description",
       cell: (context) => (
-        <div
-          className="max-w-[340px] flex items-center"
-          title={context.getValue()}
-        >
+        <div title={context.getValue()}>
           <div className="truncate">{context.getValue()}</div>
         </div>
       ),
@@ -178,11 +199,20 @@ export const useAlertTableCols = ({
       cell: (context) => (
         <AlertExtraPayload
           alert={context.row.original}
-          isToggled={expandedToggles[context.row.original.id]}
+          isToggled={
+            // When menu is not displayed, it means we're in History mode and therefore
+            // we need to use the alert id as the key to keep the state of the toggles and not the fingerprint
+            // because all fingerprints are the same. (it's the history of that fingerprint :P)
+            isMenuDisplayed
+              ? expandedToggles[context.row.original.fingerprint]
+              : expandedToggles[context.row.original.id]
+          }
           setIsToggled={(newValue) =>
             setExpandedToggles({
               ...expandedToggles,
-              [context.row.original.id]: newValue,
+              [isMenuDisplayed
+                ? context.row.original.fingerprint
+                : context.row.original.id]: newValue,
             })
           }
         />
@@ -193,9 +223,18 @@ export const useAlertTableCols = ({
       ? [
           columnHelper.display({
             id: "alertMenu",
-            cell: (context) => <AlertMenu alert={context.row.original}
-            isMenuOpen={context.row.original.fingerprint === currentOpenMenu}
-            setIsMenuOpen={setCurrentOpenMenu}/>,
+            meta: {
+              tdClassName: "flex justify-end",
+            },
+            cell: (context) => (
+              <AlertMenu
+                alert={context.row.original}
+                isMenuOpen={
+                  context.row.original.fingerprint === currentOpenMenu
+                }
+                setIsMenuOpen={setCurrentOpenMenu}
+              />
+            ),
           }),
         ]
       : []) as ColumnDef<AlertDto>[]),

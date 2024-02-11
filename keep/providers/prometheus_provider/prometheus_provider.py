@@ -51,6 +51,7 @@ class PrometheusProvider(BaseProvider):
   group_wait:      15s
   group_interval:  15s
   repeat_interval: 1m
+  continue: true
 
 receivers:
 - name: "keep"
@@ -64,6 +65,7 @@ receivers:
 
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
+        "error": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
@@ -227,7 +229,9 @@ receivers:
                 alert_payload[parameter] = random.choice(parameter_options)
         annotations = {"summary": alert_payload["summary"]}
         alert_payload["labels"]["alertname"] = alert_type
-        alert_payload["status"] = AlertStatus.FIRING.value
+        alert_payload["status"] = random.choice(
+            [AlertStatus.FIRING.value, AlertStatus.RESOLVED.value]
+        )
         alert_payload["annotations"] = annotations
         alert_payload["startsAt"] = datetime.datetime.now(
             tz=datetime.timezone.utc

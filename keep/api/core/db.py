@@ -159,6 +159,20 @@ def try_create_single_tenant(tenant_id: str) -> None:
             pass
         except Exception:
             pass
+    # New session since the previous might be in a bad state
+    with Session(engine) as session:
+        try:
+            # TODO: remove this once we have a migration system
+            logger.info("Migrating TenantApiKey table")
+            session.exec(
+                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
+            )
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
+            session.commit()
+            logger.info("Migrated TenantApiKey table")
+        except Exception:
+            pass
 
 
 def create_workflow_execution(
@@ -416,6 +430,16 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
     return workflows
 
 
+def get_all_workflows_yamls(tenant_id: str) -> List[str]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow.workflow_raw)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
 def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     with Session(engine) as session:
         # if the workflow id is uuid:
@@ -547,8 +571,6 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             .options(joinedload(WorkflowExecution.logs))
             .one()
         )
-
-        return execution_with_logs
     return execution_with_logs
 
 
@@ -775,6 +797,24 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
     return alerts
 
 
+def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
+    # get the previous alert for a given fingerprint
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
+            .limit(2)
+            .all()
+        )
+    if len(alert) > 1:
+        return alert[1]
+    else:
+        # no previous alert
+        return None
+
+
 def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
@@ -984,19 +1024,44 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Group:
+def assign_alert_to_group(
+    tenant_id, alert_id, rule_id, timeframe, group_fingerprint
+) -> Group:
     # checks if group with the group critiria exists, if not it creates it
     #   and then assign the alert to the group
-    with Session(engine, expire_on_commit=False) as session:
+    with Session(engine) as session:
         group = session.exec(
             select(Group)
-            .options(selectinload(Group.alerts))
+            .options(joinedload(Group.alerts))
             .where(Group.tenant_id == tenant_id)
             .where(Group.rule_id == rule_id)
             .where(Group.group_fingerprint == group_fingerprint)
+            .order_by(Group.creation_time.desc())
         ).first()
 
-        if not group:
+        # if the last alert in the group is older than the timeframe, create a new group
+        is_group_expired = False
+        if group:
+            # group has at least one alert (o/w it wouldn't created in the first place)
+            is_group_expired = max(
+                alert.timestamp for alert in group.alerts
+            ) < datetime.utcnow() - timedelta(seconds=timeframe)
+
+        if is_group_expired and group:
+            logger.info(
+                f"Group {group.id} is expired, creating a new group for rule {rule_id}"
+            )
+            fingerprint = group.calculate_fingerprint()
+            # enrich the group with the expired flag
+            enrich_alert(
+                tenant_id,
+                fingerprint,
+                {"group_expired": True},
+            )
+            logger.info(f"Enriched group {group.id} with group_expired flag")
+
+        # if there is no group with the group_fingerprint, create it
+        if not group or is_group_expired:
             # Create and add a new group if it doesn't exist
             group = Group(
                 tenant_id=tenant_id,
@@ -1008,7 +1073,7 @@ def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Gr
             # Re-query the group with selectinload to set up future automatic loading of alerts
             group = session.exec(
                 select(Group)
-                .options(selectinload(Group.alerts))
+                .options(joinedload(Group.alerts))
                 .where(Group.id == group.id)
             ).first()
 
@@ -1020,10 +1085,11 @@ def assign_alert_to_group(tenant_id, alert_id, rule_id, group_fingerprint) -> Gr
         )
         session.add(alert_group)
         session.commit()
-        # To reflect the newly added alert we expire its state to force a refresh on access
-        session.expire(group, ["alerts"])
-        session.refresh(group)
-        return group
+        # Requery the group to get the updated alerts
+        group = session.exec(
+            select(Group).options(joinedload(Group.alerts)).where(Group.id == group.id)
+        ).first()
+    return group
 
 
 def get_groups(tenant_id):
