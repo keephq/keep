@@ -1,4 +1,3 @@
-import hashlib
 import itertools
 import json
 import logging
@@ -80,9 +79,7 @@ class RulesEngine:
         grouped_alerts = []
         for group in groups:
             rule = updated_rules_dict.get(str(group.rule_id))
-            group_fingerprint = hashlib.sha256(
-                "|".join([str(group.id), group.group_fingerprint]).encode()
-            ).hexdigest()
+            group_fingerprint = group.calculate_fingerprint()
             try:
                 group_attributes = GroupDto.get_group_attributes(group.alerts)
             except Exception:
@@ -203,6 +200,9 @@ class RulesEngine:
         #      }
         #    }
         # than the group_fingerprint will be "queue1,cluster1"
+
+        # note: group_fingerprint is not a unique id, since different rules can lead to the same group_fingerprint
+        #       hence, the actual fingerprint is composed of the group_fingerprint and the group id
         event_payload = event.dict()
         grouping_criteria = rule.grouping_criteria
         group_fingerprint = []
