@@ -1,5 +1,6 @@
 import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import KeycloakProvider from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
 import {
@@ -186,14 +187,45 @@ const noAuthOptions = {
 } as AuthOptions;
 
 
+const keycloakAuthOptions = {
+  providers: [
+    KeycloakProvider({
+      clientId: process.env.KEYCLOAK_ID!,
+      clientSecret: process.env.KEYCLOAK_SECRET!,
+      issuer: process.env.KEYCLOAK_ISSUER, // Make sure this includes the realm, e.g., "https://my-keycloak-domain.com/realms/My_Realm"
+    }),
+  ],
+  pages: {
+    signIn: "/signin",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  callbacks: {
+    async jwt({ token, account, profile, user }) {
+      if (account) {
+        token.accessToken = account.access_token;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken;
+      return session;
+    },
+  },
+  // Include any additional NextAuth options here
+} as AuthOptions;;
 
 
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
-    authType === AuthenticationType.MULTI_TENANT
+  authType === AuthenticationType.MULTI_TENANT
     ? multiTenantAuthOptions
     : authType === AuthenticationType.SINGLE_TENANT
     ? singleTenantAuthOptions
+    : authType === AuthenticationType.KEYCLOAK
+    ? keycloakAuthOptions
     : noAuthOptions;
 
 

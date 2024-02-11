@@ -1,0 +1,51 @@
+{
+    "id": "keep",
+    "realm": "keep",
+    "enabled": true,
+    "users": [
+      {
+        "username": "admin",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "admin",
+            "temporary": false
+          }
+        ],
+        "realmRoles": ["offline_access", "uma_authorization", "admin"],
+        "clientRoles": {
+          "realm-management": ["manage-users", "manage-identity-providers"]
+        }
+      }
+    ],
+    "clients": [
+        {
+          "clientId": "keep",
+          "name": "Keep Application",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "redirectUris": [
+            "http://localhost:3000/*"
+          ],
+          "webOrigins": [],
+          "protocol": "openid-connect",
+          "attributes": {
+            "access.token.lifespan": "3600"
+          },
+          "secret": "keep-keycloak-secret",
+          "directAccessGrantsEnabled": true,
+          "publicClient": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "fullScopeAllowed": true,
+          "authorizationServicesEnabled": true,
+          "serviceAccountsEnabled": true,
+          "access": {
+            "view": true,
+            "configure": true,
+            "manage": true
+          }
+        }
+      ]
+  }
