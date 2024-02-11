@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
@@ -22,11 +23,18 @@ class Group(SQLModel, table=True):
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
+
+    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
     group_fingerprint: str
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
         back_populates="groups", link_model=AlertToGroup
     )
+
+    def calculate_fingerprint(self):
+        return hashlib.sha256(
+            "|".join([str(self.id), self.group_fingerprint]).encode()
+        ).hexdigest()
 
 
 class Alert(SQLModel, table=True):
