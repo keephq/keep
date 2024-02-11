@@ -318,6 +318,7 @@ class AuthVerifierKeycloak(AuthVerifierBase):
         self.keycloak_url = os.environ.get("KEYCLOAK_URL")
         self.keycloak_realm = os.environ.get("KEYCLOAK_REALM")
         self.keycloak_client_id = os.environ.get("KEYCLOAK_CLIENT_ID")
+        self.keycloak_audience = os.environ.get("KEYCLOAK_AUDIENCE")
         if (
             not self.keycloak_url
             or not self.keycloak_realm
@@ -351,11 +352,13 @@ class AuthVerifierKeycloak(AuthVerifierBase):
             payload = self.keycloak_client.decode_token(
                 token, key=self.keycloak_public_key, options=self.verify_options
             )
-            tenant_id = payload.get("tenant_id")
+            tenant_id = payload.get("keep_tenant_id")
             email = payload.get("email")
-            role_name = payload.get(
-                "role", AdminRole.get_name()
-            )  # default to admin for backwards compatibility
+            role_name = payload.get("keep_role")
+            if not role_name:
+                raise HTTPException(
+                    status_code=401, detail="Invalid Keycloak token - no role in token"
+                )
             role = get_role_by_role_name(role_name)
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid Keycloak token")

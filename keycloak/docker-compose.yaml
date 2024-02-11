@@ -32,6 +32,13 @@ services:
       KC_DB_URL: jdbc:mysql://mysql:3306/keycloak
       KC_DB_USERNAME: keycloak_user
       KC_DB_PASSWORD: keycloak_password
+      # this will be used in keep-realm.json
+      KEEP_REALM: keep
+      KEEP_ADMIN_USER: keep_admin
+      KEEP_ADMIN_PASSWORD: keep_admin
+      KEEP_TENANT_ID: keep
+      KEEP_AUTH_REDICERT_URL: http://localhost:3000/*
+      KEEP_CLIENT_ID: keep
     command:
       - start-dev
       - --import-realm

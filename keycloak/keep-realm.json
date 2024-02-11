@@ -1,52 +1,93 @@
 {
-    "id": "keep",
-    "realm": "keep",
-    "enabled": true,
-    "users": [
-      {
-        "username": "keep",
-        "enabled": true,
-        "credentials": [
-          {
-            "type": "password",
-            "value": "keep",
-            "temporary": false
-          }
-        ],
-        "realmRoles": ["offline_access", "uma_authorization", "admin"],
-        "clientRoles": {
-          "realm-management": ["manage-users", "manage-identity-providers"]
-        }
-      }
-    ],
-    "clients": [
+  "id": "keep",
+  "realm": "${KEEP_REALM}",
+  "enabled": true,
+  "users": [
+    {
+      "username": "${KEEP_ADMIN_USER}",
+      "enabled": true,
+      "credentials": [
         {
-          "clientId": "keep",
-          "name": "Keep Application",
-          "audience": "keep-aud",
-          "enabled": true,
-          "clientAuthenticatorType": "client-secret",
-          "redirectUris": [
-            "http://localhost:3000/*"
-          ],
-          "webOrigins": [],
+          "type": "password",
+          "value": "${KEEP_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "keep_role": "admin"
+      },
+      "realmRoles": ["offline_access", "uma_authorization", "admin"],
+      "clientRoles": {
+        "realm-management": ["manage-users", "manage-identity-providers"]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "${KEEP_CLIENT_ID}",
+      "name": "Keep Application",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "${KEEP_AUTH_REDICERT_URL}"
+      ],
+      "webOrigins": [],
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600"
+      },
+      "secret": "keep-keycloak-secret",
+      "directAccessGrantsEnabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "fullScopeAllowed": true,
+      "authorizationServicesEnabled": true,
+      "serviceAccountsEnabled": true,
+      "access": {
+        "view": true,
+        "configure": true,
+        "manage": true
+      },
+      "protocolMappers": [
+        {
+          "name": "keep-audience-mapper",
           "protocol": "openid-connect",
-          "attributes": {
-            "access.token.lifespan": "3600"
-          },
-          "secret": "keep-keycloak-secret",
-          "directAccessGrantsEnabled": true,
-          "publicClient": false,
-          "standardFlowEnabled": true,
-          "implicitFlowEnabled": false,
-          "fullScopeAllowed": true,
-          "authorizationServicesEnabled": true,
-          "serviceAccountsEnabled": true,
-          "access": {
-            "view": true,
-            "configure": true,
-            "manage": true
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "${KEEP_CLIENT_ID}",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "keep-tenant-id-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "keep_tenant_id",
+            "claim.value": "${KEEP_TENANT_ID}",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "keep-role-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "keep_role",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "keep_role",
+            "jsonType.label": "String"
           }
         }
       ]
-  }
+    }
+  ]
+}
