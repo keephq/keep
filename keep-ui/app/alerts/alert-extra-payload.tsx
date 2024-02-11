@@ -30,12 +30,6 @@ export default function AlertExtraPayload({
     setIsToggled(!isToggled);
   };
 
-  useEffect(() => {
-    if (isToggled && ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [isToggled]);
-
   const { extraPayload, extraPayloadLength } =
     getExtraPayloadNoKnownKeys(alert);
 
@@ -49,7 +43,7 @@ export default function AlertExtraPayload({
         Extra Payload
       </AccordionHeader>
       <AccordionBody ref={ref}>
-        <pre className="overflow-scroll max-w-lg">
+        <pre className="overflow-auto max-w-lg">
           {JSON.stringify(extraPayload, null, 2)}
         </pre>
       </AccordionBody>
