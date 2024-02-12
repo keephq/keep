@@ -1,7 +1,8 @@
+"use client";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Fragment, useState } from "react";
 import {
   Bars3Icon,
@@ -83,7 +84,9 @@ const GnipLogo = (props: any) => (
   </svg>
 );
 
-export default function NavbarInner({ session }: { session: any }) {
+export default function NavbarInner() {
+  const { data: session } = useSession();
+
   const pathname = usePathname();
   const { data: configData } = useSWR<InternalConfig>(
     "/api/config",
@@ -103,7 +106,7 @@ export default function NavbarInner({ session }: { session: any }) {
     <Disclosure as="nav" className="bg-white shadow-sm">
       {({ open }) => (
         <>
-        <DarkModeToggle />
+          <DarkModeToggle />
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between">
               <div className="flex">
