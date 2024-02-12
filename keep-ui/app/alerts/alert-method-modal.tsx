@@ -5,7 +5,6 @@ import {
   ProviderMethod,
   ProviderMethodParam,
 } from "app/providers/providers";
-import { AlertDto } from "./models";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
@@ -20,29 +19,46 @@ import {
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { useSearchParams } from "next/navigation";
+import { useProviders } from "utils/hooks/useProviders";
 
-interface Props {
-  isOpen: boolean;
-  closeModal: () => void;
-  method: ProviderMethod | null;
-  alert: AlertDto;
-  provider?: Provider;
-}
+export function AlertMethodModal() {
+  const searchParams = useSearchParams();
+  const alertFingerprint = searchParams?.get("alertFingerprint");
+  const providerId = searchParams?.get("providerId");
+  const methodName = searchParams?.get("methodName");
+  const isOpen = !!alertFingerprint && !!providerId && !!methodName;
 
-export function AlertMethodTransition({
-  isOpen,
-  closeModal,
-  method,
-  provider,
-  alert,
-}: Props) {
   const [isLoading, setIsLoading] = useState(true);
-  const [autoParams, setAutoParams] = useState<{ [key: string]: string }>({});
-  const [userParams, setUserParams] = useState<{ [key: string]: string }>({});
-  const [results, setResults] = useState<string[] | object[] | null>(null);
+  const [userInputParameters, setUserInputParameters] = useState<{
+    [key: string]: string;
+  }>({});
+  const [methodResult, setMethodResult] = useState<string[] | object[] | null>(
+    null
+  );
 
-  const { useAllAlerts } = useAlerts();
-  const { mutate } = useAllAlerts();
+  const { data: providersData = { installed_providers: [] } } = useProviders(
+    {}
+  );
+  const { useAllAlertsWithSubscription } = useAlerts();
+  const { data: alerts, mutate } = useAllAlertsWithSubscription();
+
+  if (!isOpen) {
+    return <></>;
+  }
+
+  const providerMethods = providersData.installed_providers.find(
+    (p) => p.id === providerId
+  )?.methods;
+  if (!providerMethods) return <></>;
+
+  const method = providerMethods.find((m) => m.name === methodName);
+  if (!method) return <></>;
+
+  const alert = alerts?.find((a) => a.fingerprint === alertFingerprint);
+  if (!alert) return <></>;
+
+  const handleClose = () => {};
 
   const validateAndSetUserParams = (
     key: string,
@@ -50,13 +66,13 @@ export function AlertMethodTransition({
     mandatory: boolean
   ) => {
     const newUserParams = {
-      ...userParams,
+      ...userInputParameters,
       [key]: value,
     };
     if (value === "" && mandatory) {
       delete newUserParams[key];
     }
-    setUserParams(newUserParams);
+    setUserInputParameters(newUserParams);
   };
 
   const getUserParamInput = (param: ProviderMethodParam) => {
@@ -89,7 +105,7 @@ export function AlertMethodTransition({
           <TextInput
             required={param.mandatory}
             placeholder={param.default ?? ""}
-            value={userParams[param.name] ?? ""}
+            value={userInputParameters[param.name] ?? ""}
             onValueChange={(value: string) =>
               validateAndSetUserParams(param.name, value, param.mandatory)
             }
@@ -118,9 +134,7 @@ export function AlertMethodTransition({
   const invokeMethod = async (
     provider: Provider,
     method: ProviderMethod,
-    methodParams: { [key: string]: string },
-    userParams: { [key: string]: string },
-    closeModal: () => void
+    userParams: { [key: string]: string }
   ) => {
     const session = await getSession();
     const apiUrl = getApiURL();
@@ -134,24 +148,24 @@ export function AlertMethodTransition({
             Authorization: `Bearer ${session!.accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ...methodParams, ...userParams }),
+          body: JSON.stringify(userParams),
         }
       );
-      const response_object = await response.json();
+      const responseObject = await response.json();
       if (response.ok) {
-        if (method.type === "action") mutate(undefined, { optimisticData: [] });
+        if (method.type === "action") mutate();
         toast.success(`Successfully called "${method.name}"`, {
           position: toast.POSITION.TOP_LEFT,
         });
         if (method.type === "view") {
-          setResults(response_object);
+          setMethodResult(responseObject);
           setIsLoading(false);
         }
       } else {
         toast.error(
           `Failed to invoke "${method.name}" on ${
             provider.details.name ?? provider.id
-          } due to ${response_object.detail}`,
+          } due to ${responseObject.detail}`,
           { position: toast.POSITION.TOP_LEFT }
         );
       }
@@ -162,39 +176,13 @@ export function AlertMethodTransition({
         } due to ${e.message}`,
         { position: toast.POSITION.TOP_LEFT }
       );
-      closeModal();
+      handleClose();
     } finally {
       if (method.type === "action") {
-        closeModal();
+        handleClose();
       }
     }
   };
-
-  useEffect(() => {
-    const newAutoParams = { ...autoParams };
-    // Auto populate params from the alert itself
-    method?.func_params?.forEach((param) => {
-      if (Object.keys(alert).includes(param.name)) {
-        newAutoParams[param.name] = alert[
-          param.name as keyof typeof alert
-        ] as string;
-      }
-    });
-    if (autoParams !== newAutoParams) {
-      setAutoParams(newAutoParams);
-      // Invoke the method if all params are auto populated
-      if (
-        method?.func_params?.every((param) =>
-          Object.keys(newAutoParams).includes(param.name)
-        )
-      ) {
-        // This means all method params are auto populated
-        invokeMethod(provider!, method!, newAutoParams, {}, closeModal);
-      } else {
-        setIsLoading(false);
-      }
-    }
-  }, [method, alert, provider, closeModal]);
 
   if (!method || !provider) {
     return <></>;
@@ -204,13 +192,15 @@ export function AlertMethodTransition({
     return method.func_params
       ?.filter((fp) => fp.mandatory)
       .every((fp) =>
-        Object.keys({ ...autoParams, ...userParams }).includes(fp.name)
+        Object.keys({
+          ...userInputParameters,
+        }).includes(fp.name)
       );
   };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={closeModal}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -239,27 +229,18 @@ export function AlertMethodTransition({
               >
                 {isLoading ? (
                   <Loading includeMinHeight={false} />
-                ) : results ? (
-                  <AlertMethodResultsTable results={results} />
+                ) : methodResult ? (
+                  <AlertMethodResultsTable results={methodResult} />
                 ) : (
                   <div>
                     {method.func_params?.map((param) => {
-                      if (!Object.keys(autoParams).includes(param.name)) {
-                        return getUserParamInput(param);
-                      }
-                      return <span className="hidden" key={param.name}></span>;
+                      return getUserParamInput(param);
                     })}
                     <Button
                       type="submit"
                       color="orange"
                       onClick={() =>
-                        invokeMethod(
-                          provider!,
-                          method!,
-                          autoParams,
-                          userParams,
-                          closeModal
-                        )
+                        invokeMethod(provider, method, userInputParameters)
                       }
                       disabled={!buttonEnabled()}
                     >
