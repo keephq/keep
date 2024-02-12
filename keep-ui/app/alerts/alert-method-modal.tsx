@@ -1,3 +1,4 @@
+// TODO: this needs to be refactored
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useEffect, useState } from "react";
 import {
@@ -19,63 +20,86 @@ import {
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
+
+const supportedParamTypes = ["datetime", "literal", "str"];
 
 export function AlertMethodModal() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const currentPreset = searchParams
+    ? searchParams.get("selectedPreset")
+    : "Feed";
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
   const methodName = searchParams?.get("methodName");
   const isOpen = !!alertFingerprint && !!providerId && !!methodName;
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [userInputParameters, setUserInputParameters] = useState<{
+  const { data: providersData = { installed_providers: [] } } = useProviders(
+    {}
+  );
+  const provider = providersData.installed_providers.find(
+    (p) => p.id === providerId
+  );
+  const method = provider?.methods?.find((m) => m.name === methodName);
+  const { useAllAlertsWithSubscription } = useAlerts();
+  const { data: alerts, mutate } = useAllAlertsWithSubscription();
+  const alert = alerts?.find((a) => a.fingerprint === alertFingerprint);
+  const [isLoading, setIsLoading] = useState(false);
+  const [inputParameters, setInputParameters] = useState<{
     [key: string]: string;
   }>({});
   const [methodResult, setMethodResult] = useState<string[] | object[] | null>(
     null
   );
 
-  const { data: providersData = { installed_providers: [] } } = useProviders(
-    {}
-  );
-  const { useAllAlertsWithSubscription } = useAlerts();
-  const { data: alerts, mutate } = useAllAlertsWithSubscription();
+  useEffect(() => {
+    /**
+     * Auto populate params from the AlertDto
+     */
+    if (method && alert) {
+      method.func_params?.forEach((param) => {
+        const alertParamValue = (alert as any)[param.name];
+        if (alertParamValue) {
+          setInputParameters((prevParams) => {
+            return { ...prevParams, [param.name]: alertParamValue };
+          });
+        }
+      });
+    }
+  }, [alert, method]);
 
-  if (!isOpen) {
+  if (!isOpen || !provider || !method || !alert) {
     return <></>;
   }
 
-  const providerMethods = providersData.installed_providers.find(
-    (p) => p.id === providerId
-  )?.methods;
-  if (!providerMethods) return <></>;
+  const handleClose = () => {
+    setInputParameters({});
+    setMethodResult(null);
+    router.replace(`${pathname}?selectedPreset=${currentPreset}`);
+  };
 
-  const method = providerMethods.find((m) => m.name === methodName);
-  if (!method) return <></>;
-
-  const alert = alerts?.find((a) => a.fingerprint === alertFingerprint);
-  if (!alert) return <></>;
-
-  const handleClose = () => {};
-
-  const validateAndSetUserParams = (
+  const validateAndSetParams = (
     key: string,
     value: string,
     mandatory: boolean
   ) => {
     const newUserParams = {
-      ...userInputParameters,
+      ...inputParameters,
       [key]: value,
     };
     if (value === "" && mandatory) {
       delete newUserParams[key];
     }
-    setUserInputParameters(newUserParams);
+    setInputParameters(newUserParams);
   };
 
-  const getUserParamInput = (param: ProviderMethodParam) => {
+  const getInputs = (param: ProviderMethodParam) => {
+    if (supportedParamTypes.includes(param.type.toLowerCase()) === false) {
+      return <></>;
+    }
+
     return (
       <div key={param.name} className="mb-2.5">
         <Text className="capitalize mb-1">
@@ -89,7 +113,7 @@ export function AlertMethodModal() {
         {param.type.toLowerCase() === "literal" && (
           <Select
             onValueChange={(value: string) =>
-              validateAndSetUserParams(param.name, value, param.mandatory)
+              validateAndSetParams(param.name, value, param.mandatory)
             }
           >
             {param.expected_values!.map((value) => {
@@ -105,9 +129,9 @@ export function AlertMethodModal() {
           <TextInput
             required={param.mandatory}
             placeholder={param.default ?? ""}
-            value={userInputParameters[param.name] ?? ""}
+            value={inputParameters[param.name]}
             onValueChange={(value: string) =>
-              validateAndSetUserParams(param.name, value, param.mandatory)
+              validateAndSetParams(param.name, value, param.mandatory)
             }
           />
         )}
@@ -118,7 +142,7 @@ export function AlertMethodModal() {
             displayFormat="yyyy-MM-dd HH:mm:ss"
             onValueChange={(value) => {
               if (value) {
-                validateAndSetUserParams(
+                validateAndSetParams(
                   param.name,
                   value.toISOString(),
                   param.mandatory
@@ -184,16 +208,12 @@ export function AlertMethodModal() {
     }
   };
 
-  if (!method || !provider) {
-    return <></>;
-  }
-
-  const buttonEnabled = () => {
+  const isInvokeEnabled = () => {
     return method.func_params
       ?.filter((fp) => fp.mandatory)
       .every((fp) =>
         Object.keys({
-          ...userInputParameters,
+          ...inputParameters,
         }).includes(fp.name)
       );
   };
@@ -213,7 +233,7 @@ export function AlertMethodModal() {
           <div className="fixed inset-0 bg-gray-900 bg-opacity-25" />
         </Transition.Child>
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center p-4 text-center  h-full">
+          <div className="flex items-center justify-center p-4 text-center h-full">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -224,7 +244,7 @@ export function AlertMethodModal() {
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className="w-full max-w-lg max-h-96 transform overflow-scroll bg-white
+                className="w-full max-w-xl max-h-96 transform overflow-x-scroll bg-white
                                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
               >
                 {isLoading ? (
@@ -234,15 +254,15 @@ export function AlertMethodModal() {
                 ) : (
                   <div>
                     {method.func_params?.map((param) => {
-                      return getUserParamInput(param);
+                      return getInputs(param);
                     })}
                     <Button
                       type="submit"
                       color="orange"
                       onClick={() =>
-                        invokeMethod(provider, method, userInputParameters)
+                        invokeMethod(provider, method, inputParameters)
                       }
-                      disabled={!buttonEnabled()}
+                      disabled={!isInvokeEnabled()}
                     >
                       Invoke {`"${method.name}"`}
                     </Button>
