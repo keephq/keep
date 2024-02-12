@@ -13,7 +13,7 @@ import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
-import { AlertMethodTransition } from "./alert-method-transition";
+import { AlertMethodModal } from "./alert-method-modal";
 import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -41,9 +41,6 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
   const { getCurrentPreset } = usePresets();
 
   const { data: session } = useSession();
-
-  const [isOpen, setIsOpen] = useState(false);
-  const [method, setMethod] = useState<ProviderMethod | null>(null);
 
   const { refs, x, y } = useFloating();
 
@@ -130,9 +127,18 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
     return false;
   };
 
-  const openMethodTransition = (method: ProviderMethod) => {
-    setMethod(method);
-    setIsOpen(true);
+  const openMethodModal = (method: ProviderMethod) => {
+    router.replace(
+      `/alerts?methodName=${method.name}&providerId=${
+        provider!.id
+      }&alertFingerprint=${
+        alert.fingerprint
+      }&selectedPreset=${getCurrentPreset()}`,
+      {
+        scroll: false,
+      }
+    );
+    handleCloseMenu();
   };
 
   const canAssign = !alert.assignee;
@@ -239,12 +245,6 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
                           className={`${
                             active ? "bg-slate-200" : "text-gray-900"
                           } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                          // disabled={!!alert.assignee && currentUser.email !== alert.assignee}
-                          // title={`${
-                          //   !!alert.assignee && currentUser.email !== alert.assignee
-                          //     ? "Cannot unassign other users"
-                          //     : ""
-                          // }`}
                         >
                           <UserPlusIcon
                             className="mr-2 h-4 w-4"
@@ -276,7 +276,7 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
                                 !methodEnabled ? "Missing required scopes" : ""
                               }
                               onClick={() => {
-                                openMethodTransition(method);
+                                openMethodModal(method);
                               }}
                             >
                               {/* TODO: We can probably make this icon come from the server as well */}
@@ -318,21 +318,6 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
           </Portal>
         )}
       </Menu>
-      {method !== null ? (
-        <AlertMethodTransition
-          isOpen={isOpen}
-          closeModal={() => {
-            setIsOpen(false);
-            setMethod(null);
-            handleCloseMenu();
-          }}
-          method={method}
-          alert={alert}
-          provider={provider}
-        />
-      ) : (
-        <></>
-      )}
     </>
   );
 }

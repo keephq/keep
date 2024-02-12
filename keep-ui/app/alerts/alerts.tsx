@@ -12,6 +12,8 @@ import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
 import { AlertDto } from "./models";
+import { AlertMethodModal } from "./alert-method-modal";
+import { ProviderMethod } from "app/providers/providers";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -21,12 +23,8 @@ const defaultPresets: Preset[] = [
 
 export default function Alerts() {
   const { useAllAlertsWithSubscription } = useAlerts();
-  // get providers
-  // providers doesnt change often so we can use a longer deduping interval
-  const { data: providersData = { installed_providers: [] } } = useProviders({
-    dedupingInterval: 10000,
-    revalidateOnMount: false,
-  });
+
+  const { data: providersData = { installed_providers: [] } } = useProviders();
 
   const ticketingProviders = useMemo(
     () =>
@@ -106,6 +104,7 @@ export default function Alerts() {
           handleClose={() => setNoteModalAlert(null)}
           alert={noteModalAlert ?? null}
         />
+        <AlertMethodModal />
       </TabGroup>
     </Card>
   );
