@@ -21,7 +21,7 @@ import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
-import AddUserModal from './add-user-modal';
+import AddUserModal from "./add-user-modal";
 import { AuthenticationType } from "utils/authenticationType";
 
 interface Props {
@@ -49,15 +49,13 @@ export default function UsersSettings({
     { revalidateOnFocus: false }
   );
 
-
   const { data: configData } = useSWR<Config>("/api/config", fetcher, {
     revalidateOnFocus: false,
   });
 
   const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [addUserError, setAddUserError] = useState('');
-
+  const [addUserError, setAddUserError] = useState("");
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthenticationType;
@@ -65,7 +63,6 @@ export default function UsersSettings({
   const addUserEnabled = authType !== AuthenticationType.NO_AUTH;
 
   if (!data || isLoading) return <Loading />;
-
 
   return (
     <div className="mt-10">
@@ -84,7 +81,11 @@ export default function UsersSettings({
             icon={UserPlusIcon}
             onClick={() => setAddUserModalOpen(true)}
             disabled={!addUserEnabled}
-            tooltip={!addUserEnabled? "Add user is disabled because Keep is running in NO_AUTH mode.": "Add user"}
+            tooltip={
+              !addUserEnabled
+                ? "Add user is disabled because Keep is running in NO_AUTH mode."
+                : "Add user"
+            }
           >
             Add User
           </Button>
@@ -95,7 +96,11 @@ export default function UsersSettings({
           <TableHead>
             <TableRow>
               <TableHeaderCell>{/** Image */}</TableHeaderCell>
-              <TableHeaderCell>{authType == AuthenticationType.MULTI_TENANT? "Email": "Username"}</TableHeaderCell>
+              <TableHeaderCell>
+                {authType == AuthenticationType.MULTI_TENANT
+                  ? "Email"
+                  : "Username"}
+              </TableHeaderCell>
               <TableHeaderCell className="text-right">Name</TableHeaderCell>
               <TableHeaderCell className="text-right">Role</TableHeaderCell>
               <TableHeaderCell className="text-right">

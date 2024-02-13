@@ -8,7 +8,7 @@ import {
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useSession } from "next-auth/react"
+import { useSession } from "next-auth/react";
 import { fetcher } from "../../utils/fetcher";
 import { Workflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
@@ -17,10 +17,9 @@ import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
 import WorkflowTile from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
-import { Dialog } from '@headlessui/react';
+import { Dialog } from "@headlessui/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
-
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -29,7 +28,6 @@ export default function WorkflowsPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
 
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
@@ -90,7 +88,7 @@ export default function WorkflowsPage() {
   function handleStaticExampleSelect(example: string) {
     // todo: something less static
     let hardCodedYaml = "";
-    if(example === "slack"){
+    if (example === "slack") {
       hardCodedYaml = `
       workflow:
         id: slack-demo
@@ -106,8 +104,7 @@ export default function WorkflowsPage() {
               with:
                 message: "Workflow ran | reason: {{ event.trigger }}"
         `;
-    }
-    else{
+    } else {
       hardCodedYaml = `
       workflow:
         id: bq-sql-query
@@ -130,8 +127,10 @@ export default function WorkflowsPage() {
                 message: "Results from the DB: ({{ steps.get-sql-data.results }})"
               `;
     }
-    const blob = new Blob([hardCodedYaml], { type: 'application/x-yaml' });
-    const file = new File([blob], `${example}.yml`, { type: 'application/x-yaml' });
+    const blob = new Blob([hardCodedYaml], { type: "application/x-yaml" });
+    const file = new File([blob], `${example}.yml`, {
+      type: "application/x-yaml",
+    });
 
     const event = {
       target: {
@@ -142,8 +141,6 @@ export default function WorkflowsPage() {
     setIsModalOpen(false);
   }
 
-
-
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
       <div className="flex justify-between items-center">
@@ -152,14 +149,33 @@ export default function WorkflowsPage() {
           <Subtitle>Automate your alert management with workflows.</Subtitle>
         </div>
         <div>
-        <Button className="mr-2.5" color="orange" size="md" variant="secondary" onClick={() => router.push('/workflows/builder')} icon={PlusCircleIcon}>
-          Create a workflow
-        </Button>
-        <Button color="orange" size="md" onClick={() => {setIsModalOpen(true);}} icon={ArrowDownOnSquareIcon}>
-          Upload a Workflow
-        </Button>
+          <Button
+            className="mr-2.5"
+            color="orange"
+            size="md"
+            variant="secondary"
+            onClick={() => router.push("/workflows/builder")}
+            icon={PlusCircleIcon}
+          >
+            Create a workflow
+          </Button>
+          <Button
+            color="orange"
+            size="md"
+            onClick={() => {
+              setIsModalOpen(true);
+            }}
+            icon={ArrowDownOnSquareIcon}
+          >
+            Upload a Workflow
+          </Button>
         </div>
-        <Dialog as="div" className="fixed inset-0 z-10 overflow-y-auto" open={isModalOpen} onClose={setIsModalOpen}>
+        <Dialog
+          as="div"
+          className="fixed inset-0 z-10 overflow-y-auto"
+          open={isModalOpen}
+          onClose={setIsModalOpen}
+        >
           <div className="flex items-center justify-center min-h-screen">
             <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
 
@@ -170,27 +186,46 @@ export default function WorkflowsPage() {
               <input
                 type="file"
                 id="workflowFile"
-                accept=".yml, .yaml"  // accept only yamls
+                accept=".yml, .yaml" // accept only yamls
                 onChange={(e) => {
                   onDrop(e);
-                  setIsModalOpen(false);  // Add this line to close the modal
+                  setIsModalOpen(false); // Add this line to close the modal
                 }}
               />
 
-            <div className="mt-4">
-              <h3>Or just try some from Keep examples:</h3>
+              <div className="mt-4">
+                <h3>Or just try some from Keep examples:</h3>
 
-              <Button className="mt-2" color="orange" size="md" icon={ArrowRightIcon} onClick={() => handleStaticExampleSelect("slack")}>
-                Send a Slack message for every alert or manually
-              </Button>
+                <Button
+                  className="mt-2"
+                  color="orange"
+                  size="md"
+                  icon={ArrowRightIcon}
+                  onClick={() => handleStaticExampleSelect("slack")}
+                >
+                  Send a Slack message for every alert or manually
+                </Button>
 
-              <Button className="mt-2" color="orange" size="md" icon={ArrowRightIcon} onClick={() => handleStaticExampleSelect("sql")}>
-                Run SQL query and send the results as a Slack message
-              </Button>
+                <Button
+                  className="mt-2"
+                  color="orange"
+                  size="md"
+                  icon={ArrowRightIcon}
+                  onClick={() => handleStaticExampleSelect("sql")}
+                >
+                  Run SQL query and send the results as a Slack message
+                </Button>
 
-              <p className="mt-4">More examples at <a href="https://github.com/keephq/keep/tree/main/examples/workflows" target="_blank">Keep GitHub repo</a></p>
-            </div>
-
+                <p className="mt-4">
+                  More examples at{" "}
+                  <a
+                    href="https://github.com/keephq/keep/tree/main/examples/workflows"
+                    target="_blank"
+                  >
+                    Keep GitHub repo
+                  </a>
+                </p>
+              </div>
 
               <div className="mt-4">
                 <button onClick={() => setIsModalOpen(false)}>Cancel</button>

@@ -26,7 +26,6 @@ export const useFetchProviders = () => {
   const { data: session, status } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
 
-
   const { data, error } = useSWR<ProvidersResponse>(
     shouldFetch ? `${getApiURL()}/providers` : null,
     (url) => {
@@ -40,11 +39,12 @@ export const useFetchProviders = () => {
   );
 
   const isLocalhost = data && data.is_localhost;
-  const toastShownKey = 'localhostToastShown';
+  const toastShownKey = "localhostToastShown";
   const ToastMessage = () => (
     <div>
-      Webhooks are disabled because Keep is not accessible from the internet.<br /><br />
-
+      Webhooks are disabled because Keep is not accessible from the internet.
+      <br />
+      <br />
       Click for Keep docs on how to enabled it 📚
     </div>
   );
@@ -53,18 +53,22 @@ export const useFetchProviders = () => {
     const toastShown = localStorage.getItem(toastShownKey);
 
     if (isLocalhost && !toastShown) {
-      toast(<ToastMessage/>, {
+      toast(<ToastMessage />, {
         type: "info",
         position: toast.POSITION.TOP_CENTER,
         autoClose: 10000,
-        onClick: () => window.open('https://docs.keephq.dev/development/external-url', '_blank'),
+        onClick: () =>
+          window.open(
+            "https://docs.keephq.dev/development/external-url",
+            "_blank"
+          ),
         style: {
           width: "250%", // Set width
           marginLeft: "-75%", // Adjust starting position to left
         },
-        progressStyle: { backgroundColor: 'orange' }
+        progressStyle: { backgroundColor: "orange" },
       });
-      localStorage.setItem(toastShownKey, 'true');
+      localStorage.setItem(toastShownKey, "true");
     }
   }, [isLocalhost]);
 
@@ -121,7 +125,7 @@ export const useFetchProviders = () => {
     error,
     session,
     isSlowLoading,
-    isLocalhost
+    isLocalhost,
   };
 };
 
@@ -138,7 +142,7 @@ export default function ProvidersPage({
     error,
     session,
     isSlowLoading,
-    isLocalhost
+    isLocalhost,
   } = useFetchProviders();
   const { searchProviderString, selectedTags } = useContext(LayoutContext);
   const router = useRouter();

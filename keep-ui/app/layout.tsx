@@ -2,7 +2,6 @@ import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
 import { Intercom } from "@/components/ui/Intercom";
 import { Mulish } from "next/font/google";
-import { Card } from "@tremor/react";
 
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,7 +13,7 @@ const mulish = Mulish({
 });
 
 import { ToastContainer } from "react-toastify";
-import Navbar from "./navbar";
+import Navbar from "../components/navbar/navbar";
 
 export default async function RootLayout({
   children,
@@ -22,16 +21,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`h-full bg-gray-50 ${mulish.className}`}
-      suppressHydrationWarning={true}
-    >
-      <body className="h-full">
+    <html lang="en" className={`h-screen bg-gray-50 ${mulish.className}`}>
+      <body className="grid grid-cols-[250px_auto]">
         <NextAuthProvider>
           <Navbar />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-          <ErrorBoundary>{children}</ErrorBoundary>
+          <main className="col-start-2 overflow-auto">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
         </NextAuthProvider>
         <ToastContainer />
 

@@ -1,7 +1,7 @@
-import InitPostHog from "./init-posthog";
+import InitPostHog from "../../app/init-posthog";
 import NavbarInner from "./navbar-inner";
 
-import { CMDK } from "./command-menu";
+import { CMDK } from "../../app/command-menu";
 
 export default function Navbar() {
   return (
