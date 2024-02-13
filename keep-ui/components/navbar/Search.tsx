@@ -101,6 +101,7 @@ export const Search = () => {
   const [query, setQuery] = useState<string>("");
   const router = useRouter();
   const comboboxBtnRef = useRef<ElementRef<"button">>(null);
+  const comboboxInputRef = useRef<ElementRef<"input">>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -115,6 +116,13 @@ export const Search = () => {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
+
+  const onOptionSelection = (value: string | null) => {
+    if (value && comboboxInputRef.current) {
+      comboboxInputRef.current.blur();
+      router.push(value);
+    }
+  };
 
   const queriedOptions = query.length
     ? OPTIONS.filter((option) =>
@@ -249,8 +257,8 @@ export const Search = () => {
       </Link>
 
       <Combobox
-        defaultValue=""
-        onChange={(value) => value && router.push(value)}
+        value={query}
+        onChange={onOptionSelection}
         nullable
         as="div"
         className="relative"
@@ -269,12 +277,14 @@ export const Search = () => {
                 className="z-20"
                 placeholder="Search or start with ⌘K"
                 color="orange"
+                value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                ref={comboboxInputRef}
               />
             </Combobox.Button>
             <Transition
               as={Fragment}
-              afterLeave={() => setQuery("")}
+              beforeLeave={() => setQuery("")}
               leave="transition ease-in duration-100"
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
