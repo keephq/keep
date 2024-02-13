@@ -1,4 +1,4 @@
-import InitPostHog from "../../app/init-posthog";
+import InitPostHog from "./init-posthog";
 import NavbarInner from "./navbar-inner";
 
 import { CMDK } from "../../app/command-menu";
