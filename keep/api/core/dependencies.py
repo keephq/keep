@@ -353,7 +353,7 @@ class AuthVerifierKeycloak(AuthVerifierBase):
                 token, key=self.keycloak_public_key, options=self.verify_options
             )
             tenant_id = payload.get("keep_tenant_id")
-            email = payload.get("email")
+            email = payload.get("preferred_username")
             role_name = payload.get("keep_role")
             if not role_name:
                 raise HTTPException(

@@ -20,7 +20,7 @@ services:
       - keycloak-and-mysql-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/phasetwo/phasetwo-keycloak:latest
     ports:
       - 8181:8080
     restart: unless-stopped
@@ -44,7 +44,8 @@ services:
       - --import-realm
     volumes:
       - ./keep-realm.json:/opt/keycloak/data/import/keep-realm.json
-      - ./themes:/opt/keycloak/providers
+    # this overrides PhaseTwo's proviers so we will need to figure it out
+    #  - ./themes:/opt/keycloak/providers
     depends_on:
       - mysql
     networks:
