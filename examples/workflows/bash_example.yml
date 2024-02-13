@@ -24,6 +24,6 @@ workflow:
           config: "{{ providers.resend-test }}"
           with:
             _from: "onboarding@resend.dev"
-            to: "ahmetcanturan.dev@gmail.com"
+            to: "youremail.dev@gmail.com"
             subject: "Python test is up!"
             html: <p>Python test is up!</p>
