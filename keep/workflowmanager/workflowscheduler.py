@@ -134,7 +134,7 @@ class WorkflowScheduler:
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, triggered, event
+        self, workflow_id, tenant_id, triggered_by_user, event
     ):
         try:
             # if the event is not defined, add some entropy

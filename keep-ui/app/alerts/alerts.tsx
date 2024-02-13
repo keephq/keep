@@ -13,7 +13,7 @@ import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
 import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
-import { ProviderMethod } from "app/providers/providers";
+import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 
 const defaultPresets: Preset[] = [
   { name: "Feed", options: [] },
@@ -36,6 +36,8 @@ export default function Alerts() {
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
+  const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
+    useState<AlertDto | null>();
 
   const { useAllPresets, getCurrentPreset } = usePresets();
   const pathname = usePathname();
@@ -91,6 +93,7 @@ export default function Alerts() {
               isAsyncLoading={isAsyncLoading}
               setTicketModalAlert={setTicketModalAlert}
               setNoteModalAlert={setNoteModalAlert}
+              setRunWorkflowModalAlert={setRunWorkflowModalAlert}
             />
           ))}
         </TabPanels>
@@ -105,6 +108,10 @@ export default function Alerts() {
           alert={noteModalAlert ?? null}
         />
         <AlertMethodModal />
+        <AlertRunWorkflowModal
+          alert={runWorkflowModalAlert}
+          handleClose={() => setRunWorkflowModalAlert(null)}
+        />
       </TabGroup>
     </Card>
   );

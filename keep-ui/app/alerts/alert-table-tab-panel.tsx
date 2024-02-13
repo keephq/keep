@@ -63,6 +63,7 @@ interface Props {
   isAsyncLoading: boolean;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
+  setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
 }
 
 const defaultRowPaginationState = {
@@ -76,6 +77,7 @@ export default function AlertTableTabPanel({
   isAsyncLoading,
   setTicketModalAlert,
   setNoteModalAlert,
+  setRunWorkflowModalAlert
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
@@ -116,6 +118,7 @@ export default function AlertTableTabPanel({
     isMenuDisplayed: true,
     setTicketModalAlert: setTicketModalAlert,
     setNoteModalAlert: setNoteModalAlert,
+    setRunWorkflowModalAlert: setRunWorkflowModalAlert
   });
 
   useEffect(() => {
