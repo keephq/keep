@@ -1,4 +1,3 @@
-import { Dialog } from "@headlessui/react";
 import { useState } from "react";
 import { TextInput, Button, Text, Card } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";

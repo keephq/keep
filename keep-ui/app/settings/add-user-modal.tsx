@@ -5,7 +5,6 @@ import {
   SubmitHandler,
   FieldValues,
 } from "react-hook-form";
-import { Dialog } from "@headlessui/react";
 import {
   TextInput,
   Button,

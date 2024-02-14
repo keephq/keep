@@ -1,4 +1,3 @@
-import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";

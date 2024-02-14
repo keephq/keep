@@ -1,6 +1,5 @@
 import React from "react";
 import Select, { components } from "react-select";
-import { Dialog } from "@headlessui/react";
 import { Button, TextInput } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
