@@ -67,7 +67,6 @@
     "chokidar": "^3.5.3",
     "classnames": "^2.3.2",
     "client-only": "^0.0.1",
-    "cmdk": "^0.2.0",
     "color-convert": "^2.0.1",
     "color-name": "^1.1.4",
     "combined-stream": "^1.0.8",
