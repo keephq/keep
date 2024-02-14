@@ -1,16 +1,10 @@
-import { AiOutlineAlert } from "react-icons/ai";
 import { getServerSession } from "next-auth";
 import { Search } from "components/navbar/Search";
 import { ConfigureLinks } from "components/navbar/ConfigureLinks";
-import { AnalyzeLinks } from "components/navbar/AnalyzeLinks";
+import { AnalyseLinks } from "components/navbar/AnalyseLinks";
 import { LearnLinks } from "components/navbar/LearnLinks";
 import { UserInfo } from "components/navbar/UserInfo";
 import InitPostHog from "components/navbar/init-posthog";
-
-// noc navigation incldues only alerts
-const nocNavigation = [
-  { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
-];
 
 export default async function NavbarInner() {
   const session = await getServerSession();
@@ -26,7 +20,7 @@ export default async function NavbarInner() {
             <Search />
             <div className="pt-6 px-2 space-y-9">
               <ConfigureLinks isNOCRole={isNOCRole} />
-              <AnalyzeLinks />
+              <AnalyseLinks />
               <LearnLinks />
             </div>
           </div>
