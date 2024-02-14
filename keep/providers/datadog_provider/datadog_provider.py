@@ -234,6 +234,7 @@ class DatadogProvider(BaseProvider):
                 raise Exception("Could not refresh token, need to re-authenticate")
             response_json = response.json()
             self.configuration.access_token = response_json.get("access_token")
+            self.configuration.host = f"https://api.{domain}"
             # update the oauth_token refresh_token for next run
             self.config.authentication["oauth_token"]["refresh_token"] = response_json[
                 "refresh_token"
