@@ -41,7 +41,10 @@ class Alert(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    # index=True added because we query top 1000 alerts order by timestamp. On a large dataset, this will be slow without an index.
+    #            with 1M alerts, we see queries goes from >30s to 0s with the index
+    #            todo: on MSSQL, the index is "nonclustered" index which cannot be controlled by SQLModel
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
     provider_type: str
     provider_id: str | None
     event: dict = Field(sa_column=Column(JSON))
