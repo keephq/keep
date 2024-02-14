@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { AnchorHTMLAttributes, ReactNode } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
 import { Icon } from "@tremor/react";
@@ -10,8 +10,8 @@ import classNames from "classnames";
 type StyledLinkProps = {
   children: ReactNode;
   icon: IconType;
-  tabIndex?: number;
-} & LinkProps;
+} & LinkProps &
+  AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export const LinkWithIcon = ({
   icon,
