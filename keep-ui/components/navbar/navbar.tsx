@@ -1,42 +1,11 @@
-import { Disclosure, Menu, Transition } from "@headlessui/react";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { getSession, signOut, useSession } from "next-auth/react";
-import { Fragment, useState } from "react";
-import {
-  Bars3Icon,
-  DocumentTextIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
-import { VscDebugDisconnect } from "react-icons/vsc";
-import { LuWorkflow } from "react-icons/lu";
 import { AiOutlineAlert } from "react-icons/ai";
-import { MdOutlineEngineering } from "react-icons/md";
-
-import Link from "next/link";
-import { Icon } from "@tremor/react";
-import { AuthenticationType } from "utils/authenticationType";
-import useSWR from "swr";
-import { fetcher } from "utils/fetcher";
-import { User } from "next-auth";
-import { InternalConfig } from "types/internal-config";
-import { NameInitialsAvatar } from "react-name-initials-avatar";
-import DarkModeToggle from "../../app/dark-mode-toggle";
-import { useConfig } from "utils/hooks/useConfig";
-import { Search } from "./Search";
-import { ConfigureLinks } from "./ConfigureLinks";
-import { MonitorLinks } from "./MonitorLinks";
-import { AnalyzeLinks } from "./AnalyzeLinks";
-import { LearnLinks } from "./LearnLinks";
-import { UserInfo } from "./UserInfo";
-import InitPostHog from "./init-posthog";
-
-const navigation = [
-  { name: "Providers", href: "/providers", icon: VscDebugDisconnect },
-  { name: "Alerts", href: "/alerts", icon: AiOutlineAlert },
-  { name: "Alert Groups", href: "/rules", icon: MdOutlineEngineering },
-  { name: "Workflows", href: "/workflows", icon: LuWorkflow },
-];
+import { getServerSession } from "next-auth";
+import { Search } from "components/navbar/Search";
+import { ConfigureLinks } from "components/navbar/ConfigureLinks";
+import { AnalyzeLinks } from "components/navbar/AnalyzeLinks";
+import { LearnLinks } from "components/navbar/LearnLinks";
+import { UserInfo } from "components/navbar/UserInfo";
+import InitPostHog from "components/navbar/init-posthog";
 
 // noc navigation incldues only alerts
 const nocNavigation = [
@@ -44,17 +13,22 @@ const nocNavigation = [
 ];
 
 export default async function NavbarInner() {
+  const session = await getServerSession();
+
+  const isNOCRole = session?.userRole === "noc";
+
   return (
     <>
       <InitPostHog />
       <aside className="bg-gray-50 col-span-1 border-r border-gray-300 h-full">
-        <nav className="flex flex-col">
-          <div className="flex-1">
+        <nav className="flex flex-col h-full">
+          <div className="flex-1 h-full">
             <Search />
-            <ConfigureLinks />
-            <MonitorLinks />
-            <AnalyzeLinks />
-            <LearnLinks />
+            <div className="pt-6 px-2 space-y-9">
+              <ConfigureLinks isNOCRole={isNOCRole} />
+              <AnalyzeLinks />
+              <LearnLinks />
+            </div>
           </div>
 
           <UserInfo />
