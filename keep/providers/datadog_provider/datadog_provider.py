@@ -64,6 +64,15 @@ class DatadogProviderAuthConfig:
         },
         default="",
     )
+    domain: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Datadog API domain",
+            "sensitive": False,
+            "hint": "https://api.datadoghq.com",
+        },
+        default="https://api.datadoghq.com",
+    )
     oauth_token: dict = dataclasses.field(
         metadata={
             "description": "For OAuth flow",
@@ -197,9 +206,14 @@ class DatadogProvider(BaseProvider):
             self.configuration.api_key[
                 "appKeyAuth"
             ] = self.authentication_config.app_key
+            domain = self.authentication_config.domain or "https://api.datadoghq.com"
+            self.configuration.host = domain
         elif self.authentication_config.oauth_token:
+            domain = self.authentication_config.oauth_token.get(
+                "domain", "datadoghq.com"
+            )
             response = requests.post(
-                "https://api.datadoghq.com/oauth2/v1/token",
+                f"https://api.{domain}/oauth2/v1/token",
                 data={
                     "grant_type": "refresh_token",
                     "client_id": DatadogProvider.DATADOG_CLIENT_ID,
@@ -220,6 +234,7 @@ class DatadogProvider(BaseProvider):
                 raise Exception("Could not refresh token, need to re-authenticate")
             response_json = response.json()
             self.configuration.access_token = response_json.get("access_token")
+            self.configuration.host = f"https://api.{domain}"
             # update the oauth_token refresh_token for next run
             self.config.authentication["oauth_token"]["refresh_token"] = response_json[
                 "refresh_token"
@@ -238,6 +253,7 @@ class DatadogProvider(BaseProvider):
         Returns:
             dict: access token to Datadog.
         """
+        domain = payload.pop("domain", "datadoghq.com")
         verifier = payload.pop("verifier", None)
         if not verifier:
             raise Exception("No verifier provided")
@@ -246,7 +262,7 @@ class DatadogProvider(BaseProvider):
             raise Exception("No code provided")
 
         token = requests.post(
-            "https://api.datadoghq.com/oauth2/v1/token",
+            f"https://api.{domain}/oauth2/v1/token",
             data={
                 "grant_type": "authorization_code",
                 "client_id": payload["client_id"],
@@ -267,6 +283,7 @@ class DatadogProvider(BaseProvider):
                 "verifier": verifier,
                 "code": code,
                 "redirect_uri": payload["redirect_uri"],
+                "domain": domain,
             }
         }
 

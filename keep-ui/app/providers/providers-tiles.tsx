@@ -35,7 +35,7 @@ const ProvidersTiles = ({
   const providerName = searchParams?.get("provider_name");
 
   useEffect(() => {
-    if (providerType && providerName) {
+    if (providerType) {
       // Find the provider based on providerType and providerName
       const provider = providers.find(
         (provider) => provider.type === providerType
@@ -43,9 +43,11 @@ const ProvidersTiles = ({
 
       if (provider) {
         setSelectedProvider(provider);
-        setFormValues({
-          provider_name: providerName,
-        });
+        if (providerName) {
+          setFormValues({
+            provider_name: providerName,
+          });
+        }
         setOpenPanel(true);
       }
     }

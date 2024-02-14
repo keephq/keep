@@ -84,7 +84,11 @@ class BashProvider(BaseProvider):
                 stderr = e.args[1].decode()
                 return_code = e.args[0]
 
-        return {"stdout": stdout, "stderr": stderr, "return_code": return_code}
+        return {
+            "stdout": str(stdout),
+            "stderr": str(stderr),
+            "return_code": return_code,
+        }
 
     def dispose(self):
         """

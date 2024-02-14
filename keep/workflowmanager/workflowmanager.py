@@ -152,22 +152,24 @@ class WorkflowManager:
                         previous_alert = get_previous_alert_by_fingerprint(
                             tenant_id, event.fingerprint
                         )
-                    # now compare:
-                    #   (no previous alert means that the workflow should run)
-                    if previous_alert:
-                        for field in fields_that_needs_to_be_change:
-                            # the field hasn't change
-                            if getattr(event, field) == previous_alert.event.get(field):
-                                self.logger.info(
-                                    "Skipping the workflow because the field hasn't change",
-                                    extra={
-                                        "field": field,
-                                        "event": event,
-                                        "previous_alert": previous_alert,
-                                    },
-                                )
-                                should_run = False
-                                break
+                        # now compare:
+                        #   (no previous alert means that the workflow should run)
+                        if previous_alert:
+                            for field in fields_that_needs_to_be_change:
+                                # the field hasn't change
+                                if getattr(event, field) == previous_alert.event.get(
+                                    field
+                                ):
+                                    self.logger.info(
+                                        "Skipping the workflow because the field hasn't change",
+                                        extra={
+                                            "field": field,
+                                            "event": event,
+                                            "previous_alert": previous_alert,
+                                        },
+                                    )
+                                    should_run = False
+                                    break
 
                     if not should_run:
                         continue

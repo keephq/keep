@@ -12,6 +12,7 @@ import {
   ColumnDef,
   ColumnOrderState,
   VisibilityState,
+  ColumnSizingState,
 } from "@tanstack/react-table";
 import AlertPagination from "./alert-pagination";
 import AlertColumnsSelect from "./alert-columns-select";
@@ -64,6 +65,11 @@ export function AlertTable({
     DEFAULT_COLS_VISIBILITY
   );
 
+  const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
+    "table-sizes",
+    {}
+  );
+
   const table = useReactTable({
     data: rowPagination
       ? getPaginatedData(alerts, rowPagination.state)
@@ -72,6 +78,7 @@ export function AlertTable({
     state: {
       columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
       columnOrder: columnOrder,
+      columnSizing: columnSizing,
       rowSelection: rowSelection?.state,
       pagination: rowPagination?.state,
       columnPinning: {
@@ -91,7 +98,9 @@ export function AlertTable({
     manualPagination: rowPagination !== undefined,
     onPaginationChange: rowPagination?.onChange,
     onRowSelectionChange: rowSelection?.onChange,
+    onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
+    columnResizeMode: "onChange",
   });
 
   return (
@@ -109,7 +118,7 @@ export function AlertTable({
           Alerts will show up in this table as they are added to Keep...
         </Callout>
       )}
-      <Table>
+      <Table className="[&>table]:table-fixed [&>table]:w-full">
         <AlertsTableHeaders
           columns={columns}
           table={table}
