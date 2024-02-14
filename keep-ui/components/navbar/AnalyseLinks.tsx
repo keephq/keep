@@ -12,7 +12,7 @@ export const AnalyseLinks = () => {
   return (
     <div className="space-y-2">
       <Subtitle className="text-xs pl-3">ANALYSE</Subtitle>
-      <ul className="space-y-2">
+      <ul className="space-y-2 max-h-60 overflow-auto">
         <li>
           <LinkWithIcon href="/alerts/feed" icon={AiOutlineAlert}>
             Feed
