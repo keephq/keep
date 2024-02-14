@@ -7,7 +7,6 @@ export default async function Page({
 }: {
   searchParams?: { [key: string]: string };
 }) {
-  const session = await getServerSession(authOptions);
   return <ProvidersPage searchParams={searchParams} />;
 }
 
