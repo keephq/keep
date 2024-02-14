@@ -34,6 +34,7 @@ import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
+import { useSearchParams } from "next/navigation";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -92,6 +93,7 @@ const ProviderForm = ({
   isLocalhost,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
+  const searchParams = useSearchParams();
   const initialData = {
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
@@ -106,7 +108,6 @@ const ProviderForm = ({
   const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [isModalOpen, setIsModalOpen] = useState(false);
   // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
@@ -132,8 +133,18 @@ const ProviderForm = ({
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
     const verifierChallenge = base64urlencode(await sha256(verifier));
+
+    let oauth2Url = provider.oauth2_url;
+    if (searchParams?.get("domain")) {
+      // TODO: this is a hack for Datadog OAuth2 since it can be initated from different domains
+      oauth2Url = oauth2Url?.replace(
+        "datadoghq.com",
+        searchParams.get("domain")
+      );
+    }
+
     window.location.assign(
-      `${provider.oauth2_url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`
+      `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`
     );
   }
 
