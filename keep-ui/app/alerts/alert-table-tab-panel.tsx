@@ -5,18 +5,17 @@ import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
 import { AlertDto, AlertKnownKeys, Preset } from "./models";
 import AlertActions from "./alert-actions";
-import { TabPanel } from "@tremor/react";
 
 const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
-  if (presetName === "Deleted") {
+  if (presetName === "deleted") {
     return alert.deleted === true;
   }
 
-  if (presetName === "Groups") {
+  if (presetName === "groups") {
     return alert.group === true;
   }
 
-  if (presetName === "Feed") {
+  if (presetName === "feed") {
     return alert.deleted === false;
   }
 
@@ -77,7 +76,7 @@ export default function AlertTableTabPanel({
   isAsyncLoading,
   setTicketModalAlert,
   setNoteModalAlert,
-  setRunWorkflowModalAlert
+  setRunWorkflowModalAlert,
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
@@ -114,11 +113,12 @@ export default function AlertTableTabPanel({
 
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
-    isCheckboxDisplayed: preset.name !== "Deleted",
+    isCheckboxDisplayed: preset.name !== "deleted",
     isMenuDisplayed: true,
     setTicketModalAlert: setTicketModalAlert,
     setNoteModalAlert: setNoteModalAlert,
-    setRunWorkflowModalAlert: setRunWorkflowModalAlert
+    setRunWorkflowModalAlert: setRunWorkflowModalAlert,
+    presetName: preset.name,
   });
 
   useEffect(() => {
@@ -126,7 +126,7 @@ export default function AlertTableTabPanel({
   }, [selectedOptions]);
 
   return (
-    <TabPanel className="mt-4">
+    <>
       {selectedRowIds.length ? (
         <AlertActions
           selectedRowIds={selectedRowIds}
@@ -153,6 +153,6 @@ export default function AlertTableTabPanel({
         }}
         presetName={preset.name}
       />
-    </TabPanel>
+    </>
   );
 }

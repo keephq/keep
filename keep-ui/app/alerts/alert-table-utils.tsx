@@ -72,16 +72,20 @@ interface GenerateAlertTableColsArg {
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  presetName: string;
 }
 
-export const useAlertTableCols = ({
-  additionalColsToGenerate = [],
-  isCheckboxDisplayed,
-  isMenuDisplayed,
-  setNoteModalAlert,
-  setTicketModalAlert,
-  setRunWorkflowModalAlert,
-}: GenerateAlertTableColsArg = {}) => {
+export const useAlertTableCols = (
+  {
+    additionalColsToGenerate = [],
+    isCheckboxDisplayed,
+    isMenuDisplayed,
+    setNoteModalAlert,
+    setTicketModalAlert,
+    setRunWorkflowModalAlert,
+    presetName,
+  }: GenerateAlertTableColsArg = { presetName: "feed" }
+) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [currentOpenMenu, setCurrentOpenMenu] = useState("");
 
@@ -241,6 +245,7 @@ export const useAlertTableCols = ({
             size: 50,
             cell: (context) => (
               <AlertMenu
+                presetName={presetName.toLowerCase()}
                 alert={context.row.original}
                 isMenuOpen={
                   context.row.original.fingerprint === currentOpenMenu

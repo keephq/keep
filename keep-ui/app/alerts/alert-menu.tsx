@@ -18,13 +18,13 @@ import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
-import { usePresets } from "utils/hooks/usePresets";
 
 interface Props {
   alert: AlertDto;
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  presetName: string;
 }
 
 export default function AlertMenu({
@@ -32,6 +32,7 @@ export default function AlertMenu({
   isMenuOpen,
   setIsMenuOpen,
   setRunWorkflowModalAlert,
+  presetName,
 }: Props) {
   const router = useRouter();
 
@@ -44,7 +45,6 @@ export default function AlertMenu({
 
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnMount: false });
-  const { getCurrentPreset } = usePresets();
 
   const { data: session } = useSession();
 
@@ -135,11 +135,9 @@ export default function AlertMenu({
 
   const openMethodModal = (method: ProviderMethod) => {
     router.replace(
-      `/alerts?methodName=${method.name}&providerId=${
+      `/alerts/${presetName}?methodName=${method.name}&providerId=${
         provider!.id
-      }&alertFingerprint=${
-        alert.fingerprint
-      }&selectedPreset=${getCurrentPreset()}`,
+      }&alertFingerprint=${alert.fingerprint}`,
       {
         scroll: false,
       }
@@ -235,9 +233,7 @@ export default function AlertMenu({
                       <button
                         onClick={() => {
                           router.replace(
-                            `/alerts?fingerprint=${
-                              alert.fingerprint
-                            }&selectedPreset=${getCurrentPreset()}`,
+                            `/alerts/${presetName}?fingerprint=${alert.fingerprint}`,
                             {
                               scroll: false,
                             }
