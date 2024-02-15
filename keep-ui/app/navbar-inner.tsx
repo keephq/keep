@@ -16,12 +16,10 @@ import { MdOutlineEngineering } from "react-icons/md";
 import Link from "next/link";
 import { Icon } from "@tremor/react";
 import { AuthenticationType } from "utils/authenticationType";
-import useSWR from "swr";
-import { fetcher } from "utils/fetcher";
 import { User } from "next-auth";
-import { InternalConfig } from "types/internal-config";
 import { NameInitialsAvatar } from "react-name-initials-avatar";
 import DarkModeToggle from "./dark-mode-toggle";
+import { useConfig } from "utils/hooks/useConfig";
 
 const navigation = [
   { name: "Providers", href: "/providers", icon: VscDebugDisconnect },
@@ -85,11 +83,7 @@ const GnipLogo = (props: any) => (
 
 export default function NavbarInner({ session }: { session: any }) {
   const pathname = usePathname();
-  const { data: configData } = useSWR<InternalConfig>(
-    "/api/config",
-    fetcher,
-    undefined
-  );
+  const { data: configData } = useConfig();
   const [imageError, setImageError] = useState(false);
 
   // Determine runtime configuration
@@ -103,7 +97,7 @@ export default function NavbarInner({ session }: { session: any }) {
     <Disclosure as="nav" className="bg-white shadow-sm">
       {({ open }) => (
         <>
-        <DarkModeToggle />
+          <DarkModeToggle />
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between">
               <div className="flex">

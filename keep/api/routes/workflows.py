@@ -182,7 +182,7 @@ def run_workflow(
     # Finally, run it
     try:
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, "manual", body
+            workflow_id, tenant_id, created_by, body
         )
     except Exception as e:
         logger.exception(

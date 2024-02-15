@@ -1,5 +1,5 @@
 import { Menu, Portal, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { Icon } from "@tremor/react";
 import {
   ArchiveBoxIcon,
@@ -7,13 +7,13 @@ import {
   PlusIcon,
   TrashIcon,
   UserPlusIcon,
+  PlayIcon,
 } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
-import { AlertMethodModal } from "./alert-method-modal";
 import { useFloating } from "@floating-ui/react-dom";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -24,9 +24,15 @@ interface Props {
   alert: AlertDto;
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
 }
 
-export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
+export default function AlertMenu({
+  alert,
+  isMenuOpen,
+  setIsMenuOpen,
+  setRunWorkflowModalAlert,
+}: Props) {
   const router = useRouter();
 
   const apiUrl = getApiURL();
@@ -186,6 +192,22 @@ export default function AlertMenu({ alert, isMenuOpen, setIsMenuOpen }: Props) {
                 style={{ left: (x ?? 0) - 50, top: y ?? 0 }}
               >
                 <div className="px-1 py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                        onClick={() => {
+                          setRunWorkflowModalAlert?.(alert);
+                          handleCloseMenu();
+                        }}
+                      >
+                        <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Run Workflow
+                      </button>
+                    )}
+                  </Menu.Item>
                   <Menu.Item>
                     {({ active }) => (
                       <Link
