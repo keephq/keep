@@ -32,9 +32,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <div className="flex-1 h-0">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
+            <ToastContainer />
           </main>
         </NextAuthProvider>
-        <ToastContainer />
 
         {/** footer */}
         {process.env.GIT_COMMIT_HASH ? (
