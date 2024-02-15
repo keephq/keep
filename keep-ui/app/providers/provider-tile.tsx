@@ -125,10 +125,10 @@ export default function ProviderTile({ provider, onClick }: Props) {
                     key={tag}
                     icon={icon}
                     size="xs"
-                    className="text-[3px] mr-1 mt-5"
+                    className="mr-1"
                     color="slate"
                   >
-                    {tag}
+                    <p className="ml-1">{tag}</p>
                   </Badge>
                 );
               })}

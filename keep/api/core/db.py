@@ -176,7 +176,11 @@ def try_create_single_tenant(tenant_id: str) -> None:
 
 
 def create_workflow_execution(
-    workflow_id: str, tenant_id: str, triggered_by: str, execution_number: int = 1
+    workflow_id: str,
+    tenant_id: str,
+    triggered_by: str,
+    execution_number: int = 1,
+    fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
@@ -190,6 +194,14 @@ def create_workflow_execution(
                 status="in_progress",
             )
             session.add(workflow_execution)
+
+            if fingerprint:
+                workflow_to_alert_execution = WorkflowToAlertExecution(
+                    workflow_execution_id=workflow_execution.id,
+                    alert_fingerprint=fingerprint,
+                )
+                session.add(workflow_to_alert_execution)
+
             session.commit()
             return workflow_execution.id
         except IntegrityError:
