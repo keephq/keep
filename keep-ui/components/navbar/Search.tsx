@@ -124,6 +124,14 @@ export const Search = () => {
     }
   };
 
+  const onLeave = () => {
+    setQuery("");
+
+    if (comboboxInputRef.current) {
+      comboboxInputRef.current.blur();
+    }
+  };
+
   const queriedOptions = query.length
     ? OPTIONS.filter((option) =>
         option.label
@@ -157,11 +165,7 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem
-                  className={`flex items-center justify-start space-x-3 cursor-default select-none p-2 ${
-                    active ? "bg-orange-400 text-white" : "text-gray-900"
-                  }`}
-                >
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
                     className={`py-2 px-0 ${
                       active ? "bg-orange-400 text-white" : "text-gray-900"
@@ -199,11 +203,7 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem
-                  className={`flex items-center justify-start space-x-3 cursor-default select-none p-2 ${
-                    active ? "bg-orange-400 text-white" : "text-gray-900"
-                  }`}
-                >
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
                     className={`py-2 px-0 ${
                       active ? "bg-orange-400 text-white" : "text-gray-900"
@@ -228,11 +228,7 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem
-                  className={`flex items-center justify-start space-x-3 cursor-default select-none p-2 ${
-                    active ? "bg-orange-400 text-white" : "text-gray-900"
-                  }`}
-                >
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
                   <Icon
                     className={`py-2 px-0 ${
                       active ? "bg-orange-400 text-white" : "text-gray-900"
@@ -284,7 +280,7 @@ export const Search = () => {
             </Combobox.Button>
             <Transition
               as={Fragment}
-              beforeLeave={() => setQuery("")}
+              beforeLeave={onLeave}
               leave="transition ease-in duration-100"
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
