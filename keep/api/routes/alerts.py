@@ -28,8 +28,8 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
-from keep.api.utils.tenant_utils import update_key_last_used
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+from keep.api.utils.tenant_utils import update_key_last_used
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -170,7 +170,7 @@ def pull_alerts_from_providers(
                     if len(new_compressed_batch) <= 10240:
                         number_of_alerts_in_batch += 1
                         previous_compressed_batch = new_compressed_batch
-                    else:
+                    elif pusher_client:
                         pusher_client.trigger(
                             f"private-{tenant_id}",
                             "async-alerts",
@@ -182,7 +182,11 @@ def pull_alerts_from_providers(
 
                 # this means we didn't get to this ^ else statement and loop ended
                 #   so we need to send the rest of the alerts
-                if new_compressed_batch and len(new_compressed_batch) < 10240:
+                if (
+                    new_compressed_batch
+                    and len(new_compressed_batch) < 10240
+                    and pusher_client
+                ):
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
@@ -207,7 +211,7 @@ def pull_alerts_from_providers(
                 },
             )
             pass
-    if sync is False:
+    if sync is False and pusher_client:
         pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
     logger.info("Fetched alerts from installed providers")
     return sync_alerts
@@ -505,14 +509,15 @@ def handle_formatted_events(
                     alert_event_copy[enrichment] = alert_enrichment.enrichments[
                         enrichment
                     ]
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-alerts",
-                    json.dumps([AlertDto(**alert_event_copy).dict()]),
-                )
-            except Exception:
-                logger.exception("Failed to push alert to the client")
+            if pusher_client:
+                try:
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
+                        json.dumps([AlertDto(**alert_event_copy).dict()]),
+                    )
+                except Exception:
+                    logger.exception("Failed to push alert to the client")
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -564,14 +569,15 @@ def handle_formatted_events(
             # Now send the grouped alerts to the client
             logger.info("Sending grouped alerts to the client")
             for grouped_alert in grouped_alerts:
-                try:
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
-                        json.dumps([grouped_alert.dict()]),
-                    )
-                except Exception:
-                    logger.exception("Failed to push alert to the client")
+                if pusher_client:
+                    try:
+                        pusher_client.trigger(
+                            f"private-{tenant_id}",
+                            "async-alerts",
+                            json.dumps([grouped_alert.dict()]),
+                        )
+                    except Exception:
+                        logger.exception("Failed to push alert to the client")
             logger.info("Sent grouped alerts to the client")
     except Exception:
         logger.exception(
@@ -632,9 +638,7 @@ async def receive_generic_event(
     if authenticated_entity.api_key_name:
         logger.debug("Updating API Key last used")
         update_key_last_used(
-            session,
-            tenant_id,
-            unique_api_key_id=authenticated_entity.api_key_name
+            session, tenant_id, unique_api_key_id=authenticated_entity.api_key_name
         )
         logger.debug("Successfully updated API Key last used")
 
