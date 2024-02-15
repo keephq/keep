@@ -69,21 +69,25 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
       >
         <div className="px-1 py-1 ">
           {userRole !== "noc" && (
-            <Menu.Item as="li">
-              <Link
-                className="ui-active:bg-orange-500 ui-activ e:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+            <li>
+              <Menu.Item
+                as={Link}
                 href="/settings"
+                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
               >
                 Settings
-              </Link>
-            </Menu.Item>
+              </Menu.Item>
+            </li>
           )}
           {configData?.AUTH_TYPE !== AuthenticationType.NO_AUTH && (
-            <Menu.Item as="li">
-              <button className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm">
+            <li>
+              <Menu.Item
+                as="button"
+                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+              >
                 Sign out
-              </button>
-            </Menu.Item>
+              </Menu.Item>
+            </li>
           )}
         </div>
       </Menu.Items>
