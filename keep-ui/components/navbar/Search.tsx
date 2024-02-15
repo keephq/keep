@@ -34,7 +34,7 @@ const NAVIGATION_OPTIONS = [
     icon: AiOutlineAlert,
     label: "Go to alert console",
     shortcut: ["g"],
-    navigate: "/alerts",
+    navigate: "/alerts/feed",
   },
   {
     icon: MdOutlineEngineering,
