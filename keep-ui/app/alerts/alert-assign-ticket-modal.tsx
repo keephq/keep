@@ -1,13 +1,13 @@
-import React from 'react';
-import Select, { components } from 'react-select';
-import { Dialog } from '@headlessui/react';
-import { Button, TextInput } from '@tremor/react';
-import { PlusIcon } from '@heroicons/react/20/solid'
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import React from "react";
+import Select, { components } from "react-select";
+import { Button, TextInput } from "@tremor/react";
+import { PlusIcon } from "@heroicons/react/20/solid";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "./../providers/providers";
 import { useSession } from "next-auth/react";
-import { getApiURL } from 'utils/apiUrl';
-import { AlertDto } from './models';
+import { getApiURL } from "utils/apiUrl";
+import { AlertDto } from "./models";
+import Modal from "@/components/ui/Modal";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -33,14 +33,21 @@ interface FormData {
   ticket_url: string;
 }
 
-const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: AlertAssignTicketModalProps) => {
-
-  const { handleSubmit, control, formState: { errors } } = useForm<FormData>();
+const AlertAssignTicketModal = ({
+  handleClose,
+  ticketingProviders,
+  alert,
+}: AlertAssignTicketModalProps) => {
+  const {
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<FormData>();
   // get the token
   const { data: session } = useSession();
 
   // if this modal should not be open, do nothing
-  if(!alert) return null;
+  if (!alert) return null;
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
@@ -53,7 +60,6 @@ const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: Aler
         },
         fingerprint: alert.fingerprint,
       };
-
 
       const response = await fetch(`${getApiURL()}/alerts/enrich`, {
         method: "POST",
@@ -82,28 +88,27 @@ const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: Aler
   const providerOptions: OptionType[] = ticketingProviders.map((provider) => ({
     id: provider.id,
     value: provider.id,
-    label: provider.details.name || '',
+    label: provider.details.name || "",
     type: provider.type,
   }));
 
   const customOptions: OptionType[] = [
     ...providerOptions,
     {
-      value: 'add_provider',
-      label: 'Add another ticketing provider',
-      icon: 'plus',
+      value: "add_provider",
+      label: "Add another ticketing provider",
+      icon: "plus",
       isAddProvider: true,
-      id: 'add_provider',
-      type: '',
+      id: "add_provider",
+      type: "",
     },
   ];
 
   const handleOnChange = (option: any) => {
-    if (option.value === 'add_provider') {
-      window.open('/providers?labels=ticketing', '_blank');
+    if (option.value === "add_provider") {
+      window.open("/providers?labels=ticketing", "_blank");
     }
   };
-
 
   const Option = (props: any) => {
     // Check if the option is 'add_provider'
@@ -115,9 +120,17 @@ const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: Aler
           {isAddProvider ? (
             <PlusIcon className="h-5 w-5 text-gray-400 mr-2" />
           ) : (
-            props.data.type && <img src={`/icons/${props.data.type}-icon.png`} alt="" style={{ height: '20px', marginRight: '10px' }} />
+            props.data.type && (
+              <img
+                src={`/icons/${props.data.type}-icon.png`}
+                alt=""
+                style={{ height: "20px", marginRight: "10px" }}
+              />
+            )
           )}
-          <span style={{ color: isAddProvider ? 'gray' : 'inherit' }}>{props.data.label}</span>
+          <span style={{ color: isAddProvider ? "gray" : "inherit" }}>
+            {props.data.label}
+          </span>
         </div>
       </components.Option>
     );
@@ -132,7 +145,13 @@ const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: Aler
           {data.isAddProvider ? (
             <PlusIcon className="h-5 w-5 text-gray-400 mr-2" />
           ) : (
-            data.type && <img src={`/icons/${data.type}-icon.png`} alt="" style={{ height: '20px', marginRight: '10px' }} />
+            data.type && (
+              <img
+                src={`/icons/${data.type}-icon.png`}
+                alt=""
+                style={{ height: "20px", marginRight: "10px" }}
+              />
+            )
           )}
           {children}
         </div>
@@ -144,63 +163,105 @@ const AlertAssignTicketModal = ({ handleClose, ticketingProviders, alert }: Aler
   const isOpen = alert !== null;
 
   return (
-    <Dialog open={isOpen} onClose={handleClose} className="fixed inset-0 z-10 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
-        <div className="relative bg-white p-6 rounded-lg" style={{ width: "400px", maxWidth: "90%" }}>
-          <Dialog.Title className="text-lg font-semibold">Assign Ticket</Dialog.Title>
-          {ticketingProviders.length > 0 ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">Ticket Provider</label>
-                <Controller
-                  name="provider"
-                  control={control}
-                  rules={{ required: 'Provider is required' }}
-                  render={({ field }) => (
-                    <Select {...field} options={customOptions} onChange={(option) => { field.onChange(option); handleOnChange(option); }} components={{ Option, SingleValue }} />
-                  )}
-                />
-              </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700">Ticket URL</label>
-                <Controller
-                  name="ticket_url"
-                  control={control}
-                  rules={{
-                    required: 'URL is required',
-                    pattern: {
-                      value: /^(https?|http):\/\/[^\s/$.?#].[^\s]*$/i,
-                      message: 'Invalid URL format',
-                    },
-                  }}
-                  render={({ field }) => (
-                    <>
-                      <TextInput {...field} className="w-full mt-1" placeholder="Ticket URL" />
-                      {errors.ticket_url && <span className="text-red-500">{errors.ticket_url.message}</span>}
-                    </>
-                  )}
-                />
-              </div>
-              <div className="mt-6 flex gap-2">
-                <Button color="orange" type="submit">Assign Ticket</Button>
-                <Button onClick={handleClose} variant="secondary" className="border border-orange-500 text-orange-500">Cancel</Button>
-              </div>
-            </form>
-          ) : (
-            <div className="text-center mt-4">
-              <p className="text-gray-700 text-sm">
-                Please connect at least one ticketing provider to use this feature.
-              </p>
-              <Button onClick={() => window.open('/providers?labels=ticketing', '_blank')} color="orange" className="mt-4 mr-4">
-                Connect Ticketing Provider
-              </Button>
-              <Button onClick={handleClose} variant="secondary" className="mt-4 border border-orange-500 text-orange-500">Close</Button>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Assign Ticket"
+      className="w-[400px]"
+    >
+      <div className="relative bg-white p-6 rounded-lg">
+        {ticketingProviders.length > 0 ? (
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Ticket Provider
+              </label>
+              <Controller
+                name="provider"
+                control={control}
+                rules={{ required: "Provider is required" }}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={customOptions}
+                    onChange={(option) => {
+                      field.onChange(option);
+                      handleOnChange(option);
+                    }}
+                    components={{ Option, SingleValue }}
+                  />
+                )}
+              />
             </div>
-          )}
-        </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Ticket URL
+              </label>
+              <Controller
+                name="ticket_url"
+                control={control}
+                rules={{
+                  required: "URL is required",
+                  pattern: {
+                    value: /^(https?|http):\/\/[^\s/$.?#].[^\s]*$/i,
+                    message: "Invalid URL format",
+                  },
+                }}
+                render={({ field }) => (
+                  <>
+                    <TextInput
+                      {...field}
+                      className="w-full mt-1"
+                      placeholder="Ticket URL"
+                    />
+                    {errors.ticket_url && (
+                      <span className="text-red-500">
+                        {errors.ticket_url.message}
+                      </span>
+                    )}
+                  </>
+                )}
+              />
+            </div>
+            <div className="mt-6 flex gap-2">
+              <Button color="orange" type="submit">
+                Assign Ticket
+              </Button>
+              <Button
+                onClick={handleClose}
+                variant="secondary"
+                className="border border-orange-500 text-orange-500"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center mt-4">
+            <p className="text-gray-700 text-sm">
+              Please connect at least one ticketing provider to use this
+              feature.
+            </p>
+            <Button
+              onClick={() =>
+                window.open("/providers?labels=ticketing", "_blank")
+              }
+              color="orange"
+              className="mt-4 mr-4"
+            >
+              Connect Ticketing Provider
+            </Button>
+            <Button
+              onClick={handleClose}
+              variant="secondary"
+              className="mt-4 border border-orange-500 text-orange-500"
+            >
+              Close
+            </Button>
+          </div>
+        )}
       </div>
-    </Dialog>
+    </Modal>
   );
 };
 

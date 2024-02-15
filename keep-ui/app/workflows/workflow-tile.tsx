@@ -176,7 +176,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [isRunning, setIsRunning] = useState(false);
   const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
 
-  const [alertPayload, setAlertPayload] = useState({});
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
 
@@ -284,7 +283,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   const handleAlertTriggerModalSubmit = (payload: any) => {
-    setAlertPayload(payload);
     runWorkflow(payload); // Function to run the workflow with the payload
   };
 

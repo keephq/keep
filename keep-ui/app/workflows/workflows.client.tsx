@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Col, Grid, Subtitle } from "@tremor/react";
+import { Callout, Subtitle } from "@tremor/react";
 import {
   ArrowDownOnSquareIcon,
   ExclamationCircleIcon,
@@ -17,9 +17,9 @@ import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
 import WorkflowTile from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
-import { Dialog } from "@headlessui/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
+import Modal from "@/components/ui/Modal";
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -170,69 +170,61 @@ export default function WorkflowsPage() {
             Upload a Workflow
           </Button>
         </div>
-        <Dialog
-          as="div"
-          className="fixed inset-0 z-10 overflow-y-auto"
-          open={isModalOpen}
-          onClose={setIsModalOpen}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Upload a Workflow file"
         >
-          <div className="flex items-center justify-center min-h-screen">
-            <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+          <div className="bg-white p-4 rounded max-w-lg max-h-fit	 mx-auto z-20">
+            <input
+              type="file"
+              id="workflowFile"
+              accept=".yml, .yaml" // accept only yamls
+              onChange={(e) => {
+                onDrop(e);
+                setIsModalOpen(false); // Add this line to close the modal
+              }}
+            />
 
-            <div className="bg-white p-4 rounded max-w-lg max-h-fit	 mx-auto z-20">
-              <Dialog.Title>
-                <h2>Upload a Workflow file</h2>
-              </Dialog.Title>
-              <input
-                type="file"
-                id="workflowFile"
-                accept=".yml, .yaml" // accept only yamls
-                onChange={(e) => {
-                  onDrop(e);
-                  setIsModalOpen(false); // Add this line to close the modal
-                }}
-              />
+            <div className="mt-4">
+              <h3>Or just try some from Keep examples:</h3>
 
-              <div className="mt-4">
-                <h3>Or just try some from Keep examples:</h3>
+              <Button
+                className="mt-2"
+                color="orange"
+                size="md"
+                icon={ArrowRightIcon}
+                onClick={() => handleStaticExampleSelect("slack")}
+              >
+                Send a Slack message for every alert or manually
+              </Button>
 
-                <Button
-                  className="mt-2"
-                  color="orange"
-                  size="md"
-                  icon={ArrowRightIcon}
-                  onClick={() => handleStaticExampleSelect("slack")}
+              <Button
+                className="mt-2"
+                color="orange"
+                size="md"
+                icon={ArrowRightIcon}
+                onClick={() => handleStaticExampleSelect("sql")}
+              >
+                Run SQL query and send the results as a Slack message
+              </Button>
+
+              <p className="mt-4">
+                More examples at{" "}
+                <a
+                  href="https://github.com/keephq/keep/tree/main/examples/workflows"
+                  target="_blank"
                 >
-                  Send a Slack message for every alert or manually
-                </Button>
+                  Keep GitHub repo
+                </a>
+              </p>
+            </div>
 
-                <Button
-                  className="mt-2"
-                  color="orange"
-                  size="md"
-                  icon={ArrowRightIcon}
-                  onClick={() => handleStaticExampleSelect("sql")}
-                >
-                  Run SQL query and send the results as a Slack message
-                </Button>
-
-                <p className="mt-4">
-                  More examples at{" "}
-                  <a
-                    href="https://github.com/keephq/keep/tree/main/examples/workflows"
-                    target="_blank"
-                  >
-                    Keep GitHub repo
-                  </a>
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <button onClick={() => setIsModalOpen(false)}>Cancel</button>
-              </div>
+            <div className="mt-4">
+              <button onClick={() => setIsModalOpen(false)}>Cancel</button>
             </div>
           </div>
-        </Dialog>
+        </Modal>
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>

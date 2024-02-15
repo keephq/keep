@@ -71,6 +71,7 @@ interface GenerateAlertTableColsArg {
   isMenuDisplayed?: boolean;
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = ({
@@ -79,6 +80,7 @@ export const useAlertTableCols = ({
   isMenuDisplayed,
   setNoteModalAlert,
   setTicketModalAlert,
+  setRunWorkflowModalAlert,
 }: GenerateAlertTableColsArg = {}) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [currentOpenMenu, setCurrentOpenMenu] = useState("");
@@ -244,6 +246,7 @@ export const useAlertTableCols = ({
                   context.row.original.fingerprint === currentOpenMenu
                 }
                 setIsMenuOpen={setCurrentOpenMenu}
+                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
               />
             ),
           }),

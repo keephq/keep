@@ -1,5 +1,11 @@
-import { ArrowPathIcon, TableCellsIcon } from "@heroicons/react/24/outline";
-import { ArrowLeftIcon, ArrowRightIcon } from "@radix-ui/react-icons";
+import {
+  ArrowPathIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  TableCellsIcon,
+} from "@heroicons/react/24/outline";
 import { Button, Select, SelectItem, Text } from "@tremor/react";
 import { AlertDto } from "./models";
 import { Table } from "@tanstack/react-table";
@@ -22,12 +28,11 @@ export default function AlertPagination({ table, isRefreshAllowed }: Props) {
       <Text>
         Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
       </Text>
-      <div className="flex">
+      <div className="flex gap-1">
         <Select
           value={table.getState().pagination.pageSize.toString()}
           enableClear={false}
           onValueChange={(newValue) => table.setPageSize(Number(newValue))}
-          className="mr-2"
           icon={TableCellsIcon}
         >
           <SelectItem value="10">10</SelectItem>
@@ -35,29 +40,45 @@ export default function AlertPagination({ table, isRefreshAllowed }: Props) {
           <SelectItem value="50">50</SelectItem>
           <SelectItem value="100">100</SelectItem>
         </Select>
-        <Button
-          icon={ArrowLeftIcon}
-          onClick={table.previousPage}
-          disabled={!table.getCanPreviousPage()}
-          size="xs"
-          color="orange"
-          variant="secondary"
-          className="mr-1"
-        />
-        <Button
-          icon={ArrowRightIcon}
-          onClick={table.nextPage}
-          disabled={!table.getCanNextPage()}
-          size="xs"
-          color="orange"
-          variant="secondary"
-        />
+        <div className="flex">
+          <Button
+            icon={ChevronDoubleLeftIcon}
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+            size="xs"
+            color="orange"
+            variant="secondary"
+          />
+          <Button
+            icon={ChevronLeftIcon}
+            onClick={table.previousPage}
+            disabled={!table.getCanPreviousPage()}
+            size="xs"
+            color="orange"
+            variant="secondary"
+          />
+          <Button
+            icon={ChevronRightIcon}
+            onClick={table.nextPage}
+            disabled={!table.getCanNextPage()}
+            size="xs"
+            color="orange"
+            variant="secondary"
+          />
+          <Button
+            icon={ChevronDoubleRightIcon}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={!table.getCanNextPage()}
+            size="xs"
+            color="orange"
+            variant="secondary"
+          />
+        </div>
         {isRefreshAllowed && (
           <Button
             icon={ArrowPathIcon}
             color="orange"
             size="xs"
-            className="ml-2.5"
             disabled={isValidating}
             loading={isValidating}
             onClick={async () => await mutate()}
