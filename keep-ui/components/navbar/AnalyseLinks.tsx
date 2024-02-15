@@ -7,12 +7,12 @@ import { AiOutlineSwap, AiOutlineAlert, AiOutlineDelete } from "react-icons/ai";
 
 export const AnalyseLinks = () => {
   const { useAllPresets } = usePresets();
-  const { data: presets = [] } = useAllPresets();
+  const { data: presets = [] } = useAllPresets({ revalidateIfStale: false });
 
   return (
     <div className="space-y-2">
       <Subtitle className="text-xs pl-3">ANALYSE</Subtitle>
-      <ul className="space-y-2 max-h-60 overflow-auto">
+      <ul className="space-y-2 max-h-60 overflow-auto min-w-[max-content]">
         <li>
           <LinkWithIcon href="/alerts/feed" icon={AiOutlineAlert}>
             Feed

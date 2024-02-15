@@ -9,8 +9,6 @@ import InitPostHog from "components/navbar/init-posthog";
 export default async function NavbarInner() {
   const session = await getServerSession();
 
-  const isNOCRole = session?.userRole === "noc";
-
   return (
     <>
       <InitPostHog />
@@ -19,13 +17,13 @@ export default async function NavbarInner() {
           <div className="flex-1 h-full">
             <Search />
             <div className="pt-6 px-2 space-y-9">
-              <ConfigureLinks isNOCRole={isNOCRole} />
+              <ConfigureLinks session={session} />
               <AnalyseLinks />
               <LearnLinks />
             </div>
           </div>
 
-          <UserInfo />
+          <UserInfo session={session} />
         </nav>
       </aside>
     </>
