@@ -38,14 +38,22 @@
       "group": "Development",
       "pages": [
         "development/getting-started",
-        "development/authentication",
         "development/external-url"
       ]
     },
     {
       "group": "Deployment",
       "pages": [
-        "deployment/authentication",
+        {
+          "group": "Authentication",
+          "pages": [
+            "deployment/authentication/overview",
+            "deployment/authentication/no-auth",
+            "deployment/authentication/basic-auth",
+            "deployment/authentication/enterprise-auth",
+            "deployment/authentication/multi-tenant-auth"
+          ]
+        },
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",

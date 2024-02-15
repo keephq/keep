@@ -22,6 +22,46 @@
       }
     }
   ],
+  "identityProviders": [
+    {
+      "alias": "okta",
+      "displayName": "Okta",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": false,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "OKTA_CLIENT_ID",
+        "clientSecret": "OKTA_CLIENT_SECRET",
+        "authorizationUrl": "https://YOUR_OKTA_DOMAIN/oauth2/default/v1/authorize",
+        "tokenUrl": "https://YOUR_OKTA_DOMAIN/oauth2/default/v1/token",
+        "userInfoUrl": "https://YOUR_OKTA_DOMAIN/oauth2/default/v1/userinfo",
+        "logoutUrl": "https://YOUR_OKTA_DOMAIN/oauth2/default/v1/logout",
+        "defaultScope": "openid email profile"
+      }
+    },
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "GOOGLE_CLIENT_ID",
+        "clientSecret": "GOOGLE_CLIENT_SECRET",
+        "defaultScope": "openid email profile"
+      }
+    }
+  ],
   "clients": [
     {
       "clientId": "${KEEP_CLIENT_ID}",

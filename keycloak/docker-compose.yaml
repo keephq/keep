@@ -20,7 +20,7 @@ services:
       - keycloak-and-mysql-network
 
   keycloak:
-    image: quay.io/phasetwo/phasetwo-keycloak:latest
+    image: quay.io/keycloak/keycloak:latest
     ports:
       - 8181:8080
     restart: unless-stopped
@@ -34,9 +34,9 @@ services:
       KC_DB_PASSWORD: keycloak_password
       # this will be used in keep-realm.json
       KEEP_REALM: keep
-      KEEP_ADMIN_USER: keep_admin
-      KEEP_ADMIN_PASSWORD: keep_admin
-      KEEP_TENANT_ID: keep
+      KEEP_ADMIN_USER: keep_admin # default admin user for keep
+      KEEP_ADMIN_PASSWORD: keep_admin # default admin password for keep
+      KEEP_TENANT_ID: keep #
       KEEP_AUTH_REDICERT_URL: http://localhost:3000/*
       KEEP_CLIENT_ID: keep
     command:
@@ -44,8 +44,7 @@ services:
       - --import-realm
     volumes:
       - ./keep-realm.json:/opt/keycloak/data/import/keep-realm.json
-    # this overrides PhaseTwo's proviers so we will need to figure it out
-    #  - ./themes:/opt/keycloak/providers
+      - ./themes:/opt/keycloak/providers
     depends_on:
       - mysql
     networks:

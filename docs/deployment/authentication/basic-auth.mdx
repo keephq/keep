@@ -1,0 +1,26 @@
+---
+title: "Basic Authentication"
+---
+
+## Basic Authentication
+
+For single-tenant applications requiring user management and authentication, Keep supports basic authentication with username and password.
+
+### When to Use
+
+- **Self-Hosted Deployments:** When you're deploying Keep for individual use or within an organization without the need for multi-tenancy.
+- **Enhanced Security:** Provides a simple yet effective layer of security for your Keep instance.
+
+### Setup Instructions
+
+Use the `docker-compose-with-auth.yml` for an easy setup, which includes necessary environment variables for enabling basic authentication:
+
+```yml
+# Backend configuration
+- AUTH_TYPE=SINGLE_TENANT
+- KEEP_JWT_SECRET=keepjwtsecret # Replace with a secure secret
+- KEEP_DEFAULT_USERNAME=admin # Replace as needed
+- KEEP_DEFAULT_PASSWORD=keep # Replace with a secure password
+
+# Frontend configuration
+- AUTH_TYPE=SINGLE_TENANT

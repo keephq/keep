@@ -1,0 +1,13 @@
+---
+title: "No Authentication"
+---
+
+Deploying Keep without authentication is the quickest way to get up and running, ideal for local development or internal tools where security is not a concern.
+## Setup Instructions
+Either if you use docker-compose, kubernetes, openshift or any other deployment method, add the following environment variable:
+```
+# This should be available both for the API and the UI
+AUTH_TYPE=NO_AUTH
+```
+## Implications
+With `AUTH_TYPE=NO_AUTH` - Keep won't show any login page and will let you consume API's without authentication.
