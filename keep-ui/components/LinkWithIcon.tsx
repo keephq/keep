@@ -26,16 +26,13 @@ export const LinkWithIcon = ({
   return (
     <Link
       className={classNames(
-        "flex items-center space-x-2 text-sm p-2 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
+        "flex items-center space-x-2 text-sm p-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
         { "bg-gray-200": isActive }
       )}
       tabIndex={tabIndex}
       {...restOfLinkProps}
     >
-      <Icon
-        className="text-lg text-gray-700 group-hover:text-orange-500"
-        icon={icon}
-      />
+      <Icon className="text-gray-700 group-hover:text-orange-500" icon={icon} />
       <span>{children}</span>
     </Link>
   );

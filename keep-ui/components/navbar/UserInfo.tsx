@@ -34,7 +34,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   return (
     <Menu as="li" ref={refs.setReference}>
-      <Menu.Button className="flex items-center justify-between w-full text-sm p-2 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
+      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center">
           {image ? (
             <Image
@@ -71,7 +71,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
           {userRole !== "noc" && (
             <Menu.Item as="li">
               <Link
-                className="ui-active:bg-orange-600 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                className="ui-active:bg-orange-500 ui-activ e:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
                 href="/settings"
               >
                 Settings
@@ -80,7 +80,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
           )}
           {configData?.AUTH_TYPE !== AuthenticationType.NO_AUTH && (
             <Menu.Item as="li">
-              <button className="ui-active:bg-orange-600 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm">
+              <button className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm">
                 Sign out
               </button>
             </Menu.Item>

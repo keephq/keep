@@ -6,9 +6,9 @@ import { AiOutlineBook } from "react-icons/ai";
 
 export const LearnLinks = () => {
   return (
-    <div className="space-y-2">
-      <Subtitle className="text-xs pl-3">LEARN</Subtitle>
-      <ul className="space-y-2">
+    <div className="space-y-1">
+      <Subtitle className="text-xs pl-5 text-slate-400">LEARN</Subtitle>
+      <ul className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon
             href="https://docs.keephq.dev"

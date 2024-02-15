@@ -16,7 +16,7 @@ export default async function NavbarInner() {
         <nav className="flex flex-col h-full">
           <div className="flex-1 h-full">
             <Search />
-            <div className="pt-6 px-2 space-y-9">
+            <div className="pt-6 space-y-4">
               <AnalyseLinks />
               <ConfigureLinks session={session} />
               <LearnLinks />

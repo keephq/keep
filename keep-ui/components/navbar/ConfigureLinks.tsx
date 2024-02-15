@@ -17,9 +17,9 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
   }
 
   return (
-    <div className="space-y-2">
-      <Subtitle className="text-xs pl-3">CONFIGURE</Subtitle>
-      <ul className="space-y-2">
+    <div className="space-y-1">
+      <Subtitle className="text-xs pl-5 text-slate-400">CONFIGURE</Subtitle>
+      <ul className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
             Providers
