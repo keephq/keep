@@ -4,7 +4,7 @@ import { ConfigureLinks } from "components/navbar/ConfigureLinks";
 import { AnalyseLinks } from "components/navbar/AnalyseLinks";
 import { LearnLinks } from "components/navbar/LearnLinks";
 import { UserInfo } from "components/navbar/UserInfo";
-import InitPostHog from "components/navbar/init-posthog";
+import { InitPostHog } from "components/navbar/InitPostHog";
 
 export default async function NavbarInner() {
   const session = await getServerSession();
@@ -17,8 +17,8 @@ export default async function NavbarInner() {
           <div className="flex-1 h-full">
             <Search />
             <div className="pt-6 px-2 space-y-9">
-              <ConfigureLinks session={session} />
               <AnalyseLinks />
+              <ConfigureLinks session={session} />
               <LearnLinks />
             </div>
           </div>

@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { NoAuthUserEmail } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
 
-const InitPostHog = () => {
+export const InitPostHog = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -50,5 +50,3 @@ const InitPostHog = () => {
 
   return null;
 };
-
-export default InitPostHog;
