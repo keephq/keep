@@ -12,6 +12,7 @@ from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
+from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -462,8 +463,17 @@ def handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
+    # first, filter out any deduplicated events
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+    formatted_events = [
+        event
+        for event in formatted_events
+        if not alert_deduplicator.is_deduplicated(event)
+    ]
+
     try:
         # keep raw events in the DB if the user wants to
+        # this is mainly for debugging and research purposes
         if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
             for raw_event in raw_events:
                 alert = AlertRaw(
