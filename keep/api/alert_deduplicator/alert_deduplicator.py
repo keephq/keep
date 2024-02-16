@@ -1,10 +1,11 @@
 import copy
+import hashlib
 import json
 import logging
 
 import celpy
 
-from keep.api.core.db import get_all_filters
+from keep.api.core.db import get_alert_by_hash, get_all_filters
 from keep.api.models.alert import AlertDto
 
 
@@ -13,6 +14,7 @@ class AlertDeduplicator:
     def __init__(self, tenant_id):
         self.filters = get_all_filters(tenant_id)
         self.logger = logging.getLogger(__name__)
+        self.tenant_id = tenant_id
 
     def is_deduplicated(self, alert: AlertDto) -> bool:
         # Apply all deduplication filters
@@ -20,10 +22,15 @@ class AlertDeduplicator:
             alert = self._apply_deduplication_filter(filt, alert)
 
         # Calculate the hash
-        alert_hash = self._calculate_hash(alert)
+        alert_hash = hashlib.sha256(
+            json.dumps(alert.dict(), default=str).encode()
+        ).hexdigest()
 
         # Check if the hash is already in the database
-        return self._is_hash_in_db(alert_hash)
+        alert_deduplicate = (
+            True if get_alert_by_hash(self.tenant_id, alert_hash) else False
+        )
+        return alert_deduplicate
 
     def _run_matcher(self, matcher, alert: AlertDto) -> bool:
         # run the CEL matcher

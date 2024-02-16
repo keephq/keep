@@ -1198,6 +1198,18 @@ def get_rule_distribution(tenant_id, minute=False):
 def get_all_filters(tenant_id):
     with Session(engine) as session:
         filters = session.exec(
-            select(AlertDeduplicationFilter).where(Filter.tenant_id == tenant_id)
+            select(AlertDeduplicationFilter).where(
+                AlertDeduplicationFilter.tenant_id == tenant_id
+            )
         ).all()
     return filters
+
+
+def get_alert_by_hash(tenant_id, alert_hash):
+    with Session(engine) as session:
+        alert = session.exec(
+            select(Alert)
+            .where(Alert.tenant_id == tenant_id)
+            .where(Alert.alert_hash == alert_hash)
+        ).first()
+    return alert

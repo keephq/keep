@@ -465,11 +465,11 @@ def handle_formatted_events(
     )
     # first, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
-    formatted_events = [
-        event
-        for event in formatted_events
-        if not alert_deduplicator.is_deduplicated(event)
-    ]
+
+    for event in formatted_events:
+        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
+        event.alert_hash = event_hash
+        event.isDuplicate = event_deduplicated
 
     try:
         # keep raw events in the DB if the user wants to
