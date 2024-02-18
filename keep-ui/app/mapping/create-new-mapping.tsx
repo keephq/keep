@@ -1,13 +1,14 @@
 "use client";
 
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
   TextInput,
   Textarea,
   Divider,
   Subtitle,
   Text,
-  Select,
-  SelectItem,
+  MultiSelect,
+  MultiSelectItem,
   Badge,
   Button,
 } from "@tremor/react";
@@ -17,7 +18,7 @@ import { usePapaParse } from "react-papaparse";
 export default function CreateNewMapping() {
   const [mapName, setMapName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
-  const [selectedAttribute, setSelectedAttribute] = useState<string>("");
+  const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
 
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
@@ -49,15 +50,21 @@ export default function CreateNewMapping() {
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
     const ruleData = parsedData?.reduce((acc, row) => {
-      const key = row[selectedAttribute];
-      delete row[selectedAttribute];
-      return { ...acc, [key]: row };
+      const copiedRow = { ...row };
+      // attribute=attributeValue&&attribute2=attribute2Value
+      const key = selectedAttributes.reduce((key, attribute, index) => {
+        key += `${attribute}=${copiedRow[attribute]}`;
+        if (index !== selectedAttributes.length - 1) key += "&&";
+        delete copiedRow[attribute];
+        return key;
+      }, "");
+      return { ...acc, [key]: copiedRow };
     }, {});
     console.log(ruleData);
   };
 
   const submitEnabled = (): boolean => {
-    return !!mapName && !!selectedAttribute && !!parsedData;
+    return !!mapName && selectedAttributes.length > 0 && !!parsedData;
   };
 
   return (
@@ -90,32 +97,38 @@ export default function CreateNewMapping() {
       />
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">
-        <Text>Lookup alert attribute to match against the uploaded CSV</Text>
-        <Select
-          value={selectedAttribute}
-          onValueChange={setSelectedAttribute}
+        <Text>Alert lookup attributes to match against the uploaded CSV</Text>
+        <Text className="text-xs">
+          (E.g. the attributes that we will try to match before enriching)
+        </Text>
+        <MultiSelect
+          className="mt-1"
+          value={selectedAttributes}
+          onValueChange={setSelectedAttributes}
           disabled={!parsedData}
-          enableClear={false}
+          icon={MagnifyingGlassIcon}
         >
           {attributes &&
             attributes.map((attribute) => (
-              <SelectItem key={attribute} value={attribute}>
+              <MultiSelectItem key={attribute} value={attribute}>
                 {attribute}
-              </SelectItem>
+              </MultiSelectItem>
             ))}
-        </Select>
+        </MultiSelect>
       </div>
       <div className="mt-2.5">
         <Text>Result attributes</Text>
-        <Text>
+        <Text className="text-xs">
           (E.g. attributes that will be added to matching incoming alerts)
         </Text>
         <div className="flex flex-col gap-1 py-1">
-          {!selectedAttribute ? (
+          {selectedAttributes.length === 0 ? (
             <Badge color="gray">...</Badge>
           ) : (
             attributes
-              .filter((attribute) => attribute !== selectedAttribute)
+              .filter(
+                (attribute) => selectedAttributes.includes(attribute) === false
+              )
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
                   {attribute}
