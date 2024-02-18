@@ -32,7 +32,7 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
         </li>
         <li>
           <LinkWithIcon href="/workflows" icon={LuWorkflow}>
-            Worksflows
+            Workflows
           </LinkWithIcon>
         </li>
       </ul>
