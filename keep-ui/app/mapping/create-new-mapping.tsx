@@ -64,7 +64,14 @@ export default function CreateNewMapping() {
   };
 
   const submitEnabled = (): boolean => {
-    return !!mapName && selectedAttributes.length > 0 && !!parsedData;
+    return (
+      !!mapName &&
+      selectedAttributes.length > 0 &&
+      !!parsedData &&
+      attributes.filter(
+        (attribute) => selectedAttributes.includes(attribute) === false
+      ).length > 0
+    );
   };
 
   return (
