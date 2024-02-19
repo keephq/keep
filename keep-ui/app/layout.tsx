@@ -23,9 +23,8 @@ type RootLayoutProps = {
 export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
-      <body className="h-screen grid grid-cols-[250px_auto]">
+      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[250px_auto] lg:grid-rows-1">
         <NextAuthProvider>
-          {/* @ts-expect-error Server Component */}
           <Navbar />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
           <main className="flex flex-col col-start-2 p-4 overflow-auto">
