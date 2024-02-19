@@ -18,6 +18,7 @@ import { usePapaParse } from "react-papaparse";
 export default function CreateNewMapping() {
   const [mapName, setMapName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
+  const [fileName, setFileName] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
 
   /** This is everything related with the uploaded CSV file */
@@ -32,6 +33,7 @@ export default function CreateNewMapping() {
 
   const readFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    setFileName(file?.name || "");
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result;
@@ -49,18 +51,7 @@ export default function CreateNewMapping() {
 
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
-    const ruleData = parsedData?.reduce((acc, row) => {
-      const copiedRow = { ...row };
-      // attribute=attributeValue&&attribute2=attribute2Value
-      const key = selectedAttributes.reduce((key, attribute, index) => {
-        key += `${attribute}=${copiedRow[attribute]}`;
-        if (index !== selectedAttributes.length - 1) key += "&&";
-        delete copiedRow[attribute];
-        return key;
-      }, "");
-      return { ...acc, [key]: copiedRow };
-    }, {});
-    console.log(ruleData);
+    console.log(parsedData);
   };
 
   const submitEnabled = (): boolean => {
@@ -97,11 +88,17 @@ export default function CreateNewMapping() {
         />
       </div>
       <Divider />
-      <input
-        type="file"
-        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-        onChange={readFile}
-      />
+      <div>
+        <input
+          type="file"
+          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+          onChange={readFile}
+          required={true}
+        />
+        <Text className="text-xs text-orange-400">
+          * Upload a CSV file to start creating a new mapping
+        </Text>
+      </div>
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">
         <Text>Alert lookup attributes to match against the uploaded CSV</Text>
@@ -151,7 +148,7 @@ export default function CreateNewMapping() {
         className="float-right"
         type="submit"
       >
-        Submit
+        Create
       </Button>
     </form>
   );
