@@ -29,8 +29,8 @@ export const Menu = ({ children }: MenuButtonProps) => {
     <Popover as={Fragment}>
       {({ close: closeMenu }) => (
         <>
-          <div className="p-4 w-full block lg:hidden">
-            <Popover.Button>
+          <div className="p-3 w-full block lg:hidden">
+            <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
               <Icon icon={AiOutlineMenu} color="orange" />
             </Popover.Button>
           </div>
@@ -44,9 +44,12 @@ export const Menu = ({ children }: MenuButtonProps) => {
             className="bg-gray-50 col-span-1 border-r border-gray-300 z-50 h-screen fixed inset-0"
             as="nav"
           >
-            <Popover.Button className="fixed top-0 right-0 p-4">
-              <Icon icon={AiOutlineClose} color="orange" />
-            </Popover.Button>
+            <div className="p-3 fixed top-0 right-0 ">
+              <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
+                <Icon icon={AiOutlineClose} color="orange" />
+              </Popover.Button>
+            </div>
+
             {children}
           </Popover.Panel>
         </>
