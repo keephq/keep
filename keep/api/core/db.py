@@ -122,7 +122,7 @@ def create_db_and_tables():
     with engine.connect() as connection:
         try:
             connection.execute(
-                text("ALTER TABLE ALERT ADD COLUMN alert_hash VARCHAR(255);")
+                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
             )
         except OperationalError as e:
             # that's ok
