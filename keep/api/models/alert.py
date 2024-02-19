@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from enum import Enum
 from typing import Any, Dict
@@ -71,7 +72,7 @@ class AlertDto(BaseModel):
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
         if fingerprint is None:
-            return values.get("name", "")
+            return hashlib.sha256(values.get("name").encode()).hexdigest()
         return fingerprint
 
     @validator("deleted", pre=True, always=True)
