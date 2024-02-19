@@ -27,10 +27,20 @@ class MappingRule(SQLModel, table=True):
     )  # max_length=204800)
 
 
-class MappingRuleDto(BaseModel):
+class MappRuleDtoBase(BaseModel):
     name: str
     description: Optional[str] = None
     file_name: Optional[str] = None
     priority: int = 0
     matchers: list[str]
+
+
+class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
+    id: int
+    created_by: Optional[str]
+    created_at: datetime
+    attributes: list[str] = []
+
+
+class MappingRuleDtoIn(MappRuleDtoBase):
     rows: list[dict]

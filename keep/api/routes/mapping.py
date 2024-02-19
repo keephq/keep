@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.db.mapping import MappingRule, MappingRuleDto
+from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def get_rules(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
     session: Session = Depends(get_session),
-) -> list[MappingRule]:
+) -> list[MappingRuleDtoOut]:
     logger.info("Getting mapping rules")
     rules: list[MappingRule] = (
         session.query(MappingRule)
@@ -24,12 +24,26 @@ def get_rules(
         .all()
     )
     logger.info("Got mapping rules", extra={"rules_count": len(rules) if rules else 0})
-    return rules
+
+    rules_dtos = []
+    if rules:
+        for rule in rules:
+            rule_dto = MappingRuleDtoOut(**rule.dict())
+            rule_dto.attributes = [
+                key for key in rule.rows[0].keys() if key not in rule.matchers
+            ]
+            rules_dtos.append(rule_dto)
+
+    return rules_dtos
 
 
-@router.post("", description="Create a new mapping rule")
+@router.post(
+    "",
+    description="Create a new mapping rule",
+    response_model_exclude={"rows", "tenant_id"},
+)
 def create_rule(
-    rule: MappingRuleDto,
+    rule: MappingRuleDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
     session: Session = Depends(get_session),
 ) -> MappingRule:

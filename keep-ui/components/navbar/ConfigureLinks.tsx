@@ -1,6 +1,6 @@
 "use client";
 
-import { Subtitle } from "@tremor/react";
+import { Badge, Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { MdOutlineEngineering } from "react-icons/md";
@@ -33,7 +33,10 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
         </li>
         <li>
           <LinkWithIcon href="/mapping" icon={RiMindMap}>
-            Mapping
+            Mapping{" "}
+            <Badge color="orange" size="xs">
+              Beta
+            </Badge>
           </LinkWithIcon>
         </li>
         <li>
