@@ -19,9 +19,9 @@ class MappingRule(SQLModel, table=True):
     override: bool = Field(default=True)
     condition: Optional[str] = Field(max_length=2000)
     # The attributes to match against (e.g. ["service","region"])
-    matchers: list = Field(sa_column=Column(JSON), nullable=False)
+    matchers: list[str] = Field(sa_column=Column(JSON), nullable=False)
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
-    rows: dict = Field(
+    rows: list[dict] = Field(
         sa_column=Column(JSON),
         nullable=False,
     )  # max_length=204800)
@@ -29,8 +29,8 @@ class MappingRule(SQLModel, table=True):
 
 class MappingRuleDto(BaseModel):
     name: str
-    description: Optional[str]
-    file_name: Optional[str]
+    description: Optional[str] = None
+    file_name: Optional[str] = None
     priority: int = 0
     matchers: list[str]
-    rows: dict
+    rows: list[dict]

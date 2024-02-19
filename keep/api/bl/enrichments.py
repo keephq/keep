@@ -59,7 +59,9 @@ class EnrichmentsBl:
                         for key, value in row.items()
                         if key not in rule.matchers
                     }
-                    enrich_alert(self.tenant_id, alert.fingerprint, enrichments)
+                    enrich_alert(
+                        self.tenant_id, alert.fingerprint, enrichments, self.db_session
+                    )
                     self.logger.info(
                         "Alert enriched", extra={"fingerprint": alert.fingerprint}
                     )

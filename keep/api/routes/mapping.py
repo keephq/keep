@@ -12,11 +12,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("", description="Get all mapping rules", response_class=list[MappingRule])
+@router.get("", description="Get all mapping rules")
 def get_rules(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
     session: Session = Depends(get_session),
-):
+) -> list[MappingRule]:
     logger.info("Getting mapping rules")
     rules: list[MappingRule] = (
         session.query(MappingRule)
@@ -27,18 +27,17 @@ def get_rules(
     return rules
 
 
-@router.post("", description="Create a new mapping rule", response_class=MappingRule)
+@router.post("", description="Create a new mapping rule")
 def create_rule(
     rule: MappingRuleDto,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
     session: Session = Depends(get_session),
-):
+) -> MappingRule:
     logger.info("Creating a new mapping rule")
     new_rule = MappingRule(
         **rule.dict(),
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
-        priority=rule.priority,
     )
     session.add(new_rule)
     session.commit()

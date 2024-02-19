@@ -17,9 +17,11 @@ import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
+import { useMappings } from "utils/hooks/useMappingRules";
 
-export default function CreateNewMapping({ mutate }: { mutate: () => void }) {
+export default function CreateNewMapping() {
   const { data: session } = useSession();
+  const { mutate } = useMappings();
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
@@ -64,8 +66,10 @@ export default function CreateNewMapping({ mutate }: { mutate: () => void }) {
     e.preventDefault();
     const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/mapping`, {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name: mapName,
@@ -77,6 +81,7 @@ export default function CreateNewMapping({ mutate }: { mutate: () => void }) {
     });
     if (response.ok) {
       clearForm();
+      mutate();
       toast.success("Mapping created successfully");
     } else {
       toast.error(
@@ -126,9 +131,11 @@ export default function CreateNewMapping({ mutate }: { mutate: () => void }) {
           onChange={readFile}
           required={true}
         />
-        <Text className="text-xs text-orange-400">
-          * Upload a CSV file to start creating a new mapping
-        </Text>
+        {!parsedData && (
+          <Text className="text-xs text-red-500">
+            * Upload a CSV file to begin with creating a new mapping
+          </Text>
+        )}
       </div>
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">

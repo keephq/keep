@@ -602,33 +602,39 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments):
+def _enrich_alert(session, tenant_id, fingerprint, enrichments):
+    enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
+    if enrichment:
+        # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
+        # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
+        new_enrichment_data = {**enrichment.enrichments, **enrichments}
+        stmt = (
+            update(AlertEnrichment)
+            .where(AlertEnrichment.id == enrichment.id)
+            .values(enrichments=new_enrichment_data)
+        )
+        session.execute(stmt)
+        session.commit()
+        # Refresh the instance to get updated data from the database
+        session.refresh(enrichment)
+        return enrichment
+    else:
+        alert_enrichment = AlertEnrichment(
+            tenant_id=tenant_id,
+            alert_fingerprint=fingerprint,
+            enrichments=enrichments,
+        )
+        session.add(alert_enrichment)
+        session.commit()
+        return alert_enrichment
+
+
+def enrich_alert(tenant_id, fingerprint, enrichments, session=None):
     # else, the enrichment doesn't exist, create it
-    with Session(engine) as session:
-        enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
-        if enrichment:
-            # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
-            # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-            new_enrichment_data = {**enrichment.enrichments, **enrichments}
-            stmt = (
-                update(AlertEnrichment)
-                .where(AlertEnrichment.id == enrichment.id)
-                .values(enrichments=new_enrichment_data)
-            )
-            session.execute(stmt)
-            session.commit()
-            # Refresh the instance to get updated data from the database
-            session.refresh(enrichment)
-            return enrichment
-        else:
-            alert_enrichment = AlertEnrichment(
-                tenant_id=tenant_id,
-                alert_fingerprint=fingerprint,
-                enrichments=enrichments,
-            )
-            session.add(alert_enrichment)
-            session.commit()
-            return alert_enrichment
+    if not session:
+        with Session(engine) as session:
+            return _enrich_alert(session, tenant_id, fingerprint, enrichments)
+    return _enrich_alert(session, tenant_id, fingerprint, enrichments)
 
 
 def get_enrichment(tenant_id, fingerprint):

@@ -1,13 +1,12 @@
 import { MappingRule } from "app/mapping/models";
-import { getServerSession } from "next-auth";
-import { authOptions } from "pages/api/auth/[...nextauth]";
+import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useMappings = async (options: SWRConfiguration = {}) => {
+export const useMappings = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
-  const session = await getServerSession(authOptions);
+  const { data: session } = useSession();
 
   return useSWR<MappingRule[]>(
     () => (session ? `${apiUrl}/mapping` : null),
