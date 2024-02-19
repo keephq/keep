@@ -11,6 +11,10 @@ from keep.api.models.alert import AlertDto
 
 # decide whether this should be a singleton so that we can keep the filters in memory
 class AlertDeduplicator:
+    # this fields will be removed from the alert before hashing
+    # TODO: make this configurable
+    DEFAULT_FIELDS = ["lastReceived"]
+
     def __init__(self, tenant_id):
         self.filters = get_all_filters(tenant_id)
         self.logger = logging.getLogger(__name__)
@@ -21,6 +25,10 @@ class AlertDeduplicator:
         for filt in self.filters:
             alert = self._apply_deduplication_filter(filt, alert)
 
+        # Remove default fields
+        for field in AlertDeduplicator.DEFAULT_FIELDS:
+            alert = self._remove_field(field, alert)
+
         # Calculate the hash
         alert_hash = hashlib.sha256(
             json.dumps(alert.dict(), default=str).encode()
@@ -30,7 +38,7 @@ class AlertDeduplicator:
         alert_deduplicate = (
             True if get_alert_by_hash(self.tenant_id, alert_hash) else False
         )
-        return alert_deduplicate
+        return alert_hash, alert_deduplicate
 
     def _run_matcher(self, matcher, alert: AlertDto) -> bool:
         # run the CEL matcher
@@ -48,22 +56,39 @@ class AlertDeduplicator:
                 return False
             # unknown
             raise
-        if r:
-            return True
+        return True if r else False
 
     def _apply_deduplication_filter(self, filt, alert: AlertDto) -> AlertDto:
         # check if the matcher applies
-        filter_apply = self._run_matcher(filt.matcher, alert)
+        filter_apply = self._run_matcher(filt.matcher_cel, alert)
         if not filter_apply:
-            self.logger.debug(f"Filter {filt.name} did not match")
+            self.logger.debug(f"Filter {filt.id} did not match")
             return alert
 
         # remove the fields
         for field in filt.fields:
             alert = self._remove_field(field, alert)
 
+        return alert
+
     def _remove_field(self, field, alert: AlertDto) -> AlertDto:
         # remove the field from the alert
         alert = copy.deepcopy(alert)
-        delattr(alert, field)
+        field_parts = field.split(".")
+        # if its not a nested field
+        if len(field_parts) == 1:
+            try:
+                delattr(alert, field)
+            except AttributeError:
+                self.logger.warning("Failed to delete attribute {field} from alert")
+                pass
+        # if its a nested field, copy the dictionaty and remove the field
+        # this is for cases such as labels/tags
+        else:
+            alert_attr = field_parts[0]
+            d = copy.deepcopy(getattr(alert, alert_attr))
+            for part in field_parts[1:-1]:
+                d = d[part]
+            del d[field_parts[-1]]
+            setattr(alert, field_parts[0], d)
         return alert

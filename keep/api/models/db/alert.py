@@ -93,7 +93,7 @@ class AlertDeduplicationFilter(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     # the list of fields to pop from the alert before hashing
-    fields: List[str]
+    fields: list = Field(sa_column=Column(JSON), default=[])
     # a CEL expression to match the alert
     matcher_cel: str
 
