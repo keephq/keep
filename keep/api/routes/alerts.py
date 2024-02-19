@@ -471,6 +471,11 @@ def handle_formatted_events(
         event.alert_hash = event_hash
         event.isDuplicate = event_deduplicated
 
+    # filter out the deduplicated events
+    formatted_events = list(
+        filter(lambda event: not event.isDuplicate, formatted_events)
+    )
+
     try:
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
@@ -506,6 +511,7 @@ def handle_formatted_events(
                 event=formatted_event.dict(),
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
+                alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
             formatted_event.event_id = alert.id
