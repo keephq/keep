@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth/next";
 import Page from "../page";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { getApiURL } from "utils/apiUrl";
-import { load, JSON_SCHEMA } from "js-yaml";
 
 export default async function PageWithId({
   params,

@@ -12,13 +12,17 @@ import {
   Badge,
   Button,
 } from "@tremor/react";
+import { useSession } from "next-auth/react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { usePapaParse } from "react-papaparse";
+import { toast } from "react-toastify";
+import { getApiURL } from "utils/apiUrl";
 
-export default function CreateNewMapping() {
+export default function CreateNewMapping({ mutate }: { mutate: () => void }) {
+  const { data: session } = useSession();
   const [mapName, setMapName] = useState<string>("");
-  const [mapDescription, setMapDescription] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
 
   /** This is everything related with the uploaded CSV file */
@@ -49,9 +53,36 @@ export default function CreateNewMapping() {
     if (file) reader.readAsText(file);
   };
 
+  const clearForm = () => {
+    setMapName("");
+    setMapDescription("");
+    setParsedData(null);
+    setSelectedAttributes([]);
+  };
+
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
-    console.log(parsedData);
+    const apiUrl = getApiURL();
+    const response = await fetch(`${apiUrl}/mapping`, {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      body: JSON.stringify({
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        matchers: selectedAttributes,
+        rows: parsedData,
+      }),
+    });
+    if (response.ok) {
+      clearForm();
+      toast.success("Mapping created successfully");
+    } else {
+      toast.error(
+        "Failed to create mapping, please contact us if this issue persists."
+      );
+    }
   };
 
   const submitEnabled = (): boolean => {
