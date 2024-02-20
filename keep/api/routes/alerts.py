@@ -12,8 +12,8 @@ from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
-from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
+from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -518,9 +518,12 @@ def handle_formatted_events(
             formatted_event.event_id = alert.id
             alert_dto = AlertDto(**alert.event)
 
-            # Mapping
             enrichments_bl = EnrichmentsBl(tenant_id, session)
-            enrichments_bl.run_mapping_rules(alert_dto)
+            # Mapping
+            try:
+                enrichments_bl.run_mapping_rules(alert_dto)
+            except Exception:
+                logger.exception("Failed to run mapping rules")
 
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
