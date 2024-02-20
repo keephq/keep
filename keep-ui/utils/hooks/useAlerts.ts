@@ -101,35 +101,41 @@ export const useAlerts = () => {
       alertSubscription;
 
     useEffect(() => {
-      const newAlertsMap = new Map<string, AlertDto>(
-        alertsFromEndpoint.map((alertFromEndpoint) => [
-          alertFromEndpoint.fingerprint,
-          {
-            ...alertFromEndpoint,
-            lastReceived: toDateObjectWithFallback(
-              alertFromEndpoint.lastReceived
-            ),
-          },
-        ])
-      );
+      if (alertsFromEndpoint.length) {
+        const newAlertsMap = new Map<string, AlertDto>(
+          alertsFromEndpoint.map((alertFromEndpoint) => [
+            alertFromEndpoint.fingerprint,
+            {
+              ...alertFromEndpoint,
+              lastReceived: toDateObjectWithFallback(
+                alertFromEndpoint.lastReceived
+              ),
+            },
+          ])
+        );
 
-      setAlertsMap(newAlertsMap);
+        setAlertsMap(newAlertsMap);
+      }
     }, [alertsFromEndpoint]);
 
     useEffect(() => {
-      const alertsFromPusherWithLastReceivedDate = alertsFromPusher.map(
-        (alertFromPusher) => ({
-          ...alertFromPusher,
-          lastReceived: toDateObjectWithFallback(alertFromPusher.lastReceived),
-        })
-      );
+      if (alertsFromPusher.length) {
+        const alertsFromPusherWithLastReceivedDate = alertsFromPusher.map(
+          (alertFromPusher) => ({
+            ...alertFromPusher,
+            lastReceived: toDateObjectWithFallback(
+              alertFromPusher.lastReceived
+            ),
+          })
+        );
 
-      setAlertsMap((previousAlertsMap) =>
-        getFormatAndMergePusherWithEndpointAlerts(
-          previousAlertsMap,
-          alertsFromPusherWithLastReceivedDate
-        )
-      );
+        setAlertsMap((previousAlertsMap) =>
+          getFormatAndMergePusherWithEndpointAlerts(
+            previousAlertsMap,
+            alertsFromPusherWithLastReceivedDate
+          )
+        );
+      }
     }, [alertsFromPusher]);
 
     return {

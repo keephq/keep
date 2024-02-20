@@ -15,16 +15,14 @@ interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
     lastReceived: Date;
   })[];
+  presetName: string;
 }
 
 const AlertHistoryPanel = ({
   alertsHistoryWithDate,
+  presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
 
   const [rowPagination, setRowPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -63,11 +61,7 @@ const AlertHistoryPanel = ({
         </div>
         <Button
           className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-          onClick={() =>
-            router.replace(`/alerts?selectedPreset=${currentPreset}`, {
-              scroll: false,
-            })
-          }
+          onClick={() => router.replace(`/alerts/${presetName}`)}
         >
           Close
         </Button>
@@ -98,9 +92,10 @@ const AlertHistoryPanel = ({
 
 interface Props {
   alerts: AlertDto[];
+  presetName: string;
 }
 
-export function AlertHistory({ alerts }: Props) {
+export function AlertHistory({ alerts, presetName }: Props) {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -109,9 +104,6 @@ export function AlertHistory({ alerts }: Props) {
       ? searchParams.get("fingerprint") === alert.fingerprint
       : undefined
   );
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
 
   const { useAlertHistory } = useAlerts();
   const { data: alertHistory = [] } = useAlertHistory(selectedAlert, {
@@ -126,15 +118,14 @@ export function AlertHistory({ alerts }: Props) {
   return (
     <Modal
       isOpen={selectedAlert !== undefined}
-      onClose={() =>
-        router.replace(`/alerts?selectedPreset=${currentPreset}`, {
-          scroll: false,
-        })
-      }
+      onClose={() => router.replace(`/alerts/${presetName}`)}
       className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >
-      <AlertHistoryPanel alertsHistoryWithDate={alertsHistoryWithDate} />
+      <AlertHistoryPanel
+        alertsHistoryWithDate={alertsHistoryWithDate}
+        presetName={presetName}
+      />
     </Modal>
   );
 }
