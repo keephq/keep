@@ -98,12 +98,12 @@ class AlertEnrichment(SQLModel, table=True):
 
 
 class AlertDeduplicationFilter(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
+    id: str = Field(default_factory=uuid4, primary_key=True, max_length=36)
+    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
     # the list of fields to pop from the alert before hashing
     fields: list = Field(sa_column=Column(JSON), default=[])
     # a CEL expression to match the alert
-    matcher_cel: str
+    matcher_cel: str = Field(max_length=2000)
 
     class Config:
         arbitrary_types_allowed = True
