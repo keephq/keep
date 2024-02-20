@@ -52,6 +52,10 @@ class Alert(SQLModel, table=True):
     groups: List["Group"] = Relationship(
         back_populates="alerts", link_model=AlertToGroup
     )
+    # alert_hash is different than fingerprint, it is a hash of the alert itself
+    #            and it is used for deduplication.
+    #            alert can be different but have the same fingerprint (e.g. different "firing" and "resolved" will have the same fingerprint but not the same alert_hash)
+    alert_hash: str | None
 
     # Define a one-to-one relationship to AlertEnrichment using alert_fingerprint
     alert_enrichment: "AlertEnrichment" = Relationship(
@@ -80,6 +84,18 @@ class AlertEnrichment(SQLModel, table=True):
             "uselist": True,
         },
     )
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class AlertDeduplicationFilter(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+    # the list of fields to pop from the alert before hashing
+    fields: list = Field(sa_column=Column(JSON), default=[])
+    # a CEL expression to match the alert
+    matcher_cel: str
 
     class Config:
         arbitrary_types_allowed = True

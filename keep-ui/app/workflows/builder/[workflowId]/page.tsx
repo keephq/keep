@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
-import Page from "../page";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { getApiURL } from "utils/apiUrl";
+import PageClient from "../page.client";
 
 export default async function PageWithId({
   params,
@@ -17,5 +17,7 @@ export default async function PageWithId({
     cache: "no-store",
   });
   const text = await response.json();
-  return <Page workflow={text.workflow_raw} workflowId={params.workflowId} />;
+  return (
+    <PageClient workflow={text.workflow_raw} workflowId={params.workflowId} />
+  );
 }

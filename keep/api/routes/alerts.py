@@ -13,6 +13,7 @@ from pusher import Pusher
 from sqlmodel import Session
 
 from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -463,8 +464,22 @@ def handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
+    # first, filter out any deduplicated events
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+
+    for event in formatted_events:
+        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
+        event.alert_hash = event_hash
+        event.isDuplicate = event_deduplicated
+
+    # filter out the deduplicated events
+    formatted_events = list(
+        filter(lambda event: not event.isDuplicate, formatted_events)
+    )
+
     try:
         # keep raw events in the DB if the user wants to
+        # this is mainly for debugging and research purposes
         if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
             for raw_event in raw_events:
                 alert = AlertRaw(
@@ -497,6 +512,7 @@ def handle_formatted_events(
                 event=formatted_event.dict(),
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
+                alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
             formatted_event.event_id = alert.id

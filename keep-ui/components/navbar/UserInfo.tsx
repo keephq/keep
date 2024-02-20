@@ -3,6 +3,7 @@
 import { Menu } from "@headlessui/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
+import { signOut } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
 import Image from "next/image";
@@ -84,6 +85,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               <Menu.Item
                 as="button"
                 className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                onClick={() => signOut()}
               >
                 Sign out
               </Menu.Item>
