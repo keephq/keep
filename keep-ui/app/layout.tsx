@@ -1,8 +1,8 @@
+import { ReactNode } from "react";
 import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
 import { Intercom } from "@/components/ui/Intercom";
 import { Mulish } from "next/font/google";
-import { Card } from "@tremor/react";
 
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,26 +14,27 @@ const mulish = Mulish({
 });
 
 import { ToastContainer } from "react-toastify";
-import Navbar from "./navbar";
+import Navbar from "components/navbar/Navbar";
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+type RootLayoutProps = {
+  children: ReactNode;
+};
+
+export default async function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html
-      lang="en"
-      className={`h-full bg-gray-50 ${mulish.className}`}
-      suppressHydrationWarning={true}
-    >
-      <body className="h-full">
+    <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
+      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[250px_auto] lg:grid-rows-1">
         <NextAuthProvider>
+          {/* @ts-ignore-error Server Component */}
           <Navbar />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-          <ErrorBoundary>{children}</ErrorBoundary>
+          <main className="flex flex-col col-start-2 p-4 overflow-auto">
+            <div className="flex-1 h-0">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </div>
+            <ToastContainer />
+          </main>
         </NextAuthProvider>
-        <ToastContainer />
 
         {/** footer */}
         {process.env.GIT_COMMIT_HASH ? (

@@ -19,19 +19,20 @@ import {
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
-export function AlertMethodModal() {
+interface AlertMethodModalProps {
+  presetName: string;
+}
+
+export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const router = useRouter();
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
+
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
   const methodName = searchParams?.get("methodName");
@@ -77,7 +78,7 @@ export function AlertMethodModal() {
   const handleClose = () => {
     setInputParameters({});
     setMethodResult(null);
-    router.replace(`${pathname}?selectedPreset=${currentPreset}`);
+    router.replace(`/alerts/${presetName}`);
   };
 
   const validateAndSetParams = (

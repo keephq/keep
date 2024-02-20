@@ -5,7 +5,11 @@ import { useSession } from "next-auth/react";
 import Loading from "../loading";
 import Alerts from "./alerts";
 
-export default function AlertsPage() {
+type AlertsPageProps = {
+  presetName: string;
+};
+
+export default function AlertsPage({ presetName }: AlertsPageProps) {
   const { data: session, status } = useSession();
 
   const router = useRouter();
@@ -22,5 +26,5 @@ export default function AlertsPage() {
     router.push("/signin");
   }
 
-  return <Alerts />;
+  return <Alerts presetName={presetName} />;
 }
