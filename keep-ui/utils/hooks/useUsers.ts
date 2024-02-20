@@ -1,19 +1,15 @@
 import { User } from "app/settings/models";
 import { useSession } from "next-auth/react";
-import useSWR, { SWRConfiguration } from "swr";
+import { SWRConfiguration } from "swr";
+import useSWRImmutable from "swr/immutable";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useUsers = (
-  options: SWRConfiguration = {
-    dedupingInterval: 10000,
-    revalidateOnFocus: false,
-  }
-) => {
+export const useUsers = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  return useSWR<User[]>(
+  return useSWRImmutable<User[]>(
     () => (session ? `${apiUrl}/users` : null),
     (url) => fetcher(url, session?.accessToken),
     options

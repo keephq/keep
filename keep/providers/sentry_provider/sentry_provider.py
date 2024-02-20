@@ -216,11 +216,19 @@ class SentryProvider(BaseProvider):
         )
         # map severity and status to keep's format
         severity = event.pop("level", tags_as_dict.get("level", "")).lower()
-        severity = SentryProvider.SEVERITIES_MAP.get(
-            severity, AlertSeverity.INFO
-        )
+        severity = SentryProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
         status = event.get("action")
         status = SentryProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+
+        # https://docs.sentry.io/product/integrations/integration-platform/webhooks/issue-alerts/#dataeventissue_url
+        url = event_data.pop("url", None)
+        if "issue_url" in event_data:
+            url = event_data["issue_url"]
+        elif "web_url" in event_data:
+            url = event_data["web_url"]
+        elif "url" in tags_as_dict:
+            url = tags_as_dict["url"]
+
         logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(
             id=event_data.pop("event_id"),
@@ -236,7 +244,7 @@ class SentryProvider(BaseProvider):
             description=event.get("culprit", ""),
             pushed=True,
             severity=severity,
-            url=event_data.pop("url", tags_as_dict.pop("url", event.get("url", None))),
+            url=url,
             fingerprint=event.get("id"),
             tags=tags_as_dict,
         )

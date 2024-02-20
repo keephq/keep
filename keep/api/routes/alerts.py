@@ -12,6 +12,8 @@ from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
+from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
+from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -28,8 +30,8 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
-from keep.api.utils.tenant_utils import update_key_last_used
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+from keep.api.utils.tenant_utils import update_key_last_used
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -170,7 +172,7 @@ def pull_alerts_from_providers(
                     if len(new_compressed_batch) <= 10240:
                         number_of_alerts_in_batch += 1
                         previous_compressed_batch = new_compressed_batch
-                    else:
+                    elif pusher_client:
                         pusher_client.trigger(
                             f"private-{tenant_id}",
                             "async-alerts",
@@ -182,7 +184,11 @@ def pull_alerts_from_providers(
 
                 # this means we didn't get to this ^ else statement and loop ended
                 #   so we need to send the rest of the alerts
-                if new_compressed_batch and len(new_compressed_batch) < 10240:
+                if (
+                    new_compressed_batch
+                    and len(new_compressed_batch) < 10240
+                    and pusher_client
+                ):
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
@@ -207,7 +213,7 @@ def pull_alerts_from_providers(
                 },
             )
             pass
-    if sync is False:
+    if sync is False and pusher_client:
         pusher_client.trigger(f"private-{tenant_id}", "async-done", {})
     logger.info("Fetched alerts from installed providers")
     return sync_alerts
@@ -458,8 +464,22 @@ def handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
+    # first, filter out any deduplicated events
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+
+    for event in formatted_events:
+        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
+        event.alert_hash = event_hash
+        event.isDuplicate = event_deduplicated
+
+    # filter out the deduplicated events
+    formatted_events = list(
+        filter(lambda event: not event.isDuplicate, formatted_events)
+    )
+
     try:
         # keep raw events in the DB if the user wants to
+        # this is mainly for debugging and research purposes
         if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
             for raw_event in raw_events:
                 alert = AlertRaw(
@@ -492,27 +512,36 @@ def handle_formatted_events(
                 event=formatted_event.dict(),
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
+                alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
             formatted_event.event_id = alert.id
-            alert_event_copy = {**alert.event}
+            alert_dto = AlertDto(**alert.event)
+
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Mapping
+            try:
+                enrichments_bl.run_mapping_rules(alert_dto)
+            except Exception:
+                logger.exception("Failed to run mapping rules")
+
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
-                    alert_event_copy[enrichment] = alert_enrichment.enrichments[
-                        enrichment
-                    ]
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-alerts",
-                    json.dumps([AlertDto(**alert_event_copy).dict()]),
-                )
-            except Exception:
-                logger.exception("Failed to push alert to the client")
+                    value = alert_enrichment.enrichments[enrichment]
+                    setattr(alert_dto, enrichment, value)
+            if pusher_client:
+                try:
+                    pusher_client.trigger(
+                        f"private-{tenant_id}",
+                        "async-alerts",
+                        json.dumps([alert_dto.dict()]),
+                    )
+                except Exception:
+                    logger.exception("Failed to push alert to the client")
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -564,14 +593,15 @@ def handle_formatted_events(
             # Now send the grouped alerts to the client
             logger.info("Sending grouped alerts to the client")
             for grouped_alert in grouped_alerts:
-                try:
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
-                        json.dumps([grouped_alert.dict()]),
-                    )
-                except Exception:
-                    logger.exception("Failed to push alert to the client")
+                if pusher_client:
+                    try:
+                        pusher_client.trigger(
+                            f"private-{tenant_id}",
+                            "async-alerts",
+                            json.dumps([grouped_alert.dict()]),
+                        )
+                    except Exception:
+                        logger.exception("Failed to push alert to the client")
             logger.info("Sent grouped alerts to the client")
     except Exception:
         logger.exception(
@@ -632,9 +662,7 @@ async def receive_generic_event(
     if authenticated_entity.api_key_name:
         logger.debug("Updating API Key last used")
         update_key_last_used(
-            session,
-            tenant_id,
-            unique_api_key_id=authenticated_entity.api_key_name
+            session, tenant_id, unique_api_key_id=authenticated_entity.api_key_name
         )
         logger.debug("Successfully updated API Key last used")
 

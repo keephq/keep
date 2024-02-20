@@ -41,9 +41,24 @@ class WorkflowExecution(SQLModel, table=True):
     logs: List["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"
     )
+    workflow_to_alert_execution: "WorkflowToAlertExecution" = Relationship(
+        back_populates="workflow_execution"
+    )
 
     class Config:
         orm_mode = True
+
+
+class WorkflowToAlertExecution(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("workflow_execution_id", "alert_fingerprint"),)
+
+    # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
+    id: Optional[int] = Field(primary_key=True, default=None)
+    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
+    alert_fingerprint: str = Field(foreign_key="alert.fingerprint")
+    workflow_execution: WorkflowExecution = Relationship(
+        back_populates="workflow_to_alert_execution"
+    )
 
 
 class WorkflowExecutionLog(SQLModel, table=True):

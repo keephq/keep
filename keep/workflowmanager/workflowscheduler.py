@@ -134,7 +134,7 @@ class WorkflowScheduler:
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, triggered, event
+        self, workflow_id, tenant_id, triggered_by_user, event
     ):
         try:
             # if the event is not defined, add some entropy
@@ -156,6 +156,7 @@ class WorkflowScheduler:
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
+                fingerprint=event.get("fingerprint"),
             )
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
@@ -251,6 +252,7 @@ class WorkflowScheduler:
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
+                        fingerprint=event.fingerprint,
                     )
                 # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
                 except IntegrityError:
