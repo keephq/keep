@@ -54,8 +54,10 @@ class WorkflowToAlertExecution(SQLModel, table=True):
 
     # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
     id: Optional[int] = Field(primary_key=True, default=None)
-    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
-    alert_fingerprint: str = Field(foreign_key="alert.fingerprint")
+    workflow_execution_id: str = Field(
+        foreign_key="workflowexecution.id", max_length=36
+    )
+    alert_fingerprint: str = Field(max_length=256)
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
     )

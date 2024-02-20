@@ -11,7 +11,7 @@ from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, select, text, update
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -122,9 +122,18 @@ def create_db_and_tables():
     # Execute the ALTER TABLE command
     with engine.connect() as connection:
         try:
-            connection.execute(
-                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
-            )
+            if engine.dialect.name == "mssql":
+                connection.execute(
+                    text("ALTER TABLE alert ADD alert_hash VARCHAR(255);")
+                )
+            else:
+                connection.execute(
+                    text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
+                )
+        except ProgrammingError as e:
+            if "column names in each table must be unique" in str(e).lower():
+                return
+            raise
         except OperationalError as e:
             # that's ok
             if "duplicate column" in str(e).lower():
