@@ -20,6 +20,7 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
+from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
