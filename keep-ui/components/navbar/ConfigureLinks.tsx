@@ -1,10 +1,11 @@
 "use client";
 
-import { Subtitle } from "@tremor/react";
+import { Badge, Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { MdOutlineEngineering } from "react-icons/md";
 import { LuWorkflow } from "react-icons/lu";
+import { RiMindMap } from "react-icons/ri";
 import { Session } from "next-auth";
 
 type ConfigureLinksProps = { session: Session | null };
@@ -28,6 +29,14 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
         <li>
           <LinkWithIcon href="/rules" icon={MdOutlineEngineering}>
             Alert Groups
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/mapping" icon={RiMindMap}>
+            Mapping{" "}
+            <Badge color="orange" size="xs">
+              Beta
+            </Badge>
           </LinkWithIcon>
         </li>
         <li>

@@ -13,6 +13,7 @@ from pusher import Pusher
 from sqlmodel import Session
 
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
+from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -515,22 +516,29 @@ def handle_formatted_events(
             )
             session.add(alert)
             formatted_event.event_id = alert.id
-            alert_event_copy = {**alert.event}
+            alert_dto = AlertDto(**alert.event)
+
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Mapping
+            try:
+                enrichments_bl.run_mapping_rules(alert_dto)
+            except Exception:
+                logger.exception("Failed to run mapping rules")
+
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
-                    alert_event_copy[enrichment] = alert_enrichment.enrichments[
-                        enrichment
-                    ]
+                    value = alert_enrichment.enrichments[enrichment]
+                    setattr(alert_dto, enrichment, value)
             if pusher_client:
                 try:
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        json.dumps([AlertDto(**alert_event_copy).dict()]),
+                        json.dumps([alert_dto.dict()]),
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
