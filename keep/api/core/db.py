@@ -10,8 +10,8 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, desc, func, null, select, text, update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -114,6 +114,23 @@ def create_db_and_tables():
     Creates the database and tables.
     """
     SQLModel.metadata.create_all(engine)
+    # migration add column
+
+    # todo: remove this
+
+    # Execute the ALTER TABLE command
+    with engine.connect() as connection:
+        try:
+            connection.execute(
+                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
+            )
+        except OperationalError as e:
+            # that's ok
+            if "duplicate column" in str(e):
+                return
+            raise
+        except Exception:
+            raise
 
 
 def get_session() -> Session:
@@ -1176,3 +1193,23 @@ def get_rule_distribution(tenant_id, minute=False):
             rule_distribution[rule_id][group_fingerprint][timestamp] = hits
 
         return rule_distribution
+
+
+def get_all_filters(tenant_id):
+    with Session(engine) as session:
+        filters = session.exec(
+            select(AlertDeduplicationFilter).where(
+                AlertDeduplicationFilter.tenant_id == tenant_id
+            )
+        ).all()
+    return filters
+
+
+def get_alert_by_hash(tenant_id, alert_hash):
+    with Session(engine) as session:
+        alert = session.exec(
+            select(Alert)
+            .where(Alert.tenant_id == tenant_id)
+            .where(Alert.alert_hash == alert_hash)
+        ).first()
+    return alert
