@@ -47,7 +47,6 @@ export const AlertKnownKeys = [
   "name",
   "status",
   "lastReceived",
-  "environment",
   "isDuplicate",
   "duplicateReason",
   "source",

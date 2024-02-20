@@ -30,6 +30,10 @@
         "overview/keyconcepts",
         "overview/usecases",
         "overview/ruleengine",
+        {
+          "group": "Enrichments",
+          "pages": ["overview/enrichment/mapping"]
+        },
         "overview/examples",
         "overview/comparison"
       ]
@@ -176,7 +180,7 @@
           "pages": ["workflows/examples/multi-step-alert"]
         },
         "workflows/state"
-        ]
+      ]
     },
     {
       "group": "Keep API",
@@ -254,10 +258,7 @@
                 "cli/commands/workflow-run",
                 {
                   "group": "keep workflow runs",
-                  "pages": [
-                    "cli/commands/runs-logs",
-                    "cli/commands/runs-list"
-                  ]
+                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
                 }
               ]
             },
@@ -265,7 +266,6 @@
             "cli/commands/cli-config",
             "cli/commands/cli-version",
             "cli/commands/cli-whoami"
-
           ]
         }
       ]

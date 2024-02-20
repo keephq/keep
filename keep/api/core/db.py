@@ -10,8 +10,8 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, desc, func, null, select, text, update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -20,6 +20,7 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *
+from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
@@ -114,6 +115,25 @@ def create_db_and_tables():
     Creates the database and tables.
     """
     SQLModel.metadata.create_all(engine)
+    # migration add column
+
+    # todo: remove this
+
+    # Execute the ALTER TABLE command
+    with engine.connect() as connection:
+        try:
+            connection.execute(
+                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
+            )
+        except OperationalError as e:
+            # that's ok
+            if "duplicate column" in str(e).lower():
+                return
+            logger.exception("Failed to add column alert_hash to alert table")
+            raise
+        except Exception:
+            logger.exception("Failed to add column alert_hash to alert table")
+            raise
 
 
 def get_session() -> Session:
@@ -176,7 +196,11 @@ def try_create_single_tenant(tenant_id: str) -> None:
 
 
 def create_workflow_execution(
-    workflow_id: str, tenant_id: str, triggered_by: str, execution_number: int = 1
+    workflow_id: str,
+    tenant_id: str,
+    triggered_by: str,
+    execution_number: int = 1,
+    fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
@@ -190,6 +214,14 @@ def create_workflow_execution(
                 status="in_progress",
             )
             session.add(workflow_execution)
+
+            if fingerprint:
+                workflow_to_alert_execution = WorkflowToAlertExecution(
+                    workflow_execution_id=workflow_execution.id,
+                    alert_fingerprint=fingerprint,
+                )
+                session.add(workflow_to_alert_execution)
+
             session.commit()
             return workflow_execution.id
         except IntegrityError:
@@ -590,33 +622,39 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments):
+def _enrich_alert(session, tenant_id, fingerprint, enrichments):
+    enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
+    if enrichment:
+        # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
+        # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
+        new_enrichment_data = {**enrichment.enrichments, **enrichments}
+        stmt = (
+            update(AlertEnrichment)
+            .where(AlertEnrichment.id == enrichment.id)
+            .values(enrichments=new_enrichment_data)
+        )
+        session.execute(stmt)
+        session.commit()
+        # Refresh the instance to get updated data from the database
+        session.refresh(enrichment)
+        return enrichment
+    else:
+        alert_enrichment = AlertEnrichment(
+            tenant_id=tenant_id,
+            alert_fingerprint=fingerprint,
+            enrichments=enrichments,
+        )
+        session.add(alert_enrichment)
+        session.commit()
+        return alert_enrichment
+
+
+def enrich_alert(tenant_id, fingerprint, enrichments, session=None):
     # else, the enrichment doesn't exist, create it
-    with Session(engine) as session:
-        enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
-        if enrichment:
-            # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
-            # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-            new_enrichment_data = {**enrichment.enrichments, **enrichments}
-            stmt = (
-                update(AlertEnrichment)
-                .where(AlertEnrichment.id == enrichment.id)
-                .values(enrichments=new_enrichment_data)
-            )
-            session.execute(stmt)
-            session.commit()
-            # Refresh the instance to get updated data from the database
-            session.refresh(enrichment)
-            return enrichment
-        else:
-            alert_enrichment = AlertEnrichment(
-                tenant_id=tenant_id,
-                alert_fingerprint=fingerprint,
-                enrichments=enrichments,
-            )
-            session.add(alert_enrichment)
-            session.commit()
-            return alert_enrichment
+    if not session:
+        with Session(engine) as session:
+            return _enrich_alert(session, tenant_id, fingerprint, enrichments)
+    return _enrich_alert(session, tenant_id, fingerprint, enrichments)
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -1164,3 +1202,23 @@ def get_rule_distribution(tenant_id, minute=False):
             rule_distribution[rule_id][group_fingerprint][timestamp] = hits
 
         return rule_distribution
+
+
+def get_all_filters(tenant_id):
+    with Session(engine) as session:
+        filters = session.exec(
+            select(AlertDeduplicationFilter).where(
+                AlertDeduplicationFilter.tenant_id == tenant_id
+            )
+        ).all()
+    return filters
+
+
+def get_alert_by_hash(tenant_id, alert_hash):
+    with Session(engine) as session:
+        alert = session.exec(
+            select(Alert)
+            .where(Alert.tenant_id == tenant_id)
+            .where(Alert.alert_hash == alert_hash)
+        ).first()
+    return alert

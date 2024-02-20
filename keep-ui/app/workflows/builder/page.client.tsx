@@ -1,6 +1,6 @@
 "use client";
 
-import { Title, Button, Subtitle } from "@tremor/react";
+import { Title, Button, Subtitle, Badge } from "@tremor/react";
 import { useEffect, useState } from "react";
 import {
   PlusIcon,
@@ -66,7 +66,9 @@ export default function PageClient({
     <main className="p-4 md:p-10 mx-auto max-w-full h-full">
       <div className="flex justify-between">
         <div className="flex flex-col">
-          <Title>Builder</Title>
+          <Title>
+            Builder <Badge color="orange" size="xs" tooltip="Slack us if something isn't working properly :)">Beta</Badge>
+          </Title>
           <Subtitle>Workflow building kit</Subtitle>
         </div>
         {workflow ? (

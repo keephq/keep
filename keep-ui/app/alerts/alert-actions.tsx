@@ -91,8 +91,8 @@ export default function AlertActions({
   };
 
   async function addOrUpdatePreset() {
-    const presetName = prompt("Enter new preset name");
-    if (presetName) {
+    const newPresetName = prompt("Enter new preset name");
+    if (newPresetName) {
       const distinctAlertNames = Array.from(
         new Set(selectedAlerts.map((alert) => alert.name))
       );
@@ -107,18 +107,18 @@ export default function AlertActions({
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: presetName, options: options }),
+        body: JSON.stringify({ name: newPresetName, options: options }),
       });
       if (response.ok) {
-        toast(`Preset ${presetName} created!`, {
+        toast(`Preset ${newPresetName} created!`, {
           position: "top-left",
           type: "success",
         });
         presetsMutator();
         clearRowSelection();
-        router.replace(`${pathname}?selectedPreset=${presetName}`);
+        router.replace(`/alerts/${newPresetName}`);
       } else {
-        toast(`Error creating preset ${presetName}`, {
+        toast(`Error creating preset ${newPresetName}`, {
           position: "top-left",
           type: "error",
         });

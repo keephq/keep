@@ -95,9 +95,16 @@ def get_workflows(
                 # the provider is not installed, now we want to check:
                 # 1. if the provider requires any config - so its not instaleld
                 # 2. if the provider does not require any config - consider it as installed
-                conf = ProvidersFactory.get_provider_required_config(
-                    provider.get("type")
-                )
+                try:
+                    conf = ProvidersFactory.get_provider_required_config(
+                        provider.get("type")
+                    )
+                except ModuleNotFoundError:
+                    logger.warning(
+                        "Someone tried to use a non-existing provider in a workflow",
+                        extra={"provider": provider.get("type")},
+                    )
+                    conf = None
                 if conf:
                     provider_dto = ProviderDTO(
                         name=provider.get("name"),
@@ -135,13 +142,14 @@ def get_workflows(
         workflows_dto.append(workflow_dto)
     return workflows_dto
 
+
 @router.get(
-        "/export",
-        description="export all workflow Yamls",
+    "/export",
+    description="export all workflow Yamls",
 )
 def export_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:workflows"])    
+        AuthVerifier(["read:workflows"])
     ),
 ) -> list[str]:
     tenant_id = authenticated_entity.tenant_id
@@ -149,6 +157,7 @@ def export_workflows(
     # get all workflows
     workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
     return workflows
+
 
 @router.post(
     "/{workflow_id}/run",
@@ -173,7 +182,7 @@ def run_workflow(
     # Finally, run it
     try:
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, "manual", body
+            workflow_id, tenant_id, created_by, body
         )
     except Exception as e:
         logger.exception(

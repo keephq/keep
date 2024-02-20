@@ -35,7 +35,7 @@ const getFormatAndMergePusherWithEndpointAlerts = (
     }
 
     return newAlertsMap;
-  }, alertsMap);
+  }, new Map(alertsMap));
 
 export const getDefaultSubscriptionObj = (
   isAsyncLoading: boolean = false,
@@ -101,39 +101,45 @@ export const useAlerts = () => {
       alertSubscription;
 
     useEffect(() => {
-      const alertsMap = new Map<string, AlertDto>(
-        alertsFromEndpoint.map((alertFromEndpoint) => [
-          alertFromEndpoint.fingerprint,
-          {
-            ...alertFromEndpoint,
-            lastReceived: toDateObjectWithFallback(
-              alertFromEndpoint.lastReceived
-            ),
-          },
-        ])
-      );
+      if (alertsFromEndpoint.length) {
+        const newAlertsMap = new Map<string, AlertDto>(
+          alertsFromEndpoint.map((alertFromEndpoint) => [
+            alertFromEndpoint.fingerprint,
+            {
+              ...alertFromEndpoint,
+              lastReceived: toDateObjectWithFallback(
+                alertFromEndpoint.lastReceived
+              ),
+            },
+          ])
+        );
 
-      setAlertsMap(alertsMap);
+        setAlertsMap(newAlertsMap);
+      }
     }, [alertsFromEndpoint]);
 
     useEffect(() => {
-      const alertsFromPusherWithLastReceivedDate = alertsFromPusher.map(
-        (alertFromPusher) => ({
-          ...alertFromPusher,
-          lastReceived: toDateObjectWithFallback(alertFromPusher.lastReceived),
-        })
-      );
+      if (alertsFromPusher.length) {
+        const alertsFromPusherWithLastReceivedDate = alertsFromPusher.map(
+          (alertFromPusher) => ({
+            ...alertFromPusher,
+            lastReceived: toDateObjectWithFallback(
+              alertFromPusher.lastReceived
+            ),
+          })
+        );
 
-      setAlertsMap((previousAlertsMap) =>
-        getFormatAndMergePusherWithEndpointAlerts(
-          previousAlertsMap,
-          alertsFromPusherWithLastReceivedDate
-        )
-      );
+        setAlertsMap((previousAlertsMap) =>
+          getFormatAndMergePusherWithEndpointAlerts(
+            previousAlertsMap,
+            alertsFromPusherWithLastReceivedDate
+          )
+        );
+      }
     }, [alertsFromPusher]);
 
     return {
-      data: [...alertsMap.values()],
+      data: Array.from(alertsMap.values()),
       ...restOfAlertSubscription,
       ...restOfAllAlerts,
     };

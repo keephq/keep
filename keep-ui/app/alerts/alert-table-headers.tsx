@@ -1,6 +1,6 @@
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
 
-import { ReactNode } from "react";
+import { CSSProperties, ReactNode } from "react";
 import {
   closestCenter,
   DndContext,
@@ -17,26 +17,29 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Column,
   ColumnDef,
   ColumnOrderState,
   flexRender,
+  Header,
   Table,
 } from "@tanstack/react-table";
 import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "./models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
+import classnames from "classnames";
 
 interface DraggableHeaderCellProps {
-  column: Column<AlertDto, unknown>;
+  header: Header<AlertDto, unknown>;
   children: ReactNode;
 }
 
 const DraggableHeaderCell = ({
-  column,
+  header,
   children,
 }: DraggableHeaderCellProps) => {
+  const { column, getResizeHandler } = header;
+
   const {
     attributes,
     listeners,
@@ -49,31 +52,42 @@ const DraggableHeaderCell = ({
     disabled: column.getIsPinned() !== false,
   });
 
-  const dragStyle = {
+  const dragStyle: CSSProperties = {
+    width: column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
+    cursor:
+      column.getIsPinned() !== false
+        ? "default"
+        : isDragging
+        ? "grabbing"
+        : "grab",
   };
 
   return (
     <TableHeaderCell
+      className={`relative ${
+        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
+      } group`}
       style={dragStyle}
-      className={
-        column.getIsPinned()
-          ? ""
-          : `hover:bg-slate-100 ${
-              isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`
-      }
       ref={setNodeRef}
     >
-      <span
-        className={`flex ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-        {...attributes}
-        {...listeners}
-      >
+      <div  {...listeners}>
         {children}
-      </span>
+      </div>
+      {column.getIsPinned() === false && (
+        <div
+          className={classnames(
+            "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
+            {
+              "hover:w-2 bg-blue-100": column.getIsResizing() === false,
+              "w-2 bg-blue-400": column.getIsResizing(),
+            }
+          )}
+          onMouseDown={getResizeHandler()}
+        />
+      )}
     </TableHeaderCell>
   );
 };
@@ -147,7 +161,7 @@ export default function AlertsTableHeaders({
                 return (
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
-                    column={header.column}
+                    header={header}
                   >
                     {header.isPlaceholder
                       ? null
