@@ -126,10 +126,12 @@ def create_db_and_tables():
             )
         except OperationalError as e:
             # that's ok
-            if "duplicate column" in str(e):
+            if "duplicate column" in str(e).lower():
                 return
+            logger.exception("Failed to add column alert_hash to alert table")
             raise
         except Exception:
+            logger.exception("Failed to add column alert_hash to alert table")
             raise
 
 
