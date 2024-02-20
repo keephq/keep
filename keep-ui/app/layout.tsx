@@ -14,7 +14,7 @@ const mulish = Mulish({
 });
 
 import { ToastContainer } from "react-toastify";
-import Navbar from "components/navbar/Navbar";
+import Navbar from "components/navbar/navbar";
 
 type RootLayoutProps = {
   children: ReactNode;
