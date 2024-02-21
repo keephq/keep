@@ -28,6 +28,7 @@ services:
       - PUSHER_APP_SECRET=keepappsecret
       - PUSHER_HOST=keep-websocket-server
       - PUSHER_PORT=6001
+      - USE_NGROK=false
 
   keep-websocket-server-common:
     image: quay.io/soketi/soketi:1.4-16-debian
