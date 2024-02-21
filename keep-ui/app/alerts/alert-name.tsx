@@ -79,10 +79,10 @@ export default function AlertName({
 
   const handleWorkflowClick = (workflows: Workflow[]) => {
     if (workflows.length === 1) {
-      return router.push(`workflows/${workflows[0].id}`);
+      return router.push(`/workflows/${workflows[0].id}`);
     }
 
-    return router.push("workflows");
+    return router.push("/workflows");
   };
 
   const relevantWorkflows = useMemo(
