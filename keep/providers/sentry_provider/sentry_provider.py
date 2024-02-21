@@ -223,10 +223,10 @@ class SentryProvider(BaseProvider):
 
         # https://docs.sentry.io/product/integrations/integration-platform/webhooks/issue-alerts/#dataeventissue_url
         url = event_data.pop("url", None)
-        if "issue_url" in event_data:
-            url = event_data["issue_url"]
-        elif "web_url" in event_data:
+        if "web_url" in event_data:
             url = event_data["web_url"]
+        elif "issue_url" in event_data:
+            url = event_data["issue_url"]
         elif "url" in tags_as_dict:
             url = tags_as_dict["url"]
 

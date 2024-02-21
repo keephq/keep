@@ -1,12 +1,8 @@
 """
 Test the io handler
 """
-import json
-import tempfile
 
-import pytest
 
-from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 
 
@@ -52,3 +48,27 @@ def test_with_function_2(context_manager):
     }
     s = iohandler.render("hello keep.first({{ steps.some_list }})")
     assert s == "hello 1"
+
+
+def test_with_json_dumps(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "some_list": [1, 2, 3],
+    }
+    context_manager.providers_context = {
+        "name": "s3",
+    }
+    s = iohandler.render("hello keep.json_dumps({{ steps.some_list }})")
+    assert s == "hello [\n    1,\n    2,\n    3\n]"
+
+
+def test_with_json_dumps_when_json_string(context_manager):
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "some_list": "[1, 2, 3]",
+    }
+    context_manager.providers_context = {
+        "name": "s3",
+    }
+    s = iohandler.render("hello keep.json_dumps({{ steps.some_list }})")
+    assert s == "hello [\n    1,\n    2,\n    3\n]"
