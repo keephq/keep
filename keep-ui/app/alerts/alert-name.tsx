@@ -82,7 +82,7 @@ export default function AlertName({
       return router.push(`/workflows/${workflows[0].id}`);
     }
 
-    return router.push("workflows");
+    return router.push("/workflows");
   };
 
   const relevantWorkflows = useMemo(
