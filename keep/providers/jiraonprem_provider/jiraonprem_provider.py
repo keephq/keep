@@ -1,6 +1,7 @@
 """
 JiraonpremProvider is a class that implements the BaseProvider interface for Jira updates.
 """
+
 import dataclasses
 import json
 from typing import List
@@ -268,6 +269,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
+        priority: str = "Medium",
         **kwargs: dict,
     ):
         """
@@ -287,6 +289,7 @@ class JiraonpremProvider(BaseProvider):
                 "description": description,
                 "project": {"key": project_key},
                 "issuetype": {"name": issue_type},
+                "priority": {"name": priority},
             }
 
             if labels:
@@ -388,6 +391,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
+        priority: str = "Medium",
         **kwargs: dict,
     ):
         """
@@ -413,6 +417,7 @@ class JiraonpremProvider(BaseProvider):
                 labels=labels,
                 components=components,
                 custom_fields=custom_fields,
+                priority=priority,
                 **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
