@@ -51,6 +51,7 @@ $rqb-branch-style: $rqb-border-style !default;
     display: flex;
     gap: $rqb-spacing;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .rule {
@@ -58,7 +59,14 @@ $rqb-branch-style: $rqb-border-style !default;
       display: flex;
       gap: $rqb-spacing;
       align-items: baseline;
+      flex-grow: 1;
     }
+  }
+
+  .rule-value input[type="text"] {
+    width: 100%; // Use available width
+    max-width: 100%; // Prevent overflow
+    box-sizing: border-box; // Include padding and border in the width calculation
   }
 
   .shiftActions {
