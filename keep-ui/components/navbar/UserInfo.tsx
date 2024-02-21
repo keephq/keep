@@ -36,7 +36,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
   return (
     <Menu as="li" ref={refs.setReference}>
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
-        <span className="space-x-3 flex items-center">
+        <span className="space-x-3 flex items-center w-full">
           {image ? (
             <Image
               className="rounded-full w-7 h-7 inline"
@@ -52,11 +52,11 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               </span>
             </span>
           )}{" "}
-          <span>{name ?? email}</span>
+          <span className="truncate">{name ?? email}</span>
         </span>
 
         <Icon
-          className="text-gray-700 font-medium"
+          className="text-gray-700 font-medium px-0"
           size="xs"
           icon={AiOutlineRight}
         />
