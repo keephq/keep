@@ -7,6 +7,8 @@ import inspect
 import json
 import logging
 import os
+import types
+import typing
 from dataclasses import fields
 from typing import get_args
 
@@ -136,6 +138,45 @@ class ProvidersFactory:
             )
             return {}
 
+    def _get_method_param_type(param: inspect.Parameter) -> str:
+        """
+        Get the type name from a function parameter annotation.
+        Handles generic types like Union by returning the first non-NoneType arg.
+        Falls back to 'str' if it can't determine the type.
+
+        Args:
+            param (inspect.Parameter): The parameter to get the type from.
+
+        Returns:
+            str: The type name.
+
+        """
+        annotation_type = param.annotation
+        if annotation_type is inspect.Parameter.empty:
+            # if no annotation, defaults to str
+            return "str"
+
+        if isinstance(annotation_type, type):
+            # it's a simple type
+            return annotation_type.__name__
+
+        annotation_type_origin = typing.get_origin(annotation_type)
+        annotation_type_args = typing.get_args(annotation_type)
+        if annotation_type_args and annotation_type_origin in [
+            typing.Union,
+            types.UnionType,
+        ]:
+            # get the first annotation type argument which type is not NoneType
+            arg_type = next(
+                item.__name__
+                for item in annotation_type_args
+                if item.__name__ != "NoneType"
+            )
+            return arg_type
+        else:
+            # otherwise fallback to str
+            return "str"
+
     def __get_methods(provider_class: BaseProvider) -> list[ProviderMethodDTO]:
         methods = []
         for method in provider_class.PROVIDER_METHODS:
@@ -157,7 +198,7 @@ class ProvidersFactory:
                 func_params.append(
                     ProviderMethodParam(
                         name=param,
-                        type=params[param].annotation.__name__,
+                        type=ProvidersFactory._get_method_param_type(params[param]),
                         mandatory=mandatory,
                         default=default,
                         expected_values=expected_values,
