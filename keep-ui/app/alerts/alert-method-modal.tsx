@@ -1,6 +1,5 @@
 // TODO: this needs to be refactored
-import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Provider,
   ProviderMethod,
@@ -20,18 +19,20 @@ import {
 } from "@tremor/react";
 import AlertMethodResultsTable from "./alert-method-results-table";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
+import Modal from "@/components/ui/Modal";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
-export function AlertMethodModal() {
+interface AlertMethodModalProps {
+  presetName: string;
+}
+
+export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const router = useRouter();
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
+
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
   const methodName = searchParams?.get("methodName");
@@ -77,7 +78,7 @@ export function AlertMethodModal() {
   const handleClose = () => {
     setInputParameters({});
     setMethodResult(null);
-    router.replace(`${pathname}?selectedPreset=${currentPreset}`);
+    router.replace(`/alerts/${presetName}`);
   };
 
   const validateAndSetParams = (
@@ -219,60 +220,26 @@ export function AlertMethodModal() {
   };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={handleClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-900 bg-opacity-25" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center p-4 text-center h-full">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel
-                className="w-full max-w-xl max-h-96 transform overflow-x-scroll bg-white
-                                    p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
-              >
-                {isLoading ? (
-                  <Loading includeMinHeight={false} />
-                ) : methodResult ? (
-                  <AlertMethodResultsTable results={methodResult} />
-                ) : (
-                  <div>
-                    {method.func_params?.map((param) => {
-                      return getInputs(param);
-                    })}
-                    <Button
-                      type="submit"
-                      color="orange"
-                      onClick={() =>
-                        invokeMethod(provider, method, inputParameters)
-                      }
-                      disabled={!isInvokeEnabled()}
-                    >
-                      Invoke {`"${method.name}"`}
-                    </Button>
-                  </div>
-                )}
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+    <Modal isOpen={isOpen} onClose={handleClose}>
+      {isLoading ? (
+        <Loading includeMinHeight={false} />
+      ) : methodResult ? (
+        <AlertMethodResultsTable results={methodResult} />
+      ) : (
+        <div>
+          {method.func_params?.map((param) => {
+            return getInputs(param);
+          })}
+          <Button
+            type="submit"
+            color="orange"
+            onClick={() => invokeMethod(provider, method, inputParameters)}
+            disabled={!isInvokeEnabled()}
+          >
+            Invoke {`"${method.name}"`}
+          </Button>
         </div>
-      </Dialog>
-    </Transition>
+      )}
+    </Modal>
   );
 }

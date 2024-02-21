@@ -12,6 +12,8 @@ from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
+from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
+from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
@@ -462,8 +464,22 @@ def handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
+    # first, filter out any deduplicated events
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+
+    for event in formatted_events:
+        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
+        event.alert_hash = event_hash
+        event.isDuplicate = event_deduplicated
+
+    # filter out the deduplicated events
+    formatted_events = list(
+        filter(lambda event: not event.isDuplicate, formatted_events)
+    )
+
     try:
         # keep raw events in the DB if the user wants to
+        # this is mainly for debugging and research purposes
         if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
             for raw_event in raw_events:
                 alert = AlertRaw(
@@ -496,25 +512,33 @@ def handle_formatted_events(
                 event=formatted_event.dict(),
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
+                alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
             formatted_event.event_id = alert.id
-            alert_event_copy = {**alert.event}
+            alert_dto = AlertDto(**alert.event)
+
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Mapping
+            try:
+                enrichments_bl.run_mapping_rules(alert_dto)
+            except Exception:
+                logger.exception("Failed to run mapping rules")
+
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
                     # set the enrichment
-                    alert_event_copy[enrichment] = alert_enrichment.enrichments[
-                        enrichment
-                    ]
+                    value = alert_enrichment.enrichments[enrichment]
+                    setattr(alert_dto, enrichment, value)
             if pusher_client:
                 try:
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "async-alerts",
-                        json.dumps([AlertDto(**alert_event_copy).dict()]),
+                        json.dumps([alert_dto.dict()]),
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
