@@ -209,7 +209,7 @@ export default function AlertMenu({
                   <Menu.Item>
                     {({ active }) => (
                       <Link
-                        href={`workflows/builder?alertName=${encodeURIComponent(
+                        href={`/workflows/builder?alertName=${encodeURIComponent(
                           alertName
                         )}&alertSource=${alertSource}`}
                       >
