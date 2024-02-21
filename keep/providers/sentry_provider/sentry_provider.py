@@ -1,6 +1,7 @@
 """
 SentryProvider is a class that provides a way to read data from Sentry.
 """
+
 import dataclasses
 import datetime
 import logging
@@ -247,6 +248,7 @@ class SentryProvider(BaseProvider):
             url=url,
             fingerprint=event.get("id"),
             tags=tags_as_dict,
+            exceptions=event_data.get("exception", {}).get("values", []),
         )
 
     def setup_webhook(
