@@ -98,7 +98,9 @@ class AlertEnrichment(SQLModel, table=True):
 
 
 class AlertDeduplicationFilter(SQLModel, table=True):
-    id: str = Field(default_factory=uuid4, primary_key=True, max_length=36)
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
+    )
     tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
     # the list of fields to pop from the alert before hashing
     fields: list = Field(sa_column=Column(JSON), default=[])
