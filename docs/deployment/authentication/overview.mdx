@@ -1,0 +1,31 @@
+---
+title: "Authentication Overview"
+---
+
+## Overview
+
+Authentication plays a crucial role in securing applications by verifying user identities and providing the necessary access controls. Keep supports various authentication methods to accommodate different deployment strategies and security needs, from development environments to production setups.
+
+<Tip>We will be happy to help with any authentication </Tip>
+
+### Authentication Strategies
+
+- [**No Authentication:**](no-auth) Quick setup for testing or internal use cases.
+- [**Basic Authentication:**](basic-auth) Simple username/password authentication. Works well for small teams or for dev/stage environments.
+- [**Enterprise Authentication:**](enterprise-auth) Use Keep with enterprise authentication methods such as SSO/SAML/OIDC and/or sync users with LDAP.
+- [**Multi-Tenant Authentication:**](multi-tenant-auth) Utilize Auth0 for scalable, multi-tenant authentication.
+
+Choosing the right authentication strategy depends on your specific use case, security requirements, and deployment environment.
+
+### How To Configure
+The authentication scheme on Keep being controlled with environment variables both on the backend (Keep API) and the frontend (Keep UI).
+
+|  Strategy | Environment Variable
+| ------------------------------------- | -------------------------------------------------------------- |
+| No Authentication | `AUTH_TYPE=NO_AUTH`|
+| Basic Authentication| `AUTH_TYPE=SINGLE_TENANT`  |
+| Enterprise Authentication | `AUTH_TYPE=KEYCLOAK` |
+| Multi-Tenant Authentication                           |  `AUTH_TYPE=MULTI_TENANT`  |
+
+###
+For more details on each authentication strategy, including setup instructions and implications, refer to the respective sections.

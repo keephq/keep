@@ -1,0 +1,24 @@
+---
+title: "Enterprise Authentication (SSO, SAML, OIDC and LDAP)"
+---
+
+## Enterprise Authentication
+
+Keep integrates with Keycloak to provide a powerful and flexible authentication system for multi-tenant applications, supporting Single Sign-On (SSO) and SAML.
+
+### Key Features
+
+- **Scalability:** Easily manage numerous users across different tenants.
+- **Flexibility:** Support for various identity protocols, including OpenID Connect, SAML, and OAuth 2.0.
+- **Customization:** Extensive customization options for authentication flows, user federation, and more.
+
+### Setup Instructions
+
+To configure Keycloak for your Keep deployment, set the following environment variables:
+
+```env
+# Keycloak configuration
+KC_DB=mysql
+KC_DB_URL=jdbc:mysql://mysql:3306/keycloak
+KC_DB_USERNAME=keycloak_user
+KC_DB_PASSWORD=keycloak_password
