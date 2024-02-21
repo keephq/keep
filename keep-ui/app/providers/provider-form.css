@@ -1,3 +1,4 @@
 div[role="tooltip"] {
-  max-width: unset !important;
+  max-width: 384px !important;
+  text-wrap: wrap !important;
 }
