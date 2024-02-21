@@ -35,6 +35,7 @@ import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
+import "./provider-form.css";
 
 type ProviderFormProps = {
   provider: Provider;
