@@ -17,14 +17,28 @@ class RulesEngine:
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
 
-    def _calc_max_severity(self, severities):
-        if not severities:
+    def _calc_max_severity(self, alerts):
+        if not alerts:
+            # should not happen
             self.logger.info(
                 "Could not calculate max severity from empty list - fallbacking to info"
             )
             return str(AlertSeverity.INFO)
 
-        severities = [AlertSeverity(severity) for severity in severities]
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        # now take the latest (by timestamp) for each fingerprint:
+        alerts = [
+            max(alerts, key=lambda alert: alert.event["lastReceived"])
+            for alerts in alerts_by_fingerprint.values()
+        ]
+        # if all alerts are with the same status, just use it
+        severities = [AlertSeverity(alert.event["severity"]) for alert in alerts]
         max_severity = max(severities, key=lambda severity: severity.order)
         return str(max_severity)
 
@@ -96,9 +110,7 @@ class RulesEngine:
                 **group.alerts[0].event,
             }
             group_description = chevron.render(rule.group_description, context)
-            group_severity = self._calc_max_severity(
-                [alert.event["severity"] for alert in group.alerts]
-            )
+            group_severity = self._calc_max_severity(group.alerts)
             # group all the sources from all the alerts
             group_source = list(
                 set(
