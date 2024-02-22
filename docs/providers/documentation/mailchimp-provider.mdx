@@ -1,0 +1,67 @@
+---
+title: "Mailchimp"
+sidebarTitle: "Mailchimp Provider"
+---
+
+# Mailchimp Provider
+
+MailchimpProvider is a class that implements the Mailchimp API and allows email sending through Keep.
+
+## Inputs
+The `notify` function of `MailchimpProvider` takes the following arguments:
+
+- `_from` (str): Required. The email address of the sender.
+- `to` (str): Required. The email address of the recipient.
+- `subject` (str): Required. The subject of the email.
+- `html` (str): Required. The HTML body of the email.
+- `**kwargs` (optional): Additional optional parameters can be provided as key-value pairs.
+
+See [documentation](https://mailchimp.com/docs/api-reference/emails/send-email) for more
+
+## Outputs
+The `notify` function of `ResendProvider` outputs the following format (example):
+
+```json
+{
+  "email": "user@example.com",
+  "status": "sent",
+  "_id": "8db77476a09d4b47ae1b9bc69d1c74e3",
+  "reject_reason": null,
+  "queued_reason": null
+}
+```
+
+See [documentation](https://mailchimp.com/developer/transactional/guides/quick-start/) for more
+
+
+## Authentication Parameters
+The Mailchimp provider requires the following authentication parameter:
+
+- `api_key`: Required. Mailchimp Transactional API key. You can obtain an API key by visiting [Mailchimp API Keys](https://mandrillapp.com//settings).
+
+## Connecting with the Provider
+To connect with the Mailchimp provider and send emails through Keep, follow these steps:
+
+1. Obtain a Mailchimp Transactional API key: Visit [Mailchimp API Keys](https://mandrillapp.com//settings) to obtain an API key if you don't have one already.
+2. Configure the Mailchimp provider in your system with the obtained API key.
+3. Use the following YAML example to send an email notification using the Mailchimp provider:
+
+```yaml title=examples/alert_example.yml
+# Send an email notification using the Mailchimp provider.
+alert:
+  id: email-notification
+  description: Send an email notification using Mailchimp
+  actions:
+    - name: send-email
+      provider:
+        type: mailchimp
+        config: "{{ providers.mailchimp-provider }}"
+        with:
+          _from: "sender@example.com"
+          to: "recipient@example.com"
+          subject: "Hello from Mailchimp Provider"
+          html: "<p>This is the email body.</p>"
+```
+
+## Useful Links
+- [Mailchimp API Keys](https://mailchimp.com/developer/transactional/guides/quick-start/#generate-your-api-key)
