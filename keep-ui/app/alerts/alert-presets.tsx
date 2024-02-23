@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
-import { Button, Subtitle } from "@tremor/react";
+import { Button, Subtitle, Switch } from "@tremor/react";
 import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
@@ -29,6 +29,11 @@ export default function AlertPresets({
   setSelectedOptions,
   isLoading,
 }: Props) {
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+
+  const handleSwitchChange = (value: boolean) => {
+    setIsPrivate(value);
+  }
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets({ revalidateOnFocus: false });
@@ -143,6 +148,7 @@ export default function AlertPresets({
     return label.toLowerCase().includes(input.toLowerCase());
   };
 
+  // When deleting a preset, we check if it is a private or global
   async function deletePreset(presetId: string) {
     if (
       confirm(`You are about to delete preset ${preset!.name}, are you sure?`)
@@ -163,6 +169,8 @@ export default function AlertPresets({
     }
   }
 
+
+  // Add an option or check box, if it will be global or private.
   async function addOrUpdatePreset() {
     const presetName = prompt(
       `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
@@ -183,7 +191,11 @@ export default function AlertPresets({
             Authorization: `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name: presetName, options: options }),
+          body: JSON.stringify({
+            name: presetName,
+            options: options,
+            is_global: isPrivate,
+          }),
         }
       );
       if (response.ok) {
@@ -224,17 +236,30 @@ export default function AlertPresets({
           isDisabled={isLoading}
         />
         {preset?.name === "Feed" && (
-          <Button
-            icon={PlusIcon}
-            size="xs"
-            color="orange"
-            className="ml-2.5"
-            disabled={selectedOptions.length <= 0}
-            onClick={async () => await addOrUpdatePreset()}
-            tooltip="Save current filter as a view"
-          >
-            Create Preset
-          </Button>
+          <>
+            <Button
+              icon={PlusIcon}
+              size="xs"
+              color="orange"
+              className="ml-2.5"
+              disabled={selectedOptions.length <= 0}
+              onClick={async () => await addOrUpdatePreset()}
+              tooltip="Save current filter as a view"
+            >
+              Create Preset
+            </Button>
+            <div className="flex items-center mb-4">
+              <Switch
+                id="switch"
+                name="switch"
+                checked={isPrivate}
+                onChange={handleSwitchChange}
+              />
+              <label htmlFor="switch" className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                Save preset as private or global.
+                 </label>
+            </div>
+          </>
         )}
         {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
           <div className="flex ml-2.5">
