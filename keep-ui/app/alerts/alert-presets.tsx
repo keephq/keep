@@ -8,6 +8,7 @@ import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
+import { useRouter } from "next/navigation";
 
 export interface Option {
   readonly label: string;
@@ -36,8 +37,11 @@ export default function AlertPresets({
   }
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets({ revalidateOnFocus: false });
+  const { mutate: presetsMutator } = useAllPresets({
+    revalidateOnFocus: false,
+  });
   const { data: session } = useSession();
+  const router = useRouter();
 
   const selectRef = useRef(null);
   const [options, setOptions] = useState<Option[]>([]);
@@ -172,11 +176,11 @@ export default function AlertPresets({
 
   // Add an option or check box, if it will be global or private.
   async function addOrUpdatePreset() {
-    const presetName = prompt(
+    const newPresetName = prompt(
       `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
-      preset?.name === "Feed" || preset?.name === "Deleted" ? "" : preset?.name
+      preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
     );
-    if (presetName) {
+    if (newPresetName) {
       const options = selectedOptions.map((option) => {
         return {
           value: option.value,
@@ -201,14 +205,15 @@ export default function AlertPresets({
       if (response.ok) {
         toast(
           preset?.name
-            ? `Preset ${presetName} updated!`
-            : `Preset ${presetName} created!`,
+            ? `Preset ${newPresetName} updated!`
+            : `Preset ${newPresetName} created!`,
           {
             position: "top-left",
             type: "success",
           }
         );
-        presetsMutator();
+        await presetsMutator();
+        router.push(`/alerts/${newPresetName.toLowerCase()}`);
       }
     }
   }
@@ -235,6 +240,7 @@ export default function AlertPresets({
           isClearable={false}
           isDisabled={isLoading}
         />
+
         {preset?.name === "Feed" && (
           <>
             <Button
@@ -260,8 +266,7 @@ export default function AlertPresets({
                  </label>
             </div>
           </>
-        )}
-        {preset?.name !== "Deleted" && preset?.name !== "Feed" && (
+        {preset?.name !== "deleted" && preset?.name !== "feed" && (
           <div className="flex ml-2.5">
             <Button
               icon={CheckIcon}

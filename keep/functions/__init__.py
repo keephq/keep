@@ -1,4 +1,5 @@
 import datetime
+import json
 import urllib.parse
 from itertools import groupby
 
@@ -69,6 +70,12 @@ def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
 def datetime_compare(t1, t2) -> float:
     diff = (t1 - t2).total_seconds() / 3600
     return diff
+
+
+def json_dumps(data: str | dict) -> str:
+    if isinstance(data, str):
+        data = json.loads(data)
+    return json.dumps(data, indent=4, default=str)
 
 
 def encode(string) -> str:

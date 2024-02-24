@@ -1,3 +1,5 @@
+import hashlib
+
 from keep.api.models.alert import AlertDto
 
 
@@ -20,4 +22,4 @@ def test_alert_dto_fingerprint_none():
         event_id="1234",
         url="https://www.google.com/search?q=open+source+alert+management",
     )
-    assert alert_dto.fingerprint == name
+    assert alert_dto.fingerprint == hashlib.sha256(name.encode()).hexdigest()

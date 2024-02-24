@@ -1,27 +1,30 @@
-import { Card, TabGroup, TabList, Tab, TabPanels } from "@tremor/react";
+import { Card } from "@tremor/react";
 import { Preset } from "./models";
 import { useMemo, useState } from "react";
-import "./alerts.client.css";
 import AlertStreamline from "./alert-streamline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
 import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
-import { ProviderMethod } from "app/providers/providers";
+import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 
 const defaultPresets: Preset[] = [
-  { name: "Feed", options: [] },
-  { name: "Deleted", options: [] },
-  { name: "Groups", options: [] },
+  { name: "feed", options: [] },
+  { name: "deleted", options: [] },
+  { name: "groups", options: [] },
 ];
 
-export default function Alerts() {
+type AlertsProps = {
+  presetName: string;
+};
+
+export default function Alerts({ presetName }: AlertsProps) {
   const { useAllAlertsWithSubscription } = useAlerts();
 
   const { data: providersData = { installed_providers: [] } } = useProviders();
@@ -36,11 +39,11 @@ export default function Alerts() {
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
+  const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
+    useState<AlertDto | null>();
 
-  const { useAllPresets, getCurrentPreset } = usePresets();
-  const pathname = usePathname();
+  const { useAllPresets } = usePresets();
   const router = useRouter();
-  const currentSelectedPreset = getCurrentPreset();
 
   const {
     data: alerts,
@@ -54,12 +57,13 @@ export default function Alerts() {
   });
   const presets = [...defaultPresets, ...savedPresets] as const;
 
-  const selectPreset = (presetName: string) => {
-    router.replace(`${pathname}?selectedPreset=${presetName}`);
-  };
+  const selectedPreset = presets.find(
+    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
+  );
 
-  const selectedPresetIndex =
-    presets.findIndex((preset) => preset.name === currentSelectedPreset) ?? 0;
+  if (selectedPreset === undefined) {
+    router.push("/alerts/feed");
+  }
 
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
@@ -69,43 +73,34 @@ export default function Alerts() {
           lastSubscribedDate={lastSubscribedDate}
         />
       )}
-      {/* key is necessary to re-render tabs on preset delete */}
-      <TabGroup key={presets.length} index={selectedPresetIndex}>
-        <TabList variant="line" color="orange">
-          {presets.map((preset, index) => (
-            <Tab
-              key={preset.name}
-              tabIndex={index}
-              onClick={() => selectPreset(preset.name)}
-            >
-              {preset.name}
-            </Tab>
-          ))}
-        </TabList>
-        <TabPanels>
-          {presets.map((preset) => (
-            <AlertTableTabPanel
-              key={preset.name}
-              preset={preset}
-              alerts={alerts}
-              isAsyncLoading={isAsyncLoading}
-              setTicketModalAlert={setTicketModalAlert}
-              setNoteModalAlert={setNoteModalAlert}
-            />
-          ))}
-        </TabPanels>
-        <AlertHistory alerts={alerts} />
-        <AlertAssignTicketModal
-          handleClose={() => setTicketModalAlert(null)}
-          ticketingProviders={ticketingProviders}
-          alert={ticketModalAlert ?? null}
+      {selectedPreset && (
+        <AlertTableTabPanel
+          key={selectedPreset.name}
+          preset={selectedPreset}
+          alerts={alerts}
+          isAsyncLoading={isAsyncLoading}
+          setTicketModalAlert={setTicketModalAlert}
+          setNoteModalAlert={setNoteModalAlert}
+          setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         />
-        <AlertNoteModal
-          handleClose={() => setNoteModalAlert(null)}
-          alert={noteModalAlert ?? null}
-        />
-        <AlertMethodModal />
-      </TabGroup>
+      )}
+      {selectedPreset && (
+        <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+      )}
+      <AlertAssignTicketModal
+        handleClose={() => setTicketModalAlert(null)}
+        ticketingProviders={ticketingProviders}
+        alert={ticketModalAlert ?? null}
+      />
+      <AlertNoteModal
+        handleClose={() => setNoteModalAlert(null)}
+        alert={noteModalAlert ?? null}
+      />
+      {selectedPreset && <AlertMethodModal presetName={selectedPreset.name} />}
+      <AlertRunWorkflowModal
+        alert={runWorkflowModalAlert}
+        handleClose={() => setRunWorkflowModalAlert(null)}
+      />
     </Card>
   );
 }

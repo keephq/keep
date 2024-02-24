@@ -66,7 +66,7 @@ class DatadogProviderAuthConfig:
     )
     domain: str = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "Datadog API domain",
             "sensitive": False,
             "hint": "https://api.datadoghq.com",

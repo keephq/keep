@@ -1,4 +1,3 @@
-import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
@@ -10,21 +9,20 @@ import { PaginationState } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
+import Modal from "@/components/ui/Modal";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
     lastReceived: Date;
   })[];
+  presetName: string;
 }
 
 const AlertHistoryPanel = ({
   alertsHistoryWithDate,
+  presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
 
   const [rowPagination, setRowPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -63,11 +61,7 @@ const AlertHistoryPanel = ({
         </div>
         <Button
           className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-          onClick={() =>
-            router.replace(`/alerts?selectedPreset=${currentPreset}`, {
-              scroll: false,
-            })
-          }
+          onClick={() => router.replace(`/alerts/${presetName}`)}
         >
           Close
         </Button>
@@ -98,9 +92,10 @@ const AlertHistoryPanel = ({
 
 interface Props {
   alerts: AlertDto[];
+  presetName: string;
 }
 
-export function AlertHistory({ alerts }: Props) {
+export function AlertHistory({ alerts, presetName }: Props) {
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -109,9 +104,6 @@ export function AlertHistory({ alerts }: Props) {
       ? searchParams.get("fingerprint") === alert.fingerprint
       : undefined
   );
-  const currentPreset = searchParams
-    ? searchParams.get("selectedPreset")
-    : "Feed";
 
   const { useAlertHistory } = useAlerts();
   const { data: alertHistory = [] } = useAlertHistory(selectedAlert, {
@@ -124,50 +116,16 @@ export function AlertHistory({ alerts }: Props) {
   }));
 
   return (
-    <Transition appear show={selectedAlert !== undefined} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={() =>
-          router.replace(`/alerts?selectedPreset=${currentPreset}`, {
-            scroll: false,
-          })
-        }
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-900 bg-opacity-25" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex h-full items-center justify-center p-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel
-                className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
+    <Modal
+      isOpen={selectedAlert !== undefined}
+      onClose={() => router.replace(`/alerts/${presetName}`)}
+      className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
-              >
-                <AlertHistoryPanel
-                  alertsHistoryWithDate={alertsHistoryWithDate}
-                />
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition>
+    >
+      <AlertHistoryPanel
+        alertsHistoryWithDate={alertsHistoryWithDate}
+        presetName={presetName}
+      />
+    </Modal>
   );
 }

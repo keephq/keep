@@ -1,5 +1,3 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "pages/api/auth/[...nextauth]";
 import ProvidersPage from "./page.client";
 
 export default async function Page({
