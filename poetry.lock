@@ -1897,6 +1897,23 @@ files = [
 ]
 
 [[package]]
+name = "mailchimp-transactional"
+version = "1.0.56"
+description = "Mailchimp Transactional API"
+optional = false
+python-versions = "*"
+files = [
+    {file = "mailchimp_transactional-1.0.56-py3-none-any.whl", hash = "sha256:a76ea88b90a2d47d8b5134586aabbd3a96c459f6066d8886748ab59e50de36eb"},
+]
+
+[package.dependencies]
+certifi = ">=2017.4.17"
+python-dateutil = ">=2.1"
+requests = ">=2.23"
+six = ">=1.10"
+urllib3 = ">=1.23"
+
+[[package]]
 name = "mccabe"
 version = "0.7.0"
 description = "McCabe checker, plugin for flake8"
@@ -4430,4 +4447,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "06eda6ff94200921d87cbd7ba9d6c2252f55987cd3eba60428b05b6dd1111115"
+content-hash = "3d586178ae001464f57f6b5981381ceb8bf1f093cf72155f31e5832fb3a61819"
