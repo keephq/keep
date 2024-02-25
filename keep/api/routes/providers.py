@@ -2,13 +2,14 @@ import json
 import logging
 import time
 import uuid
-import yaml
 from typing import Callable, Optional
 
 import sqlalchemy
+import yaml
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi import UploadFile as fastapiuploadfile
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
@@ -82,11 +83,9 @@ def get_providers(
             "installed_providers": [],
             "is_localhost": is_localhost,
         }
-    
-@router.get(
-    "/export",
-    description="export all installed providers"
-)
+
+
+@router.get("/export", description="export all installed providers")
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:providers"])
@@ -104,15 +103,13 @@ def get_installed_providers(
     try:
         return {
             "installed_providers": installed_providers,
-            "is_localhost": is_localhost
+            "is_localhost": is_localhost,
         }
     except Exception as e:
         logger.info(f"execption in {e}")
         logger.exception("Failed to get providers")
-        return {
-            "installed_providers": [],
-            "is_localhost": is_localhost
-        }
+        return {"installed_providers": [], "is_localhost": is_localhost}
+
 
 @router.get(
     "/{provider_type}/{provider_id}/configured-alerts",
@@ -569,6 +566,11 @@ async def install_provider(
     try:
         session.add(provider_model)
         session.commit()
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Provider already installed",
+        )
     except Exception as e:
         logger.exception("Failed to add provider to db")
         return JSONResponse(
