@@ -198,7 +198,7 @@ export default function AlertPresets({
           body: JSON.stringify({
             name: presetName,
             options: options,
-            is_global: isPrivate,
+            is_private: isPrivate,
           }),
         }
       );

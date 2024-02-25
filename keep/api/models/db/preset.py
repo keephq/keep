@@ -12,7 +12,8 @@ class Preset(SQLModel, table=True):
 
     # if created_by is not null then it means this preset is only for this user
     # keeping index=True for better search
-    created_by: Optional[str] = Field(index=True, nullable=True)
+    created_by: Optional[str] = Field(index=True, nullable=False)
+    is_private: Optional[bool] = Field(nullable=True)
     name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
 
@@ -22,6 +23,7 @@ class PresetDto(BaseModel, extra="ignore"):
     name: str
     options: list = []
     created_by: Optional[str] = None
+    is_private: Optional[bool] = Field(nullable=True)
 
 
 class PresetOption(BaseModel, extra="ignore"):
