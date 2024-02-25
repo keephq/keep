@@ -145,7 +145,7 @@ export default function AlertMenu({
     handleCloseMenu();
   };
 
-  const canAssign = !alert.assignee;
+  const canAssign = true; //!alert.assignee;
 
   const handleMenuToggle = () => {
     setIsMenuOpen(alert.fingerprint);
