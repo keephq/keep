@@ -145,7 +145,7 @@ export default function AlertMenu({
     handleCloseMenu();
   };
 
-  const canAssign = !alert.assignee;
+  const canAssign = true; // TODO: keep track of assignments for auditing
 
   const handleMenuToggle = () => {
     setIsMenuOpen(alert.fingerprint);
