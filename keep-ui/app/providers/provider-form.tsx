@@ -293,11 +293,14 @@ const ProviderForm = ({
         if (!response.ok) {
           // If the response is not okay, throw the error message
           return response_json.then((errorData) => {
+            if (response.status === 409) {
+              throw `Provider with name ${formValues.provider_name} already exists`;
+            }
             const errorDetail = errorData.detail;
             if (response.status === 412) {
               setProviderValidatedScopes(errorDetail);
             }
-            throw `Scopes are invalid for ${provider.type}: ${JSON.stringify(
+            throw `${provider.type} scopes are invalid: ${JSON.stringify(
               errorDetail,
               null,
               4
@@ -339,7 +342,11 @@ const ProviderForm = ({
           console.log("Connect Result:", data);
           setIsLoading(false);
           onConnectChange(false, true);
-          if (formValues.install_webhook && provider.can_setup_webhook) {
+          if (
+            formValues.install_webhook &&
+            provider.can_setup_webhook &&
+            !isLocalhost
+          ) {
             installWebhook(data as Provider, accessToken);
           }
           onAddProvider({ ...provider, ...data } as Provider);
