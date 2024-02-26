@@ -40,7 +40,6 @@ export interface Preset {
   id?: string;
   name: string;
   options: Option[];
-  created_by: Option[]
 }
 
 export const AlertKnownKeys = [
