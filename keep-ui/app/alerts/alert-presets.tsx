@@ -196,7 +196,7 @@ export default function AlertPresets({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            name: presetName,
+            name: newPresetName,
             options: options,
             is_private: isPrivate,
           }),
@@ -241,31 +241,38 @@ export default function AlertPresets({
           isDisabled={isLoading}
         />
 
-        {preset?.name === "Feed" && (
+{preset?.name === "feed" && (
           <>
-            <Button
-              icon={PlusIcon}
-              size="xs"
-              color="orange"
-              className="ml-2.5"
-              disabled={selectedOptions.length <= 0}
-              onClick={async () => await addOrUpdatePreset()}
-              tooltip="Save current filter as a view"
-            >
-              Create Preset
-            </Button>
-            <div className="flex items-center mb-4">
-              <Switch
-                id="switch"
-                name="switch"
-                checked={isPrivate}
-                onChange={handleSwitchChange}
-              />
-              <label htmlFor="switch" className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-                Save preset as private or global.
-                 </label>
-            </div>
-          </>
+<div className="flex items-center mb-4">
+           
+           <Button 
+  icon={PlusIcon} 
+  size="xs" 
+  color="orange" 
+  className="ml-2.5 rounded-lg shadow-md"
+  disabled={selectedOptions.length <= 0}
+  onClick={async () => await addOrUpdatePreset()}
+  tooltip="Save current filter as a view"
+>
+  Create Preset
+</Button>
+
+  <Switch 
+    id="switch"
+    name="switch"
+    checked={isPrivate}
+    onChange={handleSwitchChange} 
+    className="focus:outline-none focus:ring-2 focus:ring-orange-500"
+  />
+
+  <label 
+    htmlFor="switch"
+    className="text-gray-700 dark:text-gray-200 ml-2 text-sm font-medium"
+  >
+    Save preset as private or global.
+  </label>  
+</div>
+          </>)}
         {preset?.name !== "deleted" && preset?.name !== "feed" && (
           <div className="flex ml-2.5">
             <Button
