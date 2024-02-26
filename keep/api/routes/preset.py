@@ -2,7 +2,8 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
+
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
@@ -24,9 +25,17 @@ def get_presets(
     logger.info("Getting all presets")
 
     # only global presets
-    statement = select(Preset).where(
-        Preset.tenant_id == tenant_id
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(
+            or_(
+                Preset.created_by == None,
+                Preset.created_by == authenticated_entity.email,
+            )
+        )
     )
+
     presets = session.exec(statement).all()
     logger.info("Got all presets")
     return [PresetDto(**preset.dict()) for preset in presets]
