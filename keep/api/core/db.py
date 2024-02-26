@@ -89,6 +89,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 
 if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
@@ -101,7 +102,7 @@ elif db_connection_string == "impersonate":
         creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(db_connection_string)
+    engine = create_engine(db_connection_string, pool_size=pool_size)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
