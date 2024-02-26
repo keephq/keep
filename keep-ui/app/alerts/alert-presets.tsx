@@ -263,7 +263,6 @@ export default function AlertPresets({
     onChange={handleSwitchChange} 
     className="focus:outline-none focus:ring-2 focus:ring-orange-500"
   />
-
   <label 
     htmlFor="switch"
     className="text-gray-700 dark:text-gray-200 ml-2 text-sm font-medium"
