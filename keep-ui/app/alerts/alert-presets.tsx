@@ -256,7 +256,6 @@ export default function AlertPresets({
 >
   Create Preset
 </Button>
-
   <Switch 
     id="switch"
     name="switch"
