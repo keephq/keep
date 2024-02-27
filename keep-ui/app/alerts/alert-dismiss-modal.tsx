@@ -84,6 +84,7 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
     setSelectedOption({ value: 'forever', label: 'Forever' });
     setDateSelected(false);
     setIsDatePickerOpen(false);
+    setDismissComment('');
     handleClose();
   };
 
