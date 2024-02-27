@@ -15,7 +15,6 @@ const mulish = Mulish({
 
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
-import { MinimizeMenuButton } from "components/navbar/MinimizeMenuButton";
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -28,8 +27,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <NextAuthProvider>
           {/* @ts-ignore-error Server Component */}
           <Navbar />
-          {/* @ts-ignore-error Server Component */}
-          <MinimizeMenuButton />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
           <main className="flex flex-col col-start-3 p-4 overflow-auto">
             <div className="flex-1 h-0">
