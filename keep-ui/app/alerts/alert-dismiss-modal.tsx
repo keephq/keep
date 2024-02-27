@@ -16,7 +16,7 @@ import { useSession } from "next-auth/react";
 import { format, set } from "date-fns";
 
 interface Props {
-  alert: AlertDto;
+  alert: AlertDto | null | undefined;
   handleClose: () => void;
 }
 
@@ -35,9 +35,12 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
     const [selectedOption, setSelectedOption] = useState({ value: '', label: 'Dismiss Forever' });
 
   const { data: session } = useSession();
+  // if this modal should not be open, do nothing
+  if (!alert) return null;
+
   const isOpen = !!alert;
 
-  const handleDismissOptionChange = (selectedOption) => {
+  const handleDismissOptionChange = (selectedOption: any) => {
     setSelectedOption(selectedOption);
     const custom = selectedOption.value === 'custom';
     setIsDatePickerOpen(custom);
@@ -49,7 +52,7 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
     }
   };
 
-  const handleDateChange = (date) => {
+  const handleDateChange = (date: any) => {
     const hasTimeChanged = date.getHours() !== selectedTime.getHours() ||
                             date.getMinutes() !== selectedTime.getMinutes() ||
                             date.getSeconds() !== selectedTime.getSeconds();
