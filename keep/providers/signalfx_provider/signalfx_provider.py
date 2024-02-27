@@ -1,10 +1,11 @@
 import base64
 import dataclasses
+import datetime
 
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
@@ -82,8 +83,25 @@ class SignalfxProvider(BaseProvider):
 
     PROVIDER_METHODS = []
 
-    FINGERPRINT_FIELDS = ["event_type", "detector_id"]
+    FINGERPRINT_FIELDS = ["detectorId", "incidentId"]
     PROVIDER_DISPLAY_NAME = "SignalFx"
+
+    SEVERITIES_MAP = {
+        "Critical": AlertSeverity.CRITICAL,
+        "Major": AlertSeverity.HIGH,
+        "Warning": AlertSeverity.WARNING,
+        "Info": AlertSeverity.INFO,
+        "Minor": AlertSeverity.LOW,
+    }
+
+    # https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
+    #   search for "statusExtended"
+    STATUS_MAP = {
+        "ok": AlertStatus.RESOLVED,
+        "anomalous": AlertStatus.FIRING,
+        "manually resolved": AlertStatus.RESOLVED,
+        "stopped": AlertStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -129,13 +147,31 @@ class SignalfxProvider(BaseProvider):
     @staticmethod
     def _format_alert(event: dict) -> AlertDto:
         # Transform a SignalFx event into an AlertDto object
-        # see: https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
-        return AlertDto(
-            id=event.get("id"),
-            name=event.get("name"),
-            message=event.get("description"),
-            # Fill in the rest of the required fields based on SignalFx event structure
+        #   see: https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
+        severity = SignalfxProvider.SEVERITIES_MAP.get(
+            event.pop("severity"), AlertSeverity.INFO
         )
+        status = SignalfxProvider.STATUS_MAP.get(
+            event.pop("statusExtended"), AlertStatus.FIRING
+        )
+        message = event.pop("description", "")
+        name = event.pop("messageTitle", "")
+        lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
+        url = event.pop("detectorUrl")
+        _id = event.pop("incidentId")
+        alert_dto = AlertDto(
+            id=_id,
+            name=name,
+            message=message,
+            lastReceived=lastReceived,
+            severity=severity,
+            status=status,
+            url=url,
+        )
+        alert_dto.fingerprint = SignalfxProvider.get_alert_fingerprint(
+            alert_dto, SignalfxProvider.FINGERPRINT_FIELDS
+        )
+        return alert_dto
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -151,7 +187,9 @@ class SignalfxProvider(BaseProvider):
                 "SignalFx email, password and organization ID are required for webhook setup"
             )
             return None
-        # 1. First - get session token
+        # 1. First - get session token becuase to set up webhook
+        #            you must have User API access token and you can use the Org access token
+        #            https://dev.splunk.com/observability/reference/api/sessiontokens/latest
         headers = self._get_headers()
         session_payload = {
             "email": email,
@@ -186,7 +224,8 @@ class SignalfxProvider(BaseProvider):
             return None
 
         integration_id = None
-        for integration in response.json().get("results", []):
+        integrations = response.json().get("results", [])
+        for integration in integrations:
             # check if the webhook integration already exists
             if (
                 integration.get("name")
@@ -226,6 +265,8 @@ class SignalfxProvider(BaseProvider):
                 headers=headers,
                 json=webhook_payloads,
             )
+            # keep the integration id for later
+            integration_id = response.json().get("id")
         try:
             response.raise_for_status()
         # catch any HTTP errors
@@ -245,21 +286,70 @@ class SignalfxProvider(BaseProvider):
             self.logger.error(f"Failed to get SignalFx detectors: {e.response.text}")
             return None
         detectors = response.json().get("results", [])
+        # subscribe the webhook to all detectors
         for detector in detectors:
-            detector_id = detector.get("id")
-            response = requests.post(
-                f"{self.api_url}/v2/detector/{detector_id}/subscription",
-                headers=headers,
-                json={"integrationId": integration_id},
+            self.logger.info(
+                "Updating SignalFx detector",
+                extra={
+                    "detector_id": detector.get("id"),
+                    "detector_name": detector.get("name"),
+                },
             )
-            try:
-                response.raise_for_status()
-            # catch any HTTP errors
-            except requests.exceptions.HTTPError as e:
-                self.logger.error(
-                    f"Failed to subscribe SignalFx detector {detector_id} to webhook: {e.response.text}"
+            detector_id = detector.get("id")
+            rules = detector.get("rules", [])
+            detector_updated = False
+            for rule in rules:
+                notifications = rule.get("notifications", [])
+                keep_installed = integration_id in [
+                    notification.get("credentialId") for notification in notifications
+                ]
+                if not keep_installed:
+                    # add the webhook as a notification to the rule
+                    self.logger.info(
+                        "Adding SignalFx webhook to detector rule",
+                        extra={
+                            "rule_id": rule.get("id"),
+                            "rule_name": rule.get("name"),
+                        },
+                    )
+                    notifications.append(
+                        {
+                            "credentialId": integration_id,
+                            "type": "Webhook",
+                        }
+                    )
+                    detector_updated = True
+            # if at least one rule was updated, update the detector
+            if detector_updated:
+                # update the detector
+                #   https://dev.splunk.com/observability/reference/api/detectors/latest#endpoint-update-single-detector
+                self.logger.info(
+                    "Updating SignalFx detector",
+                    extra={
+                        "detector_id": detector_id,
+                        "detector_name": detector.get("name"),
+                    },
                 )
-                return None
+                response = requests.put(
+                    f"{self.api_url}/v2/detector/{detector_id}",
+                    headers=headers,
+                    json=detector,
+                )
+                try:
+                    response.raise_for_status()
+                    self.logger.info(
+                        "SignalFx detector updated",
+                        extra={
+                            "detector_id": detector_id,
+                            "detector_name": detector.get("name"),
+                        },
+                    )
+                # catch any HTTP errors
+                except requests.exceptions.HTTPError as e:
+                    self.logger.error(
+                        f"Failed to subscribe SignalFx detector {detector_id} to webhook: {e.response.text}"
+                    )
+                    return None
         self.logger.info("SignalFx webhook integration setup complete")
 
 
@@ -277,7 +367,7 @@ if __name__ == "__main__":
     email = os.environ.get("SIGNALFX_USER", "")
     password = os.environ.get("SIGNALFX_PASSWORD", "")
     org_id = os.environ.get("SIGNALFX_ORGID", "")
-
+    keep_api_key = os.environ.get("KEEP_API_KEY")
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
@@ -298,5 +388,5 @@ if __name__ == "__main__":
         provider_config=config,
     )
     keep_api_url = "https://7259-2a00-a041-3420-6000-2191-2ad8-a16f-e292.ngrok-free.app/alerts/event/signalfx"
-    webhook = provider.setup_webhook("keep", keep_api_url, "1234", True)
+    webhook = provider.setup_webhook("keep", keep_api_url, keep_api_key, True)
     print(webhook)
