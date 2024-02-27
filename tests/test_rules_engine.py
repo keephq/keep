@@ -1,7 +1,10 @@
 import datetime
 import hashlib
 import json
+import time
 import uuid
+
+from sqlalchemy.orm import subqueryload
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import get_rules as get_rules_db
@@ -335,6 +338,78 @@ def test_group_severity_and_status(db_session):
     assert results[0].status == AlertStatus.FIRING.value
     assert results[1].status == AlertStatus.FIRING.value
     assert results[2].status == AlertStatus.RESOLVED.value
+
+
+def test_expired_group(db_session):
+    # insert alerts
+    alerts_dto = [
+        AlertDto(
+            id=str(uuid.uuid4()),
+            source=["grafana"],
+            name="grafana-test-alert",
+            status=AlertStatus.FIRING,
+            severity=AlertSeverity.CRITICAL,
+            lastReceived=datetime.datetime.now().isoformat(),
+            labels={"label_1": "a"},
+        )
+        for i in range(3)
+    ]
+    # add the alert to the db:
+    alerts = [
+        Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event=alert.dict(),
+            fingerprint=hashlib.sha256(json.dumps(alert.dict()).encode()).hexdigest(),
+        )
+        for alert in alerts_dto
+    ]
+    db_session.add_all(alerts)
+    db_session.commit()
+    # update the dto's event_id
+    for i, alert in enumerate(alerts_dto):
+        alert.event_id = alerts[i].id
+    # create a simple rule
+    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    # simple rule
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=1,  # 1 second so it will expire
+        definition_cel='(source == "grafana" && labels.label_1 == "a")',
+        created_by="test@keephq.dev",
+    )
+    # Run for the first time
+    results = rules_engine.run_rules([alerts_dto[0]])
+    # this should create a group
+    assert results[0].num_of_alerts == 1
+    assert results[0].status == AlertStatus.FIRING.value
+    assert results[0].severity == AlertSeverity.CRITICAL.value
+    expired_group_id = results[0].id
+    # now let's sleep two seconds to let the group expire
+    time.sleep(2)
+    # Run for the second time
+    results = rules_engine.run_rules([alerts_dto[1]])
+    # this should create a new group
+    assert results[0].num_of_alerts == 1
+    assert results[0].status == AlertStatus.FIRING.value
+    assert results[0].severity == AlertSeverity.CRITICAL.value
+
+    # but the group should be different
+    expired_group = (
+        db_session.query(Alert)
+        .filter(Alert.fingerprint == expired_group_id)
+        .options(subqueryload(Alert.alert_enrichment))
+        .first()
+    )
+    expired_group_dto = AlertDto(**expired_group.event)
+    assert expired_group_dto.status == AlertStatus.RESOLVED.value
+    assert expired_group.alert_enrichment.enrichments.get("group_expired")
 
 
 # Next steps:
