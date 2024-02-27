@@ -38,6 +38,9 @@ class AlertDeduplicator:
         alert_deduplicate = (
             True if get_alert_by_hash(self.tenant_id, alert_hash) else False
         )
+        if alert_deduplicate:
+            self.logger.info(f"Alert {alert.id} is deduplicated {alert.source}")
+
         return alert_hash, alert_deduplicate
 
     def _run_matcher(self, matcher, alert: AlertDto) -> bool:
