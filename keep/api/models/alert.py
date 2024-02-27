@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import logging
 from enum import Enum
@@ -64,6 +65,9 @@ class AlertDto(BaseModel):
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
     deleted: bool = False  # Whether the alert has been deleted
+    dismissUntil: str | None = None  # The time until the alert is dismissed
+    # DO NOT MOVE DISMISSED ABOVE dismissedUntil since it is used in root_validator
+    dismissed: bool = False  # Whether the alert has been dismissed
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
@@ -81,6 +85,31 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("dismissed", pre=True, always=True)
+    def validate_dismissed(cls, dismissed, values):
+        # normzlize dismissed value
+        if isinstance(dismissed, str):
+            dismissed = dismissed.lower() == "true"
+
+        # if dismissed is False, return False
+        if not dismissed:
+            return dismissed
+
+        # else, validate dismissedUntil
+        dismiss_until = values.get("dismissUntil")
+        # if there's no dismissUntil, return just return dismissed
+        if not dismiss_until:
+            return dismissed
+
+        # if there's dismissUntil, validate it
+        dismiss_until_datetime = datetime.datetime.strptime(
+            dismiss_until, "%Y-%m-%dT%H:%M:%S.%fZ"
+        ).replace(tzinfo=datetime.timezone.utc)
+        dismissed = (
+            datetime.datetime.now(datetime.timezone.utc) < dismiss_until_datetime
+        )
+        return dismissed
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -146,6 +175,13 @@ class AlertDto(BaseModel):
 class DeleteRequestBody(BaseModel):
     fingerprint: str
     lastReceived: str
+    restore: bool = False
+
+
+class DismissRequestBody(BaseModel):
+    fingerprint: str
+    dismissUntil: str
+    dismissComment: str
     restore: bool = False
 
 
