@@ -1,5 +1,5 @@
 import { Menu, Portal, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Icon } from "@tremor/react";
 import {
   ArchiveBoxIcon,
@@ -24,6 +24,7 @@ interface Props {
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
 }
 
@@ -32,6 +33,7 @@ export default function AlertMenu({
   isMenuOpen,
   setIsMenuOpen,
   setRunWorkflowModalAlert,
+  setDismissModalAlert,
   presetName,
 }: Props) {
   const router = useRouter();
@@ -75,30 +77,9 @@ export default function AlertMenu({
     </svg>
   );
 
-  const onDelete = async () => {
-    const confirmed = confirm(
-      `Are you sure you want to ${
-        alert.deleted ? "restore" : "delete"
-      } this alert?`
-    );
-    if (confirmed) {
-      const body = {
-        fingerprint: fingerprint,
-        lastReceived: alert.lastReceived,
-        restore: alert.deleted,
-      };
-      const res = await fetch(`${apiUrl}/alerts`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        await mutate();
-      }
-    }
+  const onDismiss = async () => {
+    setDismissModalAlert?.(alert);
+    await mutate();
   };
 
   const callAssignEndpoint = async (unassign: boolean = false) => {
@@ -315,7 +296,7 @@ export default function AlertMenu({
                     {({ active }) => (
                       <button
                         onClick={() => {
-                          onDelete();
+                          onDismiss();
                           handleCloseMenu();
                         }}
                         className={`${
@@ -326,7 +307,7 @@ export default function AlertMenu({
                           className="mr-2 h-4 w-4"
                           aria-hidden="true"
                         />
-                        {alert.deleted ? "Restore" : "Delete"}
+                        {alert.deleted ? "Restore" : "Dismiss"}
                       </button>
                     )}
                   </Menu.Item>

@@ -830,12 +830,16 @@ def enrich_alert(
         # use pusher to push the enriched alert to the client
         if pusher_client:
             logger.info("Pushing enriched alert to the client")
-            pusher_client.trigger(
-                f"private-{tenant_id}",
-                "async-alerts",
-                json.dumps([enriched_alerts_dto[0].dict()]),
-            )
-            logger.info("Pushed enriched alert to the client")
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-alerts",
+                    json.dumps([enriched_alerts_dto[0].dict()]),
+                )
+                logger.info("Pushed enriched alert to the client")
+            except Exception:
+                logger.exception("Failed to push alert to the client")
+                pass
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},

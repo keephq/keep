@@ -64,6 +64,7 @@ class AlertDto(BaseModel):
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
     deleted: bool = False  # Whether the alert has been deleted
+    dismissed: bool = False  # Whether the alert has been dismissed
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
@@ -81,6 +82,11 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("dismissed", pre=True, always=True)
+    def validate_dismissed(cls, dismissed, values):
+        # the dismissed being kept as string (enrichment)
+        return True if values.get("dismissed", "").lower() == "true" else False
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -146,6 +152,13 @@ class AlertDto(BaseModel):
 class DeleteRequestBody(BaseModel):
     fingerprint: str
     lastReceived: str
+    restore: bool = False
+
+
+class DismissRequestBody(BaseModel):
+    fingerprint: str
+    dismissUntil: str
+    dismissComment: str
     restore: bool = False
 
 

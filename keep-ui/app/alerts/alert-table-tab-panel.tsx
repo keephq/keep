@@ -63,6 +63,7 @@ interface Props {
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
+  setDismissModalAlert: (alert: AlertDto | null) => void;
 }
 
 const defaultRowPaginationState = {
@@ -77,6 +78,7 @@ export default function AlertTableTabPanel({
   setTicketModalAlert,
   setNoteModalAlert,
   setRunWorkflowModalAlert,
+  setDismissModalAlert,
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
@@ -118,6 +120,7 @@ export default function AlertTableTabPanel({
     setTicketModalAlert: setTicketModalAlert,
     setNoteModalAlert: setNoteModalAlert,
     setRunWorkflowModalAlert: setRunWorkflowModalAlert,
+    setDismissModalAlert: setDismissModalAlert,
     presetName: preset.name,
   });
 
