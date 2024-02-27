@@ -9,6 +9,8 @@ import {
   UserPlusIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
+import { IoNotificationsOffOutline } from "react-icons/io5";
+
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
@@ -76,6 +78,32 @@ export default function AlertMenu({
       />
     </svg>
   );
+
+  const onDelete = async () => {
+    const confirmed = confirm(
+      `Are you sure you want to ${
+        alert.deleted ? "restore" : "delete"
+      } this alert?`
+    );
+    if (confirmed) {
+      const body = {
+        fingerprint: fingerprint,
+        lastReceived: alert.lastReceived,
+        restore: alert.deleted,
+      };
+      const res = await fetch(`${apiUrl}/alerts`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session!.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        await mutate();
+      }
+    }
+  }
 
   const onDismiss = async () => {
     setDismissModalAlert?.(alert);
@@ -303,11 +331,30 @@ export default function AlertMenu({
                           active ? "bg-slate-200" : "text-gray-900"
                         }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                       >
+                        <IoNotificationsOffOutline
+                          className="mr-2 h-4 w-4"
+                          aria-hidden="true"
+                        />
+                        {alert.dismissed ? "Restore" : "Dismiss"}
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => {
+                          onDelete();
+                          handleCloseMenu();
+                        }}
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      >
                         <TrashIcon
                           className="mr-2 h-4 w-4"
                           aria-hidden="true"
                         />
-                        {alert.deleted ? "Restore" : "Dismiss"}
+                        {alert.deleted ? "Undelete" : "Delete"}
                       </button>
                     )}
                   </Menu.Item>

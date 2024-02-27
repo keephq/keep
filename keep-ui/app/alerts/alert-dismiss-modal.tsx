@@ -22,64 +22,77 @@ interface Props {
 
 export default function AlertDismissModal({ alert, handleClose }: Props) {
     const [dismissComment, setDismissComment] = useState<string>("");
-    const [dismissOption, setDismissOption] = useState('forever');
+    const [dismissOption, setDismissOption] = useState('');
+    // State to track if the date has been set
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedTime, setSelectedTime] = useState(new Date());
+
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    // State to track if the date has been set
     const [dateSelected, setDateSelected] = useState(false);
     const [timeSelected, setTimeSelected] = useState(false);
+
     const [selectedOption, setSelectedOption] = useState({ value: '', label: 'Dismiss Forever' });
 
-
-  const apiUrl = getApiURL();
   const { data: session } = useSession();
   const isOpen = !!alert;
 
   const handleDismissOptionChange = (selectedOption) => {
-    setSelectedOption(selectOptions[0]);
+    setSelectedOption(selectedOption);
     const custom = selectedOption.value === 'custom';
     setIsDatePickerOpen(custom);
     if(!custom){
       setDateSelected(false);
+      setSelectedDate(new Date());
       setTimeSelected(false);
+      setSelectedTime(new Date());
     }
   };
 
   const handleDateChange = (date) => {
-    setSelectedDate(date);
-    // Check if the time has changed
-    if (date.getHours() !== selectedTime.getHours() ||
-        date.getMinutes() !== selectedTime.getMinutes() ||
-        date.getSeconds() !== selectedTime.getSeconds()) {
-        setTimeSelected(true);
+    const hasTimeChanged = date.getHours() !== selectedTime.getHours() ||
+                            date.getMinutes() !== selectedTime.getMinutes() ||
+                            date.getSeconds() !== selectedTime.getSeconds();
+
+    const hasDateChanged = date.getDate() !== selectedDate.getDate() ||
+                           date.getMonth() !== selectedDate.getMonth() ||
+                           date.getFullYear() !== selectedDate.getFullYear();
+
+    setTimeSelected(hasTimeChanged);
+    setDateSelected(hasDateChanged);
+    // Only update the state if there's a change to reduce unnecessary re-renders
+    if (hasTimeChanged || hasDateChanged) {
+      // Updating both states together to ensure synchronization
+      setSelectedTime(date);
+      setSelectedDate(date);
+
+      // Update additional states as required
+      setSelectedOption({ value: date.toISOString(), label: `Until ${format(date, "MMMM d, yyyy h:mm:ss aa")}` });
+      setDismissOption(date.toISOString());
+
+      // Determine if both date and time have been selected
+      const bothSelected = (hasTimeChanged || timeSelected) && (hasDateChanged || dateSelected);
+      // Set the state to close the picker if both date and time have been selected
+      // This is an optimistic update, assuming the state updates for date and time are synchronous
+      if (bothSelected) {
+        setIsDatePickerOpen(false);
+      }
     }
-    // Check if the day has changed
-      if (date.getDate() !== selectedDate.getDate() ||
-      date.getMonth() !== selectedDate.getMonth() ||
-      date.getFullYear() !== selectedDate.getFullYear() || !timeSelected) {
-      setDateSelected(true);
-    }
-    setSelectedOption({ value: date.toISOString(), label: `Until ${format(date, "MMMM d, yyyy h:mm:ss aa")}` });
-    // If both date and time have been selected, close the picker
-    if (dateSelected && timeSelected) {
-      setIsDatePickerOpen(false);
-  }
   };
 
   const clearAndClose = () => {
     setSelectedOption({ value: 'forever', label: 'Forever' });
     setDateSelected(false);
-    setTimeSelected(false);
     setIsDatePickerOpen(false);
     handleClose();
   };
 
-  const handleDismiss = async () => {
+  const handleDismissChange = async () => {
       const requestData = {
         enrichments: {
             fingerprint: alert.fingerprint,
-            dismissed: true,
-            dismissComment: dismissComment,
+            dismissed: !alert.dismissed, // Toggle the dismissed state
+            note: dismissComment, // use the note mechanism to store the dismiss comment
             dismissUntil: dismissOption,
           },
         fingerprint: alert.fingerprint,
@@ -138,48 +151,73 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
 
   return (
     <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
-      <Title>Dismiss Until</Title>
-      <Select
-        value={selectedOption}
-        onChange={handleDismissOptionChange}
-        options={selectOptions}
-      />
-      {isDatePickerOpen && (
-        <div style={{ position: 'absolute', zIndex: 1000 }}>
-            <DatePicker
-              selected={selectedDate}
-              onChange={handleDateChange}
-              showTimeSelect
-              timeFormat="p"
-              timeIntervals={15}
-              timeCaption="Time"
-              dateFormat="MMMM d, yyyy h:mm:ss aa"
-              inline
-            />
+      {alert && alert.dismissed? (
+        <>
+        <Subtitle className="text-center">Are you sure you want to restore this alert?</Subtitle>
+        <div className="flex justify-center mt-4 space-x-2">
+          <Button
+            onClick={handleDismissChange}
+            color="orange"
+          >
+            Restore
+          </Button>
+          <Button
+            onClick={clearAndClose}
+            variant="secondary"
+          >
+            Cancel
+          </Button>
         </div>
-        )}
-        <Title className="mt-2">Dismiss Comment</Title>
-        <ReactQuill
-        value={dismissComment}
-        onChange={(value: string) => setDismissComment(value)}
-        theme="snow"
-        placeholder="Add your dismiss comment here..."
-        modules={modules}
-        formats={formats}
-      />
-      <Button
-          onClick={handleDismiss}
-          color="orange"
-          className="mr-2 mt-4"
-        >
-          Dismiss
-        </Button>
-        <Button // Use Tremor button for Cancel
-          onClick={clearAndClose}
-          variant="secondary"
-        >
-          Cancel
-        </Button>
+        </>
+      ) : (
+        <>
+          <Title>Dismiss Until</Title>
+          <Select
+            value={selectedOption}
+            onChange={handleDismissOptionChange}
+            options={selectOptions}
+          />
+          {isDatePickerOpen && (
+            <div style={{ position: 'absolute', zIndex: 1000 }}>
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={handleDateChange}
+                  showTimeSelect
+                  timeFormat="p"
+                  timeIntervals={15}
+                  timeCaption="Time"
+                  dateFormat="MMMM d, yyyy h:mm:ss aa"
+                  minDate={new Date()}
+                  minTime={set(new Date(), { hours: 0, minutes: 0, seconds: 0 })}
+                  maxTime={set(new Date(), { hours: 23, minutes: 59, seconds: 59 })}
+                  inline
+                />
+            </div>
+            )}
+            <Title className="mt-2">Dismiss Comment</Title>
+            <ReactQuill
+            value={dismissComment}
+            onChange={(value: string) => setDismissComment(value)}
+            theme="snow"
+            placeholder="Add your dismiss comment here..."
+            modules={modules}
+            formats={formats}
+          />
+          <Button
+              onClick={handleDismissChange}
+              color="orange"
+              className="mr-2 mt-4"
+            >
+              Dismiss
+            </Button>
+            <Button // Use Tremor button for Cancel
+              onClick={clearAndClose}
+              variant="secondary"
+            >
+              Cancel
+              </Button>
+            </>
+      )}
     </Modal>
   );
 }

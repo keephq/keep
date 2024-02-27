@@ -16,7 +16,11 @@ const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
   }
 
   if (presetName === "feed") {
-    return alert.deleted === false;
+    return alert.deleted === false && alert.dismissed === false;
+  }
+
+  if (presetName === "dismissed") {
+    return alert.dismissed === true;
   }
 
   return true;
@@ -115,7 +119,7 @@ export default function AlertTableTabPanel({
 
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
-    isCheckboxDisplayed: preset.name !== "deleted",
+    isCheckboxDisplayed: preset.name !== "deleted" && preset.name !== "dismissed",
     isMenuDisplayed: true,
     setTicketModalAlert: setTicketModalAlert,
     setNoteModalAlert: setNoteModalAlert,

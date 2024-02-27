@@ -18,6 +18,7 @@ import AlertDismissModal from "./alert-dismiss-modal";
 const defaultPresets: Preset[] = [
   { name: "feed", options: [] },
   { name: "deleted", options: [] },
+  { name: "dismissed", options: []},
   { name: "groups", options: [] },
 ];
 
