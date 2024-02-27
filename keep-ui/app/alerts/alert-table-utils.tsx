@@ -16,6 +16,7 @@ import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
+import { set } from "date-fns";
 
 export const DEFAULT_COLS = [
   "checkbox",
@@ -72,6 +73,7 @@ interface GenerateAlertTableColsArg {
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
 }
 
@@ -83,6 +85,7 @@ export const useAlertTableCols = (
     setNoteModalAlert,
     setTicketModalAlert,
     setRunWorkflowModalAlert,
+    setDismissModalAlert,
     presetName,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
@@ -252,6 +255,7 @@ export const useAlertTableCols = (
                 }
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                setDismissModalAlert={setDismissModalAlert}
               />
             ),
           }),
