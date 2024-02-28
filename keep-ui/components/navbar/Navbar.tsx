@@ -6,14 +6,14 @@ import { LearnLinks } from "components/navbar/LearnLinks";
 import { UserInfo } from "components/navbar/UserInfo";
 import { InitPostHog } from "components/navbar/InitPostHog";
 import { Menu } from "components/navbar/Menu";
-import { MinimizeMenuButton } from "./MinimizeMenuButton";
+import { MinimizeMenuButton } from "components/navbar/MinimizeMenuButton";
 
 export default async function NavbarInner() {
   const session = await getServerSession();
 
   return (
     <>
-      <InitPostHog />
+      <InitPostHog session={session} />
       <Menu>
         <div className="flex-1 h-full">
           <Search />

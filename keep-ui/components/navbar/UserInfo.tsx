@@ -10,7 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
-import DarkModeToggle from "app/dark-mode-toggle";
+import DarkModeToggle from "components/navbar/DarkModeToggle";
 import { useFloating } from "@floating-ui/react-dom";
 import { Icon } from "@tremor/react";
 

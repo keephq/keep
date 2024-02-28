@@ -1,16 +1,18 @@
-// app/posthog.tsx
 // took this from https://posthog.com/tutorials/nextjs-app-directory-analytics
 "use client";
 import posthog from "posthog-js";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { NoAuthUserEmail } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
+import { Session } from "next-auth";
 
-export const InitPostHog = () => {
+type InitPostHogProps = {
+  session: Session | null;
+};
+
+export const InitPostHog = ({ session }: InitPostHogProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const { data: configData } = useConfig();
 
   if (typeof window !== "undefined" && configData && configData.POSTHOG_KEY) {
