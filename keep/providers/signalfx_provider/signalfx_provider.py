@@ -158,6 +158,9 @@ class SignalfxProvider(BaseProvider):
         name = event.pop("messageTitle", "")
         lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
         url = event.pop("detectorUrl")
+        # quote the URL if needed
+        # if " " in url:
+
         _id = event.pop("incidentId")
         alert_dto = AlertDto(
             id=_id,
