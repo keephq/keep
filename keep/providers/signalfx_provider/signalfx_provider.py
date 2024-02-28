@@ -1,13 +1,18 @@
 import base64
 import dataclasses
 import datetime
+from urllib.parse import quote, urlparse
 
 import pydantic
 import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, ProviderConfig
+from keep.providers.base.base_provider import (
+    BaseProvider,
+    ProviderConfig,
+    ProviderScope,
+)
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -36,18 +41,6 @@ class SignalfxProviderAuthConfig:
             "hint": "https://api.{{realm}}.signalfx.com e.g. eu0",
         },
         default="eu0",
-    )
-    # https://dev.splunk.com/observability/reference/api/org_tokens/latest
-    # Authentication token. Must be a session token (User API access token).
-    #   The user who created the token has to have the Observability Cloud admin role to use this endpoint.
-    session_token: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "SignalFX session token. Required for setup webhook.",
-            "sensitive": True,
-            "hint": "https://dev.splunk.com/observability/reference/api/sessiontokens/latest",
-        },
-        default="",
     )
     email: str = dataclasses.field(
         metadata={
@@ -79,8 +72,16 @@ class SignalfxProviderAuthConfig:
 
 
 class SignalfxProvider(BaseProvider):
-    PROVIDER_SCOPES = []
-
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="API",
+            description="API authScope - read permission for SignalFx API",
+            mandatory=True,
+            mandatory_for_webhook=True,
+            documentation_url="https://dev.splunk.com/observability/reference/api/org_tokens/latest#endpoint-create-single-token",
+            alias="API Read",
+        ),
+    ]
     PROVIDER_METHODS = []
 
     FINGERPRINT_FIELDS = ["detectorId", "incidentId"]
@@ -107,15 +108,10 @@ class SignalfxProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-        self.api_url = (
-            f"https://api.{self.config.authentication.get('realm')}.signalfx.com"
-        )
-        self.api_token = self.config.authentication["sf_token"]
+        self.api_url = f"https://api.{self.authentication_config.realm}.signalfx.com"
+        self.api_token = self.authentication_config.sf_token
         if not self.api_token:
             raise ValueError("SignalFx token is required")
-
-        if not self.config.authentication.get("realm"):
-            raise ValueError("SignalFx realm is required")
 
     def _get_headers(self):
         return {
@@ -123,26 +119,93 @@ class SignalfxProvider(BaseProvider):
             "Content-Type": "application/json",
         }
 
+    def validate_scopes(self):
+        # try to get some data from the API
+        scopes = {}
+        headers = self._get_headers()
+        response = requests.get(f"{self.api_url}/v2/detector", headers=headers)
+        try:
+            response.raise_for_status()
+            scopes["API"] = True
+        except requests.exceptions.HTTPError as e:
+            self.logger.error(f"Failed to get SignalFx alerts: {e.response.text}")
+            scopes["API"] = str(e)
+        return scopes
+
     def validate_config(self):
-        # Implement any necessary configuration validation
-        pass
+        self.authentication_config = SignalfxProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def dispose(self):
-        # Clean up resources if necessary
         pass
 
     def _get_alerts(self):
         headers = self._get_headers()
-        response = requests.get(f"{self.api_url}/v2/alert", headers=headers)
+        # should also consider /v2/event/find but it looks like the same scehme
+        #  https://dev.splunk.com/observability/reference/api/retrieve_events_v2/latest#endpoint-retrieve-events-using-query
+        response = requests.get(f"{self.api_url}/v2/incident", headers=headers)
         response.raise_for_status()
-        alerts_data = response.json()
-
+        incidents = response.json()
         # Map SignalFx alert data to AlertDto objects
         alerts = []
-        for alert_data in alerts_data.get("results", []):
-            alerts.append(self._format_alert(alert_data))
+        # TODO: incident may have more than one alert?
+        for incident in incidents:
+            try:
+                alerts.append(self._format_alert_get_alert(incident))
+            except Exception as e:
+                self.logger.error(f"Failed to format SignalFx alert: {e}")
+                pass
 
         return alerts
+
+    @staticmethod
+    def sanitize_url(url: str) -> str:
+        # SignalFx URLs are not always properly formatted
+        # e.g. 'https://app.eu0.signalfx.com/#/detector/YYYYYY/edit?incidentId=XXXXX&is=manually resolved'
+        # so Pyatnadic will raise an error if the URL is not properly formatted
+
+        # remove the # from the URL
+        parsed_url = urlparse(url.replace("#", ""))
+        # quote the query
+        quoted_query = quote(parsed_url.query)
+        # reassemble the URL
+        url = url.replace(parsed_url.query, quoted_query)
+        return url
+
+    def _format_alert_get_alert(self, incident: dict) -> AlertDto:
+        # there is difference between webhook payload (_format_alert)
+        #   and alerts from API (get_alert) so we need to handle it separately
+        last_alert = incident.get("events")[-1]
+        severity = SignalfxProvider.SEVERITIES_MAP.get(
+            incident.pop("severity").lower(), AlertSeverity.INFO
+        )
+        status = SignalfxProvider.STATUS_MAP.get(
+            incident.pop("anomalyState").lower(), AlertStatus.FIRING
+        )
+        incident_id = incident.pop("incidentId")
+        detector_id = incident.pop("detectorId")
+        url = f"https://app.eu0.signalfx.com/#/detector/{detector_id}/edit?incidentId%3D{incident_id}"
+        name = incident.pop("detectLabel")
+        description = incident.pop("displayBody")
+        lastReceived = datetime.datetime.fromtimestamp(
+            last_alert.get("timestamp") / 1000
+        ).isoformat()
+        alert_dto = AlertDto(
+            id=incident_id,
+            name=name,
+            description=description,
+            lastReceived=lastReceived,
+            severity=severity,
+            status=status,
+            url=url,
+            source=["signalfx"],
+            **incident,  # rest of the incident
+        )
+        alert_dto.fingerprint = SignalfxProvider.get_alert_fingerprint(
+            alert_dto, SignalfxProvider.FINGERPRINT_FIELDS
+        )
+        return alert_dto
 
     @staticmethod
     def _format_alert(event: dict) -> AlertDto:
@@ -154,22 +217,26 @@ class SignalfxProvider(BaseProvider):
         status = SignalfxProvider.STATUS_MAP.get(
             event.pop("statusExtended"), AlertStatus.FIRING
         )
-        message = event.pop("description", "")
+        # remove the status so we won't have duplicated keywords
+        event.pop("status", None)
+        message = event.pop("messageBody", "")
+        description = event.pop("description", "")
         name = event.pop("messageTitle", "")
         lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
         url = event.pop("detectorUrl")
-        # quote the URL if needed
-        # if " " in url:
-
+        url = SignalfxProvider.sanitize_url(url)
         _id = event.pop("incidentId")
         alert_dto = AlertDto(
             id=_id,
             name=name,
             message=message,
+            description=description,
             lastReceived=lastReceived,
             severity=severity,
             status=status,
             url=url,
+            source=["signalfx"],
+            **event,  # rest of the alert
         )
         alert_dto.fingerprint = SignalfxProvider.get_alert_fingerprint(
             alert_dto, SignalfxProvider.FINGERPRINT_FIELDS

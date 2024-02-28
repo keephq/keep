@@ -101,7 +101,7 @@ export default function AlertName({
             <Icon
               icon={ArrowTopRightOnSquareIcon}
               tooltip="Open Original Alert"
-              color="gray"
+              color="green"
               variant="solid"
               size="xs"
               className="ml-1"

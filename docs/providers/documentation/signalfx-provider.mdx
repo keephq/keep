@@ -21,73 +21,126 @@ For more information, feel free to reach out on our Slack Community.
 
 </Card>
 
-## Inputs
-
-_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
-
-## Outputs
-
-_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
-
-## Authentication Parameters
-
-The `api_key` and `kibana_host` are required for connecting to the Kibana provider. You can obtain them as described in the "Connecting with the Provider" section.
-`kibana_port` can be used to override the default Kibana port (9243)
+## Overview
 
 ## Connecting with the Provider
+There are three approaches to connect with SignalFX:
+- Push (manually) - Install Keep as a Webhook Integration.
+- Push (auto instrumentation) - Let Keep instrument itself as webhook integration and subscribe to your SignalFx detectors.
+- Pull - Keep will pull alerts from SignalFx.
 
-### Kibana Host
+<Tip>The recommened way to install SignalFx is Push with auth instrumentation. With this approach, you have the advantages of Push approach which are - more context (since SignalFx sends more context on Webhooks) and more real time, with the convient of Pull integration (just supply credentials and Keep will do the rest)</Tip>
+In the following sections we will elaborate on each approach.
 
-Simply copy the hostname from the URL bar in your browser:
+### Push (manually)
+<Info>For more information about how SignalFx integrates with Webhooks, you can read https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#webhook2</Info>
+1. From your SignalFx console, click on "Data Management":
 
-<img src="/images/kibana/kibana_host.png" alt="Kibana Host" />
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_1.png" />
+</Frame>
 
-### API Key
+2. Click on "+ Add Integration"
 
-To obtain a Kibana API key, follow these steps:
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_2.png" />
+</Frame>
 
-1. Log in to your Kibana account.
-2. Click Stack Management
-3. Click on Security
-4. Click on API Keys
+3. Change the "By Use Case" select to "All" and filter "webhook":
 
-<img src="/images/kibana/api-keys.png" alt="Kibana API Keys" />
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_3.png" />
+</Frame>
 
-1. Click on the top right `Create API key` button
-2. Give the API key and indicative name (e.g. keep-api-key)
-3. Make sure the `Restrict Permissions` toggle is not toggeled
-4. On the bottom right corner, click on `Create API key`
+4. Click on the Webhook tile and fill the following details:
 
-<img src="/images/kibana/create-api-key.png" alt="Create Kibana API Key" />
 
-6. Copy the newly created encoded API key and you're set!
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_4.png" />
+</Frame>
 
-<img src="/images/kibana/copy-created-key.png" alt="Copy Kibana API Key" />
+5. Now, go to Detectors & SLOs page:
+
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_5.png" />
+</Frame>
+
+6. For every Detector and Rule, add Keep as Alert recipient:
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_manual_6.png" />
+</Frame>
+
+
+
+
+
+### Push (auto instrumentation)
+With this approach:
+1. Keep will install itself as Webhook Integration.
+2. Keep will iterate all Detectors and Rules, and will add itself as a subscriber
+
+<Info>The downside of this approach is that you'll need email/password of a user with admin role. This is due to SignalFx limitation on installing integrations: You can read more here - https://dev.splunk.com/observability/reference/api/integrations/latest#endpoint-create-integration </Info>
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_limitation.png" />
+</Frame>
+
+
+To install Keep with Push (auto instrumentation):
+1. SF token with read permissions - go to Settings -> Access Tokens -> New Token
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_accesstoken.png" />
+</Frame>
+
+2. email/password for a user with admin role - this will be used only for creating the Webhook Integration
+3. orgid - this will be used only for creating the Webhook Integration
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_orgid.png" />
+</Frame>
+
+
+After we have all what we need, go to Keep and install the SignalFx provider:
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_keep.png" />
+</Frame>
+
+
+### Pull
+With this approach, Keep will pull alerts from SignalFx every time you refresh the console page.
+
+
+
+
 
 ## Fingerprinting
 
-Fingerprints in Kibana are simply the alert instance ID.
+Fingerprints in SignalFx calculated based on (incidentId, detectorId).
 
-## Scopes
-
-Certain scopes may be required to perform specific actions or queries via the Datadog Provider. Below is a summary of relevant scopes and their use cases:
-
-- rulesSettings:read (Read alerts)
-  Required: True
-  Description: Read alerts.
-- rulesSettings:write (Modify Alerts)
-  Required: True
-  Description: Modify alerts.
-- actions:read (Read connectors)
-  Required: True
-  Description: Read connectors.
-- actions:write (Write connectors)
-  Required: True
-  Description: Write connectors.
-
-## Notes
-
-_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page_
 
 ## Useful Links
 
