@@ -30,7 +30,7 @@ class GitlabProviderAuthConfig:
     personal_access_token: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "GitLab Personal/Project/Group Access Tokens",
+            "description": "GitLab Personal Access Token",
             "sensitive": True,
             "documentation_url": "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
         }
@@ -42,10 +42,10 @@ class GitlabProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="authenticated",
-            description="Authenticated with GitLab",
+            name="api",
+            description="Authenticated with api scope",
             mandatory=True,
-            alias="GitLab PAT",
+            alias="GitLab PAT with api scope",
         ),
     ]
     PROVIDER_TAGS = ["ticketing"]
@@ -69,18 +69,18 @@ class GitlabProvider(BaseProvider):
 
         # first, validate user/api token are correct:
         resp = requests.get(
-            f"{self.gitlab_host}/api/v4/projects",
+            f"{self.gitlab_host}/api/v4/personal_access_tokens/self",
             headers=headers,
             verify=False,
         )
         try:
             resp.raise_for_status()
             scopes = {
-                "authenticated": True
+                "api": ("Missing api scope", True)['api' in resp.json()['scopes']]
             }
         except HTTPError as e:
             scopes = {
-                "authenticated": str(e)
+                "api": str(e)
             }
         return scopes
 

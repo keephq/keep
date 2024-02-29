@@ -1,15 +1,10 @@
 ---
 title: "GitLab Provider"
 sidebarTitle: "GitLab Provider"
-description: "GitLab provider is a provider used to query data and creating issues in GitLab"
+description: "GitLab provider is a provider used for creating issues in GitLab"
 ---
 
 ## Inputs
-
-The `query` function take following parameters as inputs:
-
-- `host` (required): GitLab host name of the project.
-- `PAT` (required): Your Personal Access Token with proper scopes.
 
 The `notify` function take following parameters as inputs:
 
@@ -19,21 +14,23 @@ The `notify` function take following parameters as inputs:
 - `labels` (optional): Issue labels seperated by a Comma.
 - `issue_type` (optional): Issue type name. One of `issue`, `incident`, `test_case` or `task`. Default is `issue`.
 
-## Outputs
+See [documentation](https://docs.gitlab.com/ee/api/issues.html#new-issue) for more
 
 ## Authentication Parameters
+The GitLab provider requires the following authentication parameter:
 
-The `notify` function requires an `personal_access_token` from GtLab.
+- `host` (required): GitLab host name of the project.
+- `Personal Access Token` (required): Your Personal Access Token with `api` scope.
+
+See [GitLab Scopes](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#personal-access-token-scopes) for more.
 
 ## Connecting with the Provider
 
-1. Go to https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token to see how to create a personal_access_token.
-2. Give your access token proper scope permissions
-3. Get `host`, eg: if you're using Cloud GitLab, use: `https://gitlab.com` or use your `host` if you're using onPrem.
+1. Go to [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token) to see how to create a personal_access_token.
+2. Get `host`, eg: if you're using Cloud GitLab, use: `https://gitlab.com` or use your `host` if you're using onPrem.
 
-## Notes
 
 ## Useful Links
 
-- https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html
-- https://docs.gitlab.com/ee/api/issues.html#new-issue
+- [GitLab PAT](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token)
+- [GitLab Create New Issue](https://docs.gitlab.com/ee/api/issues.html#new-issue)
