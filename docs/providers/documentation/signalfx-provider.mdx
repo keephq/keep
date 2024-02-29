@@ -4,35 +4,28 @@ sidebarTitle: "SignalFX Provider"
 description: "SignalFX provider allows you get alerts from SignalFX Alerting via webhooks."
 ---
 
-<Card
-  title="SignalFX Webhooks"
-  icon="lightbulb"
-  iconType="duotone"
-  color="#ca8b04"
->
-  Please note that when installing SignalFX with Webhook auto instrumentation,
-  Keep installs itself as a Webhook Integration, adds itself as a subscriber to all available
-  SignalFX Detector and Rules.
-
-  When a new Detector created, you'll need to add Keep as a subscriber or re-run the "setup webhook"
-  from the UI
-
-For more information, feel free to reach out on our Slack Community.
-
-</Card>
-
 ## Overview
+SignalFX Provider enriches your monitoring and alerting capabilities by seamlessly integrating with SignalFX Alerting via webhooks. This integration allows you to receive alerts directly from SignalFX, ensuring you're promptly informed about significant events and metrics within your infrastructure.
+
+Key Features:
+- Webhook Auto-Instrumentation: Automatically configures Keep as a Webhook Integration within SignalFX, subscribing to all available SignalFX Detectors and Rules for comprehensive monitoring.
+- Manual and Automated Subscription Management: Provides flexibility in adding Keep as a subscriber to new Detectors either manually or by re-running the "setup webhook" feature from the UI for effortless maintenance.
+
+<Tip>For further information or assistance, feel free to reach out on our Slack Community.</Tip>
 
 ## Connecting with the Provider
 There are three approaches to connect with SignalFX:
-- Push (manually) - Install Keep as a Webhook Integration.
-- Push (auto instrumentation) - Let Keep instrument itself as webhook integration and subscribe to your SignalFx detectors.
+- Push (Manually) - Install Keep as a Webhook Integration.
+- Push (Auto Instrumentation) - Let Keep instrument itself as a webhook integration and subscribe to your SignalFx detectors.
 - Pull - Keep will pull alerts from SignalFx.
 
-<Tip>The recommened way to install SignalFx is Push with auth instrumentation. With this approach, you have the advantages of Push approach which are - more context (since SignalFx sends more context on Webhooks) and more real time, with the convient of Pull integration (just supply credentials and Keep will do the rest)</Tip>
-In the following sections we will elaborate on each approach.
 
-### Push (manually)
+<Tip>The recommended way to install SignalFx is through Push (Auto Instrumentation). With this approach, you benefit from the advantages of the Push approach, which include more context (since SignalFx sends more context on Webhooks) and more real-time alerts, combined with the convenience of Pull integration (just supply credentials, and Keep will do the rest).</Tip>
+
+In the following sections, we will elaborate on each approach.
+
+
+### Push (Manually)
 <Info>For more information about how SignalFx integrates with Webhooks, you can read https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#webhook2</Info>
 1. From your SignalFx console, click on "Data Management":
 
@@ -88,10 +81,10 @@ In the following sections we will elaborate on each approach.
 
 
 
-### Push (auto instrumentation)
+### Push (Auto Instrumentation)
 With this approach:
-1. Keep will install itself as Webhook Integration.
-2. Keep will iterate all Detectors and Rules, and will add itself as a subscriber
+1. Keep installs itself as Webhook Integration.
+2. Keep iterates all Detectors and Rules, and will add itself as a subscriber
 
 <Info>The downside of this approach is that you'll need email/password of a user with admin role. This is due to SignalFx limitation on installing integrations: You can read more here - https://dev.splunk.com/observability/reference/api/integrations/latest#endpoint-create-integration </Info>
 
@@ -133,8 +126,21 @@ After we have all what we need, go to Keep and install the SignalFx provider:
 ### Pull
 With this approach, Keep will pull alerts from SignalFx every time you refresh the console page.
 
+1. SF token with read permissions - go to Settings -> Access Tokens -> New Token
 
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_accesstoken.png" />
+</Frame>
 
+2. In Keep's UI, install SignalFx Provider:
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/signalfx_keep2.png" />
+</Frame>
 
 
 ## Fingerprinting
@@ -144,5 +150,4 @@ Fingerprints in SignalFx calculated based on (incidentId, detectorId).
 
 ## Useful Links
 
-- [Kibana Alerting](https://www.elastic.co/guide/en/kibana/current/alerting-getting-started.html)
-- [Kibana Connectors](https://www.elastic.co/guide/en/kibana/current/action-types.html)
+- [SignalFx Webhook](https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#webhook2)
