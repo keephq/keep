@@ -6,6 +6,7 @@ import { LearnLinks } from "components/navbar/LearnLinks";
 import { UserInfo } from "components/navbar/UserInfo";
 import { InitPostHog } from "components/navbar/InitPostHog";
 import { Menu } from "components/navbar/Menu";
+import { MinimizeMenuButton } from "./MinimizeMenuButton";
 
 export default async function NavbarInner() {
   const session = await getServerSession();
@@ -25,6 +26,7 @@ export default async function NavbarInner() {
 
         <UserInfo session={session} />
       </Menu>
+      <MinimizeMenuButton />
     </>
   );
 }

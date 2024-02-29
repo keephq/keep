@@ -101,6 +101,7 @@
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
             "providers/documentation/sentry-provider",
+            "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/slack-provider",

@@ -1,5 +1,5 @@
 import { Menu, Portal, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Icon } from "@tremor/react";
 import {
   ArchiveBoxIcon,
@@ -9,6 +9,8 @@ import {
   UserPlusIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
+import { IoNotificationsOffOutline } from "react-icons/io5";
+
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
@@ -24,6 +26,7 @@ interface Props {
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
 }
 
@@ -32,6 +35,7 @@ export default function AlertMenu({
   isMenuOpen,
   setIsMenuOpen,
   setRunWorkflowModalAlert,
+  setDismissModalAlert,
   presetName,
 }: Props) {
   const router = useRouter();
@@ -99,6 +103,11 @@ export default function AlertMenu({
         await mutate();
       }
     }
+  }
+
+  const onDismiss = async () => {
+    setDismissModalAlert?.(alert);
+    await mutate();
   };
 
   const callAssignEndpoint = async (unassign: boolean = false) => {
@@ -145,7 +154,7 @@ export default function AlertMenu({
     handleCloseMenu();
   };
 
-  const canAssign = !alert.assignee;
+  const canAssign = true; // TODO: keep track of assignments for auditing
 
   const handleMenuToggle = () => {
     setIsMenuOpen(alert.fingerprint);
@@ -315,6 +324,25 @@ export default function AlertMenu({
                     {({ active }) => (
                       <button
                         onClick={() => {
+                          onDismiss();
+                          handleCloseMenu();
+                        }}
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      >
+                        <IoNotificationsOffOutline
+                          className="mr-2 h-4 w-4"
+                          aria-hidden="true"
+                        />
+                        {alert.dismissed ? "Restore" : "Dismiss"}
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => {
                           onDelete();
                           handleCloseMenu();
                         }}
@@ -326,7 +354,7 @@ export default function AlertMenu({
                           className="mr-2 h-4 w-4"
                           aria-hidden="true"
                         />
-                        {alert.deleted ? "Restore" : "Delete"}
+                        {alert.deleted ? "Undelete" : "Delete"}
                       </button>
                     )}
                   </Menu.Item>
