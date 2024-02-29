@@ -15,7 +15,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ $fullName }}-frontend
   labels:
     {{- include "keep.labels" . | nindent 4 }}
   {{- with .Values.frontend.ingress.annotations }}
@@ -49,11 +49,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $fullName }}
+                name: {{ $fullName }}-frontend
                 port:
                   number: {{ $svcPort }}
               {{- else }}
-              serviceName: {{ $fullName }}
+              serviceName: {{ $fullName }}-frontend
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}
