@@ -5,6 +5,7 @@ import { Popover } from "@headlessui/react";
 import { Icon } from "@tremor/react";
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { usePathname } from "next/navigation";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 
 type CloseMenuOnRouteChangeProps = {
   closeMenu: () => void;
@@ -25,6 +26,8 @@ type MenuButtonProps = {
 };
 
 export const Menu = ({ children }: MenuButtonProps) => {
+  const [isMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
+
   return (
     <Popover as={Fragment}>
       {({ close: closeMenu }) => (
@@ -35,7 +38,10 @@ export const Menu = ({ children }: MenuButtonProps) => {
             </Popover.Button>
           </div>
 
-          <aside className="bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block">
+          <aside
+            className='relative bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
+            data-minimized={isMenuMinimized}
+          >
             <nav className="flex flex-col h-full">{children}</nav>
           </aside>
 
