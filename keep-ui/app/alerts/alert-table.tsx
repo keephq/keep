@@ -14,6 +14,7 @@ import {
   VisibilityState,
   ColumnSizingState,
 } from "@tanstack/react-table";
+import { useTheme } from "next-themes";
 import AlertPagination from "./alert-pagination";
 import AlertColumnsSelect from "./alert-columns-select";
 import AlertsTableHeaders from "./alert-table-headers";
@@ -53,6 +54,8 @@ export function AlertTable({
   rowPagination,
   isRefreshAllowed = true,
 }: Props) {
+  const { theme } = useTheme();
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -112,7 +115,7 @@ export function AlertTable({
         <Callout
           title="Getting your alerts..."
           icon={CircleStackIcon}
-          color="gray"
+          color={theme === "dark" ? "white" : "slate"}
           className="mt-5"
         >
           Alerts will show up in this table as they are added to Keep...

@@ -3,7 +3,7 @@
 import { AnchorHTMLAttributes, ReactNode } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
-import { Icon } from "@tremor/react";
+import { Icon, Subtitle } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
 
@@ -26,14 +26,17 @@ export const LinkWithIcon = ({
   return (
     <Link
       className={classNames(
-        "flex items-center space-x-2 text-sm p-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
-        { "bg-gray-200": isActive }
+        "flex items-center space-x-2 text-sm p-1 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
+        { "bg-gray-200 dark:bg-gray-700": isActive }
       )}
       tabIndex={tabIndex}
       {...restOfLinkProps}
     >
-      <Icon className="text-gray-700 group-hover:text-orange-500" icon={icon} />
-      <span>{children}</span>
+      <Icon
+        className="text-gray-700 group-hover:text-orange-500 dark:text-white"
+        icon={icon}
+      />
+      <Subtitle>{children}</Subtitle>
     </Link>
   );
 };

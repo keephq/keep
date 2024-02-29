@@ -12,7 +12,7 @@ import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
 import DarkModeToggle from "components/navbar/DarkModeToggle";
 import { useFloating } from "@floating-ui/react-dom";
-import { Icon } from "@tremor/react";
+import { Icon, Subtitle } from "@tremor/react";
 
 const getInitials = (name: string) =>
   ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
@@ -35,7 +35,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   return (
     <Menu as="li" ref={refs.setReference}>
-      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
+      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
           {image ? (
             <Image
@@ -52,18 +52,18 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               </span>
             </span>
           )}{" "}
-          <span className="truncate">{name ?? email}</span>
+          <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
 
         <Icon
-          className="text-gray-700 font-medium px-0"
+          className="text-gray-700 font-medium px-0 dark:text-gray-300"
           size="xs"
           icon={AiOutlineRight}
         />
       </Menu.Button>
 
       <Menu.Items
-        className="w-48 ml-2 origin-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-10"
+        className="w-48 ml-2 origin-right divide-y divide-gray-100 rounded-md bg-white dark:bg-gray-700 shadow-lg ring-1 ring-black/5 focus:outline-none z-10"
         style={floatingStyles}
         ref={refs.setFloating}
         as="ul"
@@ -74,7 +74,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               <Menu.Item
                 as={Link}
                 href="/settings"
-                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 dark:ui-not-active:text-white group flex w-full items-center rounded-md px-2 py-2 text-sm"
               >
                 Settings
               </Menu.Item>
@@ -84,7 +84,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
             <li>
               <Menu.Item
                 as="button"
-                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 dark:ui-not-active:text-white group flex w-full items-center rounded-md px-2 py-2 text-sm"
                 onClick={() => signOut()}
               >
                 Sign out

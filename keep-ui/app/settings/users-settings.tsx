@@ -117,7 +117,9 @@ export default function UsersSettings({
               <TableRow
                 key={user.name}
                 className={`${
-                  user.email === currentUser?.email ? "bg-orange-50" : null
+                  user.email === currentUser?.email
+                    ? "bg-orange-50 dark:bg-orange-950"
+                    : null
                 }`}
               >
                 <TableCell>
@@ -131,18 +133,20 @@ export default function UsersSettings({
                     />
                   )}
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="text-right">
-                  <Text>{user.name}</Text>
+                <TableCell>
+                  <Subtitle>{user.email}</Subtitle>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Text>{user.role}</Text>
+                  <Subtitle>{user.name}</Subtitle>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Text>{user.created_at}</Text>
+                  <Subtitle>{user.role}</Subtitle>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Text>{user.last_login}</Text>
+                  <Subtitle>{user.created_at}</Subtitle>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Subtitle>{user.last_login}</Subtitle>
                 </TableCell>
                 <TableCell>
                   <UsersMenu user={user} currentUser={currentUser} />

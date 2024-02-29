@@ -14,7 +14,7 @@ import {
   Text,
 } from "@tremor/react";
 import Loading from "app/loading";
-import { CopyBlock, a11yLight } from "react-code-blocks";
+import { CopyBlock, a11yLight, a11yDark } from "react-code-blocks";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { KeyIcon } from "@heroicons/react/24/outline";
@@ -24,6 +24,7 @@ import { AuthenticationType } from "utils/authenticationType";
 import { Config } from "./users-settings";
 import CreateApiKeyModal from "./create-api-key-modal";
 import ApiKeysMenu from "./api-key-menu";
+import { useTheme } from "next-themes";
 
 interface ApiKeyResponse {
   apiKey: string;
@@ -44,7 +45,8 @@ export interface ApiKey {
 
 export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
-  const { data, error, isLoading } = useSWR<ApiKeyResponse>(
+  const { theme } = useTheme();
+  const { error, isLoading } = useSWR<ApiKeyResponse>(
     selectedTab === "api-key" ? `${apiUrl}/settings/apikeys` : null,
     async (url) => {
       const response = await fetcher(url, accessToken);
@@ -66,7 +68,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
 
   const getCopyBlockProps = (secret: string) => {
     return {
-      theme: { ...a11yLight },
+      theme: theme === "dark" ? a11yDark : a11yLight,
       language: "text",
       text: secret,
       codeBlock: true,

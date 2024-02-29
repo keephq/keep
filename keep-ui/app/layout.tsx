@@ -22,7 +22,7 @@ type RootLayoutProps = {
 export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={mulish.className} suppressHydrationWarning>
-      <body className="bg-gray-50 dark:bg-gray-900 h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
+      <body className="bg-gray-50 dark:bg-slate-950 h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
         <Providers>
           {/* @ts-ignore-error Server Component */}
           <Navbar />

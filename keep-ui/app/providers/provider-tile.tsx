@@ -61,7 +61,7 @@ const OAuthIcon = (props: any) => (
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="tile-basis relative group flex justify-around items-center bg-white dark:bg-gray-700 rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
       <div className="w-32">
@@ -125,8 +125,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
                     key={tag}
                     icon={icon}
                     size="xs"
-                    className="mr-1"
-                    color="slate"
+                    className="mr-1 bg-slate-100 text-gray-900 dark:text-orange-500"
                   >
                     <p className="ml-1">{tag}</p>
                   </Badge>

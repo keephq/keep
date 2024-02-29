@@ -17,7 +17,7 @@ export const MinimizeMenuButton = () => {
         onClick={() => setisMenuMinimized(!isMenuMinimized)}
       >
         <Icon
-          className="text-slate-600 p-0 opacity-50 hover:opacity-100"
+          className="text-slate-600 dark:text-gray-300 p-0 opacity-50 hover:opacity-100"
           icon={isMenuMinimized ? TbChevronCompactRight : TbChevronCompactLeft}
           size="lg"
         />

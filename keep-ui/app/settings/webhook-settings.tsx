@@ -15,12 +15,13 @@ import {
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
-import { CodeBlock, a11yLight } from "react-code-blocks";
+import { CodeBlock, a11yLight, a11yDark } from "react-code-blocks";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
+import { useTheme } from "next-themes";
 
 interface Webhook {
   webhookApi: string;
@@ -35,6 +36,7 @@ interface Props {
 
 export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
+  const { theme } = useTheme();
 
   const apiUrl = getApiURL();
 
@@ -195,7 +197,7 @@ req.end();
                 <TabPanel key={title}>
                   <CodeBlock
                     language={language}
-                    theme={a11yLight}
+                    theme={theme === "dark" ? a11yDark : a11yLight}
                     // @ts-ignore - `text` isn't a valid prop, but it appears in the docs
                     text={code}
                     customStyle={{ overflowY: "scroll" }}

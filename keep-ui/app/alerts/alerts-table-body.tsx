@@ -1,9 +1,7 @@
 import { TableBody, TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "./models";
-import "./alerts-table-body.css";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { Table, flexRender } from "@tanstack/react-table";
+import "./alerts-table-body.css";
 
 interface Props {
   table: Table<AlertDto>;
@@ -18,7 +16,7 @@ export function AlertsTableBody({ table, showSkeleton }: Props) {
           {row.getVisibleCells().map((cell) => (
             <TableCell
               key={cell.id}
-              className={`bg-white ${
+              className={`${
                 cell.column.columnDef.meta?.tdClassName
                   ? cell.column.columnDef.meta?.tdClassName
                   : ""
@@ -36,7 +34,7 @@ export function AlertsTableBody({ table, showSkeleton }: Props) {
             .filter((col) => col.getIsVisible())
             .map((col) => (
               <TableCell key={col.id}>
-                <Skeleton />
+                <span className="block w-full h-2 bg-gray-200 rounded animate-pulse" />
               </TableCell>
             ))}
         </TableRow>

@@ -146,7 +146,7 @@ export const Search = () => {
       return (
         <ListItem className="flex flex-col items-center justify-center cursor-default select-none px-4 py-2 text-gray-700 h-72">
           <Icon color="orange" size="xl" icon={MdOutlineSearchOff} />
-          Nothing found.
+          <Subtitle>Nothing found.</Subtitle>
         </ListItem>
       );
     }
@@ -165,10 +165,12 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 dark:ui-not-active:text-white">
                   <Icon
                     className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
+                      active
+                        ? "bg-orange-400 text-white"
+                        : "text-gray-900 dark:text-white"
                     }`}
                     icon={option.icon}
                     color="orange"
@@ -203,10 +205,12 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 dark:ui-not-active:text-white">
                   <Icon
                     className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
+                      active
+                        ? "bg-orange-400 text-white"
+                        : "text-gray-900 dark:text-white"
                     }`}
                     icon={option.icon}
                     color="orange"
@@ -228,10 +232,12 @@ export const Search = () => {
               value={option.navigate}
             >
               {({ active }) => (
-                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900">
+                <ListItem className="flex items-center justify-start space-x-3 cursor-default select-none p-2 ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 dark:ui-not-active:text-white">
                   <Icon
                     className={`py-2 px-0 ${
-                      active ? "bg-orange-400 text-white" : "text-gray-900"
+                      active
+                        ? "bg-orange-400 text-white"
+                        : "text-gray-900 dark:text-white"
                     }`}
                     icon={option.icon}
                     color="orange"
@@ -247,7 +253,7 @@ export const Search = () => {
   };
 
   return (
-    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
+    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300 dark:border-gray-700">
       <Link href="/">
         <Image className="w-8" src={KeepPng} alt="Keep Logo" />
       </Link>
@@ -286,7 +292,7 @@ export const Search = () => {
               leaveTo="opacity-0"
             >
               <Combobox.Options
-                className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
+                className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white dark:bg-gray-700 shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
                 as={List}
               >
                 <NoQueriesFoundResult />

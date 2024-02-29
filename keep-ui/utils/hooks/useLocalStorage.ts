@@ -24,8 +24,10 @@ function getParsedJson<T>(
 }
 
 export const useLocalStorage = <T>(key: string, initialValue: T) => {
-  const localStorageValue = useSyncExternalStore(subscribe, () =>
-    getSnapshot(key)
+  const localStorageValue = useSyncExternalStore(
+    subscribe,
+    () => getSnapshot(key),
+    () => JSON.stringify(initialValue)
   );
   const parsedLocalStorageValue = getParsedJson(
     localStorageValue,

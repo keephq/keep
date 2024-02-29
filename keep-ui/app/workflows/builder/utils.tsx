@@ -10,7 +10,6 @@ import {
 } from "sequential-workflow-designer";
 import { KeepStep } from "./types";
 import { Action, Alert } from "./alert";
-import { stringify } from "yaml";
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**

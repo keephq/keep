@@ -33,13 +33,13 @@ export const Menu = ({ children }: MenuButtonProps) => {
       {({ close: closeMenu }) => (
         <>
           <div className="p-3 w-full block lg:hidden">
-            <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
+            <Popover.Button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
               <Icon icon={AiOutlineMenu} color="orange" />
             </Popover.Button>
           </div>
 
           <aside
-            className='relative bg-gray-50 col-span-1 border-r border-gray-300 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
+            className='relative bg-gray-50 dark:bg-slate-950 col-span-1 border-r border-gray-300 dark:border-gray-700 h-full hidden lg:block [&[data-minimized="true"]>nav]:invisible'
             data-minimized={isMenuMinimized}
           >
             <nav className="flex flex-col h-full">{children}</nav>
@@ -47,11 +47,11 @@ export const Menu = ({ children }: MenuButtonProps) => {
 
           <CloseMenuOnRouteChange closeMenu={closeMenu} />
           <Popover.Panel
-            className="bg-gray-50 col-span-1 border-r border-gray-300 z-50 h-screen fixed inset-0"
+            className="bg-gray-50 dark:bg-slate-950 col-span-1 border-r border-gray-300 dark:border-gray-700 z-50 h-screen fixed inset-0"
             as="nav"
           >
             <div className="p-3 fixed top-0 right-0 ">
-              <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
+              <Popover.Button className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
                 <Icon icon={AiOutlineClose} color="orange" />
               </Popover.Button>
             </div>

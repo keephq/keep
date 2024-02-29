@@ -68,14 +68,14 @@ const DraggableHeaderCell = ({
   return (
     <TableHeaderCell
       className={`relative ${
-        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
+        column.getIsPinned() === false
+          ? "hover:bg-slate-100 dark:hover:bg-gray-600"
+          : ""
       } group`}
       style={dragStyle}
       ref={setNodeRef}
     >
-      <div  {...listeners}>
-        {children}
-      </div>
+      <div {...listeners}>{children}</div>
       {column.getIsPinned() === false && (
         <div
           className={classnames(
