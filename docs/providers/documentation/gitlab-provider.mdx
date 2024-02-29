@@ -1,0 +1,36 @@
+---
+title: "GitLab Provider"
+sidebarTitle: "GitLab Provider"
+description: "GitLab provider is a provider used for creating issues in GitLab"
+---
+
+## Inputs
+
+The `notify` function take following parameters as inputs:
+
+- `id` (required): The global ID or path of the project.
+- `title` (required): Title of the Issue/Ticket.
+- `description` (optional): Description for the Issue.
+- `labels` (optional): Issue labels seperated by a Comma.
+- `issue_type` (optional): Issue type name. One of `issue`, `incident`, `test_case` or `task`. Default is `issue`.
+
+See [documentation](https://docs.gitlab.com/ee/api/issues.html#new-issue) for more
+
+## Authentication Parameters
+The GitLab provider requires the following authentication parameter:
+
+- `host` (required): GitLab host name of the project.
+- `Personal Access Token` (required): Your Personal Access Token with `api` scope.
+
+See [GitLab Scopes](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#personal-access-token-scopes) for more.
+
+## Connecting with the Provider
+
+1. Go to [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token) to see how to create a personal_access_token.
+2. Get `host`, eg: if you're using Cloud GitLab, use: `https://gitlab.com` or use your `host` if you're using onPrem.
+
+
+## Useful Links
+
+- [GitLab PAT](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token)
+- [GitLab Create New Issue](https://docs.gitlab.com/ee/api/issues.html#new-issue)
