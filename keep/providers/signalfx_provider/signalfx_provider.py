@@ -438,6 +438,7 @@ if __name__ == "__main__":
     password = os.environ.get("SIGNALFX_PASSWORD", "")
     org_id = os.environ.get("SIGNALFX_ORGID", "")
     keep_api_key = os.environ.get("KEEP_API_KEY")
+    keep_api_url = os.environ.get("KEEP_API_URL")
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
@@ -457,6 +458,5 @@ if __name__ == "__main__":
         provider_type="signalfx",
         provider_config=config,
     )
-    keep_api_url = "https://7259-2a00-a041-3420-6000-2191-2ad8-a16f-e292.ngrok-free.app/alerts/event/signalfx"
     webhook = provider.setup_webhook("keep", keep_api_url, keep_api_key, True)
     print(webhook)
