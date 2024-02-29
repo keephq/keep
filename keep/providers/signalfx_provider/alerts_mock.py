@@ -1,17 +1,17 @@
 ALERTS = {
-    "high_cpu_usage": {
-        "payload": {
-            "summary": "CPU usage is over 90%",
-            "labels": {
-                "instance": "example1",
-                "job": "example2",
-                "workfload": "somecoolworkload",
-                "severity": "critical",
-            },
-        },
-        "parameters": {
-            "labels.host": ["host1", "host2", "host3"],
-            "labels.instance": ["instance1", "instance2", "instance3"],
-        },
-    }
+    "severity": "Critical",
+    "originatingMetric": "sf.org.log.numMessagesDroppedThrottle",
+    "detectOnCondition": "when(A < threshold(1))",
+    "messageBody": 'Rule "logs" in detector "logs" cleared at Thu, 29 Feb 2024 11:48:32 GMT.\n\nCurrent signal value for sf.org.log.numMessagesDroppedThrottle: 0\n\nSignal details:\n{sf_metric=sf.org.log.numMessagesDroppedThrottle, orgId=XXXX}',
+    "inputs": {
+        "A": {"value": "0", "fragment": "data(...A')", "key": {...}},
+        "_S2": {"value": "1", "fragment": "threshold(1)"},
+    },
+    "rule": "logs",
+    "description": "The value of sf.org.log.numMessagesDroppedThrottle is below 1.",
+    "messageTitle": "Manually resolved: logs (logs)",
+    "sf_schema": 2,
+    "eventType": "XXXX_XXXX_logs",
+    "runbookUrl": None,
+    "triggeredWhileMuted": False,
 }
