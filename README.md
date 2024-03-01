@@ -198,10 +198,20 @@ The easiest way to start with Keep is to run it via docker-compose:
 curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
+
+#### Spinning up Keep with Helm on Kubernetes/Openshift
+To install Keep to your Kubernetes ease free with Helm, run the following commands:
+
+```shell
+helm repo add keephq https://keephq.github.io/helm-charts
+helm pull keephq/keep
+helm install keep keephq/keep
+```
+
+More information about the Helm chart can be found [here](https://github.com/keephq/helm-charts).
+
 #### Local development
 You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
-
-
 
 #### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
