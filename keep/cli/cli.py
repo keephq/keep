@@ -641,6 +641,157 @@ def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
         table.add_row([log["id"], log["timestamp"], log["message"]])
     print(table)
 
+@cli.group()
+@pass_info
+def mappings(info: Info):
+    """Manage mappings."""
+    pass
+
+@mappings.command(name="list")
+@pass_info
+def list_mappings(info: Info):
+    """List mappings."""
+    resp = make_keep_request(
+        "GET",
+        info.keep_api_url + "/mapping",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting mappings: {resp.text}")
+
+    mappings = resp.json()
+
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = [
+        "ID",
+        "Name",
+        "Description",
+        "Priority",
+        "Matchers",
+        "Attributes",
+        "File Name",
+        "Created By",
+        "Creation Time",
+    ]
+
+    # Add rows for each mapping
+    for mapping in mappings:
+        table.add_row(
+            [
+                mapping["id"],
+                mapping["name"],
+                mapping["description"],
+                mapping["priority"],
+                ", ".join(mapping["matchers"]),
+                ", ".join(mapping["attributes"]),
+                mapping["file_name"],
+                mapping["created_by"],
+                mapping["created_at"],
+            ]
+        )
+    print(table)
+@mappings.command()
+@click.option(
+    "--name",
+    "-n",
+    type=str,
+    help="The name of the mapping",
+    required=True,
+)
+@click.option(
+    "--description",
+    "-d",
+    type=str,
+    help="The description of the mapping",
+    required=False,
+    default="",
+)
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(exists=True),
+    help="The mapping file",
+    required=True,
+)
+@click.option(
+    "--matchers",
+    "-m",
+    type=str,
+    help="The matchers of the mapping, as a comma-separated list of strings",
+    required=True,
+)
+@pass_info
+def create(info: Info, name: str, description: str, file: str, matchers: str):
+    """Create a mapping rule."""
+    if os.path.isfile(file) and file.endswith(".csv"):
+        with open(file, "rb") as f:
+            file_name = os.path.basename(file)
+            try:
+                csv_data = f.read().decode("utf-8")
+                csv_rows = csv_data.split("\n")
+                csv_headers = csv_rows[0].split(",")
+                csv_rows = csv_rows[1:]
+                rows = []
+                for row in csv_rows:
+                    if row:
+                        row = row.split(",")
+                        rows.append(OrderedDict(zip(csv_headers, row)))
+            except Exception as e:
+                click.echo(click.style(f"Error reading or processing CSV file: {e}"))
+                return
+            mappings_endpoint = info.keep_api_url + "/mapping"
+            response = make_keep_request(
+                "POST",
+                mappings_endpoint,
+                headers={"x-api-key": info.api_key, "accept": "application/json"},
+                json={
+                    "name": name,
+                    "description": description,
+                    "file_name": file_name,
+                    "matchers": matchers.split(","),
+                    "rows": rows,
+                }
+            )
+
+        # Check the response
+        if response.ok:
+            click.echo(click.style(f"Mapping rule {file_name} created successfully", bold=True))
+        else:
+            click.echo(
+                click.style(
+                    f"Error creating mapping rule {file_name}: {response.text}", bold=True
+                )
+            )
+@mappings.command(name="delete")
+@click.option(
+    "--mapping-id",
+    type=int,
+    help="The ID of the mapping to delete",
+    required=True,
+)
+@pass_info
+def delete_mapping(info: Info, mapping_id: int):
+    """Delete a mapping with a specified ID"""
+
+    # Delete the mapping with the specified ID
+    mappings_endpoint = info.keep_api_url + f"/mapping/{mapping_id}"
+    response = make_keep_request(
+        "DELETE",
+        mappings_endpoint,
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    # Check the response
+    if response.ok:
+        response = response.json()
+        click.echo(click.style(f"Mapping rule {mapping_id} deleted successfully", bold=True))
+    else:
+        click.echo(
+            click.style(
+                f"Error deleting mapping rule {mapping_id}: {response.text}", bold=True
+            )
+        )
 
 @cli.group()
 @pass_info
