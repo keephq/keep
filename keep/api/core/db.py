@@ -13,12 +13,14 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, select, text, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
+from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
@@ -89,6 +91,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 
 if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
@@ -101,7 +104,11 @@ elif db_connection_string == "impersonate":
         creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(db_connection_string)
+    try:
+        engine = create_engine(db_connection_string, pool_size=pool_size)
+    # SQLite does not support pool_size
+    except TypeError:
+        engine = create_engine(db_connection_string)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
@@ -1096,6 +1103,17 @@ def assign_alert_to_group(
                 fingerprint,
                 {"group_expired": True},
             )
+            # change the group status to resolve so it won't spam the UI
+            #   this was asked by @bhuvanesh and should be configurable in the future (how to handle status of expired groups)
+            group_alert = session.exec(
+                select(Alert)
+                .where(Alert.fingerprint == fingerprint)
+                .order_by(Alert.timestamp.desc())
+            ).first()
+            group_alert.event["status"] = AlertStatus.RESOLVED.value
+            # mark the event as modified so it will be updated in the database
+            flag_modified(group_alert, "event")
+            session.commit()
             logger.info(f"Enriched group {group.id} with group_expired flag")
 
         # if there is no group with the group_fingerprint, create it

@@ -9,6 +9,7 @@ import {
   AiOutlineDelete,
   AiOutlineGroup,
 } from "react-icons/ai";
+import { IoNotificationsOffOutline } from "react-icons/io5";
 
 export const AnalyseLinks = () => {
   const { useAllPresets } = usePresets();
@@ -21,6 +22,11 @@ export const AnalyseLinks = () => {
         <li>
           <LinkWithIcon href="/alerts/feed" icon={AiOutlineAlert}>
             Feed
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/alerts/dismissed" icon={IoNotificationsOffOutline}>
+            Dismissed
           </LinkWithIcon>
         </li>
         <li>

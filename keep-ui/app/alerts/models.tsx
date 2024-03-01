@@ -27,6 +27,7 @@ export interface AlertDto {
   generatorURL?: string;
   fingerprint: string;
   deleted: boolean;
+  dismissed: boolean;
   assignee?: string;
   ticket_url: string;
   ticket_status?: string;

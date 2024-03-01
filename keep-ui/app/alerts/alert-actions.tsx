@@ -127,7 +127,7 @@ export default function AlertActions({
   }
 
   return (
-    <div className="w-full flex justify-end items-center py-0.5">
+    <div className="w-full flex justify-end items-center mt-6">
       <Button
         icon={TrashIcon}
         size="xs"
