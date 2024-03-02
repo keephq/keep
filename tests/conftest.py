@@ -84,7 +84,6 @@ def docker_services(
         yield
         return
 
-    os.environ["AUTH_TYPE"] = "SINGLE_TENANT"
     # Else, start the docker services
     try:
         with get_docker_services(
