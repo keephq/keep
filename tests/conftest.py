@@ -45,6 +45,24 @@ def context_manager():
 
 
 @pytest.fixture(scope="session")
+def docker_compose_file(pytestconfig):
+    docker_compose_keep_file = os.path.join(os.getcwd(), "docker-compose.yml")
+    return docker_compose_keep_file
+
+
+@pytest.fixture(scope="session")
+def docker_setup(pytestconfig):
+    docker_setup = "--env-file .env.tests up -d"
+    return docker_setup
+
+
+@pytest.fixture(scope="session")
+def docker_compose_project_name(pytestconfig):
+    project_name = "keep-e2e-tests"
+    return project_name
+
+
+@pytest.fixture(scope="session")
 def docker_services(
     docker_compose_command,
     docker_compose_file,
@@ -62,10 +80,11 @@ def docker_services(
         return
 
     # For local development, you can avoid spinning up the mysql container every time:
-    if os.getenv("SKIP_DOCKER"):
+    if os.getenv("SKIP_DOCKER") == "true":
         yield
         return
 
+    os.environ["AUTH_TYPE"] = "SINGLE_TENANT"
     # Else, start the docker services
     try:
         with get_docker_services(
@@ -81,6 +100,26 @@ def docker_services(
         print(f"Docker services could not be started: {e}")
         # Optionally, provide a fallback or mock service here
         yield None
+
+
+def is_port_responsive(host, port):
+    import socket
+
+    try:
+        # Create a socket object
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Try to open the port
+        s.connect((host, port))
+
+        # Close the socket
+        s.close()
+
+        return True
+    except Exception:
+        pass
+
+    return
 
 
 def is_mysql_responsive(host, port, user, password, database):
@@ -185,3 +224,21 @@ def db_session(request, mysql_container):
     SQLModel.metadata.drop_all(mock_engine)
     # Clean up after the test
     session.close()
+
+
+@pytest.fixture(scope="session")
+def keep_service(docker_services):
+    """
+    Start the `keep` service using its specific Docker Compose file.
+    """
+    try:
+        docker_services.wait_until_responsive(
+            timeout=30.0, pause=0.1, check=lambda: is_port_responsive("localhost", 8080)
+        )
+        print("`keep` service is up and running.")
+    except Exception as e:
+        print(
+            f"Exception occurred while waiting for `keep` service to be responsive: {e}"
+        )
+
+    yield docker_services

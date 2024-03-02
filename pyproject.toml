@@ -92,6 +92,8 @@ coverage = "^7.2.2"
 pytest-mock = "^3.11.1"
 ruff = "^0.1.6"
 pytest-docker = "^2.0.1"
+playwright = "^1.41.2"
+pytest-playwright = "^0.4.4"
 
 [build-system]
 requires = ["poetry-core"]
