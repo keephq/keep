@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
+import Modal from "@/components/ui/Modal";
 
 export interface Option {
   readonly label: string;
@@ -47,6 +48,18 @@ export default function AlertPresets({
   const [options, setOptions] = useState<Option[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInputValue, setModalInputValue] = useState("");
+  const handleModalInputChange = (event) => {
+    setModalInputValue(event.target.value);
+};
+const handleCancelClick = () => {
+  setIsModalOpen(false);
+};
+const handleokClick = () => {
+  setIsModalOpen(false);
+};
+
   const uniqueValuesMap = useMemo(() => {
     const newUniqueValuesMap = new Map<string, Set<string>>();
     if (alerts) {
@@ -176,10 +189,8 @@ export default function AlertPresets({
 
   // Add an option or check box, if it will be global or private.
   async function addOrUpdatePreset() {
-    const newPresetName = prompt(
-      `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
-      preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
-    );
+    setIsModalOpen(true);
+    const newPresetName =  modalInputValue 
     if (newPresetName) {
       const options = selectedOptions.map((option) => {
         return {
@@ -256,19 +267,44 @@ export default function AlertPresets({
 >
   Create Preset
 </Button>
-  <Switch 
+
+
+
+<Modal 
+ isOpen={isModalOpen}
+ onClose={() => setIsModalOpen(false)}
+ title="New Preset"
+ className=" m-0.20 "
+ > 
+<div>
+ <label className="m-20 bg-orange-100  " htmlFor={`${preset?.name ? "Update preset name?" : "Enter new preset name"}`}/>
+        <input
+        className="border-orange-100 "
+        color="orange"
+          value={modalInputValue}
+          onChange={handleModalInputChange}
+          defaultValue={preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name}
+        />
+         <Switch 
     id="switch"
     name="switch"
     checked={isPrivate}
     onChange={handleSwitchChange} 
-    className="focus:outline-none focus:ring-2 focus:ring-orange-500"
+    className="focus:outline-none focus:ring-2 focus:ring-orange-500  m-3.5"
   />
   <label 
     htmlFor="switch"
-    className="text-gray-700 dark:text-gray-200 ml-2 text-sm font-medium"
+    className="text-gray-700 dark:text-gray-200 ml-2 text-sm font-medium m-8"
   >
     Save preset as private or global.
   </label>  
+  <button className="bg-orange-100 w-40px h-40px rounded m-8" onClick={handleCancelClick}>Cancel</button>
+  <button className="text-orange-100 " onClick={handleokClick}>Ok</button>
+
+</div>
+</Modal>
+
+ 
 </div>
           </>)}
         {preset?.name !== "deleted" && preset?.name !== "feed" && (
