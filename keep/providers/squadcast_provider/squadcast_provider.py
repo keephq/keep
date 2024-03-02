@@ -45,7 +45,7 @@ class SquadcastProviderAuthConfig:
 
 
 class SquadcastProvider(BaseProvider):
-    """Send email using the Squadcast API."""
+    """Create incidents and notes using the Squadcast API."""
 
     PROVIDER_TAGS = ["alert"]
 
@@ -127,17 +127,17 @@ class SquadcastProvider(BaseProvider):
         return requests.post(f"{self.__get_endpoint('api')}/v3/incidents/{incident_id}/warroom", data=body,
                              headers=headers)
 
-    def _notify(self, notif_type: str, message: str = "", description: str = "", incident_id: str = "",
+    def _notify(self, notify_type: str, message: str = "", description: str = "", incident_id: str = "",
                 priority: str = "",
                 status: str = "",
                 event_id: str = "", attachments: list = [], **kwargs) -> dict:
         """
-        Creat an incident or notes using the Squadcast API.
+        Create an incident or notes using the Squadcast API.
         """
         self.logger.info(
-            "Sending email using Squadcast API",
+            f"Creating {notify_type} using SquadcastProvider",
             extra={
-                notif_type: notif_type
+                notify_type: notify_type
             })
         refresh_headers = {
             "content-type": "application/json",
@@ -148,17 +148,17 @@ class SquadcastProvider(BaseProvider):
             "content-type": "application/json",
             "Authorization": f"Bearer {api_key_resp.json()['data']['access_token']}",
         }
-        if notif_type == 'incident':
+        if notify_type == 'incident':
             if message == "" or description == "":
                 raise Exception(f"message: \"{message}\" and description: \"{description}\" cannot be empty")
             resp = self._create_incidents(headers=headers, message=message, description=description, priority=priority,
                                           status=status, event_id=event_id)
-        elif notif_type == 'notes':
+        elif notify_type == 'notes':
             if message == "" or incident_id == "":
                 raise Exception(f"message: \"{message}\" and incident_id: \"{incident_id}\" cannot be empty")
             resp = self._crete_notes(headers=headers, message=message, incident_id=incident_id, attachments=attachments)
         else:
-            raise Exception("notif_type is a mandatory field, expected: incident | notes")
+            raise Exception("notify_type is a mandatory field, expected: incident | notes")
         try:
             resp.raise_for_status()
             return resp.json()
