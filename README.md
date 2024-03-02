@@ -166,6 +166,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/zenduty-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/squadcast-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/oncall-icon.png?raw=true"/>
 </p>
 <h3 align="center">Ticketing tools</h2>
 <p align="center">
@@ -198,10 +200,20 @@ The easiest way to start with Keep is to run it via docker-compose:
 curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
+
+#### Spinning up Keep with Helm on Kubernetes/Openshift
+To install Keep to your Kubernetes ease free with Helm, run the following commands:
+
+```shell
+helm repo add keephq https://keephq.github.io/helm-charts
+helm pull keephq/keep
+helm install keep keephq/keep
+```
+
+More information about the Helm chart can be found [here](https://github.com/keephq/helm-charts).
+
 #### Local development
 You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
-
-
 
 #### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
