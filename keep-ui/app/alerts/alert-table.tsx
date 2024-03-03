@@ -13,6 +13,7 @@ import {
   ColumnOrderState,
   VisibilityState,
   ColumnSizingState,
+  getFilteredRowModel,
 } from "@tanstack/react-table";
 import AlertPagination from "./alert-pagination";
 import AlertColumnsSelect from "./alert-columns-select";
@@ -90,6 +91,7 @@ export function AlertTable({
       pagination: { pageSize: 10 },
     },
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     pageCount: rowPagination
       ? getDataPageCount(alerts.length, rowPagination.state)
       : undefined,
@@ -105,9 +107,7 @@ export function AlertTable({
 
   return (
     <>
-      {presetName && (
-        <AlertColumnsSelect presetName={presetName} table={table} />
-      )}
+      <AlertColumnsSelect presetName={presetName} table={table} />
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."
