@@ -388,36 +388,38 @@ const ProviderForm = ({
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
         )}
-        <div className="flex items-center">
-          <Image
-            src={`/keep.png`}
-            width={55}
-            height={64}
-            alt={provider.type}
-            className="mt-5 mb-9 mr-2.5"
-          />
-          <div className="flex flex-col">
-            <Icon
-              icon={ArrowLongLeftIcon}
-              size="xl"
-              color="orange"
-              className="py-0"
+        {provider.config.length > 0 && (
+          <div className="flex items-center">
+            <Image
+              src={`/keep.png`}
+              width={55}
+              height={64}
+              alt={provider.type}
+              className="mt-5 mb-9 mr-2.5"
             />
-            <Icon
-              icon={ArrowLongRightIcon}
-              size="xl"
-              color="orange"
-              className="py-0 pb-2.5"
+            <div className="flex flex-col">
+              <Icon
+                icon={ArrowLongLeftIcon}
+                size="xl"
+                color="orange"
+                className="py-0"
+              />
+              <Icon
+                icon={ArrowLongRightIcon}
+                size="xl"
+                color="orange"
+                className="py-0 pb-2.5"
+              />
+            </div>
+            <Image
+              src={`/icons/${provider.type}-icon.png`}
+              width={64}
+              height={55}
+              alt={provider.type}
+              className="mt-5 mb-9 ml-2.5"
             />
           </div>
-          <Image
-            src={`/icons/${provider.type}-icon.png`}
-            width={64}
-            height={55}
-            alt={provider.type}
-            className="mt-5 mb-9 ml-2.5"
-          />
-        </div>
+          )}
         {provider.scopes?.length > 0 && (
           <ProviderFormScopes
             provider={provider}
@@ -442,29 +444,33 @@ const ProviderForm = ({
                 <Divider />
               </>
             ) : null}
-            <label htmlFor="provider_name" className="label-container mb-1">
-              <Text>
-                Provider Name
-                <span className="text-red-400">*</span>
-              </Text>
-            </label>
-            <TextInput
-              type="text"
-              id="provider_name"
-              name="provider_name"
-              value={formValues.provider_name || ""}
-              onChange={handleInputChange}
-              placeholder="Enter provider name"
-              color="orange"
-              autoComplete="off"
-              disabled={isProviderNameDisabled}
-              error={Object.keys(inputErrors).includes("provider_name")}
-              title={
-                isProviderNameDisabled
-                  ? "This field is disabled because it is pre-filled from the workflow."
-                  : ""
-              }
-            />
+            {provider.config.length > 0 && (
+              <>
+                <label htmlFor="provider_name" className="label-container mb-1">
+                  <Text>
+                    Provider Name
+                    <span className="text-red-400">*</span>
+                  </Text>
+                </label>
+                <TextInput
+                  type="text"
+                  id="provider_name"
+                  name="provider_name"
+                  value={formValues.provider_name || ""}
+                  onChange={handleInputChange}
+                  placeholder="Enter provider name"
+                  color="orange"
+                  autoComplete="off"
+                  disabled={isProviderNameDisabled}
+                  error={Object.keys(inputErrors).includes("provider_name")}
+                  title={
+                    isProviderNameDisabled
+                      ? "This field is disabled because it is pre-filled from the workflow."
+                      : ""
+                  }
+                />
+              </>
+            )}
           </div>
           {Object.keys(provider.config).map((configKey) => {
             const method = provider.config[configKey];
@@ -639,7 +645,7 @@ const ProviderForm = ({
         >
           Cancel
         </Button>
-        {installedProvidersMode && (
+        {installedProvidersMode && provider.config.length > 0 && (
           <>
             <Button onClick={deleteProvider} color="red" className="mr-2.5">
               Delete
@@ -653,7 +659,7 @@ const ProviderForm = ({
             </Button>
           </>
         )}
-        {!installedProvidersMode && (
+        {!installedProvidersMode && provider.config.length > 0 && (
           <Button
             loading={isLoading}
             onClick={handleConnectClick}

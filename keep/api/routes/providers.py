@@ -800,4 +800,9 @@ def get_webhook_settings(
             api_key=webhook_api_key,
             keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
         ),
+        webhookMarkdown=provider_class.webhook_markdown.format(
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
+        ),
     )
