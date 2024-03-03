@@ -16,7 +16,7 @@ import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
-import { set } from "date-fns";
+import { isDateWithinRange } from "./alert-columns-select";
 
 export const DEFAULT_COLS = [
   "checkbox",
@@ -181,6 +181,7 @@ export const useAlertTableCols = (
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
       header: "Last Received",
+      filterFn: isDateWithinRange,
       minSize: 100,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
