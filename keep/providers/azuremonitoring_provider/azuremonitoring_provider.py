@@ -16,7 +16,7 @@ class AzuremonitoringProvider(BaseProvider):
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
-💡 For more details on how to configure Azure Monitor to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/docs/integrations/azure-monitor). 💡
+💡 For more details on how to configure Azure Monitor to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/azuremonitoring-provider). 💡
 
 To send alerts from Azure Monitor to Keep, Use the following webhook url to configure Azure Monitor send alerts to Keep:
 
