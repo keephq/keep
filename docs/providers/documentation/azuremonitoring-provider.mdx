@@ -4,8 +4,6 @@ sidebarTitle: "Azure Monitoring Provider"
 description: "Azure Monitoring provider allows you to get alerts from Azure Monitoring via webhooks."
 ---
 
-import { webhook_markdown } from './path-to-webhook-markdown-variable';
-
 ## Overview
 
 The Azure Monitoring Provider integrates Keep with Azure Monitoring, allowing you to receive alerts within Keep's platform. By setting up a webhook in Azure, you can ensure that critical alerts are sent to Keep, allowing for efficient monitoring and response.
@@ -14,17 +12,67 @@ The Azure Monitoring Provider integrates Keep with Azure Monitoring, allowing yo
 
 Connecting Azure Monitoring to Keep involves creating an Action Group in Azure, adding a webhook action, and configuring the Alert Rule to use the new Action Group.
 
-### Step 1: Create an Action Group
-
+### Step 1: Navigate an Action Group
 1. Log in to your Azure portal.
-2. Navigate to **Monitor** > **Alerts** > **Manage actions**.
-3. Click on **+ New action group**.
-4. Enter the details for the action group and select the subscription and resource group.
-5. Click **Next**.
+2. Navigate to **Monitor** > **Alerts** > **Action groups**.
 
-### Step 2: Add a Webhook Action
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_1.png" />
+</Frame>
 
-1. Within the new action group, select **+ Add action**.
-2. Choose the **Webhook** action type.
-3. In the **Name** field, enter `keep-azuremonitoring-webhook-integration`.
-4. For the **URL**, use the following webhook URL provided by Keep:
+### Step 2: Create new Action Group
+1. Click on **+ Create**.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_2.png" />
+</Frame>
+
+
+### Step 3: Fill Action Group details
+1. Choose the Subscription and Resource Group.
+2. Give the Action Group an indicative name.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_3.png" />
+</Frame>
+
+### Step 4: Go to "Action" and add Keep as a Webhook
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_4.png" />
+</Frame>
+
+### Step 5: Test Keep Webhook action
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_5.png" />
+</Frame>
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_6.png" />
+</Frame>
+
+### Step 7: View the alert in Keep
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/azuremonitoring_7.png" />
+</Frame>
+
+## Useful Links
+- [Azure Monitor alert webhook](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-webhooks)
+- [Azure Monitor alert payload](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-payload-samples)
+- [Azure Monitor action groups](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups)
