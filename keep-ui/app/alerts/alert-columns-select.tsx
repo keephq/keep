@@ -85,7 +85,7 @@ export default function AlertColumnsSelect({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-x-2 pt-4">
+    <div className="grid grid-cols-2 gap-x-2 pt-4 w-2/5">
       <div>
         <Subtitle>Columns</Subtitle>
         <MultiSelect
