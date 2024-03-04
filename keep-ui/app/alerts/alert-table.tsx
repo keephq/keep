@@ -8,20 +8,18 @@ import {
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
-  PaginationState,
   ColumnDef,
   ColumnOrderState,
   VisibilityState,
   ColumnSizingState,
+  getFilteredRowModel,
 } from "@tanstack/react-table";
 import AlertPagination from "./alert-pagination";
 import AlertColumnsSelect from "./alert-columns-select";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
-  getDataPageCount,
   getColumnsIds,
-  getPaginatedData,
   getOnlyVisibleCols,
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
@@ -38,10 +36,6 @@ interface Props {
     state: RowSelectionState;
     onChange: OnChangeFn<RowSelectionState>;
   };
-  rowPagination?: {
-    state: PaginationState;
-    onChange: OnChangeFn<PaginationState>;
-  };
 }
 
 export function AlertTable({
@@ -50,7 +44,6 @@ export function AlertTable({
   isAsyncLoading = false,
   presetName,
   rowSelection,
-  rowPagination,
   isRefreshAllowed = true,
 }: Props) {
   const columnsIds = getColumnsIds(columns);
@@ -71,16 +64,13 @@ export function AlertTable({
   );
 
   const table = useReactTable({
-    data: rowPagination
-      ? getPaginatedData(alerts, rowPagination.state)
-      : alerts,
+    data: alerts,
     columns: columns,
     state: {
       columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       rowSelection: rowSelection?.state,
-      pagination: rowPagination?.state,
       columnPinning: {
         left: ["checkbox"],
         right: ["alertMenu"],
@@ -90,24 +80,19 @@ export function AlertTable({
       pagination: { pageSize: 10 },
     },
     getCoreRowModel: getCoreRowModel(),
-    pageCount: rowPagination
-      ? getDataPageCount(alerts.length, rowPagination.state)
-      : undefined,
-    getPaginationRowModel: rowPagination ? undefined : getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: rowSelection !== undefined,
-    manualPagination: rowPagination !== undefined,
-    onPaginationChange: rowPagination?.onChange,
     onRowSelectionChange: rowSelection?.onChange,
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
+    autoResetPageIndex: false,
   });
 
   return (
     <>
-      {presetName && (
-        <AlertColumnsSelect presetName={presetName} table={table} />
-      )}
+      <AlertColumnsSelect presetName={presetName} table={table} />
       {isAsyncLoading && (
         <Callout
           title="Getting your alerts..."
