@@ -47,7 +47,7 @@ class WorkflowManager:
         self.started = False
 
     def _apply_filter(self, filter_val, value):
-        # if its a regex, apply it
+        # if it's a regex, apply it
         if filter_val.startswith('r"'):
             try:
                 # remove the r" and the last "
@@ -75,7 +75,7 @@ class WorkflowManager:
                 # todo - handle it better
                 # todo2 - handle if more than one provider is not configured
                 except ProviderConfigurationException as e:
-                    self.logger.warn(
+                    self.logger.warning(
                         f"Workflow have a provider that is not configured: {e}"
                     )
                     continue
@@ -216,7 +216,7 @@ class WorkflowManager:
         # If at least one workflow has an interval, run workflows using the scheduler,
         #   otherwise, just run it
         if any([Workflow.workflow_interval for Workflow in workflows]):
-            # running workglows in scheduler mode
+            # running workflows in scheduler mode
             self.logger.info(
                 "Found at least one workflow with an interval, running in scheduler mode"
             )
@@ -268,7 +268,7 @@ class WorkflowManager:
                 self.logger.info(
                     f"Running on_failure action for workflow {workflow.workflow_id}"
                 )
-                # Adding the exception message to the provider context so it'll be available for the action
+                # Adding the exception message to the provider context, so it'll be available for the action
                 message = (
                     f"Workflow {workflow.workflow_id} failed with exception: {str(e)}å"
                 )
