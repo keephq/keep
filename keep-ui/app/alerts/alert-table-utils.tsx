@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   ColumnDef,
-  PaginationState,
+  FilterFn,
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
@@ -16,7 +16,7 @@ import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
-import { set } from "date-fns";
+import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
 
 export const DEFAULT_COLS = [
   "checkbox",
@@ -34,16 +34,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
-export const getPaginatedData = (
-  alerts: AlertDto[],
-  { pageIndex, pageSize }: PaginationState
-) => alerts.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
-
-export const getDataPageCount = (
-  dataLength: number,
-  { pageSize }: PaginationState
-) => Math.ceil(dataLength / pageSize);
 
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
@@ -63,6 +53,30 @@ export const getOnlyVisibleCols = (
 
     return { ...acc, [columnId]: false };
   }, columnVisibility);
+
+export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
+  const date = new Date(row.getValue(columnId));
+
+  const { start, end } = value;
+
+  if (!date) {
+    return true;
+  }
+
+  if (isValid(start) && isValid(end)) {
+    return isWithinInterval(startOfDay(date), { start, end });
+  }
+
+  if (isValid(start)) {
+    return isSameDay(start, date);
+  }
+
+  if (isValid(end)) {
+    return isSameDay(end, date);
+  }
+
+  return true;
+};
 
 const columnHelper = createColumnHelper<AlertDto>();
 
@@ -181,6 +195,7 @@ export const useAlertTableCols = (
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
       header: "Last Received",
+      filterFn: isDateWithinRange,
       minSize: 100,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
