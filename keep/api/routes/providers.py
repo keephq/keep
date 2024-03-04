@@ -788,6 +788,15 @@ def get_webhook_settings(
         "https://", f"https://keep:{webhook_api_key}@"
     )
 
+    try:
+        webhookMarkdown = provider_class.webhook_markdown.format(
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
+        )
+    except AttributeError:
+        webhookMarkdown = None
+
     logger.info("Got webhook settings", extra={"provider_type": provider_type})
     return ProviderWebhookSettings(
         webhookDescription=provider_class.webhook_description.format(
@@ -800,9 +809,5 @@ def get_webhook_settings(
             api_key=webhook_api_key,
             keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
         ),
-        webhookMarkdown=provider_class.webhook_markdown.format(
-            keep_webhook_api_url=keep_webhook_api_url,
-            api_key=webhook_api_key,
-            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
-        ),
+        webhookMarkdown=webhookMarkdown,
     )
