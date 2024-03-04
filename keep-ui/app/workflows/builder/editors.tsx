@@ -32,11 +32,11 @@ export function GlobalEditor() {
   return (
     <EditorLayout>
       <Title>Keep Workflow Editor</Title>
-      <Text>
+      <Text className="dark:text-white">
         Use this visual workflow editor to easily create or edit existing Keep
         workflow YAML specifications.
       </Text>
-      <Text className="mt-5">
+      <Text className="mt-5 dark:text-white">
         Use the toolbox to add steps, conditions and actions to your workflow
         and click the `Generate` button to compile the workflow / `Deploy`
         button to deploy the workflow to Keep.
@@ -99,7 +99,7 @@ function KeepStepEditor({
 
   return (
     <>
-      <Text>Provider Name</Text>
+      <Text className="dark:text-white">Provider Name</Text>
       <Select
         className="my-2.5"
         placeholder={`Select from installed ${providerType} providers`}
@@ -145,9 +145,9 @@ function KeepStepEditor({
             : ""
         }`}
       />
-      <Text className="my-2.5">Provider Parameters</Text>
+      <Text className="my-2.5 dark:text-white">Provider Parameters</Text>
       <div>
-        <Text>If</Text>
+        <Text className="dark:text-white">If</Text>
         <TextInput
           id="if"
           placeholder="If Condition"
@@ -188,14 +188,14 @@ function KeepThresholdConditionEditor({
   const currentCompareToValue = (properties.compare_to as string) ?? "";
   return (
     <>
-      <Text>Value</Text>
+      <Text className="dark:text-white">Value</Text>
       <TextInput
         placeholder="Value"
         onChange={(e: any) => updateProperty("value", e.target.value)}
         className="mb-2.5"
         value={currentValueValue}
       />
-      <Text>Compare to</Text>
+      <Text className="dark:text-white">Compare to</Text>
       <TextInput
         placeholder="Compare with"
         onChange={(e: any) => updateProperty("compare_to", e.target.value)}
@@ -213,7 +213,7 @@ function KeepAssertConditionEditor({
   const currentAssertValue = (properties.assert as string) ?? "";
   return (
     <>
-      <Text>Assert</Text>
+      <Text className="dark:text-white">Assert</Text>
       <TextInput
         placeholder="E.g. 200 == 200"
         onChange={(e: any) => updateProperty("assert", e.target.value)}
@@ -229,7 +229,7 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
 
   return (
     <>
-      <Text>Foreach Value</Text>
+      <Text className="dark:text-white">Foreach Value</Text>
       <TextInput
         placeholder="Value"
         onChange={(e: any) => updateProperty("value", e.target.value)}
@@ -319,7 +319,7 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
       {propertyKeys.map((key, index) => {
         return (
           <div key={index}>
-            <Text className="capitalize mt-2.5">{key}</Text>
+            <Text className="capitalize mt-2.5 dark:text-white">{key}</Text>
             {key === "manual" ? (
               <div key={key}>
                 <input
@@ -336,9 +336,8 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
                   <Button
                     onClick={addFilter}
                     size="xs"
-                    className="ml-1 mt-1"
+                    className="ml-1 mt-1 text-gray-500 dark:text-white"
                     variant="light"
-                    color="gray"
                     icon={FunnelIcon}
                   >
                     Add Filter
@@ -400,7 +399,7 @@ export default function StepEditor({
   return (
     <EditorLayout>
       <Title className="capitalize">{providerType} Editor</Title>
-      <Text className="mt-1">Unique Identifier</Text>
+      <Text className="mt-1 dark:text-white">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
         icon={KeyIcon}

@@ -98,8 +98,10 @@ const ProvidersTiles = ({
   const providersWithConfig = providers
     .filter((provider) => {
       const config = (provider as Provider).config;
-       // Filter out providers with empty config and providers that support webhooks
-      return (config && Object.keys(config).length > 0) || (provider.supports_webhook);
+      // Filter out providers with empty config and providers that support webhooks
+      return (
+        (config && Object.keys(config).length > 0) || provider.supports_webhook
+      );
     })
     .sort(
       (a, b) =>
@@ -129,7 +131,7 @@ const ProvidersTiles = ({
         isOpen={openPanel}
         size={panelSize}
         backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[2000]"
+        panelContainerClassName="bg-white z-[2000] dark:bg-gray-700"
       >
         {selectedProvider && (
           <ProviderForm

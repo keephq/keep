@@ -503,7 +503,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           isOpen={openPanel}
           size={30}
           backdropClicked={handleCloseModal}
-          panelContainerClassName="bg-white z-[2000]"
+          panelContainerClassName="bg-white z-[2000] dark:bg-gray-700"
         >
           {selectedProvider && (
             <ProviderForm

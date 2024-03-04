@@ -378,7 +378,7 @@ const ProviderForm = ({
             <Icon
               icon={DocumentTextIcon}
               variant="simple"
-              color="gray"
+              className="text-gray-500 dark:text-white"
               size="sm"
               tooltip={`${provider.type} provider documentation`}
             />
@@ -419,7 +419,7 @@ const ProviderForm = ({
               className="mt-5 mb-9 ml-2.5"
             />
           </div>
-          )}
+        )}
         {provider.scopes?.length > 0 && (
           <ProviderFormScopes
             provider={provider}
@@ -447,7 +447,7 @@ const ProviderForm = ({
             {Object.keys(provider.config).length > 0 && (
               <>
                 <label htmlFor="provider_name" className="label-container mb-1">
-                  <Text>
+                  <Text className="dark:text-white">
                     Provider Name
                     <span className="text-red-400">*</span>
                   </Text>
@@ -479,7 +479,7 @@ const ProviderForm = ({
             return (
               <div className="mt-2.5" key={configKey}>
                 <label htmlFor={configKey} className="flex items-center mb-1">
-                  <Text className="capitalize">
+                  <Text className="dark:text-white capitalize">
                     {method.description}
                     {method.required === true ? (
                       <span className="text-red-400">*</span>
@@ -562,11 +562,13 @@ const ProviderForm = ({
                     htmlFor="install_webhook"
                     className="flex items-center"
                   >
-                    <Text className="capitalize">Install Webhook</Text>
+                    <Text className="capitalize dark:text-white">
+                      Install Webhook
+                    </Text>
                     <Icon
                       icon={QuestionMarkCircleIcon}
                       variant="simple"
-                      color="gray"
+                      className="text-gray-500 dark:text-white"
                       size="sm"
                       tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
                     />

@@ -903,9 +903,12 @@ export default function Page() {
               combinators: "bg-orange-400 text-white rounded-l-full p-1 shadow",
               addRule: "bg-orange-400 text-white rounded-none p-1 shadow",
               addGroup: "bg-orange-400 text-white rounded-r-full p-1 shadow",
-              fields: "bg-white text-orange-400 rounded-l-full p-1 shadow",
-              operators: "bg-white text-orange-400 rounded-none p-1 shadow",
-              value: "bg-white text-orange-400 rounded-r-full p-1 shadow w-32",
+              fields:
+                "bg-white text-orange-400 rounded-l-full p-1 shadow dark:bg-gray-700",
+              operators:
+                "bg-white text-orange-400 rounded-none p-1 shadow dark:bg-gray-700",
+              value:
+                "bg-white text-orange-400 rounded-r-full p-1 shadow w-32 dark:bg-gray-700",
               removeGroup: "p-1 ml-auto",
               removeRule: "p-1 ml-auto",
             }}
@@ -982,17 +985,19 @@ export default function Page() {
                           onClick={() => handleRowClick(rule)}
                           className={`cursor-pointer ${
                             activeRow === rule.id
-                              ? "bg-gray-100"
-                              : "hover:bg-gray-100"
+                              ? "bg-gray-100 dark:bg-gray-700"
+                              : "hover:bg-gray-100 dark:hover:bg-gray-700"
                           }`}
                         >
-                          <TableCell className="whitespace-normal break-words">
+                          <TableCell className="whitespace-normal break-words dark:text-white">
                             {rule.name}
                           </TableCell>
-                          <TableCell className="whitespace-normal break-words">
+                          <TableCell className="whitespace-normal break-words dark:text-white">
                             {rule.definition_cel}
                           </TableCell>
-                          <TableCell>{rule.created_by}</TableCell>
+                          <TableCell className="dark:text-white">
+                            {rule.created_by}
+                          </TableCell>
                         </TableRow>
                         {expandedRows[rule.id] && (
                           <TableRow key={`details-${rule.id}`}>
@@ -1018,35 +1023,33 @@ export default function Page() {
                                 )}
                                 {rule.distribution &&
                                 Object.keys(rule.distribution).length > 0 ? (
-                                  <>
-                                    <div className="text-center">
-                                      <AreaChart
-                                        data={flattenDistribution(
-                                          rule.distribution
-                                        )}
-                                        index="timestamp"
-                                        yAxisWidth={65}
-                                        categories={Object.keys(
-                                          rule.distribution
-                                        ).map((key) =>
-                                          key === "none"
-                                            ? "Number of Alerts"
-                                            : key
-                                        )}
-                                        enableLegendSlider={true}
-                                      />
-                                      <div className="mt-2">
-                                        {" "}
-                                        {/* Adjust margin-top as needed */}
-                                        <Text
-                                          color="orange"
-                                          className="inline-block mx-auto"
-                                        >
-                                          Alerts hits (24 hours)
-                                        </Text>
-                                      </div>
+                                  <div className="text-center">
+                                    <AreaChart
+                                      data={flattenDistribution(
+                                        rule.distribution
+                                      )}
+                                      index="timestamp"
+                                      yAxisWidth={65}
+                                      categories={Object.keys(
+                                        rule.distribution
+                                      ).map((key) =>
+                                        key === "none"
+                                          ? "Number of Alerts"
+                                          : key
+                                      )}
+                                      enableLegendSlider={true}
+                                    />
+                                    <div className="mt-2">
+                                      {" "}
+                                      {/* Adjust margin-top as needed */}
+                                      <Text
+                                        color="orange"
+                                        className="inline-block mx-auto"
+                                      >
+                                        Alerts hits (24 hours)
+                                      </Text>
                                     </div>
-                                  </>
+                                  </div>
                                 ) : (
                                   <Text className="mt-2" color="red">
                                     No alerts matched this rule in the last 24

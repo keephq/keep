@@ -63,15 +63,17 @@ const ProviderFormScopes = ({
             {
               // provider.scopes! is because we validates scopes exists in the parent component
               provider.scopes!.map((scope) => {
-                let isScopeString = typeof validatedScopes[scope.name] === 'string';
+                let isScopeString =
+                  typeof validatedScopes[scope.name] === "string";
                 let isScopeLong = false;
 
                 if (isScopeString) {
-                    isScopeLong = validatedScopes[scope.name].toString().length > 100;
+                  isScopeLong =
+                    validatedScopes[scope.name].toString().length > 100;
                 }
                 return (
                   <TableRow key={scope.name}>
-                    <TableCell>
+                    <TableCell className="dark:text-white">
                       {scope.name}
                       {scope.mandatory ? (
                         <span className="text-red-400">*</span>
@@ -89,7 +91,9 @@ const ProviderFormScopes = ({
                             ? "gray"
                             : "red" // scope was tested and is a string, meaning it has an error
                         }
-                        className={`truncate ${isScopeLong? 'max-w-lg' : 'max-w-xs' }`}
+                        className={`truncate ${
+                          isScopeLong ? "max-w-lg" : "max-w-xs"
+                        }`}
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
@@ -98,14 +102,17 @@ const ProviderFormScopes = ({
                           : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
-                    <TableCell title={scope.description} className="max-w-xs">
+                    <TableCell
+                      title={scope.description}
+                      className="max-w-xs dark:text-white"
+                    >
                       <div className="flex items-center break-words whitespace-normal">
                         {scope.description}
                         {scope.mandatory_for_webhook ? (
                           <Icon
                             icon={QuestionMarkCircleIcon}
                             variant="simple"
-                            color="gray"
+                            className="text-gray-500 dark:text-white"
                             size="sm"
                             tooltip="Mandatory for webhook installation"
                           />

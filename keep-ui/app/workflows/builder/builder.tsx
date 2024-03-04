@@ -36,6 +36,7 @@ import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { useTheme } from "next-themes";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -62,6 +63,7 @@ function Builder({
   accessToken,
   installedProviders,
 }: Props) {
+  const { theme } = useTheme();
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
@@ -136,15 +138,7 @@ function Builder({
         triggers = { alert: { source: alertSource, name: alertName } };
       }
       setDefinition(
-        wrapDefinition(
-          generateWorkflow(
-            alertUuid,
-            "",
-            [],
-            [],
-            triggers
-          )
-        )
+        wrapDefinition(generateWorkflow(alertUuid, "", [], [], triggers))
       );
     } else {
       setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
@@ -172,7 +166,12 @@ function Builder({
   }, [triggerSave]);
 
   useEffect(() => {
-    enableGenerate(definition.isValid && stepValidationError === null && globalValidationError === null || false);
+    enableGenerate(
+      (definition.isValid &&
+        stepValidationError === null &&
+        globalValidationError === null) ||
+        false
+    );
   }, [
     stepValidationError,
     globalValidationError,
@@ -235,7 +234,7 @@ function Builder({
       <Modal
         onRequestClose={closeModal}
         isOpen={modalIsOpen}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+        className="bg-gray-50 dark:bg-gray-700 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
       >
         <BuilderModalContent
           closeModal={closeModal}
@@ -273,6 +272,7 @@ function Builder({
             controlBar={true}
             globalEditor={<GlobalEditor />}
             stepEditor={<StepEditor installedProviders={installedProviders} />}
+            theme={theme}
           />
         </>
       )}

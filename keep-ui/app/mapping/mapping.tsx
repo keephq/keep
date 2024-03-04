@@ -38,8 +38,10 @@ export default function Mapping() {
               title="Mapping rules does not exist"
               icon={MdWarning}
             >
-              <p className="text-slate-400">No mapping rules found</p>
-              <p className="text-slate-400">
+              <p className="text-slate-400 dark:text-white">
+                No mapping rules found
+              </p>
+              <p className="text-slate-40 dark:text-white">
                 Configure new mapping rule using the mapping rules wizard.
               </p>
             </Callout>

@@ -118,7 +118,7 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
             {headerGroup.headers.map((header) => {
               return (
                 <TableHeaderCell
-                  className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+                  className="text-gray-900 dark:text-white"
                   key={header.id}
                 >
                   {flexRender(
@@ -134,11 +134,11 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <TableRow
-            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
+            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 dark:hover:bg-gray-700"
             key={row.id}
           >
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
+              <TableCell key={cell.id} className="dark:text-white">
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}
