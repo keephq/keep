@@ -692,19 +692,19 @@ def list_mappings(info: Info):
             ]
         )
     print(table)
-@mappings.command()
+@mappings.command(name="create")
 @click.option(
     "--name",
     "-n",
     type=str,
-    help="The name of the mapping",
+    help="The name of the mapping.",
     required=True,
 )
 @click.option(
     "--description",
     "-d",
     type=str,
-    help="The description of the mapping",
+    help="The description of the mapping.",
     required=False,
     default="",
 )
@@ -712,14 +712,14 @@ def list_mappings(info: Info):
     "--file",
     "-f",
     type=click.Path(exists=True),
-    help="The mapping file",
+    help="The mapping file. Must be a CSV file.",
     required=True,
 )
 @click.option(
     "--matchers",
     "-m",
     type=str,
-    help="The matchers of the mapping, as a comma-separated list of strings",
+    help="The matchers of the mapping, as a comma-separated list of strings.",
     required=True,
 )
 @pass_info
@@ -768,12 +768,12 @@ def create(info: Info, name: str, description: str, file: str, matchers: str):
 @click.option(
     "--mapping-id",
     type=int,
-    help="The ID of the mapping to delete",
+    help="The ID of the mapping to delete.",
     required=True,
 )
 @pass_info
 def delete_mapping(info: Info, mapping_id: int):
-    """Delete a mapping with a specified ID"""
+    """Delete a mapping with a specified ID."""
 
     # Delete the mapping with the specified ID
     mappings_endpoint = info.keep_api_url + f"/mapping/{mapping_id}"
