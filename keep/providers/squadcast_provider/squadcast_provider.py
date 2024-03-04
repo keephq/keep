@@ -26,7 +26,7 @@ class SquadcastProviderAuthConfig:
     )
     refresh_token: str | None = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "Squadcast Refresh Token",
             "hint": "https://support.squadcast.com/docs/squadcast-public-api",
             "sensitive": True,
@@ -35,7 +35,7 @@ class SquadcastProviderAuthConfig:
     )
     webhook_url: str | None = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "Incident webhook url",
             "hint": "https://support.squadcast.com/integrations/incident-webhook-incident-webhook-api",
             "sensitive": True,
@@ -107,30 +107,15 @@ class SquadcastProvider(BaseProvider):
 
     def _create_incidents(self, headers: dict, message: str, description: str, priority: str = "",
                           status: str = "",
-                          event_id: str = "",
-                          additional_json: str = ""):
+                          event_id: str = ""):
 
-        body = {
+        body = json.dumps({
             "message": message,
             "description": description,
             "priority": priority,
             "status": status,
             "event_id": event_id
-        }
-
-        print(additional_json)
-
-        if additional_json != "":
-            body_json = body.copy()
-            try:
-                additions = json.dumps(additional_json.replace("'", '"'))
-            except json.JSONDecodeError as e:
-                raise Exception(f"Failed to parse additional_json: {str(e)}")
-            body_json.update(json.loads(additions))
-            body = json.dumps(body_json)
-            print(body)
-        else:
-            body = json.dumps(body)
+        })
 
         return requests.post(self.authentication_config.webhook_url, data=body, headers=headers)
 
@@ -145,8 +130,7 @@ class SquadcastProvider(BaseProvider):
     def _notify(self, notify_type: str, message: str = "", description: str = "", incident_id: str = "",
                 priority: str = "",
                 status: str = "",
-                event_id: str = "",
-                additional_json: str = "", attachments: list = [], **kwargs) -> dict:
+                event_id: str = "", attachments: list = [], **kwargs) -> dict:
         """
         Create an incident or notes using the Squadcast API.
         """
@@ -168,7 +152,7 @@ class SquadcastProvider(BaseProvider):
             if message == "" or description == "":
                 raise Exception(f"message: \"{message}\" and description: \"{description}\" cannot be empty")
             resp = self._create_incidents(headers=headers, message=message, description=description, priority=priority,
-                                            status=status, event_id=event_id, additional_json=additional_json)
+                                          status=status, event_id=event_id)
         elif notify_type == 'notes':
             if message == "" or incident_id == "":
                 raise Exception(f"message: \"{message}\" and incident_id: \"{incident_id}\" cannot be empty")

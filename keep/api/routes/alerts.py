@@ -204,7 +204,7 @@ def pull_alerts_from_providers(
                 },
             )
         except Exception as e:
-            logger.warning(
+            logger.warn(
                 f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
@@ -288,7 +288,7 @@ def get_alert_history(
             ).get(fingerprint, [])
             enriched_alerts_dto.extend(pulled_alerts_history)
         except Exception:
-            logger.warning(
+            logger.warn(
                 "Failed to pull alerts history from installed provider",
                 extra={
                     "provider_id": provider_id,
