@@ -79,6 +79,7 @@
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
+            "providers/documentation/azuremonitoring-provider",
             "providers/documentation/cloudwatch-logs",
             "providers/documentation/cloudwatch-metrics",
             "providers/documentation/console-provider",
