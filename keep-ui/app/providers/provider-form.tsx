@@ -388,7 +388,7 @@ const ProviderForm = ({
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
         )}
-        {provider.config.length > 0 && (
+        {Object.keys(provider.config).length > 0 && (
           <div className="flex items-center">
             <Image
               src={`/keep.png`}
@@ -444,7 +444,7 @@ const ProviderForm = ({
                 <Divider />
               </>
             ) : null}
-            {provider.config.length > 0 && (
+            {Object.keys(provider.config).length > 0 && (
               <>
                 <label htmlFor="provider_name" className="label-container mb-1">
                   <Text>
@@ -645,7 +645,7 @@ const ProviderForm = ({
         >
           Cancel
         </Button>
-        {installedProvidersMode && provider.config.length > 0 && (
+        {installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <>
             <Button onClick={deleteProvider} color="red" className="mr-2.5">
               Delete
@@ -659,7 +659,7 @@ const ProviderForm = ({
             </Button>
           </>
         )}
-        {!installedProvidersMode && provider.config.length > 0 && (
+        {!installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <Button
             loading={isLoading}
             onClick={handleConnectClick}
