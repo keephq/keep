@@ -65,7 +65,7 @@ class WebsocketProvider(BaseProvider):
         try:
             self.ws.close()
         except Exception:
-            self.logger.warn("Failed to close websocket connection")
+            self.logger.warning("Failed to close websocket connection")
 
 
 if __name__ == "__main__":
