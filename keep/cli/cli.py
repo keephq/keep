@@ -22,6 +22,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
+
 posthog_client = get_posthog_client()
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -641,11 +642,13 @@ def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
         table.add_row([log["id"], log["timestamp"], log["message"]])
     print(table)
 
+
 @cli.group()
 @pass_info
 def mappings(info: Info):
     """Manage mappings."""
     pass
+
 
 @mappings.command(name="list")
 @pass_info
@@ -692,6 +695,8 @@ def list_mappings(info: Info):
             ]
         )
     print(table)
+
+
 @mappings.command(name="create")
 @click.option(
     "--name",
@@ -752,18 +757,23 @@ def create(info: Info, name: str, description: str, file: str, matchers: str):
                     "file_name": file_name,
                     "matchers": matchers.split(","),
                     "rows": rows,
-                }
+                },
             )
 
         # Check the response
         if response.ok:
-            click.echo(click.style(f"Mapping rule {file_name} created successfully", bold=True))
+            click.echo(
+                click.style(f"Mapping rule {file_name} created successfully", bold=True)
+            )
         else:
             click.echo(
                 click.style(
-                    f"Error creating mapping rule {file_name}: {response.text}", bold=True
+                    f"Error creating mapping rule {file_name}: {response.text}",
+                    bold=True,
                 )
             )
+
+
 @mappings.command(name="delete")
 @click.option(
     "--mapping-id",
@@ -785,13 +795,16 @@ def delete_mapping(info: Info, mapping_id: int):
     # Check the response
     if response.ok:
         response = response.json()
-        click.echo(click.style(f"Mapping rule {mapping_id} deleted successfully", bold=True))
+        click.echo(
+            click.style(f"Mapping rule {mapping_id} deleted successfully", bold=True)
+        )
     else:
         click.echo(
             click.style(
                 f"Error deleting mapping rule {mapping_id}: {response.text}", bold=True
             )
         )
+
 
 @cli.group()
 @pass_info
@@ -907,10 +920,11 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         ]
         provider_type = provider.get("type")
         for param, details in provider["config"].items():
+            param_as_flag = f"--{param.replace('_', '-')}"
             table.add_row(
                 [
                     provider_type,
-                    param,
+                    param_as_flag,
                     details.get("required", False),
                     details.get("description", "no description"),
                 ]
