@@ -98,7 +98,8 @@ const ProvidersTiles = ({
   const providersWithConfig = providers
     .filter((provider) => {
       const config = (provider as Provider).config;
-      return config && Object.keys(config).length > 0; // Filter out providers with empty config
+       // Filter out providers with empty config and providers that support webhooks
+      return (config && Object.keys(config).length > 0) || (provider.supports_webhook);
     })
     .sort(
       (a, b) =>

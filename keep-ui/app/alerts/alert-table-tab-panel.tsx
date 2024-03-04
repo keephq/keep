@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { PaginationState, RowSelectionState } from "@tanstack/react-table";
+import { useState } from "react";
+import { RowSelectionState } from "@tanstack/react-table";
 import AlertPresets, { Option } from "./alert-presets";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
@@ -70,11 +70,6 @@ interface Props {
   setDismissModalAlert: (alert: AlertDto | null) => void;
 }
 
-const defaultRowPaginationState = {
-  pageSize: 10,
-  pageIndex: 0,
-};
-
 export default function AlertTableTabPanel({
   alerts,
   preset,
@@ -86,10 +81,6 @@ export default function AlertTableTabPanel({
 }: Props) {
   const [selectedOptions, setSelectedOptions] = useState<Option[]>(
     preset.options
-  );
-
-  const [rowPagination, setRowPagination] = useState<PaginationState>(
-    defaultRowPaginationState
   );
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -119,7 +110,8 @@ export default function AlertTableTabPanel({
 
   const alertTableColumns = useAlertTableCols({
     additionalColsToGenerate: additionalColsToGenerate,
-    isCheckboxDisplayed: preset.name !== "deleted" && preset.name !== "dismissed",
+    isCheckboxDisplayed:
+      preset.name !== "deleted" && preset.name !== "dismissed",
     isMenuDisplayed: true,
     setTicketModalAlert: setTicketModalAlert,
     setNoteModalAlert: setNoteModalAlert,
@@ -127,10 +119,6 @@ export default function AlertTableTabPanel({
     setDismissModalAlert: setDismissModalAlert,
     presetName: preset.name,
   });
-
-  useEffect(() => {
-    setRowPagination(defaultRowPaginationState);
-  }, [selectedOptions]);
 
   return (
     <>
@@ -154,10 +142,6 @@ export default function AlertTableTabPanel({
         columns={alertTableColumns}
         isAsyncLoading={isAsyncLoading}
         rowSelection={{ state: rowSelection, onChange: setRowSelection }}
-        rowPagination={{
-          state: rowPagination,
-          onChange: setRowPagination,
-        }}
         presetName={preset.name}
       />
     </>

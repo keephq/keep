@@ -1,11 +1,10 @@
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { AlertDto } from "./models";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { PaginationState } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
@@ -24,10 +23,6 @@ const AlertHistoryPanel = ({
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
 
-  const [rowPagination, setRowPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  });
   const alertTableColumns = useAlertTableCols();
 
   const sortedHistoryAlert = alertsHistoryWithDate.map((alert) =>
@@ -80,10 +75,6 @@ const AlertHistoryPanel = ({
         columns={alertTableColumns}
         isMenuColDisplayed={false}
         isRefreshAllowed={false}
-        rowPagination={{
-          state: rowPagination,
-          onChange: setRowPagination,
-        }}
         presetName="alert-history"
       />
     </Fragment>
