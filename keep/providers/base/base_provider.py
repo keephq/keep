@@ -43,6 +43,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         config: ProviderConfig,
         webhooke_template: Optional[str] = None,
         webhook_description: Optional[str] = None,
+        webhook_markdown: Optional[str] = None,
         provider_description: Optional[str] = None,
     ):
         """
@@ -57,6 +58,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.config = config
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
+        self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
         self.logger = context_manager.get_logger()
