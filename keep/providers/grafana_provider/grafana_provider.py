@@ -155,7 +155,7 @@ class GrafanaProvider(BaseProvider):
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, verify=False, headers=headers)
         if not response.ok:
-            self.logger.warn(
+            self.logger.warning(
                 "Could not get alerts", extra={"response": response.json()}
             )
             error = response.json()
@@ -174,7 +174,7 @@ class GrafanaProvider(BaseProvider):
 
         if not response.ok:
             response_json = response.json()
-            self.logger.warn(
+            self.logger.warning(
                 "Could not deploy alert", extra={"response": response_json}
             )
             raise Exception(response_json)
