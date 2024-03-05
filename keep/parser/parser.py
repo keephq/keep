@@ -98,7 +98,7 @@ class Parser:
                 if provider_type not in provider_types:
                     provider_types.append(provider_type)
             except Exception:
-                self.logger.warn(
+                self.logger.warning(
                     "Could not get provider type from step or action",
                     extra={"step_or_action": step_or_action},
                 )
