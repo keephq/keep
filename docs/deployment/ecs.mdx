@@ -1,0 +1,135 @@
+---
+title: "AWS ECS"
+sidebarTitle: "AWS ECS"
+---
+
+## Step 1: Login to AWS Console
+- Open your web browser and navigate to the AWS Management Console.
+- Log in using your AWS account credentials.
+
+## Step 2: Navigate to ECS
+- Click on the "Services" dropdown menu in the top left corner.
+- Select "ECS" from the list of services.
+
+## Step 3: Create 3 Task Definitions
+- In the ECS dashboard, navigate to the "Task Definitions" section in the left sidebar.
+- Click on "Create new Task Definition".
+    
+    ### Task Definition 1 (Frontend - KeepUI):
+
+        - Configure your container definitions as below:
+            ```
+            - Infrastructure Requirements:
+                - Launch Type: AWS Fargate
+                - OS, Architecture, Network mode: Linux/X86_64
+                - Task Size: 
+                    - CPU: 0.5 vCPU
+                    - Memory: 4 GB
+                - Task Role and Task Execution Role are optional if yoy plan on using secrets manager for example then create a task execution role to allow access to the secret manager you created.
+            - Container Details:
+                - Name: keep-frontend
+                - Image URI: us-central1-docker.pkg.dev/keephq/keep/keep-api:latest
+                - Ports Mapping:
+                    - Container Port: 3000
+                    - Protocol: TCP
+                - Environment Variables: (This can be static of you can use parameter store or secrets manager)
+                    - DATABASE_CONNECTION_STRING
+                    - AUTH_TYPE
+                    - KEEP_JWT_SECRET
+                    - KEEP_DEFAULT_USERNAME
+                    - KEEP_DEFAULT_PASSWORD
+                    - SECRET_MANAGER_TYPE
+                    - SECRET_MANAGER_DIRECTORY
+                    - USE_NGROK            
+                    - KEEP_API_URL           
+                    - PUSHER_APP_ID        
+                    - PUSHER_APP_KEY         
+                    - PUSHER_APP_SECRET     
+                    - PUSHER_HOST     
+                    - PUSHER_PORT 
+            ```
+        - Review and create your task definition.
+
+    ### Task Definition 2 (Backend - keepAPI):
+
+        - Configure your container definitions as below:
+            ```
+            - Infrastructure Requirements:
+                - Launch Type: AWS Fargate
+                - OS, Architecture, Network mode: Linux/X86_64
+                - Task Size: 
+                    - CPU: 0.5 vCPU
+                    - Memory: 4 GB
+                - Task Role and Task Execution Role are optional if yoy plan on using secrets manager for example then create a task execution role to allow access to the secret manager you created.
+            - Container Details:
+                - Name: keep-backend
+                - Image URI: us-central1-docker.pkg.dev/keephq/keep/keep-api:latest
+                - Ports Mapping:
+                    - Container Port: 8080
+                    - Protocol: TCP
+                - Environment Variables: (This can be static of you can use parameter store or secrets manager)
+                    - DATABASE_CONNECTION_STRING
+                    - AUTH_TYPE
+                    - KEEP_JWT_SECRET
+                    - KEEP_DEFAULT_USERNAME
+                    - KEEP_DEFAULT_PASSWORD
+                    - SECRET_MANAGER_TYPE
+                    - SECRET_MANAGER_DIRECTORY
+                    - USE_NGROK            
+                    - KEEP_API_URL           
+                    - PUSHER_APP_ID        
+                    - PUSHER_APP_KEY         
+                    - PUSHER_APP_SECRET     
+                    - PUSHER_HOST     
+                    - PUSHER_PORT 
+            - Storage:
+                - Volume Name: keep-efs
+                - Configuration Type: Configure at task definition creation
+                - Volume type: EFS
+                - Storage configurations:
+                    - File system ID: Select an exisiting EFS filesystem or create a new one
+                    - Root Directory: /
+                - Container mount points: 
+                    - Container: select the container you just created
+                    - Source volume: keep-efs
+                    - Container path: /app
+                    - Make sure that Readonly is not selected
+            ```
+        - Review and create your task definition.
+
+    ### Task Definition 3 (Websocket):
+
+        - Configure your container definitions as below:
+            ```
+            - Infrastructure Requirements:
+                - Launch Type: AWS Fargate
+                - OS, Architecture, Network mode: Linux/X86_64
+                - Task Size: 
+                    - CPU: 0.25 vCPU
+                    - Memory: 1 GB
+                - Task Role and Task Execution Role are optional if yoy plan on using secrets manager for example then create a task execution role to allow access to the secret manager you created.
+            - Container Details:
+                - Name: keep-websocket
+                - Image URI: quay.io/soketi/soketi:1.4-16-debian
+                - Ports Mapping:
+                    - Container Port: 6001
+                    - Protocol: TCP
+                - Environment Variables: (This can be static of you can use parameter store or secrets manager)
+                    - SOKETI_DEBUG
+                    - SOKETI_DEFAULT_APP_ID
+                    - SOKETI_DEFAULT_APP_KEY
+                    - SOKETI_DEFAULT_APP_SECRET
+                    - SOKETI_USER_AUTHENTICATION_TIMEOUT
+            ```
+        - Review and create your task definition.
+
+## Step 4: Create Keep Service
+- In the ECS dashboard, navigate to the "Clusters" section in the left sidebar.
+- Select the cluster you want to deploy your service to.
+- Click on the "Create" button next to "Services".
+- Configure your service settings.
+- Review and create your service.
+
+## Step 5: Monitor Your Service
+- Once your service is created, monitor its status in the ECS dashboard.
+- You can view task status, service events, and other metrics to ensure your service is running correctly.
