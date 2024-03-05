@@ -53,7 +53,8 @@
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",
-        "deployment/openshift"
+        "deployment/openshift",
+        "deployment/ecs"
       ]
     },
     {
