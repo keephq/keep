@@ -81,7 +81,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         # Parse and format the timestamp
         event_time = essentials.get("firedDateTime", essentials.get("resolvedDateTime"))
         if event_time:
-            event_time = datetime.datetime.fromisoformat(event_time.rstrip("Z"))
+            event_time = datetime.datetime.fromisoformat(event_time)
 
         # Extract other essential fields
         resource_ids = essentials.get("alertTargetIDs", [])
