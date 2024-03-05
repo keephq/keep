@@ -258,7 +258,7 @@ export const useAlertTableCols = (
           columnHelper.display({
             id: "alertMenu",
             meta: {
-              tdClassName: "flex justify-end",
+              tdClassName: "flex justify-end sticky right-0",
             },
             size: 50,
             cell: (context) => (
