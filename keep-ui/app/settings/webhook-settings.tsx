@@ -136,7 +136,7 @@ req.end();
 
     const resp = await fetch(data.webhookApi, requestOptions);
     if (resp.ok) {
-      router.push("/alerts");
+      router.push("/alerts/feed");
     } else {
       alert("Something went wrong! Please try again.");
     }
