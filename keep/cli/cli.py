@@ -264,11 +264,29 @@ def whoami(info: Info):
 
 @cli.command()
 @click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
-def api(multi_tenant: bool):
+@click.option(
+    "--port",
+    "-p",
+    type=int,
+    default=8080,
+    help="The port to run the API on"
+)
+@click.option(
+    "--host",
+    "-h",
+    type=str,
+    default="0.0.0.0",
+    help="The host to run the API on"
+)
+def api(multi_tenant: bool, port: int, host: str):
     """Start the API."""
     from keep.api import api
 
     ctx = click.get_current_context()
+
+    api.PORT = ctx.params.get("port")
+    api.HOST = ctx.params.get("host")
+
     if multi_tenant:
         auth_type = "MULTI_TENANT"
     else:
