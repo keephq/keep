@@ -1067,6 +1067,7 @@ def alert(info: Info):
 )
 @pass_info
 def get_alert(info: Info, fingerprint: str):
+    """Get an alert by fingerprint."""
     resp = _get_alert_by_fingerprint(info.keep_api_url, info.api_key, fingerprint)
     if not resp.ok:
         raise Exception(f"Error getting alert: {resp.text}")
