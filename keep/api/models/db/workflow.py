@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, String
+from sqlalchemy import TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
@@ -34,7 +34,7 @@ class WorkflowExecution(SQLModel, table=True):
     status: str = Field(sa_column=Column(TEXT))
     execution_number: int
     logs: Optional[str]
-    error: Optional[str] = Field(sa_column=String(length=10240))
+    error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
 
