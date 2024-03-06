@@ -89,7 +89,7 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
 
   const table = useReactTable({
     columns,
-    data: mappings,
+    data: mappings.sort((a, b) => b.priority - a.priority),
     getCoreRowModel: getCoreRowModel(),
   });
 
