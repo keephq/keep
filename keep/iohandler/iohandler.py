@@ -194,6 +194,8 @@ class IOHandler:
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
         rendered = chevron.render(_key, context, warn=True)
+        # chevron.render will escape the quotes, we need to unescape them
+        rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
         sys.stderr = original_stderr
         # If render should failed if value does not exists
