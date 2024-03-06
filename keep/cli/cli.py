@@ -264,19 +264,9 @@ def whoami(info: Info):
 
 @cli.command()
 @click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
+@click.option("--port", "-p", type=int, default=8080, help="The port to run the API on")
 @click.option(
-    "--port",
-    "-p",
-    type=int,
-    default=8080,
-    help="The port to run the API on"
-)
-@click.option(
-    "--host",
-    "-h",
-    type=str,
-    default="0.0.0.0",
-    help="The host to run the API on"
+    "--host", "-h", type=str, default="0.0.0.0", help="The host to run the API on"
 )
 def api(multi_tenant: bool, port: int, host: str):
     """Start the API."""
@@ -745,8 +735,18 @@ def list_mappings(info: Info):
     help="The matchers of the mapping, as a comma-separated list of strings.",
     required=True,
 )
+@click.option(
+    "--priority",
+    "-p",
+    type=int,
+    help="The priority of the mapping, higher priority means this rule will execute first.",
+    required=False,
+    default=0,
+)
 @pass_info
-def create(info: Info, name: str, description: str, file: str, matchers: str):
+def create(
+    info: Info, name: str, description: str, file: str, matchers: str, priority: int
+):
     """Create a mapping rule."""
     if os.path.isfile(file) and file.endswith(".csv"):
         with open(file, "rb") as f:
@@ -775,6 +775,7 @@ def create(info: Info, name: str, description: str, file: str, matchers: str):
                     "file_name": file_name,
                     "matchers": matchers.split(","),
                     "rows": rows,
+                    "priority": priority,
                 },
             )
 
