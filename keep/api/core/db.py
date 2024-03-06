@@ -10,10 +10,11 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, text, update
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import and_, desc, func, null, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -105,6 +106,7 @@ elif db_connection_string == "impersonate":
     )
 elif db_connection_string:
     try:
+        logger.info(f"Creating a connection pool with size {pool_size}")
         engine = create_engine(db_connection_string, pool_size=pool_size)
     # SQLite does not support pool_size
     except TypeError:
@@ -121,26 +123,11 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
+    if not database_exists(engine.url):
+        logger.info("Creating the database")
+        create_database(engine.url)
+        logger.info("Database created")
     SQLModel.metadata.create_all(engine)
-    # migration add column
-
-    # todo: remove this
-
-    # Execute the ALTER TABLE command
-    with engine.connect() as connection:
-        try:
-            connection.execute(
-                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
-            )
-        except OperationalError as e:
-            # that's ok
-            if "duplicate column" in str(e).lower():
-                return
-            logger.exception("Failed to add column alert_hash to alert table")
-            raise
-        except Exception:
-            logger.exception("Failed to add column alert_hash to alert table")
-            raise
 
 
 def get_session() -> Session:
