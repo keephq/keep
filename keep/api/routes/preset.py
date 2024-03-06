@@ -2,7 +2,8 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
+
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
@@ -22,7 +23,19 @@ def get_presets(
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
-    statement = select(Preset).where(Preset.tenant_id == tenant_id)
+
+    # only global presets
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(
+            or_(
+                Preset.created_by == None,
+                Preset.created_by == authenticated_entity.email,
+            )
+        )
+    )
+
     presets = session.exec(statement).all()
     logger.info("Got all presets")
     return [PresetDto(**preset.dict()) for preset in presets]
@@ -31,6 +44,7 @@ def get_presets(
 class CreateOrUpdatePresetDto(BaseModel):
     name: str | None
     options: list[PresetOption]
+    is_private: bool = False  # if true visible to all users of that tenant
 
 
 @router.post("", description="Create a preset for tenant")
@@ -40,13 +54,22 @@ def create_preset(
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Creating preset")
     if not body.options or not body.name:
         raise HTTPException(400, "Options and name are required")
     if body.name == "Feed" or body.name == "Deleted":
         raise HTTPException(400, "Cannot create preset with this name")
     options_dict = [option.dict() for option in body.options]
-    preset = Preset(tenant_id=tenant_id, options=options_dict, name=body.name)
+
+    created_by = authenticated_entity.email
+
+    preset = Preset(
+        tenant_id=tenant_id,
+        options=options_dict,
+        name=body.name,
+        created_by=created_by,
+        is_private=body.is_private,
+    )
+
     session.add(preset)
     session.commit()
     session.refresh(preset)
