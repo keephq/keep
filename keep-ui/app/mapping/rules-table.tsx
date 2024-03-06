@@ -35,6 +35,11 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
       cell: (context) => context.row.original.id,
     }),
     columnHelper.display({
+      id: "priority",
+      header: "Priority",
+      cell: (context) => context.row.original.priority,
+    }),
+    columnHelper.display({
       id: "name",
       header: "Name",
       cell: (context) => context.row.original.name,
