@@ -713,7 +713,7 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    if session.bind.dialect.name == "mysql":
+                    if session.bind.dialect.name in ["mysql", "postgresql"]:
                         query = query.filter(
                             func.json_extract(
                                 AlertEnrichment.enrichments, f"$.{filter_key}"
@@ -728,7 +728,7 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
                             != null()
                         )
                 elif isinstance(filter_value, (str, int)):
-                    if session.bind.dialect.name == "mysql":
+                    if session.bind.dialect.name in ["mysql", "postgresql"]:
                         query = query.filter(
                             func.json_unquote(
                                 func.json_extract(
@@ -1173,7 +1173,7 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name == "mysql":
+        if session.bind.dialect.name in ["mysql", "postgresql"]:
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
