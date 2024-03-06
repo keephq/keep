@@ -127,11 +127,32 @@ export function getActionOrStepObj(
   };
 }
 
+function generateForeach(
+  actionOrStep: any,
+  stepOrAction: "step" | "action",
+  providers?: Provider[],
+  sequence?: any
+) {
+  return {
+    id: Uid.next(),
+    type: "foreach",
+    componentType: "container",
+    name: "Foreach",
+    properties: {
+      value: actionOrStep.foreach,
+    },
+    sequence: [
+      sequence ?? getActionOrStepObj(actionOrStep, stepOrAction, providers),
+    ],
+  };
+}
+
 export function generateCondition(
   condition: any,
   action: any,
   providers?: Provider[]
 ): any {
+  const stepOrAction = action.type === "step" ? "step" : "action";
   const generatedCondition = {
     id: Uid.next(),
     name: condition.name,
@@ -145,23 +166,14 @@ export function generateCondition(
       assert: condition.assert,
     },
     branches: {
-      true: [getActionOrStepObj(action, "action", providers)],
+      true: [getActionOrStepObj(action, stepOrAction, providers)],
       false: [],
     },
   };
 
   // If this is a foreach, we need to add the foreach to the condition
   if (action.foreach) {
-    return {
-      id: Uid.next(),
-      type: "foreach",
-      componentType: "container",
-      name: "Foreach",
-      properties: {
-        value: action.foreach,
-      },
-      sequence: [generatedCondition],
-    };
+    return generateForeach(action, stepOrAction, providers, generatedCondition);
   }
 
   return generatedCondition;
@@ -203,15 +215,19 @@ export function parseWorkflow(
   const workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert
     : parsedWorkflowFile.workflow;
-  const steps =
-    workflow.steps?.map((step: any) => {
-      return getActionOrStepObj(step, "step", providers);
+  const steps = [] as any;
+  const workflowSteps =
+    workflow.steps?.map((s: any) => {
+      s.type = "step";
+      return s;
     }) || [];
+  const workflowActions = workflow.actions || [];
   const conditions = [] as any;
-  workflow.actions?.forEach((action: any) => {
+  [...workflowSteps, ...workflowActions].forEach((action: any) => {
+    const stepOrAction = action.type === "step" ? "step" : "action";
     // This means this action always runs, there's no condition and no alias
-    if (!action.condition && !action.if) {
-      steps.push(getActionOrStepObj(action, "action", providers));
+    if (!action.condition && !action.if && !action.foreach) {
+      steps.push(getActionOrStepObj(action, stepOrAction, providers));
     }
     // If this is an alias, we need to find the existing condition and add this action to it
     else if (action.if) {
@@ -221,11 +237,17 @@ export function parseWorkflow(
       );
       if (existingCondition) {
         existingCondition.branches.true.push(
-          getActionOrStepObj(action, "action", providers)
+          getActionOrStepObj(action, stepOrAction, providers)
         );
       } else {
-        steps.push(getActionOrStepObj(action, "action", providers));
+        if (action.foreach) {
+          steps.push(generateForeach(action, stepOrAction, providers));
+        } else {
+          steps.push(getActionOrStepObj(action, stepOrAction, providers));
+        }
       }
+    } else if (action.foreach) {
+      steps.push(generateForeach(action, stepOrAction, providers));
     } else {
       action.condition.forEach((condition: any) => {
         conditions.push(generateCondition(condition, action, providers));
@@ -375,7 +397,33 @@ export function buildAlert(definition: Definition): Alert {
       const condition = (forEach as SequentialStep).sequence.find((c) =>
         c.type.startsWith("condition-")
       ) as BranchedStep;
-      const foreachActions = getActionsFromCondition(condition, forEachValue);
+      let foreachActions = [] as Action[];
+      if (condition) {
+        foreachActions = getActionsFromCondition(condition, forEachValue);
+      } else {
+        const stepOrAction = (forEach as SequentialStep).sequence[0];
+        const withParams = getWithParams(stepOrAction);
+        const providerType = stepOrAction.type
+          .replace("action-", "")
+          .replace("step-", "");
+        const ifParam = stepOrAction.properties.if;
+        const providerName =
+          (stepOrAction.properties.config as string)?.trim() ||
+          `default-${providerType}`;
+        const provider: any = {
+          type: stepOrAction.type.replace("action-", "").replace("step-", ""),
+          config: `{{ providers.${providerName} }}`,
+          with: withParams,
+        };
+        foreachActions = [
+          {
+            name: stepOrAction.name,
+            provider: provider,
+            foreach: forEachValue,
+            if: ifParam as string,
+          },
+        ];
+      }
       actions = [...actions, ...foreachActions];
     });
   // Actions > Condition
