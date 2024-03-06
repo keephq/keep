@@ -535,7 +535,10 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         ).first()
 
         workflow_execution.status = status
-        workflow_execution.error = error
+        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
+        #   we need to fix it in the future, create a migration that increases the size of the error field
+        #   and then we can remove the [:255] from here
+        workflow_execution.error = error[:255] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
@@ -723,10 +726,20 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    query = query.filter(
-                        func.json_type(AlertEnrichment.enrichments, f"$.{filter_key}")
-                        != null()
-                    )
+                    if session.bind.dialect.name == "mysql":
+                        query = query.filter(
+                            func.json_extract(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
+                            != null()
+                        )
+                    elif session.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            func.json_type(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
+                            != null()
+                        )
                 elif isinstance(filter_value, (str, int)):
                     if session.bind.dialect.name == "mysql":
                         query = query.filter(
