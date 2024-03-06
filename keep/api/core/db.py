@@ -185,7 +185,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             # Tenant already exists
             pass
         except Exception:
-            pass
+            logger.exception("Failed to create user for single tenant")
     # New session since the previous might be in a bad state
     with Session(engine) as session:
         try:
