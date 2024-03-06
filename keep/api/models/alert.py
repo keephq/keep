@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import logging
 from enum import Enum
 from typing import Any, Dict
@@ -72,6 +73,11 @@ class AlertDto(BaseModel):
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
+
+    def __str__(self) -> str:
+        # Convert the model instance to a dictionary
+        model_dict = self.dict()
+        return json.dumps(model_dict, indent=4, default=str)
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
