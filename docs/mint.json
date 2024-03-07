@@ -257,6 +257,14 @@
                 }
               ]
             },
+            {
+              "group": "keep mappings",
+              "pages": [
+                "cli/commands/mappings-list",
+                "cli/commands/mappings-create",
+                "cli/commands/mappings-delete"
+              ]
+            },
             "cli/commands/cli-api",
             "cli/commands/cli-config",
             "cli/commands/cli-version",

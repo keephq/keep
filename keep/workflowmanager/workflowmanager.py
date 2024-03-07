@@ -174,15 +174,18 @@ class WorkflowManager:
                     if not should_run:
                         continue
                     # Lastly, if the workflow should run, add it to the scheduler
-                    self.scheduler.workflows_to_run.append(
-                        {
-                            "workflow": workflow,
-                            "workflow_id": workflow_model.id,
-                            "tenant_id": tenant_id,
-                            "triggered_by": "alert",
-                            "event": event,
-                        }
-                    )
+                    self.logger.info("Adding workflow to run")
+                    with self.scheduler.lock:
+                        self.scheduler.workflows_to_run.append(
+                            {
+                                "workflow": workflow,
+                                "workflow_id": workflow_model.id,
+                                "tenant_id": tenant_id,
+                                "triggered_by": "alert",
+                                "event": event,
+                            }
+                        )
+                    self.logger.info("Workflow added to run")
 
     def _get_event_value(self, event, filter_key):
         # if the filter key is a nested key, get the value
