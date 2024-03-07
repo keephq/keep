@@ -16,10 +16,10 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
-
 @pydantic.dataclasses.dataclass
 class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
+
     api_url: str = dataclasses.field(
         metadata={
             "required": False,
@@ -507,6 +507,7 @@ if __name__ == "__main__":
         tenant_id="singletenant",
         workflow_id="test",
     )
+
     # Load environment variables
     import os
 
@@ -530,5 +531,6 @@ if __name__ == "__main__":
         provider_type="sentry",
         provider_config=config,
     )
+
     alerts = provider.get_alerts()
     print(alerts)
