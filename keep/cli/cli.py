@@ -1108,6 +1108,11 @@ def list_alerts(info: Info, filter: typing.List[str], export: bool):
             aggregated_alerts[alert["fingerprint"]] = alert
 
     alerts = aggregated_alerts.values()
+
+    if len(alerts) == 0:
+        click.echo(click.style("No alerts found.", bold=True))
+        return
+
     # Apply all provided filters
     for filt in filter:
         key, value = filt.split("=")
