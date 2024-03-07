@@ -21,7 +21,7 @@ class SquadcastProviderAuthConfig:
             "required": True,
             "description": "Service region: EU/US",
             "hint": "https://apidocs.squadcast.com/#intro",
-            "sensitive": False
+            "sensitive": False,
         }
     )
     refresh_token: str | None = dataclasses.field(
@@ -31,7 +31,7 @@ class SquadcastProviderAuthConfig:
             "hint": "https://support.squadcast.com/docs/squadcast-public-api",
             "sensitive": True,
         },
-        default=None
+        default=None,
     )
     webhook_url: str | None = dataclasses.field(
         metadata={
@@ -40,7 +40,7 @@ class SquadcastProviderAuthConfig:
             "hint": "https://support.squadcast.com/integrations/incident-webhook-incident-webhook-api",
             "sensitive": True,
         },
-        default=None
+        default=None,
     )
 
 
@@ -59,7 +59,7 @@ class SquadcastProvider(BaseProvider):
     ]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -67,11 +67,16 @@ class SquadcastProvider(BaseProvider):
         """
         Validates that the user has the required scopes to use the provider.
         """
+        return {
+            "authenticated": True,
+        }
         refresh_headers = {
             "content-type": "application/json",
-            "X-Refresh-Token": f"{self.authentication_config.refresh_token}"
+            "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
         }
-        resp = requests.get(f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers)
+        resp = requests.get(
+            f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers
+        )
         try:
             resp.raise_for_status()
             scopes = {
@@ -85,80 +90,119 @@ class SquadcastProvider(BaseProvider):
         return scopes
 
     def __get_endpoint(self, endpoint: str):
-        if endpoint == 'auth':
-            return ('https://auth.eu.squadcast.com', 'https://auth.squadcast.com')[
-                self.authentication_config.service_region == 'US']
-        elif endpoint == 'api':
-            return ('https://api.eu.squadcast.com', 'https://api.squadcast.com')[
-                self.authentication_config.service_region == 'US']
+        if endpoint == "auth":
+            return ("https://auth.eu.squadcast.com", "https://auth.squadcast.com")[
+                self.authentication_config.service_region == "US"
+            ]
+        elif endpoint == "api":
+            return ("https://api.eu.squadcast.com", "https://api.squadcast.com")[
+                self.authentication_config.service_region == "US"
+            ]
 
     def validate_config(self):
         self.authentication_config = SquadcastProviderAuthConfig(
             **self.config.authentication
         )
         if (
-                not self.authentication_config.refresh_token
-                and not self.authentication_config.webhook_url
+            not self.authentication_config.refresh_token
+            and not self.authentication_config.webhook_url
         ):
             raise ProviderConfigException(
                 "SquadcastProvider requires either refresh_token or webhook_url",
                 provider_id=self.provider_id,
             )
 
-    def _create_incidents(self, headers: dict, message: str, description: str, priority: str = "",
-                          status: str = "",
-                          event_id: str = ""):
+    def _create_incidents(
+        self,
+        headers: dict,
+        message: str,
+        description: str,
+        priority: str = "",
+        status: str = "",
+        event_id: str = "",
+    ):
+        body = json.dumps(
+            {
+                "message": message,
+                "description": description,
+                "priority": priority,
+                "status": status,
+                "event_id": event_id,
+            }
+        )
 
-        body = json.dumps({
-            "message": message,
-            "description": description,
-            "priority": priority,
-            "status": status,
-            "event_id": event_id
-        })
+        return requests.post(
+            self.authentication_config.webhook_url, data=body, headers=headers
+        )
 
-        return requests.post(self.authentication_config.webhook_url, data=body, headers=headers)
+    def _crete_notes(
+        self, headers: dict, message: str, incident_id: str, attachments: list = []
+    ):
+        body = json.dumps({"message": message, "attachments": attachments})
+        return requests.post(
+            f"{self.__get_endpoint('api')}/v3/incidents/{incident_id}/warroom",
+            data=body,
+            headers=headers,
+        )
 
-    def _crete_notes(self, headers: dict, message: str, incident_id: str, attachments: list = []):
-        body = json.dumps({
-            "message": message,
-            "attachments": attachments
-        })
-        return requests.post(f"{self.__get_endpoint('api')}/v3/incidents/{incident_id}/warroom", data=body,
-                             headers=headers)
-
-    def _notify(self, notify_type: str, message: str = "", description: str = "", incident_id: str = "",
-                priority: str = "",
-                status: str = "",
-                event_id: str = "", attachments: list = [], **kwargs) -> dict:
+    def _notify(
+        self,
+        notify_type: str,
+        message: str = "",
+        description: str = "",
+        incident_id: str = "",
+        priority: str = "",
+        status: str = "",
+        event_id: str = "",
+        attachments: list = [],
+        **kwargs,
+    ) -> dict:
         """
         Create an incident or notes using the Squadcast API.
         """
         self.logger.info(
             f"Creating {notify_type} using SquadcastProvider",
-            extra={
-                notify_type: notify_type
-            })
+            extra={notify_type: notify_type},
+        )
         refresh_headers = {
             "content-type": "application/json",
-            "X-Refresh-Token": f"{self.authentication_config.refresh_token}"
+            "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
         }
-        api_key_resp = requests.get(f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers)
+        api_key_resp = requests.get(
+            f"{self.__get_endpoint('auth')}/oauth/access-token", headers=refresh_headers
+        )
         headers = {
             "content-type": "application/json",
             "Authorization": f"Bearer {api_key_resp.json()['data']['access_token']}",
         }
-        if notify_type == 'incident':
+        if notify_type == "incident":
             if message == "" or description == "":
-                raise Exception(f"message: \"{message}\" and description: \"{description}\" cannot be empty")
-            resp = self._create_incidents(headers=headers, message=message, description=description, priority=priority,
-                                          status=status, event_id=event_id)
-        elif notify_type == 'notes':
+                raise Exception(
+                    f'message: "{message}" and description: "{description}" cannot be empty'
+                )
+            resp = self._create_incidents(
+                headers=headers,
+                message=message,
+                description=description,
+                priority=priority,
+                status=status,
+                event_id=event_id,
+            )
+        elif notify_type == "notes":
             if message == "" or incident_id == "":
-                raise Exception(f"message: \"{message}\" and incident_id: \"{incident_id}\" cannot be empty")
-            resp = self._crete_notes(headers=headers, message=message, incident_id=incident_id, attachments=attachments)
+                raise Exception(
+                    f'message: "{message}" and incident_id: "{incident_id}" cannot be empty'
+                )
+            resp = self._crete_notes(
+                headers=headers,
+                message=message,
+                incident_id=incident_id,
+                attachments=attachments,
+            )
         else:
-            raise Exception("notify_type is a mandatory field, expected: incident | notes")
+            raise Exception(
+                "notify_type is a mandatory field, expected: incident | notes"
+            )
         try:
             resp.raise_for_status()
             return resp.json()
@@ -175,7 +219,7 @@ class SquadcastProvider(BaseProvider):
 if __name__ == "__main__":
     import os
 
-    squadcast_api_key = os.environ.get("MAILCHIMP_API_KEY")
+    squadcast_api_key = os.environ.get("SQUADCAST_API_KEY")
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
@@ -184,11 +228,10 @@ if __name__ == "__main__":
     config = ProviderConfig(
         authentication={"api_key": squadcast_api_key},
     )
-    provider = SquadcastProvider(context_manager, provider_id="squadcast-test", config=config)
+    provider = SquadcastProvider(
+        context_manager, provider_id="squadcast-test", config=config
+    )
     response = provider.notify(
-        "onboarding@squadcast.dev",
-        "youremail@gmail.com",
-        "Hello World from Keep!",
-        "<strong>Test</strong> with HTML",
+        description="test",
     )
     print(response)

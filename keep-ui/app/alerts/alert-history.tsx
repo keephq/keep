@@ -37,7 +37,7 @@ const AlertHistoryPanel = ({
       <div className="flex justify-center">
         <Image
           className="animate-bounce"
-          src="keep.svg"
+          src="/keep.svg"
           alt="loading"
           width={200}
           height={200}

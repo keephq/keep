@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import logging
 from enum import Enum
 from typing import Any, Dict
@@ -73,11 +74,19 @@ class AlertDto(BaseModel):
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
 
+    def __str__(self) -> str:
+        # Convert the model instance to a dictionary
+        model_dict = self.dict()
+        return json.dumps(model_dict, indent=4, default=str)
+
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
+        # if its none, use the name
         if fingerprint is None:
-            return hashlib.sha256(values.get("name").encode()).hexdigest()
-        return fingerprint
+            fingerprint = values.get("name")
+        # normalize fingerprint
+        hashed_fingerprint = hashlib.sha256(fingerprint.encode()).hexdigest()
+        return hashed_fingerprint
 
     @validator("deleted", pre=True, always=True)
     def validate_deleted(cls, deleted, values):
