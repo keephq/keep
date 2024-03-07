@@ -20,7 +20,14 @@ from keep.providers.providers_factory import ProvidersFactory
 @pydantic.dataclasses.dataclass
 class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
-
+    api_url: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Sentry API URL",
+            "hint": "(default: https://sentry.io/api/0) https://docs.sentry.io/api/",
+            "sensitive": False,
+        }
+    )
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
@@ -88,6 +95,7 @@ class SentryProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("organization_slug")
         self.project_slug = self.config.authentication.get("project_slug")
+        self.SENTRY_API = self.config.authentication.get("api_url", self.SENTRY_API)
 
     @property
     def __headers(self) -> dict:
@@ -502,17 +510,20 @@ if __name__ == "__main__":
     # Load environment variables
     import os
 
+    sentry_api_url = os.environ.get("SENTRY_API_URL")
     sentry_api_token = os.environ.get("SENTRY_API_TOKEN")
     sentry_org_slug = os.environ.get("SENTRY_ORG_SLUG")
     sentry_project_slug = os.environ.get("SENTRY_PROJECT_SLUG")
 
     config = {
         "authentication": {
+            "api_url": sentry_api_url,
             "api_key": sentry_api_token,
             "organization_slug": sentry_org_slug,
             "project_slug": sentry_project_slug,
         },
     }
+
     provider = ProvidersFactory.get_provider(
         context_manager,
         provider_id="sentry-prod",
