@@ -177,16 +177,17 @@ class WorkflowScheduler:
                 "triggered_by_user": triggered_by_user,
             },
         )
-        self.workflows_to_run.append(
-            {
-                "workflow_id": workflow_id,
-                "workflow_execution_id": workflow_execution_id,
-                "tenant_id": tenant_id,
-                "triggered_by": "manual",
-                "triggered_by_user": triggered_by_user,
-                "event": event,
-            }
-        )
+        with self.lock:
+            self.workflows_to_run.append(
+                {
+                    "workflow_id": workflow_id,
+                    "workflow_execution_id": workflow_execution_id,
+                    "tenant_id": tenant_id,
+                    "triggered_by": "manual",
+                    "triggered_by_user": triggered_by_user,
+                    "event": event,
+                }
+            )
         return workflow_execution_id
 
     def _get_unique_execution_number(self, payload: bytes):
@@ -211,7 +212,8 @@ class WorkflowScheduler:
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
-        workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
+        with self.lock:
+            workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
         for workflow_to_run in workflows_to_run:
             self.logger.info(
                 "Running event workflow on background",
