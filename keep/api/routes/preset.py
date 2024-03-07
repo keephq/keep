@@ -123,6 +123,7 @@ def update_preset(
             raise HTTPException(400, "Cannot create preset with this name")
         if body.name != preset.name:
             preset.name = body.name
+    preset.is_private = body.is_private
     options_dict = [option.dict() for option in body.options]
     if not options_dict:
         raise HTTPException(400, "Options cannot be empty")
