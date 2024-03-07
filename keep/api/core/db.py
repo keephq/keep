@@ -123,7 +123,7 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
-    if not database_exists(engine.url):
+    if not database_exists(engine.url) and not RUNNING_IN_CLOUD_RUN:
         logger.info("Creating the database")
         create_database(engine.url)
         logger.info("Database created")
