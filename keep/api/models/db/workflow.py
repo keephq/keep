@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, String
+from sqlalchemy import TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
@@ -34,7 +34,7 @@ class WorkflowExecution(SQLModel, table=True):
     status: str = Field(sa_column=Column(TEXT))
     execution_number: int
     logs: Optional[str]
-    error: Optional[str] = Field(sa_column=String(length=10240))
+    error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
 
@@ -55,7 +55,7 @@ class WorkflowToAlertExecution(SQLModel, table=True):
     # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
     id: Optional[int] = Field(primary_key=True, default=None)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
-    alert_fingerprint: str = Field(foreign_key="alert.fingerprint")
+    alert_fingerprint: str
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
     )

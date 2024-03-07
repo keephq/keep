@@ -51,16 +51,6 @@ export function stepValidator(
   definition: Definition,
   setStepValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
-  if (step.type === "foreach") {
-    // This checks if there's any step that is not action in foreach
-    const foreachIncludesNotCondition = (step as SequentialStep).sequence.some(
-      (step) => !step.type.includes("condition-")
-    );
-    if (foreachIncludesNotCondition) {
-      setStepValidationError("Foreach can only contain conditions.");
-      return false;
-    }
-  }
   if (step.type.includes("condition-")) {
     const onlyActions = (step as BranchedStep).branches.true.every((step) =>
       step.type.includes("action-")
