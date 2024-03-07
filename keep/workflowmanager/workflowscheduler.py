@@ -6,6 +6,7 @@ import threading
 import time
 import typing
 import uuid
+from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
@@ -38,6 +39,7 @@ class WorkflowScheduler:
         # all workflows that needs to be run due to alert event
         self.workflows_to_run = []
         self._stop = False
+        self.lock = Lock()
 
     async def start(self):
         self.logger.info("Starting workflows scheduler")
@@ -136,6 +138,7 @@ class WorkflowScheduler:
     def handle_manual_event_workflow(
         self, workflow_id, tenant_id, triggered_by_user, event
     ):
+        self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
             # if the event is not defined, add some entropy
             if not event:
@@ -151,6 +154,7 @@ class WorkflowScheduler:
             unique_execution_number = self._get_unique_execution_number(
                 json.dumps(event).encode()
             )
+            self.logger.info(f"Unique execution number: {unique_execution_number}")
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
@@ -158,10 +162,21 @@ class WorkflowScheduler:
                 execution_number=unique_execution_number,
                 fingerprint=event.get("fingerprint"),
             )
+            self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
             raise e
+        self.logger.info(
+            "Adding workflow to run",
+            extra={
+                "workflow_id": workflow_id,
+                "workflow_execution_id": workflow_execution_id,
+                "tenant_id": tenant_id,
+                "triggered_by": "manual",
+                "triggered_by_user": triggered_by_user,
+            },
+        )
         self.workflows_to_run.append(
             {
                 "workflow_id": workflow_id,
@@ -198,7 +213,16 @@ class WorkflowScheduler:
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
         workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
         for workflow_to_run in workflows_to_run:
-            self.logger.info("Running event workflow on background")
+            self.logger.info(
+                "Running event workflow on background",
+                extra={
+                    "workflow_id": workflow_to_run.get("workflow_id"),
+                    "workflow_execution_id": workflow_to_run.get(
+                        "workflow_execution_id"
+                    ),
+                    "tenant_id": workflow_to_run.get("tenant_id"),
+                },
+            )
             workflow = workflow_to_run.get("workflow")
             workflow_id = workflow_to_run.get("workflow_id")
             tenant_id = workflow_to_run.get("tenant_id")
