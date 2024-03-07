@@ -222,7 +222,7 @@ export default function AlertPresets({
         <Modal
         isOpen={isModalOpen}
         onClose={() => {}}
-        className="w-[50%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl">
+        className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl">
         <div className="space-y-2">
           <div className="text-lg font-semibold">
             <p>{presetName ? "Update preset name?" : "Enter new preset name"}</p>
@@ -251,7 +251,8 @@ export default function AlertPresets({
           <div className="flex justify-end space-x-2.5">
             <Button
               size="lg"
-              color="red"
+              variant="secondary"
+              color="orange"
               onClick={() => setIsModalOpen(false)}
               tooltip="Close Modal"
             >
@@ -259,7 +260,7 @@ export default function AlertPresets({
             </Button>
             <Button
               size="lg"
-              color="green"
+              color="orange"
               onClick={addOrUpdatePreset}
               tooltip="Save Modal"
             >
