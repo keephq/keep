@@ -1,5 +1,6 @@
 "use client";
 
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
   NumberInput,
@@ -12,6 +13,7 @@ import {
   MultiSelectItem,
   Badge,
   Button,
+  Icon,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
@@ -109,19 +111,6 @@ export default function CreateNewMapping() {
       <Subtitle>Mapping Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>
-          Priority<span className="text-red-500 text-xs">*</span>
-        </Text>
-        <NumberInput
-          placeholder="Priority"
-          required={true}
-          value={priority}
-          onValueChange={setPriority}
-          min={0}
-          max={100}
-        />
-      </div>
-      <div className="mt-2.5">
-        <Text>
           Name<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
@@ -137,6 +126,20 @@ export default function CreateNewMapping() {
           placeholder="Map Description"
           value={mapDescription}
           onValueChange={setMapDescription}
+        />
+      </div>
+      <div className="mt-2.5">
+        <Text>
+          Priority
+          <Icon icon={InformationCircleIcon} size="xs" color="gray" tooltip="Higher priority will be executed first" />
+        </Text>
+        <NumberInput
+          placeholder="Priority"
+          required={true}
+          value={priority}
+          onValueChange={setPriority}
+          min={0}
+          max={100}
         />
       </div>
       <Divider />
