@@ -174,7 +174,17 @@ class CloudwatchProvider(BaseProvider):
                 for res in iam_resp.get("EvaluationResults")
             }
             scopes["iam:SimulatePrincipalPolicy"] = True
-            return scopes
+            if all(scopes.values()):
+                self.logger.info(
+                    "All AWS IAM scopes are granted!", extra={"scopes": scopes}
+                )
+                return scopes
+            # if not all the scopes are granted, we need to test them one by one
+            else:
+                self.logger.warning(
+                    "Some of the AWS IAM scopes are not granted, testing them one by one...",
+                    extra={"scopes": scopes},
+                )
         # otherwise, we need to test them one by one
         except Exception:
             self.logger.info("Error validating AWS IAM scopes")
