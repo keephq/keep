@@ -24,7 +24,7 @@ def get_presets(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
 
-    # only global presets
+    # both global and private presets
     statement = (
         select(Preset)
         .where(Preset.tenant_id == tenant_id)
