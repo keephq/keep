@@ -10,10 +10,9 @@ class Preset(SQLModel, table=True):
 
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
 
-    # if created_by is not null then it means this preset is only for this user
     # keeping index=True for better search
     created_by: Optional[str] = Field(index=True, nullable=False)
-    is_private: Optional[bool] = Field(nullable=True)
+    is_private: Optional[bool] = Field(default=False)
     name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
 
@@ -23,7 +22,7 @@ class PresetDto(BaseModel, extra="ignore"):
     name: str
     options: list = []
     created_by: Optional[str] = None
-    is_private: Optional[bool] = Field(nullable=True)
+    is_private: Optional[bool] = Field(default=False)
 
 
 class PresetOption(BaseModel, extra="ignore"):

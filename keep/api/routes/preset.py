@@ -30,7 +30,7 @@ def get_presets(
         .where(Preset.tenant_id == tenant_id)
         .where(
             or_(
-                Preset.created_by == None,
+                Preset.is_private == False,
                 Preset.created_by == authenticated_entity.email,
             )
         )
