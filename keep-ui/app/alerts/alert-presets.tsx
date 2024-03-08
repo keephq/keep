@@ -10,7 +10,6 @@ import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
-import AlertTableCheckbox from "./alert-table-checkbox";
 
 export interface Option {
   readonly label: string;
@@ -173,13 +172,6 @@ export default function AlertPresets({
   }
 
   async function addOrUpdatePreset() {
-    // console.log("HELLO WORLD");
-    // setIsModalOpen(false);
-    // const newPresetName = prompt(
-    //   `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
-    //   preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
-    // );
-
     if (presetName) {
       const options = selectedOptions.map((option) => {
         return {
@@ -221,7 +213,7 @@ export default function AlertPresets({
       <div className="flex w-full">
         <Modal
         isOpen={isModalOpen}
-        onClose={() => {}}
+        onClose={() => {setIsModalOpen(false)}}
         className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl">
         <div className="space-y-2">
           <div className="text-lg font-semibold">
@@ -240,7 +232,8 @@ export default function AlertPresets({
           </div>
 
           <div className="flex items-center space-x-2">
-            <AlertTableCheckbox
+            <input
+              type="checkbox"
               id={"private"}
               checked={isPrivate}
               onChange={() => setIsPrivate(!isPrivate)}
