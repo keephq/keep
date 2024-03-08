@@ -2,6 +2,7 @@
 
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
+  NumberInput,
   TextInput,
   Textarea,
   Divider,
@@ -26,6 +27,7 @@ export default function CreateNewMapping() {
   const [fileName, setFileName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
+  const [priority, setPriority] = useState<number>(0);
 
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
@@ -72,6 +74,7 @@ export default function CreateNewMapping() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        priority: priority,
         name: mapName,
         description: mapDescription,
         file_name: fileName,
@@ -104,6 +107,19 @@ export default function CreateNewMapping() {
   return (
     <form className="max-w-lg py-2" onSubmit={addRule}>
       <Subtitle>Mapping Metadata</Subtitle>
+      <div className="mt-2.5">
+        <Text>
+          Priority<span className="text-red-500 text-xs">*</span>
+        </Text>
+        <NumberInput
+          placeholder="Priority"
+          required={true}
+          value={priority}
+          onValueChange={setPriority}
+          min={0}
+          max={100}
+        />
+      </div>
       <div className="mt-2.5">
         <Text>
           Name<span className="text-red-500 text-xs">*</span>
