@@ -16,6 +16,7 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
+
 @pydantic.dataclasses.dataclass
 class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
@@ -24,7 +25,7 @@ class SentryProviderAuthConfig:
         metadata={
             "required": False,
             "description": "Sentry API URL",
-            "hint": "(default: https://sentry.io/api/0) https://docs.sentry.io/api/",
+            "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
             "sensitive": False,
         }
     )
@@ -52,7 +53,7 @@ class SentryProviderAuthConfig:
 class SentryProvider(BaseProvider):
     """Enrich alerts with data from Sentry."""
 
-    SENTRY_API = "https://sentry.io/api/0"
+    SENTRY_DEFAULT_API = "https://sentry.io/api/0"
     PROVIDER_SCOPES = [
         ProviderScope(
             "event:read",
@@ -95,14 +96,16 @@ class SentryProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("organization_slug")
         self.project_slug = self.config.authentication.get("project_slug")
-        self.SENTRY_API = self.config.authentication.get("api_url", self.SENTRY_API)
+        self.sentry_api = self.config.authentication.get(
+            "api_url", self.SENTRY_DEFAULT_API
+        )
 
     @property
     def __headers(self) -> dict:
         return {"Authorization": f"Bearer {self.authentication_config.api_key}"}
 
     def get_events_url(self, project, date="14d"):
-        return f"{self.SENTRY_API}/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
+        return f"{self.sentry_api}/organizations/{self.sentry_org_slug}/events/?field=title&field=event.type&field=project&field=user.display&field=timestamp&field=replayId&per_page=50 \
                                   &query={project}&referrer=api.discover.query-table&sort=-timestamp&statsPeriod={date}"
 
     def dispose(self):
@@ -147,7 +150,7 @@ class SentryProvider(BaseProvider):
             if scope.name == "event:read":
                 if self.project_slug:
                     response = requests.get(
-                        f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/issues/",
+                        f"{self.sentry_api}/projects/{self.sentry_org_slug}/{self.project_slug}/issues/",
                         headers=self.__headers,
                     )
                     if not response.ok:
@@ -156,7 +159,7 @@ class SentryProvider(BaseProvider):
                         continue
                 else:
                     projects_response = requests.get(
-                        f"{self.SENTRY_API}/projects/",
+                        f"{self.sentry_api}/projects/",
                         headers=self.__headers,
                     )
                     if not projects_response.ok:
@@ -166,7 +169,7 @@ class SentryProvider(BaseProvider):
                     projects = projects_response.json()
                     project_slug = projects[0].get("slug")
                     response = requests.get(
-                        f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/",
+                        f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/issues/",
                         headers=self.__headers,
                     )
                     if not response.ok:
@@ -176,7 +179,7 @@ class SentryProvider(BaseProvider):
                 validated_scopes[scope.name] = True
             elif scope.name == "project:read":
                 response = requests.get(
-                    f"{self.SENTRY_API}/projects/",
+                    f"{self.sentry_api}/projects/",
                     headers=self.__headers,
                 )
                 if not response.ok:
@@ -186,7 +189,7 @@ class SentryProvider(BaseProvider):
                 validated_scopes[scope.name] = True
             elif scope.name == "project:write":
                 response = requests.post(
-                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/plugins/webhooks/",
+                    f"{self.sentry_api}/projects/{self.sentry_org_slug}/{self.project_slug or project_slug}/plugins/webhooks/",
                     headers=self.__headers,
                 )
                 if not response.ok:
@@ -279,7 +282,7 @@ class SentryProvider(BaseProvider):
         else:
             # Get all projects if no project slug was given
             projects_response = requests.get(
-                f"{self.SENTRY_API}/projects/",
+                f"{self.sentry_api}/projects/",
                 headers=self.__headers,
             )
             if not projects_response.ok:
@@ -291,7 +294,7 @@ class SentryProvider(BaseProvider):
         for project_slug in project_slugs:
             self.logger.info(f"Setting up webhook for project {project_slug}")
             webhooks_request = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
+                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
                 headers=self.__headers,
             )
             webhooks_request.raise_for_status()
@@ -323,20 +326,20 @@ class SentryProvider(BaseProvider):
             existing_webhooks.append(f"{keep_api_url}&api_key={api_key}")
             # Update the webhooks urls
             update_response = requests.put(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
+                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
                 headers=self.__headers,
                 json={"urls": "\n".join(existing_webhooks)},
             )
             update_response.raise_for_status()
             # Enable webhooks plugin for project
             requests.post(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
+                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/plugins/webhooks/",
                 headers=self.__headers,
             ).raise_for_status()
             # TODO: make sure keep alert does not exist and if it doesnt create it.
             alert_rule_name = f"Keep Alert Rule - {project_slug}"
             alert_rules_response = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
+                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
                 headers=self.__headers,
             ).json()
             alert_rule_exists = next(
@@ -373,7 +376,7 @@ class SentryProvider(BaseProvider):
                 }
                 try:
                     requests.post(
-                        f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
+                        f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/rules/",
                         headers=self.__headers,
                         json=alert_payload,
                     ).raise_for_status()
@@ -404,7 +407,7 @@ class SentryProvider(BaseProvider):
             dict: issues by id
         """
         issues_response = requests.get(
-            f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*",
+            f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*",
             headers=self.__headers,
         )
         if not issues_response.ok:
@@ -416,7 +419,7 @@ class SentryProvider(BaseProvider):
         all_issues_by_project = {}
         if self.authentication_config.project_slug:
             response = requests.get(
-                f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
+                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
                 headers=self.__headers,
                 timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
@@ -428,7 +431,7 @@ class SentryProvider(BaseProvider):
             )
         else:
             projects_response = requests.get(
-                f"{self.SENTRY_API}/projects/",
+                f"{self.sentry_api}/projects/",
                 headers=self.__headers,
                 timeout=SentryProvider.DEFAULT_TIMEOUT,
             )
@@ -438,7 +441,7 @@ class SentryProvider(BaseProvider):
             for project in projects:
                 project_slug = project.get("slug")
                 response = requests.get(
-                    f"{self.SENTRY_API}/projects/{self.sentry_org_slug}/{project_slug}/events/",
+                    f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/events/",
                     headers=self.__headers,
                     timeout=SentryProvider.DEFAULT_TIMEOUT,
                 )
