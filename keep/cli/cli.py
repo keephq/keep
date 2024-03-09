@@ -18,6 +18,7 @@ from keep.api.core.db import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client
+from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -1206,6 +1207,55 @@ def enrich(info: Info, fingerprint, params):
         )
     else:
         click.echo(click.style(f"Alert {fingerprint} enriched successfully", bold=True))
+
+
+@alert.command()
+@click.option(
+    "--provider-type",
+    "-p",
+    type=click.Path(exists=False),
+    help="The type of the provider which will be used to simulate the alert.",
+    required=True,
+)
+@click.argument("params", nargs=-1, type=click.UNPROCESSED)
+@pass_info
+def simulate(info: Info, provider_type: str, params: list[str]):
+    """Simulate an alert."""
+    click.echo(click.style("Simulating alert", bold=True))
+    try:
+        provider = ProvidersFactory.get_provider_class(provider_type)
+    except Exception as e:
+        click.echo(click.style(f"No such provuder: {e}", bold=True))
+        return
+
+    try:
+        alert = provider.simulate_alert()
+    except Exception:
+        click.echo(click.style("Provider does not support alert simulation", bold=True))
+        return
+    # override the alert with the provided params
+    for param in params:
+        key, value = param.split("=")
+        # if the param contains "."
+        if "." in key:
+            # split the key by "." and set the value in the alert
+            keys = key.split(".")
+            alert[keys[0]][keys[1]] = value
+        else:
+            alert[key] = value
+    click.echo("Simulated alert:")
+    click.echo(json.dumps(alert, indent=4))
+    # send the alert to the server
+    resp = make_keep_request(
+        "POST",
+        info.keep_api_url + f"/alerts/event/{provider_type}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json=alert,
+    )
+    if not resp.ok:
+        click.echo(click.style(f"Error simulating alert: {resp.text}", bold=True))
+    else:
+        click.echo(click.style("Alert simulated successfully", bold=True))
 
 
 @cli.group()
