@@ -333,10 +333,8 @@ ALERTS = {
                             "vars": {
                                 "'args'": [
                                     "'test'",
-                                    "'https://ebc35f33e151401f9deac549978bda11:f3403f81e12e4c24942d505f086b2cad@sentry.io/1'",
                                 ],
                                 "'client'": "<raven.base.Client object at 0x107bb8210>",
-                                "'dsn'": "'https://ebc35f33e151401f9deac549978bda11:f3403f81e12e4c24942d505f086b2cad@sentry.io/1'",
                                 "'opts'": "<Values at 0x107ba3b00: {'data': None, 'tags': None}>",
                                 "'parser'": "<optparse.OptionParser instance at 0x107ba3368>",
                                 "'root'": "<logging.Logger object at 0x107ba5b10>",
