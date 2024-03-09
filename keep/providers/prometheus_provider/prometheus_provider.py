@@ -197,8 +197,8 @@ receivers:
         """
         raise NotImplementedError("Prometheus provider does not support notify()")
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> dict:
+    @classmethod
+    def simulate_alert(cls, **kwargs) -> dict:
         """Mock a Prometheus alert."""
         import hashlib
         import json

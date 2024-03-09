@@ -487,8 +487,8 @@ class GrafanaProvider(BaseProvider):
                 return alerts
         return []
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> dict:
+    @classmethod
+    def simulate_alert(cls, **kwargs) -> dict:
         import hashlib
         import json
         import random
