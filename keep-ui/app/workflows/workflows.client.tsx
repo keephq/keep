@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import useSWR from "swr";
 import { Callout, Subtitle } from "@tremor/react";
 import {
-  ArrowDownOnSquareIcon,
+  ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -177,7 +177,7 @@ export default function WorkflowsPage() {
             onClick={() => {
               setIsModalOpen(true);
             }}
-            icon={ArrowDownOnSquareIcon}
+            icon={ArrowUpOnSquareStackIcon}
           >
             Upload Workflows
           </Button>
