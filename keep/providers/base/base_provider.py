@@ -526,15 +526,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 f"Failed to push alert to {self.provider_id}: {response.content}"
             )
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> AlertDto:
-        """
-        Simulate an alert.
+    @classmethod
+    def simulate_alert(cls) -> dict:
+        # can be overridden by the provider
+        import importlib
+        import random
 
-        Args:
-            **kwargs (dict): The provider context (with statement)
+        module_path = ".".join(cls.__module__.split(".")[0:-1]) + ".alerts_mock"
+        module = importlib.import_module(module_path)
 
-        Returns:
-            AlertDto: The simulated alert.
-        """
-        raise NotImplementedError("simulate_alert() method not implemented")
+        ALERTS = getattr(module, "ALERTS", None)
+
+        alert_type = random.choice(list(ALERTS.keys()))
+        alert_data = ALERTS[alert_type]
+
+        # Start with the base payload
+        simulated_alert = alert_data["payload"].copy()
+
+        return simulated_alert
