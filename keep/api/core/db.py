@@ -200,7 +200,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec(
                 "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
             )
-            session.exec("ALTER TABLE preset ADD COLUMN created_by TEXT DEFAULT '';")
+            session.exec("ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';")
             session.commit()
             logger.info("Migrated Preset table")
         except Exception:
