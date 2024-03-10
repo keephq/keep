@@ -193,6 +193,19 @@ def try_create_single_tenant(tenant_id: str) -> None:
         except Exception:
             pass
 
+    # migrating presets table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating Preset table")
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
+            )
+            session.exec("ALTER TABLE preset ADD COLUMN created_by TEXT DEFAULT '';")
+            session.commit()
+            logger.info("Migrated Preset table")
+        except Exception as e:
+            pass
+
 
 def create_workflow_execution(
     workflow_id: str,
