@@ -203,7 +203,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec("ALTER TABLE preset ADD COLUMN created_by TEXT DEFAULT '';")
             session.commit()
             logger.info("Migrated Preset table")
-        except Exception as e:
+        except Exception:
             pass
 
 
