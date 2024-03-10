@@ -816,8 +816,8 @@ class DatadogProvider(BaseProvider):
     def get_alert_schema():
         return DatadogAlertFormatDescription.schema()
 
-    @staticmethod
-    def simulate_alert() -> dict:
+    @classmethod
+    def simulate_alert(cls) -> dict:
         # Choose a random alert type
         import hashlib
         import random
