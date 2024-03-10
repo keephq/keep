@@ -420,6 +420,8 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 WorkflowExecution.workflow_id,
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.utcnow() - timedelta(days=14))
             .group_by(WorkflowExecution.workflow_id)
             .cte("latest_execution_cte")
         )
