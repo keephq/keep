@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { AlertDto, Preset } from "./models";
 import CreatableSelect from "react-select/creatable";
-import { Button, Subtitle } from "@tremor/react";
+import Modal from '@/components/ui/Modal';
+import {Button, Subtitle, TextInput} from "@tremor/react";
 import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
@@ -42,6 +43,9 @@ export default function AlertPresets({
   const [options, setOptions] = useState<Option[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [presetName, setPresetName] = useState(preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name);
+  const [isPrivate, setIsPrivate] = useState(preset?.is_private);
   const uniqueValuesMap = useMemo(() => {
     const newUniqueValuesMap = new Map<string, Set<string>>();
     if (alerts) {
@@ -168,11 +172,7 @@ export default function AlertPresets({
   }
 
   async function addOrUpdatePreset() {
-    const newPresetName = prompt(
-      `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
-      preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
-    );
-    if (newPresetName) {
+    if (presetName) {
       const options = selectedOptions.map((option) => {
         return {
           value: option.value,
@@ -187,21 +187,22 @@ export default function AlertPresets({
             Authorization: `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name: newPresetName, options: options }),
+          body: JSON.stringify({ name: presetName, options: options, is_private: isPrivate }),
         }
       );
       if (response.ok) {
+        setIsModalOpen(false);
         toast(
           preset?.name
-            ? `Preset ${newPresetName} updated!`
-            : `Preset ${newPresetName} created!`,
+            ? `Preset ${presetName} updated!`
+            : `Preset ${presetName} created!`,
           {
             position: "top-left",
             type: "success",
           }
         );
         await presetsMutator();
-        router.push(`/alerts/${newPresetName.toLowerCase()}`);
+        router.push(`/alerts/${presetName.toLowerCase()}`);
       }
     }
   }
@@ -210,6 +211,58 @@ export default function AlertPresets({
     <>
       <Subtitle>Filters</Subtitle>
       <div className="flex w-full">
+        <Modal
+        isOpen={isModalOpen}
+        onClose={() => {setIsModalOpen(false)}}
+        className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl">
+        <div className="space-y-2">
+          <div className="text-lg font-semibold">
+            <p>{presetName ? "Update preset name?" : "Enter new preset name"}</p>
+          </div>
+
+          <div className="space-y-2">
+            <TextInput
+              error={!presetName}
+              errorMessage="Preset name is required"
+              placeholder={presetName === "feed" || presetName === "deleted" ? "" : presetName}
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={"private"}
+              checked={isPrivate}
+              onChange={() => setIsPrivate(!isPrivate)}
+            />
+            <label htmlFor={"private"}>Private</label>
+          </div>
+
+          <div className="flex justify-end space-x-2.5">
+            <Button
+              size="lg"
+              variant="secondary"
+              color="orange"
+              onClick={() => setIsModalOpen(false)}
+              tooltip="Close Modal"
+            >
+              Close
+            </Button>
+            <Button
+              size="lg"
+              color="orange"
+              onClick={addOrUpdatePreset}
+              tooltip="Save Modal"
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
         <CreatableSelect
           isMulti
           options={options}
@@ -235,7 +288,7 @@ export default function AlertPresets({
             color="orange"
             className="ml-2.5"
             disabled={selectedOptions.length <= 0}
-            onClick={async () => await addOrUpdatePreset()}
+            onClick={() => setIsModalOpen(true)}
             tooltip="Save current filter as a view"
           >
             Create Preset
@@ -250,7 +303,7 @@ export default function AlertPresets({
               title="Save preset"
               className="mr-1"
               disabled={selectedOptions.length <= 0}
-              onClick={async () => await addOrUpdatePreset()}
+              onClick={() => setIsModalOpen(true)}
             >
               Save Preset
             </Button>

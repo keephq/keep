@@ -41,6 +41,7 @@ export interface Preset {
   id?: string;
   name: string;
   options: Option[];
+  is_private: boolean;
 }
 
 export const AlertKnownKeys = [
