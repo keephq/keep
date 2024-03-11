@@ -681,6 +681,9 @@ async def receive_event(
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
+    # Production incident mitigation inventory:
+    if provider_type == os.environ.get("PRODUCTION_INCIDENT_MITIGATION_BLOCKED_PROVIDER", ""):
+        return None
     tenant_id = authenticated_entity.tenant_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
     # if this request is just to confirm the sns subscription, return ok
