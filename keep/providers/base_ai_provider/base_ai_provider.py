@@ -60,7 +60,8 @@ class BaseAiProvider(BaseProvider):
                 options={
                     'num_predict': 128, # If response is {}, increase this value. May make generaton slower.
                 },
-                prompt='Respond using JSON. Key names should have no backslashes, values should use plain ascii with no special characters. ' + str(instruction) + ' Alert: ' + str(alert) + f"\nUse the following template: {str(json.dumps(template))}."
+                prompt='Respond using JSON. Key names should have no backslashes, values should use plain ascii with no special characters. ' + 
+                str(instruction) + ' Alert: ' + str(alert) + f"\nUse the following template: {str(json.dumps(template))}."
             )
             self.logger.info(f"Finished executing model {model_name} with instruction {instruction} and alert {alert}, response: {response['response']}.")
         try:

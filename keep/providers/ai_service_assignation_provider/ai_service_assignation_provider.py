@@ -48,25 +48,25 @@ class AiServiceAssignationProvider(BaseAiProvider):
                     objects like [{'service': 'service_name', 'description': 'service_description'}]"""
                 )
 
-        query = "; ".join(
+        prompt = "; ".join(
             [f"Service: \"{service.service}\" ({service.description})" for service in services_and_descriptions]
         )
-        query += " Assign only one service, choose between: " 
-        query += ", ".join(
+        prompt += " Assign only one service, choose between: " 
+        prompt += ", ".join(
             [service.service for service in services_and_descriptions]
         ) 
 
         template = {
             "service": "|".join([str(k) for k in [service.service for service in services_and_descriptions]]),
-            "reason": "string describing why exactly this service was chosen",
         }
         alert = self.context_manager.get_full_context()['alert']
-        labels = self._execute_model(
+        enrichment = self._execute_model(
             template=template, 
-            instruction=query, 
-            alert=alert.name
+            instruction=prompt, 
+            alert=alert.name,
+            as_enrichment=True
         )
-        return labels
+        return {"enrich_alert": enrichment}
 
 
 if __name__ == "__main__":

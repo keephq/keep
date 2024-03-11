@@ -39,13 +39,13 @@ class AiSeverityProvider(BaseAiProvider):
             "severity": "info|critical",
         }
         alert = self.context_manager.get_full_context()['alert']
-        enrichments = self._execute_model(
+        enrichment = self._execute_model(
             template=template, 
             instruction=severity_instruction, 
             alert=alert.name,
             as_enrichment=True,
         )
-        return {"enrich_alert": enrichments}
+        return {"enrich_alert": enrichment}
 
 
 if __name__ == "__main__":
