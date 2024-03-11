@@ -1,0 +1,35 @@
+---
+title: "Splunk"
+sidebarTitle: "Splunk Provider"
+description: "Splunk provider allows you to query Splunk metrics and logs for monitoring and analytics."
+---
+
+## Authentication Parameters
+The Splunk provider requires the following authentication parameter:
+
+- `Splunk Username`: Required. This is your Splunk account username, which you use to log in to the Splunk platform.
+- `Splunk Password`: Required. This is the password associated with your Splunk account username. Together with the username, it is used for basic authentication to secure access to the Splunk API.
+- `Host`: This is the hostname or IP address of the Splunk instance you wish to connect to. It identifies the Splunk server that the API will interact with.
+- `Port`: This is the network port on the Splunk server that is listening for API connections. The default port for Splunk's management API is typically 8089.
+- ``
+
+## Connecting with the Provider
+
+Obtain Splunk Authentication Credentials:
+1. Ensure you have a Splunk account with the necessary permissions for the operations you intend to perform.
+2. Note down your Splunk Username and Password. These credentials are required for authenticating API requests.
+
+Identify Your Splunk Instance Details:
+1. Determine the Host (IP address or hostname) and Port (default is 8089 for Splunk's management API) of the Splunk instance you wish to connect to.
+
+---
+**NOTE**
+Make sure to follow this [Guide](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/ConfigureWebhookAllowList) to configure your webhook allow list to allow your `keep` deployment.
+---
+
+
+## Useful Links
+
+- [Splunk Python SDK](https://dev.splunk.com/view/python-sdk/SP-CAAAEBB)
+- [Splunk Webhook](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/Webhooks)
+- [Splunk Webhook Allow List](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/ConfigureWebhookAllowList)
