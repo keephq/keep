@@ -9,7 +9,6 @@ from pympler.asizeof import asizeof
 from keep.api.core.db import get_session
 from keep.api.logging import WorkflowLoggerAdapter
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
-from keep.api.models.alert import AlertDto
 
 
 class ContextManager:
