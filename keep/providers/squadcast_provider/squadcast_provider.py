@@ -67,9 +67,6 @@ class SquadcastProvider(BaseProvider):
         """
         Validates that the user has the required scopes to use the provider.
         """
-        return {
-            "authenticated": True,
-        }
         refresh_headers = {
             "content-type": "application/json",
             "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
@@ -120,6 +117,7 @@ class SquadcastProvider(BaseProvider):
         priority: str = "",
         status: str = "",
         event_id: str = "",
+        additional_json: str = "",
     ):
         body = json.dumps(
             {
@@ -131,6 +129,20 @@ class SquadcastProvider(BaseProvider):
             }
         )
 
+        if additional_json != "":
+            additional_json = additional_json.replace("'", "\"")
+            j = eval(additional_json)
+            # assign body to the json object to prevent core field from being overwritten
+            j["message"] = message
+            j["description"] = description
+            j["priority"] = priority
+            j["status"] = status
+            j["event_id"] = event_id
+            try:
+                body = json.dumps(j)
+            except Exception:
+                pass
+        
         return requests.post(
             self.authentication_config.webhook_url, data=body, headers=headers
         )
@@ -155,11 +167,13 @@ class SquadcastProvider(BaseProvider):
         status: str = "",
         event_id: str = "",
         attachments: list = [],
+        additional_json: str = "",
         **kwargs,
     ) -> dict:
         """
         Create an incident or notes using the Squadcast API.
         """
+
         self.logger.info(
             f"Creating {notify_type} using SquadcastProvider",
             extra={notify_type: notify_type},
@@ -187,6 +201,7 @@ class SquadcastProvider(BaseProvider):
                 priority=priority,
                 status=status,
                 event_id=event_id,
+                additional_json=additional_json,
             )
         elif notify_type == "notes":
             if message == "" or incident_id == "":
