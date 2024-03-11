@@ -5,7 +5,6 @@ import dataclasses
 
 from threading import Lock
 
-from keep.iohandler.iohandler import IOHandler
 from keep.providers.base.base_provider import BaseProvider
 from httpx import ConnectError
 
@@ -56,7 +55,7 @@ class BaseAiProvider(BaseProvider):
                 )
             except ConnectError:
                 self.logger.error(
-                    f"Failed to connect to Ollama. Please check Ollama host."
+                    "Failed to connect to Ollama. Please check Ollama host."
                 )
                 return {}
 
