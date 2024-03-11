@@ -107,9 +107,6 @@ class ContextManager:
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
         }
 
-        if isinstance(full_context['alert'], dict):
-            full_context['alert'] = AlertDto(**full_context['alert'])
-
         if not exclude_providers:
             full_context["providers"] = self.providers_context
 
