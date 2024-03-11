@@ -25,6 +25,7 @@ from keep.api.core.db import (
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.db import get_workflow_id_by_name
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -181,8 +182,9 @@ def run_workflow(
 
     # Finally, run it
     try:
+        alert = AlertDto(**body)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, body
+            workflow_id, tenant_id, created_by, alert
         )
     except Exception as e:
         logger.exception(
