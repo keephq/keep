@@ -78,6 +78,7 @@ google-cloud-trace = "1.11.3"
 hvac = "^2.1.0"
 mailchimp-transactional = "^1.0.56"
 sqlalchemy-utils = "^0.41.1"
+ollama = "^0.1.7"
 
 
 [tool.poetry.group.dev.dependencies]
