@@ -1,12 +1,16 @@
 from keep.iohandler.iohandler import IOHandler
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base_ai_provider.base_ai_provider import BaseAiProvider, BaseAiProviderAuthConfig
+from keep.providers.base_ai_provider.base_ai_provider import (
+    BaseAiProvider,
+    BaseAiProviderAuthConfig,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
 
 
 class AiSeverityProviderAuthConfig(BaseAiProviderAuthConfig):
     pass
+
 
 class AiSeverityProvider(BaseAiProvider):
     """
@@ -37,10 +41,10 @@ class AiSeverityProvider(BaseAiProvider):
         template = {
             "severity": "info|critical",
         }
-        alert = self.context_manager.get_full_context()['alert']
+        alert = self.context_manager.get_full_context()["alert"]
         enrichment = self._execute_model(
-            template=template, 
-            instruction=severity_instruction, 
+            template=template,
+            instruction=severity_instruction,
             alert=alert.name,
             as_enrichment=True,
         )
@@ -51,8 +55,7 @@ if __name__ == "__main__":
     # Output debug messages
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[
-                        logging.StreamHandler()])
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
 
     # Load environment variables
     import os
@@ -63,9 +66,7 @@ if __name__ == "__main__":
         workflow_id="test",
     )
 
-    config = {
-        "authentication": {"host": host}
-    }
+    config = {"authentication": {"host": host}}
     provider: AiSeverityProvider = ProvidersFactory.get_provider(
         context_manager,
         provider_id="ai-severity-provider-id",
