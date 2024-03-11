@@ -130,8 +130,11 @@ class SquadcastProvider(BaseProvider):
         )
 
         if additional_json != "":
-            additional_json = additional_json.replace("'", "\"")
-            j = eval(additional_json)
+            from asteval import Interpreter
+            aeval = Interpreter()
+
+            additional_json = additional_json.replace("'", "\"")            
+            j = aeval(additional_json)
             # assign body to the json object to prevent core field from being overwritten
             j["message"] = message
             j["description"] = description
