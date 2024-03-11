@@ -1,6 +1,7 @@
 """
 SshProvider is a class that provides a way to execute SSH commands and get the output.
 """
+
 import dataclasses
 import io
 
@@ -38,6 +39,9 @@ class SshProviderAuthConfig:
             "required": False,
             "description": "SSH private key",
             "sensitive": True,
+            "type": "file",
+            "name": "pkey",
+            "file_type": "*",
         },
     )
     password: str = dataclasses.field(
