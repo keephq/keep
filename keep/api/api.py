@@ -1,11 +1,8 @@
 import logging
 import os
-import threading
-import time
 from importlib import metadata
 
 import jwt
-import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -201,25 +198,6 @@ def get_app(
                 "role": user.role,
             }
 
-    from fastapi import BackgroundTasks
-
-    @app.post("/start-services")
-    async def start_services(background_tasks: BackgroundTasks):
-        logger.info("Starting the internal services")
-        if SCHEDULER:
-            logger.info("Starting the scheduler")
-            wf_manager = WorkflowManager.get_instance()
-            background_tasks.add_task(wf_manager.start)
-            logger.info("Scheduler started successfully")
-
-        if CONSUMER:
-            logger.info("Starting the consumer")
-            event_subscriber = EventSubscriber.get_instance()
-            background_tasks.add_task(event_subscriber.start)
-            logger.info("Consumer started successfully")
-
-        return {"status": "Services are starting in the background"}
-
     @app.on_event("startup")
     async def on_startup():
         # load all providers into cache
@@ -228,13 +206,24 @@ def get_app(
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
         logger.info("Providers loaded successfully")
-
-        # We want to start all internal services (workflowmanager, eventsubscriber, etc) only after the server is up
-        # so we init a thread that will wait for the server to be up and then start the internal services
-        # start the internal services
-        logger.info("Starting the run services thread")
-        thread = threading.Thread(target=run_services_after_app_is_up)
-        thread.start()
+        # Start the services
+        logger.info("Starting the services")
+        # Start the scheduler
+        if SCHEDULER:
+            logger.info("Starting the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.start()
+            logger.info("Scheduler started successfully")
+        # Start the consumer
+        if CONSUMER:
+            logger.info("Starting the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            # TODO: there is some "race condition" since if the consumer starts before the server,
+            #       and start getting events, it will fail since the server is not ready yet
+            #       we should add a "wait" here to make sure the server is ready
+            await event_subscriber.start()
+            logger.info("Consumer started successfully")
+        logger.info("Services started successfully")
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
@@ -262,46 +251,6 @@ def get_app(
     keep.api.observability.setup(app)
 
     return app
-
-
-def run_services_after_app_is_up():
-    """Waits until the server is up and than invoking the 'start-services' endpoint to start the internal services"""
-    logger.info("Waiting for the server to be ready")
-    _wait_for_server_to_be_ready()
-    logger.info("Server is ready, starting the internal services")
-    # start the internal services
-    try:
-        # the internal services are always on localhost
-        response = requests.post(f"http://localhost:{PORT}/start-services")
-        response.raise_for_status()
-        logger.info("Internal services started successfully")
-    except Exception as e:
-        logger.info("Failed to start internal services")
-        raise e
-
-
-def _is_server_ready() -> bool:
-    # poll localhost to see if the server is up
-    try:
-        # we are using hardcoded "localhost" to avoid problems where we start Keep on platform such as CloudRun where we have more than one instance
-        response = requests.get(f"http://localhost:{PORT}/healthcheck", timeout=1)
-        response.raise_for_status()
-        return True
-    except Exception:
-        return False
-
-
-def _wait_for_server_to_be_ready():
-    """Wait until the server is up by polling localhost"""
-    start_time = time.time()
-    while True:
-        if _is_server_ready():
-            return True
-        if time.time() - start_time >= 60:
-            raise TimeoutError("Server is not ready after 60 seconds.")
-        else:
-            logger.warning("Server is not ready yet, retrying in 1 second...")
-        time.sleep(1)
 
 
 def run(app: FastAPI):

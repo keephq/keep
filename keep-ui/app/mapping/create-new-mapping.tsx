@@ -1,7 +1,9 @@
 "use client";
 
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
+  NumberInput,
   TextInput,
   Textarea,
   Divider,
@@ -11,6 +13,7 @@ import {
   MultiSelectItem,
   Badge,
   Button,
+  Icon,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
@@ -26,6 +29,7 @@ export default function CreateNewMapping() {
   const [fileName, setFileName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
+  const [priority, setPriority] = useState<number>(0);
 
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
@@ -72,6 +76,7 @@ export default function CreateNewMapping() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        priority: priority,
         name: mapName,
         description: mapDescription,
         file_name: fileName,
@@ -121,6 +126,20 @@ export default function CreateNewMapping() {
           placeholder="Map Description"
           value={mapDescription}
           onValueChange={setMapDescription}
+        />
+      </div>
+      <div className="mt-2.5">
+        <Text>
+          Priority
+          <Icon icon={InformationCircleIcon} size="xs" color="gray" tooltip="Higher priority will be executed first" />
+        </Text>
+        <NumberInput
+          placeholder="Priority"
+          required={true}
+          value={priority}
+          onValueChange={setPriority}
+          min={0}
+          max={100}
         />
       </div>
       <Divider />

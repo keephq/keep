@@ -123,10 +123,15 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
-    if not database_exists(engine.url):
-        logger.info("Creating the database")
-        create_database(engine.url)
-        logger.info("Database created")
+    try:
+        if not database_exists(engine.url):
+            logger.info("Creating the database")
+            create_database(engine.url)
+            logger.info("Database created")
+    # On Cloud Run, it fails to check if the database exists
+    except Exception:
+        logger.warning("Failed to create the database or detect if it exists.")
+        pass
     SQLModel.metadata.create_all(engine)
 
 
@@ -185,6 +190,19 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
             session.commit()
             logger.info("Migrated TenantApiKey table")
+        except Exception:
+            pass
+
+    # migrating presets table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating Preset table")
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
+            )
+            session.exec("ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';")
+            session.commit()
+            logger.info("Migrated Preset table")
         except Exception:
             pass
 
@@ -415,6 +433,8 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 WorkflowExecution.workflow_id,
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.started >= datetime.utcnow() - timedelta(days=14))
             .group_by(WorkflowExecution.workflow_id)
             .cte("latest_execution_cte")
         )

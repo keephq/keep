@@ -81,8 +81,12 @@ class AlertDto(BaseModel):
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
+        # if its none, use the name
         if fingerprint is None:
-            return hashlib.sha256(values.get("name").encode()).hexdigest()
+            fingerprint = hashlib.sha256(values.get("name").encode()).hexdigest()
+        # take only the first 255 characters
+        else:
+            fingerprint = fingerprint[:255]
         return fingerprint
 
     @validator("deleted", pre=True, always=True)

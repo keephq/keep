@@ -16,10 +16,10 @@ import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
 
 const defaultPresets: Preset[] = [
-  { name: "feed", options: [] },
-  { name: "deleted", options: [] },
-  { name: "dismissed", options: []},
-  { name: "groups", options: [] },
+  { name: "feed", options: [], is_private: false },
+  { name: "deleted", options: [], is_private: false },
+  { name: "dismissed", options: [], is_private: false },
+  { name: "groups", options: [], is_private: false },
 ];
 
 type AlertsProps = {
@@ -106,8 +106,8 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => setRunWorkflowModalAlert(null)}
       />
       <AlertDismissModal
-          alert={dismissModalAlert}
-          handleClose={() => setDismissModalAlert(null)}
+        alert={dismissModalAlert}
+        handleClose={() => setDismissModalAlert(null)}
       />
     </Card>
   );
