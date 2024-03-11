@@ -1,6 +1,5 @@
 import enum
 import hashlib
-import json
 import logging
 import threading
 import time
@@ -16,6 +15,7 @@ from keep.api.core.db import finish_workflow_execution as finish_workflow_execut
 from keep.api.core.db import get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
+from keep.api.models.alert import AlertDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -136,31 +136,18 @@ class WorkflowScheduler:
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, event
+        self, workflow_id, tenant_id, triggered_by_user, alert: AlertDto
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
-            # if the event is not defined, add some entropy
-            if not event:
-                event = {
-                    "workflow_id": workflow_id,
-                    "triggered_by_user": triggered_by_user,
-                    "trigger": "manual",
-                    "time": time.time(),
-                }
-            else:
-                # so unique_execution_number will be different
-                event["time"] = time.time()
-            unique_execution_number = self._get_unique_execution_number(
-                json.dumps(event).encode()
-            )
+            unique_execution_number = self._get_unique_execution_number()
             self.logger.info(f"Unique execution number: {unique_execution_number}")
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
-                fingerprint=event.get("fingerprint"),
+                fingerprint=alert.fingerprint,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -185,25 +172,17 @@ class WorkflowScheduler:
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
                     "triggered_by_user": triggered_by_user,
-                    "event": event,
+                    "event": alert,
                 }
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self, payload: bytes):
-        """Gets a unique execution number for a workflow execution
-        # TODO: this is a hack. the execution number is a way to enforce that
-        #       the interval mechanism will work. we need to find a better way to do it
-        #       the "correct way" should be to seperate the interval mechanism from the event/manual mechanishm
-
-        Args:
-            workflow_id (str): the id of the workflow
-            tenant_id (str): the id ot the tenant
-            payload (bytes): some encoded binary payload
-
+    def _get_unique_execution_number(self):
+        """
         Returns:
             int: an int represents unique execution number
         """
+        payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
             WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1
         )
