@@ -431,7 +431,7 @@ async def update_provider(
     )
     try:
         provider_info = await request.json()
-    except ValueError:
+    except Exception:
         # If error occurs (likely not JSON), try to get as form data
         form_data = await request.form()
         provider_info = dict(form_data)
