@@ -67,9 +67,6 @@ class SquadcastProvider(BaseProvider):
         """
         Validates that the user has the required scopes to use the provider.
         """
-        return {
-            "authenticated": True,
-        }
         refresh_headers = {
             "content-type": "application/json",
             "X-Refresh-Token": f"{self.authentication_config.refresh_token}",
