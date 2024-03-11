@@ -225,6 +225,7 @@ class ProvidersFactory:
         providers = []
         blacklisted_providers = [
             "base_provider",
+            "base_ai_provider",
             "mock_provider",
             "file_provider",
             "github_workflows_provider",

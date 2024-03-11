@@ -9,6 +9,7 @@ from pympler.asizeof import asizeof
 from keep.api.core.db import get_session
 from keep.api.logging import WorkflowLoggerAdapter
 from keep.storagemanager.storagemanagerfactory import StorageManagerFactory
+from keep.api.models.alert import AlertDto
 
 
 class ContextManager:
@@ -105,6 +106,9 @@ class ContextManager:
             "event": self.event_context,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
         }
+
+        if isinstance(full_context['alert'], dict):
+            full_context['alert'] = AlertDto(**full_context['alert'])
 
         if not exclude_providers:
             full_context["providers"] = self.providers_context

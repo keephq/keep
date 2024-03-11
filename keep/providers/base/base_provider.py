@@ -224,6 +224,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             self.context_manager.dependencies.add(results.__class__)
 
         enrich_alert = kwargs.get("enrich_alert", [])
+        enrich_alert.append(results.get("enrich_alert", []))
         if enrich_alert:
             self._enrich_alert(enrich_alert, results)
         # and return the results
