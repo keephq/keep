@@ -739,7 +739,7 @@ def list_mappings(info: Info):
 @click.option(
     "--priority",
     "-p",
-    type=int,
+    type=click.IntRange(0, 100),
     help="The priority of the mapping, higher priority means this rule will execute first.",
     required=False,
     default=0,
