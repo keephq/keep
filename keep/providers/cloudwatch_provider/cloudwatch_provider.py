@@ -256,7 +256,7 @@ class CloudwatchProvider(BaseProvider):
         # 4. validate start query
         logs_client = self.__generate_client("logs")
         try:
-            logs_client.start_query(
+            query = logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -275,16 +275,22 @@ class CloudwatchProvider(BaseProvider):
             else:
                 self.logger.info("Error validating AWS logs:StartQuery scope")
                 scopes["logs:StartQuery"] = str(e)
+        if query:
+            try:
+                query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            except Exception:
+                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
+                scopes[
+                    "logs:GetQueryResults"
+                ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            try:
+                logs_client.get_query_results(queryId=query_id)
+                scopes["logs:StartQuery"] = True
+            except Exception as e:
+                self.logger.exception("Error validating AWS logs:StartQuery scope")
+                scopes["logs:StartQuery"] = str(e)
 
         # 5. validate get query results
-        try:
-            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-        except Exception:
-            self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-            scopes[
-                "logs:GetQueryResults"
-            ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-
         if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
