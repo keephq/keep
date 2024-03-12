@@ -93,6 +93,13 @@ class CloudwatchProvider(BaseProvider):
             alias="Read Query results",
         ),
         ProviderScope(
+            name="logs:DescribeQueries",
+            description="Part of CloudWatchLogsReadOnlyAccess role. Required to describe the results of CloudWatch Logs Insights queries.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeQueries.html",
+            mandatory=False,
+            alias="Describe Query results",
+        ),
+        ProviderScope(
             name="logs:StartQuery",
             description="Part of CloudWatchLogsReadOnlyAccess role. Required to start CloudWatch Logs Insights queries.",
             documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartQuery.html",
@@ -285,6 +292,23 @@ class CloudwatchProvider(BaseProvider):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
+
+        # 6. validate describe query results
+        try:
+            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+        except Exception:
+            self.logger.exception("Error validating AWS logs:DescribeQueries scope")
+            scopes[
+                "logs:DescribeQueries"
+            ] = "Could not validate logs:DescribeQueries scope"
+
+        if query_id:
+            try:
+                logs_client.get_query_results(queryId=query_id)
+                scopes["logs:DescribeQueries"] = True
+            except Exception as e:
+                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
+                scopes["logs:DescribeQueries"] = str(e)
         # Finally
         return scopes
 
