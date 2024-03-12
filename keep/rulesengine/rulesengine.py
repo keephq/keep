@@ -234,6 +234,12 @@ class RulesEngine:
                 f"Failed to calculate group fingerprint for event {event.id} and rule {rule.name}"
             )
             return "none"
+        # if any of the values is None, we will return "none"
+        if any([fingerprint is None for fingerprint in group_fingerprint]):
+            self.logger.warning(
+                f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
+            )
+            return "none"
         return ",".join(group_fingerprint)
 
     def _calc_group_status(self, alerts):
