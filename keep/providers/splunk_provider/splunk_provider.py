@@ -12,16 +12,24 @@ from keep.providers.providers_factory import ProvidersFactory
 
 @pydantic.dataclasses.dataclass
 class SplunkProviderAuthConfig:
-    username: str = dataclasses.field(
+    # username: str = dataclasses.field(
+    #     metadata={
+    #         "required": True,
+    #         "description": "Splunk Username",
+    #     }
+    # )
+    # password: str = dataclasses.field(
+    #     metadata={
+    #         "required": True,
+    #         "description": "Splunk Password",
+    #         "sensitive": True,
+    #     }
+    # )
+
+    api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Splunk Username",
-        }
-    )
-    password: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Splunk Password",
+            "description": "Splunk API Key",
             "sensitive": True,
         }
     )
@@ -45,11 +53,23 @@ class SplunkProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="connect_to_client",
+            name="authenticated",
             description="The user can connect to the client",
             mandatory=True,
             alias="Connect to the client",
-        )
+        ),
+        ProviderScope(
+            name="list_all_objects",
+            description="The user can get all the alerts",
+            mandatory=True,
+            alias="List all Alerts",
+        ),
+        ProviderScope(
+            name="edit_own_objects",
+            description="The user can edit and add webhook to saved_searches",
+            mandatory=True,
+            alias="Needed to connect to webhook",
+        ),
     ]
 
     SEVERITIES_MAP = {
@@ -66,16 +86,33 @@ class SplunkProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     def validate_scopes(self) -> dict[str, bool | str]:
+        list_all_objects_scope = "NOT_FOUND"
+        edit_own_object_scope = "NOT_FOUND"
         try:
-            connect(username=self.authentication_config.username, password=self.authentication_config.password,
-                    host=self.authentication_config.host, port=self.authentication_config.port)
+            service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
+                              port=self.authentication_config.port)
+            for user in service.users:
+                user_roles = user.content['roles']
+                for role_name in user_roles:
+                    perms = self.__get_role_capabilities(role_name=role_name, service=service)
+                    if not list_all_objects_scope and 'list_all_objects' in perms:
+                        list_all_objects_scope = True
+                    if not edit_own_object_scope and 'edit_own_objects' in perms:
+                        edit_own_object_scope = True
+                    if list_all_objects_scope and edit_own_object_scope:
+                        break
+
             scopes = {
-                "connect_to_client": True,
+                "authenticated": True,
+                "list_all_objects": list_all_objects_scope,
+                "edit_own_objects": edit_own_object_scope,
             }
         except Exception as e:
             self.logger.exception("Error validating scopes")
             scopes = {
                 "connect_to_client": str(e),
+                "list_all_objects": "UNAUTHENTICATED",
+                "edit_own_objects": "UNAUTHENTICATED",
             }
         return scopes
 
@@ -83,6 +120,10 @@ class SplunkProvider(BaseProvider):
         self.authentication_config = SplunkProviderAuthConfig(
             **self.config.authentication
         )
+
+    def __get_role_capabilities(self, role_name, service):
+        role = service.roles[role_name]
+        return role.content['capabilities'] + role.content['imported_capabilities']
 
     def dispose(self):
         """
@@ -99,19 +140,18 @@ class SplunkProvider(BaseProvider):
             "action.webhook": "1",
             "action.webhook.param.url": keep_api_url,
         }
-        service = connect(username=self.authentication_config.username, password=self.authentication_config.password,
-                          host=self.authentication_config.host, port=self.authentication_config.port)
+        service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
+                          port=self.authentication_config.port)
         for saved_search in service.saved_searches:
             existing_webhook_url = saved_search["_state"]["content"].get("action.webhook.param.url", None)
             if existing_webhook_url is None or existing_webhook_url != keep_api_url:
-                print("REEE_LOGS_HERE: ", saved_search["path"], existing_webhook_url)
                 saved_search.update(**creation_updation_kwargs).refresh()
 
     # @staticmethod
     def _format_alert(self, event: dict) -> AlertDto:
         search_id = event["sid"]
-        service = connect(username=self.authentication_config.username, password=self.authentication_config.password,
-                          host=self.authentication_config.host, port=self.authentication_config.port)
+        service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
+                          port=self.authentication_config.port)
         saved_search = service.saved_searches[search_id]
         return AlertDto(
             id=event["sid"],
