@@ -281,11 +281,13 @@ class CloudwatchProvider(BaseProvider):
             except Exception:
                 self.logger.exception("Error validating AWS logs:DescribeQueries scope")
                 scopes[
-                    "logs:GetQueryResults"
+                    "logs:GetQueryResults",
+                    "logs:DescribeQueries"
                 ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
             try:
                 logs_client.get_query_results(queryId=query_id)
                 scopes["logs:StartQuery"] = True
+                scopes["logs:DescribeQueries"] = True
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:StartQuery scope")
                 scopes["logs:StartQuery"] = str(e)
@@ -298,23 +300,7 @@ class CloudwatchProvider(BaseProvider):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
-
-        # 6. validate describe query results
-        try:
-            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-        except Exception:
-            self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-            scopes[
-                "logs:DescribeQueries"
-            ] = "Could not validate logs:DescribeQueries scope"
-
-        if query_id:
-            try:
-                logs_client.get_query_results(queryId=query_id)
-                scopes["logs:DescribeQueries"] = True
-            except Exception as e:
-                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-                scopes["logs:DescribeQueries"] = str(e)
+        
         # Finally
         return scopes
 
