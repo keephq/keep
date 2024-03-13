@@ -7,6 +7,7 @@ import datetime
 import json
 import logging
 import os
+from typing import Optional
 
 import pydantic
 import requests
@@ -118,7 +119,7 @@ class DynatraceProvider(BaseProvider):
             raise Exception(f"Failed to get problems from Dynatrace: {response.text}")
         else:
             return [
-                self.format_alert(event)
+                self._format_alert(event)
                 for event in response.json().get("problems", [])
             ]
 
@@ -208,7 +209,9 @@ class DynatraceProvider(BaseProvider):
         return scopes
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["DynatraceProvider"]
+    ) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
             tags = event.get("Tags", [])

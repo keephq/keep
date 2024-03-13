@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 import os
+from typing import Optional
 from uuid import uuid4
 
 import pydantic
@@ -118,7 +119,9 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["ParseableProvider"]
+    ) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")

@@ -1,4 +1,5 @@
 import dataclasses
+from typing import Optional
 
 import pydantic
 from splunklib.client import connect
@@ -24,13 +25,13 @@ class SplunkProviderAuthConfig:
         metadata={
             "description": "Splunk Host (default is localhost)",
         },
-        default="localhost"
+        default="localhost",
     )
     port: int = dataclasses.field(
         metadata={
             "description": "Splunkd Port (default is 8089)",
         },
-        default=8089
+        default=8089,
     )
 
 
@@ -67,7 +68,7 @@ class SplunkProvider(BaseProvider):
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -75,15 +76,20 @@ class SplunkProvider(BaseProvider):
         list_all_objects_scope = "NOT_FOUND"
         edit_own_object_scope = "NOT_FOUND"
         try:
-            service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
-                              port=self.authentication_config.port)
+            service = connect(
+                token=self.authentication_config.api_key,
+                host=self.authentication_config.host,
+                port=self.authentication_config.port,
+            )
             for user in service.users:
-                user_roles = user.content['roles']
+                user_roles = user.content["roles"]
                 for role_name in user_roles:
-                    perms = self.__get_role_capabilities(role_name=role_name, service=service)
-                    if not list_all_objects_scope and 'list_all_objects' in perms:
+                    perms = self.__get_role_capabilities(
+                        role_name=role_name, service=service
+                    )
+                    if not list_all_objects_scope and "list_all_objects" in perms:
                         list_all_objects_scope = True
-                    if not edit_own_object_scope and 'edit_own_objects' in perms:
+                    if not edit_own_object_scope and "edit_own_objects" in perms:
                         edit_own_object_scope = True
                     if list_all_objects_scope and edit_own_object_scope:
                         break
@@ -109,7 +115,7 @@ class SplunkProvider(BaseProvider):
 
     def __get_role_capabilities(self, role_name, service):
         role = service.roles[role_name]
-        return role.content['capabilities'] + role.content['imported_capabilities']
+        return role.content["capabilities"] + role.content["imported_capabilities"]
 
     def dispose(self):
         """
@@ -118,7 +124,7 @@ class SplunkProvider(BaseProvider):
         pass
 
     def setup_webhook(
-            self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         self.logger.info("Setting up Splunk webhook on all Alerts")
         creation_updation_kwargs = {
@@ -126,26 +132,41 @@ class SplunkProvider(BaseProvider):
             "action.webhook": "1",
             "action.webhook.param.url": keep_api_url,
         }
-        service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
-                          port=self.authentication_config.port)
+        service = connect(
+            token=self.authentication_config.api_key,
+            host=self.authentication_config.host,
+            port=self.authentication_config.port,
+        )
         for saved_search in service.saved_searches:
-            existing_webhook_url = saved_search["_state"]["content"].get("action.webhook.param.url", None)
+            existing_webhook_url = saved_search["_state"]["content"].get(
+                "action.webhook.param.url", None
+            )
             if existing_webhook_url is None or existing_webhook_url != keep_api_url:
                 saved_search.update(**creation_updation_kwargs).refresh()
 
-    # @staticmethod
-    def _format_alert(self, event: dict) -> AlertDto:
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: Optional["SplunkProvider"]
+    ) -> AlertDto:
+        if not provider_instance:
+            raise Exception("Provider instance is required to format alert")
+
         search_id = event["sid"]
-        service = connect(token=self.authentication_config.api_key, host=self.authentication_config.host,
-                          port=self.authentication_config.port)
+        service = connect(
+            token=provider_instance.authentication_config.api_key,
+            host=provider_instance.authentication_config.host,
+            port=provider_instance.authentication_config.port,
+        )
         saved_search = service.saved_searches[search_id]
         return AlertDto(
             id=event["sid"],
             name=event["search_name"],
             source=["splunk"],
             url=event["results_link"],
-            severity=SplunkProvider.SEVERITIES_MAP.get(saved_search["_state"]["content"]["alert.severity"]),
-            description=saved_search["_state"]["content"]["description"]
+            severity=SplunkProvider.SEVERITIES_MAP.get(
+                saved_search["_state"]["content"]["alert.severity"]
+            ),
+            description=saved_search["_state"]["content"]["description"],
         )
 
 
