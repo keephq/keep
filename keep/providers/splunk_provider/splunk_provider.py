@@ -12,20 +12,6 @@ from keep.providers.providers_factory import ProvidersFactory
 
 @pydantic.dataclasses.dataclass
 class SplunkProviderAuthConfig:
-    # username: str = dataclasses.field(
-    #     metadata={
-    #         "required": True,
-    #         "description": "Splunk Username",
-    #     }
-    # )
-    # password: str = dataclasses.field(
-    #     metadata={
-    #         "required": True,
-    #         "description": "Splunk Password",
-    #         "sensitive": True,
-    #     }
-    # )
-
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
