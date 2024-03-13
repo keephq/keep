@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+from typing import Optional
 from urllib.parse import urlparse
 
 import boto3
@@ -482,7 +483,9 @@ class CloudwatchProvider(BaseProvider):
         self.logger.info("Webhook setup completed!")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["CloudwatchProvider"]
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
         if event.get("Type") == "SubscriptionConfirmation":

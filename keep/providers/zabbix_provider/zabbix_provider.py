@@ -1,12 +1,13 @@
 """
 Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
+
 import dataclasses
 import datetime
 import json
 import os
 import random
-from typing import Literal
+from typing import Literal, Optional
 
 import pydantic
 import requests
@@ -554,7 +555,9 @@ class ZabbixProvider(BaseProvider):
         self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["ZabbixProvider"]
+    ) -> AlertDto:
         environment = "unknown"
         tags = {
             tag.get("tag"): tag.get("value")
