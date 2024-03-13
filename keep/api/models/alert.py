@@ -96,6 +96,12 @@ class AlertDto(BaseModel):
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
 
+    @validator("lastReceived", pre=True, always=True)
+    def validate_last_received(cls, last_received, values):
+        if not last_received:
+            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return last_received
+
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):
         # normzlize dismissed value
