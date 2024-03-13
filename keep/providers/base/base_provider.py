@@ -1,6 +1,7 @@
 """
 Base class for all providers.
 """
+
 import abc
 import copy
 import datetime
@@ -230,14 +231,31 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: Optional["BaseProvider"]
+    ) -> AlertDto | list[AlertDto]:
+        """
+        Format an incoming alert.
+
+        Args:
+            event (dict): The raw provider event payload.
+            provider_instance (Optional[&quot;BaseProvider&quot;]): The tenant provider instance if it was successfully loaded.
+
+        Raises:
+            NotImplementedError: For providers who does not implement this method.
+
+        Returns:
+            AlertDto | list[AlertDto]: The formatted alert(s).
+        """
         raise NotImplementedError("format_alert() method not implemented")
 
     @classmethod
-    def format_alert(cls, event: dict) -> AlertDto | list[AlertDto]:
+    def format_alert(
+        cls, event: dict, provider_instance: Optional["BaseProvider"]
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event)
+        formatted_alert = cls._format_alert(event, provider_instance)
         logger.debug("Alert formatted")
         return formatted_alert
 
