@@ -39,7 +39,10 @@ class AlertDeduplicator:
             self.tenant_id, alert.fingerprint
         )
         alert_deduplicate = (
-            True if last_alert_by_fingerprint.alert_hash == alert_hash else False
+            True
+            if last_alert_by_fingerprint
+            and last_alert_by_fingerprint.alert_hash == alert_hash
+            else False
         )
         if alert_deduplicate:
             self.logger.info(f"Alert {alert.id} is deduplicated {alert.source}")
