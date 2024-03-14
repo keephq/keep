@@ -27,8 +27,8 @@ export default withAuth(function middleware(req) {
   //       I guess first step should be some mapping ~ {role: [allowed_pages]}
   //       and the second step would be to get it dymnamically from an API
   //       or some role-based routing
-  if (req.nextauth.token?.role === "noc" && pathname !== "/alerts") {
-    return NextResponse.redirect(new URL("/alerts", req.url));
+  if (req.nextauth.token?.role === "noc" && !pathname.startsWith("/alerts")){
+    return NextResponse.redirect(new URL("/alerts/feed", req.url));
   }
 
   // Continue with the normal flow for other cases
