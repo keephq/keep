@@ -3,8 +3,6 @@ import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
 import {
-  OnChangeFn,
-  RowSelectionState,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
@@ -14,6 +12,7 @@ import {
   ColumnSizingState,
   getFilteredRowModel,
 } from "@tanstack/react-table";
+
 import AlertPagination from "./alert-pagination";
 import AlertColumnsSelect from "./alert-columns-select";
 import AlertsTableHeaders from "./alert-table-headers";
@@ -24,6 +23,8 @@ import {
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
 } from "./alert-table-utils";
+import AlertActions from "./alert-actions";
+import AlertPresets from "./alert-presets";
 
 interface Props {
   alerts: AlertDto[];
@@ -32,10 +33,6 @@ interface Props {
   presetName: string;
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
-  rowSelection?: {
-    state: RowSelectionState;
-    onChange: OnChangeFn<RowSelectionState>;
-  };
 }
 
 export function AlertTable({
@@ -43,7 +40,6 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
-  rowSelection,
   isRefreshAllowed = true,
 }: Props) {
   const columnsIds = getColumnsIds(columns);
@@ -70,7 +66,6 @@ export function AlertTable({
       columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
       columnOrder: columnOrder,
       columnSizing: columnSizing,
-      rowSelection: rowSelection?.state,
       columnPinning: {
         left: ["checkbox"],
         right: ["alertMenu"],
@@ -82,16 +77,33 @@ export function AlertTable({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    enableRowSelection: rowSelection !== undefined,
-    onRowSelectionChange: rowSelection?.onChange,
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
     autoResetPageIndex: false,
   });
 
+  const selectedRowIds = Object.entries(
+    table.getSelectedRowModel().rowsById
+  ).reduce<string[]>((acc, [alertId]) => {
+    return acc.concat(alertId);
+  }, []);
+
   return (
     <>
+      {selectedRowIds.length ? (
+        <AlertActions
+          selectedRowIds={selectedRowIds}
+          alerts={alerts}
+          clearRowSelection={table.resetRowSelection}
+        />
+      ) : (
+        <AlertPresets
+          table={table}
+          preset={{ name: presetName, is_private: false, options: [] }}
+          isLoading={isAsyncLoading}
+        />
+      )}
       <AlertColumnsSelect presetName={presetName} table={table} />
       {isAsyncLoading && (
         <Callout

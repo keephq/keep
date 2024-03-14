@@ -7,7 +7,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Props {
   selectedRowIds: string[];
@@ -20,7 +20,6 @@ export default function AlertActions({
   alerts,
   clearRowSelection,
 }: Props) {
-  const pathname = usePathname();
   const router = useRouter();
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnFocus: false });
