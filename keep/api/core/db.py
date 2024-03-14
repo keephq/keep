@@ -1132,9 +1132,17 @@ def assign_alert_to_group(
                 .where(Alert.fingerprint == fingerprint)
                 .order_by(Alert.timestamp.desc())
             ).first()
-            group_alert.event["status"] = AlertStatus.RESOLVED.value
-            # mark the event as modified so it will be updated in the database
-            flag_modified(group_alert, "event")
+            # this is kinda wtf but sometimes we deleted manually
+            #   these from the DB since it was too big
+            if not group_alert:
+                logger.warning(
+                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
+                )
+            else:
+                group_alert.event["status"] = AlertStatus.RESOLVED.value
+                # mark the event as modified so it will be updated in the database
+                flag_modified(group_alert, "event")
+            # commit the changes
             session.commit()
             logger.info(f"Enriched group {group.id} with group_expired flag")
 
