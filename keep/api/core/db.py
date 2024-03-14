@@ -200,7 +200,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec(
                 "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
             )
-            session.exec("ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';")
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';"
+            )
             session.commit()
             logger.info("Migrated Preset table")
         except Exception:
@@ -1252,11 +1254,14 @@ def get_all_filters(tenant_id):
     return filters
 
 
-def get_alert_by_hash(tenant_id, alert_hash):
+def get_last_alert_by_fingerprint(tenant_id, fingerprint):
+    # get the last alert for a given fingerprint
+    # to check deduplication
     with Session(engine) as session:
         alert = session.exec(
             select(Alert)
             .where(Alert.tenant_id == tenant_id)
-            .where(Alert.alert_hash == alert_hash)
+            .where(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
         ).first()
     return alert
