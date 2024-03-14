@@ -428,7 +428,7 @@ class NewrelicProvider(BaseProvider):
         lastReceived = event["lastReceived"] if "lastReceived" in event else None
         if lastReceived:
             lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%SZ",
             )
             event["lastReceived"] = lastReceived
         # format status and severity to Keep format
