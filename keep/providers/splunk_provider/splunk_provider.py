@@ -29,7 +29,7 @@ class SplunkProviderAuthConfig:
     )
     port: int = dataclasses.field(
         metadata={
-            "description": "Splunkd Port (default is 8089)",
+            "description": "Splunk Port (default is 8089)",
         },
         default=8089,
     )
