@@ -83,7 +83,12 @@ class AlertDto(BaseModel):
     def assign_fingerprint_if_none(cls, fingerprint, values):
         # if its none, use the name
         if fingerprint is None:
-            fingerprint = hashlib.sha256(values.get("name").encode()).hexdigest()
+            fingerprint_payload = values.get("name")
+            # if the alert name is None, than use the entire payload
+            if not fingerprint_payload:
+                logger.warning("No name to alert, using the entire payload")
+                fingerprint_payload = json.dumps(values)
+            fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
         # take only the first 255 characters
         else:
             fingerprint = fingerprint[:255]
@@ -95,6 +100,12 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("lastReceived", pre=True, always=True)
+    def validate_last_received(cls, last_received, values):
+        if not last_received:
+            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return last_received
 
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):

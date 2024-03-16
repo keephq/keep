@@ -3902,6 +3902,16 @@ files = [
 ]
 
 [[package]]
+name = "splunk-sdk"
+version = "1.7.4"
+description = "The Splunk Software Development Kit for Python."
+optional = false
+python-versions = "*"
+files = [
+    {file = "splunk-sdk-1.7.4.tar.gz", hash = "sha256:8f3f149e3a0daf7526ed36882c109e4ec8080e417efe25d23f4578e86d38b9f2"},
+]
+
+[[package]]
 name = "sqlalchemy"
 version = "1.4.41"
 description = "Database Abstraction Library"
@@ -4476,4 +4486,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "dff1adb9a5cfcc30d8bf6ac233fcd29af4e67faad205f3117e9501e5a5f983d4"
+content-hash = "73ea9506331667a2eb2b4cace7c017a11f7adb4d12aa8b6c7adc0d071181bd13"

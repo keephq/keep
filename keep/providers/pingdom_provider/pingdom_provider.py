@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+from typing import Optional
 
 import pydantic
 import requests
@@ -143,7 +144,9 @@ class PingdomProvider(BaseProvider):
         return alerts_dtos
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["PingdomProvider"]
+    ) -> AlertDto:
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
 
         # map severity and status to keep's format

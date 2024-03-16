@@ -200,7 +200,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec(
                 "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
             )
-            session.exec("ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';")
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';"
+            )
             session.commit()
             logger.info("Migrated Preset table")
         except Exception:
@@ -1130,9 +1132,17 @@ def assign_alert_to_group(
                 .where(Alert.fingerprint == fingerprint)
                 .order_by(Alert.timestamp.desc())
             ).first()
-            group_alert.event["status"] = AlertStatus.RESOLVED.value
-            # mark the event as modified so it will be updated in the database
-            flag_modified(group_alert, "event")
+            # this is kinda wtf but sometimes we deleted manually
+            #   these from the DB since it was too big
+            if not group_alert:
+                logger.warning(
+                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
+                )
+            else:
+                group_alert.event["status"] = AlertStatus.RESOLVED.value
+                # mark the event as modified so it will be updated in the database
+                flag_modified(group_alert, "event")
+            # commit the changes
             session.commit()
             logger.info(f"Enriched group {group.id} with group_expired flag")
 
@@ -1252,11 +1262,14 @@ def get_all_filters(tenant_id):
     return filters
 
 
-def get_alert_by_hash(tenant_id, alert_hash):
+def get_last_alert_by_fingerprint(tenant_id, fingerprint):
+    # get the last alert for a given fingerprint
+    # to check deduplication
     with Session(engine) as session:
         alert = session.exec(
             select(Alert)
             .where(Alert.tenant_id == tenant_id)
-            .where(Alert.alert_hash == alert_hash)
+            .where(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
         ).first()
     return alert

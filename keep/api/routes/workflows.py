@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -182,6 +183,13 @@ def run_workflow(
 
     # Finally, run it
     try:
+        # if its event that was triggered by the UI with the Modal
+        if "test-workflow" in body.get("fingerprint", ""):
+            # some random
+            body["id"] = body.get("fingerprint")
+            body["lastReceived"] = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
         alert = AlertDto(**body)
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, alert

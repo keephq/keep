@@ -6,6 +6,7 @@ import datetime
 import json
 import os
 import time
+from typing import Optional
 
 import pydantic
 import requests
@@ -747,7 +748,10 @@ class DatadogProvider(BaseProvider):
                         )
                 self.logger.info("Monitors updated")
 
-    def _format_alert(event: dict) -> AlertDto:
+    @staticmethod
+    def _format_alert(
+        event: dict, provider_instance: Optional["DatadogProvider"]
+    ) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
         tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
