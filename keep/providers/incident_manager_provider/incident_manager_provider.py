@@ -4,11 +4,9 @@ IncidentManagerProvider is a class that provides a way to read data from AWS Inc
 
 import dataclasses
 import datetime
-import hashlib
 import json
 import logging
 import os
-import time
 from urllib.parse import urlparse
 
 import boto3
@@ -209,7 +207,6 @@ class IncidentManagerProvider(BaseProvider):
         if self.authentication_config.sns_topic_arn:
 
             try:
-                sns_client = self.__generate_client("sns")
                 sns_topic = self.authentication_config.sns_topic_arn
                 if not sns_topic.startswith("arn:aws:sns"):
                     account_id = self._get_account_id()
