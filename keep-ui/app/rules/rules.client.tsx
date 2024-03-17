@@ -32,7 +32,6 @@ import QueryBuilder, {
   QueryValidator,
   findPath,
 } from "react-querybuilder";
-// import 'react-querybuilder/dist/query-builder.scss';
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import Loading from "../loading";
