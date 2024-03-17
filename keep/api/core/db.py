@@ -1262,14 +1262,14 @@ def get_all_filters(tenant_id):
     return filters
 
 
-def get_last_alert_by_fingerprint(tenant_id, fingerprint):
+def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
-        alert = session.exec(
-            select(Alert)
+        alert_hash = session.exec(
+            select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
             .where(Alert.fingerprint == fingerprint)
             .order_by(Alert.timestamp.desc())
         ).first()
-    return alert
+    return alert_hash
