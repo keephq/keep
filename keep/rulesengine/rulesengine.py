@@ -129,7 +129,8 @@ class RulesEngine:
 
             group_status = self._calc_group_status(group.alerts)
             # get the payload of the group
-            group_payload = self._generate_group_payload(group.alerts)
+            # todo: this is not scaling, needs to find another solution
+            # group_payload = self._generate_group_payload(group.alerts)
             # create the alert
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
@@ -146,7 +147,7 @@ class RulesEngine:
                     "status": group_status,
                     "pushed": True,
                     "group": True,
-                    "groupPayload": group_payload,
+                    # "groupPayload": group_payload,
                     "fingerprint": group_fingerprint,
                     **group_attributes,
                 },
@@ -287,6 +288,7 @@ class RulesEngine:
         Returns:
             dict: the payload of the group alert
         """
+
         # first, group by fingerprints
         alerts_by_fingerprint = {}
         for alert in alerts:

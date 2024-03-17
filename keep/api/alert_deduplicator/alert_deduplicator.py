@@ -5,7 +5,7 @@ import logging
 
 import celpy
 
-from keep.api.core.db import get_all_filters, get_last_alert_by_fingerprint
+from keep.api.core.db import get_all_filters, get_last_alert_hash_by_fingerprint
 from keep.api.models.alert import AlertDto
 
 
@@ -35,13 +35,13 @@ class AlertDeduplicator:
         ).hexdigest()
 
         # Check if the hash is already in the database
-        last_alert_by_fingerprint = get_last_alert_by_fingerprint(
+        last_alert_hash_by_fingerprint = get_last_alert_hash_by_fingerprint(
             self.tenant_id, alert.fingerprint
         )
         alert_deduplicate = (
             True
-            if last_alert_by_fingerprint
-            and last_alert_by_fingerprint.alert_hash == alert_hash
+            if last_alert_hash_by_fingerprint
+            and last_alert_hash_by_fingerprint == alert_hash
             else False
         )
         if alert_deduplicate:
