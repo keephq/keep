@@ -259,7 +259,7 @@ export function parseWorkflow(
     workflow.triggers?.reduce((prev: any, curr: any) => {
       const currType = curr.type;
       let value = curr.value;
-      if (currType === "alert") {
+      if (currType === "alert" && curr.filters) {
         value = curr.filters.reduce((prev: any, curr: any) => {
           prev[curr.key] = curr.value;
           return prev;
