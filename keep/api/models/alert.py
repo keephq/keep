@@ -120,7 +120,7 @@ class AlertDto(BaseModel):
         # else, validate dismissedUntil
         dismiss_until = values.get("dismissUntil")
         # if there's no dismissUntil, return just return dismissed
-        if not dismiss_until:
+        if not dismiss_until or dismiss_until == "forever":
             return dismissed
 
         # if there's dismissUntil, validate it
