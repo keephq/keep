@@ -777,6 +777,8 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
+        query = query.order_by(Alert.timestamp.desc())
+
         # Execute the query
         alerts = query.all()
 
