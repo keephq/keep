@@ -184,13 +184,20 @@ def run_workflow(
     # Finally, run it
     try:
         # if its event that was triggered by the UI with the Modal
-        if "test-workflow" in body.get("fingerprint", ""):
+        if "test-workflow" in body.get("fingerprint", "") or not body:
             # some random
-            body["id"] = body.get("fingerprint")
+            body["id"] = body.get("fingerprint", "manual-run")
+            body["name"] = body.get("fingerprint", "manual-run")
             body["lastReceived"] = datetime.datetime.now(
                 tz=datetime.timezone.utc
             ).isoformat()
-        alert = AlertDto(**body)
+        try:
+            alert = AlertDto(**body)
+        except TypeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid alert format",
+            )
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, alert
         )
