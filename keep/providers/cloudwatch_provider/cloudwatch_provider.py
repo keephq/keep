@@ -404,7 +404,7 @@ class CloudwatchProvider(BaseProvider):
             actions = alarm.get("AlarmActions", [])
             # extract only SNS actions
             topics = [action for action in actions if action.startswith("arn:aws:sns")]
-            # if we got explicitly SNS topic, add is as an action
+            # if we got explicitly SNS topic, add it as an action
             if self.authentication_config.cloudwatch_sns_topic:
                 self.logger.warning(
                     "Cannot hook alarm without SNS topic, trying to add SNS action..."
@@ -418,22 +418,32 @@ class CloudwatchProvider(BaseProvider):
                 else:
                     sns_topic = self.authentication_config.cloudwatch_sns_topic
                 actions.append(sns_topic)
-                try:
-                    alarm["AlarmActions"] = actions
-                    # filter out irrelevant files
-                    filtered_alarm = {
-                        k: v
-                        for k, v in alarm.items()
-                        if k in CloudwatchProvider.VALID_ALARM_KEYS
-                    }
-                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
-                    # now it should contain the SNS topic
-                    topics = [sns_topic]
-                except Exception:
-                    self.logger.exception(
-                        "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                # if the alarm already has the SNS topic as action, we don't need to add it again
+                if sns_topic in actions:
+                    self.logger.info(
+                        "SNS action already added to alarm %s, skipping...",
+                        alarm.get("AlarmName"),
                     )
-                    continue
+                else:
+                    self.logger.info(
+                        "Adding SNS action to alarm %s...", alarm.get("AlarmName")
+                    )
+                    try:
+                        alarm["AlarmActions"] = actions
+                        # filter out irrelevant files
+                        filtered_alarm = {
+                            k: v
+                            for k, v in alarm.items()
+                            if k in CloudwatchProvider.VALID_ALARM_KEYS
+                        }
+                        cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                        # now it should contain the SNS topic
+                        topics = [sns_topic]
+                    except Exception:
+                        self.logger.exception(
+                            "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                        )
+                        continue
                 self.logger.info(
                     "SNS action added to alarm %s!", alarm.get("AlarmName")
                 )
