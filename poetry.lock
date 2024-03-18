@@ -3916,6 +3916,16 @@ files = [
 ]
 
 [[package]]
+name = "splunk-sdk"
+version = "1.7.4"
+description = "The Splunk Software Development Kit for Python."
+optional = false
+python-versions = "*"
+files = [
+    {file = "splunk-sdk-1.7.4.tar.gz", hash = "sha256:8f3f149e3a0daf7526ed36882c109e4ec8080e417efe25d23f4578e86d38b9f2"},
+]
+
+[[package]]
 name = "sqlalchemy"
 version = "1.4.41"
 description = "Database Abstraction Library"

@@ -249,9 +249,7 @@ class WorkflowScheduler:
             # TODO: one more robust way to do it
             if not workflow_execution_id:
                 try:
-                    workflow_execution_number = self._get_unique_execution_number(
-                        event.json().encode()
-                    )
+                    workflow_execution_number = self._get_unique_execution_number()
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
                         tenant_id=tenant_id,

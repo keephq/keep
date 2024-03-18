@@ -719,9 +719,17 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
-        # tb: if we want to have fingerprint_fields configured by the user, format_alert
-        #   needs to be called from an initalized provider instance instead of a static method.
-        formatted_events = provider_class.format_alert(event)
+
+        # if we have provider id, let's try to init the provider class with it
+        provider_instance = None
+        if provider_id:
+            try:
+                provider_instance = ProvidersFactory.get_installed_provider(
+                    tenant_id, provider_id, provider_type
+                )
+            except Exception as e:
+                logger.warning(f"Failed to get provider instance due to {str(e)}")
+        formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
             formatted_events = [formatted_events]

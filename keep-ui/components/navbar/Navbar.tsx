@@ -7,9 +7,10 @@ import { UserInfo } from "components/navbar/UserInfo";
 import { InitPostHog } from "components/navbar/InitPostHog";
 import { Menu } from "components/navbar/Menu";
 import { MinimizeMenuButton } from "./MinimizeMenuButton";
+import {authOptions} from "pages/api/auth/[...nextauth]";
 
 export default async function NavbarInner() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   return (
     <>
