@@ -1,0 +1,78 @@
+---
+title: "GCP Monitoring"
+sidebarTitle: "GCP Monitoring Provider"
+description: "GCP Monitoringing provider allows you to get alerts from Azure Monitoring via webhooks."
+---
+
+## Overview
+The GCP Monitoring Provider enables seamless integration between Keep and GCP Monitoring, allowing alerts from GCP Monitoring to be directly sent to Keep through webhook configurations. This integration ensures that critical alerts are efficiently managed and responded to within Keep's platform.
+
+## Connecting GCP Monitoring to Keep
+To connect GCP Monitoring to Keep, you'll need to configure a webhook as a notification channel in GCP Monitoring and then link it to the desired alert policy.
+
+### Step 1: Access Notification Channels
+Log in to the Google Cloud Platform console.
+Navigate to **Monitoring > Alerting > Notification channels**.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_1.png" />
+</Frame>
+
+### Step 2: Add a New Webhook
+Within the Webhooks section, click on **ADD NEW**.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_2.png" />
+</Frame>
+
+### Step 3: Configure the Webhook
+In the Endpoint URL field, enter the webhook URL provided by Keep.
+- For Display Name, use keep-gcpmonitoring-webhook-integration.
+- Enable Use HTTP Basic Auth and input the following credentials:
+    - Auth Username: **api_key**
+    - Auth Password: **%YOURAPIKEY%**
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_3.png" />
+</Frame>
+
+### Step 4: Save the Webhook Configuration
+- Click on Save to store the webhook configuration.
+
+### Step 5: Associate the Webhook with an Alert Policy
+
+Navigate to the alert policy you wish to send notifications from to Keep.
+-  Click on Edit.
+-  Under "Notifications and name," find the Notification Channels section and select the keep-gcpmonitoring-webhook-integration channel you created.
+-  Save the changes by clicking on SAVE POLICY.
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_4.png" />
+</Frame>
+
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_5.png" />
+</Frame>
+
+### Step 6: Review the alert in Keep
+
+<Frame
+    width="100"
+    height="200">
+    <img height="10" src="/images/gcpmonitoring_6.png" />
+</Frame>
+
+### Useful Links
+ - [GCP Monitoring Notification Channels](https://cloud.google.com/monitoring/support/notification-options)
+ - [GCP Monitoring Alerting](https://cloud.google.com/monitoring/alerts)

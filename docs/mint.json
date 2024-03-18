@@ -89,6 +89,7 @@
             "providers/documentation/kibana-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
+            "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana-oncall-provider",
             "providers/documentation/http-provider",
