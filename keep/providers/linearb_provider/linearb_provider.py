@@ -160,6 +160,14 @@ class LinearbProvider(BaseProvider):
                     "teams": teams,
                 }
 
+                if respository_urls and isinstance(respository_urls, str):
+                    respository_urls = json.loads(respository_urls)
+                    payload["respository_urls"] = respository_urls
+
+                if services and isinstance(services, str):
+                    services = json.loads(services)
+                    payload["services"] = services
+
                 result = requests.post(
                     f"{self.LINEARB_API}/api/v1/incidents",
                     json=payload,
