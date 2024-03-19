@@ -64,6 +64,50 @@ class IOHandler:
         replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
+    def extract_keep_functions(self, text):
+        matches = []
+        i = 0
+        while i < len(text):
+            if text[i : i + 5] == "keep.":
+                start = i
+                func_end = text.find("(", start) + 1  # Position after the opening '('
+                if func_end > 0:
+                    paren_count = 1
+                    i = func_end
+                    in_string = False
+                    escape_next = False
+                    quote_char = ""  # Initialize quote_char here
+
+                    while i < len(text) and (paren_count > 0 or in_string):
+                        # Handle escape sequences
+                        if text[i] == "\\" and in_string and not escape_next:
+                            escape_next = True
+                            i += 1
+                            continue  # Skip the next character evaluation
+                        elif text[i] in ('"', "'"):
+                            if not in_string:  # Starting a string
+                                in_string = True
+                                quote_char = text[i]
+                            elif (
+                                text[i] == quote_char and not escape_next
+                            ):  # Ending the string
+                                in_string = False
+                                quote_char = ""  # Reset quote_char
+                        elif text[i] == "(" and not in_string:
+                            paren_count += 1
+                        elif text[i] == ")" and not in_string:
+                            paren_count -= 1
+
+                        escape_next = False  # Reset escape_next if not escaping the current character
+                        i += 1
+
+                    if paren_count == 0:
+                        # Match found, append and reset state as needed
+                        matches.append(text[start:i])
+            else:
+                i += 1  # Continue searching through the text
+        return matches
+
     def parse(self, string, safe=False, default=""):
         """Use AST module to parse 'call stack'-like string and return the result
 
@@ -92,12 +136,8 @@ class IOHandler:
         string = self._render(string, safe, default)
 
         # Now, extract the token if exists -
-        pattern = (
-            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
-        )
         parsed_string = copy.copy(string)
-        matches = re.findall(pattern, parsed_string)
-        tokens = list(matches)
+        tokens = self.extract_keep_functions(parsed_string)
 
         if len(tokens) == 0:
             return parsed_string
