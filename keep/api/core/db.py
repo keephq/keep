@@ -132,6 +132,30 @@ def create_db_and_tables():
     except Exception:
         logger.warning("Failed to create the database or detect if it exists.")
         pass
+
+    # migrate the workflowtoexecution table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating WorkflowToAlertExecution table")
+            # get the foreign key constraint name
+            results = session.exec(
+                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
+            )
+            # now remove it
+            for row in results:
+                constraint_name = row["CONSTRAINT_NAME"]
+                if constraint_name.startswith("workflowtoalertexecution"):
+                    session.exec(
+                        f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
+                    )
+
+            # also add grouping_criteria to the workflow table
+            session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            session.commit()
+            logger.info("Migrated WorkflowToAlertExecution table")
+        except Exception:
+            logger.exception("Failed to migrate table")
+            pass
     SQLModel.metadata.create_all(engine)
 
 
