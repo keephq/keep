@@ -7,6 +7,7 @@ import datetime
 import json
 import logging
 import os
+from typing import Optional
 from urllib.parse import urlparse
 
 import boto3
@@ -20,7 +21,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
-class IncidentManagerProviderAuthConfig:
+class IncidentmanagerProviderAuthConfig:
     access_key: str = dataclasses.field(
         metadata={"required": True, "description": "AWS access key", "sensitive": True}
     )
@@ -59,46 +60,55 @@ class IncidentManagerProviderAuthConfig:
     )
 
 
-class IncidentManagerProvider(BaseProvider):
+class IncidentmanagerProvider(BaseProvider):
     """Push incidents from AWS IncidentManager to Keep."""
 
     PROVIDER_SCOPES = [
         ProviderScope(
             name="ssm-incidents:ListIncidentRecords",
             description="Required to retrieve incidents.",
-            documentation_url="https://docs.aws.amazon.com/incident-manager/latest/userguide/what-is-incident-manager.html#features",
+            documentation_url="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html",
             mandatory=True,
             alias="Describe Incidents",
         ),
+        # this is not needed until we figure out how to override dismiss call
+        # ProviderScope(
+        #     name="ssm-incidents:UpdateIncidentRecord",
+        #     description="Required to update incidents, when you resolve them for example.",
+        #     documentation_url="https://docs.aws.amazon.com/incident-manager/latest/userguide/what-is-incident-manager.html#features",
+        #     mandatory=False,
+        #     alias="Update Incident Records",
+        # ),
         ProviderScope(
-            name="ssm-incidents:UpdateIncidentRecord",
-            description="Required to update incidents, when you resolve them for example.",
-            documentation_url="https://docs.aws.amazon.com/incident-manager/latest/userguide/what-is-incident-manager.html#features",
+            name="ssm-incidents:GetResponsePlan",
+            description="Required to get response plan and register keep as webhook",
+            documentation_url="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html",
             mandatory=False,
-            alias="Update Incident Records",
+            alias="Update Response Plan",
         ),
         ProviderScope(
             name="ssm-incidents:UpdateResponsePlan",
             description="Required to update response plan and register keep as webhook",
-            documentation_url="https://docs.aws.amazon.com/incident-manager/latest/userguide/what-is-incident-manager.html#features",
+            documentation_url="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html",
             mandatory=False,
             alias="Update Response Plan",
         ),
         ProviderScope(
             name="iam:SimulatePrincipalPolicy",
             description="Allow Keep to test the scopes of the current user/role without modifying any resource.",
-            documentation_url="https://docs.aws.amazon.com/IAM/latest/APIReference/API_SimulatePrincipalPolicy.html",
+            documentation_url="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html",
             mandatory=False,
             alias="Simulate IAM Policy",
         ),
         ProviderScope(
             name="sns:ListSubscriptionsByTopic",
             description="Required to list all subscriptions of a topic, so Keep will be able to add itself as a subscription.",
-            documentation_url="https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html",
+            documentation_url="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm-incidents.html",
             mandatory=False,
             alias="List Subscriptions",
         ),
     ]
+    PROVIDER_DISPLAY_NAME = "Incident Manager"
 
     STATUS_MAP = {
         "OPEN": AlertStatus.FIRING,
@@ -204,34 +214,63 @@ class IncidentManagerProvider(BaseProvider):
                 )
                 raise
         # 2 validate if we are already getting user's sns topic and able to fetch sns from aws, not mandatory though
-        if self.authentication_config.sns_topic_arn:
+        try:
+            sns_topic = self.authentication_config.sns_topic_arn
+            if not sns_topic.startswith("arn:aws:sns"):
+                account_id = self._get_account_id()
+                sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.sns_topic_arn}"
 
-            try:
-                sns_topic = self.authentication_config.sns_topic_arn
-                if not sns_topic.startswith("arn:aws:sns"):
-                    account_id = self._get_account_id()
-                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.default_sns_topic}"
-
-                scopes["sns:ListSubscriptionsByTopic"] = True
-            except Exception as e:
-                self.logger.exception(
-                    "Error validating AWS sns:ListSubscriptionsByTopic scope"
-                )
-                scopes["sns:ListSubscriptionsByTopic"] = str(e)
-
-        else:
-            scopes["sns:ListSubscriptionsByTopic"] = (
-                "incident_manager_sns_topic is not set, so we cannot validate sns:ListSubscriptionsByTopic scope"
+            scopes["sns:ListSubscriptionsByTopic"] = True
+        except Exception as e:
+            self.logger.exception(
+                "Error validating AWS sns:ListSubscriptionsByTopic scope"
             )
+            scopes["sns:ListSubscriptionsByTopic"] = str(e)
+
+        # 3 validate get response plan
+        response_plan = None
+        try:
+            response_plan = ssm_incident_client.get_response_plan(
+                arn=self.authentication_config.response_plan_arn
+            )
+            scopes["ssm-incidents:GetResponsePlan"] = True
+        except Exception:
+            scopes["ssm-incidents:GetResponsePlan"] = (
+                "No permissions to get response plan"
+            )
+            raise
+
+        # 4 validate update response plan
+        try:
+            if not response_plan:
+                raise Exception("No response plan found")
+            ssm_incident_client.update_response_plan(
+                arn=self.authentication_config.response_plan_arn, displayName="test"
+            )
+            ssm_incident_client.update_response_plan(
+                arn=self.authentication_config.response_plan_arn,
+                displayName=response_plan["displayName"],
+            )
+            scopes["ssm-incidents:UpdateResponsePlan"] = True
+        except Exception:
+            scopes["ssm-incidents:UpdateResponsePlan"] = (
+                "No permissions to update response plan"
+            )
+            raise
 
         return scopes
-        #
 
     @property
     def client(self):
         if self._client is None:
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
+
+    def _get_alerts(self) -> list[AlertDto]:
+        all_alerts = []
+        for alert in self._query():
+            all_alerts.append(self._format_alert(alert, self))
+        return all_alerts
 
     def _query(self, **kwargs: dict) -> dict:
 
@@ -247,7 +286,6 @@ class IncidentManagerProvider(BaseProvider):
                 extra={"kwargs": kwargs},
             )
             raise
-
         return all_records
 
     def _get_account_id(self):
@@ -271,7 +309,7 @@ class IncidentManagerProvider(BaseProvider):
             self.logger.exception("Error closing boto3 connection")
 
     def validate_config(self):
-        self.authentication_config = IncidentManagerProviderAuthConfig(
+        self.authentication_config = IncidentmanagerProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -306,7 +344,7 @@ class IncidentManagerProvider(BaseProvider):
         url_with_api_key = keep_api_url.replace(
             "https://", f"https://api_key:{api_key}@"
         )
-        #print(url_with_api_key)
+        # print(url_with_api_key)
         self.logger.info("Subscribing to topic %s...", topic)
         sns_client.subscribe(
             TopicArn=topic,
@@ -324,7 +362,7 @@ class IncidentManagerProvider(BaseProvider):
             1. Query the response plan
             2. Add/Update given sns topic to add keep's webhook
         """
-       
+
         if not self.authentication_config.response_plan_arn:
             self.logger.warning(
                 "No default response plan name provided, skipping webhook setup"
@@ -336,7 +374,7 @@ class IncidentManagerProvider(BaseProvider):
         response_plan = ssm_incident_client.get_response_plan(
             arn=self.authentication_config.response_plan_arn
         )
-        #print(response_plan)
+        # print(response_plan)
 
         if self.authentication_config.sns_topic_arn:
             sns_topic = self.authentication_config.sns_topic_arn
@@ -348,6 +386,9 @@ class IncidentManagerProvider(BaseProvider):
             if "notificationTargets" not in response_plan["incidentTemplate"]:
                 ssm_incident_client.update_response_plan(
                     arn=self.authentication_config.response_plan_arn,
+                    chatChannel={
+                        "chatbotSns": [sns_topic],
+                    },
                     incidentTemplateNotificationTargets=[
                         {"snsTopicArn": sns_topic},
                     ],
@@ -373,7 +414,9 @@ class IncidentManagerProvider(BaseProvider):
         self.logger.info("Webhook setup completed!")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["IncidentmanagerProvider"]
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
         if event.get("Type") == "SubscriptionConfirmation":
@@ -384,29 +427,23 @@ class IncidentManagerProvider(BaseProvider):
             # Done
             return
 
-        try:
-            alert = json.loads(event.get("Message"))
-        except Exception:
-            logger.exception("Error parsing incident record", extra={"event": event})
-            return
+        alert = event
 
         # Map the status to Keep status
-        status = IncidentManagerProvider.STATUS_MAP.get(
-            alert.get("STATUS"), AlertStatus.FIRING
+        status = IncidentmanagerProvider.STATUS_MAP.get(
+            alert.get("status"), AlertStatus.FIRING
         )
-
-        severity = IncidentManagerProvider.SEVERITIES_MAP.get(alert.get("IMPACT"), 5)
+        del alert["status"]
+        severity = IncidentmanagerProvider.SEVERITIES_MAP.get(alert.get("IMPACT"), 5)
 
         return AlertDto(
             id=alert.get("arn"),
             name=alert.get("title"),
             status=status,
             severity=severity,
-            lastReceived=str(
-                datetime.datetime.fromisoformat(alert.get("lastModifiedTime"))
-            ),
+            lastReceived=str(alert.get("creationTime")),
             description=alert.get("summary"),
-            source=alert.get("incident_manager")["createdBy"],
+            source=[alert.get("incidentRecordSource")["createdBy"]],
             **alert,
         )
 
@@ -417,23 +454,23 @@ if __name__ == "__main__":
             "access_key": os.environ.get("AWS_ACCESS_KEY_ID"),
             "access_key_secret": os.environ.get("AWS_SECRET_ACCESS_KEY"),
             "region": os.environ.get("AWS_REGION"),
-            "response_plan_arn": "",
-            "sns_topic_arn": "",
+            "response_plan_arn": "arn:aws:ssm-incidents::085059502819:response-plan/ResponseEmail",
+            "sns_topic_arn": "arn:aws:sns:ap-south-1:085059502819:Keep",
         }
     )
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
     )
-    provider = IncidentManagerProvider(context_manager, "incident_manager", config)
+    provider = IncidentmanagerProvider(context_manager, "asdasd", config)
 
     results = provider.validate_scopes()
-    #print(results)
+    print(results)
 
-    provider.setup_webhook(
-        tenant_id="keep",
-        keep_api_url="{please fill the url}/event/incident_manager",
-        api_key="localhost",
-    )
-    results = provider.query()
-    # print(results)
+    # provider.setup_webhook(
+    #     tenant_id="keep",
+    #     keep_api_url="https://1064-2401-4900-1c0f-ae0f-dbba-8aae-8a51-8d29.ngrok-free.app/alerts/event/incidentmanager",
+    #     api_key="localhost",
+    # )
+    # results = provider.get_alerts()
+# print(results)
