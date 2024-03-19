@@ -152,7 +152,16 @@ def create_db_and_tables():
                     logger.info(f"Dropped constraint {constraint_name}")
             # also add grouping_criteria to the workflow table
             logger.info("Migrating Rule table")
-            session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            try:
+                session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
             logger.info("Migrated Rule table")
             session.commit()
             logger.info("Migrated succesfully")
