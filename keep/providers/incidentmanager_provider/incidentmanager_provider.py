@@ -3,8 +3,6 @@ IncidentManagerProvider is a class that provides a way to read data from AWS Inc
 """
 
 import dataclasses
-import datetime
-import json
 import logging
 import os
 from typing import Optional
