@@ -145,14 +145,17 @@ def create_db_and_tables():
             for row in results:
                 constraint_name = row["CONSTRAINT_NAME"]
                 if constraint_name.startswith("workflowtoalertexecution"):
+                    logger.info(f"Dropping constraint {constraint_name}")
                     session.exec(
                         f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
                     )
-
+                    logger.info(f"Dropped constraint {constraint_name}")
             # also add grouping_criteria to the workflow table
+            logger.info("Migrating Rule table")
             session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            logger.info("Migrated Rule table")
             session.commit()
-            logger.info("Migrated WorkflowToAlertExecution table")
+            logger.info("Migrated succesfully")
         except Exception:
             logger.exception("Failed to migrate table")
             pass
