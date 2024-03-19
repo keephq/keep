@@ -81,7 +81,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     """
 
     # this is example for sentry alert with
-    #      "  }, [data, data?.storeDetails, onSelect]);",
+    #      "  }, [data, data?.testDetails, onSelect]);",
     # that screwed are iohandler
     #
     context_manager.alert = AlertDto(
@@ -189,18 +189,18 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
                                 "filename": "./modules/shared/components/test-test-test/test-test-test.tsx",
                                 "function": "<anonymous>",
                                 "pre_context": [
-                                    "      onSelect(data.storeDetails);",
+                                    "      onSelect(data.testDetails);",
                                     "    }",
-                                    "  }, [data, data?.storeDetails, onSelect]);",
+                                    "  }, [data, data?.testDetails, onSelect]);",
                                     "",
                                     "  useEffect(() => {",
                                 ],
                                 "context_line": "    error && captureException(error, { extra: { test } });",
                                 "post_context": [
-                                    "  }, [error, storeId]);",
+                                    "  }, [error, testId]);",
                                     "",
                                     "  const onSelectHandler = (externalReference: string) => {",
-                                    "    setStoreId(externalReference);",
+                                    "    setTestId(externalReference);",
                                     "  };",
                                 ],
                             },
@@ -257,7 +257,7 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
                                     " * This source code is licensed under the MIT license found in the",
                                     " * LICENSE file in the root directory of this source tree.",
                                 ],
-                                "context_line": "{snip} ?void 0:f.storeDetails,u]),(0,s.useEffect)(()=>{h&&(0,D.Tb)(h,{extra:{test:l}})},[h,l]);let m=e=>{d(e)},g=(0,s.useMemo)(()=>t&&0===n.leng {snip}",
+                                "context_line": "{snip} ?void 0:f.testDetails,u]),(0,s.useEffect)(()=>{h&&(0,D.Tb)(h,{extra:{test:l}})},[h,l]);let m=e=>{d(e)},g=(0,s.useMemo)(()=>t&&0===n.leng {snip}",
                                 "post_context": [
                                     "Sentry.addTracingExtensions();",
                                     "Sentry.init({...});",
