@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "components/ui/Modal";
 import { Button, Textarea } from "@tremor/react";
 import QueryBuilder, {
@@ -62,18 +62,26 @@ const getOperators = (id: string): Operator[] => {
 
 type AlertsRulesBuilderProps = {
   table: Table<AlertDto>;
+  defaultQuery: string | undefined;
 };
 
-export const AlertsRulesBuilder = ({ table }: AlertsRulesBuilderProps) => {
+export const AlertsRulesBuilder = ({
+  table,
+  defaultQuery = "",
+}: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
-  const [celRules, setCELRules] = useState("");
-  const [query, setQuery] = useState<RuleGroupType>({
-    combinator: "and",
-    rules: [],
-  });
+  const [celRules, setCELRules] = useState(defaultQuery);
 
   const parcedCELRulesToQuery = parseCEL(celRules);
+  const [query, setQuery] = useState<RuleGroupType>(parcedCELRulesToQuery);
+
   const isValidCEL = formatQuery(parcedCELRulesToQuery, "cel") === celRules;
+
+  useEffect(() => {
+    if (isValidCEL) {
+      return table.setGlobalFilter(celRules);
+    }
+  }, [isValidCEL, table, celRules]);
 
   const onApplyFilter = () => {
     if (celRules.length === 0) {
@@ -145,6 +153,7 @@ export const AlertsRulesBuilder = ({ table }: AlertsRulesBuilderProps) => {
         className="max-h-64 min-h-10"
         value={celRules}
         onValueChange={(newValue) => setCELRules(newValue)}
+        placeholder='Use CEL to filter your alerts e.g. source.contains("kibana")'
       />
       <div className="flex justify-end gap-x-2">
         <Button

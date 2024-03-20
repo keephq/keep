@@ -94,68 +94,68 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
 
   return (
     <>
-      <Subtitle>Filters</Subtitle>
-      <div className="flex w-full">
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
-        >
-          <div className="space-y-2">
-            <div className="text-lg font-semibold">
-              <p>
-                {presetName ? "Update preset name?" : "Enter new preset name"}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <TextInput
-                error={!presetName}
-                errorMessage="Preset name is required"
-                placeholder={
-                  presetName === "feed" || presetName === "deleted"
-                    ? ""
-                    : presetName
-                }
-                value={presetName}
-                onChange={(e) => setPresetName(e.target.value)}
-                className="w-full"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={"private"}
-                checked={isPrivate}
-                onChange={() => setIsPrivate(!isPrivate)}
-              />
-              <label htmlFor={"private"}>Private</label>
-            </div>
-
-            <div className="flex justify-end space-x-2.5">
-              <Button
-                size="lg"
-                variant="secondary"
-                color="orange"
-                onClick={() => setIsModalOpen(false)}
-                tooltip="Close Modal"
-              >
-                Close
-              </Button>
-              <Button
-                size="lg"
-                color="orange"
-                onClick={addOrUpdatePreset}
-                tooltip="Save Modal"
-              >
-                Save
-              </Button>
-            </div>
+      {" "}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
+      >
+        <div className="space-y-2">
+          <div className="text-lg font-semibold">
+            <p>
+              {presetName ? "Update preset name?" : "Enter new preset name"}
+            </p>
           </div>
-        </Modal>
 
-        <AlertsRulesBuilder table={table} />
+          <div className="space-y-2">
+            <TextInput
+              error={!presetName}
+              errorMessage="Preset name is required"
+              placeholder={
+                presetName === "feed" || presetName === "deleted"
+                  ? ""
+                  : presetName
+              }
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={"private"}
+              checked={isPrivate}
+              onChange={() => setIsPrivate(!isPrivate)}
+            />
+            <label htmlFor={"private"}>Private</label>
+          </div>
+
+          <div className="flex justify-end space-x-2.5">
+            <Button
+              size="lg"
+              variant="secondary"
+              color="orange"
+              onClick={() => setIsModalOpen(false)}
+              tooltip="Close Modal"
+            >
+              Close
+            </Button>
+            <Button
+              size="lg"
+              color="orange"
+              onClick={addOrUpdatePreset}
+              tooltip="Save Modal"
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <Subtitle>CEL</Subtitle>
+      <div className="flex w-full items-start">
+        <AlertsRulesBuilder table={table} defaultQuery="" />
         {preset?.name === "feed" && (
           <Button
             icon={PlusIcon}
