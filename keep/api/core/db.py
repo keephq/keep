@@ -196,18 +196,39 @@ def try_create_single_tenant(tenant_id: str) -> None:
         pass
     with Session(engine) as session:
         try:
-            # Do everything related with single tenant creation in here
-            session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-            default_password = hashlib.sha256(
-                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-            ).hexdigest()
-            default_user = User(
-                username=default_username,
-                password_hash=default_password,
-                role=AdminRole.get_name(),
-            )
-            session.add(default_user)
+            # check if the tenant exist:
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant")
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # now let's create the default user
+
+            # check if at least one user exists:
+            user = session.exec(select(User)).first()
+            # if no users exist, let's create the default user
+            if not user:
+                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                default_user = User(
+                    username=default_username,
+                    password_hash=default_password,
+                    role=AdminRole.get_name(),
+                )
+                session.add(default_user)
+            # else, if the user want to force the refresh of the default user password
+            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
+                # update the password of the default user
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                user.password_hash = default_password
+            # commit the changes
             session.commit()
         except IntegrityError:
             # Tenant already exists
