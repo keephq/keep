@@ -265,7 +265,7 @@
     "postcss-nested": "^6.0.1",
     "postcss-selector-parser": "^6.0.12",
     "postcss-value-parser": "^4.2.0",
-    "posthog-js": "^1.105.7",
+    "posthog-js": "^1.116.2",
     "posthog-node": "^3.1.1",
     "preact-render-to-string": "^5.2.6",
     "prelude-ls": "^1.2.1",
