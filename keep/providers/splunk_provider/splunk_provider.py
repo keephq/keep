@@ -156,6 +156,7 @@ class SplunkProvider(BaseProvider):
                 url=event["results_link"],
                 severity=SplunkProvider.SEVERITIES_MAP.get("1"),
                 status="firing",
+                **event
             )
 
         search_id = event["sid"]
@@ -175,6 +176,7 @@ class SplunkProvider(BaseProvider):
             ),
             description=saved_search["_state"]["content"]["description"],
             status="firing",
+            **event
         )
 
 
