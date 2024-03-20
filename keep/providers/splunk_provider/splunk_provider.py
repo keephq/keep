@@ -149,7 +149,14 @@ class SplunkProvider(BaseProvider):
         event: dict, provider_instance: Optional["SplunkProvider"]
     ) -> AlertDto:
         if not provider_instance:
-            raise Exception("Provider instance is required to format alert")
+            return AlertDto(
+                id=event["sid"],
+                name=event["search_name"],
+                source=["splunk"],
+                url=event["results_link"],
+                severity=SplunkProvider.SEVERITIES_MAP.get("1"),
+                status="firing",
+            )
 
         search_id = event["sid"]
         service = connect(
@@ -167,6 +174,7 @@ class SplunkProvider(BaseProvider):
                 saved_search["_state"]["content"]["alert.severity"]
             ),
             description=saved_search["_state"]["content"]["description"],
+            status="firing",
         )
 
 
