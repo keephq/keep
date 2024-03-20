@@ -20,17 +20,25 @@ const getAllMatches = (pattern: RegExp, string: string) =>
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
 
 export const evalWithContext = (context: AlertDto, expression: string) => {
-  const variables = getAllMatches(variablePattern, expression) ?? [];
+  try {
+    if (expression.length === 0) {
+      return new Function();
+    }
 
-  const func = new Function(...variables, `return (${expression})`);
+    const variables = getAllMatches(variablePattern, expression) ?? [];
 
-  const args = variables.map((arg) =>
-    Object.hasOwnProperty.call(context, arg)
-      ? context[arg as keyof AlertDto]
-      : undefined
-  );
+    const func = new Function(...variables, `return (${expression})`);
 
-  return func(...args);
+    const args = variables.map((arg) =>
+      Object.hasOwnProperty.call(context, arg)
+        ? context[arg as keyof AlertDto]
+        : undefined
+    );
+
+    return func(...args);
+  } catch (error) {
+    return;
+  }
 };
 
 type AlertsRulesBuilderProps = {
@@ -50,14 +58,14 @@ export const AlertsRulesBuilder = ({ table }: AlertsRulesBuilderProps) => {
 
   const onApplyFilter = () => {
     if (CELRules.length === 0) {
-      return table.setGlobalFilter({});
+      return table.setGlobalFilter("");
     }
 
     if (!isValidCEL) {
       alert("Your CEL string is invalid");
     }
 
-    table.setGlobalFilter(CELRules);
+    return table.setGlobalFilter(CELRules);
   };
 
   const onGenerateQuery = () => {
@@ -99,6 +107,8 @@ export const AlertsRulesBuilder = ({ table }: AlertsRulesBuilderProps) => {
         <div className="space-y-2 pt-4">
           <div className="max-h-96 overflow-auto">
             <QueryBuilder
+              query={query}
+              onQueryChange={(newQuery) => setQuery(newQuery)}
               fields={fields}
               addRuleToNewGroups
               showCombinatorsBetweenRules={false}
@@ -134,7 +144,7 @@ export const AlertsRulesBuilder = ({ table }: AlertsRulesBuilderProps) => {
           color="orange"
           onClick={onApplyFilter}
         >
-          Apply Filter
+          Apply filter
         </Button>
       </div>
     </div>
