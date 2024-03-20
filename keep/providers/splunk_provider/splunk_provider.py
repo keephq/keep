@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 from typing import Optional
 
 import pydantic
@@ -154,6 +155,7 @@ class SplunkProvider(BaseProvider):
                 name=event["search_name"],
                 source=["splunk"],
                 url=event["results_link"],
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 severity=SplunkProvider.SEVERITIES_MAP.get("1"),
                 status="firing",
                 **event
@@ -174,6 +176,7 @@ class SplunkProvider(BaseProvider):
             severity=SplunkProvider.SEVERITIES_MAP.get(
                 saved_search["_state"]["content"]["alert.severity"]
             ),
+            lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
             description=saved_search["_state"]["content"]["description"],
             status="firing",
             **event
