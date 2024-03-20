@@ -406,6 +406,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             <span className="text-right">{workflow.creation_time}</span>
           </ListItem>
           <ListItem>
+            <span>Last Updated</span>
+            <span className="text-right">{workflow.last_updated}</span>
+          </ListItem>
+          <ListItem>
             <span>Last Execution</span>
             <span className="text-right">
               {workflow.last_execution_time
