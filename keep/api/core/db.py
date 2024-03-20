@@ -221,7 +221,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     role=AdminRole.get_name(),
                 )
                 session.add(default_user)
-            # else, if the user want to force the creation of the default user
+            # else, if the user want to force the refresh of the default user password
             elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
                 # update the password of the default user
                 default_password = hashlib.sha256(
