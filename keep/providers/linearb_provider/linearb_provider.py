@@ -117,12 +117,14 @@ class LinearbProvider(BaseProvider):
                                 team_names.append(team)
                     payload["teams"] = team_names
 
-                if respository_urls and isinstance(respository_urls, str):
-                    respository_urls = json.loads(respository_urls)
+                if respository_urls:
+                    if isinstance(respository_urls, str):
+                        respository_urls = json.loads(respository_urls)
                     payload["respository_urls"] = respository_urls
 
-                if services and isinstance(services, str):
-                    services = json.loads(services)
+                if services:
+                    if isinstance(services, str):
+                        services = json.loads(services)
                     payload["services"] = services
 
                 if started_at:
@@ -159,6 +161,16 @@ class LinearbProvider(BaseProvider):
                     "issued_at": issued_at,
                     "teams": teams,
                 }
+
+                if respository_urls:
+                    if isinstance(respository_urls, str):
+                        respository_urls = json.loads(respository_urls)
+                    payload["respository_urls"] = respository_urls
+
+                if services:
+                    if isinstance(services, str):
+                        services = json.loads(services)
+                    payload["services"] = services
 
                 result = requests.post(
                     f"{self.LINEARB_API}/api/v1/incidents",

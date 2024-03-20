@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 from typing import Optional
 
 import pydantic
@@ -149,7 +150,16 @@ class SplunkProvider(BaseProvider):
         event: dict, provider_instance: Optional["SplunkProvider"]
     ) -> AlertDto:
         if not provider_instance:
-            raise Exception("Provider instance is required to format alert")
+            return AlertDto(
+                id=event["sid"],
+                name=event["search_name"],
+                source=["splunk"],
+                url=event["results_link"],
+                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                severity=SplunkProvider.SEVERITIES_MAP.get("1"),
+                status="firing",
+                **event
+            )
 
         search_id = event["sid"]
         service = connect(
@@ -166,7 +176,10 @@ class SplunkProvider(BaseProvider):
             severity=SplunkProvider.SEVERITIES_MAP.get(
                 saved_search["_state"]["content"]["alert.severity"]
             ),
+            lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
             description=saved_search["_state"]["content"]["description"],
+            status="firing",
+            **event
         )
 
 

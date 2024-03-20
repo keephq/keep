@@ -628,6 +628,8 @@ async def install_provider_oauth2(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
+        validated_scopes = validate_scopes(provider)
+
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
@@ -643,6 +645,7 @@ async def install_provider_oauth2(
             installed_by=installed_by,
             installation_time=time.time(),
             configuration_key=secret_name,
+            validatedScopes=validated_scopes,
         )
         session.add(provider)
         session.commit()
