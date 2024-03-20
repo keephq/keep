@@ -123,7 +123,7 @@ class WorkflowScheduler:
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
                 status=WorkflowStatus.ERROR,
-                error=",".join(str(e) for e in errors),
+                error="\n".join(str(e) for e in errors),
             )
         else:
             self._finish_workflow_execution(

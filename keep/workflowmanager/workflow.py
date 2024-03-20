@@ -63,7 +63,7 @@ class Workflow:
         except Exception as e:
             self.logger.error(f"Action {action.name} failed: {e}")
             action_status = False
-            action_error = str(e)
+            action_error = f"Failed to run action {action.name}: {str(e)}"
         return action_status, action_error
 
     def run_actions(self):
@@ -72,8 +72,9 @@ class Workflow:
         actions_errors = []
         for action in self.workflow_actions:
             action_status, action_error = self.run_action(action)
-            actions_firing.append(action_status)
-            actions_errors.append(action_error)
+            if action_error:
+                actions_firing.append(action_status)
+                actions_errors.append(action_error)
         self.logger.debug("Actions run")
         return actions_firing, actions_errors
 

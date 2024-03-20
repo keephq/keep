@@ -137,7 +137,13 @@ class IOHandler:
 
         # Now, extract the token if exists -
         parsed_string = copy.copy(string)
-        tokens = self.extract_keep_functions(parsed_string)
+        # tokens = self.extract_keep_functions(parsed_string)
+        pattern = (
+            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
+        )
+        parsed_string = copy.copy(string)
+        matches = re.findall(pattern, parsed_string)
+        tokens = list(matches)
 
         if len(tokens) == 0:
             return parsed_string
@@ -149,7 +155,13 @@ class IOHandler:
         # this basically for complex expressions with functions and operators
         for token in tokens:
             token = "".join(token)
-            val = self._parse_token(token)
+            try:
+                val = self._parse_token(token)
+            except Exception as e:
+                # TODO: better error
+                raise Exception(
+                    f"Failed to parse token {token} in string {string} with error {e}"
+                )
             parsed_string = parsed_string.replace(token, str(val))
 
         return parsed_string
@@ -240,9 +252,18 @@ class IOHandler:
         sys.stderr = original_stderr
         # If render should failed if value does not exists
         if safe and "Could not find key" in stderr_output:
-            raise RenderException(
-                f"Could not find key {key} in context - {stderr_output}"
-            )
+            # if more than one keys missing, pretiffy the error
+            if stderr_output.count("Could not find key") > 1:
+                missing_keys = stderr_output.split("Could not find key")
+                missing_keys = [
+                    missing_key.strip().replace("\n", "")
+                    for missing_key in missing_keys[1:]
+                ]
+                missing_keys = list(set(missing_keys))
+                err = "Could not find keys: " + ", ".join(missing_keys)
+            else:
+                err = stderr_output.replace("\n", "")
+            raise RenderException(f"{err} in the context.")
         if not rendered:
             return default
         return rendered
