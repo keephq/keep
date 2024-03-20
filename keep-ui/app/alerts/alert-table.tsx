@@ -25,6 +25,7 @@ import {
 } from "./alert-table-utils";
 import AlertActions from "./alert-actions";
 import AlertPresets from "./alert-presets";
+import { evalWithContext } from "./alerts-rules-builder";
 
 interface Props {
   alerts: AlertDto[];
@@ -74,6 +75,9 @@ export function AlertTable({
     initialState: {
       pagination: { pageSize: 10 },
     },
+    globalFilterFn: ({ original }, _id, value) => {
+      return evalWithContext(original, value);
+    },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -81,6 +85,7 @@ export function AlertTable({
     enableColumnPinning: true,
     columnResizeMode: "onChange",
     autoResetPageIndex: false,
+    enableGlobalFilter: true,
   });
 
   const selectedRowIds = Object.entries(
