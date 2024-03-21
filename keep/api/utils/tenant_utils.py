@@ -1,6 +1,5 @@
 import hashlib
 import logging
-from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
@@ -39,44 +38,6 @@ def get_api_key(
 
     api_key = session.exec(statement).first()
     return api_key
-
-
-def update_key_last_used(
-    session: Session,
-    tenant_id: str,
-    unique_api_key_id: str,
-) -> str:
-    """
-    Updates API key last used.
-
-    Args:
-        session (Session): _description_
-        tenant_id (str): _description_
-        unique_api_key_id (str): _description_
-
-    Returns:
-        str: _description_
-    """
-
-    # Get API Key from database
-    statement = (
-        select(TenantApiKey)
-        .where(TenantApiKey.reference_id == unique_api_key_id)
-        .where(TenantApiKey.tenant_id == tenant_id)
-    )
-
-    tenant_api_key_entry = session.exec(statement).first()
-
-    # Update last used
-    if not tenant_api_key_entry:
-        # shouldn't happen but somehow happened to specific tenant so logging it
-        logger.error(
-            "API key not found",
-            extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
-        )
-        return
-    tenant_api_key_entry.last_used = datetime.utcnow()
-    session.commit()
 
 
 def update_api_key_internal(

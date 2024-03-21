@@ -1332,3 +1332,41 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
             .order_by(Alert.timestamp.desc())
         ).first()
     return alert_hash
+
+
+def update_key_last_used(
+    tenant_id: str,
+    reference_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        reference_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    with Session(engine) as session:
+        # Get API Key from database
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.reference_id == reference_id)
+            .where(TenantApiKey.tenant_id == tenant_id)
+        )
+
+        tenant_api_key_entry = session.exec(statement).first()
+
+        # Update last used
+        if not tenant_api_key_entry:
+            # shouldn't happen but somehow happened to specific tenant so logging it
+            logger.error(
+                "API key not found",
+                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+            )
+            return
+        tenant_api_key_entry.last_used = datetime.utcnow()
+        session.add(tenant_api_key_entry)
+        session.commit()
