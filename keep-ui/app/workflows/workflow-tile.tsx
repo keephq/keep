@@ -385,7 +385,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       )}
       <Card>
         <div className="flex w-full justify-between items-center h-14">
-          <Title>{workflow.description}</Title>
+          <Title>{workflow.name.length > 30 ? `${workflow.name.substring(0, 50)}...` : workflow.name}</Title>
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -394,6 +394,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             workflow,
           })}
+        </div>
+
+        <div className="flex w-fit justify-between items-center h-10">
+          <Text>{workflow.description.length > 50 ? `${workflow.description.substring(0, 50)}...` : workflow.description}</Text>
         </div>
 
         <List>
