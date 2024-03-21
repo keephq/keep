@@ -755,6 +755,13 @@ async def receive_event(
                 pusher_client,
                 provider_id,
             )
+        if authenticated_entity.api_key_name:
+            logger.debug("Updating API Key last used")
+            update_key_last_used(
+                session, tenant_id, unique_api_key_id=authenticated_entity.api_key_name
+            )
+            logger.debug("Successfully updated API Key last used")
+        return {"status": "ok"}
         logger.info(
             "Handled event successfully",
             extra={
@@ -763,7 +770,7 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
-        return {"status": "ok"}
+
     except Exception as e:
         logger.exception(
             "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
