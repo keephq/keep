@@ -13,6 +13,11 @@ def get_nested_attribute(obj, attr_path: str):
     """
     attributes = attr_path.split(".")
     for attr in attributes:
+        # @@ is used as a placeholder for . in cases where the attribute name has a .
+        # For example, we have {"results": {"some.attribute": "value"}}
+        # We can access it by using "results.some@@attribute" so we won't think its a nested attribute
+        if attr is not None and "@@" in attr:
+            attr = attr.replace("@@", ".")
         obj = getattr(obj, attr, obj.get(attr) if isinstance(obj, dict) else None)
         if obj is None:
             return None

@@ -64,6 +64,63 @@ class IOHandler:
         replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
+    def extract_keep_functions(self, text):
+        matches = []
+        i = 0
+        while i < len(text):
+            if text[i : i + 5] == "keep.":
+                start = i
+                func_end = text.find("(", start)
+                if func_end > -1:  # Opening '(' found after "keep."
+                    i = func_end + 1  # Move i to the character after '('
+                    paren_count = 1
+                    in_string = False
+                    escape_next = False
+                    quote_char = ""
+
+                    while i < len(text) and (paren_count > 0 or in_string):
+                        if text[i] == "\\" and in_string and not escape_next:
+                            escape_next = True
+                            i += 1
+                            continue
+                        elif text[i] in ('"', "'"):
+                            if not in_string:
+                                in_string = True
+                                quote_char = text[i]
+                            elif text[i] == quote_char and not escape_next:
+                                in_string = False
+                                quote_char = ""
+                        elif text[i] == "(" and not in_string:
+                            paren_count += 1
+                        elif text[i] == ")" and not in_string:
+                            paren_count -= 1
+
+                        escape_next = False
+                        i += 1
+
+                    if paren_count == 0:
+                        matches.append(text[start:i])
+                    continue  # Skip the increment at the end of the loop to continue from the current position
+                else:
+                    # If no '(' found, increment i to move past "keep."
+                    i += 5
+            else:
+                i += 1
+        return matches
+
+    def _trim_token_error(self, token):
+        # trim too long tokens so that the error message will be readable
+        if len(token) > 64:
+            try:
+                func_name = token.split("keep.")[1].split("(")[0]
+                err = f"keep.{func_name}(...)"
+            except Exception:
+                err = token
+            finally:
+                return err
+        else:
+            return token
+
     def parse(self, string, safe=False, default=""):
         """Use AST module to parse 'call stack'-like string and return the result
 
@@ -92,24 +149,34 @@ class IOHandler:
         string = self._render(string, safe, default)
 
         # Now, extract the token if exists -
-        pattern = (
-            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
-        )
         parsed_string = copy.copy(string)
-        matches = re.findall(pattern, parsed_string)
-        tokens = list(matches)
-
+        tokens = self.extract_keep_functions(parsed_string)
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
             token = "".join(tokens[0])
-            val = self._parse_token(token)
+            try:
+                val = self._parse_token(token)
+            except Exception as e:
+                # trim stacktrace since we have limitation on the error message
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
+                raise Exception(
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
+                )
             parsed_string = parsed_string.replace(token, str(val))
             return parsed_string
         # this basically for complex expressions with functions and operators
         for token in tokens:
             token = "".join(token)
-            val = self._parse_token(token)
+            try:
+                val = self._parse_token(token)
+            except Exception as e:
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
+                raise Exception(
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
+                )
             parsed_string = parsed_string.replace(token, str(val))
 
         return parsed_string
@@ -200,9 +267,18 @@ class IOHandler:
         sys.stderr = original_stderr
         # If render should failed if value does not exists
         if safe and "Could not find key" in stderr_output:
-            raise RenderException(
-                f"Could not find key {key} in context - {stderr_output}"
-            )
+            # if more than one keys missing, pretiffy the error
+            if stderr_output.count("Could not find key") > 1:
+                missing_keys = stderr_output.split("Could not find key")
+                missing_keys = [
+                    missing_key.strip().replace("\n", "")
+                    for missing_key in missing_keys[1:]
+                ]
+                missing_keys = list(set(missing_keys))
+                err = "Could not find keys: " + ", ".join(missing_keys)
+            else:
+                err = stderr_output.replace("\n", "")
+            raise RenderException(f"{err} in the context.")
         if not rendered:
             return default
         return rendered
