@@ -245,7 +245,7 @@ async def update_smtp_settings(
     smtp_settings = smtp_settings.dict()
     smtp_settings["password"] = smtp_settings["password"].get_secret_value()
     secret_manager.write_secret(
-        secret_name="smtp", secret_value=json.dumps(smtp_settings)
+        secret_name=f"{tenant_id}_smtp", secret_value=json.dumps(smtp_settings)
     )
     return {"status": "SMTP settings updated successfully"}
 
@@ -263,7 +263,7 @@ async def get_smtp_settings(
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     # Read the SMTP settings from the secret manager
     try:
-        smtp_settings = secret_manager.read_secret(secret_name="smtp")
+        smtp_settings = secret_manager.read_secret(secret_name=f"{tenant_id}_smtp")
         smtp_settings = json.loads(smtp_settings)
         logger.info("SMTP settings retrieved successfully")
         return JSONResponse(status_code=200, content=smtp_settings)
@@ -284,7 +284,7 @@ async def delete_smtp_settings(
     context_manager = ContextManager(tenant_id=tenant_id)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     # Read the SMTP settings from the secret manager
-    secret_manager.delete_secret(secret_name="smtp")
+    secret_manager.delete_secret(secret_name=f"{tenant_id}_smtp")
     logger.info("SMTP settings deleted successfully")
     return JSONResponse(status_code=200, content={})
 
