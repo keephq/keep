@@ -225,10 +225,15 @@ class ProvidersFactory:
         providers = []
         blacklisted_providers = [
             "base_provider",
+            "base_ai_provider",
             "mock_provider",
             "file_provider",
             "github_workflows_provider",
         ]
+
+        if not os.environ.get("AI_PROVIDERS_ENABLED", False):
+            blacklisted_providers.append("ai_service_assignation_provider")
+            blacklisted_providers.append("ai_severity_provider")
 
         for provider_directory in os.listdir(
             os.path.dirname(os.path.abspath(__file__))

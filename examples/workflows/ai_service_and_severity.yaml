@@ -1,0 +1,21 @@
+id: ai_service_and_severity
+description: Workflow with AI
+triggers:
+- type: alert
+steps:
+- name: ai_severity-step
+  provider:
+    config: '{{ providers.ai_severity }}'
+    type: ai_severity
+    with:
+      severity_instruction: Set "critical" if it's about database, set "info" in all other cases.
+- name: ai_service_assignation-step
+  provider:
+    config: '{{ providers.ai_service_assignation }}'
+    type: ai_service_assignation
+    with:
+      services_and_descriptions:
+      - description: non-critical network-bound service
+        service: service_a
+      - description: memory-heavy background workers
+        service: service_b
