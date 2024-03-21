@@ -70,43 +70,56 @@ class IOHandler:
         while i < len(text):
             if text[i : i + 5] == "keep.":
                 start = i
-                func_end = text.find("(", start) + 1  # Position after the opening '('
-                if func_end > 0:
+                func_end = text.find("(", start)
+                if func_end > -1:  # Opening '(' found after "keep."
+                    i = func_end + 1  # Move i to the character after '('
                     paren_count = 1
-                    i = func_end
                     in_string = False
                     escape_next = False
-                    quote_char = ""  # Initialize quote_char here
+                    quote_char = ""
 
                     while i < len(text) and (paren_count > 0 or in_string):
-                        # Handle escape sequences
                         if text[i] == "\\" and in_string and not escape_next:
                             escape_next = True
                             i += 1
-                            continue  # Skip the next character evaluation
+                            continue
                         elif text[i] in ('"', "'"):
-                            if not in_string:  # Starting a string
+                            if not in_string:
                                 in_string = True
                                 quote_char = text[i]
-                            elif (
-                                text[i] == quote_char and not escape_next
-                            ):  # Ending the string
+                            elif text[i] == quote_char and not escape_next:
                                 in_string = False
-                                quote_char = ""  # Reset quote_char
+                                quote_char = ""
                         elif text[i] == "(" and not in_string:
                             paren_count += 1
                         elif text[i] == ")" and not in_string:
                             paren_count -= 1
 
-                        escape_next = False  # Reset escape_next if not escaping the current character
+                        escape_next = False
                         i += 1
 
                     if paren_count == 0:
-                        # Match found, append and reset state as needed
                         matches.append(text[start:i])
+                    continue  # Skip the increment at the end of the loop to continue from the current position
+                else:
+                    # If no '(' found, increment i to move past "keep."
+                    i += 5
             else:
-                i += 1  # Continue searching through the text
+                i += 1
         return matches
+
+    def _trim_token_error(self, token):
+        # trim too long tokens so that the error message will be readable
+        if len(token) > 64:
+            try:
+                func_name = token.split("keep.")[1].split("(")[0]
+                err = f"keep.{func_name}(...)"
+            except Exception:
+                err = token
+            finally:
+                return err
+        else:
+            return token
 
     def parse(self, string, safe=False, default=""):
         """Use AST module to parse 'call stack'-like string and return the result
@@ -137,14 +150,7 @@ class IOHandler:
 
         # Now, extract the token if exists -
         parsed_string = copy.copy(string)
-        # tokens = self.extract_keep_functions(parsed_string)
-        pattern = (
-            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
-        )
-        parsed_string = copy.copy(string)
-        matches = re.findall(pattern, parsed_string)
-        tokens = list(matches)
-
+        tokens = self.extract_keep_functions(parsed_string)
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
@@ -152,8 +158,11 @@ class IOHandler:
             try:
                 val = self._parse_token(token)
             except Exception as e:
+                # trim stacktrace since we have limitation on the error message
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
                 raise Exception(
-                    f"Got {e.__class__.__name__} while parsing token '{token}'"
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
             parsed_string = parsed_string.replace(token, str(val))
             return parsed_string
@@ -163,8 +172,10 @@ class IOHandler:
             try:
                 val = self._parse_token(token)
             except Exception as e:
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
                 raise Exception(
-                    f"Got {e.__class__.__name__} while parsing token '{token}'"
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
             parsed_string = parsed_string.replace(token, str(val))
 

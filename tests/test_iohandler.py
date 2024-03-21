@@ -321,13 +321,13 @@ def test_alert_with_odd_number_of_parentheses(context_manager):
     assert "aptures a message event and sends it to Sentry" in s
 
 
-def test_deeply_nested_functions(mocked_context_manager):
+def test_functions(mocked_context_manager):
     mocked_context_manager.get_full_context.return_value = {
-        "steps": {"some_list": [1, 2, 3]},
+        "steps": {"some_list": [["Asd", 2, 3], [4, 5, 6], [7, 8, 9]]},
     }
     iohandler = IOHandler(mocked_context_manager)
-    s = iohandler.render("result is keep.first(keep.{{ steps.some_list }})")
-    assert s == "result is 1"
+    s = iohandler.render("result is keep.first(keep.first({{ steps.some_list }}))")
+    assert s == "result is Asd"
 
 
 def test_render_with_json_dumps_function(mocked_context_manager):
@@ -594,6 +594,89 @@ def test_keep_in_string_not_as_function_call(context_manager):
     assert (
         len(extracted_functions) == 0
     ), "Expected no functions to be extracted when 'keep.' is part of a string."
+
+
+def test_no_function_calls(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "This is a sentence with keep. but no function calls."
+    # Assuming extract_keep_functions is a method of setup object
+    functions = iohandler.extract_keep_functions(template)
+    assert len(functions) == 0, "Should find no functions"
+
+
+def test_keep_in_string_not_as_function_call(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Here is a sentence with keep. not as a function call: 'Let's keep. moving forward.'"
+    functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(functions) == 0
+    ), "Should find no functions when 'keep.' is part of a string."
+
+
+def test_malformed_function_calls(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Here is a malformed function call keep.(without closing parenthesis."
+    functions = iohandler.extract_keep_functions(template)
+    assert len(functions) == 0, "Should handle malformed function calls gracefully."
+
+
+def test_mixed_content(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Mix of valid keep.doSomething() and text keep. not as a call."
+    functions = iohandler.extract_keep_functions(template)
+    assert len(functions) == 1, "Should only extract valid function calls."
+
+
+def test_nested_functions(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Nested functions keep.nest(keep.inner()) should be handled."
+    functions = iohandler.extract_keep_functions(template)
+    assert len(functions) == 1, "Should handle nested functions without getting stuck."
+
+
+def test_endless_loop_potential(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "keep.() empty function call followed by text keep. not as a call."
+    functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(functions) == 1
+    ), "Should not enter an endless loop with empty function calls."
+
+
+def test_edge_case_with_escaped_quotes(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = (
+        r"Edge case keep.function('argument with an escaped quote\\') and more text."
+    )
+    functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(functions) == 1
+    ), "Should correctly handle escaped quotes within function arguments."
+
+
+def test_consecutive_function_calls(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Consecutive keep.first() and keep.second() calls."
+    functions = iohandler.extract_keep_functions(template)
+    assert len(functions) == 2, "Should correctly handle consecutive function calls."
+
+
+def test_function_call_at_end(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Function call at the very end keep.end()"
+    functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(functions) == 1
+    ), "Should correctly handle a function call at the end of the string."
+
+
+def test_complex_mixture(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "Mix keep.start() some text keep.in('middle') and malformed keep. and valid keep.end()."
+    functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(functions) == 3
+    ), "Should correctly handle a complex mixture of text and function calls."
 
 
 """
