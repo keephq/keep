@@ -27,6 +27,7 @@ export type Workflow = {
   triggers: Trigger[];
   last_execution_time: string;
   last_execution_status: string;
+  last_updated: string;
   workflow_raw: string;
   workflow_raw_id: string;
 }

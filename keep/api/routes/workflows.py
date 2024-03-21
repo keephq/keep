@@ -316,6 +316,7 @@ async def update_workflow_by_id(
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
     workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
     session.refresh(workflow_from_db)
