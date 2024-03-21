@@ -239,6 +239,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
             workflow_data = workflow_data.pop("workflow")
 
     except yaml.YAMLError:
+        logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
 
