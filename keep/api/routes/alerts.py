@@ -747,7 +747,6 @@ async def receive_event(
                 pusher_client,
                 provider_id,
             )
-        return {"status": "ok"}
         logger.info(
             "Handled event successfully",
             extra={
@@ -756,7 +755,7 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
-
+        return {"status": "ok"}
     except Exception as e:
         logger.exception(
             "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
