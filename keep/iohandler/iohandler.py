@@ -149,7 +149,12 @@ class IOHandler:
             return parsed_string
         elif len(tokens) == 1:
             token = "".join(tokens[0])
-            val = self._parse_token(token)
+            try:
+                val = self._parse_token(token)
+            except Exception as e:
+                raise Exception(
+                    f"Got {e.__class__.__name__} while parsing token '{token}'"
+                )
             parsed_string = parsed_string.replace(token, str(val))
             return parsed_string
         # this basically for complex expressions with functions and operators
@@ -158,9 +163,8 @@ class IOHandler:
             try:
                 val = self._parse_token(token)
             except Exception as e:
-                # TODO: better error
                 raise Exception(
-                    f"Failed to parse token {token} in string {string} with error {e}"
+                    f"Got {e.__class__.__name__} while parsing token '{token}'"
                 )
             parsed_string = parsed_string.replace(token, str(val))
 
