@@ -8,10 +8,12 @@ import QueryBuilder, {
   defaultOperators,
   formatQuery,
   parseCEL,
+  parseSQL,
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { AlertDto } from "./models";
+import { format } from "path";
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
 const getAllMatches = (pattern: RegExp, string: string) =>
@@ -70,6 +72,10 @@ export const AlertsRulesBuilder = ({
   defaultQuery = "",
 }: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
+  const [isImportSQLOpen, setImportSQLOpen] = useState(false);
+  const [sqlQuery, setSQLQuery] = useState(`SELECT *
+FROM alerts
+WHERE severity = 'critical' and status = 'firing'`);
   const [celRules, setCELRules] = useState(defaultQuery);
 
   const parcedCELRulesToQuery = parseCEL(celRules);
@@ -120,6 +126,22 @@ export const AlertsRulesBuilder = ({
       operators: getOperators(id),
     }));
 
+  const onImportSQL = () => {
+    setImportSQLOpen(true);
+  }
+
+  const convertSQLToCEL = (sql: string): string => {
+      const query = parseSQL(sql);
+      return formatQuery(query, "cel");
+  };
+
+  const onImportSQLSubmit = () => {
+    const convertedCEL = convertSQLToCEL(sqlQuery);
+    setCELRules(convertedCEL); // Set the converted CEL as the new CEL rules
+    setImportSQLOpen(false); // Close the modal
+  };
+
+
   return (
     <div className="flex flex-col gap-y-2 w-full justify-end">
       <Modal
@@ -149,6 +171,24 @@ export const AlertsRulesBuilder = ({
           </div>
         </div>
       </Modal>
+      <Modal
+        isOpen={isImportSQLOpen}
+        onClose={() => setImportSQLOpen(false)}
+        title="Import from SQL"
+      >
+        <div className="space-y-4 p-4">
+          <Textarea
+            className="min-h-[8em] h-auto" // This sets a minimum height and allows it to auto-adjust
+            value={sqlQuery}
+            onValueChange={setSQLQuery}
+            placeholder={sqlQuery}
+          />
+          <Button color="orange" onClick={onImportSQLSubmit}>
+            Convert to CEL
+          </Button>
+        </div>
+      </Modal>
+
       <Textarea
         className="max-h-64 min-h-10"
         value={celRules}
@@ -162,7 +202,15 @@ export const AlertsRulesBuilder = ({
           type="button"
           onClick={onGUIView}
         >
-          Open GUI view
+          Build Query
+        </Button>
+        <Button
+          variant="secondary"
+          color="orange"
+          type="button"
+          onClick={onImportSQL}
+        >
+          Import from SQL
         </Button>
         <Button
           className="inline-flex w-auto"
