@@ -448,6 +448,10 @@ def list_workflows(info: Info):
         raise Exception(f"Error getting workflows: {resp.text}")
 
     workflows = resp.json()
+    if len(workflows) == 0:
+        click.echo(click.style("No workflows found.", bold=True))
+        return
+
     # Create a new table
     table = PrettyTable()
     # Add column headers
@@ -609,6 +613,10 @@ def list_workflow_executions(info: Info):
         raise Exception(f"Error getting workflow executions: {resp.text}")
 
     workflow_executions = resp.json()
+    if len(workflow_executions) == 0:
+        click.echo(click.style("No workflow executions found.", bold=True))
+        return
+
     # Create a new table
     table = PrettyTable()
     # Add column headers
@@ -661,6 +669,10 @@ def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
     workflow_executions = resp.json()
 
     workflow_execution_logs = workflow_executions[0].get("logs", [])
+    if len(workflow_execution_logs) == 0:
+        click.echo(click.style("No logs found for this workflow execution.", bold=True))
+        return
+
     # Create a new table
     table = PrettyTable()
     # Add column headers
@@ -696,6 +708,9 @@ def list_mappings(info: Info):
         raise Exception(f"Error getting mappings: {resp.text}")
 
     mappings = resp.json()
+    if len(mappings) == 0:
+        click.echo(click.style("No mappings found.", bold=True))
+        return
 
     # Create a new table
     table = PrettyTable()
