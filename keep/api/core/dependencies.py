@@ -15,7 +15,12 @@ from pusher import Pusher
 from sqlmodel import Session
 
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_api_key, get_session, get_user_by_api_key
+from keep.api.core.db import (
+    get_api_key,
+    get_session,
+    get_user_by_api_key,
+    update_key_last_used,
+)
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.core.rbac import get_role_by_role_name
 
@@ -210,6 +215,13 @@ class AuthVerifierMultiTenant:
         tenant_api_key = get_api_key(api_key)
         if not tenant_api_key:
             raise HTTPException(status_code=401, detail="Invalid API Key")
+        # update last used
+        else:
+            logger.debug("Updating API Key last used")
+            update_key_last_used(
+                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+            )
+            logger.debug("Successfully updated API Key last used")
 
         # validate scopes
         role = get_role_by_role_name(tenant_api_key.role)
@@ -294,6 +306,12 @@ class AuthVerifierSingleTenant:
 
         if not tenant_api_key:
             raise HTTPException(status_code=401, detail="Invalid API Key")
+        else:
+            logger.debug("Updating API Key last used")
+            update_key_last_used(
+                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+            )
+            logger.debug("Successfully updated API Key last used")
 
         role = get_role_by_role_name(tenant_api_key.role)
         # validate scopes
