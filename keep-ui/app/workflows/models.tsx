@@ -19,6 +19,7 @@ export type Trigger = {
 
 export type Workflow = {
   id: string;
+  name: string;
   description: string;
   created_by: string;
   creation_time: string;
