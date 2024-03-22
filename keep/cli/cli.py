@@ -33,7 +33,6 @@ except metadata.PackageNotFoundError:
     except metadata.PackageNotFoundError:
         KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
-
 logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -116,9 +115,9 @@ class Info:
             pass
         self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
         self.keep_api_url = (
-            self.config.get("keep_api_url")
-            or os.getenv("KEEP_API_URL")
-            or Info.KEEP_MANAGED_API_URL
+                self.config.get("keep_api_url")
+                or os.getenv("KEEP_API_URL")
+                or Info.KEEP_MANAGED_API_URL
         )
         self.random_user_id = self.config.get("random_user_id")
         # if we don't have a random user id, we create one and keep it on the config file
@@ -132,10 +131,10 @@ class Info:
 
         # if we auth, we don't need to check for api key
         if (
-            "auth" in arguments
-            or "api" in arguments
-            or "config" in arguments
-            or "version" in arguments
+                "auth" in arguments
+                or "api" in arguments
+                or "config" in arguments
+                or "version" in arguments
         ):
             return
 
@@ -220,14 +219,39 @@ def version():
     click.echo(click.style(KEEP_VERSION, bold=True))
 
 
-@cli.command()
+@cli.group()
 @pass_info
 def config(info: Info):
-    """Get the config."""
-    keep_url = click.prompt("Enter your keep url", default="http://localhost:8080")
-    api_key = click.prompt(
-        "Enter your api key (leave blank for localhost)", hide_input=True, default=""
-    )
+    """Manage the config."""
+    pass
+
+
+@config.command(name="show")
+@pass_info
+def show(info: Info):
+    """show the current config."""
+    click.echo(click.style("Current config", bold=True))
+    for key, value in info.config.items():
+        click.echo(f"{key}: {value}")
+
+
+@config.command(name="new")
+@click.option("--url", "-u", type=str, required=False, is_flag=False, flag_value="http://localhost:8080", help="The url of the keep api")
+@click.option("--api-key", "-a", type=str, required=False, is_flag=False, flag_value="", help="The api key for keep")
+@click.option("--interactive", "-i", help="Interactive mode creating keep config (default True)", is_flag=True)
+@pass_info
+def new_config(info: Info, url: str, api_key: str, interactive: bool):
+    """create new config."""
+    ctx = click.get_current_context()
+
+    if not interactive:
+        keep_url = ctx.params.get("url")
+        api_key = ctx.params.get("api_key")
+    else:
+        keep_url = click.prompt("Enter your keep url", default="http://localhost:8080")
+        api_key = click.prompt(
+            "Enter your api key (leave blank for localhost)", hide_input=True, default=""
+        )
     if not api_key:
         api_key = "localhost"
     with open(f"{get_default_conf_file_path()}", "w") as f:
@@ -338,14 +362,14 @@ def api(multi_tenant: bool, port: int, host: str):
 )
 @pass_info
 def run(
-    info: Info,
-    alerts_directory: str,
-    alert_url: list[str],
-    interval: int,
-    providers_file,
-    tenant_id,
-    api_key,
-    api_url,
+        info: Info,
+        alerts_directory: str,
+        alert_url: list[str],
+        interval: int,
+        providers_file,
+        tenant_id,
+        api_key,
+        api_url,
 ):
     """Run a workflow."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
@@ -746,7 +770,7 @@ def list_mappings(info: Info):
 )
 @pass_info
 def create(
-    info: Info, name: str, description: str, file: str, matchers: str, priority: int
+        info: Info, name: str, description: str, file: str, matchers: str, priority: int
 ):
     """Create a mapping rule."""
     if os.path.isfile(file) and file.endswith(".csv"):
@@ -973,7 +997,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
     for config in provider["config"]:
         config_as_flag = f"--{config.replace('_', '-')}"
         if config_as_flag not in options_dict and provider["config"][config].get(
-            "required", True
+                "required", True
         ):
             raise click.BadOptionUsage(
                 config_as_flag,

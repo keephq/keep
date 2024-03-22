@@ -1,0 +1,56 @@
+---
+sidebarTitle: "keep config new"
+---
+
+Create new config.
+
+## Usage
+
+```
+Usage: keep config new [OPTIONS]...
+```
+
+## Options
+* `interactive`:
+  * Type: BOOL
+  * Default: `True`
+  * Usage: `--interactive`
+
+  Create config interactively.
+
+* `url`:
+  * Type: STRING
+  * Default: `http://localhost:8080`
+  * Usage: `--url`
+
+  The URL of the Keep backend server.
+
+* `api-key`:
+  * Type: STRING
+  * Default: ``
+  * Usage: `--api-key`
+
+  The api key for authenticating over keep.
+
+* `help`:
+  * Type: BOOL
+  * Default: `false`
+  * Usage: `--help`
+
+  Show this message and exit.
+
+
+
+## CLI Help
+
+```
+Usage: keep config new [OPTIONS]
+
+  create new config.
+
+Options:
+  -u, --url TEXT      The url of the keep api
+  -a, --api-key TEXT  The api key for keep
+  -i, --interactive   Interactive mode creating keep config (default True)
+  --help              Show this message and exit.
+```
