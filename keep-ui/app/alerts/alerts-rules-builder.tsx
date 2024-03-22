@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "components/ui/Modal";
-import { Button, Textarea } from "@tremor/react";
+import { Button, Textarea, Badge } from "@tremor/react";
 import QueryBuilder, {
   Field,
   Operator,
@@ -82,6 +82,21 @@ WHERE severity = 'critical' and status = 'firing'`);
   const [query, setQuery] = useState<RuleGroupType>(parcedCELRulesToQuery);
 
   const isValidCEL = formatQuery(parcedCELRulesToQuery, "cel") === celRules;
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Adjust the height of the textarea based on its content
+  const adjustTextAreaHeight = () => {
+    const textArea = textAreaRef.current;
+    if (textArea) {
+      textArea.style.height = 'auto';
+      textArea.style.height = `${textArea.scrollHeight}px`;
+    }
+  };
+  // Adjust the height whenever the content changes
+  useEffect(() => {
+    adjustTextAreaHeight();
+  }, [celRules]);
+
 
   useEffect(() => {
     if (isValidCEL) {
@@ -188,13 +203,18 @@ WHERE severity = 'critical' and status = 'firing'`);
           </Button>
         </div>
       </Modal>
-
-      <Textarea
-        className="max-h-64 min-h-10"
-        value={celRules}
-        onValueChange={(newValue) => setCELRules(newValue)}
-        placeholder='Use CEL to filter your alerts e.g. source.contains("kibana")'
-      />
+      <div className="flex items-center space-x-2">
+        <Badge key={"cel"} size="md" color="orange">
+          CEL
+        </Badge>
+        <Textarea
+          ref={textAreaRef}
+          className="resize-none overflow-hidden" // Add additional styling if needed
+          value={celRules}
+          onValueChange={setCELRules}
+          placeholder='Use CEL to filter your alerts e.g. source.contains("kibana")'
+        />
+      </div>
       <div className="flex justify-end gap-x-2">
         <Button
           variant="secondary"

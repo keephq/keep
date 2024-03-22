@@ -153,8 +153,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
           </div>
         </div>
       </Modal>
-      <Subtitle>CEL</Subtitle>
-      <div className="flex w-full items-start">
+      <div className="flex w-full items-start mt-6">
         <AlertsRulesBuilder table={table} defaultQuery="" />
         {preset?.name === "feed" && (
           <Button
