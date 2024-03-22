@@ -229,7 +229,7 @@ def config(info: Info):
 @config.command(name="show")
 @pass_info
 def show(info: Info):
-    """Show the current config."""
+    """show the current config."""
     click.echo(click.style("Current config", bold=True))
     for key, value in info.config.items():
         click.echo(f"{key}: {value}")
