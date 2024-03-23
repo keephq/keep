@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput } from "@tremor/react";
-import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
@@ -20,7 +19,7 @@ interface Props {
 export default function AlertPresets({ preset, isLoading, table }: Props) {
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets({
+  const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
   const { data: session } = useSession();
@@ -31,6 +30,13 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
     preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
   );
   const [isPrivate, setIsPrivate] = useState(preset?.is_private);
+  const [presetCEL, setPresetCEL] = useState('');
+
+
+
+  const selectedPreset = savedPresets.find(
+    (savedPreset) => savedPreset.name.toLowerCase() === decodeURIComponent(preset!.name)
+  ) as Preset | undefined;
 
   async function deletePreset(presetId: string) {
     if (
@@ -54,23 +60,20 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
 
   async function addOrUpdatePreset() {
     if (presetName) {
-      const options = selectedOptions.map((option) => {
-        return {
-          value: option.value,
-          label: option.label,
-        };
-      });
       const response = await fetch(
-        preset?.id ? `${apiUrl}/preset/${preset?.id}` : `${apiUrl}/preset`,
+        selectedPreset?.id ? `${apiUrl}/preset/${selectedPreset?.id}` : `${apiUrl}/preset`,
         {
-          method: preset?.id ? "PUT" : "POST",
+          method: selectedPreset?.id ? "PUT" : "POST",
           headers: {
             Authorization: `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             name: presetName,
-            options: options,
+            options: [{
+              "label": "CEL",
+              "value": presetCEL,
+            }],
             is_private: isPrivate,
           }),
         }
@@ -78,7 +81,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
       if (response.ok) {
         setIsModalOpen(false);
         toast(
-          preset?.name
+          selectedPreset?.name
             ? `Preset ${presetName} updated!`
             : `Preset ${presetName} created!`,
           {
@@ -157,9 +160,10 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
       <AlertsRulesBuilder
           table={table}
           defaultQuery=""
-          preset={preset}
+          selectedPreset={selectedPreset}
           setIsModalOpen={setIsModalOpen}
           deletePreset={deletePreset}
+          setPresetCEL={setPresetCEL}
         />
       </div>
     </>

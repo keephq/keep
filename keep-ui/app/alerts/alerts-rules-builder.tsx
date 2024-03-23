@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Modal from "components/ui/Modal";
 import { Button, Textarea, Badge } from "@tremor/react";
 import QueryBuilder, {
@@ -16,8 +16,7 @@ import { AlertDto, Preset } from "./models";
 import { XMarkIcon, InformationCircleIcon, CheckIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
-import { FaRegKeyboard } from "react-icons/fa6";
-
+import { usePresets } from "utils/hooks/usePresets";
 
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
@@ -69,18 +68,20 @@ const getOperators = (id: string): Operator[] => {
 
 type AlertsRulesBuilderProps = {
   table: Table<AlertDto>;
-  preset?: Preset;
+  selectedPreset?: Preset;
   defaultQuery: string | undefined;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   deletePreset: (presetId: string) => Promise<void>;
+  setPresetCEL: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export const AlertsRulesBuilder = ({
   table,
-  preset,
+  selectedPreset,
   defaultQuery = "",
   setIsModalOpen,
   deletePreset,
+  setPresetCEL,
 }: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
@@ -96,7 +97,49 @@ WHERE severity = 'critical' and status = 'firing'`);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [showClearButton, setShowClearButton] = useState(false);
-  // for the error message
+
+  const isFirstRender = useRef(true);
+
+  const constructCELRules = (preset) => {
+    // Check if selectedPreset is defined and has options
+    if (preset && preset.options) {
+      // New version: single "CEL" key
+      const celOption = preset.options.find(option => option.label === "CEL");
+      if (celOption) {
+        return celOption.value;
+      }
+      // Older version: Concatenate multiple fields
+      else {
+        return preset.options
+        .map(option => {
+          // Assuming the older format is exactly "x='y'" (x equals y)
+          // We split the string by '=', then trim and quote the value part
+          let [key, value] = option.value.split('=');
+          // Trim spaces and single quotes (if any) from the value
+          value = value.trim().replace(/^'(.*)'$/, "$1");
+          // Return the correctly formatted CEL expression
+          return `${key.trim()}=="${value}"`;
+        })
+        .join(' && ');
+      }
+    }
+    return ""; // Default to empty string if no preset or options are found
+  };
+
+  useEffect(() => {
+    // Use the constructCELRules function to set the initial value of celRules
+    const initialCELRules = constructCELRules(selectedPreset);
+    setCELRules(initialCELRules);
+  }, [selectedPreset]);
+
+  useEffect(() => {
+    // This effect waits for celRules to update and applies the filter only on the initial render
+    if (isFirstRender.current && celRules.length > 0) {
+      onApplyFilter();
+      isFirstRender.current = false;
+    }
+    // This effect should only run when celRules updates and on initial render
+  }, [celRules]);
 
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
@@ -218,6 +261,22 @@ WHERE severity = 'critical' and status = 'firing'`);
     }
   }
 
+  const validateAndOpenSaveModal = (celExpression: string) => {
+    // Use existing validation logic
+    const celQuery = formatQuery(parseCEL(celExpression), "cel");
+    const isValidCEL = celQuery.replace(/\s+/g, '') === celExpression.replace(/\s+/g, '') || celExpression === "";
+
+    if (isValidCEL && celExpression.length) {
+      // If CEL is valid and not empty, set the CEL rules for the preset and open the modal
+      setPresetCEL(celExpression);
+      setIsModalOpen(true);
+    } else {
+      // If CEL is invalid or empty, inform the user
+      alert('You can only save a valid CEL expression.');
+      setIsValidCEL(isValidCEL);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-y-2 w-full justify-end">
       <Modal
@@ -319,16 +378,18 @@ WHERE severity = 'critical' and status = 'firing'`);
   <Button
     icon={FiSave}
     color="orange"
-    onClick={() => setIsModalOpen(true)}
+    disabled={!celRules.length}
+    onClick={() => validateAndOpenSaveModal(celRules)}
     tooltip="Save current filter as a view"
   >
+
   </Button>
-  {preset?.name !== "deleted" && preset?.name !== "feed" && preset?.name !== "dismissed" && (
+  {selectedPreset?.name !== "deleted" && selectedPreset?.name !== "feed" && selectedPreset?.name !== "dismissed" && (
     <Button
       icon={TrashIcon}
       color="orange"
       title="Delete preset"
-      onClick={async () => await deletePreset(preset!.id!)}
+      onClick={async () => await deletePreset(selectedPreset!.id!)}
     >
     </Button>
   )}
