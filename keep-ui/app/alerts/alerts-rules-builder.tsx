@@ -12,8 +12,13 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import { AlertDto } from "./models";
-import { format } from "path";
+import { AlertDto, Preset } from "./models";
+import { XMarkIcon, InformationCircleIcon, CheckIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { FiSave } from "react-icons/fi";
+import { TbDatabaseImport } from "react-icons/tb";
+import { FaRegKeyboard } from "react-icons/fa6";
+
+
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
 const getAllMatches = (pattern: RegExp, string: string) =>
@@ -64,12 +69,18 @@ const getOperators = (id: string): Operator[] => {
 
 type AlertsRulesBuilderProps = {
   table: Table<AlertDto>;
+  preset?: Preset;
   defaultQuery: string | undefined;
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  deletePreset: (presetId: string) => Promise<void>;
 };
 
 export const AlertsRulesBuilder = ({
   table,
+  preset,
   defaultQuery = "",
+  setIsModalOpen,
+  deletePreset,
 }: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
@@ -80,9 +91,12 @@ WHERE severity = 'critical' and status = 'firing'`);
 
   const parcedCELRulesToQuery = parseCEL(celRules);
   const [query, setQuery] = useState<RuleGroupType>(parcedCELRulesToQuery);
+  const [isValidCEL, setIsValidCEL] = useState(true);
+  const [sqlError, setSqlError] = useState<string | null>(null);
 
-  const isValidCEL = formatQuery(parcedCELRulesToQuery, "cel") === celRules;
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [showClearButton, setShowClearButton] = useState(false);
+  // for the error message
 
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
@@ -99,10 +113,32 @@ WHERE severity = 'critical' and status = 'firing'`);
 
 
   useEffect(() => {
-    if (isValidCEL) {
-      return table.setGlobalFilter(celRules);
+    setShowClearButton(celRules.length > 0);
+  }, [celRules]);
+
+  const handleClearInput = () => {
+    setCELRules("");
+    table.resetGlobalFilter();
+    setIsValidCEL(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevents the default action of Enter key in a form
+      const target = e.target as HTMLTextAreaElement; // Type assertion
+      // You can now use `target` which is asserted to be an HTMLTextAreaElement
+
+      // check if the CEL is valid by comparing the parsed query with the original CEL
+      // remove spaces so that "a && b" is the same as "a&&b"
+      const celQuery = formatQuery(parcedCELRulesToQuery, "cel");
+      const isValidCEL = celQuery.replace(/\s+/g, '') === celRules.replace(/\s+/g, '') || celRules === "";
+      setIsValidCEL(isValidCEL);
+      if(isValidCEL){
+        onApplyFilter();
+      }
     }
-  }, [isValidCEL, table, celRules]);
+  };
+
 
   const onApplyFilter = () => {
     if (celRules.length === 0) {
@@ -145,17 +181,42 @@ WHERE severity = 'critical' and status = 'firing'`);
     setImportSQLOpen(true);
   }
 
-  const convertSQLToCEL = (sql: string): string => {
+  const convertSQLToCEL = (sql: string): string | null => {
+    try {
       const query = parseSQL(sql);
       return formatQuery(query, "cel");
+    } catch (error) {
+      // If the caught error is an instance of Error, use its message
+      if (error instanceof Error) {
+        setSqlError(error.message);
+      } else {
+        setSqlError('An unknown error occurred while parsing SQL.');
+      }
+      return null;
+    }
   };
+
+
 
   const onImportSQLSubmit = () => {
     const convertedCEL = convertSQLToCEL(sqlQuery);
-    setCELRules(convertedCEL); // Set the converted CEL as the new CEL rules
-    setImportSQLOpen(false); // Close the modal
+    if (convertedCEL) {
+      setCELRules(convertedCEL); // Set the converted CEL as the new CEL rules
+      setImportSQLOpen(false); // Close the modal
+      setSqlError(null); // Clear any previous errors
+    }
   };
 
+
+
+
+  const onValueChange = (value: string) => {
+    setCELRules(value);
+    setShowClearButton(value.length > 0);
+    if (value.length === 0) {
+      setIsValidCEL(true);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-y-2 w-full justify-end">
@@ -188,58 +249,99 @@ WHERE severity = 'critical' and status = 'firing'`);
       </Modal>
       <Modal
         isOpen={isImportSQLOpen}
-        onClose={() => setImportSQLOpen(false)}
+        onClose={() => { setImportSQLOpen(false); setSqlError(null); }} // Clear the error when closing the modal
         title="Import from SQL"
       >
         <div className="space-y-4 p-4">
+
           <Textarea
             className="min-h-[8em] h-auto" // This sets a minimum height and allows it to auto-adjust
             value={sqlQuery}
             onValueChange={setSQLQuery}
-            placeholder={sqlQuery}
+            placeholder="Enter your SQL query here"
           />
-          <Button color="orange" onClick={onImportSQLSubmit}>
+          {sqlError && (
+            <div className="text-red-500 text-sm mb-2">
+              Error: {sqlError}
+            </div>
+          )}
+          <Button color="orange" onClick={onImportSQLSubmit} disabled={!(sqlQuery.length > 0)}>
             Convert to CEL
           </Button>
         </div>
       </Modal>
-      <div className="flex items-center space-x-2">
-        <Badge key={"cel"} size="md" color="orange">
-          CEL
-        </Badge>
-        <Textarea
-          ref={textAreaRef}
-          className="resize-none overflow-hidden" // Add additional styling if needed
-          value={celRules}
-          onValueChange={setCELRules}
-          placeholder='Use CEL to filter your alerts e.g. source.contains("kibana")'
-        />
-      </div>
-      <div className="flex justify-end gap-x-2">
-        <Button
-          variant="secondary"
-          color="orange"
-          type="button"
-          onClick={onGUIView}
-        >
-          Build Query
-        </Button>
-        <Button
-          variant="secondary"
-          color="orange"
-          type="button"
-          onClick={onImportSQL}
-        >
-          Import from SQL
-        </Button>
-        <Button
-          className="inline-flex w-auto"
-          color="orange"
-          onClick={onApplyFilter}
-        >
-          Apply filter
-        </Button>
-      </div>
+
+
+      <div className="flex flex-wrap items-center gap-x-2">
+      <div className="flex items-center space-x-2 relative flex-grow">
+          {/* CEL badge and (i) icon container */}
+          <div className="flex items-center space-x-2">
+            <Badge key={"cel"} size="md" color="orange">CEL</Badge>
+          </div>
+
+          {/* Textarea and error message container */}
+          <div className="flex-grow relative">
+  <Textarea
+    ref={textAreaRef}
+    rows={1}
+    className="resize-none overflow-hidden w-full pr-40" // Provide enough padding to the right
+    value={celRules}
+    onValueChange={onValueChange}
+    onKeyDown={handleKeyDown}
+    placeholder="Use CEL to filter your alerts e.g. source.contains('kibana')."
+    error={!isValidCEL}
+  />
+  {!isValidCEL && (
+    <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+      Invalid Common Expression Logic expression.
+    </div>
+  )}
+  {celRules && (
+    <button
+      onClick={handleClearInput}
+      className="absolute right-36 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
+    >
+      <XMarkIcon className="h-4 w-4" />
+    </button>
+  )}
+  <Badge
+    size="md"
+    color="orange"
+    className="absolute right-2 top-1/2 transform -translate-y-1/2" // Position to the far right inside the padding area
+  >
+    Enter to apply
+  </Badge>
+</div>
+
+        </div>
+
+  {/* Buttons next to the Textarea */}
+  <Button
+    icon={FiSave}
+    color="orange"
+    onClick={() => setIsModalOpen(true)}
+    tooltip="Save current filter as a view"
+  >
+  </Button>
+  {preset?.name !== "deleted" && preset?.name !== "feed" && preset?.name !== "dismissed" && (
+    <Button
+      icon={TrashIcon}
+      color="orange"
+      title="Delete preset"
+      onClick={async () => await deletePreset(preset!.id!)}
+    >
+    </Button>
+  )}
+  <Button
+    color="orange"
+    type="button"
+    onClick={onImportSQL}
+    icon={TbDatabaseImport}
+    tooltip="Import from SQL"
+  >
+  </Button>
+</div>
+
     </div>
   );
 };

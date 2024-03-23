@@ -154,47 +154,13 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
         </div>
       </Modal>
       <div className="flex w-full items-start mt-6">
-        <AlertsRulesBuilder table={table} defaultQuery="" />
-        {preset?.name === "feed" && (
-          <Button
-            icon={PlusIcon}
-            size="xs"
-            color="orange"
-            className="ml-2.5"
-            // disabled={selectedOptions.length <= 0}
-            onClick={() => setIsModalOpen(true)}
-            tooltip="Save current filter as a view"
-          >
-            Create Preset
-          </Button>
-        )}
-        {preset?.name !== "deleted" && preset?.name !== "feed" && (
-          <div className="flex ml-2.5">
-            <Button
-              icon={CheckIcon}
-              size="xs"
-              color="orange"
-              title="Save preset"
-              className="mr-1"
-              // disabled={selectedOptions.length <= 0}
-              onClick={() => setIsModalOpen(true)}
-            >
-              Save Preset
-            </Button>
-            <Button
-              icon={TrashIcon}
-              size="xs"
-              color="orange"
-              variant="secondary"
-              title="Delete preset"
-              onClick={async () => {
-                await deletePreset(preset!.id!);
-              }}
-            >
-              Delete Preset
-            </Button>
-          </div>
-        )}
+      <AlertsRulesBuilder
+          table={table}
+          defaultQuery=""
+          preset={preset}
+          setIsModalOpen={setIsModalOpen}
+          deletePreset={deletePreset}
+        />
       </div>
     </>
   );
