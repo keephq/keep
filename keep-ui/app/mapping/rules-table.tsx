@@ -24,7 +24,7 @@ import { toast } from "react-toastify";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
-export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
+export default function RulesTable({ mappings, editCallback }: { mappings: MappingRule[]; editCallback: (rule: MappingRule) => void }) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
 
@@ -76,13 +76,21 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
       id: "delete",
       header: "",
       cell: (context) => (
-        <Button
-          color="red"
-          size="xs"
-          variant="secondary"
-          icon={MdRemoveCircle}
-          onClick={() => deleteRule(context.row.original.id!)}
-        />
+        <div className={"space-x-4 flex flex-row items-center justify-center"}>
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            onClick={() => deleteRule(context.row.original.id!)}
+          />
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            onClick={() => editCallback(context.row.original!)}
+          > Edit </Button>
+        </div>
       ),
     }),
   ] as DisplayColumnDef<MappingRule>[];

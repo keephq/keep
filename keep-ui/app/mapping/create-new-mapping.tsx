@@ -16,13 +16,14 @@ import {
   Icon,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import {ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
+import {MappingRule} from "./models";
 
-export default function CreateNewMapping() {
+export default function CreateNewMapping( {editRule, editCallback}: {editRule: MappingRule | null; editCallback: (rule: MappingRule | null) => void } ) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
   const [mapName, setMapName] = useState<string>("");
@@ -30,16 +31,41 @@ export default function CreateNewMapping() {
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
+  const [editMode, setEditMode] = useState(false);
+  const inputFile = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editRule !== null) {
+      handleFileReset();
+      setEditMode(true);
+      console.log(editRule)
+      setMapName(editRule.name);
+      setFileName(editRule.file_name? editRule.file_name : "");
+      setMapDescription(editRule.description ? editRule.description : "");
+      setSelectedAttributes(editRule.attributes ? editRule.attributes : []);
+      setPriority(editRule.priority);
+    }
+  }, [editRule]);
 
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
   const attributes = useMemo(() => {
     if (parsedData) {
+      setSelectedAttributes([]);
       return Object.keys(parsedData[0]);
     }
+    if (editRule) {
+      return [...editRule.attributes ? editRule.attributes : [], ...editRule.matchers];
+    }
     return [];
-  }, [parsedData]);
+  }, [parsedData, editRule]);
   const { readString } = usePapaParse();
+
+    const handleFileReset = () => {
+      if (inputFile.current) {
+          inputFile.current.value = "";
+      }
+  };
 
   const readFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -64,6 +90,7 @@ export default function CreateNewMapping() {
     setMapDescription("");
     setParsedData(null);
     setSelectedAttributes([]);
+    handleFileReset();
   };
 
   const addRule = async (e: FormEvent) => {
@@ -94,20 +121,65 @@ export default function CreateNewMapping() {
       );
     }
   };
+  const updateRule = async (e: FormEvent) => {
+    e.preventDefault();
+    const apiUrl = getApiURL();
+    console.log("PAYLOAD: ", {
+        id: editRule?.id,
+        priority: priority,
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        matchers: selectedAttributes,
+        rows: parsedData,
+      })
+    const response = await fetch(`${apiUrl}/mapping`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editRule?.id,
+        priority: priority,
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        matchers: selectedAttributes,
+        rows: parsedData,
+      }),
+    });
+    if (response.ok) {
+      clearForm();
+      exitEditMode();
+      mutate();
+      toast.success("Mapping updated successfully");
+    } else {
+      toast.error(
+        "Failed to update mapping, please contact us if this issue persists."
+      );
+    }
+  };
+
+  const exitEditMode = async() => {
+    editCallback(null);
+    setEditMode(false);
+    clearForm();
+  }
 
   const submitEnabled = (): boolean => {
     return (
       !!mapName &&
       selectedAttributes.length > 0 &&
-      !!parsedData &&
+      (editMode || !!parsedData) &&
       attributes.filter(
-        (attribute) => selectedAttributes.includes(attribute) === false
+        (attribute) => !selectedAttributes.includes(attribute)
       ).length > 0
     );
   };
 
   return (
-    <form className="max-w-lg py-2" onSubmit={addRule}>
+    <form className="max-w-lg py-2" onSubmit={editMode ? updateRule : addRule}>
       <Subtitle>Mapping Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>
@@ -148,11 +220,12 @@ export default function CreateNewMapping() {
           type="file"
           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           onChange={readFile}
-          required={true}
+          required={!editRule}
+          ref={inputFile}
         />
         {!parsedData && (
           <Text className="text-xs text-red-500">
-            * Upload a CSV file to begin with creating a new mapping
+            {!editMode ? "* Upload a CSV file to begin with creating a new mapping" : ""}
           </Text>
         )}
       </div>
@@ -166,7 +239,7 @@ export default function CreateNewMapping() {
           className="mt-1"
           value={selectedAttributes}
           onValueChange={setSelectedAttributes}
-          disabled={!parsedData}
+          disabled={!editMode && !parsedData}
           icon={MagnifyingGlassIcon}
         >
           {attributes &&
@@ -188,7 +261,7 @@ export default function CreateNewMapping() {
           ) : (
             attributes
               .filter(
-                (attribute) => selectedAttributes.includes(attribute) === false
+                (attribute) => !selectedAttributes.includes(attribute)
               )
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
@@ -198,15 +271,24 @@ export default function CreateNewMapping() {
           )}
         </div>
       </div>
+      <div className={"space-x-4 flex flex-row justify-end items-center"}>
+      {editMode ? <Button
+        color="orange"
+        size="xs"
+        className=""
+        onClick={exitEditMode}
+      >
+        Cancel
+      </Button> : <></>}
       <Button
         disabled={!submitEnabled()}
         color="orange"
         size="xs"
-        className="float-right"
         type="submit"
       >
-        Create
+        {editMode ? "Update" : "Create"}
       </Button>
+      </div>
     </form>
   );
 }
