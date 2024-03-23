@@ -138,6 +138,9 @@ WHERE severity = 'critical' and status = 'firing'`);
       onApplyFilter();
       isFirstRender.current = false;
     }
+    else if (!selectedPreset) {
+      isFirstRender.current = false;
+    }
     // This effect should only run when celRules updates and on initial render
   }, [celRules]);
 
@@ -384,7 +387,7 @@ WHERE severity = 'critical' and status = 'firing'`);
   >
 
   </Button>
-  {selectedPreset?.name !== "deleted" && selectedPreset?.name !== "feed" && selectedPreset?.name !== "dismissed" && (
+  {selectedPreset && selectedPreset.name && selectedPreset?.name !== "deleted" && selectedPreset?.name !== "feed" && selectedPreset?.name !== "dismissed" && (
     <Button
       icon={TrashIcon}
       color="orange"
