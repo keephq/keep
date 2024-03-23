@@ -91,18 +91,20 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 # this is a workaround for gunicorn to load the env vars
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
-db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+db_host = config("DATABASE_HOST", default="")
+db_port = config("DATABASE_PORT", default="3306")
+db_user = config("DATABASE_USER", default="root")
+db_password = config("DATABASE_PASSWORD", default="")
+db_name = config("DATABASE_NAME", default="keep")
+db_connection_string = "mysql+pymysql://" + db_user + ":" + db_password + "@" + db_host + ":" + db_port + "/" + db_name
+if db_host == "":
+    db_connection_string = ""
 pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 
 if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
         "mysql+pymysql://",
         creator=__get_conn,
-    )
-elif db_connection_string == "impersonate":
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn_impersonate,
     )
 elif db_connection_string:
     try:

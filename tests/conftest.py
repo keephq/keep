@@ -139,9 +139,6 @@ def db_session(request, mysql_container):
         )
     SQLModel.metadata.create_all(mock_engine)
 
-    # Mock the environment variables so db.py will use it
-    os.environ["DATABASE_CONNECTION_STRING"] = db_connection_string
-
     # Create a session
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=mock_engine)
     session = SessionLocal()

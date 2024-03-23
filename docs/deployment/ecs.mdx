@@ -38,7 +38,11 @@ sidebarTitle: "AWS ECS"
                 - Protocol: TCP
             ![Container Details](/images/ecs-task-def-frontend3.png)
             - Environment Variables: (This can be static or you can use parameter store or secrets manager)
-                - DATABASE_CONNECTION_STRING
+                - DATABASE_HOST
+                - DATABASE_PORT
+                - DATABASE_USER
+                - DATABASE_PASSWORD
+                - DATABASE_NAME
                 - AUTH_TYPE
                 - KEEP_JWT_SECRET
                 - KEEP_DEFAULT_USERNAME
@@ -79,7 +83,11 @@ sidebarTitle: "AWS ECS"
                 - Protocol: TCP
                 ![Container Details](/images/ecs-task-def-backend3.png)
             - Environment Variables: (This can be static or you can use parameter store or secrets manager)
-                - DATABASE_CONNECTION_STRING
+                - DATABASE_HOST
+                - DATABASE_PORT
+                - DATABASE_USER
+                - DATABASE_PASSWORD
+                - DATABASE_NAME
                 - AUTH_TYPE
                 - KEEP_JWT_SECRET
                 - KEEP_DEFAULT_USERNAME

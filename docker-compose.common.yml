@@ -21,7 +21,11 @@ services:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
       - SECRET_MANAGER_DIRECTORY=/state
-      - DATABASE_CONNECTION_STRING=sqlite:///./db.sqlite3?check_same_thread=False
+      - DATABASE_HOST=""
+      - DATABASE_PORT="3306"
+      - DATABASE_USER="root"
+      - DATABASE_PASSWORD=""
+      - DATABASE_NAME="keep"
       - OPENAI_API_KEY=$OPENAI_API_KEY
       - PUSHER_APP_ID=1
       - PUSHER_APP_KEY=keepappkey
