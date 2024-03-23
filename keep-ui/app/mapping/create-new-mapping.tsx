@@ -38,7 +38,6 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
     if (editRule !== null) {
       handleFileReset();
       setEditMode(true);
-      console.log(editRule)
       setMapName(editRule.name);
       setFileName(editRule.file_name? editRule.file_name : "");
       setMapDescription(editRule.description ? editRule.description : "");
@@ -124,15 +123,6 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    console.log("PAYLOAD: ", {
-        id: editRule?.id,
-        priority: priority,
-        name: mapName,
-        description: mapDescription,
-        file_name: fileName,
-        matchers: selectedAttributes,
-        rows: parsedData,
-      })
     const response = await fetch(`${apiUrl}/mapping`, {
       method: "PUT",
       headers: {
