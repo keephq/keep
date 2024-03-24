@@ -83,7 +83,9 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
     }
 
     const jsExpression = sanitizeCELIntoJS(celExpression);
-    const variables = getAllMatches(variablePattern, jsExpression) ?? [];
+    const variables = (
+      getAllMatches(variablePattern, jsExpression) ?? []
+    ).filter((variable) => variable !== "true" && variable !== "false");
 
     const func = new Function(...variables, `return (${jsExpression})`);
 
