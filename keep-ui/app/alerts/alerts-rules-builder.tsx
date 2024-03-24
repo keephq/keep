@@ -1,0 +1,450 @@
+import { useEffect, useRef, useState } from "react";
+import Modal from "components/ui/Modal";
+import { Button, Textarea, Badge } from "@tremor/react";
+import QueryBuilder, {
+  Field,
+  Operator,
+  RuleGroupType,
+  defaultOperators,
+  formatQuery,
+  parseCEL,
+  parseSQL,
+} from "react-querybuilder";
+import "react-querybuilder/dist/query-builder.scss";
+import { Table } from "@tanstack/react-table";
+import { AlertDto, Preset, severityMapping } from "./models";
+import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { FiSave } from "react-icons/fi";
+import { TbDatabaseImport } from "react-icons/tb";
+
+// Culled from: https://stackoverflow.com/a/54372020/12627235
+const getAllMatches = (pattern: RegExp, string: string) =>
+  // make sure string is a String, and make sure pattern has the /g flag
+  String(string).match(new RegExp(pattern, "g"));
+
+const sanitizeCELIntoJS = (celExpression: string): string => {
+  // First, replace "contains" with "includes"
+  let jsExpression = celExpression.replace(/contains/g, "includes");
+  // Replace severity comparisons with mapped values
+  jsExpression = jsExpression.replace(
+    /severity\s*([<>=]+)\s*(\d)/g,
+    (match, operator, number) => {
+      const severityValue = severityMapping[number];
+      if (!severityValue) {
+        return match; // If no mapping found, return the original match
+      }
+
+      // For equality, directly replace with the severity level
+      if (operator === "==") {
+        return `severity == "${severityValue}"`;
+      }
+
+      // For greater than or less than, include multiple levels based on the mapping
+      const levels = Object.entries(severityMapping);
+      let replacement = "";
+      if (operator === ">") {
+        const filteredLevels = levels
+          .filter(([key]) => key > number)
+          .map(([, value]) => `severity == "${value}"`);
+        replacement = filteredLevels.join(" || ");
+      } else if (operator === "<") {
+        const filteredLevels = levels
+          .filter(([key]) => key < number)
+          .map(([, value]) => `severity == "${value}"`);
+        replacement = filteredLevels.join(" || ");
+      }
+
+      return `(${replacement})`;
+    }
+  );
+
+  // Convert 'in' syntax to '.includes()'
+  jsExpression = jsExpression.replace(
+    /(\w+)\s+in\s+\[([^\]]+)\]/g,
+    (match, variable, list) => {
+      // Split the list by commas, trim spaces, and wrap items in quotes if not already done
+      const items = list
+        .split(",")
+        .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
+      return `[${items.join(", ")}].includes(${variable})`;
+    }
+  );
+
+  return jsExpression;
+};
+
+// this pattern is far from robust
+const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
+
+export const evalWithContext = (context: AlertDto, celExpression: string) => {
+  try {
+    if (celExpression.length === 0) {
+      return new Function();
+    }
+
+    const jsExpression = sanitizeCELIntoJS(celExpression);
+    const variables = (
+      getAllMatches(variablePattern, jsExpression) ?? []
+    ).filter((variable) => variable !== "true" && variable !== "false");
+
+    const func = new Function(...variables, `return (${jsExpression})`);
+
+    const args = variables.map((arg) =>
+      Object.hasOwnProperty.call(context, arg)
+        ? context[arg as keyof AlertDto]
+        : undefined
+    );
+
+    return func(...args);
+  } catch (error) {
+    return;
+  }
+};
+
+const getOperators = (id: string): Operator[] => {
+  if (id === "source") {
+    return [
+      { name: "contains", label: "contains" },
+      { name: "null", label: "null" },
+    ];
+  }
+
+  return defaultOperators;
+};
+
+type AlertsRulesBuilderProps = {
+  table: Table<AlertDto>;
+  selectedPreset?: Preset;
+  defaultQuery: string | undefined;
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  deletePreset: (presetId: string) => Promise<void>;
+  setPresetCEL: React.Dispatch<React.SetStateAction<string>>;
+};
+
+const SQL_QUERY_PLACEHOLDER = `SELECT *
+FROM alerts
+WHERE severity = 'critical' and status = 'firing'`;
+
+export const AlertsRulesBuilder = ({
+  table,
+  selectedPreset,
+  defaultQuery = "",
+  setIsModalOpen,
+  deletePreset,
+  setPresetCEL,
+}: AlertsRulesBuilderProps) => {
+  const [isGUIOpen, setIsGUIOpen] = useState(false);
+  const [isImportSQLOpen, setImportSQLOpen] = useState(false);
+  const [sqlQuery, setSQLQuery] = useState("");
+  const [celRules, setCELRules] = useState(defaultQuery);
+
+  const parsedCELRulesToQuery = parseCEL(celRules);
+  const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
+  const [isValidCEL, setIsValidCEL] = useState(true);
+  const [sqlError, setSqlError] = useState<string | null>(null);
+
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isFirstRender = useRef(true);
+
+  const constructCELRules = (preset?: Preset) => {
+    // Check if selectedPreset is defined and has options
+    if (preset && preset.options) {
+      // New version: single "CEL" key
+      const celOption = preset.options.find((option) => option.label === "CEL");
+      if (celOption) {
+        return celOption.value;
+      }
+      // Older version: Concatenate multiple fields
+      else {
+        return preset.options
+          .map((option) => {
+            // Assuming the older format is exactly "x='y'" (x equals y)
+            // We split the string by '=', then trim and quote the value part
+            let [key, value] = option.value.split("=");
+            // Trim spaces and single quotes (if any) from the value
+            value = value.trim().replace(/^'(.*)'$/, "$1");
+            // Return the correctly formatted CEL expression
+            return `${key.trim()}=="${value}"`;
+          })
+          .join(" && ");
+      }
+    }
+    return ""; // Default to empty string if no preset or options are found
+  };
+
+  useEffect(() => {
+    // Use the constructCELRules function to set the initial value of celRules
+    const initialCELRules = constructCELRules(selectedPreset);
+    setCELRules(initialCELRules);
+  }, [selectedPreset]);
+
+  useEffect(() => {
+    // This effect waits for celRules to update and applies the filter only on the initial render
+    if (isFirstRender.current && celRules.length > 0) {
+      onApplyFilter();
+      isFirstRender.current = false;
+    } else if (!selectedPreset) {
+      isFirstRender.current = false;
+    }
+    // This effect should only run when celRules updates and on initial render
+  }, [celRules]);
+
+  // Adjust the height of the textarea based on its content
+  const adjustTextAreaHeight = () => {
+    const textArea = textAreaRef.current;
+    if (textArea) {
+      textArea.style.height = "auto";
+      textArea.style.height = `${textArea.scrollHeight}px`;
+    }
+  };
+  // Adjust the height whenever the content changes
+  useEffect(() => {
+    adjustTextAreaHeight();
+  }, [celRules]);
+
+  const handleClearInput = () => {
+    setCELRules("");
+    table.resetGlobalFilter();
+    setIsValidCEL(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevents the default action of Enter key in a form
+      // You can now use `target` which is asserted to be an HTMLTextAreaElement
+
+      // check if the CEL is valid by comparing the parsed query with the original CEL
+      // remove spaces so that "a && b" is the same as "a&&b"
+      const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
+      const isValidCEL =
+        celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
+        celRules === "";
+      setIsValidCEL(isValidCEL);
+      if (isValidCEL) {
+        onApplyFilter();
+      }
+    }
+  };
+
+  const onApplyFilter = () => {
+    if (celRules.length === 0) {
+      return table.resetGlobalFilter();
+    }
+
+    return table.setGlobalFilter(celRules);
+  };
+
+  const onGenerateQuery = () => {
+    setCELRules(formatQuery(query, "cel"));
+    setIsGUIOpen(false);
+  };
+
+  const fields: Field[] = table
+    .getAllColumns()
+    .filter(({ getIsPinned }) => getIsPinned() === false)
+    .map(({ id, columnDef }) => ({
+      name: id,
+      label: columnDef.header as string,
+      operators: getOperators(id),
+    }));
+
+  const onImportSQL = () => {
+    setImportSQLOpen(true);
+  };
+
+  const convertSQLToCEL = (sql: string): string | null => {
+    try {
+      const query = parseSQL(sql);
+      const formattedCel = formatQuery(query, "cel");
+      return formatQuery(parseCEL(formattedCel), "cel");
+    } catch (error) {
+      // If the caught error is an instance of Error, use its message
+      if (error instanceof Error) {
+        setSqlError(error.message);
+      } else {
+        setSqlError("An unknown error occurred while parsing SQL.");
+      }
+      return null;
+    }
+  };
+
+  const onImportSQLSubmit = () => {
+    const convertedCEL = convertSQLToCEL(sqlQuery);
+    if (convertedCEL) {
+      setCELRules(convertedCEL); // Set the converted CEL as the new CEL rules
+      setImportSQLOpen(false); // Close the modal
+      setSqlError(null); // Clear any previous errors
+    }
+  };
+
+  const onValueChange = (value: string) => {
+    setCELRules(value);
+    if (value.length === 0) {
+      setIsValidCEL(true);
+    }
+  };
+
+  const validateAndOpenSaveModal = (celExpression: string) => {
+    // Use existing validation logic
+    const celQuery = formatQuery(parseCEL(celExpression), "cel");
+    const isValidCEL =
+      celQuery.replace(/\s+/g, "") === celExpression.replace(/\s+/g, "") ||
+      celExpression === "";
+
+    if (isValidCEL && celExpression.length) {
+      // If CEL is valid and not empty, set the CEL rules for the preset and open the modal
+      setPresetCEL(celExpression);
+      setIsModalOpen(true);
+    } else {
+      // If CEL is invalid or empty, inform the user
+      alert("You can only save a valid CEL expression.");
+      setIsValidCEL(isValidCEL);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-y-2 w-full justify-end">
+      <Modal
+        isOpen={isGUIOpen}
+        onClose={() => setIsGUIOpen(false)}
+        className="w-[50%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
+        title="Query Builder"
+      >
+        <div className="space-y-2 pt-4">
+          <div className="max-h-96 overflow-auto">
+            <QueryBuilder
+              query={query}
+              onQueryChange={(newQuery) => setQuery(newQuery)}
+              fields={fields}
+              addRuleToNewGroups
+              showCombinatorsBetweenRules={false}
+            />
+          </div>
+          <div className="inline-flex justify-end">
+            <Button
+              color="orange"
+              onClick={onGenerateQuery}
+              disabled={!query.rules.length}
+            >
+              Generate Query
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={isImportSQLOpen}
+        onClose={() => {
+          setImportSQLOpen(false);
+          setSqlError(null);
+        }} // Clear the error when closing the modal
+        title="Import from SQL"
+      >
+        <div className="space-y-4 p-4">
+          <Textarea
+            className="min-h-[8em] h-auto" // This sets a minimum height and allows it to auto-adjust
+            placeholder={SQL_QUERY_PLACEHOLDER}
+            onValueChange={setSQLQuery}
+          />
+          {sqlError && (
+            <div className="text-red-500 text-sm mb-2">Error: {sqlError}</div>
+          )}
+          <Button
+            color="orange"
+            onClick={onImportSQLSubmit}
+            disabled={!(sqlQuery.length > 0)}
+          >
+            Convert to CEL
+          </Button>
+        </div>
+      </Modal>
+
+      <div className="flex flex-wrap items-center gap-x-2">
+        <div className="flex items-center space-x-2 relative flex-grow">
+          {/* CEL badge and (i) icon container */}
+          <div className="flex items-center space-x-2">
+            <Badge
+              key={"cel"}
+              size="md"
+              className="cursor-pointer"
+              color="orange"
+              tooltip="Click for documentation"
+              onClick={() =>
+                window.open(
+                  "https://docs.keephq.dev/overview/presets",
+                  "_blank"
+                )
+              }
+            >
+              CEL
+            </Badge>
+          </div>
+
+          {/* Textarea and error message container */}
+          <div className="flex-grow relative">
+            <Textarea
+              ref={textAreaRef}
+              rows={1}
+              className="resize-none overflow-hidden w-full pr-40" // Provide enough padding to the right
+              value={celRules}
+              onValueChange={onValueChange}
+              onKeyDown={handleKeyDown}
+              placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
+              error={!isValidCEL}
+            />
+            {!isValidCEL && (
+              <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+                Invalid Common Expression Logic expression.
+              </div>
+            )}
+            {celRules && (
+              <button
+                onClick={handleClearInput}
+                className="absolute right-36 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
+            <Badge
+              size="md"
+              color="orange"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2" // Position to the far right inside the padding area
+            >
+              Enter to apply
+            </Badge>
+          </div>
+        </div>
+
+        {/* Buttons next to the Textarea */}
+        <Button
+          icon={FiSave}
+          color="orange"
+          size="sm"
+          disabled={!celRules.length}
+          onClick={() => validateAndOpenSaveModal(celRules)}
+          tooltip="Save current filter as a view"
+        ></Button>
+        {selectedPreset &&
+          selectedPreset.name &&
+          selectedPreset?.name !== "deleted" &&
+          selectedPreset?.name !== "feed" &&
+          selectedPreset?.name !== "dismissed" && (
+            <Button
+              icon={TrashIcon}
+              color="orange"
+              title="Delete preset"
+              onClick={async () => await deletePreset(selectedPreset!.id!)}
+            ></Button>
+          )}
+        <Button
+          color="orange"
+          type="button"
+          onClick={onImportSQL}
+          icon={TbDatabaseImport}
+          size="sm"
+          tooltip="Import from SQL"
+        ></Button>
+      </div>
+    </div>
+  );
+};

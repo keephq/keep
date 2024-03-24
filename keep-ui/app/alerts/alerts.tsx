@@ -64,10 +64,6 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  if (selectedPreset === undefined) {
-    router.push("/alerts/feed");
-  }
-
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       {pusherChannel && (
