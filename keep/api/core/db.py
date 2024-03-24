@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pymysql
@@ -493,8 +493,12 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
             .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.started >= datetime.utcnow() - timedelta(days=14))
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .group_by(WorkflowExecution.workflow_id)
+            .limit(1000)
             .cte("latest_execution_cte")
         )
 
