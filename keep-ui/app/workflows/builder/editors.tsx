@@ -344,7 +344,7 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
                     Add Filter
                   </Button>
                 </div>
-                {Object.keys(properties.alert as {}).map((filter) => {
+                {properties.alert && Object.keys(properties.alert as {}).map((filter) => {
                   return (
                     <>
                       <Subtitle className="mt-2.5">{filter}</Subtitle>

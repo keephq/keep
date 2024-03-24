@@ -4,6 +4,7 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
+from typing import Optional
 
 import pydantic
 import requests
@@ -155,7 +156,7 @@ class GrafanaProvider(BaseProvider):
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, verify=False, headers=headers)
         if not response.ok:
-            self.logger.warn(
+            self.logger.warning(
                 "Could not get alerts", extra={"response": response.json()}
             )
             error = response.json()
@@ -174,7 +175,7 @@ class GrafanaProvider(BaseProvider):
 
         if not response.ok:
             response_json = response.json()
-            self.logger.warn(
+            self.logger.warning(
                 "Could not deploy alert", extra={"response": response_json}
             )
             raise Exception(response_json)
@@ -192,7 +193,9 @@ class GrafanaProvider(BaseProvider):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["GrafanaProvider"]
+    ) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:
@@ -487,8 +490,8 @@ class GrafanaProvider(BaseProvider):
                 return alerts
         return []
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> dict:
+    @classmethod
+    def simulate_alert(cls, **kwargs) -> dict:
         import hashlib
         import json
         import random

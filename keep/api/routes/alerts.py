@@ -31,7 +31,6 @@ from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertReques
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
-from keep.api.utils.tenant_utils import update_key_last_used
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -204,7 +203,7 @@ def pull_alerts_from_providers(
                 },
             )
         except Exception as e:
-            logger.warn(
+            logger.warning(
                 f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
@@ -288,7 +287,7 @@ def get_alert_history(
             ).get(fingerprint, [])
             enriched_alerts_dto.extend(pulled_alerts_history)
         except Exception:
-            logger.warn(
+            logger.warning(
                 "Failed to pull alerts history from installed provider",
                 extra={
                     "provider_id": provider_id,
@@ -659,13 +658,6 @@ async def receive_generic_event(
         pusher_client,
     )
 
-    if authenticated_entity.api_key_name:
-        logger.debug("Updating API Key last used")
-        update_key_last_used(
-            session, tenant_id, unique_api_key_id=authenticated_entity.api_key_name
-        )
-        logger.debug("Successfully updated API Key last used")
-
     return alert
 
 
@@ -719,9 +711,17 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
-        # tb: if we want to have fingerprint_fields configured by the user, format_alert
-        #   needs to be called from an initalized provider instance instead of a static method.
-        formatted_events = provider_class.format_alert(event)
+
+        # if we have provider id, let's try to init the provider class with it
+        provider_instance = None
+        if provider_id:
+            try:
+                provider_instance = ProvidersFactory.get_installed_provider(
+                    tenant_id, provider_id, provider_type
+                )
+            except Exception as e:
+                logger.warning(f"Failed to get provider instance due to {str(e)}")
+        formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
             formatted_events = [formatted_events]

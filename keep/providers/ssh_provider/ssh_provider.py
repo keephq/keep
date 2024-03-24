@@ -1,6 +1,7 @@
 """
 SshProvider is a class that provides a way to execute SSH commands and get the output.
 """
+
 import dataclasses
 import io
 
@@ -38,6 +39,9 @@ class SshProviderAuthConfig:
             "required": False,
             "description": "SSH private key",
             "sensitive": True,
+            "type": "file",
+            "name": "pkey",
+            "file_type": "*",
         },
     )
     password: str = dataclasses.field(
@@ -92,7 +96,7 @@ class SshProvider(BaseProvider):
             key = RSAKey.from_private_key(
                 private_key_file, self.config.authentication.get("pkey_passphrase")
             )
-            ssh_client.connect(host, port, user, pk=key)
+            ssh_client.connect(host, port, user, pkey=key)
         else:
             # Connect using password
             ssh_client.connect(
@@ -147,20 +151,19 @@ if __name__ == "__main__":
     # Load environment variables
     import os
 
-    user = os.environ.get("SSH_USERNAME")
+    user = os.environ.get("SSH_USERNAME") or "root"
     password = os.environ.get("SSH_PASSWORD")
-    host = os.environ.get("SSH_HOST")
-
+    host = os.environ.get("SSH_HOST") or "1.1.1.1"
+    pkey = os.environ.get("SSH_PRIVATE_KEY")
     config = {
-        "id": "ssh-demo",
         "authentication": {
             "user": user,
-            "password": password,
+            "pkey": pkey,
             "host": host,
         },
     }
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id="ssh", provider_type="ssh", provider_config=config
     )
-    result = provider.query("df -h")
+    result = provider.query(command="df -h")
     print(result)

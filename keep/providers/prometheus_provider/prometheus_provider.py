@@ -5,6 +5,7 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 import dataclasses
 import datetime
 import os
+from typing import Optional
 
 import pydantic
 import requests
@@ -132,7 +133,7 @@ receivers:
         if not response.ok:
             return []
         alerts_data = response.json().get("data", {})
-        alert_dtos = self.format_alert(alerts_data)
+        alert_dtos = self._format_alert(alerts_data)
         return alert_dtos
 
     def get_status(event: dict) -> AlertStatus:
@@ -141,7 +142,9 @@ receivers:
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: Optional["PrometheusProvider"]
+    ) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
         alerts = event.get("alerts", [event])
@@ -197,8 +200,8 @@ receivers:
         """
         raise NotImplementedError("Prometheus provider does not support notify()")
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> dict:
+    @classmethod
+    def simulate_alert(cls, **kwargs) -> dict:
         """Mock a Prometheus alert."""
         import hashlib
         import json

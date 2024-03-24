@@ -10,3 +10,4 @@ class WebhookSettings(BaseModel):
 class ProviderWebhookSettings(BaseModel):
     webhookDescription: str | None = None
     webhookTemplate: str
+    webhookMarkdown: str | None = None

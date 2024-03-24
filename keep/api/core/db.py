@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pymysql
@@ -14,6 +14,7 @@ from sqlalchemy import and_, desc, func, null, select, text, update
 from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, SQLModel, create_engine, select
 
 # This import is required to create the tables
@@ -105,6 +106,7 @@ elif db_connection_string == "impersonate":
     )
 elif db_connection_string:
     try:
+        logger.info(f"Creating a connection pool with size {pool_size}")
         engine = create_engine(db_connection_string, pool_size=pool_size)
     # SQLite does not support pool_size
     except TypeError:
@@ -121,13 +123,18 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
-    SQLModel.metadata.create_all(engine)
-    # migration add column
+    try:
+        if not database_exists(engine.url):
+            logger.info("Creating the database")
+            create_database(engine.url)
+            logger.info("Database created")
+    # On Cloud Run, it fails to check if the database exists
+    except Exception:
+        logger.warning("Failed to create the database or detect if it exists.")
+        pass
 
-    # todo: remove this
-
-    # Execute the ALTER TABLE command
-    with engine.connect() as connection:
+    # migrate the workflowtoexecution table
+    with Session(engine) as session:
         try:
             if engine.dialect.name == "mssql":
                 connection.execute(
@@ -147,9 +154,40 @@ def create_db_and_tables():
                 return
             logger.exception("Failed to add column alert_hash to alert table")
             raise
+            
+            logger.info("Migrating WorkflowToAlertExecution table")
+            # get the foreign key constraint name
+            results = session.exec(
+                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
+            )
+            # now remove it
+            for row in results:
+                constraint_name = row["CONSTRAINT_NAME"]
+                if constraint_name.startswith("workflowtoalertexecution"):
+                    logger.info(f"Dropping constraint {constraint_name}")
+                    session.exec(
+                        f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
+                    )
+                    logger.info(f"Dropped constraint {constraint_name}")
+            # also add grouping_criteria to the workflow table
+            logger.info("Migrating Rule table")
+            try:
+                session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
+            logger.info("Migrated Rule table")
+            session.commit()
+            logger.info("Migrated succesfully")
         except Exception:
-            logger.exception("Failed to add column alert_hash to alert table")
-            raise
+            logger.exception("Failed to migrate table")
+            pass
+    SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Session:
@@ -177,18 +215,39 @@ def try_create_single_tenant(tenant_id: str) -> None:
         pass
     with Session(engine) as session:
         try:
-            # Do everything related with single tenant creation in here
-            session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-            default_password = hashlib.sha256(
-                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-            ).hexdigest()
-            default_user = User(
-                username=default_username,
-                password_hash=default_password,
-                role=AdminRole.get_name(),
-            )
-            session.add(default_user)
+            # check if the tenant exist:
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant")
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # now let's create the default user
+
+            # check if at least one user exists:
+            user = session.exec(select(User)).first()
+            # if no users exist, let's create the default user
+            if not user:
+                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                default_user = User(
+                    username=default_username,
+                    password_hash=default_password,
+                    role=AdminRole.get_name(),
+                )
+                session.add(default_user)
+            # else, if the user want to force the refresh of the default user password
+            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
+                # update the password of the default user
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                user.password_hash = default_password
+            # commit the changes
             session.commit()
         except IntegrityError:
             # Tenant already exists
@@ -207,6 +266,21 @@ def try_create_single_tenant(tenant_id: str) -> None:
             session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
             session.commit()
             logger.info("Migrated TenantApiKey table")
+        except Exception:
+            pass
+
+    # migrating presets table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating Preset table")
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
+            )
+            session.exec(
+                "ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';"
+            )
+            session.commit()
+            logger.info("Migrated Preset table")
         except Exception:
             pass
 
@@ -437,7 +511,13 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 WorkflowExecution.workflow_id,
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .group_by(WorkflowExecution.workflow_id)
+            .limit(1000)
             .cte("latest_execution_cte")
         )
 
@@ -544,7 +624,10 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         ).first()
 
         workflow_execution.status = status
-        workflow_execution.error = error
+        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
+        #   we need to fix it in the future, create a migration that increases the size of the error field
+        #   and then we can remove the [:255] from here
+        workflow_execution.error = error[:255] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
@@ -733,20 +816,22 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    if session.bind.dialect.name == "mssql":
+                    if session.bind.dialect.name in ["mysql", "postgresql", "mssql"]:
                         query = query.filter(
-                            func.JSON_VALUE(
+                            func.json_extract(
                                 AlertEnrichment.enrichments, f"$.{filter_key}"
                             )
                             != null()
                         )
-                    else:
+                    elif session.bind.dialect.name == "sqlite":
                         query = query.filter(
-                            func.json_type(AlertEnrichment.enrichments, filter_path)
+                            func.json_type(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
                             != null()
                         )
                 elif isinstance(filter_value, (str, int)):
-                    if session.bind.dialect.name == "mysql":
+                    if session.bind.dialect.name in ["mysql", "postgresql"]:
                         query = query.filter(
                             func.json_unquote(
                                 func.json_extract(
@@ -775,6 +860,8 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
+
+        query = query.order_by(Alert.timestamp.desc())
 
         # Execute the query
         alerts = query.all()
@@ -1131,9 +1218,17 @@ def assign_alert_to_group(
                 .where(Alert.fingerprint == fingerprint)
                 .order_by(Alert.timestamp.desc())
             ).first()
-            group_alert.event["status"] = AlertStatus.RESOLVED.value
-            # mark the event as modified so it will be updated in the database
-            flag_modified(group_alert, "event")
+            # this is kinda wtf but sometimes we deleted manually
+            #   these from the DB since it was too big
+            if not group_alert:
+                logger.warning(
+                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
+                )
+            else:
+                group_alert.event["status"] = AlertStatus.RESOLVED.value
+                # mark the event as modified so it will be updated in the database
+                flag_modified(group_alert, "event")
+            # commit the changes
             session.commit()
             logger.info(f"Enriched group {group.id} with group_expired flag")
 
@@ -1194,7 +1289,7 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name == "mysql":
+        if session.bind.dialect.name in ["mysql", "postgresql"]:
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
@@ -1281,11 +1376,52 @@ def get_all_filters(tenant_id):
     return filters
 
 
-def get_alert_by_hash(tenant_id, alert_hash):
+def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+    # get the last alert for a given fingerprint
+    # to check deduplication
     with Session(engine) as session:
-        alert = session.exec(
-            select(Alert)
+        alert_hash = session.exec(
+            select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
-            .where(Alert.alert_hash == alert_hash)
+            .where(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
         ).first()
-    return alert
+    return alert_hash
+
+
+def update_key_last_used(
+    tenant_id: str,
+    reference_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        reference_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    with Session(engine) as session:
+        # Get API Key from database
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.reference_id == reference_id)
+            .where(TenantApiKey.tenant_id == tenant_id)
+        )
+
+        tenant_api_key_entry = session.exec(statement).first()
+
+        # Update last used
+        if not tenant_api_key_entry:
+            # shouldn't happen but somehow happened to specific tenant so logging it
+            logger.error(
+                "API key not found",
+                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+            )
+            return
+        tenant_api_key_entry.last_used = datetime.utcnow()
+        session.add(tenant_api_key_entry)
+        session.commit()

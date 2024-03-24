@@ -21,7 +21,8 @@ export const LinkWithIcon = ({
 }: StyledLinkProps) => {
   const pathname = usePathname();
 
-  const isActive = pathname === restOfLinkProps.href;
+  const isActive =
+    decodeURIComponent(pathname?.toLowerCase() || "") === restOfLinkProps.href;
 
   return (
     <Link

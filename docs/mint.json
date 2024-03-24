@@ -30,6 +30,7 @@
         "overview/keyconcepts",
         "overview/usecases",
         "overview/ruleengine",
+        "overview/presets",
         {
           "group": "Enrichments",
           "pages": ["overview/enrichment/mapping"]
@@ -53,7 +54,8 @@
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",
-        "deployment/openshift"
+        "deployment/openshift",
+        "deployment/ecs"
       ]
     },
     {
@@ -79,6 +81,7 @@
           "pages": [
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
+            "providers/documentation/azuremonitoring-provider",
             "providers/documentation/cloudwatch-logs",
             "providers/documentation/cloudwatch-metrics",
             "providers/documentation/console-provider",
@@ -87,6 +90,7 @@
             "providers/documentation/kibana-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
+            "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana-oncall-provider",
             "providers/documentation/http-provider",
@@ -253,6 +257,14 @@
                   "group": "keep workflow runs",
                   "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
                 }
+              ]
+            },
+            {
+              "group": "keep mappings",
+              "pages": [
+                "cli/commands/mappings-list",
+                "cli/commands/mappings-create",
+                "cli/commands/mappings-delete"
               ]
             },
             "cli/commands/cli-api",

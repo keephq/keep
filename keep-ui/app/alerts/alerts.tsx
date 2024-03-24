@@ -16,10 +16,10 @@ import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
 
 const defaultPresets: Preset[] = [
-  { name: "feed", options: [] },
-  { name: "deleted", options: [] },
-  { name: "dismissed", options: []},
-  { name: "groups", options: [] },
+  { name: "feed", options: [], is_private: false },
+  { name: "deleted", options: [], is_private: false },
+  { name: "dismissed", options: [], is_private: false },
+  { name: "groups", options: [], is_private: false },
 ];
 
 type AlertsProps = {
@@ -64,10 +64,6 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  if (selectedPreset === undefined) {
-    router.push("/alerts/feed");
-  }
-
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       {pusherChannel && (
@@ -106,8 +102,8 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => setRunWorkflowModalAlert(null)}
       />
       <AlertDismissModal
-          alert={dismissModalAlert}
-          handleClose={() => setDismissModalAlert(null)}
+        alert={dismissModalAlert}
+        handleClose={() => setDismissModalAlert(null)}
       />
     </Card>
   );

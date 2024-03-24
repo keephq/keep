@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -25,6 +26,7 @@ from keep.api.core.db import (
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.db import get_workflow_id_by_name
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
@@ -181,8 +183,23 @@ def run_workflow(
 
     # Finally, run it
     try:
+        # if its event that was triggered by the UI with the Modal
+        if "test-workflow" in body.get("fingerprint", "") or not body:
+            # some random
+            body["id"] = body.get("fingerprint", "manual-run")
+            body["name"] = body.get("fingerprint", "manual-run")
+            body["lastReceived"] = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
+        try:
+            alert = AlertDto(**body)
+        except TypeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid alert format",
+            )
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, body
+            workflow_id, tenant_id, created_by, alert
         )
     except Exception as e:
         logger.exception(
@@ -222,6 +239,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
             workflow_data = workflow_data.pop("workflow")
 
     except yaml.YAMLError:
+        logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
 
@@ -298,6 +316,7 @@ async def update_workflow_by_id(
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
     workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
     session.refresh(workflow_from_db)

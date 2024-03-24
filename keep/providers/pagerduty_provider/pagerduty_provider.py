@@ -240,12 +240,14 @@ class PagerdutyProvider(BaseProvider):
             raise Exception("Could not get alerts")
         incidents = request.json().get("incidents", [])
         incidents = [
-            self.format_alert({"event": {"data": incident}}) for incident in incidents
+            self._format_alert({"event": {"data": incident}}) for incident in incidents
         ]
         return incidents
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: typing.Optional["PagerdutyProvider"]
+    ) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url"))

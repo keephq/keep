@@ -13,6 +13,11 @@ def get_nested_attribute(obj, attr_path: str):
     """
     attributes = attr_path.split(".")
     for attr in attributes:
+        # @@ is used as a placeholder for . in cases where the attribute name has a .
+        # For example, we have {"results": {"some.attribute": "value"}}
+        # We can access it by using "results.some@@attribute" so we won't think its a nested attribute
+        if attr is not None and "@@" in attr:
+            attr = attr.replace("@@", ".")
         obj = getattr(obj, attr, obj.get(attr) if isinstance(obj, dict) else None)
         if obj is None:
             return None
@@ -37,6 +42,7 @@ class EnrichmentsBl:
             self.db_session.query(MappingRule)
             .filter(MappingRule.tenant_id == self.tenant_id)
             .filter(MappingRule.disabled == False)
+            .order_by(MappingRule.priority.desc())
             .all()
         )
 
@@ -59,6 +65,7 @@ class EnrichmentsBl:
             for row in rule.rows:
                 if all(
                     get_nested_attribute(alert, attribute) == row.get(attribute)
+                    or row.get(attribute) == "*"  # Wildcard
                     for attribute in rule.matchers
                 ):
                     self.logger.info(
@@ -73,6 +80,12 @@ class EnrichmentsBl:
                         for key, value in row.items()
                         if key not in rule.matchers
                     }
+
+                    # Enrich the alert with the matched row
+                    for key, value in enrichments.items():
+                        setattr(alert, key, value)
+
+                    # Save the enrichments to the database
                     enrich_alert(
                         self.tenant_id, alert.fingerprint, enrichments, self.db_session
                     )

@@ -7,7 +7,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Props {
   selectedRowIds: string[];
@@ -20,7 +20,6 @@ export default function AlertActions({
   alerts,
   clearRowSelection,
 }: Props) {
-  const pathname = usePathname();
   const router = useRouter();
   const { useAllAlerts } = useAlerts();
   const { mutate } = useAllAlerts({ revalidateOnFocus: false });
@@ -96,9 +95,17 @@ export default function AlertActions({
       const distinctAlertNames = Array.from(
         new Set(selectedAlerts.map((alert) => alert.name))
       );
-      const options = distinctAlertNames.map((name) => {
-        return { value: `name=${name}`, label: `name=${name}` };
-      });
+      const formattedCel = distinctAlertNames.reduce(
+        (accumulator, currentValue, currentIndex) => {
+          return (
+            accumulator +
+            (currentIndex > 0 ? " || " : "") +
+            `name == "${currentValue}"`
+          );
+        },
+        ""
+      );
+      const options = [{ value: formattedCel, label: "CEL" }];
       const session = await getSession();
       const apiUrl = getApiURL();
       const response = await fetch(`${apiUrl}/preset`, {

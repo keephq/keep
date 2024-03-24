@@ -6,10 +6,13 @@ import { Subtitle, Title, Text, Icon } from "@tremor/react";
 import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
 import Image from "next/image";
 import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
+import Markdown from "react-markdown";
+import remarkGfm from 'remark-gfm'
 
 interface WebhookSettings {
   webhookDescription: string;
   webhookTemplate: string;
+  webhookMarkdown: string;
 }
 
 interface Props {
@@ -43,11 +46,12 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
   const isMultiline = data!.webhookDescription.includes('\n');
   const descriptionLines = data!.webhookDescription.split('\n');
   const settingsNotEmpty = settings.text.trim().length > 0;
+  const webhookMarkdown = data!.webhookMarkdown;
   return (
     <div className="my-2.5">
       <Title>
         Push alerts from{" "}
-        {provider.type.charAt(0).toLocaleUpperCase() + provider.type.slice(1)}
+        {provider.type.charAt(0).toLocaleUpperCase() + provider.display_name.slice(1)}
       </Title>
       <div className="flex">
         <Image
@@ -67,7 +71,7 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
         />
       </div>
       <Subtitle>
-        Seamlessly push alerts without actively connecting {provider.type}
+        Seamlessly push alerts without actively connecting {provider.display_name}
       </Subtitle>
       {isMultiline ? (
       descriptionLines.map((line, index) => (
@@ -79,6 +83,13 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
       <Text className="my-2.5">{data!.webhookDescription}</Text>
     )}
      {settingsNotEmpty && <CopyBlock {...settings} />}
+     {webhookMarkdown && (
+      <div className="prose whitespace-nowrap">
+        <Markdown remarkPlugins={[remarkGfm]}>
+          {webhookMarkdown}
+        </Markdown>
+      </div>
+     )}
     </div>
   );
 };

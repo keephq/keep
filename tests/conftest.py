@@ -1,6 +1,6 @@
 import os
 import random
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
@@ -185,3 +185,24 @@ def db_session(request, mysql_container):
     SQLModel.metadata.drop_all(mock_engine)
     # Clean up after the test
     session.close()
+
+
+@pytest.fixture
+def mocked_context_manager():
+    context_manager = Mock(spec=ContextManager)
+    # Simulate contexts as needed for each test case
+    context_manager.steps_context = {}
+    context_manager.providers_context = {}
+    context_manager.event_context = {}
+    context_manager.click_context = {}
+    context_manager.foreach_context = {"value": None}
+    context_manager.dependencies = set()
+    context_manager.get_full_context.return_value = {
+        "steps": {},
+        "providers": {},
+        "event": {},
+        "alert": {},
+        "foreach": {"value": None},
+        "env": {},
+    }
+    return context_manager

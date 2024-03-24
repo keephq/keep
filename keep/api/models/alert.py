@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import logging
 from enum import Enum
 from typing import Any, Dict
@@ -73,10 +74,24 @@ class AlertDto(BaseModel):
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
 
+    def __str__(self) -> str:
+        # Convert the model instance to a dictionary
+        model_dict = self.dict()
+        return json.dumps(model_dict, indent=4, default=str)
+
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
+        # if its none, use the name
         if fingerprint is None:
-            return hashlib.sha256(values.get("name").encode()).hexdigest()
+            fingerprint_payload = values.get("name")
+            # if the alert name is None, than use the entire payload
+            if not fingerprint_payload:
+                logger.warning("No name to alert, using the entire payload")
+                fingerprint_payload = json.dumps(values)
+            fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
+        # take only the first 255 characters
+        else:
+            fingerprint = fingerprint[:255]
         return fingerprint
 
     @validator("deleted", pre=True, always=True)
@@ -85,6 +100,12 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("lastReceived", pre=True, always=True)
+    def validate_last_received(cls, last_received, values):
+        if not last_received:
+            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return last_received
 
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):
@@ -99,7 +120,7 @@ class AlertDto(BaseModel):
         # else, validate dismissedUntil
         dismiss_until = values.get("dismissUntil")
         # if there's no dismissUntil, return just return dismissed
-        if not dismiss_until:
+        if not dismiss_until or dismiss_until == "forever":
             return dismissed
 
         # if there's dismissUntil, validate it

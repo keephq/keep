@@ -15,7 +15,8 @@ export default function Loading({
       }`}
     >
       <Image
-        src="/keep_loading_new.gif"
+        className="animate-bounce"
+        src="/keep.svg"
         alt="loading"
         width={200}
         height={200}

@@ -5,9 +5,7 @@ import uuid
 from typing import Callable, Optional
 
 import sqlalchemy
-import yaml
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from fastapi import UploadFile as fastapiuploadfile
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
@@ -418,7 +416,6 @@ def validate_provider_scopes(
 async def update_provider(
     provider_id: str,
     request: Request,
-    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["update:providers"])
     ),
@@ -432,7 +429,12 @@ async def update_provider(
             "provider_id": provider_id,
         },
     )
-    provider_info = await __get_provider_raw_data(request, file)
+    try:
+        provider_info = await request.json()
+    except Exception:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
@@ -478,22 +480,9 @@ async def update_provider(
     }
 
 
-async def __get_provider_raw_data(request: Request, file: fastapiuploadfile) -> dict:
-    try:
-        if file:
-            provider_raw_data = await file.read()
-        else:
-            provider_raw_data = await request.body()
-        provider_data = yaml.safe_load(provider_raw_data)
-    except yaml.YAMLError:
-        raise HTTPException(status_code=400, detail="Invalid YAML format")
-    return provider_data
-
-
 @router.post("/install")
 async def install_provider(
     request: Request,
-    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:providers"])
     ),
@@ -501,7 +490,12 @@ async def install_provider(
 ):
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
-    provider_info = await __get_provider_raw_data(request, file)
+    try:
+        provider_info = await request.json()
+    except Exception:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
@@ -634,6 +628,8 @@ async def install_provider_oauth2(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
+        validated_scopes = validate_scopes(provider)
+
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
@@ -649,6 +645,7 @@ async def install_provider_oauth2(
             installed_by=installed_by,
             installation_time=time.time(),
             configuration_key=secret_name,
+            validatedScopes=validated_scopes,
         )
         session.add(provider)
         session.commit()
@@ -788,6 +785,15 @@ def get_webhook_settings(
         "https://", f"https://keep:{webhook_api_key}@"
     )
 
+    try:
+        webhookMarkdown = provider_class.webhook_markdown.format(
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
+        )
+    except AttributeError:
+        webhookMarkdown = None
+
     logger.info("Got webhook settings", extra={"provider_type": provider_type})
     return ProviderWebhookSettings(
         webhookDescription=provider_class.webhook_description.format(
@@ -800,4 +806,5 @@ def get_webhook_settings(
             api_key=webhook_api_key,
             keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
         ),
+        webhookMarkdown=webhookMarkdown,
     )

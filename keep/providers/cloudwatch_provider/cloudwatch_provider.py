@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import time
+from typing import Optional
 from urllib.parse import urlparse
 
 import boto3
@@ -93,6 +94,13 @@ class CloudwatchProvider(BaseProvider):
             alias="Read Query results",
         ),
         ProviderScope(
+            name="logs:DescribeQueries",
+            description="Part of CloudWatchLogsReadOnlyAccess role. Required to describe the results of CloudWatch Logs Insights queries.",
+            documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeQueries.html",
+            mandatory=False,
+            alias="Describe Query results",
+        ),
+        ProviderScope(
             name="logs:StartQuery",
             description="Part of CloudWatchLogsReadOnlyAccess role. Required to start CloudWatch Logs Insights queries.",
             documentation_url="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartQuery.html",
@@ -174,7 +182,17 @@ class CloudwatchProvider(BaseProvider):
                 for res in iam_resp.get("EvaluationResults")
             }
             scopes["iam:SimulatePrincipalPolicy"] = True
-            return scopes
+            if all(scopes.values()):
+                self.logger.info(
+                    "All AWS IAM scopes are granted!", extra={"scopes": scopes}
+                )
+                return scopes
+            # if not all the scopes are granted, we need to test them one by one
+            else:
+                self.logger.warning(
+                    "Some of the AWS IAM scopes are not granted, testing them one by one...",
+                    extra={"scopes": scopes},
+                )
         # otherwise, we need to test them one by one
         except Exception:
             self.logger.info("Error validating AWS IAM scopes")
@@ -239,7 +257,7 @@ class CloudwatchProvider(BaseProvider):
         # 4. validate start query
         logs_client = self.__generate_client("logs")
         try:
-            logs_client.start_query(
+            query = logs_client.start_query(
                 logGroupName="keepTest",
                 queryString="keepTest",
                 startTime=int(
@@ -258,16 +276,24 @@ class CloudwatchProvider(BaseProvider):
             else:
                 self.logger.info("Error validating AWS logs:StartQuery scope")
                 scopes["logs:StartQuery"] = str(e)
+        if query:
+            try:
+                query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            except Exception:
+                self.logger.exception("Error validating AWS logs:DescribeQueries scope")
+                scopes[
+                    "logs:GetQueryResults",
+                    "logs:DescribeQueries"
+                ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+            try:
+                logs_client.get_query_results(queryId=query_id)
+                scopes["logs:StartQuery"] = True
+                scopes["logs:DescribeQueries"] = True
+            except Exception as e:
+                self.logger.exception("Error validating AWS logs:StartQuery scope")
+                scopes["logs:StartQuery"] = str(e)
 
         # 5. validate get query results
-        try:
-            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
-        except Exception:
-            self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-            scopes[
-                "logs:GetQueryResults"
-            ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-
         if query_id:
             try:
                 logs_client.get_query_results(queryId=query_id)
@@ -275,6 +301,7 @@ class CloudwatchProvider(BaseProvider):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
+        
         # Finally
         return scopes
 
@@ -377,7 +404,7 @@ class CloudwatchProvider(BaseProvider):
             actions = alarm.get("AlarmActions", [])
             # extract only SNS actions
             topics = [action for action in actions if action.startswith("arn:aws:sns")]
-            # if we got explicitly SNS topic, add is as an action
+            # if we got explicitly SNS topic, add it as an action
             if self.authentication_config.cloudwatch_sns_topic:
                 self.logger.warning(
                     "Cannot hook alarm without SNS topic, trying to add SNS action..."
@@ -391,22 +418,32 @@ class CloudwatchProvider(BaseProvider):
                 else:
                     sns_topic = self.authentication_config.cloudwatch_sns_topic
                 actions.append(sns_topic)
-                try:
-                    alarm["AlarmActions"] = actions
-                    # filter out irrelevant files
-                    filtered_alarm = {
-                        k: v
-                        for k, v in alarm.items()
-                        if k in CloudwatchProvider.VALID_ALARM_KEYS
-                    }
-                    cloudwatch_client.put_metric_alarm(**filtered_alarm)
-                    # now it should contain the SNS topic
-                    topics = [sns_topic]
-                except Exception:
-                    self.logger.exception(
-                        "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                # if the alarm already has the SNS topic as action, we don't need to add it again
+                if sns_topic in actions:
+                    self.logger.info(
+                        "SNS action already added to alarm %s, skipping...",
+                        alarm.get("AlarmName"),
                     )
-                    continue
+                else:
+                    self.logger.info(
+                        "Adding SNS action to alarm %s...", alarm.get("AlarmName")
+                    )
+                    try:
+                        alarm["AlarmActions"] = actions
+                        # filter out irrelevant files
+                        filtered_alarm = {
+                            k: v
+                            for k, v in alarm.items()
+                            if k in CloudwatchProvider.VALID_ALARM_KEYS
+                        }
+                        cloudwatch_client.put_metric_alarm(**filtered_alarm)
+                        # now it should contain the SNS topic
+                        topics = [sns_topic]
+                    except Exception:
+                        self.logger.exception(
+                            "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                        )
+                        continue
                 self.logger.info(
                     "SNS action added to alarm %s!", alarm.get("AlarmName")
                 )
@@ -456,7 +493,9 @@ class CloudwatchProvider(BaseProvider):
         self.logger.info("Webhook setup completed!")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["CloudwatchProvider"]
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
         if event.get("Type") == "SubscriptionConfirmation":

@@ -385,7 +385,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       )}
       <Card>
         <div className="flex w-full justify-between items-center h-14">
-          <Title>{workflow.description}</Title>
+          <Title className="truncate max-w-64 text-left text-lightBlack">{workflow.name}</Title>
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -396,6 +396,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           })}
         </div>
 
+        <div className="flex items-center justify-between h-10">
+          <Text className="truncate max-w-sm text-left text-lightBlack">{workflow.description}</Text>
+        </div>
+
         <List>
           <ListItem>
             <span>Created By</span>
@@ -404,6 +408,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <ListItem>
             <span>Created At</span>
             <span className="text-right">{workflow.creation_time}</span>
+          </ListItem>
+          <ListItem>
+            <span>Last Updated</span>
+            <span className="text-right">{workflow.last_updated}</span>
           </ListItem>
           <ListItem>
             <span>Last Execution</span>

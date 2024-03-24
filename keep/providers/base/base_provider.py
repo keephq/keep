@@ -1,6 +1,7 @@
 """
 Base class for all providers.
 """
+
 import abc
 import copy
 import datetime
@@ -43,6 +44,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         config: ProviderConfig,
         webhooke_template: Optional[str] = None,
         webhook_description: Optional[str] = None,
+        webhook_markdown: Optional[str] = None,
         provider_description: Optional[str] = None,
     ):
         """
@@ -57,6 +59,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.config = config
         self.webhooke_template = webhooke_template
         self.webhook_description = webhook_description
+        self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
         self.logger = context_manager.get_logger()
@@ -228,14 +231,31 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: Optional["BaseProvider"]
+    ) -> AlertDto | list[AlertDto]:
+        """
+        Format an incoming alert.
+
+        Args:
+            event (dict): The raw provider event payload.
+            provider_instance (Optional[&quot;BaseProvider&quot;]): The tenant provider instance if it was successfully loaded.
+
+        Raises:
+            NotImplementedError: For providers who does not implement this method.
+
+        Returns:
+            AlertDto | list[AlertDto]: The formatted alert(s).
+        """
         raise NotImplementedError("format_alert() method not implemented")
 
     @classmethod
-    def format_alert(cls, event: dict) -> AlertDto | list[AlertDto]:
+    def format_alert(
+        cls, event: dict, provider_instance: Optional["BaseProvider"]
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event)
+        formatted_alert = cls._format_alert(event, provider_instance)
         logger.debug("Alert formatted")
         return formatted_alert
 
@@ -524,15 +544,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 f"Failed to push alert to {self.provider_id}: {response.content}"
             )
 
-    @staticmethod
-    def simulate_alert(**kwargs) -> AlertDto:
-        """
-        Simulate an alert.
+    @classmethod
+    def simulate_alert(cls) -> dict:
+        # can be overridden by the provider
+        import importlib
+        import random
 
-        Args:
-            **kwargs (dict): The provider context (with statement)
+        module_path = ".".join(cls.__module__.split(".")[0:-1]) + ".alerts_mock"
+        module = importlib.import_module(module_path)
 
-        Returns:
-            AlertDto: The simulated alert.
-        """
-        raise NotImplementedError("simulate_alert() method not implemented")
+        ALERTS = getattr(module, "ALERTS", None)
+
+        alert_type = random.choice(list(ALERTS.keys()))
+        alert_data = ALERTS[alert_type]
+
+        # Start with the base payload
+        simulated_alert = alert_data["payload"].copy()
+
+        return simulated_alert
