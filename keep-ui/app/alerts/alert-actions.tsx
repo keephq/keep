@@ -95,9 +95,17 @@ export default function AlertActions({
       const distinctAlertNames = Array.from(
         new Set(selectedAlerts.map((alert) => alert.name))
       );
-      const options = distinctAlertNames.map((name) => {
-        return { value: `name=${name}`, label: `name=${name}` };
-      });
+      const formattedCel = distinctAlertNames.reduce(
+        (accumulator, currentValue, currentIndex) => {
+          return (
+            accumulator +
+            (currentIndex > 0 ? " || " : "") +
+            `name == "${currentValue}"`
+          );
+        },
+        ""
+      );
+      const options = [{ value: formattedCel, label: "CEL" }];
       const session = await getSession();
       const apiUrl = getApiURL();
       const response = await fetch(`${apiUrl}/preset`, {
