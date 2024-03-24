@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
-import { Button, Subtitle, TextInput } from "@tremor/react";
+import { Button, TextInput } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";

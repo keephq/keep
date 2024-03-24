@@ -1,4 +1,4 @@
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "components/ui/Modal";
 import { Button, Textarea, Badge } from "@tremor/react";
 import QueryBuilder, {
@@ -13,10 +13,9 @@ import QueryBuilder, {
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import { AlertDto, Preset } from "./models";
-import { XMarkIcon, InformationCircleIcon, CheckIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
-import { usePresets } from "utils/hooks/usePresets";
 
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
