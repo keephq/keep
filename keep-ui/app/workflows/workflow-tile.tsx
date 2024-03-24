@@ -385,7 +385,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       )}
       <Card>
         <div className="flex w-full justify-between items-center h-14">
-          <Title>{workflow.description}</Title>
+          <Title className="truncate max-w-64 text-left text-lightBlack">{workflow.name}</Title>
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -394,6 +394,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             workflow,
           })}
+        </div>
+
+        <div className="flex items-center justify-between h-10">
+          <Text className="truncate max-w-sm text-left text-lightBlack">{workflow.description}</Text>
         </div>
 
         <List>
