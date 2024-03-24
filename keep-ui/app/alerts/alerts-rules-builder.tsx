@@ -12,7 +12,7 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import { AlertDto, Preset } from "./models";
+import { AlertDto, Preset, severityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
@@ -22,9 +22,55 @@ const getAllMatches = (pattern: RegExp, string: string) =>
   // make sure string is a String, and make sure pattern has the /g flag
   String(string).match(new RegExp(pattern, "g"));
 
-const sanitizeCELIntoJS = (celExpression: string) => {
-  // "contains" is not a valid JS function
-  return celExpression.replace("contains", "includes");
+const sanitizeCELIntoJS = (celExpression: string): string => {
+  // First, replace "contains" with "includes"
+  let jsExpression = celExpression.replace(/contains/g, "includes");
+  // Replace severity comparisons with mapped values
+  jsExpression = jsExpression.replace(
+    /severity\s*([<>=]+)\s*(\d)/g,
+    (match, operator, number) => {
+      const severityValue = severityMapping[number];
+      if (!severityValue) {
+        return match; // If no mapping found, return the original match
+      }
+
+      // For equality, directly replace with the severity level
+      if (operator === "==") {
+        return `severity == "${severityValue}"`;
+      }
+
+      // For greater than or less than, include multiple levels based on the mapping
+      const levels = Object.entries(severityMapping);
+      let replacement = "";
+      if (operator === ">") {
+        const filteredLevels = levels
+          .filter(([key]) => key > number)
+          .map(([, value]) => `severity == "${value}"`);
+        replacement = filteredLevels.join(" || ");
+      } else if (operator === "<") {
+        const filteredLevels = levels
+          .filter(([key]) => key < number)
+          .map(([, value]) => `severity == "${value}"`);
+        replacement = filteredLevels.join(" || ");
+      }
+
+      return `(${replacement})`;
+    }
+  );
+
+  // Convert 'in' syntax to '.includes()'
+  jsExpression = jsExpression.replace(
+    /(\w+)\s+in\s+\[([^\]]+)\]/g,
+    (match, variable, list) => {
+      // Split the list by commas, trim spaces, and wrap items in quotes if not already done
+      const items = list
+        .split(",")
+        .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
+      return `[${items.join(", ")}].includes(${variable})`;
+    }
+  );
+
+  return jsExpression;
 };
 
 // this pattern is far from robust
@@ -36,8 +82,8 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
       return new Function();
     }
 
-    const variables = getAllMatches(variablePattern, celExpression) ?? [];
     const jsExpression = sanitizeCELIntoJS(celExpression);
+    const variables = getAllMatches(variablePattern, jsExpression) ?? [];
 
     const func = new Function(...variables, `return (${jsExpression})`);
 
@@ -73,6 +119,10 @@ type AlertsRulesBuilderProps = {
   setPresetCEL: React.Dispatch<React.SetStateAction<string>>;
 };
 
+const SQL_QUERY_PLACEHOLDER = `SELECT *
+FROM alerts
+WHERE severity = 'critical' and status = 'firing'`;
+
 export const AlertsRulesBuilder = ({
   table,
   selectedPreset,
@@ -83,22 +133,19 @@ export const AlertsRulesBuilder = ({
 }: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
-  const [sqlQuery, setSQLQuery] = useState(`SELECT *
-FROM alerts
-WHERE severity = 'critical' and status = 'firing'`);
+  const [sqlQuery, setSQLQuery] = useState("");
   const [celRules, setCELRules] = useState(defaultQuery);
 
-  const parcedCELRulesToQuery = parseCEL(celRules);
-  const [query, setQuery] = useState<RuleGroupType>(parcedCELRulesToQuery);
+  const parsedCELRulesToQuery = parseCEL(celRules);
+  const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
   const [sqlError, setSqlError] = useState<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const [showClearButton, setShowClearButton] = useState(false);
 
   const isFirstRender = useRef(true);
 
-  const constructCELRules = (preset) => {
+  const constructCELRules = (preset?: Preset) => {
     // Check if selectedPreset is defined and has options
     if (preset && preset.options) {
       // New version: single "CEL" key
@@ -154,10 +201,6 @@ WHERE severity = 'critical' and status = 'firing'`);
     adjustTextAreaHeight();
   }, [celRules]);
 
-  useEffect(() => {
-    setShowClearButton(celRules.length > 0);
-  }, [celRules]);
-
   const handleClearInput = () => {
     setCELRules("");
     table.resetGlobalFilter();
@@ -171,7 +214,7 @@ WHERE severity = 'critical' and status = 'firing'`);
 
       // check if the CEL is valid by comparing the parsed query with the original CEL
       // remove spaces so that "a && b" is the same as "a&&b"
-      const celQuery = formatQuery(parcedCELRulesToQuery, "cel");
+      const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
       const isValidCEL =
         celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
         celRules === "";
@@ -195,7 +238,6 @@ WHERE severity = 'critical' and status = 'firing'`);
     setIsGUIOpen(false);
   };
 
-
   const fields: Field[] = table
     .getAllColumns()
     .filter(({ getIsPinned }) => getIsPinned() === false)
@@ -212,7 +254,8 @@ WHERE severity = 'critical' and status = 'firing'`);
   const convertSQLToCEL = (sql: string): string | null => {
     try {
       const query = parseSQL(sql);
-      return formatQuery(query, "cel");
+      const formattedCel = formatQuery(query, "cel");
+      return formatQuery(parseCEL(formattedCel), "cel");
     } catch (error) {
       // If the caught error is an instance of Error, use its message
       if (error instanceof Error) {
@@ -235,7 +278,6 @@ WHERE severity = 'critical' and status = 'firing'`);
 
   const onValueChange = (value: string) => {
     setCELRules(value);
-    setShowClearButton(value.length > 0);
     if (value.length === 0) {
       setIsValidCEL(true);
     }
@@ -299,9 +341,8 @@ WHERE severity = 'critical' and status = 'firing'`);
         <div className="space-y-4 p-4">
           <Textarea
             className="min-h-[8em] h-auto" // This sets a minimum height and allows it to auto-adjust
-            value={sqlQuery}
+            placeholder={SQL_QUERY_PLACEHOLDER}
             onValueChange={setSQLQuery}
-            placeholder="Enter your SQL query here"
           />
           {sqlError && (
             <div className="text-red-500 text-sm mb-2">Error: {sqlError}</div>
@@ -328,7 +369,7 @@ WHERE severity = 'critical' and status = 'firing'`);
               tooltip="Click for documentation"
               onClick={() =>
                 window.open(
-                  "https://docs.keephq.dev/overview/filters",
+                  "https://docs.keephq.dev/overview/presets",
                   "_blank"
                 )
               }

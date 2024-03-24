@@ -30,12 +30,12 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
     preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
   );
   const [isPrivate, setIsPrivate] = useState(preset?.is_private);
-  const [presetCEL, setPresetCEL] = useState('');
-
-
+  const [presetCEL, setPresetCEL] = useState("");
 
   const selectedPreset = savedPresets.find(
-    (savedPreset) => savedPreset.name.toLowerCase() === decodeURIComponent(preset!.name)
+    (savedPreset) =>
+      savedPreset.name.toLowerCase() ===
+      decodeURIComponent(preset!.name).toLowerCase()
   ) as Preset | undefined;
 
   async function deletePreset(presetId: string) {
@@ -54,6 +54,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
           type: "success",
         });
         presetsMutator();
+        router.push("/alerts/feed");
       }
     }
   }
@@ -61,7 +62,9 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
   async function addOrUpdatePreset() {
     if (presetName) {
       const response = await fetch(
-        selectedPreset?.id ? `${apiUrl}/preset/${selectedPreset?.id}` : `${apiUrl}/preset`,
+        selectedPreset?.id
+          ? `${apiUrl}/preset/${selectedPreset?.id}`
+          : `${apiUrl}/preset`,
         {
           method: selectedPreset?.id ? "PUT" : "POST",
           headers: {
@@ -70,10 +73,12 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
           },
           body: JSON.stringify({
             name: presetName,
-            options: [{
-              "label": "CEL",
-              "value": presetCEL,
-            }],
+            options: [
+              {
+                label: "CEL",
+                value: presetCEL,
+              },
+            ],
             is_private: isPrivate,
           }),
         }
@@ -97,7 +102,6 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
 
   return (
     <>
-      {" "}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -157,7 +161,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
         </div>
       </Modal>
       <div className="flex w-full items-start mt-6">
-      <AlertsRulesBuilder
+        <AlertsRulesBuilder
           table={table}
           defaultQuery=""
           selectedPreset={selectedPreset}
