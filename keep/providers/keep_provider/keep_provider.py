@@ -28,12 +28,23 @@ class KeepProvider(BaseProvider):
         """
         pass
 
-    def _query(self, filters, distinct=True, **kwargs):
+    def _query(self, filters, distinct=True, time_delta=1, **kwargs):
         """
         Query Keep for alerts.
         """
+        self.logger.info(
+            "Querying Keep for alerts",
+            extra={
+                "filters": filters,
+                "is_distinct": distinct,
+                "time_delta": time_delta,
+            },
+        )
         db_alerts = get_alerts_with_filters(
-            self.context_manager.tenant_id, filters=filters
+            self.context_manager.tenant_id, filters=filters, time_delta=time_delta
+        )
+        self.logger.info(
+            "Got alerts from Keep", extra={"num_of_alerts": len(db_alerts)}
         )
 
         fingerprints = {}
@@ -47,6 +58,7 @@ class KeepProvider(BaseProvider):
                     alert_event["enrichments"] = alert.alert_enrichment.enrichments
                 alerts.append(alert_event)
                 fingerprints[alert.fingerprint] = True
+        self.logger.info("Returning alerts", extra={"num_of_alerts": len(alerts)})
         return alerts
 
     def validate_config(self):
