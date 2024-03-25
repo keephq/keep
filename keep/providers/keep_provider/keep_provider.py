@@ -60,7 +60,10 @@ class KeepProvider(BaseProvider):
                 fingerprints[alert.fingerprint] = True
         self.logger.info(
             "Returning alerts",
-            extra={"num_of_alerts": len(alerts), fingerprints: fingerprints.keys()},
+            extra={
+                "num_of_alerts": len(alerts),
+                fingerprints: list(fingerprints.keys()),
+            },
         )
         return alerts
 
