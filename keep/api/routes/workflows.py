@@ -15,6 +15,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -41,6 +42,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @router.get(
@@ -351,20 +353,22 @@ def get_workflow_by_id(
     ),
 ) -> List[WorkflowExecutionDTO]:
     tenant_id = authenticated_entity.tenant_id
-    workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
+    with tracer.start_as_current_span("get_workflow_executions"):
+        workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
     workflow_executions_dtos = []
-    for workflow_execution in workflow_executions:
-        workflow_execution_dto = WorkflowExecutionDTO(
-            id=workflow_execution.id,
-            workflow_id=workflow_execution.workflow_id,
-            status=workflow_execution.status,
-            started=workflow_execution.started,
-            triggered_by=workflow_execution.triggered_by,
-            error=workflow_execution.error,
-            execution_time=workflow_execution.execution_time,
-            results=workflow_execution.results,
-        )
-        workflow_executions_dtos.append(workflow_execution_dto)
+    with tracer.start_as_current_span("create_workflow_dtos"):
+        for workflow_execution in workflow_executions:
+            workflow_execution_dto = WorkflowExecutionDTO(
+                id=workflow_execution.id,
+                workflow_id=workflow_execution.workflow_id,
+                status=workflow_execution.status,
+                started=workflow_execution.started,
+                triggered_by=workflow_execution.triggered_by,
+                error=workflow_execution.error,
+                execution_time=workflow_execution.execution_time,
+                results=workflow_execution.results,
+            )
+            workflow_executions_dtos.append(workflow_execution_dto)
 
     return workflow_executions_dtos
 
