@@ -23,7 +23,12 @@ import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import {MappingRule} from "./models";
 
-export default function CreateNewMapping( {editRule, editCallback}: {editRule: MappingRule | null; editCallback: (rule: MappingRule | null) => void } ) {
+interface Props {
+  editRule: MappingRule | null;
+  editCallback: (rule: MappingRule | null) => void;
+}
+
+export default function CreateNewMapping({editRule, editCallback}: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
   const [mapName, setMapName] = useState<string>("");
@@ -31,13 +36,15 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
-  const [editMode, setEditMode] = useState(false);
+  const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
 
+
+  // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
+  // This also sets the state editMode => true, which help us differentiate whether the user is in context of editing or creating the mapping
   useEffect(() => {
     if (editRule !== null) {
       handleFileReset();
-      setEditMode(true);
       setMapName(editRule.name);
       setFileName(editRule.file_name? editRule.file_name : "");
       setMapDescription(editRule.description ? editRule.description : "");
@@ -53,6 +60,8 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
       setSelectedAttributes([]);
       return Object.keys(parsedData[0]);
     }
+
+    // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
     if (editRule) {
       return [...editRule.attributes ? editRule.attributes : [], ...editRule.matchers];
     }
@@ -120,6 +129,8 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
       );
     }
   };
+
+  // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
@@ -140,7 +151,6 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
       }),
     });
     if (response.ok) {
-      clearForm();
       exitEditMode();
       mutate();
       toast.success("Mapping updated successfully");
@@ -151,9 +161,9 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
     }
   };
 
+  // If the mapping is successfully updated or the user cancels the update we exit the editMode and set the editRule in the mapping.tsx to null.
   const exitEditMode = async() => {
     editCallback(null);
-    setEditMode(false);
     clearForm();
   }
 
@@ -210,7 +220,7 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
           type="file"
           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           onChange={readFile}
-          required={!editRule}
+          required={!editMode}
           ref={inputFile}
         />
         {!parsedData && (
@@ -262,6 +272,8 @@ export default function CreateNewMapping( {editRule, editCallback}: {editRule: M
         </div>
       </div>
       <div className={"space-x-4 flex flex-row justify-end items-center"}>
+
+      {/*If we are in the editMode we need an extra cancel button option for the user*/}
       {editMode ? <Button
         color="orange"
         size="xs"

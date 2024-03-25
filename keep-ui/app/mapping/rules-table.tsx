@@ -24,7 +24,12 @@ import { toast } from "react-toastify";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
-export default function RulesTable({ mappings, editCallback }: { mappings: MappingRule[]; editCallback: (rule: MappingRule) => void }) {
+interface Props {
+  mappings: MappingRule[];
+  editCallback: (rule: MappingRule) => void;
+}
+
+export default function RulesTable({ mappings, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
 
@@ -84,6 +89,8 @@ export default function RulesTable({ mappings, editCallback }: { mappings: Mappi
             icon={MdRemoveCircle}
             onClick={() => deleteRule(context.row.original.id!)}
           />
+
+          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
           <Button
             color="orange"
             size="xs"

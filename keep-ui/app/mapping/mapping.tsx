@@ -9,6 +9,8 @@ import {MappingRule} from "./models";
 import {useState} from "react";
 export default function Mapping() {
   const { data: mappings, isLoading } = useMappings();
+
+  // We use this state to pass the rule that needs to be edited between the CreateNewMapping and the RulesTable Component.
   const [editRule, setEditRule] = useState<MappingRule | null>(null);
 
   return (
