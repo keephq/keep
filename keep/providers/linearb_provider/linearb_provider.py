@@ -44,7 +44,9 @@ class LinearbProvider(BaseProvider):
         headers = {
             "x-api-key": self.authentication_config.api_token,
         }
-        result = requests.get(f"{self.LINEARB_API}/api/v1/health", headers=headers)
+        result = requests.get(
+            f"{self.LINEARB_API}/api/v1/health", headers=headers, timeout=10
+        )
         if not result.ok:
             return {"any": "Failed to validate the API token"}
         return {"any": True}
@@ -89,6 +91,7 @@ class LinearbProvider(BaseProvider):
                 result = requests.delete(
                     f"{self.LINEARB_API}/api/v1/incidents/{incident_id}",
                     headers=headers,
+                    timeout=10,
                 )
                 if result.ok:
                     self.logger.info("Deleted incident successfully")
@@ -101,7 +104,9 @@ class LinearbProvider(BaseProvider):
 
             # Try to get the incident
             incident_response = requests.get(
-                f"{self.LINEARB_API}/api/v1/incidents/{incident_id}", headers=headers
+                f"{self.LINEARB_API}/api/v1/incidents/{incident_id}",
+                headers=headers,
+                timeout=10,
             )
             if incident_response.ok:
                 incident = incident_response.json()
@@ -137,6 +142,7 @@ class LinearbProvider(BaseProvider):
                     f"{self.LINEARB_API}/api/v1/incidents/{incident_id}",
                     json=payload,
                     headers=headers,
+                    timeout=10,
                 )
             else:
                 if not http_url or not title:
@@ -176,6 +182,7 @@ class LinearbProvider(BaseProvider):
                     f"{self.LINEARB_API}/api/v1/incidents",
                     json=payload,
                     headers=headers,
+                    timeout=10,
                 )
 
             if result.ok:
