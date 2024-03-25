@@ -62,7 +62,7 @@ class KeepProvider(BaseProvider):
             "Returning alerts",
             extra={
                 "num_of_alerts": len(alerts),
-                fingerprints: list(fingerprints.keys()),
+                "fingerprints": list(fingerprints.keys()),
             },
         )
         return alerts
