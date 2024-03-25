@@ -80,8 +80,6 @@ class Workflow:
 
     def run(self, workflow_execution_id):
         self.logger.info(f"Running workflow {self.workflow_id}")
-        if self.workflow_id != "jira-ticket-priority-changed":
-            return
         self.context_manager.set_execution_context(workflow_execution_id)
         try:
             self.run_steps()
