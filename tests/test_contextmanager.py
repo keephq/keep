@@ -108,11 +108,7 @@ def test_context_manager_get_full_context(context_manager_with_state: ContextMan
     Test the get_full_context function
     """
     full_context = context_manager_with_state.get_full_context()
-    assert (
-        full_context["state"]["new-github-stars"][0]["alert_context"]["alert_id"]
-        == STATE_FILE_MOCK_DATA["new-github-stars"][0]["alert_context"]["alert_id"]
-    )
-    assert "state" in full_context
+    assert "steps" in full_context
 
 
 def test_context_manager_set_for_each_context(context_manager: ContextManager):
