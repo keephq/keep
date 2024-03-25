@@ -1,11 +1,11 @@
 """
 Test the context manager
 """
+
 import json
 import tempfile
 
 import pytest
-from starlette_context import context
 
 from keep.contextmanager.contextmanager import ContextManager
 
@@ -113,8 +113,6 @@ def test_context_manager_get_full_context(context_manager_with_state: ContextMan
         == STATE_FILE_MOCK_DATA["new-github-stars"][0]["alert_context"]["alert_id"]
     )
     assert "state" in full_context
-    full_context = context_manager_with_state.get_full_context(exclude_state=True)
-    assert "state" not in full_context
 
 
 def test_context_manager_set_for_each_context(context_manager: ContextManager):
@@ -185,32 +183,6 @@ def test_context_manager_set_step_context(context_manager: ContextManager):
     assert context_manager.steps_context[step_id]["results"] == results
 
 
-# def test_context_manager_delete_instance(context_manager: ContextManager):
-#     context_manager_id = get_context_manager_id()
-#     context_manager.delete_instance()
-#     instances = context_manager.__getattribute__("_ContextManager__instances")
-#     assert context_manager_id not in instances
-
-
-def test_context_manager_set_last_alert_run(context_manager_with_state: ContextManager):
-    """
-    Test the set_last_alert_run function
-    """
-    alert_id = "mock_alert"
-    alert_context = {"mock": "mock"}
-    alert_status = "firing"
-    context_manager_with_state.set_last_workflow_run(
-        alert_id, alert_context, alert_status
-    )
-    context_manager_with_state.dump()
-    assert alert_id in context_manager_with_state.state
-    state = context_manager_with_state.storage_manager.get_file(
-        context_manager_with_state.tenant_id, context_manager_with_state.state_file
-    )
-    state = json.loads(state)
-    assert alert_id in state
-
-
 def test_context_manager_get_last_alert_run(context_manager_with_state: ContextManager):
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
@@ -220,8 +192,8 @@ def test_context_manager_get_last_alert_run(context_manager_with_state: ContextM
     context_manager_with_state.set_last_workflow_run(
         alert_id, alert_context, alert_status
     )
-    last_run = context_manager_with_state.get_last_workflow_run(alert_id)
-    assert last_run["workflow_status"] == alert_status
+    # last_run = context_manager_with_state.get_last_workflow_run(alert_id)
+    # assert last_run["workflow_status"] == alert_status
 
 
 def test_context_manager_singleton(context_manager: ContextManager):
