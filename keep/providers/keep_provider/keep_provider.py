@@ -58,7 +58,10 @@ class KeepProvider(BaseProvider):
                     alert_event["enrichments"] = alert.alert_enrichment.enrichments
                 alerts.append(alert_event)
                 fingerprints[alert.fingerprint] = True
-        self.logger.info("Returning alerts", extra={"num_of_alerts": len(alerts)})
+        self.logger.info(
+            "Returning alerts",
+            extra={"num_of_alerts": len(alerts), fingerprints: fingerprints.keys()},
+        )
         return alerts
 
     def validate_config(self):
