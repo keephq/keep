@@ -43,7 +43,7 @@ export default function DarkModeToggle() {
 
   return (
     <button
-      className="flex items-center justify-between space-x-3 w-full text-sm p-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300"
+      className="flex items-center justify-between space-x-3 w-full text-sm p-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300"
       onClick={toggleDarkMode}
     >
       <span className="flex items-center justify-between">

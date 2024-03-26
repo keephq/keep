@@ -36,7 +36,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   return (
     <Menu as="li" ref={refs.setReference}>
-      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group capitalize">
+      <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
           {image ? (
             <Image
@@ -47,7 +47,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               height={28}
             />
           ) : (
-            <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-500 rounded-full dark:bg-gray-600">
+            <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600">
               <span className="font-medium text-white text-xs">
                 {getInitials(name ?? email)}
               </span>
@@ -75,7 +75,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               <Menu.Item
                 as={Link}
                 href="/settings"
-                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
               >
                 Settings
               </Menu.Item>
@@ -85,7 +85,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
             <li>
               <Menu.Item
                 as="button"
-                className="ui-active:bg-orange-500 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
+                className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
                 onClick={() => signOut()}
               >
                 Sign out
