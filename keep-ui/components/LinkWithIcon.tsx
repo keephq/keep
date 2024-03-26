@@ -7,7 +7,7 @@ import { Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
 
-type StyledLinkProps = {
+type LinkWithIconProps = {
   children: ReactNode;
   icon: IconType;
 } & LinkProps &
@@ -18,7 +18,7 @@ export const LinkWithIcon = ({
   children,
   tabIndex = 0,
   ...restOfLinkProps
-}: StyledLinkProps) => {
+}: LinkWithIconProps) => {
   const pathname = usePathname();
 
   const isActive =
@@ -27,14 +27,22 @@ export const LinkWithIcon = ({
   return (
     <Link
       className={classNames(
-        "flex items-center space-x-2 text-sm p-1 text-gray-700 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
+        "flex items-center space-x-2 text-sm p-1 text-slate-400 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300 group",
         { "bg-gray-200": isActive }
       )}
       tabIndex={tabIndex}
       {...restOfLinkProps}
     >
-      <Icon className="text-gray-700 group-hover:text-orange-500" icon={icon} />
-      <span>{children}</span>
+      <Icon
+        className={classNames("group-hover:text-orange-500", {
+          "text-orange-500": isActive,
+          "text-slate-400": !isActive,
+        })}
+        icon={icon}
+      />
+      <span className={classNames({ "text-orange-500": isActive })}>
+        {children}
+      </span>
     </Link>
   );
 };
