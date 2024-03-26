@@ -66,12 +66,14 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
+    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
     is_localhost = _is_localhost()
 
     try:
         return {
             "providers": providers,
             "installed_providers": installed_providers,
+            "linked_providers": linked_providers,
             "is_localhost": is_localhost,
         }
     except Exception:
@@ -79,6 +81,7 @@ def get_providers(
         return {
             "providers": providers,
             "installed_providers": [],
+            "linked_providers": [],
             "is_localhost": is_localhost,
         }
 

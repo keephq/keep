@@ -251,11 +251,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @classmethod
     def format_alert(
-        cls, event: dict, provider_instance: Optional["BaseProvider"]
+        cls,
+        event: dict,
+        provider_instance: Optional["BaseProvider"],
+        provider_name: Optional[str] = None,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event, provider_instance)
+
+        if isinstance(formatted_alert, list):
+            for alert in formatted_alert:
+                alert.providerName = provider_name
+        else:
+            formatted_alert.providerName = provider_name
+
         logger.debug("Alert formatted")
         return formatted_alert
 

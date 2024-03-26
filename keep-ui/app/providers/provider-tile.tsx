@@ -9,6 +9,7 @@ import {
   TicketIcon,
 } from "@heroicons/react/20/solid";
 import "./provider-tile.css";
+import moment from "moment";
 
 interface Props {
   provider: Provider;
@@ -66,7 +67,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
     >
       <div className="w-32">
         {(provider.can_setup_webhook || provider.supports_webhook) &&
-          !provider.installed && (
+          !provider.installed && !provider.linked && (
             <Icon
               icon={WebhookIcon}
               className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
@@ -75,7 +76,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               tooltip="Webhook available"
             />
           )}
-        {provider.oauth2_url && !provider.installed && (
+        {provider.oauth2_url && !provider.installed && !provider.linked && (
           <Icon
             icon={OAuthIcon}
             className={`absolute top-[-15px] ${
@@ -93,6 +94,12 @@ export default function ProviderTile({ provider, onClick }: Props) {
             Connected
           </Text>
         ) : null}
+        {provider.linked ? (
+          <Text color={"green"} className="flex text-xs group-hover:hidden">
+            Linked
+          </Text>
+        ) : null
+        }
         <div className="flex flex-col">
           <div>
             <Title
@@ -101,14 +108,28 @@ export default function ProviderTile({ provider, onClick }: Props) {
             >
               {provider.display_name}{" "}
             </Title>
-            {provider.details.name && (
+            {provider.details && provider.details.name && (
               <Subtitle className="group-hover:hidden">
                 id: {provider.details.name}
               </Subtitle>
             )}
+            {
+              provider.linked && (
+                <Subtitle className="group-hover:hidden">
+                  Last alert: {moment(provider.last_alert_received).fromNow()}
+                </Subtitle>
+              )
+            }
+            {
+              provider.linked && (
+                <Subtitle className="group-hover:hidden">
+                  Name: {provider.}
+                </Subtitle>
+              )
+            }
           </div>
           <div className="labels flex group-hover:hidden">
-            {!provider.installed &&
+            {!provider.installed && !provider.linked &&
               provider.tags.map((tag) => {
                 const icon =
                   tag === "alert"
@@ -150,7 +171,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
         height={48}
         alt={provider.type}
         className={`${
-          provider.installed ? "" : "grayscale group-hover:grayscale-0"
+          (provider.installed || provider.linked) ? "" : "grayscale group-hover:grayscale-0"
         }`}
       />
     </div>

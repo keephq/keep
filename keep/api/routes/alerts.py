@@ -669,6 +669,7 @@ async def receive_event(
     request: Request,
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
+    provider_name: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -721,7 +722,10 @@ async def receive_event(
                 )
             except Exception as e:
                 logger.warning(f"Failed to get provider instance due to {str(e)}")
-        formatted_events = provider_class.format_alert(event, provider_instance)
+
+        formatted_events = provider_class.format_alert(
+            event, provider_instance, provider_name
+        )
 
         if isinstance(formatted_events, AlertDto):
             formatted_events = [formatted_events]

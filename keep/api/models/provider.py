@@ -19,6 +19,9 @@ class Provider(BaseModel):
     can_query: bool
     query_params: list[str] | None = None
     installed: bool = False
+    # whether we got alert from this provider without installaltion
+    linked: bool = False
+    last_alert_received: datetime | None = None
     # Whether we support webhooks without install
     supports_webhook: bool = False
     # Whether we also support auto install for webhooks

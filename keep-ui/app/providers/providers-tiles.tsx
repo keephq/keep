@@ -14,12 +14,14 @@ const ProvidersTiles = ({
   addProvider,
   onDelete,
   installedProvidersMode = false,
+  linkedProvidersMode = false,
   isLocalhost = false,
 }: {
   providers: Providers;
   addProvider: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   installedProvidersMode?: boolean;
+  linkedProvidersMode?: boolean;
   isLocalhost?: boolean;
 }) => {
   const searchParams = useSearchParams();
@@ -112,8 +114,9 @@ const ProvidersTiles = ({
   return (
     <div>
       <Title className="mb-2.5">
-        {installedProvidersMode ? "Installed Providers" : "Available Providers"}
+        {installedProvidersMode ? "Installed Providers" : linkedProvidersMode ? "Linked Providers" : "Available Providers"}
       </Title>
+
       <div className="flex flex-wrap mb-5 gap-5">
         {providersWithConfig.map((provider, index) => (
           <ProviderTile

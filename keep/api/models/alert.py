@@ -73,6 +73,7 @@ class AlertDto(BaseModel):
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
+    providerName: str | None = None  # The providerName is for alerts that sent via webhook so they don't have providerId
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary

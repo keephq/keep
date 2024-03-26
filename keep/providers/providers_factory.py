@@ -12,7 +12,11 @@ import typing
 from dataclasses import fields
 from typing import get_args
 
-from keep.api.core.db import get_consumer_providers, get_installed_providers
+from keep.api.core.db import (
+    get_consumer_providers,
+    get_installed_providers,
+    get_linked_providers,
+)
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -451,3 +455,34 @@ class ProvidersFactory:
             provider_config=provider_config,
         )
         return provider_class
+
+    @staticmethod
+    def get_linked_providers(tenant_id: str) -> list[Provider]:
+        """
+        Get the linked providers.
+
+        Args:
+            tenant_id (str): The tenant id.
+
+        Returns:
+            list: The linked providers.
+        """
+        linked_providers = get_linked_providers(tenant_id)
+        available_providers = ProvidersFactory.get_all_providers()
+
+        _linked_providers = []
+        for p in linked_providers:
+            provider_name, provider_last_alert_timestamp = p[0], p[1]
+            provider: Provider = next(
+                filter(
+                    lambda provider: provider.type == provider_name,
+                    available_providers,
+                ),
+                None,
+            )
+            provider = provider.copy()
+            provider.linked = True
+            provider.last_alert_received = provider_last_alert_timestamp
+            _linked_providers.append(provider)
+
+        return _linked_providers

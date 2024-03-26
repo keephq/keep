@@ -1388,3 +1388,17 @@ def update_key_last_used(
         tenant_api_key_entry.last_used = datetime.utcnow()
         session.add(tenant_api_key_entry)
         session.commit()
+
+
+def get_linked_providers(tenant_id: str) -> List[Provider]:
+    with Session(engine) as session:
+        # extract all providers from the alerts that are linked to the tenant
+        providers = session.exec(
+            select(Alert.provider_type, func.max(Alert.timestamp))
+            .where(Alert.tenant_id == tenant_id)
+            .where(Alert.provider_id == None)
+            .where(Alert.provider_type != "group")
+            .group_by(Alert.provider_type)
+        ).all()
+
+    return providers
