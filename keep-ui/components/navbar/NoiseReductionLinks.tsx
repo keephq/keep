@@ -10,9 +10,9 @@ import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 
-type ConfigureLinksProps = { session: Session | null };
+type NoiseReductionLinksProps = { session: Session | null };
 
-export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
+export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
 
   if (isNOCRole) {
