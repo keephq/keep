@@ -244,6 +244,11 @@ class SentryProvider(BaseProvider):
         elif "url" in tags_as_dict:
             url = tags_as_dict["url"]
 
+        exceptions = event_data.get("exception", {}).get("values", [])
+        for exception in exceptions:
+            if isinstance(exception, dict) and "stacktrace" not in exception:
+                exception["stacktrace"] = False
+
         logger.info("Formatted Sentry alert", extra={"event": event})
         return AlertDto(
             id=event_data.pop("event_id"),
@@ -262,7 +267,7 @@ class SentryProvider(BaseProvider):
             url=url,
             fingerprint=event.get("id"),
             tags=tags_as_dict,
-            exceptions=event_data.get("exception", {}).get("values", []),
+            exceptions=exceptions,
         )
 
     def setup_webhook(
