@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
+import { VscDebugDisconnect } from "react-icons/vsc";
 import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react-dom";
 import { Icon } from "@tremor/react";
@@ -103,24 +104,27 @@ type UserInfoProps = {
 
 export const UserInfo = ({ session }: UserInfoProps) => {
   return (
-    <div>
-      <ul className="space-y-2 max-h-60 overflow-auto p-2">
-        <li>
-          {/* TODO: slows everything down. needs to be replaced */}
-          <DarkModeToggle />
-        </li>
-        <li>
-          <LinkWithIcon
-            icon={LuSlack}
-            href="https://slack.keephq.dev/"
-            target="_blank"
-          >
-            Join our Slack
-          </LinkWithIcon>
-        </li>
+    <ul className="space-y-2 p-2">
+      <li>
+        <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
+          Providers
+        </LinkWithIcon>
+      </li>
+      <li>
+        {/* TODO: slows everything down. needs to be replaced */}
+        <DarkModeToggle />
+      </li>
+      <li>
+        <LinkWithIcon
+          icon={LuSlack}
+          href="https://slack.keephq.dev/"
+          target="_blank"
+        >
+          Join our Slack
+        </LinkWithIcon>
+      </li>
 
-        {session && <UserDropdown session={session} />}
-      </ul>
-    </div>
+      {session && <UserDropdown session={session} />}
+    </ul>
   );
 };
