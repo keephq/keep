@@ -223,10 +223,12 @@ class Step:
 
         # Third, check throttling
         # Now check if throttling is enabled
+        self.logger.info("Checking throttling for action %s", self.config.get("name"))
         throttled = self._check_throttling(self.config.get("name"))
         if throttled:
             self.logger.info("Action %s is throttled", self.config.get("name"))
             return
+        self.logger.info("Action %s is not throttled", self.config.get("name"))
 
         # Last, run the action
         # if the provider is async, run it in a new event loop
@@ -240,6 +242,9 @@ class Step:
                 )
 
                 for curr_retry_count in range(self.__retry_count + 1):
+                    self.logger.info(
+                        f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}"
+                    )
                     try:
                         if self.step_type == StepType.STEP:
                             step_output = self.provider.query(

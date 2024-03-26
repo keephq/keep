@@ -622,6 +622,10 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50):
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .order_by(WorkflowExecution.started.desc())
             .limit(limit)
         ).all()
@@ -775,7 +779,9 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[Alert]:
+def get_alerts_with_filters(
+    tenant_id, provider_id=None, filters=None, time_delta=1
+) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -785,6 +791,12 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
+
+        # Filter by time_delta
+        query = query.filter(
+            Alert.timestamp
+            >= datetime.now(tz=timezone.utc) - timedelta(days=time_delta)
+        )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
         query = query.join(Alert.alert_enrichment)
@@ -839,6 +851,8 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
             query = query.filter(Alert.provider_id == provider_id)
 
         query = query.order_by(Alert.timestamp.desc())
+
+        query = query.limit(10000)
 
         # Execute the query
         alerts = query.all()
