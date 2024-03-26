@@ -1,12 +1,14 @@
 "use client";
 
-import { Badge, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { VscDebugDisconnect } from "react-icons/vsc";
 import { MdOutlineEngineering } from "react-icons/md";
 import { LuWorkflow } from "react-icons/lu";
 import { RiMindMap } from "react-icons/ri";
 import { Session } from "next-auth";
+import { Disclosure } from "@headlessui/react";
+import { IoChevronUp } from "react-icons/io5";
+import classNames from "classnames";
 
 type ConfigureLinksProps = { session: Session | null };
 
@@ -18,25 +20,27 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
   }
 
   return (
-    <div className="space-y-1">
-      <Subtitle className="text-xs pl-5 text-slate-400">CONFIGURE</Subtitle>
-      <ul className="space-y-2 p-2 pr-4">
-        <li>
-          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            Providers
-          </LinkWithIcon>
-        </li>
+    <Disclosure as="div" className="space-y-1" defaultOpen>
+      <Disclosure.Button className="w-full flex justify-between items-center p-2">
+        {({ open }) => (
+          <>
+            <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
+              NOISE REDUCTION
+            </Subtitle>
+            <IoChevronUp
+              className={classNames(
+                { "rotate-180": open },
+                "mr-2 text-slate-400"
+              )}
+            />
+          </>
+        )}
+      </Disclosure.Button>
+
+      <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/rules" icon={MdOutlineEngineering}>
-            Alert Groups
-          </LinkWithIcon>
-        </li>
-        <li>
-          <LinkWithIcon href="/mapping" icon={RiMindMap}>
-            Mapping{" "}
-            <Badge color="orange" size="xs">
-              Beta
-            </Badge>
+            Correlations
           </LinkWithIcon>
         </li>
         <li>
@@ -44,7 +48,12 @@ export const ConfigureLinks = ({ session }: ConfigureLinksProps) => {
             Workflows
           </LinkWithIcon>
         </li>
-      </ul>
-    </div>
+        <li>
+          <LinkWithIcon href="/mapping" icon={RiMindMap}>
+            Mapping
+          </LinkWithIcon>
+        </li>
+      </Disclosure.Panel>
+    </Disclosure>
   );
 };
