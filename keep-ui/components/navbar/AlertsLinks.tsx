@@ -16,11 +16,11 @@ import { Session } from "next-auth";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 
-type AnalyseLinksProps = {
+type AlertsLinksProps = {
   session: Session | null;
 };
 
-export const AnalyseLinks = ({ session }: AnalyseLinksProps) => {
+export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
