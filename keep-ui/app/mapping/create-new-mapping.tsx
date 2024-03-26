@@ -41,7 +41,6 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
 
 
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
-  // This also sets the state editMode => true, which help us differentiate whether the user is in context of editing or creating the mapping
   useEffect(() => {
     if (editRule !== null) {
       handleFileReset();

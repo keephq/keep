@@ -88,7 +88,8 @@ def update_rule(rule: MappingRuleDtoUpdate,
     logger.info("Updating a mapping rule")
     existing_rule: MappingRule = session.query(MappingRule).filter(
         MappingRule.tenant_id == authenticated_entity.tenant_id and MappingRule.id == rule.id).first()
-
+    if existing_rule is None:
+        raise HTTPException(status_code=404, detail="Rule not found")
     existing_rule.name = rule.name
     existing_rule.description = rule.description
     existing_rule.matchers = rule.matchers
