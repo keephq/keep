@@ -19,6 +19,7 @@ export type Trigger = {
 
 export type Workflow = {
   id: string;
+  name: string;
   description: string;
   created_by: string;
   creation_time: string;
@@ -27,6 +28,7 @@ export type Workflow = {
   triggers: Trigger[];
   last_execution_time: string;
   last_execution_status: string;
+  last_updated: string;
   workflow_raw: string;
   workflow_raw_id: string;
 }

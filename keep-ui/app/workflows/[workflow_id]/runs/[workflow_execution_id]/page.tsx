@@ -189,11 +189,18 @@ export default function WorkflowExecutionPage({
         ) : (
           <Callout
             className="mt-4"
-            title="Error during workflow exceution"
+            title="Error during workflow execution"
             icon={ExclamationCircleIcon}
             color="rose"
           >
-            {error || "An unknown error occurred during execution."}
+            {error
+              ? error.split('\n').map((line, index) => (
+                  // Render each line as a separate paragraph or div.
+                  // The key is index, which is sufficient for simple lists like this.
+                  <p key={index}>{line}</p>
+                ))
+              : "An unknown error occurred during execution."
+            }
           </Callout>
         )}
       </div>

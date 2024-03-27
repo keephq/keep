@@ -1,43 +1,15 @@
 import {
   ArrowTopRightOnSquareIcon,
   BookOpenIcon,
-  Cog8ToothIcon,
   TicketIcon,
   TrashIcon,
   PencilSquareIcon,
+  Cog8ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
-import { AlertDto, AlertKnownKeys } from "./models";
-import { Workflow } from "app/workflows/models";
+import { AlertDto, AlertToWorkflowExecution } from "./models";
+import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
 import { useRouter } from "next/navigation";
-import { useWorkflows } from "utils/hooks/useWorkflows";
-import { useMemo } from "react";
-
-const getExtraPayloadNoKnownKeys = (alert: AlertDto) =>
-  Object.fromEntries(
-    Object.entries(alert).filter(([key]) => !AlertKnownKeys.includes(key))
-  );
-
-const getRelevantWorkflows = (alert: AlertDto, workflows: Workflow[]) => {
-  const extraPayloadNoKnownKeys = getExtraPayloadNoKnownKeys(alert);
-
-  return workflows.filter((workflow) => {
-    const alertTrigger = workflow.triggers.find(
-      (trigger) => trigger.type === "alert"
-    );
-
-    const workflowIsRelevant = alertTrigger?.filters?.every((filter) => {
-      if (filter.key === "source") {
-        return alert.source?.includes(filter.value);
-      }
-      return (
-        (alert as any)[filter.key] === filter.value ||
-        extraPayloadNoKnownKeys[filter.key] === filter.value
-      );
-    });
-    return workflowIsRelevant;
-  });
-};
 
 interface Props {
   alert: AlertDto;
@@ -50,7 +22,7 @@ export default function AlertName({
   setTicketModalAlert,
 }: Props) {
   const router = useRouter();
-  const { data: workflows = [] } = useWorkflows();
+  const { data: executions } = useWorkflowExecutions();
 
   const handleNoteClick = () => {
     if (setNoteModalAlert) {
@@ -66,6 +38,10 @@ export default function AlertName({
     }
   };
 
+  const relevantWorkflowExecution =
+    executions?.find((wf) => wf.alert_fingerprint === alert.fingerprint) ??
+    null;
+
   const {
     name,
     url,
@@ -77,18 +53,13 @@ export default function AlertName({
     playbook_url,
   } = alert;
 
-  const handleWorkflowClick = (workflows: Workflow[]) => {
-    if (workflows.length === 1) {
-      return router.push(`/workflows/${workflows[0].id}`);
-    }
-
-    return router.push("/workflows");
-  };
-
-  const relevantWorkflows = useMemo(
-    () => getRelevantWorkflows(alert, workflows),
-    [alert, workflows]
-  );
+  function handleWorkflowClick(
+    relevantWorkflowExecution: AlertToWorkflowExecution
+  ): void {
+    router.push(
+      `/workflows/${relevantWorkflowExecution.workflow_id}/runs/${relevantWorkflowExecution.workflow_execution_id}`
+    );
+  }
 
   return (
     <div className="flex items-center justify-between">
@@ -160,43 +131,25 @@ export default function AlertName({
             variant="solid"
           />
         )}
-        {relevantWorkflows.length > 0 && (
+        {relevantWorkflowExecution && (
           <Icon
             icon={Cog8ToothIcon}
             size="xs"
             color={`${
-              relevantWorkflows.every(
-                (wf) => wf.last_execution_status === "success"
-              )
+              relevantWorkflowExecution.workflow_status === "success"
                 ? "green"
-                : relevantWorkflows.some(
-                    (wf) => wf.last_execution_status === "error"
-                  )
+                : relevantWorkflowExecution.workflow_status === "error"
                 ? "red"
-                : relevantWorkflows.some(
-                    (wf) =>
-                      wf.last_execution_status === "providers_not_configured"
-                  )
-                ? "amber"
                 : "gray"
             }`}
             tooltip={`${
-              relevantWorkflows.every(
-                (wf) => wf.last_execution_status === "success"
-              )
-                ? "All workflows executed successfully"
-                : relevantWorkflows.some(
-                    (wf) => wf.last_execution_status === "error"
-                  )
-                ? "Some workflows failed to execute"
-                : relevantWorkflows.some(
-                    (wf) =>
-                      wf.last_execution_status === "providers_not_configured"
-                  )
-                ? "Some workflows are not configured"
-                : "Workflows have yet to execute"
+              relevantWorkflowExecution.workflow_status === "success"
+                ? "Last workflow executed successfully"
+                : relevantWorkflowExecution.workflow_status === "error"
+                ? "Last workflow execution failed"
+                : undefined
             }`}
-            onClick={() => handleWorkflowClick(relevantWorkflows)}
+            onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
             className="ml-1 cursor-pointer"
             variant="solid"
           />

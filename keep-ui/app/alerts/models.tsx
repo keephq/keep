@@ -1,5 +1,3 @@
-import { Option } from "./alert-presets";
-
 export enum Severity {
   Critical = "critical",
   High = "high",
@@ -8,6 +6,14 @@ export enum Severity {
   Info = "info",
   Error = "error",
 }
+
+export const severityMapping: { [id: number]: string } = {
+  1: Severity.Info,
+  2: Severity.Low,
+  3: Severity.Medium,
+  4: Severity.High,
+  5: Severity.Critical,
+};
 
 export interface AlertDto {
   id: string;
@@ -37,11 +43,24 @@ export interface AlertDto {
   note?: string;
 }
 
+interface Option {
+  readonly label: string;
+  readonly value: string;
+}
+
 export interface Preset {
   id?: string;
   name: string;
   options: Option[];
   is_private: boolean;
+}
+
+export interface AlertToWorkflowExecution {
+  workflow_id: string;
+  workflow_execution_id: string;
+  alert_fingerprint: string;
+  workflow_status: "timeout" | "in_progress" | "success" | "error" | "providers_not_configured";
+  workflow_started: Date;
 }
 
 export const AlertKnownKeys = [

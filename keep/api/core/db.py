@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pymysql
@@ -196,18 +196,39 @@ def try_create_single_tenant(tenant_id: str) -> None:
         pass
     with Session(engine) as session:
         try:
-            # Do everything related with single tenant creation in here
-            session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-            default_password = hashlib.sha256(
-                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-            ).hexdigest()
-            default_user = User(
-                username=default_username,
-                password_hash=default_password,
-                role=AdminRole.get_name(),
-            )
-            session.add(default_user)
+            # check if the tenant exist:
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant")
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # now let's create the default user
+
+            # check if at least one user exists:
+            user = session.exec(select(User)).first()
+            # if no users exist, let's create the default user
+            if not user:
+                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                default_user = User(
+                    username=default_username,
+                    password_hash=default_password,
+                    role=AdminRole.get_name(),
+                )
+                session.add(default_user)
+            # else, if the user want to force the refresh of the default user password
+            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
+                # update the password of the default user
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                user.password_hash = default_password
+            # commit the changes
             session.commit()
         except IntegrityError:
             # Tenant already exists
@@ -258,7 +279,7 @@ def create_workflow_execution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                started=datetime.utcnow(),
+                started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
@@ -464,6 +485,56 @@ def add_or_update_workflow(
         return existing_workflow if existing_workflow else workflow
 
 
+def get_last_workflow_workflow_to_alert_executions(
+    session: Session, tenant_id: str
+) -> list[WorkflowToAlertExecution]:
+    """
+    Get the latest workflow executions for each alert fingerprint.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant_id to filter the workflow executions by.
+
+    Returns:
+        list[WorkflowToAlertExecution]: A list of WorkflowToAlertExecution objects.
+    """
+    # Subquery to find the max started timestamp for each alert_fingerprint
+    max_started_subquery = (
+        session.query(
+            WorkflowToAlertExecution.alert_fingerprint,
+            func.max(WorkflowExecution.started).label("max_started"),
+        )
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+        .group_by(WorkflowToAlertExecution.alert_fingerprint)
+    ).subquery("max_started_subquery")
+
+    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
+    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
+        session.query(WorkflowToAlertExecution)
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .join(
+            max_started_subquery,
+            and_(
+                WorkflowToAlertExecution.alert_fingerprint
+                == max_started_subquery.c.alert_fingerprint,
+                WorkflowExecution.started == max_started_subquery.c.max_started,
+            ),
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .limit(1000)
+        .all()
+    )
+    return latest_workflow_to_alert_executions
+
+
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
         latest_execution_cte = (
@@ -472,8 +543,12 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
             .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.started >= datetime.utcnow() - timedelta(days=14))
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .group_by(WorkflowExecution.workflow_id)
+            .limit(1000)
             .cte("latest_execution_cte")
         )
 
@@ -597,6 +672,10 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50):
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .order_by(WorkflowExecution.started.desc())
             .limit(limit)
         ).all()
@@ -750,7 +829,9 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[Alert]:
+def get_alerts_with_filters(
+    tenant_id, provider_id=None, filters=None, time_delta=1
+) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -760,6 +841,12 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
+
+        # Filter by time_delta
+        query = query.filter(
+            Alert.timestamp
+            >= datetime.now(tz=timezone.utc) - timedelta(days=time_delta)
+        )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
         query = query.join(Alert.alert_enrichment)
@@ -814,6 +901,8 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
             query = query.filter(Alert.provider_id == provider_id)
 
         query = query.order_by(Alert.timestamp.desc())
+
+        query = query.limit(10000)
 
         # Execute the query
         alerts = query.all()
@@ -1311,3 +1400,41 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
             .order_by(Alert.timestamp.desc())
         ).first()
     return alert_hash
+
+
+def update_key_last_used(
+    tenant_id: str,
+    reference_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        reference_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    with Session(engine) as session:
+        # Get API Key from database
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.reference_id == reference_id)
+            .where(TenantApiKey.tenant_id == tenant_id)
+        )
+
+        tenant_api_key_entry = session.exec(statement).first()
+
+        # Update last used
+        if not tenant_api_key_entry:
+            # shouldn't happen but somehow happened to specific tenant so logging it
+            logger.error(
+                "API key not found",
+                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+            )
+            return
+        tenant_api_key_entry.last_used = datetime.utcnow()
+        session.add(tenant_api_key_entry)
+        session.commit()

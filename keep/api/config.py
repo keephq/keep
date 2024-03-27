@@ -2,6 +2,8 @@ import logging
 import os
 
 import keep.api.logging
+from keep.api.api import AUTH_TYPE
+from keep.api.core.config import AuthenticationType
 from keep.api.core.db import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
@@ -16,7 +18,10 @@ def on_starting(server=None):
     logger.info("Keep server starting")
     if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
         create_db_and_tables()
-    try_create_single_tenant(SINGLE_TENANT_UUID)
+
+    # Create single tenant if it doesn't exist
+    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
+        try_create_single_tenant(SINGLE_TENANT_UUID)
 
     if os.environ.get("USE_NGROK", "false") == "true":
         from pyngrok import ngrok
