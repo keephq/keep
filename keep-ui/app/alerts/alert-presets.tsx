@@ -11,12 +11,16 @@ import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
 
 interface Props {
-  preset: Preset | null;
+  presetNameFromApi: string;
   isLoading: boolean;
   table: Table<AlertDto>;
 }
 
-export default function AlertPresets({ preset, isLoading, table }: Props) {
+export default function AlertPresets({
+  presetNameFromApi,
+  isLoading,
+  table,
+}: Props) {
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
@@ -27,20 +31,24 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [presetName, setPresetName] = useState(
-    preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
+    presetNameFromApi === "feed" || presetNameFromApi === "deleted"
+      ? ""
+      : presetNameFromApi
   );
-  const [isPrivate, setIsPrivate] = useState(preset?.is_private);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [presetCEL, setPresetCEL] = useState("");
 
   const selectedPreset = savedPresets.find(
     (savedPreset) =>
       savedPreset.name.toLowerCase() ===
-      decodeURIComponent(preset!.name).toLowerCase()
+      decodeURIComponent(presetNameFromApi).toLowerCase()
   ) as Preset | undefined;
 
   async function deletePreset(presetId: string) {
     if (
-      confirm(`You are about to delete preset ${preset!.name}, are you sure?`)
+      confirm(
+        `You are about to delete preset ${presetNameFromApi}, are you sure?`
+      )
     ) {
       const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
@@ -49,7 +57,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
         },
       });
       if (response.ok) {
-        toast(`Preset ${preset!.name} deleted!`, {
+        toast(`Preset ${presetNameFromApi} deleted!`, {
           position: "top-left",
           type: "success",
         });
@@ -86,7 +94,7 @@ export default function AlertPresets({ preset, isLoading, table }: Props) {
       if (response.ok) {
         setIsModalOpen(false);
         toast(
-          selectedPreset?.name
+          selectedPreset
             ? `Preset ${presetName} updated!`
             : `Preset ${presetName} created!`,
           {
