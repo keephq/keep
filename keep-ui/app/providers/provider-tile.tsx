@@ -65,7 +65,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
       className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
-      <div className="w-32">
+      <div className="w-48">
         {(provider.can_setup_webhook || provider.supports_webhook) &&
           !provider.installed && !provider.linked && (
             <Icon
@@ -95,19 +95,20 @@ export default function ProviderTile({ provider, onClick }: Props) {
           </Text>
         ) : null}
         {provider.linked ? (
-          <Text color={"green"} className="flex text-xs group-hover:hidden">
+          <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
         ) : null
         }
         <div className="flex flex-col">
           <div>
-            <Title
-              className="group-hover:hidden capitalize"
-              title={provider.details?.name}
-            >
-              {provider.display_name}{" "}
-            </Title>
+          <Title
+  className={`${!provider.linked ? 'group-hover:hidden' : ''} capitalize`}
+  title={provider.details?.name}
+>
+  {provider.display_name}{" "}
+</Title>
+
             {provider.details && provider.details.name && (
               <Subtitle className="group-hover:hidden">
                 id: {provider.details.name}
@@ -115,16 +116,16 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {
               provider.linked && (
-                <Subtitle className="group-hover:hidden">
+                <Text>
                   Last alert: {moment(provider.last_alert_received).fromNow()}
-                </Subtitle>
+                </Text>
               )
             }
             {
-              provider.linked && (
-                <Subtitle className="group-hover:hidden">
-                  Name: {provider.}
-                </Subtitle>
+              provider.linked && provider.id &&(
+                <Text>
+                  Id: {provider.id}
+                </Text>
               )
             }
           </div>
@@ -154,15 +155,16 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 );
               })}
           </div>
-
-          <Button
-            variant="secondary"
-            size="xs"
-            color={provider.installed ? "orange" : "green"}
-            className="hidden group-hover:block"
-          >
-            {provider.installed ? "Modify" : "Connect"}
-          </Button>
+          {!provider.linked && (
+            <Button
+              variant="secondary"
+              size="xs"
+              color={provider.installed ? "orange" : "green"}
+              className="hidden group-hover:block"
+            >
+              {provider.installed ? "Modify" : "Connect"}
+            </Button>
+          )}
         </div>
       </div>
       <Image

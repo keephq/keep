@@ -2,6 +2,7 @@
 The providers factory module.
 """
 import copy
+import datetime
 import importlib
 import inspect
 import json
@@ -472,17 +473,23 @@ class ProvidersFactory:
 
         _linked_providers = []
         for p in linked_providers:
-            provider_name, provider_last_alert_timestamp = p[0], p[1]
+            provider_type, provider_id, provider_last_alert_timestamp = p[0], p[1], p[2]
             provider: Provider = next(
                 filter(
-                    lambda provider: provider.type == provider_name,
+                    lambda provider: provider.type == provider_type,
                     available_providers,
                 ),
                 None,
             )
             provider = provider.copy()
             provider.linked = True
-            provider.last_alert_received = provider_last_alert_timestamp
+            # set the datetime as utc
+            if provider_last_alert_timestamp:
+                provider_last_alert_timestamp = provider_last_alert_timestamp.replace(
+                    tzinfo=datetime.timezone.utc
+                )
+            provider.last_alert_received = provider_last_alert_timestamp.isoformat()
+            provider.id = provider_id
             _linked_providers.append(provider)
 
         return _linked_providers

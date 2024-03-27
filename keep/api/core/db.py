@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from typing import List, Tuple
 from uuid import uuid4
 
 import pymysql
@@ -1390,15 +1391,23 @@ def update_key_last_used(
         session.commit()
 
 
-def get_linked_providers(tenant_id: str) -> List[Provider]:
+def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
-        # extract all providers from the alerts that are linked to the tenant
-        providers = session.exec(
-            select(Alert.provider_type, func.max(Alert.timestamp))
-            .where(Alert.tenant_id == tenant_id)
-            .where(Alert.provider_id == None)
-            .where(Alert.provider_type != "group")
-            .group_by(Alert.provider_type)
-        ).all()
+        providers = (
+            session.query(
+                Alert.provider_type,
+                Alert.provider_id,
+                func.max(Alert.timestamp).label("latest_timestamp"),
+            )
+            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.provider_type != "group",
+                Provider.id
+                == None,  # Filters for alerts with a provider_id not in Provider table
+            )
+            .group_by(Alert.provider_type, Alert.provider_id)
+            .all()
+        )
 
     return providers

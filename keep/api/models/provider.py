@@ -21,7 +21,7 @@ class Provider(BaseModel):
     installed: bool = False
     # whether we got alert from this provider without installaltion
     linked: bool = False
-    last_alert_received: datetime | None = None
+    last_alert_received: str | None = None
     # Whether we support webhooks without install
     supports_webhook: bool = False
     # Whether we also support auto install for webhooks

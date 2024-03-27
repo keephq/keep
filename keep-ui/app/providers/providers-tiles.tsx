@@ -74,6 +74,9 @@ const ProvidersTiles = ({
   };
 
   const handleConnectProvider = (provider: Provider) => {
+    // on linked providers, don't open the modal
+    if(provider.linked) return;
+
     hideOrShowIntercom(true);
     setSelectedProvider(provider);
     if (installedProvidersMode) {
