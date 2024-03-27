@@ -55,6 +55,14 @@ export interface Preset {
   is_private: boolean;
 }
 
+export interface AlertToWorkflowExecution {
+  workflow_id: string;
+  workflow_execution_id: string;
+  alert_fingerprint: string;
+  workflow_status: "timeout" | "in_progress" | "success" | "error" | "providers_not_configured";
+  workflow_started: Date;
+}
+
 export const AlertKnownKeys = [
   "id",
   "name",
