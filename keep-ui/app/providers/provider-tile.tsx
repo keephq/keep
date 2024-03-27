@@ -1,4 +1,4 @@
-import { Badge, Button, Icon, Subtitle, Text, Title } from "@tremor/react";
+import { Badge, Button, Icon, SparkAreaChart, Subtitle, Text, Title } from "@tremor/react";
 import { Provider } from "./providers";
 import Image from "next/image";
 import {
@@ -59,6 +59,25 @@ const OAuthIcon = (props: any) => (
   </svg>
 );
 
+// add +1 to each distribution to avoid 0 values
+const addOneToDistribution = (distribution: any[]) => {
+  return distribution.map((data) => ({
+    ...data,
+    number: data.number + 1,
+  }));
+}
+
+const getEmptyDistribution = () => {
+  let emptyDistribution = [];
+  for (let i = 0; i < 24; i++) {
+    emptyDistribution.push({
+      hour: i.toString(),
+      number: 0.2
+    });
+  }
+  return emptyDistribution;
+}
+
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
@@ -115,19 +134,48 @@ export default function ProviderTile({ provider, onClick }: Props) {
               </Subtitle>
             )}
             {
-              provider.linked && (
-                <Text>
+              provider.last_alert_received ? (
+                <Text
+                  className={`${!provider.linked ? 'group-hover:hidden' : ''}`}
+                >
                   Last alert: {moment(provider.last_alert_received).fromNow()}
                 </Text>
+              ) :
+              (
+                <p></p>
               )
             }
             {
-              provider.linked && provider.id &&(
+              provider.linked && provider.id ? (
                 <Text>
                   Id: {provider.id}
                 </Text>
+              ): (
+                <br></br>
               )
             }
+            {
+  (provider.installed || provider.linked) && provider.alertsDistribution && provider.alertsDistribution.length > 0 ? (
+    <SparkAreaChart
+      data={addOneToDistribution(provider.alertsDistribution)}
+      categories={['number']}
+      index={'hour'}
+      colors={['orange']}
+      className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+    />
+  ) : (provider.installed || provider.linked) ? (
+    <SparkAreaChart
+      data={getEmptyDistribution()}
+      categories={['number']}
+      index={'hour'}
+      colors={['orange']}
+      className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+      minValue={0}
+      maxValue={1}
+    />
+  ) : null
+}
+
           </div>
           <div className="labels flex group-hover:hidden">
             {!provider.installed && !provider.linked &&

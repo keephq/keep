@@ -23,8 +23,7 @@ def main():
     if keep_api_key is None or keep_api_url is None:
         raise Exception("KEEP_API_KEY and KEEP_API_URL must be set")
 
-    providers = ["prometheus"]
-    # providers = ["prometheus"]
+    providers = ["prometheus", "grafana"]
     provider_classes = {
         provider: ProvidersFactory.get_provider_class(provider)
         for provider in providers

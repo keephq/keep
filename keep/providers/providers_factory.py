@@ -473,7 +473,7 @@ class ProvidersFactory:
 
         _linked_providers = []
         for p in linked_providers:
-            provider_type, provider_id, provider_last_alert_timestamp = p[0], p[1], p[2]
+            provider_type, provider_id, last_alert_received = p[0], p[1], p[2]
             provider: Provider = next(
                 filter(
                     lambda provider: provider.type == provider_type,
@@ -483,13 +483,11 @@ class ProvidersFactory:
             )
             provider = provider.copy()
             provider.linked = True
-            # set the datetime as utc
-            if provider_last_alert_timestamp:
-                provider_last_alert_timestamp = provider_last_alert_timestamp.replace(
-                    tzinfo=datetime.timezone.utc
-                )
-            provider.last_alert_received = provider_last_alert_timestamp.isoformat()
             provider.id = provider_id
+            if last_alert_received:
+                provider.last_alert_received = last_alert_received.replace(
+                    tzinfo=datetime.timezone.utc
+                ).isoformat()
             _linked_providers.append(provider)
 
         return _linked_providers

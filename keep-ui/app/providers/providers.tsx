@@ -46,6 +46,11 @@ export interface ProvidersResponse {
   is_localhost: boolean;
 }
 
+interface AlertDistritbuionData {
+  hour: string;
+  number: number;
+}
+
 export interface Provider {
   // key value pair of auth method name and auth method config
   config: {
@@ -81,6 +86,7 @@ export interface Provider {
   validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
   tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
+  alertsDistribution?: AlertDistritbuionData[];
 }
 
 export type Providers = Provider[];

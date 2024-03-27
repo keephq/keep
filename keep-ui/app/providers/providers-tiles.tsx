@@ -1,5 +1,5 @@
 "use client";
-import { Title } from "@tremor/react";
+import { Icon, Title } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useEffect, useState } from "react";
 import SlidingPanel from "react-sliding-side-panel";
@@ -8,6 +8,7 @@ import ProviderTile from "./provider-tile";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { hideOrShowIntercom } from "@/components/ui/Intercom";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 const ProvidersTiles = ({
   providers,
@@ -116,9 +117,21 @@ const ProvidersTiles = ({
 
   return (
     <div>
-      <Title className="mb-2.5">
-        {installedProvidersMode ? "Installed Providers" : linkedProvidersMode ? "Linked Providers" : "Available Providers"}
-      </Title>
+      <div className="flex items-center mb-2.5">
+  <Title>
+    {installedProvidersMode ? "Installed Providers" : linkedProvidersMode ? "Linked Providers" : "Available Providers"}
+  </Title>
+  {linkedProvidersMode && (
+    <div className="ml-2 relative">
+      <Icon
+        icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
+        className="text-gray-400 hover:text-gray-600"
+        size="sm"
+        tooltip="Providers which send alerts without being installed by Keep"
+      />
+    </div>
+  )}
+</div>
 
       <div className="flex flex-wrap mb-5 gap-5">
         {providersWithConfig.map((provider, index) => (

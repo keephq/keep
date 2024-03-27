@@ -35,3 +35,4 @@ class Provider(BaseModel):
     installation_time: datetime | None = None
     docs: str | None = None
     tags: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = []
+    alertsDistribution: dict[str, int] | None = None
