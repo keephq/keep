@@ -10,6 +10,7 @@ import {
   Trashcan,
 } from "components/icons";
 import { IoChevronUp } from "react-icons/io5";
+import { AiOutlineGroup } from "react-icons/ai";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { Session } from "next-auth";
@@ -47,10 +48,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
         </li>
         {session && <CustomPresetAlertLinks session={session} />}
         <li>
-          <LinkWithIcon
-            href="/alerts/groups"
-            icon={SilencedDoorbellNotification}
-          >
+          <LinkWithIcon href="/alerts/groups" icon={AiOutlineGroup}>
             Correlation
           </LinkWithIcon>
         </li>
