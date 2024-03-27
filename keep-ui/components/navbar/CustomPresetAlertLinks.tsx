@@ -80,7 +80,10 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           </span>
         </Link>
         <button onClick={() => deletePreset(preset.id, preset.name)}>
-          <Icon className="text-slate-400" icon={AiOutlineDelete} />
+          <Icon
+            className="text-slate-400 hover:text-red-500"
+            icon={AiOutlineDelete}
+          />
         </button>
       </span>
     </li>
