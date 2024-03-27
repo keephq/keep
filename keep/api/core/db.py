@@ -509,10 +509,7 @@ def get_last_workflow_workflow_to_alert_executions(
             WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
         )
         .filter(WorkflowExecution.tenant_id == tenant_id)
-        .filter(
-            WorkflowExecution.started
-            >= datetime.datetime.now() - datetime.timedelta(days=7)
-        )
+        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
         .group_by(WorkflowToAlertExecution.alert_fingerprint)
     ).subquery("max_started_subquery")
 
