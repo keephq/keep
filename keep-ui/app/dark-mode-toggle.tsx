@@ -43,11 +43,14 @@ export default function DarkModeToggle() {
 
   return (
     <button
-      className="flex items-center justify-between space-x-3 w-full text-sm p-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300"
+      className="flex items-center justify-between space-x-3 w-full text-sm p-1 text-slate-400 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group"
       onClick={toggleDarkMode}
     >
       <span className="flex items-center justify-between">
-        <Icon className="text-gray-700" icon={MdDarkMode} color="orange" />
+        <Icon
+          className="text-slate-400 group-hover:text-orange-400"
+          icon={MdDarkMode}
+        />
         <span>Dark Mode</span>
       </span>
       <Switch color="orange" checked={darkMode} />
