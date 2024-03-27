@@ -350,7 +350,6 @@ def get_raw_workflow_by_id(
 
 @router.get("/executions", description="Get workflow executions by alert fingerprint")
 def get_workflow_executions_by_alert_fingerprint(
-    alert_fingerprints: list[str],
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:workflows"])
     ),
@@ -367,13 +366,18 @@ def get_workflow_executions_by_alert_fingerprint(
             WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
         )
         .filter(WorkflowExecution.tenant_id == authenticated_entity.tenant_id)
+        .filter(
+            WorkflowExecution.started
+            >= datetime.datetime.now() - datetime.timedelta(days=7)
+        )
         .group_by(WorkflowToAlertExecution.alert_fingerprint)
     )
 
-    if alert_fingerprints:
-        max_started_subquery = max_started_subquery.filter(
-            WorkflowToAlertExecution.alert_fingerprint.in_(alert_fingerprints)
-        )
+    # TODO: add alert_fingerprints query parameter
+    # if alert_fingerprints:
+    #     max_started_subquery = max_started_subquery.filter(
+    #         WorkflowToAlertExecution.alert_fingerprint.in_(alert_fingerprints)
+    #     )
 
     max_started_subquery = max_started_subquery.subquery("max_started_subquery")
 
@@ -393,6 +397,7 @@ def get_workflow_executions_by_alert_fingerprint(
             ),
         )
         .filter(WorkflowExecution.tenant_id == authenticated_entity.tenant_id)
+        .limit(1000)
         .all()
     )
 
