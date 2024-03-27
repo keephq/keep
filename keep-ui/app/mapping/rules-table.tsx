@@ -16,7 +16,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MdRemoveCircle } from "react-icons/md";
+import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
@@ -35,9 +35,27 @@ export default function RulesTable({ mappings, editCallback }: Props) {
 
   const columns = [
     columnHelper.display({
-      id: "id",
-      header: "#",
-      cell: (context) => context.row.original.id,
+      id: "delete",
+      header: "",
+      cell: (context) => (
+        <div className={"space-x-1 flex flex-row items-center justify-center"}>
+          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            onClick={() => editCallback(context.row.original!)}
+          />
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            onClick={() => deleteRule(context.row.original.id!)}
+          />
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "priority",
@@ -74,29 +92,6 @@ export default function RulesTable({ mappings, editCallback }: Props) {
               {attr}
             </Badge>
           ))}
-        </div>
-      ),
-    }),
-    columnHelper.display({
-      id: "delete",
-      header: "",
-      cell: (context) => (
-        <div className={"space-x-4 flex flex-row items-center justify-center"}>
-          <Button
-            color="red"
-            size="xs"
-            variant="secondary"
-            icon={MdRemoveCircle}
-            onClick={() => deleteRule(context.row.original.id!)}
-          />
-
-          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            onClick={() => editCallback(context.row.original!)}
-          > Edit </Button>
         </div>
       ),
     }),

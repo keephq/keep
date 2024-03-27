@@ -16,19 +16,26 @@ import {
   Icon,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
-import {ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState} from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
-import {MappingRule} from "./models";
+import { MappingRule } from "./models";
 
 interface Props {
   editRule: MappingRule | null;
   editCallback: (rule: MappingRule | null) => void;
 }
 
-export default function CreateNewMapping({editRule, editCallback}: Props) {
+export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
   const [mapName, setMapName] = useState<string>("");
@@ -39,15 +46,14 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
 
-
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
     if (editRule !== null) {
       handleFileReset();
       setMapName(editRule.name);
-      setFileName(editRule.file_name? editRule.file_name : "");
+      setFileName(editRule.file_name ? editRule.file_name : "");
       setMapDescription(editRule.description ? editRule.description : "");
-      setSelectedAttributes(editRule.attributes ? editRule.attributes : []);
+      setSelectedAttributes(editRule.matchers ? editRule.matchers : []);
       setPriority(editRule.priority);
     }
   }, [editRule]);
@@ -62,16 +68,19 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
 
     // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
     if (editRule) {
-      return [...editRule.attributes ? editRule.attributes : [], ...editRule.matchers];
+      return [
+        ...(editRule.attributes ? editRule.attributes : []),
+        ...editRule.matchers,
+      ];
     }
     return [];
   }, [parsedData, editRule]);
   const { readString } = usePapaParse();
 
-    const handleFileReset = () => {
-      if (inputFile.current) {
-          inputFile.current.value = "";
-      }
+  const handleFileReset = () => {
+    if (inputFile.current) {
+      inputFile.current.value = "";
+    }
   };
 
   const readFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -161,19 +170,18 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
   };
 
   // If the mapping is successfully updated or the user cancels the update we exit the editMode and set the editRule in the mapping.tsx to null.
-  const exitEditMode = async() => {
+  const exitEditMode = async () => {
     editCallback(null);
     clearForm();
-  }
+  };
 
   const submitEnabled = (): boolean => {
     return (
       !!mapName &&
       selectedAttributes.length > 0 &&
       (editMode || !!parsedData) &&
-      attributes.filter(
-        (attribute) => !selectedAttributes.includes(attribute)
-      ).length > 0
+      attributes.filter((attribute) => !selectedAttributes.includes(attribute))
+        .length > 0
     );
   };
 
@@ -202,7 +210,12 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
       <div className="mt-2.5">
         <Text>
           Priority
-          <Icon icon={InformationCircleIcon} size="xs" color="gray" tooltip="Higher priority will be executed first" />
+          <Icon
+            icon={InformationCircleIcon}
+            size="xs"
+            color="gray"
+            tooltip="Higher priority will be executed first"
+          />
         </Text>
         <NumberInput
           placeholder="Priority"
@@ -224,7 +237,9 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
         />
         {!parsedData && (
           <Text className="text-xs text-red-500">
-            {!editMode ? "* Upload a CSV file to begin with creating a new mapping" : ""}
+            {!editMode
+              ? "* Upload a CSV file to begin with creating a new mapping"
+              : ""}
           </Text>
         )}
       </div>
@@ -259,9 +274,7 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
             <Badge color="gray">...</Badge>
           ) : (
             attributes
-              .filter(
-                (attribute) => !selectedAttributes.includes(attribute)
-              )
+              .filter((attribute) => !selectedAttributes.includes(attribute))
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
                   {attribute}
@@ -270,25 +283,23 @@ export default function CreateNewMapping({editRule, editCallback}: Props) {
           )}
         </div>
       </div>
-      <div className={"space-x-4 flex flex-row justify-end items-center"}>
-
-      {/*If we are in the editMode we need an extra cancel button option for the user*/}
-      {editMode ? <Button
-        color="orange"
-        size="xs"
-        className=""
-        onClick={exitEditMode}
-      >
-        Cancel
-      </Button> : <></>}
-      <Button
-        disabled={!submitEnabled()}
-        color="orange"
-        size="xs"
-        type="submit"
-      >
-        {editMode ? "Update" : "Create"}
-      </Button>
+      <div className={"space-x-1 flex flex-row justify-end items-center"}>
+        {/*If we are in the editMode we need an extra cancel button option for the user*/}
+        {editMode ? (
+          <Button color="orange" size="xs" variant="secondary" onClick={exitEditMode}>
+            Cancel
+          </Button>
+        ) : (
+          <></>
+        )}
+        <Button
+          disabled={!submitEnabled()}
+          color="orange"
+          size="xs"
+          type="submit"
+        >
+          {editMode ? "Update" : "Create"}
+        </Button>
       </div>
     </form>
   );
