@@ -44,3 +44,8 @@ class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
 
 class MappingRuleDtoIn(MappRuleDtoBase):
     rows: list[dict]
+
+
+class MappingRuleDtoUpdate(MappRuleDtoBase):
+    id: int
+    rows: Optional[list[dict]] = None

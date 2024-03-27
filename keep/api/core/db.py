@@ -298,7 +298,7 @@ def create_workflow_execution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                started=datetime.utcnow(),
+                started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
@@ -504,6 +504,56 @@ def add_or_update_workflow(
         return existing_workflow if existing_workflow else workflow
 
 
+def get_last_workflow_workflow_to_alert_executions(
+    session: Session, tenant_id: str
+) -> list[WorkflowToAlertExecution]:
+    """
+    Get the latest workflow executions for each alert fingerprint.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant_id to filter the workflow executions by.
+
+    Returns:
+        list[WorkflowToAlertExecution]: A list of WorkflowToAlertExecution objects.
+    """
+    # Subquery to find the max started timestamp for each alert_fingerprint
+    max_started_subquery = (
+        session.query(
+            WorkflowToAlertExecution.alert_fingerprint,
+            func.max(WorkflowExecution.started).label("max_started"),
+        )
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+        .group_by(WorkflowToAlertExecution.alert_fingerprint)
+    ).subquery("max_started_subquery")
+
+    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
+    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
+        session.query(WorkflowToAlertExecution)
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .join(
+            max_started_subquery,
+            and_(
+                WorkflowToAlertExecution.alert_fingerprint
+                == max_started_subquery.c.alert_fingerprint,
+                WorkflowExecution.started == max_started_subquery.c.max_started,
+            ),
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .limit(1000)
+        .all()
+    )
+    return latest_workflow_to_alert_executions
+
+
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
         latest_execution_cte = (
@@ -641,6 +691,10 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50):
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .order_by(WorkflowExecution.started.desc())
             .limit(limit)
         ).all()
@@ -794,7 +848,9 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[Alert]:
+def get_alerts_with_filters(
+    tenant_id, provider_id=None, filters=None, time_delta=1
+) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -804,6 +860,12 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
+
+        # Filter by time_delta
+        query = query.filter(
+            Alert.timestamp
+            >= datetime.now(tz=timezone.utc) - timedelta(days=time_delta)
+        )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
         query = query.join(Alert.alert_enrichment)
@@ -862,6 +924,8 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
             query = query.filter(Alert.provider_id == provider_id)
 
         query = query.order_by(Alert.timestamp.desc())
+
+        query = query.limit(10000)
 
         # Execute the query
         alerts = query.all()
