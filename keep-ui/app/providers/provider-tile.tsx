@@ -61,10 +61,11 @@ const OAuthIcon = (props: any) => (
 
 // add +1 to each distribution to avoid 0 values
 const addOneToDistribution = (distribution: any[]) => {
-  return distribution.map((data) => ({
+  let dist = distribution.map((data) => ({
     ...data,
     number: data.number + 1,
   }));
+  return dist;
 }
 
 const getEmptyDistribution = () => {
@@ -161,6 +162,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
       categories={['number']}
       index={'hour'}
       colors={['orange']}
+      showGradient={true}
+      autoMinValue={true}
       className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
     />
   ) : (provider.installed || provider.linked) ? (
@@ -170,7 +173,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
       index={'hour'}
       colors={['orange']}
       className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
-      minValue={0}
+      autoMinValue={true}
       maxValue={1}
     />
   ) : null
