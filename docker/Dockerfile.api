@@ -5,6 +5,17 @@ ENV PYTHONFAULTHANDLER=1 \
     PYTHONUNBUFFERED=1
 
 RUN useradd --user-group --system --create-home --no-log-init keep
+
+# This is for MSSQL DB connections
+RUN apt-get update && apt-get install -y tdsodbc unixodbc-dev \
+    && apt install unixodbc -y  \
+    && apt-get clean -y
+
+RUN echo "[FreeTDS]\n\
+    Description = FreeTDS unixODBC Driver\n\
+    Driver = /usr/lib/arm-linux-gnueabi/odbc/libtdsodbc.so\n\
+    Setup = /usr/lib/arm-linux-gnueabi/odbc/libtdsS.so" >> /etc/odbcinst.ini
+
 WORKDIR /app
 
 FROM base as builder
@@ -26,6 +37,7 @@ FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 COPY --from=builder /venv /venv
+
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app
 RUN chown -R keep:keep /app

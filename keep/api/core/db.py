@@ -10,8 +10,8 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, desc, func, null, select, text, update
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy_utils import create_database, database_exists
@@ -136,6 +136,25 @@ def create_db_and_tables():
     # migrate the workflowtoexecution table
     with Session(engine) as session:
         try:
+            if engine.dialect.name == "mssql":
+                connection.execute(
+                    text("ALTER TABLE alert ADD alert_hash VARCHAR(255);")
+                )
+            else:
+                connection.execute(
+                    text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
+                )
+        except ProgrammingError as e:
+            if "column names in each table must be unique" in str(e).lower():
+                return
+            raise
+        except OperationalError as e:
+            # that's ok
+            if "duplicate column" in str(e).lower():
+                return
+            logger.exception("Failed to add column alert_hash to alert table")
+            raise
+            
             logger.info("Migrating WorkflowToAlertExecution table")
             # get the foreign key constraint name
             results = session.exec(
@@ -855,10 +874,11 @@ def get_alerts_with_filters(
         if filters:
             for f in filters:
                 filter_key, filter_value = f.get("key"), f.get("value")
+                filter_path = f"$.{filter_key}"
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    if session.bind.dialect.name in ["mysql", "postgresql"]:
+                    if session.bind.dialect.name in ["mysql", "postgresql", "mssql"]:
                         query = query.filter(
                             func.json_extract(
                                 AlertEnrichment.enrichments, f"$.{filter_key}"
@@ -877,16 +897,19 @@ def get_alerts_with_filters(
                         query = query.filter(
                             func.json_unquote(
                                 func.json_extract(
-                                    AlertEnrichment.enrichments, f"$.{filter_key}"
+                                    AlertEnrichment.enrichments, filter_path
                                 )
                             )
                             == filter_value
                         )
+                    elif session.bind.dialect.name == "mssql":
+                        query = query.filter(
+                            func.JSON_VALUE(AlertEnrichment.enrichments, filter_path)
+                            == str(filter_value)
+                        )
                     elif session.bind.dialect.name == "sqlite":
                         query = query.filter(
-                            func.json_extract(
-                                AlertEnrichment.enrichments, f"$.{filter_key}"
-                            )
+                            func.json_extract(AlertEnrichment.enrichments, filter_path)
                             == filter_value
                         )
                     else:
@@ -1336,26 +1359,54 @@ def get_rule_distribution(tenant_id, minute=False):
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
             timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
+        elif session.bind.dialect.name == "mssql":
+            # For MSSQL, using CONVERT to format date
+            if minute:
+                timestamp_format = func.format(
+                    AlertToGroup.timestamp, "yyyy-MM-dd HH:mm"
+                )
+            else:
+                timestamp_format = (
+                    func.format(AlertToGroup.timestamp, "yyyy-MM-dd HH") + ":00"
+                )
         else:
             raise ValueError("Unsupported database dialect")
         # Construct the query
-        query = (
-            session.query(
+        # Create a subquery
+        subquery = (
+            select(
                 Rule.id.label("rule_id"),
                 Rule.name.label("rule_name"),
                 Group.id.label("group_id"),
                 Group.group_fingerprint.label("group_fingerprint"),
-                timestamp_format.label("time"),
-                func.count(AlertToGroup.alert_id).label("hits"),
+                timestamp_format.label("formatted_timestamp"),
+                AlertToGroup.alert_id,
             )
             .join(Group, Rule.id == Group.rule_id)
             .join(AlertToGroup, Group.id == AlertToGroup.group_id)
-            .filter(AlertToGroup.timestamp >= seven_days_ago)
-            .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
+            .filter(
+                AlertToGroup.timestamp >= seven_days_ago, Rule.tenant_id == tenant_id
+            )
+            .subquery()
+        )
+
+        query = (
+            session.query(
+                subquery.c.rule_id,
+                subquery.c.rule_name,
+                subquery.c.group_id,
+                subquery.c.group_fingerprint,
+                subquery.c.formatted_timestamp.label("time"),
+                func.count(subquery.c.alert_id).label("hits"),
+            )
             .group_by(
-                "rule_id", "rule_name", "group_id", "group_fingerprint", "time"
-            )  # Adjusted here
-            .order_by("time")
+                subquery.c.rule_id,
+                subquery.c.rule_name,
+                subquery.c.group_id,
+                subquery.c.group_fingerprint,
+                subquery.c.formatted_timestamp,
+            )
+            .order_by(subquery.c.formatted_timestamp)
         )
 
         results = query.all()
@@ -1365,7 +1416,7 @@ def get_rule_distribution(tenant_id, minute=False):
         for result in results:
             rule_id = result.rule_id
             group_fingerprint = result.group_fingerprint
-            timestamp = result.time
+            timestamp = result.formatted_timestamp
             hits = result.hits
 
             if rule_id not in rule_distribution:
