@@ -63,7 +63,6 @@ class WorkflowManager:
             return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
-        return
         for event in events:
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
             for workflow_model in all_workflow_models:
