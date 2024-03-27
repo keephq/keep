@@ -1,9 +1,10 @@
 import { CSSProperties } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
+import { Trashcan } from "components/icons";
 import { getApiURL } from "utils/apiUrl";
 import { usePresets } from "utils/hooks/usePresets";
-import { AiOutlineSwap, AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@tremor/react";
 import classNames from "classnames";
@@ -80,10 +81,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           </span>
         </Link>
         <button onClick={() => deletePreset(preset.id, preset.name)}>
-          <Icon
-            className="text-slate-400 hover:text-red-500"
-            icon={AiOutlineDelete}
-          />
+          <Icon className="text-slate-400 hover:text-red-500" icon={Trashcan} />
         </button>
       </span>
     </li>

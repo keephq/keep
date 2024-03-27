@@ -3,16 +3,16 @@
 import { Subtitle } from "@tremor/react";
 
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { AiOutlineDelete } from "react-icons/ai";
+import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 import {
-  IoNotificationsOffOutline,
-  IoNotificationsOutline,
-  IoChevronUp,
-} from "react-icons/io5";
+  DoorbellNotification,
+  SilencedDoorbellNotification,
+  Trashcan,
+} from "components/icons";
+import { IoChevronUp } from "react-icons/io5";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { Session } from "next-auth";
-import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -41,26 +41,29 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
         className="space-y-2 max-h-[40vh] overflow-auto min-w-[max-content] p-2 pr-4"
       >
         <li>
-          <LinkWithIcon href="/alerts/feed" icon={IoNotificationsOutline}>
+          <LinkWithIcon href="/alerts/feed" icon={DoorbellNotification}>
             Feed [All]
           </LinkWithIcon>
         </li>
         {session && <CustomPresetAlertLinks session={session} />}
         <li>
-          <LinkWithIcon href="/alerts/groups" icon={IoNotificationsOffOutline}>
+          <LinkWithIcon
+            href="/alerts/groups"
+            icon={SilencedDoorbellNotification}
+          >
             Correlation
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon
             href="/alerts/dismissed"
-            icon={IoNotificationsOffOutline}
+            icon={SilencedDoorbellNotification}
           >
             Dismissed
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/alerts/deleted" icon={AiOutlineDelete}>
+          <LinkWithIcon href="/alerts/deleted" icon={Trashcan}>
             Deleted
           </LinkWithIcon>
         </li>
