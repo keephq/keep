@@ -279,7 +279,7 @@ def create_workflow_execution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                started=datetime.utcnow(),
+                started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
@@ -483,6 +483,56 @@ def add_or_update_workflow(
 
         session.commit()
         return existing_workflow if existing_workflow else workflow
+
+
+def get_last_workflow_workflow_to_alert_executions(
+    session: Session, tenant_id: str
+) -> list[WorkflowToAlertExecution]:
+    """
+    Get the latest workflow executions for each alert fingerprint.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant_id to filter the workflow executions by.
+
+    Returns:
+        list[WorkflowToAlertExecution]: A list of WorkflowToAlertExecution objects.
+    """
+    # Subquery to find the max started timestamp for each alert_fingerprint
+    max_started_subquery = (
+        session.query(
+            WorkflowToAlertExecution.alert_fingerprint,
+            func.max(WorkflowExecution.started).label("max_started"),
+        )
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+        .group_by(WorkflowToAlertExecution.alert_fingerprint)
+    ).subquery("max_started_subquery")
+
+    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
+    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
+        session.query(WorkflowToAlertExecution)
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .join(
+            max_started_subquery,
+            and_(
+                WorkflowToAlertExecution.alert_fingerprint
+                == max_started_subquery.c.alert_fingerprint,
+                WorkflowExecution.started == max_started_subquery.c.max_started,
+            ),
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .limit(1000)
+        .all()
+    )
+    return latest_workflow_to_alert_executions
 
 
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:

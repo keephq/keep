@@ -21,6 +21,7 @@ from sqlmodel import Session
 from keep.api.core.db import (
     get_installed_providers,
     get_last_workflow_executions,
+    get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
 )
@@ -34,6 +35,7 @@ from keep.api.models.workflow import (
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowToAlertExecutionDTO,
 )
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -343,6 +345,32 @@ def get_raw_workflow_by_id(
             )
         },
     )
+
+
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecutionDTO]:
+    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
+        latest_workflow_to_alert_executions = (
+            get_last_workflow_workflow_to_alert_executions(
+                session=session, tenant_id=authenticated_entity.tenant_id
+            )
+        )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
+        )
+        for workflow_execution in latest_workflow_to_alert_executions
+    ]
 
 
 @router.get("/{workflow_id}", description="Get workflow executions by ID")
