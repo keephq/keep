@@ -16,6 +16,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from opentelemetry import trace
+from sqlalchemy import and_, func
 from sqlmodel import Session
 
 from keep.api.core.db import (
@@ -28,12 +29,14 @@ from keep.api.core.db import get_workflow_executions as get_workflow_executions_
 from keep.api.core.db import get_workflow_id_by_name
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.workflow import WorkflowExecution, WorkflowToAlertExecution
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowToAlertExecutionDTO,
 )
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -343,6 +346,66 @@ def get_raw_workflow_by_id(
             )
         },
     )
+
+
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    alert_fingerprints: list[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecution]:
+    # Subquery to find the max started timestamp for each alert_fingerprint
+    max_started_subquery = (
+        session.query(
+            WorkflowToAlertExecution.alert_fingerprint,
+            func.max(WorkflowExecution.started).label("max_started"),
+        )
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .filter(WorkflowExecution.tenant_id == authenticated_entity.tenant_id)
+        .group_by(WorkflowToAlertExecution.alert_fingerprint)
+    )
+
+    if alert_fingerprints:
+        max_started_subquery = max_started_subquery.filter(
+            WorkflowToAlertExecution.alert_fingerprint.in_(alert_fingerprints)
+        )
+
+    max_started_subquery = max_started_subquery.subquery("max_started_subquery")
+
+    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
+    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
+        session.query(WorkflowToAlertExecution)
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .join(
+            max_started_subquery,
+            and_(
+                WorkflowToAlertExecution.alert_fingerprint
+                == max_started_subquery.c.alert_fingerprint,
+                WorkflowExecution.started == max_started_subquery.c.max_started,
+            ),
+        )
+        .filter(WorkflowExecution.tenant_id == authenticated_entity.tenant_id)
+        .all()
+    )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow.workflow_id,
+            workflow_execution_id=workflow.id,
+            alert_fingerprint="",
+            workflow_status="",
+            workflow_started="",
+        )
+        for workflow in latest_workflow_to_alert_executions
+    ]
 
 
 @router.get("/{workflow_id}", description="Get workflow executions by ID")

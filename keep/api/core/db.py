@@ -279,7 +279,7 @@ def create_workflow_execution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                started=datetime.utcnow(),
+                started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
