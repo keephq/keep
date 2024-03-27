@@ -16,13 +16,26 @@ import {
   Icon,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
+import { MappingRule } from "./models";
 
-export default function CreateNewMapping() {
+interface Props {
+  editRule: MappingRule | null;
+  editCallback: (rule: MappingRule | null) => void;
+}
+
+export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
   const [mapName, setMapName] = useState<string>("");
@@ -30,16 +43,45 @@ export default function CreateNewMapping() {
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
+  const editMode = editRule !== null;
+  const inputFile = useRef<HTMLInputElement>(null);
+
+  // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
+  useEffect(() => {
+    if (editRule !== null) {
+      handleFileReset();
+      setMapName(editRule.name);
+      setFileName(editRule.file_name ? editRule.file_name : "");
+      setMapDescription(editRule.description ? editRule.description : "");
+      setSelectedAttributes(editRule.matchers ? editRule.matchers : []);
+      setPriority(editRule.priority);
+    }
+  }, [editRule]);
 
   /** This is everything related with the uploaded CSV file */
   const [parsedData, setParsedData] = useState<any[] | null>(null);
   const attributes = useMemo(() => {
     if (parsedData) {
+      setSelectedAttributes([]);
       return Object.keys(parsedData[0]);
     }
+
+    // If we are in the editMode then we need to generate attributes i.e. [selectedAttributes + matchers]
+    if (editRule) {
+      return [
+        ...(editRule.attributes ? editRule.attributes : []),
+        ...editRule.matchers,
+      ];
+    }
     return [];
-  }, [parsedData]);
+  }, [parsedData, editRule]);
   const { readString } = usePapaParse();
+
+  const handleFileReset = () => {
+    if (inputFile.current) {
+      inputFile.current.value = "";
+    }
+  };
 
   const readFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -64,6 +106,7 @@ export default function CreateNewMapping() {
     setMapDescription("");
     setParsedData(null);
     setSelectedAttributes([]);
+    handleFileReset();
   };
 
   const addRule = async (e: FormEvent) => {
@@ -95,19 +138,55 @@ export default function CreateNewMapping() {
     }
   };
 
+  // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
+  const updateRule = async (e: FormEvent) => {
+    e.preventDefault();
+    const apiUrl = getApiURL();
+    const response = await fetch(`${apiUrl}/mapping`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editRule?.id,
+        priority: priority,
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        matchers: selectedAttributes,
+        rows: parsedData,
+      }),
+    });
+    if (response.ok) {
+      exitEditMode();
+      mutate();
+      toast.success("Mapping updated successfully");
+    } else {
+      toast.error(
+        "Failed to update mapping, please contact us if this issue persists."
+      );
+    }
+  };
+
+  // If the mapping is successfully updated or the user cancels the update we exit the editMode and set the editRule in the mapping.tsx to null.
+  const exitEditMode = async () => {
+    editCallback(null);
+    clearForm();
+  };
+
   const submitEnabled = (): boolean => {
     return (
       !!mapName &&
       selectedAttributes.length > 0 &&
-      !!parsedData &&
-      attributes.filter(
-        (attribute) => selectedAttributes.includes(attribute) === false
-      ).length > 0
+      (editMode || !!parsedData) &&
+      attributes.filter((attribute) => !selectedAttributes.includes(attribute))
+        .length > 0
     );
   };
 
   return (
-    <form className="max-w-lg py-2" onSubmit={addRule}>
+    <form className="max-w-lg py-2" onSubmit={editMode ? updateRule : addRule}>
       <Subtitle>Mapping Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>
@@ -131,7 +210,12 @@ export default function CreateNewMapping() {
       <div className="mt-2.5">
         <Text>
           Priority
-          <Icon icon={InformationCircleIcon} size="xs" color="gray" tooltip="Higher priority will be executed first" />
+          <Icon
+            icon={InformationCircleIcon}
+            size="xs"
+            color="gray"
+            tooltip="Higher priority will be executed first"
+          />
         </Text>
         <NumberInput
           placeholder="Priority"
@@ -148,11 +232,14 @@ export default function CreateNewMapping() {
           type="file"
           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           onChange={readFile}
-          required={true}
+          required={!editMode}
+          ref={inputFile}
         />
         {!parsedData && (
           <Text className="text-xs text-red-500">
-            * Upload a CSV file to begin with creating a new mapping
+            {!editMode
+              ? "* Upload a CSV file to begin with creating a new mapping"
+              : ""}
           </Text>
         )}
       </div>
@@ -166,7 +253,7 @@ export default function CreateNewMapping() {
           className="mt-1"
           value={selectedAttributes}
           onValueChange={setSelectedAttributes}
-          disabled={!parsedData}
+          disabled={!editMode && !parsedData}
           icon={MagnifyingGlassIcon}
         >
           {attributes &&
@@ -187,9 +274,7 @@ export default function CreateNewMapping() {
             <Badge color="gray">...</Badge>
           ) : (
             attributes
-              .filter(
-                (attribute) => selectedAttributes.includes(attribute) === false
-              )
+              .filter((attribute) => !selectedAttributes.includes(attribute))
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
                   {attribute}
@@ -198,15 +283,24 @@ export default function CreateNewMapping() {
           )}
         </div>
       </div>
-      <Button
-        disabled={!submitEnabled()}
-        color="orange"
-        size="xs"
-        className="float-right"
-        type="submit"
-      >
-        Create
-      </Button>
+      <div className={"space-x-1 flex flex-row justify-end items-center"}>
+        {/*If we are in the editMode we need an extra cancel button option for the user*/}
+        {editMode ? (
+          <Button color="orange" size="xs" variant="secondary" onClick={exitEditMode}>
+            Cancel
+          </Button>
+        ) : (
+          <></>
+        )}
+        <Button
+          disabled={!submitEnabled()}
+          color="orange"
+          size="xs"
+          type="submit"
+        >
+          {editMode ? "Update" : "Create"}
+        </Button>
+      </div>
     </form>
   );
 }
