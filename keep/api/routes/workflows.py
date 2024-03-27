@@ -355,7 +355,7 @@ def get_workflow_executions_by_alert_fingerprint(
         AuthVerifier(["read:workflows"])
     ),
     session: Session = Depends(get_session),
-) -> list[WorkflowToAlertExecution]:
+) -> list[WorkflowToAlertExecutionDTO]:
     # Subquery to find the max started timestamp for each alert_fingerprint
     max_started_subquery = (
         session.query(
@@ -398,13 +398,13 @@ def get_workflow_executions_by_alert_fingerprint(
 
     return [
         WorkflowToAlertExecutionDTO(
-            workflow_id=workflow.workflow_id,
-            workflow_execution_id=workflow.id,
-            alert_fingerprint="",
-            workflow_status="",
-            workflow_started="",
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
         )
-        for workflow in latest_workflow_to_alert_executions
+        for workflow_execution in latest_workflow_to_alert_executions
     ]
 
 
