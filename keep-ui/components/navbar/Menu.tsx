@@ -33,7 +33,7 @@ export const Menu = ({ children }: MenuButtonProps) => {
       {({ close: closeMenu }) => (
         <>
           <div className="p-3 w-full block lg:hidden">
-            <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
+            <Popover.Button className="p-1 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300">
               <Icon icon={AiOutlineMenu} color="orange" />
             </Popover.Button>
           </div>
@@ -51,7 +51,7 @@ export const Menu = ({ children }: MenuButtonProps) => {
             as="nav"
           >
             <div className="p-3 fixed top-0 right-0 ">
-              <Popover.Button className="p-1 hover:bg-gray-200 font-medium rounded-lg hover:text-orange-500 focus:ring focus:ring-orange-300">
+              <Popover.Button className="p-1 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300">
                 <Icon icon={AiOutlineClose} color="orange" />
               </Popover.Button>
             </div>

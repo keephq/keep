@@ -49,7 +49,7 @@ interface Option {
 }
 
 export interface Preset {
-  id?: string;
+  id: string;
   name: string;
   options: Option[];
   is_private: boolean;
