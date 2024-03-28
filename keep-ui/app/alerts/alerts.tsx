@@ -16,10 +16,10 @@ import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
 
 const defaultPresets: Preset[] = [
-  { name: "feed", options: [], is_private: false },
-  { name: "deleted", options: [], is_private: false },
-  { name: "dismissed", options: [], is_private: false },
-  { name: "groups", options: [], is_private: false },
+  { id: "feed", name: "feed", options: [], is_private: false },
+  { id: "deleted", name: "deleted", options: [], is_private: false },
+  { id: "dismissed", name: "dismissed", options: [], is_private: false },
+  { id: "groups", name: "groups", options: [], is_private: false },
 ];
 
 type AlertsProps = {
