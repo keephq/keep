@@ -42,7 +42,13 @@ export interface ProviderScope {
 export interface ProvidersResponse {
   providers: Provider[];
   installed_providers: Provider[];
+  linked_providers: Provider[];
   is_localhost: boolean;
+}
+
+interface AlertDistritbuionData {
+  hour: string;
+  number: number;
 }
 
 export interface Provider {
@@ -52,6 +58,8 @@ export interface Provider {
   };
   // whether the provider is installed or not
   installed: boolean;
+  linked: boolean;
+  last_alert_received: string;
   // if the provider is installed, this will be the auth details
   //  otherwise, this will be null
   details: {
@@ -78,6 +86,7 @@ export interface Provider {
   validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
   tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
+  alertsDistribution?: AlertDistritbuionData[];
 }
 
 export type Providers = Provider[];
@@ -85,6 +94,8 @@ export type Providers = Provider[];
 export const defaultProvider: Provider = {
   config: {}, // Set default config as an empty object
   installed: false, // Set default installed value
+  linked: false, // Set default linked value
+  last_alert_received: "", // Set default last alert received value
   details: { authentication: {}, name: "" }, // Set default authentication details as an empty object
   id: "", // Placeholder for the provider ID
   display_name: "", // Placeholder for the provider name
