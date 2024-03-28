@@ -16,7 +16,7 @@ import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
-import { useFloating } from "@floating-ui/react-dom";
+import { useFloating } from "@floating-ui/react";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
@@ -103,7 +103,7 @@ export default function AlertMenu({
         await mutate();
       }
     }
-  }
+  };
 
   const onDismiss = async () => {
     setDismissModalAlert?.(alert);

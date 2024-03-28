@@ -12,7 +12,7 @@ import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import DarkModeToggle from "app/dark-mode-toggle";
-import { useFloating } from "@floating-ui/react-dom";
+import { useFloating } from "@floating-ui/react";
 import { Icon } from "@tremor/react";
 
 const getInitials = (name: string) =>
