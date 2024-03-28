@@ -107,7 +107,7 @@ export function AlertTable({
         ) : (
           <AlertPresets
             table={table}
-            preset={{ name: presetName, is_private: false, options: [] }}
+            presetNameFromApi={presetName}
             isLoading={isAsyncLoading}
           />
         )}

@@ -2,6 +2,7 @@
 The providers factory module.
 """
 import copy
+import datetime
 import importlib
 import inspect
 import json
@@ -12,7 +13,11 @@ import typing
 from dataclasses import fields
 from typing import get_args
 
-from keep.api.core.db import get_consumer_providers, get_installed_providers
+from keep.api.core.db import (
+    get_consumer_providers,
+    get_installed_providers,
+    get_linked_providers,
+)
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -451,3 +456,38 @@ class ProvidersFactory:
             provider_config=provider_config,
         )
         return provider_class
+
+    @staticmethod
+    def get_linked_providers(tenant_id: str) -> list[Provider]:
+        """
+        Get the linked providers.
+
+        Args:
+            tenant_id (str): The tenant id.
+
+        Returns:
+            list: The linked providers.
+        """
+        linked_providers = get_linked_providers(tenant_id)
+        available_providers = ProvidersFactory.get_all_providers()
+
+        _linked_providers = []
+        for p in linked_providers:
+            provider_type, provider_id, last_alert_received = p[0], p[1], p[2]
+            provider: Provider = next(
+                filter(
+                    lambda provider: provider.type == provider_type,
+                    available_providers,
+                ),
+                None,
+            )
+            provider = provider.copy()
+            provider.linked = True
+            provider.id = provider_id
+            if last_alert_received:
+                provider.last_alert_received = last_alert_received.replace(
+                    tzinfo=datetime.timezone.utc
+                ).isoformat()
+            _linked_providers.append(provider)
+
+        return _linked_providers
