@@ -108,15 +108,18 @@ export default function ColumnSelection({
               context={context}
             />
             <span className="text-gray-400 text-sm">Set table fields</span>
-            <ul className="space-y-2 mt-3 max-h-96 overflow-auto">
+            <ul className="space-y-1 mt-3 max-h-96 overflow-auto">
               {columnsOptions.map((column) => (
-                <li key={column} className="space-x-2">
-                  <input
-                    name={column}
-                    type="checkbox"
-                    defaultChecked={selectedColumns.includes(column)}
-                  />
-                  <span>{column}</span>
+                <li key={column}>
+                  <label className="cursor-pointer p-2">
+                    <input
+                      className="mr-2"
+                      name={column}
+                      type="checkbox"
+                      defaultChecked={selectedColumns.includes(column)}
+                    />
+                    {column}
+                  </label>
                 </li>
               ))}
             </ul>
