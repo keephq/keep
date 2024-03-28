@@ -85,6 +85,7 @@ export const useFetchProviders = () => {
       const fetchedProviders = data.providers.map((provider) => ({
         ...defaultProvider,
         ...provider,
+        id: provider.type,
         installed: provider.installed ?? false,
       }));
 
