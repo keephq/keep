@@ -481,6 +481,11 @@ class ProvidersFactory:
                 ),
                 None,
             )
+            if not provider:
+                logger.warning(
+                    f"Linked provider {provider_type} does not exist anymore?"
+                )
+                continue
             provider = provider.copy()
             provider.linked = True
             provider.id = provider_id
