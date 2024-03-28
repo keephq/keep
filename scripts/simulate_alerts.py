@@ -24,7 +24,6 @@ def main():
         raise Exception("KEEP_API_KEY and KEEP_API_URL must be set")
 
     providers = ["prometheus", "grafana"]
-    # providers = ["prometheus"]
     provider_classes = {
         provider: ProvidersFactory.get_provider_class(provider)
         for provider in providers
@@ -38,8 +37,9 @@ def main():
 
         logger.info("Sending alert: {}".format(alert))
         try:
+            env = random.choice(["production", "staging", "development"])
             response = requests.post(
-                send_alert_url,
+                send_alert_url + f"?provider_id={provider_type}-{env}",
                 headers={"x-api-key": keep_api_key},
                 json=alert,
             )

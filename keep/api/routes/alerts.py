@@ -721,6 +721,7 @@ async def receive_event(
                 )
             except Exception as e:
                 logger.warning(f"Failed to get provider instance due to {str(e)}")
+
         formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
