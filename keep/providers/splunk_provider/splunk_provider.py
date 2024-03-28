@@ -150,6 +150,10 @@ class SplunkProvider(BaseProvider):
         event: dict, provider_instance: Optional["SplunkProvider"]
     ) -> AlertDto:
         if not provider_instance:
+            result = event.get("result", event.get("_result", {}))
+            message = result.get("message")
+            service = result.get("service")
+            environment = result.get("environment", result.get("env", "undefined"))
             return AlertDto(
                 id=event["sid"],
                 name=event["search_name"],
@@ -158,16 +162,19 @@ class SplunkProvider(BaseProvider):
                 lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 severity=SplunkProvider.SEVERITIES_MAP.get("1"),
                 status="firing",
+                message=message,
+                service=service,
+                environment=environment,
                 **event
             )
 
         search_id = event["sid"]
-        service = connect(
+        splunk_service = connect(
             token=provider_instance.authentication_config.api_key,
             host=provider_instance.authentication_config.host,
             port=provider_instance.authentication_config.port,
         )
-        saved_search = service.saved_searches[search_id]
+        saved_search = splunk_service.saved_searches[search_id]
         return AlertDto(
             id=event["sid"],
             name=event["search_name"],
