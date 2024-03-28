@@ -271,7 +271,7 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=None
+        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
     enriched_alerts_dto = __enrich_alerts(db_alerts)
 

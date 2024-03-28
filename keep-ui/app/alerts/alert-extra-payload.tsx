@@ -24,8 +24,6 @@ export default function AlertExtraPayload({
   isToggled = false,
   setIsToggled,
 }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-
   const onAccordionToggle = () => {
     setIsToggled(!isToggled);
   };
@@ -42,7 +40,7 @@ export default function AlertExtraPayload({
       <AccordionHeader onClick={onAccordionToggle}>
         Extra Payload
       </AccordionHeader>
-      <AccordionBody ref={ref}>
+      <AccordionBody>
         <pre className="overflow-auto">
           {JSON.stringify(extraPayload, null, 2)}
         </pre>
