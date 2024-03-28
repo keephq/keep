@@ -1,12 +1,9 @@
-import { Card } from "@tremor/react";
-import { Preset } from "./models";
 import { useMemo, useState } from "react";
-import AlertStreamline from "./alert-streamline";
+import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
-import { useRouter } from "next/navigation";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
@@ -46,14 +43,8 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto | null>();
 
   const { useAllPresets } = usePresets();
-  const router = useRouter();
 
-  const {
-    data: alerts,
-    isAsyncLoading,
-    lastSubscribedDate,
-    pusherChannel,
-  } = useAllAlertsWithSubscription();
+  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription();
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -64,26 +55,23 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
+  if (selectedPreset === undefined) {
+    return null;
+  }
+
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
-      {pusherChannel && (
-        <AlertStreamline
-          pusherChannel={pusherChannel}
-          lastSubscribedDate={lastSubscribedDate}
-        />
-      )}
-      {selectedPreset && (
-        <AlertTableTabPanel
-          key={selectedPreset.name}
-          preset={selectedPreset}
-          alerts={alerts}
-          isAsyncLoading={isAsyncLoading}
-          setTicketModalAlert={setTicketModalAlert}
-          setNoteModalAlert={setNoteModalAlert}
-          setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-          setDismissModalAlert={setDismissModalAlert}
-        />
-      )}
+    <>
+      <AlertTableTabPanel
+        key={selectedPreset.name}
+        preset={selectedPreset}
+        alerts={alerts}
+        isAsyncLoading={isAsyncLoading}
+        setTicketModalAlert={setTicketModalAlert}
+        setNoteModalAlert={setNoteModalAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+      />
+
       {selectedPreset && (
         <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       )}
@@ -105,6 +93,6 @@ export default function Alerts({ presetName }: AlertsProps) {
         alert={dismissModalAlert}
         handleClose={() => setDismissModalAlert(null)}
       />
-    </Card>
+    </>
   );
 }
