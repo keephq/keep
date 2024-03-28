@@ -51,7 +51,9 @@ const AlertHistoryPanel = ({
       <Flex alignItems="center" justifyContent="between">
         <div>
           <Title>History of: {alertsHistoryWithDate.at(0)?.name}</Title>
-          <Subtitle>Total alerts: {alertsHistoryWithDate.length}</Subtitle>
+          <Subtitle>
+            Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
+          </Subtitle>
           <Subtitle>First Occurence: {minLastReceived.toString()}</Subtitle>
           <Subtitle>Last Occurence: {maxLastReceived.toString()}</Subtitle>
         </div>
