@@ -144,9 +144,13 @@ const ProviderForm = ({
       );
     }
 
-    window.location.assign(
-      `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`
-    );
+    const url = `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`;
+
+    if (provider.type === "slack") {
+      url += `&state=${verifier}`;
+    }
+
+    window.location.assign(url);
   }
 
   useEffect(() => {
@@ -419,7 +423,7 @@ const ProviderForm = ({
               className="mt-5 mb-9 ml-2.5"
             />
           </div>
-          )}
+        )}
         {provider.scopes?.length > 0 && (
           <ProviderFormScopes
             provider={provider}
