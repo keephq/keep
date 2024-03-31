@@ -144,7 +144,7 @@ const ProviderForm = ({
       );
     }
 
-    const url = `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`;
+    let url = `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`;
 
     if (provider.type === "slack") {
       url += `&state=${verifier}`;
