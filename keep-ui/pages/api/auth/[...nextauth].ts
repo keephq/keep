@@ -48,7 +48,7 @@ const multiTenantAuthOptions = {
       if ((profile as any)?.keep_tenant_id) {
         token.keep_tenant_id = (profile as any).keep_tenant_id;
       }
-      if ((profile as any)?.keep_role){
+      if ((profile as any)?.keep_role) {
         token.keep_role = (profile as any).keep_role;
       }
 
@@ -98,7 +98,7 @@ const singleTenantAuthOptions = {
               ...user,
               accessToken,
               tenantId,
-              role
+              role,
             };
           } else {
             return null;
@@ -185,16 +185,11 @@ const noAuthOptions = {
   },
 } as AuthOptions;
 
-
-
-
-console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
-    authType === AuthenticationType.MULTI_TENANT
+  authType === AuthenticationType.MULTI_TENANT
     ? multiTenantAuthOptions
     : authType === AuthenticationType.SINGLE_TENANT
     ? singleTenantAuthOptions
     : noAuthOptions;
-
 
 export default NextAuth(authOptions);
