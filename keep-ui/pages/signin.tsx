@@ -1,5 +1,5 @@
-import { signIn, getProviders } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { signIn, getProviders } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 interface Providers {
   auth0?: {
@@ -16,7 +16,13 @@ interface Providers {
   };
 }
 
-export default function SignIn() {
+export async function getServerSideProps(context: any) {
+  return {
+    props: { params: context.query }, // will be passed to the page component as props
+  };
+}
+
+export default function SignIn({ params }: { params?: { amt: string } }) {
   const [providers, setProviders] = useState<Providers | null>(null);
 
   useEffect(() => {
@@ -31,11 +37,20 @@ export default function SignIn() {
   useEffect(() => {
     if (providers) {
       if (providers.auth0) {
-        console.log('Signing in with auth0 provider');
-        signIn('auth0', { callbackUrl: "/" });
+        console.log("Signing in with auth0 provider");
+        if (params?.amt) {
+          // Do we have a token from AWS Marketplace? redirect to auth0 with the token
+          signIn(
+            "auth0",
+            { callbackUrl: "/" },
+            { acr_values: `amt:${params.amt}` }
+          );
+        } else {
+          signIn("auth0", { callbackUrl: "/" });
+        }
       } else if (providers.credentials) {
-        console.log('Signing in with credentials provider');
-        signIn('credentials', { callbackUrl: "/" });
+        console.log("Signing in with credentials provider");
+        signIn("credentials", { callbackUrl: "/" });
       }
     }
   }, [providers]);
