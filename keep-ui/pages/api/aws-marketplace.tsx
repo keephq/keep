@@ -10,9 +10,11 @@ export default async function handler(
       "x-amzn-marketplace-offer-type": offerType,
     } = req.body;
 
+    const base64EncodedToken = encodeURIComponent(btoa(token));
+
     // Redirect to the sign-in page or wherever you want
     // amt is amazon-marketplace-token
-    res.writeHead(302, { Location: `/signin?amt=${token}` });
+    res.writeHead(302, { Location: `/signin?amt=${base64EncodedToken}` });
     res.end();
   } else {
     // Handle any non-POST requests
