@@ -36,5 +36,5 @@ export default withAuth(function middleware(req) {
 });
 
 export const config = {
-  matcher: ["/((?!keep_big\\.svg$|gnip\\.webp|signin$).*)"], // Adjust as needed
+  matcher: ["/((?!keep_big\\.svg$|gnip\\.webp|signin$|api\/aws\-marketplace$).*)"], // Adjust as needed
 };
