@@ -218,9 +218,13 @@ class AuthVerifierMultiTenant:
         # update last used
         else:
             logger.debug("Updating API Key last used")
-            update_key_last_used(
-                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
-            )
+            try:
+                update_key_last_used(
+                    tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+                )
+            except Exception:
+                logger.exception("Failed to update API Key last used")
+                pass
             logger.debug("Successfully updated API Key last used")
 
         # validate scopes
@@ -308,9 +312,13 @@ class AuthVerifierSingleTenant:
             raise HTTPException(status_code=401, detail="Invalid API Key")
         else:
             logger.debug("Updating API Key last used")
-            update_key_last_used(
-                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
-            )
+            try:
+                update_key_last_used(
+                    tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+                )
+            except Exception:
+                logger.exception("Failed to update API Key last used")
+                pass
             logger.debug("Successfully updated API Key last used")
 
         role = get_role_by_role_name(tenant_api_key.role)
@@ -414,9 +422,11 @@ def get_pusher_client() -> Pusher | None:
     # TODO: defaults on open source no docker
     return Pusher(
         host=os.environ.get("PUSHER_HOST"),
-        port=int(os.environ.get("PUSHER_PORT"))
-        if os.environ.get("PUSHER_PORT")
-        else None,
+        port=(
+            int(os.environ.get("PUSHER_PORT"))
+            if os.environ.get("PUSHER_PORT")
+            else None
+        ),
         app_id=os.environ.get("PUSHER_APP_ID"),
         key=os.environ.get("PUSHER_APP_KEY"),
         secret=os.environ.get("PUSHER_APP_SECRET"),
