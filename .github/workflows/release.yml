@@ -1,0 +1,26 @@
+name: Keep Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Release Keep
+      uses: python-semantic-release/python-semantic-release@master
+      with:
+        git_committer_name: Keep Release Bot
+        git_committer_email: no-reply@keephq.dev
+        github_token: ${{ secrets.GITHUB_TOKEN }}
