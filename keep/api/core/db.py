@@ -536,6 +536,21 @@ def get_last_workflow_workflow_to_alert_executions(
     return latest_workflow_to_alert_executions
 
 
+def get_last_workflow_execution_by_workflow_id(
+    workflow_id: str, tenant_id: str
+) -> Optional[WorkflowExecution]:
+    with Session(engine) as session:
+        workflow_execution = (
+            session.query(WorkflowExecution)
+            .filter(WorkflowExecution.workflow_id == workflow_id)
+            .filter(WorkflowExecution.tenant_id == tenant_id)
+            .filter(WorkflowExecution.status == "success")
+            .order_by(WorkflowExecution.started.desc())
+            .first()
+        )
+    return workflow_execution
+
+
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
         latest_execution_cte = (
