@@ -151,9 +151,9 @@ class SplunkProvider(BaseProvider):
         event: dict, provider_instance: Optional["SplunkProvider"]
     ) -> AlertDto:
         if not provider_instance:
-            name = event["search_name"]
             result = event.get("result", event.get("_result", {}))
             message = result.get("message")
+            name = message or event["search_name"]
             service = result.get("service")
             environment = result.get("environment", result.get("env", "undefined"))
             exception = event.get(
