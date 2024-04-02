@@ -59,7 +59,7 @@ class SplunkProvider(BaseProvider):
             alias="Needed to connect to webhook",
         ),
     ]
-    FINGERPRINT_FIELDS = ["name", "exception", "logger", "service"]
+    FINGERPRINT_FIELDS = ["exception", "logger", "service"]
 
     SEVERITIES_MAP = {
         "1": AlertSeverity.LOW,
@@ -176,7 +176,12 @@ class SplunkProvider(BaseProvider):
                 **event
             )
             alert.fingerprint = SplunkProvider.get_alert_fingerprint(
-                alert, SplunkProvider.FINGERPRINT_FIELDS
+                alert,
+                (
+                    SplunkProvider.FINGERPRINT_FIELDS
+                    if (exception is not None and logger is not None)
+                    else ["name"]
+                ),
             )
             return alert
 
