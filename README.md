@@ -226,7 +226,7 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 
 ## 🫵 Keepers
 
-### Top Contributor 
+### Top Contributors
 A special thanks to our top contributors who help us make Keep great. You are more than awesome!
 
 - [Furkan](https://github.com/pehlicd)
