@@ -276,6 +276,8 @@ def create_workflow_execution(
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
+            if len(triggered_by) > 255:
+                triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
