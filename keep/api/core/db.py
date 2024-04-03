@@ -276,6 +276,8 @@ def create_workflow_execution(
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
+            if len(triggered_by) > 255:
+                triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
@@ -573,7 +575,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
-        )
+        ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
 

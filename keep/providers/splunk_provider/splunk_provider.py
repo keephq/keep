@@ -59,6 +59,7 @@ class SplunkProvider(BaseProvider):
             alias="Needed to connect to webhook",
         ),
     ]
+    FINGERPRINT_FIELDS = ["exception", "logger", "service"]
 
     SEVERITIES_MAP = {
         "1": AlertSeverity.LOW,
@@ -152,11 +153,16 @@ class SplunkProvider(BaseProvider):
         if not provider_instance:
             result = event.get("result", event.get("_result", {}))
             message = result.get("message")
+            name = message or event["search_name"]
             service = result.get("service")
             environment = result.get("environment", result.get("env", "undefined"))
-            return AlertDto(
+            exception = event.get(
+                "exception", result.get("exception", result.get("exception_class"))
+            )
+            logger = event.get("logger", result.get("logger"))
+            alert = AlertDto(
                 id=event["sid"],
-                name=event["search_name"],
+                name=name,
                 source=["splunk"],
                 url=event["results_link"],
                 lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -165,8 +171,19 @@ class SplunkProvider(BaseProvider):
                 message=message,
                 service=service,
                 environment=environment,
+                exception=exception,
+                logger=logger,
                 **event
             )
+            alert.fingerprint = SplunkProvider.get_alert_fingerprint(
+                alert,
+                (
+                    SplunkProvider.FINGERPRINT_FIELDS
+                    if (exception is not None and logger is not None)
+                    else ["name"]
+                ),
+            )
+            return alert
 
         search_id = event["sid"]
         splunk_service = connect(

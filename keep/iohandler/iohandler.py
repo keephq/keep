@@ -252,9 +252,15 @@ class IOHandler:
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key, safe=False, default=""):
+    def _render(self, key: str, safe=False, default=""):
         # change [] to . for the key because thats what chevron uses
         _key = key.replace("[", ".").replace("]", "")
+
+        if "{{^" in key or "{{ ^" in key:
+            self.logger.debug(
+                "Safe render is not supported when there are inverted sections."
+            )
+            safe = False
 
         context = self.context_manager.get_full_context()
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
