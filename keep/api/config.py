@@ -20,7 +20,10 @@ def on_starting(server=None):
         create_db_and_tables()
 
     # Create single tenant if it doesn't exist
-    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
+    if AUTH_TYPE in [
+        AuthenticationType.SINGLE_TENANT.value,
+        AuthenticationType.NO_AUTH.value,
+    ]:
         try_create_single_tenant(SINGLE_TENANT_UUID)
 
     if os.environ.get("USE_NGROK", "false") == "true":
