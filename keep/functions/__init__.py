@@ -1,3 +1,4 @@
+import copy
 import datetime
 import json
 import urllib.parse
@@ -102,3 +103,12 @@ def slice(str_to_slice: str, start: int = 0, end: int = 0) -> str:
     if end == 0 or end == "0":
         return str_to_slice[int(start) :]
     return str_to_slice[int(start) : int(end)]
+
+
+def dict_pop(data: str | dict, *args) -> dict:
+    if isinstance(data, str):
+        data = json.loads(data)
+    dict_copy = copy.deepcopy(data)
+    for arg in args:
+        dict_copy.pop(arg, None)
+    return dict_copy
