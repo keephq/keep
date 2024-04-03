@@ -271,7 +271,7 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=None
+        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
     enriched_alerts_dto = __enrich_alerts(db_alerts)
 
@@ -721,6 +721,7 @@ async def receive_event(
                 )
             except Exception as e:
                 logger.warning(f"Failed to get provider instance due to {str(e)}")
+
         formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):

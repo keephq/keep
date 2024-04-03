@@ -5,7 +5,12 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut, MappingRuleDtoUpdate
+from keep.api.models.db.mapping import (
+    MappingRule,
+    MappingRuleDtoIn,
+    MappingRuleDtoOut,
+    MappingRuleDtoUpdate,
+)
 
 router = APIRouter()
 
@@ -82,12 +87,20 @@ def delete_rule(
 
 
 @router.put("", description="Update an existing rule")
-def update_rule(rule: MappingRuleDtoUpdate,
-                authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
-                session: Session = Depends(get_session)) -> MappingRuleDtoOut:
+def update_rule(
+    rule: MappingRuleDtoUpdate,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    session: Session = Depends(get_session),
+) -> MappingRuleDtoOut:
     logger.info("Updating a mapping rule")
-    existing_rule: MappingRule = session.query(MappingRule).filter(
-        MappingRule.tenant_id == authenticated_entity.tenant_id and MappingRule.id == rule.id).first()
+    existing_rule: MappingRule = (
+        session.query(MappingRule)
+        .filter(
+            MappingRule.tenant_id == authenticated_entity.tenant_id,
+            MappingRule.id == rule.id,
+        )
+        .first()
+    )
     if existing_rule is None:
         raise HTTPException(status_code=404, detail="Rule not found")
     existing_rule.name = rule.name
@@ -102,6 +115,6 @@ def update_rule(rule: MappingRuleDtoUpdate,
     response = MappingRuleDtoOut(**existing_rule.dict())
     if rule.rows is not None:
         response.attributes = [
-                    key for key in existing_rule.rows[0].keys() if key not in rule.matchers
-                ]
+            key for key in existing_rule.rows[0].keys() if key not in rule.matchers
+        ]
     return response

@@ -17,11 +17,11 @@ import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
 import { updateIntercom } from "@/components/ui/Intercom";
 import { useRouter } from "next/navigation";
-import { Callout } from "@tremor/react";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
+  const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
   const [isSlowLoading, setIsSlowLoading] = useState<boolean>(false);
   const { data: session, status } = useSession();
   let shouldFetch = session?.accessToken ? true : false;
@@ -72,54 +72,40 @@ export const useFetchProviders = () => {
     }
   }, [isLocalhost]);
 
-  // process data here if it's available
-  if (data && providers.length === 0 && installedProviders.length === 0) {
-    // TODO: need to refactor the backend response
-    const fetchedInstalledProviders = data.installed_providers.map(
-      (provider) => {
-        const validatedScopes = provider.validatedScopes ?? {};
-        return {
+  useEffect(() => {
+    if (data && providers.length === 0 && installedProviders.length === 0 && linkedProviders.length === 0) {
+      const fetchedInstalledProviders = data.installed_providers.map(
+        (provider) => ({
           ...provider,
           installed: true,
-          validatedScopes: validatedScopes,
-        } as Provider;
-      }
-    );
-    // TODO: refactor this to be more readable and move to backend(?)
-    const fetchedProviders = data.providers.map((provider: Provider) => {
-      const updatedProvider: Provider = {
-        config: { ...defaultProvider.config, ...(provider as Provider).config },
-        installed: (provider as Provider).installed ?? false,
-        details: {
-          authentication: {
-            ...defaultProvider.details.authentication,
-            ...((provider as Provider).details?.authentication || {}),
-          },
-        },
-        id: provider.type,
-        display_name: provider.display_name,
-        comingSoon:
-          (provider as Provider).comingSoon || defaultProvider.comingSoon,
-        can_query: false,
-        can_notify: false,
-        type: provider.type,
-        can_setup_webhook: provider.can_setup_webhook,
-        supports_webhook: provider.supports_webhook,
-        provider_description: provider.provider_description,
-        oauth2_url: provider.oauth2_url,
-        scopes: provider.scopes,
-        validatedScopes: provider.validatedScopes,
-        tags: provider.tags,
-      };
-      return updatedProvider;
-    }) as Providers;
+          validatedScopes: provider.validatedScopes ?? {},
+        })
+      );
 
-    setInstalledProviders(fetchedInstalledProviders);
-    setProviders(fetchedProviders);
-  }
+      const fetchedProviders = data.providers.map((provider) => ({
+        ...defaultProvider,
+        ...provider,
+        id: provider.type,
+        installed: provider.installed ?? false,
+      }));
+
+      const fetchedLinkedProviders = data.linked_providers.map((provider) => ({
+        ...defaultProvider,
+        ...provider,
+        linked: true,
+        validatedScopes: provider.validatedScopes ?? {},
+      }));
+
+      setInstalledProviders(fetchedInstalledProviders);
+      setProviders(fetchedProviders);
+      setLinkedProviders(fetchedLinkedProviders); // Update state with linked providers
+    }
+  }, [data, providers.length, installedProviders.length, linkedProviders.length]);
+
   return {
     providers,
     installedProviders,
+    linkedProviders, // Include linkedProviders in the returned object
     setInstalledProviders,
     status,
     error,
@@ -129,6 +115,7 @@ export const useFetchProviders = () => {
   };
 };
 
+
 export default function ProvidersPage({
   searchParams,
 }: {
@@ -137,6 +124,7 @@ export default function ProvidersPage({
   const {
     providers,
     installedProviders,
+    linkedProviders,
     setInstalledProviders,
     status,
     error,
@@ -210,6 +198,15 @@ export default function ProvidersPage({
           addProvider={addProvider}
           onDelete={deleteProvider}
           installedProvidersMode={true}
+        />
+      )}
+      {linkedProviders.length > 0 && (
+        <ProvidersTiles
+          providers={linkedProviders}
+          addProvider={addProvider}
+          onDelete={deleteProvider}
+          linkedProvidersMode={true}
+          isLocalhost={isLocalhost}
         />
       )}
       <ProvidersTiles

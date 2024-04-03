@@ -1,3 +1,4 @@
+"use client";
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/common/hooks/useLocalStorage.ts
 
 import { useSyncExternalStore } from "react";
