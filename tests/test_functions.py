@@ -225,3 +225,15 @@ def test_encode():
 
 def test_dict_to_key_value_list():
     assert functions.dict_to_key_value_list({"a": 1, "b": "test"}) == ["a:1", "b:test"]
+
+
+def test_dict_pop():
+    d = {"a": 1, "b": 2}
+    d2 = functions.dict_pop(d, "a")
+    assert d2 == {"b": 2}
+
+
+def test_dict_pop_str():
+    d = '{"a": 1, "b": 2}'
+    d2 = functions.dict_pop(d, "a")
+    assert d2 == {"b": 2}
