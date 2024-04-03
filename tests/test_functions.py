@@ -225,3 +225,11 @@ def test_encode():
 
 def test_dict_to_key_value_list():
     assert functions.dict_to_key_value_list({"a": 1, "b": "test"}) == ["a:1", "b:test"]
+
+
+def test_slice():
+    assert functions.slice("long string", 0, 4) == "long"
+
+
+def test_slice_no_end():
+    assert functions.slice("long string", 5) == "string"
