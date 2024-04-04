@@ -7,12 +7,11 @@ import { RuleFields } from "./RuleFields";
 
 type RuleGroupProps = {
   query: RuleGroupType;
-  actionProps: QueryRuleGroupProps;
+  queryRuleProps: QueryRuleGroupProps;
 };
 
-export const RuleGroup = ({ query, actionProps }: RuleGroupProps) => {
-  const { actions, ruleGroup } = actionProps;
-
+export const RuleGroup = ({ query, queryRuleProps }: RuleGroupProps) => {
+  const { actions, ruleGroup } = queryRuleProps;
   const { onRuleAdd, onGroupAdd, onRuleRemove } = actions;
   const { rules } = ruleGroup;
 
@@ -28,16 +27,19 @@ export const RuleGroup = ({ query, actionProps }: RuleGroupProps) => {
 
   return (
     <div className="space-y-2">
-      {rules.map((rule, ruleIndex) => (
-        <RuleFields
-          key={typeof rule === "string" ? ruleIndex : rule.id}
-          rule={rule}
-          ruleIndex={ruleIndex}
-          onRuleAdd={onRuleAdd}
-          onRuleRemove={onRuleRemove}
-          query={query}
-        />
-      ))}
+      {rules.map((rule, groupIndex) =>
+        // we only want rule groups to be rendered
+        typeof rule === "object" && "combinator" in rule ? (
+          <RuleFields
+            key={rule.id}
+            rule={rule}
+            groupIndex={groupIndex}
+            onRuleAdd={onRuleAdd}
+            onRuleRemove={onRuleRemove}
+            query={query}
+          />
+        ) : null
+      )}
       <Button
         className="mt-3"
         onClick={onAddGroupClick}

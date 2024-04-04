@@ -10,7 +10,6 @@ import {
 import { useState } from "react";
 import {
   RuleGroupType,
-  RuleGroupTypeAny,
   QueryActions,
   RuleType,
   defaultOperators,
@@ -47,20 +46,31 @@ type FieldProps = {
 const Field = ({ ruleField, onRemoveFieldClick }: FieldProps) => {
   const [fields, setFields] = useState<Field[]>(DEFAULT_FIELDS);
   const [searchValue, setSearchValue] = useState("");
+  const [isValueEnabled, setIsValueEnabled] = useState(true);
 
   const onValueChange = (selectedValue: string) => {
-    const doesSearchedValueExistInFields = fields.some(
-      ({ name }) =>
-        name.toLowerCase().trim() === selectedValue.toLowerCase().trim()
-    );
+    if (searchValue.length) {
+      const doesSearchedValueExistInFields = fields.some(
+        ({ name }) =>
+          name.toLowerCase().trim() === selectedValue.toLowerCase().trim()
+      );
 
-    if (doesSearchedValueExistInFields === false) {
-      setSearchValue("");
-      return setFields((fields) => [
-        ...fields,
-        { name: selectedValue, label: selectedValue, datatype: "text" },
-      ]);
+      if (doesSearchedValueExistInFields === false) {
+        setSearchValue("");
+        return setFields((fields) => [
+          ...fields,
+          { name: selectedValue, label: selectedValue, datatype: "text" },
+        ]);
+      }
     }
+  };
+
+  const onOperatorSelect = (selectedValue: string) => {
+    if (selectedValue === "null" || selectedValue === "notNull") {
+      return setIsValueEnabled(false);
+    }
+
+    return setIsValueEnabled(true);
   };
 
   return (
@@ -71,26 +81,39 @@ const Field = ({ ruleField, onRemoveFieldClick }: FieldProps) => {
           onValueChange={onValueChange}
           onSearchValueChange={setSearchValue}
           enableClear={false}
+          name={ruleField.field}
+          required
         >
           {fields.map((field) => (
             <SearchSelectItem key={field.name} value={field.name}>
               {field.label}
             </SearchSelectItem>
           ))}
-          {searchValue && (
+          {searchValue.trim() && (
             <SearchSelectItem value={searchValue}>
               {searchValue}
             </SearchSelectItem>
           )}
         </SearchSelect>
-        <Select defaultValue={ruleField.operator}>
+        <Select
+          defaultValue={ruleField.operator}
+          onValueChange={onOperatorSelect}
+          name={ruleField.operator}
+          required
+        >
           {DEFAULT_OPERATORS.map((operator) => (
             <SelectItem key={operator.name} value={operator.name}>
               {operator.label}
             </SelectItem>
           ))}
         </Select>
-        <TextInput defaultValue={ruleField.value} />
+        {isValueEnabled && (
+          <TextInput
+            name={ruleField.value}
+            defaultValue={ruleField.value}
+            required
+          />
+        )}
         <Button
           onClick={onRemoveFieldClick}
           size="lg"
@@ -105,10 +128,10 @@ const Field = ({ ruleField, onRemoveFieldClick }: FieldProps) => {
 };
 
 type RuleFieldProps = {
-  rule: RuleGroupTypeAny["rules"][number];
+  rule: RuleGroupType<RuleType<string, string, any, string>, string>;
   onRuleAdd: QueryActions["onRuleAdd"];
   onRuleRemove: QueryActions["onRuleRemove"];
-  ruleIndex: number;
+  groupIndex: number;
   query: RuleGroupType;
 };
 
@@ -116,56 +139,48 @@ export const RuleFields = ({
   rule,
   onRuleAdd,
   onRuleRemove,
-  ruleIndex,
+  groupIndex,
   query,
 }: RuleFieldProps) => {
-  if (typeof rule === "string") {
-    return null;
-  }
+  const { rules: ruleFields } = rule;
 
-  if ("combinator" in rule) {
-    const { rules: ruleFields } = rule;
-
-    const onAddRuleFieldClick = () => {
-      return onRuleAdd(
-        { field: "severity", operator: "=", value: "" },
-        [ruleIndex],
-        query
-      );
-    };
-
-    const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
-      // if the rule group fields is down to 1,
-      // this field is the last one, so just remove the rule group
-      if (ruleFields.length === 1) {
-        return onRuleRemove([ruleIndex]);
-      }
-
-      return onRuleRemove([ruleIndex, removedRuleFieldIndex]);
-    };
-
-    return (
-      <div key={rule.id} className="bg-gray-100 px-4 py-3 rounded space-y-2">
-        {ruleFields.map((ruleField, ruleFieldIndex) =>
-          "field" in ruleField ? (
-            <Field
-              key={ruleField.id}
-              ruleField={ruleField}
-              onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
-            />
-          ) : null
-        )}
-        <Button
-          onClick={onAddRuleFieldClick}
-          type="button"
-          variant="light"
-          color="orange"
-        >
-          Add condition
-        </Button>
-      </div>
+  const onAddRuleFieldClick = () => {
+    return onRuleAdd(
+      { field: "severity", operator: "=", value: "" },
+      [groupIndex],
+      query
     );
-  }
+  };
 
-  return null;
+  const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
+    // if the rule group fields is down to 1,
+    // this field is the last one, so just remove the rule group
+    if (ruleFields.length === 1) {
+      return onRuleRemove([groupIndex]);
+    }
+
+    return onRuleRemove([groupIndex, removedRuleFieldIndex]);
+  };
+
+  return (
+    <div key={rule.id} className="bg-gray-100 px-4 py-3 rounded space-y-2">
+      {ruleFields.map((ruleField, ruleFieldIndex) =>
+        "field" in ruleField ? (
+          <Field
+            key={ruleField.id}
+            ruleField={ruleField}
+            onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+          />
+        ) : null
+      )}
+      <Button
+        onClick={onAddRuleFieldClick}
+        type="button"
+        variant="light"
+        color="orange"
+      >
+        Add condition
+      </Button>
+    </div>
+  );
 };

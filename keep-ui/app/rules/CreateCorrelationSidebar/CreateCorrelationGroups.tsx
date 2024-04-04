@@ -34,7 +34,9 @@ export const CreateCorrelationGroups = () => {
         onQueryChange={onQueryChange}
         addRuleToNewGroups
         controlElements={{
-          ruleGroup: (props) => <RuleGroup query={query} actionProps={props} />,
+          ruleGroup: (queryRuleProps) => (
+            <RuleGroup query={query} queryRuleProps={queryRuleProps} />
+          ),
         }}
       />
     </div>
