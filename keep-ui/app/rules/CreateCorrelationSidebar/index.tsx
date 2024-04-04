@@ -1,6 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { CreateCorrelationSidebarHeader } from "./CreateCorrelationSidebarHeader";
-import { CreateCorrelationSidebearBody } from "./CreateCorrelationSidebarBody";
+import { CreateCorrelationSidebarBody } from "./CreateCorrelationSidebarBody";
 import { Fragment } from "react";
 
 type CreateCorrelationSidebarProps = {
@@ -37,7 +37,7 @@ export const CreateCorrelationSidebar = ({
         >
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto">
             <CreateCorrelationSidebarHeader toggle={toggle} />
-            <CreateCorrelationSidebearBody />
+            <CreateCorrelationSidebarBody />
           </Dialog.Panel>
         </Transition.Child>
       </Dialog>

@@ -3,8 +3,9 @@ import { Button, Callout, Icon } from "@tremor/react";
 import { CreateCorrelationForm } from "./CreateCorrelationForm";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
+import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
 
-export const CreateCorrelationSidebearBody = () => {
+export const CreateCorrelationSidebarBody = () => {
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
@@ -40,8 +41,12 @@ export const CreateCorrelationSidebearBody = () => {
           </Button>
         </Callout>
       )}
-      <form className="grid grid-cols-2" onSubmit={onCorrelationFormSubmit}>
+      <form
+        className="grid grid-cols-2 gap-x-10"
+        onSubmit={onCorrelationFormSubmit}
+      >
         <CreateCorrelationForm />
+        <CreateCorrelationGroups />
       </form>
     </div>
   );
