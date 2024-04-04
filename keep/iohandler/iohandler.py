@@ -197,7 +197,7 @@ class IOHandler:
                     if isinstance(arg, ast.Call):
                         _arg = _parse(self, arg)
                     elif isinstance(arg, ast.Str) or isinstance(arg, ast.Constant):
-                        _arg = arg.s
+                        _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
                     # set is basically {{ value }}
