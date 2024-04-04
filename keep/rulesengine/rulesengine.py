@@ -310,3 +310,43 @@ class RulesEngine:
             }
 
         return group_payload
+
+    @staticmethod
+    def filter_alerts(alerts: list[AlertDto], cel: str):
+        """This function filters alerts according to a CEL
+
+        Args:
+            alerts (list[AlertDto]): list of alerts
+            cel (str): CEL expression
+
+        Returns:
+            list[AlertDto]: list of alerts that are related to the cel
+        """
+        logger = logging.getLogger(__name__)
+        env = celpy.Environment()
+        ast = env.compile(cel)
+        prgm = env.program(ast)
+        filtered_alerts = []
+        for alert in alerts:
+            payload = alert.dict()
+            # TODO: workaround since source is a list
+            #       should be fixed in the future
+            payload["source"] = payload["source"][0]
+
+            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+            try:
+                r = prgm.evaluate(activation)
+            except celpy.evaluation.CELEvalError as e:
+                # this is ok, it means that the subrule is not relevant for this event
+                if "no such member" in str(e):
+                    continue
+                # unknown
+                elif "no such overload" in str(e):
+                    logger.warning(
+                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
+                    )
+                    continue
+                raise
+            if r:
+                filtered_alerts.append(alert)
+        return filtered_alerts

@@ -18,6 +18,7 @@ from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
+    get_alerts_with_filters,
     get_enrichment,
     get_last_alerts,
     get_session,
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
+def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
     """
     Enriches the alerts with the enrichment data.
 
@@ -236,7 +237,7 @@ def get_all_alerts(
         },
     )
     db_alerts = get_last_alerts(tenant_id=tenant_id)
-    enriched_alerts_dto = __enrich_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -273,7 +274,7 @@ def get_alert_history(
     db_alerts = get_alerts_by_fingerprint(
         tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
-    enriched_alerts_dto = __enrich_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
 
     if provider_id is not None and provider_type is not None:
         try:
@@ -827,7 +828,7 @@ def enrich_alert(
             )
             return {"status": "failed"}
 
-        enriched_alerts_dto = __enrich_alerts(alert)
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
         # use pusher to push the enriched alert to the client
         if pusher_client:
             logger.info("Pushing enriched alert to the client")
@@ -850,3 +851,50 @@ def enrich_alert(
     except Exception as e:
         logger.exception("Failed to enrich alert", extra={"error": str(e)})
         return {"status": "failed"}
+
+
+@router.post(
+    "/search",
+    description="Search alerts",
+)
+async def search_alerts(
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Searching alerts",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    try:
+        body = await request.json()
+        # search_query = body["query"]
+        search_query = body.get("celQuery")
+        timeframe = body.get("timeframeInSeconds")
+        if not search_query:
+            raise HTTPException(
+                status_code=400, detail="Invalid request body - missing query"
+            )
+        if not timeframe:
+            raise HTTPException(
+                status_code=400, detail="Invalid request body - missing timeframe"
+            )
+
+        timeframe_in_days = timeframe / 86400
+        alerts = get_alerts_with_filters(
+            tenant_id=tenant_id, time_delta=timeframe_in_days
+        )
+        alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+        logger.info(
+            "Searched alerts",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        return filtered_alerts
+    except Exception as e:
+        logger.exception("Failed to search alerts", extra={"error": str(e)})
+        return []
