@@ -347,6 +347,11 @@ class RulesEngine:
                     )
                     continue
                 raise
+            except Exception:
+                logger.exception(
+                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id}"
+                )
+                continue
             if r:
                 filtered_alerts.append(alert)
         return filtered_alerts
