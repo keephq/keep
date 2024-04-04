@@ -1,4 +1,6 @@
 import datetime
+import random
+import time
 import uuid
 
 import pytest
@@ -26,6 +28,39 @@ def setup_alerts(db_session, request):
                 provider_id="test",
                 event=_create_valid_event(detail),
                 fingerprint=detail["fingerprint"],
+            )
+        )
+    db_session.add_all(alerts)
+    db_session.commit()
+
+
+@pytest.fixture
+def setup_stress_alerts(db_session, request):
+    num_alerts = request.param.get(
+        "num_alerts", 1000
+    )  # Default to 1000 alerts if not specified
+    alert_details = [
+        {
+            "source": [
+                "source_{}".format(i % 10)
+            ],  # Cycle through 10 different sources
+            "severity": random.choice(
+                ["info", "warning", "critical"]
+            ),  # Alternate between 'critical' and 'warning'
+        }
+        for i in range(num_alerts)
+    ]
+    alerts = []
+    for i, detail in enumerate(alert_details):
+        alerts.append(
+            Alert(
+                tenant_id=SINGLE_TENANT_UUID,
+                provider_type="test",
+                provider_id="test_{}".format(
+                    i % 5
+                ),  # Cycle through 5 different provider_ids
+                event=_create_valid_event(detail),
+                fingerprint="fingerprint_{}".format(i),
             )
         )
     db_session.add_all(alerts)
@@ -521,6 +556,7 @@ def test_high_complexity_queries(db_session, setup_alerts):
 
 
 # Actually found a big in celpy comparing list to None
+# https://github.com/cloud-custodian/cel-python/issues/59
 @pytest.mark.parametrize(
     "setup_alerts",
     [
@@ -546,265 +582,75 @@ def test_empty_and_null_fields(db_session, setup_alerts):
     filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
     assert len(filtered_alerts) == 1
     assert filtered_alerts[0].source == ["process"]
+    # bug - https://github.com/cloud-custodian/cel-python/issues/59
     # search_query = '(queue != null)'
     # filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
     # assert len(filtered_alerts) == 2
 
 
-"""
-def test_nonexist_label(db_session):
-    pass
-"""
+@pytest.mark.parametrize(
+    "setup_alerts",
+    [
+        {
+            "alert_details": [
+                {
+                    "source": ["dynamic"],
+                    "event": {
+                        "@type": "type.googleapis.com/google.protobuf.Value",
+                        "value": {
+                            "listValue": {
+                                "values": [
+                                    {"numberValue": 100},
+                                    {"stringValue": "test"},
+                                    {"boolValue": True},
+                                ]
+                            }
+                        },
+                    },
+                }
+            ]
+        }
+    ],
+    indirect=True,
+)
+def test_complex_dynamic_conversions(db_session, setup_alerts):
+    search_query = 'event.value.listValue.values[0].numberValue == 100 && event.value.listValue.values[1].stringValue == "test" && event.value.listValue.values[2].boolValue'
+    alerts = get_alerts_with_filters(
+        tenant_id=SINGLE_TENANT_UUID, time_delta=3600 / 86400
+    )
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+    assert len(filtered_alerts) == 1
+    assert filtered_alerts[0].source == ["dynamic"]
 
 
-"""
-@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
-def test_old_alerts(db_session):
-    # insert alerts
-    alerts = [
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["sentry"], "severity": "critical"},
-            fingerprint="test",
-        ),
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["grafana"], "severity": "critical"},
-            # 15 minutes ago so out of timeframe
-            timestamp=datetime.datetime.utcnow() - datetime.timedelta(minutes=15),
-            fingerprint="test",
-        ),
-    ]
-    db_session.add_all(alerts)
-    db_session.commit()
-    # create a simple rule
-    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
-    # simple rule
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="test-rule",
-        definition={
-            "sql": "((source = :source_1) and (source = :source_2 and severity = :severity_1))",
-            "params": {
-                "source_1": "sentry",
-                "source_2": "grafana",
-                "severity_1": "critical",
-            },
-        },
-        timeframe=600,
-        definition_cel='(source == "sentry") && (source == "grafana" && severity == "critical")',
-        created_by="test@keephq.dev",
+# tests 10k alerts
+@pytest.mark.parametrize(
+    "setup_stress_alerts", [{"num_alerts": 10000}], indirect=True
+)  # Generate 10,000 alerts
+def test_filter_large_dataset(db_session, setup_stress_alerts):
+    search_query = '(source == "source_1") && (severity == "critical")'
+    start_time = time.time()
+    alerts = get_alerts_with_filters(
+        tenant_id=SINGLE_TENANT_UUID, time_delta=1
+    )  # Assuming `time_delta` is in days
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+    end_time = time.time()
+    assert len(filtered_alerts) > 0  # Ensure some alerts match the criteria
+    print(f"Time taken to filter 10,000 alerts: {end_time - start_time} seconds")
+
+
+@pytest.mark.parametrize("setup_stress_alerts", [{"num_alerts": 10000}], indirect=True)
+def test_complex_logical_operations_large_dataset(db_session, setup_stress_alerts):
+    search_query = '((source == "source_3" || source == "source_7") && severity == "warning") || (severity == "critical")'
+    start_time = time.time()
+    alerts = get_alerts_with_filters(tenant_id=SINGLE_TENANT_UUID, time_delta=1)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+    end_time = time.time()
+
+    assert len(filtered_alerts) > 0  # Ensure some alerts match the complex criteria
+    print(
+        f"Time taken to filter 10,000 alerts with complex criteria: {end_time - start_time} seconds"
     )
-    rules = get_rules_db(SINGLE_TENANT_UUID)
-    assert len(rules) == 1
-    rule = rules[0]
-    # run the rules engine
-    results = rules_engine._run_rule(rule)
-    # there should no results
-    assert results is None
-@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
-def test_another(db_session):
-    alerts = [
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["sentry"], "severity": "critical"},
-            fingerprint="test",
-        ),
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["grafana"], "severity": "critical"},
-            fingerprint="test",
-        ),
-    ]
-    db_session.add_all(alerts)
-    db_session.commit()
-    # create a simple rule
-    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
-    # simple rule
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="test-rule",
-        definition={
-            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2))",
-            "params": {
-                "source_1": "sentry",
-                "severity_1": "high",
-                "source_2": "grafana",
-                "severity_2": "critical",
-            },
-        },
-        timeframe=600,
-        definition_cel='(source == "sentry" && severity == "high") && (source == "grafana" && severity == "critical")',
-        created_by="test@keephq.dev",
-    )
-    rules = get_rules_db(SINGLE_TENANT_UUID)
-    assert len(rules) == 1
-    rule = rules[0]
-    # run the rules engine
-    results = rules_engine._run_rule(rule)
-    # there should no results
-    assert results is None
-@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
-def test_three_groups(db_session):
-    alerts = [
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["sentry"], "severity": "high"},
-            fingerprint="test",
-        ),
-        Alert(
-            tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
-            provider_id="test",
-            event={"source": ["grafana"], "severity": "critical"},
-            fingerprint="test",
-        ),
-    ]
-    db_session.add_all(alerts)
-    db_session.commit()
-    # create a simple rule
-    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
-    # simple rule
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="test-rule",
-        definition={
-            "sql": "((source = :source_1 and severity = :severity_1) and (source = :source_2 and severity = :severity_2) and (source = :source_3 and service = :service_1))",
-            "params": {
-                "source_1": "sentry",
-                "severity_1": "high",
-                "source_2": "grafana",
-                "severity_2": "critical",
-                "source_3": "elastic",
-                "service_1": "db",
-            },
-        },
-        timeframe=600,
-        definition_cel='(source == "sentry" && severity == "high") && (source == "grafana" && severity == "critical") && (source == "elastic" && service == "db")',
-        created_by="test@keephq.dev",
-    )
-    rules = get_rules_db(SINGLE_TENANT_UUID)
-    assert len(rules) == 1
-    rule = rules[0]
-    # run the rules engine
-    results = rules_engine._run_rule(rule)
-    # there should no results
-    assert results is None
-    # now insert another alert
-    alert = Alert(
-        tenant_id=SINGLE_TENANT_UUID,
-        provider_type="test",
-        provider_id="test",
-        event={"source": ["elastic"], "severity": "critical", "service": "db"},
-        fingerprint="test",
-    )
-    db_session.add(alert)
-    db_session.commit()
-    # run the rules engine
-    results = rules_engine._run_rule(rule)
-    # there should be results
-    assert results is not None
-@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
-def test_dict(db_session):
-    # Insert alerts
-    alert1 = Alert(
-        tenant_id=SINGLE_TENANT_UUID,
-        provider_type="test",
-        provider_id="test",
-        event={
-            "source": ["sentry"],
-            "severity": "critical",
-            "tags": {"some_attr": "123", "tag1": "badtag"},
-        },
-        fingerprint="test",
-    )
-    db_session.add_all([alert1])
-    db_session.commit()
-    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="like-rule",
-        definition={
-            "sql": "((tags like :tags_1)",
-            "params": {"tags_1": "%goodtag%", "service_1": "dev"},
-        },
-        timeframe=600,
-        definition_cel='(tags.contains("sometag"))',
-        created_by="test@keephq.dev",
-    )
-    rules = get_rules_db(SINGLE_TENANT_UUID)
-    assert len(rules) == 1
-    # Run the rules engine
-    results = rules_engine._run_rule(rules[0])
-    assert results is None  # Expecting no alerts to match
-    alert2 = Alert(
-        tenant_id=SINGLE_TENANT_UUID,
-        provider_type="test",
-        provider_id="test",
-        event={
-            "source": ["sentry"],
-            "severity": "critical",
-            "tags": {"some_attr": "123", "tag1": "goodtag"},
-        },
-        fingerprint="test",
-    )
-    db_session.add_all([alert2])
-    db_session.commit()
-    results = rules_engine._run_rule(rules[0])
-    assert results and len(results) == 1
-    # now check the alert
-    alerts = list(results.values())[0]
-    assert len(alerts) == 1
-    assert alerts[0].event["tags"]["tag1"] == "goodtag"
-@pytest.mark.parametrize("db_session", ["mysql", "sqlite"], indirect=["db_session"])
-def test_dict_and_startswith(db_session):
-    # Insert alerts
-    alert1 = Alert(
-        tenant_id=SINGLE_TENANT_UUID,
-        provider_type="test",
-        provider_id="test",
-        event={
-            "source": ["sentry"],
-            "severity": "critical",
-            "tags": {"tag1": "sometag"},
-        },
-        fingerprint="test",
-    )
-    alert2 = Alert(
-        tenant_id=SINGLE_TENANT_UUID,
-        provider_type="test",
-        provider_id="test",
-        event={"source": ["grafana"], "severity": "high", "service": "dev-123"},
-        fingerprint="test",
-    )
-    db_session.add_all([alert1, alert2])
-    db_session.commit()
-    # Create a rule using 'NOT' operator
-    rules_engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
-    create_rule_db(
-        tenant_id=SINGLE_TENANT_UUID,
-        name="like-rule",
-        definition={
-            "sql": "((tags like :tags_1) and (service like :service_1))",
-            "params": {"tags_1": "%sometag%", "service_1": "dev%"},
-        },
-        timeframe=600,
-        definition_cel='(tags.contains("sometag")) && (service.startsWith("dev"))',
-        created_by="test@keephq.dev",
-    )
-    rules = get_rules_db(SINGLE_TENANT_UUID)
-    assert len(rules) == 1
-    # Run the rules engine
-    results = rules_engine._run_rule(rules[0])
-    assert results and len(results) == 2
-"""
