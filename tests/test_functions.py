@@ -225,3 +225,38 @@ def test_encode():
 
 def test_dict_to_key_value_list():
     assert functions.dict_to_key_value_list({"a": 1, "b": "test"}) == ["a:1", "b:test"]
+
+
+def test_dict_pop():
+    d = {"a": 1, "b": 2}
+    d2 = functions.dict_pop(d, "a")
+    assert d2 == {"b": 2}
+
+
+def test_dict_pop_str():
+    d = '{"a": 1, "b": 2}'
+    d2 = functions.dict_pop(d, "a")
+    assert d2 == {"b": 2}
+
+
+def test_slice():
+    assert functions.slice("long string", 0, 4) == "long"
+
+
+def test_slice_no_end():
+    assert functions.slice("long string", 5) == "string"
+
+
+def test_index():
+    assert functions.index([1, 2, 3], 2) == 3
+
+
+def test_index_2():
+    s = "prod-group-a-service-b-high-cpu"
+    assert functions.index(functions.split(s, "-"), 0) == "prod"
+    assert functions.index(functions.split(s, "-"), 1) == "group"
+    assert functions.index(functions.split(s, "-"), 2) == "a"
+    assert functions.index(functions.split(s, "-"), 3) == "service"
+    assert functions.index(functions.split(s, "-"), 4) == "b"
+    assert functions.index(functions.split(s, "-"), 5) == "high"
+    assert functions.index(functions.split(s, "-"), 6) == "cpu"
