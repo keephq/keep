@@ -34,13 +34,14 @@ const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
 );
 
 const DEFAULT_FIELDS: Field[] = [
-  { name: "source", label: "Source", datatype: "text" },
-  { name: "severity", label: "Severity", datatype: "text" },
-  { name: "service", label: "Service", datatype: "text" },
+  { name: "source", label: "source", datatype: "text" },
+  { name: "severity", label: "severity", datatype: "text" },
+  { name: "service", label: "service", datatype: "text" },
 ];
 
 type FieldProps = {
   ruleField: RuleType<string, string, any, string>;
+  avaliableFields: Field[];
   onRemoveFieldClick: () => void;
   onFieldChange: (
     prop: Parameters<QueryActions["onPropChange"]>[0],
@@ -50,10 +51,11 @@ type FieldProps = {
 
 const Field = ({
   ruleField,
+  avaliableFields,
   onRemoveFieldClick,
   onFieldChange,
 }: FieldProps) => {
-  const [fields, setFields] = useState<Field[]>(DEFAULT_FIELDS);
+  const [fields, setFields] = useState<Field[]>(avaliableFields);
 
   const [searchValue, setSearchValue] = useState("");
   const [isValueEnabled, setIsValueEnabled] = useState(true);
@@ -160,12 +162,26 @@ export const RuleFields = ({
 }: RuleFieldProps) => {
   const { rules: ruleFields } = rule;
 
+  const selectedFields = ruleFields.reduce<string[]>(
+    (acc, ruleField) =>
+      "field" in ruleField ? acc.concat(ruleField.field) : acc,
+    []
+  );
+
+  const availableFields = DEFAULT_FIELDS.filter(
+    ({ name }) => selectedFields.includes(name) === false
+  );
+
   const onAddRuleFieldClick = () => {
-    return onRuleAdd(
-      { field: "severity", operator: "=", value: "" },
-      [groupIndex],
-      query
-    );
+    const nextAvailableField = availableFields.at(0);
+
+    if (nextAvailableField) {
+      return onRuleAdd(
+        { field: nextAvailableField.name, operator: "=", value: "" },
+        [groupIndex],
+        query
+      );
+    }
   };
 
   const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
@@ -195,6 +211,11 @@ export const RuleFields = ({
               key={ruleField.id}
               ruleField={ruleField}
               onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+              // add the rule field as an available selection
+              avaliableFields={availableFields.concat({
+                label: ruleField.field,
+                name: ruleField.field,
+              })}
               onFieldChange={(prop, value) =>
                 onFieldChange(prop, value, ruleFieldIndex)
               }
@@ -209,6 +230,7 @@ export const RuleFields = ({
         type="button"
         variant="light"
         color="orange"
+        disabled={availableFields.length === 0}
       >
         Add condition
       </Button>
