@@ -5,14 +5,8 @@ import {
 } from "react-querybuilder";
 import { RuleFields } from "./RuleFields";
 
-type RuleGroupProps = {
-  query: RuleGroupType;
-  queryRuleProps: QueryRuleGroupProps;
-};
-
-export const RuleGroup = ({ query, queryRuleProps }: RuleGroupProps) => {
-  const { actions, ruleGroup } = queryRuleProps;
-  const { onRuleAdd, onGroupAdd, onRuleRemove } = actions;
+export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
+  const { onRuleAdd, onGroupAdd, onRuleRemove, onPropChange } = actions;
   const { rules } = ruleGroup;
 
   const onAddGroupClick = () => {
@@ -36,7 +30,8 @@ export const RuleGroup = ({ query, queryRuleProps }: RuleGroupProps) => {
             groupIndex={groupIndex}
             onRuleAdd={onRuleAdd}
             onRuleRemove={onRuleRemove}
-            query={query}
+            onPropChange={onPropChange}
+            query={ruleGroup}
           />
         ) : null
       )}

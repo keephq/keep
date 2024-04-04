@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
 import {
   Button,
   SearchSelect,
@@ -7,13 +7,14 @@ import {
   SelectItem,
   TextInput,
 } from "@tremor/react";
-import { useState } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   RuleGroupType,
   QueryActions,
   RuleType,
   defaultOperators,
   Field,
+  RuleGroupTypeAny,
 } from "react-querybuilder";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
@@ -41,10 +42,19 @@ const DEFAULT_FIELDS: Field[] = [
 type FieldProps = {
   ruleField: RuleType<string, string, any, string>;
   onRemoveFieldClick: () => void;
+  onFieldChange: (
+    prop: Parameters<QueryActions["onPropChange"]>[0],
+    value: unknown
+  ) => void;
 };
 
-const Field = ({ ruleField, onRemoveFieldClick }: FieldProps) => {
+const Field = ({
+  ruleField,
+  onRemoveFieldClick,
+  onFieldChange,
+}: FieldProps) => {
   const [fields, setFields] = useState<Field[]>(DEFAULT_FIELDS);
+
   const [searchValue, setSearchValue] = useState("");
   const [isValueEnabled, setIsValueEnabled] = useState(true);
 
@@ -57,15 +67,19 @@ const Field = ({ ruleField, onRemoveFieldClick }: FieldProps) => {
 
       if (doesSearchedValueExistInFields === false) {
         setSearchValue("");
-        return setFields((fields) => [
+        setFields((fields) => [
           ...fields,
           { name: selectedValue, label: selectedValue, datatype: "text" },
         ]);
       }
     }
+
+    onFieldChange("field", selectedValue);
   };
 
   const onOperatorSelect = (selectedValue: string) => {
+    onFieldChange("operator", selectedValue);
+
     if (selectedValue === "null" || selectedValue === "notNull") {
       return setIsValueEnabled(false);
     }
@@ -131,14 +145,16 @@ type RuleFieldProps = {
   rule: RuleGroupType<RuleType<string, string, any, string>, string>;
   onRuleAdd: QueryActions["onRuleAdd"];
   onRuleRemove: QueryActions["onRuleRemove"];
+  onPropChange: QueryActions["onPropChange"];
   groupIndex: number;
-  query: RuleGroupType;
+  query: RuleGroupTypeAny;
 };
 
 export const RuleFields = ({
   rule,
   onRuleAdd,
   onRuleRemove,
+  onPropChange,
   groupIndex,
   query,
 }: RuleFieldProps) => {
@@ -162,17 +178,32 @@ export const RuleFields = ({
     return onRuleRemove([groupIndex, removedRuleFieldIndex]);
   };
 
+  const onFieldChange = (
+    prop: Parameters<QueryActions["onPropChange"]>[0],
+    value: unknown,
+    ruleFieldIndex: number
+  ) => {
+    return onPropChange(prop, value, [groupIndex, ruleFieldIndex]);
+  };
+
   return (
     <div key={rule.id} className="bg-gray-100 px-4 py-3 rounded space-y-2">
-      {ruleFields.map((ruleField, ruleFieldIndex) =>
-        "field" in ruleField ? (
-          <Field
-            key={ruleField.id}
-            ruleField={ruleField}
-            onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
-          />
-        ) : null
-      )}
+      {ruleFields.map((ruleField, ruleFieldIndex) => {
+        if ("field" in ruleField) {
+          return (
+            <Field
+              key={ruleField.id}
+              ruleField={ruleField}
+              onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+              onFieldChange={(prop, value) =>
+                onFieldChange(prop, value, ruleFieldIndex)
+              }
+            />
+          );
+        }
+
+        return null;
+      })}
       <Button
         onClick={onAddRuleFieldClick}
         type="button"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import QueryBuilder, { RuleGroupType } from "react-querybuilder";
 import { RuleGroup } from "./RuleGroup";
 import "../query-builder.scss";
@@ -34,9 +34,7 @@ export const CreateCorrelationGroups = () => {
         onQueryChange={onQueryChange}
         addRuleToNewGroups
         controlElements={{
-          ruleGroup: (queryRuleProps) => (
-            <RuleGroup query={query} queryRuleProps={queryRuleProps} />
-          ),
+          ruleGroup: RuleGroup,
         }}
       />
     </div>
