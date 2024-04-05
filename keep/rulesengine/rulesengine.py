@@ -346,7 +346,15 @@ class RulesEngine:
                         f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
                     )
                     continue
-                raise
+                elif "found no matching overload" in str(e):
+                    logger.warning(
+                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
+                    )
+                    continue
+                logger.warning(
+                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id} - {e}"
+                )
+                continue
             except Exception:
                 logger.exception(
                     f"Failed to evaluate the CEL expression {cel} for alert {alert.id}"

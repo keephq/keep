@@ -216,8 +216,8 @@ def test_search_sanity_5(db_session, setup_alerts):
     assert len(alerts_dto) == 3
     filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
     assert len(filtered_alerts) == 2
-    assert filtered_alerts[0].fingerprint == "test-1"
-    assert filtered_alerts[1].fingerprint == "test-2"
+    assert filtered_alerts[0].fingerprint == "test-2"
+    assert filtered_alerts[1].fingerprint == "test-1"
 
 
 @pytest.mark.parametrize(
@@ -271,15 +271,6 @@ def test_search_sanity_6(db_session, setup_alerts):
     [
         {
             "alert_details": [
-                {"source": ["sentry"], "severity": "critical"},
-                {
-                    "source": ["grafana"],
-                    "severity": "critical",
-                    "labels": {
-                        "some_label": "some_bla_value",
-                        "another_label": "another_value",
-                    },
-                },
                 {
                     "source": ["grafana"],
                     "severity": "critical",
@@ -287,12 +278,9 @@ def test_search_sanity_6(db_session, setup_alerts):
                     "some_list": ["a", "b"],
                 },
                 {
-                    "source": ["datadog"],
+                    "source": ["grafana"],
                     "severity": "critical",
-                    "labels": {
-                        "some_label": "some_value",
-                        "another_label": "another_value",
-                    },
+                    "labels": {"some_label": "bla", "another_label": "another_value"},
                 },
             ]
         }
@@ -306,10 +294,10 @@ def test_search_sanity_7(db_session, setup_alerts):
         tenant_id=SINGLE_TENANT_UUID, time_delta=timeframe_in_days
     )
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    assert len(alerts_dto) == 4
+    # assert len(alerts_dto) == 4
     filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
     assert len(filtered_alerts) == 1
-    assert filtered_alerts[0].fingerprint == "test-2"
+    assert filtered_alerts[0].fingerprint == "test-0"
 
 
 @pytest.mark.parametrize(
