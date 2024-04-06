@@ -642,3 +642,73 @@ def test_complex_logical_operations_large_dataset(db_session, setup_stress_alert
     print(
         f"Time taken to filter 10,000 alerts with complex criteria: {end_time - start_time} seconds"
     )
+
+
+# Assuming setup_alerts is a fixture that sets up the database with specified alert details
+alert_details = {
+    "alert_details": [
+        {"source": ["test"], "severity": "critical"},
+        {"source": ["test"], "severity": "high"},
+        {"source": ["test"], "severity": "warning"},
+        {"source": ["test"], "severity": "info"},
+        {"source": ["test"], "severity": "low"},
+    ]
+}
+
+
+@pytest.mark.parametrize(
+    "setup_alerts, search_query, expected_severity_counts",
+    [
+        (alert_details, 'severity == "critical"', 1),
+        (alert_details, 'severity == "high"', 1),
+        (alert_details, 'severity == "warning"', 1),
+        (alert_details, 'severity == "info"', 1),
+        (alert_details, 'severity == "low"', 1),
+        # Inequality tests
+        (alert_details, 'severity != "critical"', 4),
+        (alert_details, 'severity != "high"', 4),
+        (alert_details, 'severity != "warning"', 4),
+        (alert_details, 'severity != "info"', 4),
+        (alert_details, 'severity != "low"', 4),
+        # Greater than tests
+        (alert_details, 'severity > "critical"', 0),
+        (alert_details, 'severity > "high"', 1),
+        (alert_details, 'severity > "warning"', 2),
+        (alert_details, 'severity > "info"', 3),
+        (alert_details, 'severity > "low"', 4),
+        # Less than tests
+        (alert_details, 'severity < "critical"', 4),
+        (alert_details, 'severity < "high"', 3),
+        (alert_details, 'severity < "warning"', 2),
+        (alert_details, 'severity < "info"', 1),
+        (alert_details, 'severity < "low"', 0),
+        # Greater than or equal tests
+        (alert_details, 'severity >= "critical"', 1),
+        (alert_details, 'severity >= "high"', 2),
+        (alert_details, 'severity >= "warning"', 3),
+        (alert_details, 'severity >= "info"', 4),
+        (alert_details, 'severity >= "low"', 5),
+        # Less than or equal tests
+        (alert_details, 'severity <= "critical"', 5),
+        (alert_details, 'severity <= "high"', 4),
+        (alert_details, 'severity <= "warning"', 3),
+        (alert_details, 'severity <= "info"', 2),
+        (alert_details, 'severity <= "low"', 1),
+        # single quotes and spaces
+        (alert_details, 'severity=="critical"', 1),
+        (alert_details, ' severity == "high"', 1),
+        (alert_details, ' severity== "warning"', 1),
+        (alert_details, 'severity== "info"', 1),
+        (alert_details, 'severity =="low"', 1),
+    ],
+    indirect=["setup_alerts"],
+)
+def test_severity_comparisons(
+    db_session, setup_alerts, search_query, expected_severity_counts
+):
+    # Assuming get_alerts_with_filters and convert_db_alerts_to_dto_alerts are defined and work as expected
+    alerts = get_alerts_with_filters(tenant_id=SINGLE_TENANT_UUID)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    assert len(alerts_dto) == 5
+    filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+    assert len(filtered_alerts) == expected_severity_counts
