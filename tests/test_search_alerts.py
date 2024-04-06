@@ -694,12 +694,16 @@ alert_details = {
         (alert_details, 'severity <= "warning"', 3),
         (alert_details, 'severity <= "info"', 2),
         (alert_details, 'severity <= "low"', 1),
-        # single quotes and spaces
+        # spaces
         (alert_details, 'severity=="critical"', 1),
         (alert_details, ' severity == "high"', 1),
         (alert_details, ' severity== "warning"', 1),
         (alert_details, 'severity== "info"', 1),
         (alert_details, 'severity =="low"', 1),
+        # single quotes
+        (alert_details, "severity == 'critical'", 1),
+        (alert_details, "severity == 'high' ", 1),
+        (alert_details, "severity =='warning'", 1),
     ],
     indirect=["setup_alerts"],
 )
