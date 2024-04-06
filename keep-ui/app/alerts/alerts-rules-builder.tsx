@@ -16,6 +16,98 @@ import { AlertDto, Preset, severityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
+import Select, { components, MenuListComponentProps } from 'react-select';
+import { IoSearchOutline } from 'react-icons/io5';
+import { FiExternalLink } from 'react-icons/fi';
+
+
+const staticOptions = [
+  { value: 'severity > "warning"', label: 'severity > warning' },
+  { value: 'status=="firing"', label: 'status is firing' },
+  { value: 'source=="grafana"', label: 'source is grafana' },
+];
+
+
+const CustomOption = (props) => {
+  return (
+    <components.Option {...props}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <IoSearchOutline style={{ marginRight: '8px' }} />
+        {props.children}
+      </div>
+    </components.Option>
+  );
+};
+
+const kbdStyle = {
+  background: '#eee',
+  borderRadius: '3px',
+  padding: '2px 4px',
+  margin: '0 2px',
+  fontWeight: 'bold',
+};
+
+// Custom MenuList with a static line at the end
+const CustomMenuList = (props: MenuListComponentProps<{}>) => {
+  return (
+    <components.MenuList {...props}>
+      {props.children}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px',
+          background: 'lightgray',
+          color: 'black',
+          fontSize: '0.9em',
+          borderTop: '1px solid #ddd', // Add a separator if you like
+        }}
+      >
+        <span>Wildcard: <kbd style={kbdStyle}>source.contains("")</kbd></span>
+        <span>OR: <kbd style={kbdStyle}> || </kbd></span>
+        <span>AND: <kbd style={kbdStyle}> && </kbd></span>
+        <span><kbd style={kbdStyle}>Enter</kbd> to update query</span>
+        <a
+          href="https://docs.keephq.dev/overview/presets"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', color: 'black', display: 'flex', alignItems: 'center' }}
+        >
+          See Syntax Documentation <FiExternalLink style={{ marginLeft: '5px' }} />
+        </a>
+      </div>
+    </components.MenuList>
+  );
+};
+
+
+const customComponents = {
+  Control: () => null,  // This hides the input field control
+  DropdownIndicator: null,  // Optionally, hides the dropdown indicator if desired
+  IndicatorSeparator: null,
+  Option: CustomOption,
+  MenuList: CustomMenuList,
+};
+
+// Define the styles for react-select
+const customStyles = {
+  option: (provided, state) => ({
+    ...provided,
+    color: state.isFocused ? 'black' : 'black',
+    backgroundColor: state.isFocused ? 'rgba(255, 165, 0, 0.4)' : 'white', // Orange with opacity
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center', // Align items in the center vertically
+  }),
+  menu: (provided) => ({
+    ...provided,
+    margin: 0, // Remove the margin around the dropdown menu
+    borderRadius: '0', // Optional: Align with the border-radius of the Textarea if necessary
+  }),
+  // You can add more style customizations for other parts of the Select here if needed
+};
+
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
 const getAllMatches = (pattern: RegExp, string: string) =>
@@ -144,8 +236,21 @@ export const AlertsRulesBuilder = ({
   const [sqlError, setSqlError] = useState<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const isFirstRender = useRef(true);
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const toggleSuggestions = () => {
+    setShowSuggestions(!showSuggestions);
+  };
+
+  const handleSelectChange = (selectedOption) => {
+    setCELRules(selectedOption.value);
+    toggleSuggestions();
+    onApplyFilter();
+  };
 
   const constructCELRules = (preset?: Preset) => {
     // Check if selectedPreset is defined and has options
@@ -172,6 +277,19 @@ export const AlertsRulesBuilder = ({
     }
     return ""; // Default to empty string if no preset or options are found
   };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
@@ -332,6 +450,8 @@ export const AlertsRulesBuilder = ({
           </div>
         </div>
       </Modal>
+
+      {/* Import SQL */}
       <Modal
         isOpen={isImportSQLOpen}
         onClose={() => {
@@ -359,6 +479,7 @@ export const AlertsRulesBuilder = ({
         </div>
       </Modal>
 
+      {/* Docs */}
       <div className="flex flex-wrap items-center gap-x-2">
         <div className="flex items-center space-x-2 relative flex-grow">
           {/* CEL badge and (i) icon container */}
@@ -381,7 +502,7 @@ export const AlertsRulesBuilder = ({
           </div>
 
           {/* Textarea and error message container */}
-          <div className="flex-grow relative">
+          <div className="flex-grow relative" ref={wrapperRef}>
             <Textarea
               ref={textAreaRef}
               rows={1}
@@ -391,7 +512,20 @@ export const AlertsRulesBuilder = ({
               onKeyDown={handleKeyDown}
               placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
               error={!isValidCEL}
+              onFocus={() => setShowSuggestions(true)}
             />
+            {showSuggestions && (
+              <div className="absolute z-10 w-full">
+                <Select
+                  options={staticOptions}
+                  onChange={handleSelectChange}
+                  menuIsOpen={true}
+                  components={customComponents}
+                  onBlur={() => setShowSuggestions(false)}
+                  styles={customStyles}
+                />
+              </div>
+            )}
             {!isValidCEL && (
               <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
                 Invalid Common Expression Logic expression.
