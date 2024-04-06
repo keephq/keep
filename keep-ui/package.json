@@ -225,7 +225,7 @@
     "mz": "^2.7.0",
     "nanoid": "^3.3.6",
     "natural-compare": "^1.4.0",
-    "next": "^14.0.0",
+    "next": "^14.1.4",
     "next-auth": "^4.24.5",
     "node-releases": "^2.0.10",
     "normalize-path": "^3.0.0",
@@ -361,7 +361,7 @@
     "zod": "^3.22.3"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.12",
     "@types/js-cookie": "^3.0.3",
     "@types/js-yaml": "^4.0.5",
     "@types/json-logic-js": "^2.0.7",
