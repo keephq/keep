@@ -867,7 +867,7 @@ def get_alerts_with_filters(
         )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
-        query = query.join(Alert.alert_enrichment)
+        query = query.outerjoin(Alert.alert_enrichment)
 
         # Apply filters if provided
         if filters:
