@@ -5,7 +5,7 @@ import logging
 from enum import Enum
 from typing import Any, Dict
 
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Extra, Field, root_validator, validator
 
 logger = logging.getLogger(__name__)
 
@@ -209,3 +209,8 @@ class DismissRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
+
+
+class SearchAlertsRequest(BaseModel):
+    query: str = Field(..., alias="query")
+    timeframe: int = Field(..., alias="timeframe")

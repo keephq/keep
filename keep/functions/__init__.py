@@ -38,6 +38,10 @@ def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
 
 
+def index(iterable, index) -> any:
+    return iterable[index]
+
+
 def strip(string) -> str:
     return string.strip()
 
