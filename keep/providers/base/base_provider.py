@@ -185,18 +185,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
-            if self.context_manager.event_context:
-                for enrichment in _enrichments:
-                    if isinstance(self.context_manager.event_context, dict):
-                        self.context_manager.event_context[enrichment] = _enrichments[
-                            enrichment
-                        ]
-                    else:
-                        setattr(
-                            self.context_manager.event_context,
-                            enrichment,
-                            _enrichments[enrichment],
-                        )
         except Exception as e:
             self.logger.error(
                 "Failed to enrich alert in db",
