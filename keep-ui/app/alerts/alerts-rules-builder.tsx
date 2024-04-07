@@ -26,6 +26,7 @@ const staticOptions = [
   { value: 'severity > 1', label: 'severity > info' },
   { value: 'status=="firing"', label: 'status is firing' },
   { value: 'source=="grafana"', label: 'source is grafana' },
+  { value: 'message.contains("CPU")', label: 'cpu is high' },
 ];
 
 
@@ -65,7 +66,7 @@ const CustomMenuList = (props: MenuListProps<{}>) => {
           borderTop: '1px solid #ddd', // Add a separator if you like
         }}
       >
-        <span>Wildcard: <kbd style={kbdStyle}>source.contains(&quot&quot)</kbd></span>
+        <span>Wildcard: <kbd style={kbdStyle}>source.contains(&quot;&quot;)</kbd></span>
         <span>OR: <kbd style={kbdStyle}> || </kbd></span>
         <span>AND: <kbd style={kbdStyle}> && </kbd></span>
         <span><kbd style={kbdStyle}>Enter</kbd> to update query</span>

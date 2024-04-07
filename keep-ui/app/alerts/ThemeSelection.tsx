@@ -45,12 +45,10 @@ export const ThemeSelection = ({ onThemeChange }: { onThemeChange: (theme: any) 
     middleware: [offset({ mainAxis: 10 }), arrow({ element: arrowRef })],
   });
 
-  const handleThemeChange = (event: FormEvent<HTMLDivElement>) => {
-    const themeKey = parseInt(event.currentTarget.getAttribute('data-index') || '');
-    if (!isNaN(themeKey)) {
-        handleApplyTheme(themeKey as 0 | 1 | 2);
-    }
-};
+  const handleThemeChange = (event: any) => {
+    const themeIndex = event as 0 | 1 | 2;
+    handleApplyTheme(themeIndex as 0 | 1 | 2);
+  };
 
 
 
@@ -95,7 +93,7 @@ export const ThemeSelection = ({ onThemeChange }: { onThemeChange: (theme: any) 
               context={context}
             />
             <span className="text-gray-400 text-sm">Set theme colors</span>
-            <TabGroup onChange={(event) => handleThemeChange(event)}>
+            <TabGroup onChange={handleThemeChange}>
               <TabList color="orange">
                 <Tab>Transparent</Tab>
                 <Tab>Keep</Tab>
