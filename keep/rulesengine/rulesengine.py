@@ -217,7 +217,7 @@ class RulesEngine:
         # note: group_fingerprint is not a unique id, since different rules can lead to the same group_fingerprint
         #       hence, the actual fingerprint is composed of the group_fingerprint and the group id
         event_payload = event.dict()
-        grouping_criteria = rule.grouping_criteria
+        grouping_criteria = rule.grouping_criteria or []
         group_fingerprint = []
         for criteria in grouping_criteria:
             # we need to extract the value from the event
