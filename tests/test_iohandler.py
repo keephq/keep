@@ -1,6 +1,7 @@
 """
 Test the io handler
 """
+
 import datetime
 
 import pytest
@@ -679,7 +680,6 @@ def test_complex_mixture(context_manager):
     ), "Should correctly handle a complex mixture of text and function calls."
 
 
-"""
 def test_escaped_quotes_inside_function_arguments(context_manager):
     iohandler = IOHandler(context_manager)
     template = "keep.split('some,string,with,escaped\\\\'quotes', ',')"
@@ -688,4 +688,27 @@ def test_escaped_quotes_inside_function_arguments(context_manager):
     assert (
         len(extracted_functions) == 1
     ), "Expected one function to be extracted with escaped quotes inside arguments."
-"""
+
+
+def test_if_else_in_template_existing(mocked_context_manager):
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"notexist": "it actually exists", "name": "this is a test"}
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    rendered = iohandler.render(
+        "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
+        safe=True,
+    )
+    assert rendered == "it actually exists"
+
+
+def test_if_else_in_template_not_existing(mocked_context_manager):
+    mocked_context_manager.get_full_context.return_value = {
+        "alert": {"name": "this is a test"}
+    }
+    iohandler = IOHandler(mocked_context_manager)
+    rendered = iohandler.render(
+        "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
+        safe=True,
+    )
+    assert rendered == "this is a test"
