@@ -59,6 +59,7 @@ class SplunkProvider(BaseProvider):
             alias="Needed to connect to webhook",
         ),
     ]
+    FINGERPRINT_FIELDS = ["exception", "logger", "service"]
 
     SEVERITIES_MAP = {
         "1": AlertSeverity.LOW,
@@ -150,24 +151,47 @@ class SplunkProvider(BaseProvider):
         event: dict, provider_instance: Optional["SplunkProvider"]
     ) -> AlertDto:
         if not provider_instance:
-            return AlertDto(
+            result = event.get("result", event.get("_result", {}))
+            message = result.get("message")
+            name = message or event["search_name"]
+            service = result.get("service")
+            environment = result.get("environment", result.get("env", "undefined"))
+            exception = event.get(
+                "exception", result.get("exception", result.get("exception_class"))
+            )
+            logger = event.get("logger", result.get("logger"))
+            alert = AlertDto(
                 id=event["sid"],
-                name=event["search_name"],
+                name=name,
                 source=["splunk"],
                 url=event["results_link"],
                 lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 severity=SplunkProvider.SEVERITIES_MAP.get("1"),
                 status="firing",
+                message=message,
+                service=service,
+                environment=environment,
+                exception=exception,
+                logger=logger,
                 **event
             )
+            alert.fingerprint = SplunkProvider.get_alert_fingerprint(
+                alert,
+                (
+                    SplunkProvider.FINGERPRINT_FIELDS
+                    if (exception is not None or logger is not None)
+                    else ["name"]
+                ),
+            )
+            return alert
 
         search_id = event["sid"]
-        service = connect(
+        splunk_service = connect(
             token=provider_instance.authentication_config.api_key,
             host=provider_instance.authentication_config.host,
             port=provider_instance.authentication_config.port,
         )
-        saved_search = service.saved_searches[search_id]
+        saved_search = splunk_service.saved_searches[search_id]
         return AlertDto(
             id=event["sid"],
             name=event["search_name"],

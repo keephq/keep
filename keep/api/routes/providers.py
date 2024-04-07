@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import time
@@ -12,7 +13,7 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import get_session
+from keep.api.core.db import get_provider_distribution, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
@@ -66,12 +67,29 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
+    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
+
+    providers_distribution = get_provider_distribution(tenant_id)
+
+    for provider in linked_providers + installed_providers:
+        provider.alertsDistribution = providers_distribution.get(
+            f"{provider.id}_{provider.type}", {}
+        ).get("alert_last_24_hours", [])
+        last_alert_received = providers_distribution.get(
+            f"{provider.id}_{provider.type}", {}
+        ).get("last_alert_received", None)
+        if last_alert_received and not provider.last_alert_received:
+            provider.last_alert_received = last_alert_received.replace(
+                tzinfo=datetime.timezone.utc
+            ).isoformat()
+
     is_localhost = _is_localhost()
 
     try:
         return {
             "providers": providers,
             "installed_providers": installed_providers,
+            "linked_providers": linked_providers,
             "is_localhost": is_localhost,
         }
     except Exception:
@@ -79,6 +97,7 @@ def get_providers(
         return {
             "providers": providers,
             "installed_providers": [],
+            "linked_providers": [],
             "is_localhost": is_localhost,
         }
 

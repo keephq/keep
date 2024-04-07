@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from typing import List, Tuple
 from uuid import uuid4
 
 import pymysql
@@ -294,6 +295,8 @@ def create_workflow_execution(
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
+            if len(triggered_by) > 255:
+                triggered_by = triggered_by[:255]
             workflow_execution = WorkflowExecution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
@@ -591,7 +594,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
-        )
+        ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
 
@@ -868,7 +871,7 @@ def get_alerts_with_filters(
         )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
-        query = query.join(Alert.alert_enrichment)
+        query = query.outerjoin(Alert.alert_enrichment)
 
         # Apply filters if provided
         if filters:
@@ -1489,3 +1492,89 @@ def update_key_last_used(
         tenant_api_key_entry.last_used = datetime.utcnow()
         session.add(tenant_api_key_entry)
         session.commit()
+
+
+def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
+    with Session(engine) as session:
+        providers = (
+            session.query(
+                Alert.provider_type,
+                Alert.provider_id,
+                func.max(Alert.timestamp).label("last_alert_timestamp"),
+            )
+            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.provider_type != "group",
+                Provider.id
+                == None,  # Filters for alerts with a provider_id not in Provider table
+            )
+            .group_by(Alert.provider_type, Alert.provider_id)
+            .all()
+        )
+
+    return providers
+
+
+def get_provider_distribution(tenant_id: str) -> dict:
+    """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        if session.bind.dialect.name in ["mysql", "postgresql"]:
+            timestamp_format = func.date_format(Alert.timestamp, time_format)
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Alert.timestamp)
+
+        # Adjusted query to include max timestamp
+        query = (
+            session.query(
+                Alert.provider_id,
+                Alert.provider_type,
+                timestamp_format.label("time"),
+                func.count().label("hits"),
+                func.max(Alert.timestamp).label(
+                    "last_alert_timestamp"
+                ),  # Include max timestamp
+            )
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.timestamp >= twenty_four_hours_ago,
+            )
+            .group_by(Alert.provider_id, Alert.provider_type, "time")
+            .order_by(Alert.provider_id, Alert.provider_type, "time")
+        )
+
+        results = query.all()
+
+        provider_distribution = {}
+
+        for provider_id, provider_type, time, hits, last_alert_timestamp in results:
+            provider_key = f"{provider_id}_{provider_type}"
+
+            if provider_key not in provider_distribution:
+                provider_distribution[provider_key] = {
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "alert_last_24_hours": [
+                        {"hour": i, "number": 0} for i in range(24)
+                    ],
+                    "last_alert_received": last_alert_timestamp,  # Initialize with the first seen timestamp
+                }
+            else:
+                # Update the last alert timestamp if the current one is more recent
+                provider_distribution[provider_key]["last_alert_received"] = max(
+                    provider_distribution[provider_key]["last_alert_received"],
+                    last_alert_timestamp,
+                )
+
+            time = datetime.strptime(time, time_format)
+            index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+
+            if 0 <= index < 24:
+                provider_distribution[provider_key]["alert_last_24_hours"][index][
+                    "number"
+                ] += hits
+
+    return provider_distribution

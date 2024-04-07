@@ -239,14 +239,14 @@ export const useAlertTableCols = (
             // because all fingerprints are the same. (it's the history of that fingerprint :P)
             isMenuDisplayed
               ? expandedToggles[context.row.original.fingerprint]
-              : expandedToggles[context.row.original.id]
+              : expandedToggles[context.row.id]
           }
           setIsToggled={(newValue) =>
             setExpandedToggles({
               ...expandedToggles,
               [isMenuDisplayed
                 ? context.row.original.fingerprint
-                : context.row.original.id]: newValue,
+                : context.row.id]: newValue,
             })
           }
         />

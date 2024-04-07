@@ -84,6 +84,7 @@ class ServicenowProvider(BaseProvider):
                     self.authentication_config.username,
                     self.authentication_config.password,
                 ),
+                verify=False,
             )
             if response.status_code == 200:
                 roles = response.json()
@@ -143,6 +144,7 @@ class ServicenowProvider(BaseProvider):
             ),
             headers=headers,
             data=json.dumps(payload),
+            verify=False,
         )
 
         if response.status_code == 201:  # HTTP status code for "Created"
@@ -174,6 +176,7 @@ class ServicenowProvider(BaseProvider):
                 self.authentication_config.password,
             ),
             headers=headers,
+            verify=False,
         )
         if response.status_code == 200:
             resp = response.text
