@@ -195,7 +195,11 @@ export const RuleFields = ({
 
   const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
     // prevent users from removing group if there are only two remaining
-    if (groupsLength <= 2 && groupIndex <= 1 && removedRuleFieldIndex === 0) {
+    if (
+      groupsLength === 2 &&
+      ruleFields.length <= 1 &&
+      removedRuleFieldIndex === 0
+    ) {
       return undefined;
     }
 
