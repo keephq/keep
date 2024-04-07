@@ -11,6 +11,7 @@ import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
 import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
+import { ViewAlertModal } from './ViewAlertModal';
 
 const defaultPresets: Preset[] = [
   { id: "feed", name: "feed", options: [], is_private: false },
@@ -41,7 +42,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
   const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto | null>();
-
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
   const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription();
@@ -70,6 +71,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
+        setViewAlertModal={setViewAlertModal}
       />
 
       {selectedPreset && (
@@ -93,6 +95,11 @@ export default function Alerts({ presetName }: AlertsProps) {
         alert={dismissModalAlert}
         handleClose={() => setDismissModalAlert(null)}
       />
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+      />
+
     </>
   );
 }

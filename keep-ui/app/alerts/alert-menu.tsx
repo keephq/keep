@@ -8,6 +8,7 @@ import {
   TrashIcon,
   UserPlusIcon,
   PlayIcon,
+  EyeIcon
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 
@@ -28,6 +29,7 @@ interface Props {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
+  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export default function AlertMenu({
@@ -37,6 +39,7 @@ export default function AlertMenu({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   presetName,
+  setViewAlertModal,
 }: Props) {
   const router = useRouter();
 
@@ -282,6 +285,26 @@ export default function AlertMenu({
                       )}
                     </Menu.Item>
                   )}
+                  {/*View the alert */}
+                  <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            setViewAlertModal?.(alert);
+                            handleCloseMenu();
+                          }}
+                          className={`${
+                            active ? "bg-slate-200" : "text-gray-900"
+                          } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                        >
+                          <EyeIcon
+                            className="mr-2 h-4 w-4"
+                            aria-hidden="true"
+                          />
+                          View Alert
+                        </button>
+                      )}
+                    </Menu.Item>
                 </div>
                 {provider?.methods && provider?.methods?.length > 0 && (
                   <div className="px-1 py-1">

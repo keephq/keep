@@ -108,6 +108,7 @@ interface GenerateAlertTableColsArg {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
+  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = (
@@ -120,6 +121,7 @@ export const useAlertTableCols = (
     setRunWorkflowModalAlert,
     setDismissModalAlert,
     presetName,
+    setViewAlertModal,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -292,6 +294,7 @@ export const useAlertTableCols = (
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                 setDismissModalAlert={setDismissModalAlert}
+                setViewAlertModal={setViewAlertModal}
               />
             ),
           }),
