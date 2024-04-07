@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT
+from sqlalchemy import TEXT, String
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
