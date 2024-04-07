@@ -3,27 +3,15 @@ import QueryBuilder, { RuleGroupType } from "react-querybuilder";
 import { RuleGroup } from "./RuleGroup";
 import "../query-builder.scss";
 
-const DEFAULT_QUERY: RuleGroupType = {
-  combinator: "and",
-  rules: [
-    {
-      combinator: "and",
-      rules: [{ field: "source", operator: "=", value: "" }],
-    },
-    {
-      combinator: "and",
-      rules: [{ field: "source", operator: "=", value: "" }],
-    },
-  ],
+type CreateCorrelationGroupsProps = {
+  query: RuleGroupType;
+  onQueryChange: (newQuery: RuleGroupType) => void;
 };
 
-export const CreateCorrelationGroups = () => {
-  const [query, setQuery] = useState<RuleGroupType>(DEFAULT_QUERY);
-
-  const onQueryChange = (query: RuleGroupType) => {
-    return setQuery(query);
-  };
-
+export const CreateCorrelationGroups = ({
+  query,
+  onQueryChange,
+}: CreateCorrelationGroupsProps) => {
   return (
     <div>
       <p className="text-tremor-default font-medium text-tremor-content-strong mb-2">

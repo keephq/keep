@@ -46,7 +46,7 @@ export const CreateCorrelationForm = () => {
       </fieldset>
       <label className="text-tremor-default font-medium text-tremor-content-strong">
         When all condition meets set alert severity to
-        <Select className="mt-2" name="severity" defaultValue="high">
+        <Select className="mt-2" name="severity">
           <SelectItem value="low">Low</SelectItem>
           <SelectItem value="medium">Medium</SelectItem>
           <SelectItem value="high">High</SelectItem>

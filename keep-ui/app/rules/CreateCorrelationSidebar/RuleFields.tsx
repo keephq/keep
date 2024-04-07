@@ -47,6 +47,7 @@ type FieldProps = {
     prop: Parameters<QueryActions["onPropChange"]>[0],
     value: unknown
   ) => void;
+  isInputRemovalDisabled: boolean;
 };
 
 const Field = ({
@@ -54,6 +55,7 @@ const Field = ({
   avaliableFields,
   onRemoveFieldClick,
   onFieldChange,
+  isInputRemovalDisabled,
 }: FieldProps) => {
   const [fields, setFields] = useState<QueryField[]>(avaliableFields);
 
@@ -97,7 +99,6 @@ const Field = ({
           onValueChange={onValueChange}
           onSearchValueChange={setSearchValue}
           enableClear={false}
-          name={ruleField.field}
           required
         >
           {fields.map((field) => (
@@ -114,7 +115,6 @@ const Field = ({
         <Select
           defaultValue={ruleField.operator}
           onValueChange={onOperatorSelect}
-          name={ruleField.operator}
           required
         >
           {DEFAULT_OPERATORS.map((operator) => (
@@ -126,11 +126,11 @@ const Field = ({
         {isValueEnabled && (
           <TextInput
             onValueChange={(newValue) => onFieldChange("value", newValue)}
-            name={ruleField.value}
             defaultValue={ruleField.value}
             required
           />
         )}
+
         <Button
           onClick={onRemoveFieldClick}
           size="lg"
@@ -138,6 +138,12 @@ const Field = ({
           icon={XMarkIcon}
           variant="light"
           type="button"
+          disabled={isInputRemovalDisabled}
+          title={
+            isInputRemovalDisabled
+              ? "You must have at least two groups"
+              : undefined
+          }
         />
       </div>
     </div>
@@ -151,6 +157,7 @@ type RuleFieldProps = {
   onPropChange: QueryActions["onPropChange"];
   groupIndex: number;
   query: RuleGroupTypeAny;
+  groupsLength: number;
 };
 
 export const RuleFields = ({
@@ -160,6 +167,7 @@ export const RuleFields = ({
   onPropChange,
   groupIndex,
   query,
+  groupsLength,
 }: RuleFieldProps) => {
   const { rules: ruleFields } = rule;
 
@@ -186,6 +194,11 @@ export const RuleFields = ({
   };
 
   const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
+    // prevent users from removing group if there are only two remaining
+    if (groupsLength <= 2 && groupIndex <= 1 && removedRuleFieldIndex === 0) {
+      return undefined;
+    }
+
     // if the rule group fields is down to 1,
     // this field is the last one, so just remove the rule group
     if (ruleFields.length === 1) {
@@ -207,6 +220,14 @@ export const RuleFields = ({
     <div key={rule.id} className="bg-gray-100 px-4 py-3 rounded space-y-2">
       {ruleFields.map((ruleField, ruleFieldIndex) => {
         if ("field" in ruleField) {
+          const isInputRemovalDisabled =
+            // groups length is only 2
+            groupsLength === 2 &&
+            // and remaining fields in group is down to one
+            ruleFields.length <= 1 &&
+            // and rule field is the first (and last) one
+            ruleFieldIndex === 0;
+
           return (
             <Field
               key={ruleField.id}
@@ -220,6 +241,7 @@ export const RuleFields = ({
               onFieldChange={(prop, value) =>
                 onFieldChange(prop, value, ruleFieldIndex)
               }
+              isInputRemovalDisabled={isInputRemovalDisabled}
             />
           );
         }

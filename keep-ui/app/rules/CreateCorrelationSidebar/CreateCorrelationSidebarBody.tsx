@@ -1,16 +1,33 @@
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { Button, Callout, Icon } from "@tremor/react";
 import { CreateCorrelationForm } from "./CreateCorrelationForm";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
 import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
 import { CreateCorrelationSubmission } from "./CreateCorrelationSubmission";
+import { RuleGroupType } from "react-querybuilder";
+
+const DEFAULT_QUERY: RuleGroupType = {
+  combinator: "and",
+  rules: [
+    {
+      combinator: "and",
+      rules: [{ field: "source", operator: "=", value: "" }],
+    },
+    {
+      combinator: "and",
+      rules: [{ field: "source", operator: "=", value: "" }],
+    },
+  ],
+};
 
 export const CreateCorrelationSidebarBody = () => {
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
   );
+
+  const [query, setQuery] = useState<RuleGroupType>(DEFAULT_QUERY);
 
   const onCorrelationFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,7 +64,7 @@ export const CreateCorrelationSidebarBody = () => {
         onSubmit={onCorrelationFormSubmit}
       >
         <CreateCorrelationForm />
-        <CreateCorrelationGroups />
+        <CreateCorrelationGroups query={query} onQueryChange={setQuery} />
         <CreateCorrelationSubmission />
       </form>
     </div>

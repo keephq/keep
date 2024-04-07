@@ -32,6 +32,7 @@ export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
             onRuleRemove={onRuleRemove}
             onPropChange={onPropChange}
             query={ruleGroup}
+            groupsLength={rules.length}
           />
         ) : null
       )}
