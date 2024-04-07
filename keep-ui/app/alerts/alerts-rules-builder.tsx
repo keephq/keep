@@ -22,7 +22,7 @@ import { FiExternalLink } from 'react-icons/fi';
 
 
 const staticOptions = [
-  { value: 'severity > "warning"', label: 'severity > warning' },
+  { value: 'severity > "info"', label: 'severity > info' },
   { value: 'status=="firing"', label: 'status is firing' },
   { value: 'source=="grafana"', label: 'source is grafana' },
 ];
@@ -119,7 +119,7 @@ const sanitizeCELIntoJS = (celExpression: string): string => {
   let jsExpression = celExpression.replace(/contains/g, "includes");
   // Replace severity comparisons with mapped values
   jsExpression = jsExpression.replace(
-    /severity\s*([<>=]+)\s*(\d)/g,
+    /severity\s*([<>]=?|==)\s*(\d)/g,
     (match, operator, number) => {
       const severityValue = severityMapping[number];
       if (!severityValue) {
