@@ -13,7 +13,7 @@ import {
   QueryActions,
   RuleType,
   defaultOperators,
-  Field,
+  Field as QueryField,
   RuleGroupTypeAny,
 } from "react-querybuilder";
 
@@ -33,7 +33,7 @@ const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   ].includes(operator.name)
 );
 
-const DEFAULT_FIELDS: Field[] = [
+const DEFAULT_FIELDS: QueryField[] = [
   { name: "source", label: "source", datatype: "text" },
   { name: "severity", label: "severity", datatype: "text" },
   { name: "service", label: "service", datatype: "text" },
@@ -41,7 +41,7 @@ const DEFAULT_FIELDS: Field[] = [
 
 type FieldProps = {
   ruleField: RuleType<string, string, any, string>;
-  avaliableFields: Field[];
+  avaliableFields: QueryField[];
   onRemoveFieldClick: () => void;
   onFieldChange: (
     prop: Parameters<QueryActions["onPropChange"]>[0],
@@ -55,7 +55,7 @@ const Field = ({
   onRemoveFieldClick,
   onFieldChange,
 }: FieldProps) => {
-  const [fields, setFields] = useState<Field[]>(avaliableFields);
+  const [fields, setFields] = useState<QueryField[]>(avaliableFields);
 
   const [searchValue, setSearchValue] = useState("");
   const [isValueEnabled, setIsValueEnabled] = useState(true);
@@ -125,6 +125,7 @@ const Field = ({
         </Select>
         {isValueEnabled && (
           <TextInput
+            onValueChange={(newValue) => onFieldChange("value", newValue)}
             name={ruleField.value}
             defaultValue={ruleField.value}
             required

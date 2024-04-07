@@ -4,6 +4,7 @@ import { CreateCorrelationForm } from "./CreateCorrelationForm";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
 import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
+import { CreateCorrelationSubmission } from "./CreateCorrelationSubmission";
 
 export const CreateCorrelationSidebarBody = () => {
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
@@ -18,7 +19,7 @@ export const CreateCorrelationSidebarBody = () => {
   };
 
   return (
-    <div className="space-y-4 pt-10">
+    <div className="space-y-4 pt-10 flex flex-col flex-1">
       {isCalloutShown && (
         <Callout
           className="mb-10 relative"
@@ -42,11 +43,12 @@ export const CreateCorrelationSidebarBody = () => {
         </Callout>
       )}
       <form
-        className="grid grid-cols-2 gap-x-10"
+        className="grid grid-cols-2 gap-x-10 flex-1"
         onSubmit={onCorrelationFormSubmit}
       >
         <CreateCorrelationForm />
         <CreateCorrelationGroups />
+        <CreateCorrelationSubmission />
       </form>
     </div>
   );

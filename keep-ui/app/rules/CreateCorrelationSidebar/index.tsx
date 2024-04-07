@@ -35,7 +35,7 @@ export const CreateCorrelationSidebar = ({
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
         >
-          <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto">
+          <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <CreateCorrelationSidebarHeader toggle={toggle} />
             <CreateCorrelationSidebarBody />
           </Dialog.Panel>
