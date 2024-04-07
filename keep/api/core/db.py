@@ -575,7 +575,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
-        )
+        ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
 
@@ -852,7 +852,7 @@ def get_alerts_with_filters(
         )
 
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
-        query = query.join(Alert.alert_enrichment)
+        query = query.outerjoin(Alert.alert_enrichment)
 
         # Apply filters if provided
         if filters:

@@ -226,6 +226,15 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 
 ## 🫵 Keepers
 
+### Top Contributors
+A special thanks to our top contributors who help us make Keep great. You are more than awesome!
+
+- [Furkan](https://github.com/pehlicd)
+- [Asharon](https://github.com/asharonbaltazar)
+
+Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
+
+### Contributors 
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
 <a href="https://github.com/keephq/keep/graphs/contributors">

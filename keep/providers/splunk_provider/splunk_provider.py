@@ -179,7 +179,7 @@ class SplunkProvider(BaseProvider):
                 alert,
                 (
                     SplunkProvider.FINGERPRINT_FIELDS
-                    if (exception is not None and logger is not None)
+                    if (exception is not None or logger is not None)
                     else ["name"]
                 ),
             )
