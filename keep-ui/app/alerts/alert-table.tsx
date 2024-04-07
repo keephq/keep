@@ -48,11 +48,12 @@ export function AlertTable({
   isRefreshAllowed = true,
 }: Props) {
   const [theme, setTheme] = useLocalStorage('alert-table-theme',
-    Object.values(severityMapping).reduce((acc, severity) => {
-      acc[severity] = 'bg-white'
+    Object.values(severityMapping).reduce<{ [key: string]: string }>((acc, severity) => {
+      acc[severity] = 'bg-white';
       return acc;
     }, {})
   );
+
 
   const columnsIds = getColumnsIds(columns);
 
@@ -71,7 +72,7 @@ export function AlertTable({
     {}
   );
 
-  const handleThemeChange = (newTheme) => {
+  const handleThemeChange = (newTheme: any) => {
     setTheme(newTheme);
   };
 

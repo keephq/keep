@@ -1,9 +1,8 @@
-import React, { useState, Fragment, useRef } from 'react';
+import React, { useState, Fragment, useRef, FormEvent } from 'react';
 import { Popover } from '@headlessui/react';
 import { Button, Tab, TabGroup, TabList, TabPanels, TabPanel } from "@tremor/react";
 import { IoColorPaletteOutline } from 'react-icons/io5';
 import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
-import { severityMapping } from './models';
 
 const predefinedThemes = {
   Transparent: {
@@ -34,10 +33,11 @@ const themeKeyMapping = {
   1: 'Keep',
   2: 'Basic'
 };
+type ThemeName = keyof typeof predefinedThemes;
 
-export const ThemeSelection = ({ onThemeChange }) => {
+export const ThemeSelection = ({ onThemeChange }: { onThemeChange: (theme: any) => void }) => {
   const arrowRef = useRef(null);
-  const [selectedTab, setSelectedTab] = useState('Transparent');
+  const [selectedTab, setSelectedTab] = useState<ThemeName>('Transparent');
 
   const { refs, floatingStyles, context } = useFloating({
     strategy: "fixed",
@@ -45,17 +45,29 @@ export const ThemeSelection = ({ onThemeChange }) => {
     middleware: [offset({ mainAxis: 10 }), arrow({ element: arrowRef })],
   });
 
-  const handleApplyTheme = (themeKey) => {
-    const themeName = themeKeyMapping[themeKey];
-    setSelectedTab(themeName); // Update the selected tab
-  };
+  const handleThemeChange = (event: FormEvent<HTMLDivElement>) => {
+    const themeKey = parseInt(event.currentTarget.getAttribute('data-index') || '');
+    if (!isNaN(themeKey)) {
+        handleApplyTheme(themeKey as 0 | 1 | 2);
+    }
+};
 
-  const onApplyTheme = (close) => {
-    // Determine the theme name based on the currently selected tab
-    const themeName = selectedTab;
-    const newTheme = predefinedThemes[themeName];
-    onThemeChange(newTheme); // Apply one of the predefined themes
-    setSelectedTab('Transparent')
+
+
+
+  const handleApplyTheme = (themeKey: keyof typeof themeKeyMapping) => {
+    const themeName = themeKeyMapping[themeKey];
+    setSelectedTab(themeName as ThemeName);
+};
+
+
+
+  const onApplyTheme = (close: () => void) => {
+    // themeName is now assured to be a key of predefinedThemes
+    const themeName: ThemeName = selectedTab;
+    const newTheme = predefinedThemes[themeName]; // This should now be error-free
+    onThemeChange(newTheme);
+    setSelectedTab('Transparent'); // Assuming 'Transparent' is a valid key
     close(); // Close the popover
   };
 
@@ -83,7 +95,7 @@ export const ThemeSelection = ({ onThemeChange }) => {
               context={context}
             />
             <span className="text-gray-400 text-sm">Set theme colors</span>
-            <TabGroup onChange={(themeKey) => handleApplyTheme(themeKey, close)}>
+            <TabGroup onChange={(event) => handleThemeChange(event)}>
               <TabList color="orange">
                 <Tab>Transparent</Tab>
                 <Tab>Keep</Tab>
@@ -92,7 +104,7 @@ export const ThemeSelection = ({ onThemeChange }) => {
               <TabPanels>
                 {Object.keys(predefinedThemes).map(themeName => (
                   <TabPanel key={themeName}>
-                    {Object.entries(predefinedThemes[themeName]).map(([severity, color]) => (
+                    {Object.entries(predefinedThemes[themeName as keyof typeof predefinedThemes]).map(([severity, color]) => (
                       <div key={severity} className="flex justify-between items-center my-2">
                         <span>{severity.charAt(0).toUpperCase() + severity.slice(1).toLowerCase()}</span>
                         <div className={`w-6 h-6 rounded-full border border-gray-400 ${color}`}></div>

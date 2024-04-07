@@ -16,19 +16,20 @@ import { AlertDto, Preset, severityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
-import Select, { components, MenuListComponentProps } from 'react-select';
+import Select, { components, MenuListProps } from 'react-select';
+
 import { IoSearchOutline } from 'react-icons/io5';
 import { FiExternalLink } from 'react-icons/fi';
 
 
 const staticOptions = [
-  { value: 'severity > "info"', label: 'severity > info' },
+  { value: 'severity > 1', label: 'severity > info' },
   { value: 'status=="firing"', label: 'status is firing' },
   { value: 'source=="grafana"', label: 'source is grafana' },
 ];
 
 
-const CustomOption = (props) => {
+const CustomOption = (props: any) => {
   return (
     <components.Option {...props}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -48,7 +49,7 @@ const kbdStyle = {
 };
 
 // Custom MenuList with a static line at the end
-const CustomMenuList = (props: MenuListComponentProps<{}>) => {
+const CustomMenuList = (props: MenuListProps<{}>) => {
   return (
     <components.MenuList {...props}>
       {props.children}
@@ -64,7 +65,7 @@ const CustomMenuList = (props: MenuListComponentProps<{}>) => {
           borderTop: '1px solid #ddd', // Add a separator if you like
         }}
       >
-        <span>Wildcard: <kbd style={kbdStyle}>source.contains("")</kbd></span>
+        <span>Wildcard: <kbd style={kbdStyle}>source.contains(&quot&quot)</kbd></span>
         <span>OR: <kbd style={kbdStyle}> || </kbd></span>
         <span>AND: <kbd style={kbdStyle}> && </kbd></span>
         <span><kbd style={kbdStyle}>Enter</kbd> to update query</span>
@@ -92,7 +93,7 @@ const customComponents = {
 
 // Define the styles for react-select
 const customStyles = {
-  option: (provided, state) => ({
+  option: (provided: any, state: any) => ({
     ...provided,
     color: state.isFocused ? 'black' : 'black',
     backgroundColor: state.isFocused ? 'rgba(255, 165, 0, 0.4)' : 'white', // Orange with opacity
@@ -100,7 +101,7 @@ const customStyles = {
     display: 'flex',
     alignItems: 'center', // Align items in the center vertically
   }),
-  menu: (provided) => ({
+  menu: (provided: any) => ({
     ...provided,
     margin: 0, // Remove the margin around the dropdown menu
     borderRadius: '0', // Optional: Align with the border-radius of the Textarea if necessary
@@ -246,7 +247,7 @@ export const AlertsRulesBuilder = ({
     setShowSuggestions(!showSuggestions);
   };
 
-  const handleSelectChange = (selectedOption) => {
+  const handleSelectChange = (selectedOption: any) => {
     setCELRules(selectedOption.value);
     toggleSuggestions();
     onApplyFilter();
@@ -279,7 +280,7 @@ export const AlertsRulesBuilder = ({
   };
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    function handleClickOutside(event: any) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setShowSuggestions(false);
       }

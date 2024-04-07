@@ -82,12 +82,13 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-const invertedSeverityMapping = Object.entries(severityMapping).reduce((acc, [key, value]) => {
-  acc[value] = Number(key);
+const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: string]: number }>((acc, [key, value]) => {
+  acc[value as keyof typeof acc] = Number(key);
   return acc;
 }, {});
 
-const customSeveritySortFn = (rowA, rowB) => {
+
+const customSeveritySortFn = (rowA: any, rowB: any) => {
   // Assuming rowA and rowB contain the data in a property (like 'original' or directly)
   // Adjust the way to access severity values according to your data structure
   const severityValueA = rowA.original?.severity; // or rowA.severity;
