@@ -49,8 +49,8 @@ const AlertHistoryPanel = ({
   return (
     <Fragment>
       <Flex alignItems="center" justifyContent="between">
-        <div>
-          <Title>History of: {alertsHistoryWithDate.at(0)?.name}</Title>
+        <div className="w-11/12">
+          <Title className="truncate">History of: {alertsHistoryWithDate.at(0)?.name}</Title>
           <Subtitle>
             Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
           </Subtitle>
