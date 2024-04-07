@@ -15,7 +15,7 @@ export const CreateCorrelationForm = () => {
         Correlation name
         <TextInput
           type="text"
-          name="correlation-name"
+          name="name"
           placeholder="Choose name"
           className="mt-2"
           required

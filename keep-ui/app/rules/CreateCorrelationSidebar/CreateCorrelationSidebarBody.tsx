@@ -1,11 +1,21 @@
 import { FormEvent, useState } from "react";
 import { Button, Callout, Icon } from "@tremor/react";
-import { CreateCorrelationForm } from "./CreateCorrelationForm";
+import { getApiURL } from "utils/apiUrl";
+import { RuleGroupType, formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
+import { CreateCorrelationForm } from "./CreateCorrelationForm";
 import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
 import { CreateCorrelationSubmission } from "./CreateCorrelationSubmission";
-import { RuleGroupType } from "react-querybuilder";
+import { useSession } from "next-auth/react";
+import { useRules } from "utils/hooks/useRules";
+
+const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
+  seconds: (amount) => amount,
+  minutes: (amount) => 60 * amount,
+  hours: (amount) => 3600 * amount,
+  days: (amount) => 86400 * amount,
+};
 
 const DEFAULT_QUERY: RuleGroupType = {
   combinator: "and",
@@ -21,7 +31,16 @@ const DEFAULT_QUERY: RuleGroupType = {
   ],
 };
 
-export const CreateCorrelationSidebarBody = () => {
+type CreateCorrelationSidebarBodyProps = {
+  toggle: VoidFunction;
+};
+
+export const CreateCorrelationSidebarBody = ({
+  toggle,
+}: CreateCorrelationSidebarBodyProps) => {
+  const apiUrl = getApiURL();
+  const { mutate } = useRules();
+  const { data: session } = useSession();
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
@@ -32,7 +51,42 @@ export const CreateCorrelationSidebarBody = () => {
   const onCorrelationFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    console.log(new FormData(event.currentTarget));
+    console.log(Object.fromEntries(new FormData(event.currentTarget)));
+
+    const {
+      name,
+      description,
+      "time-units": timeUnits,
+      "time-amount": timeAmount,
+      severity,
+    } = Object.fromEntries(new FormData(event.currentTarget));
+
+    if (typeof timeUnits !== "string" || typeof timeAmount !== "string") {
+      return;
+    }
+
+    const timeframeInSeconds = TIMEFRAME_UNITS[timeUnits](+timeAmount);
+
+    if (session) {
+      fetch(`${apiUrl}/rules`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({
+          sqlQuery: formatQuery(query, "parameterized_named"),
+          ruleName: name,
+          celQuery: formatQuery(query, "cel"),
+          timeframeInSeconds,
+        }),
+      })
+        .then((response) => response.json())
+        .then(() => {
+          toggle();
+          mutate();
+        });
+    }
   };
 
   return (
