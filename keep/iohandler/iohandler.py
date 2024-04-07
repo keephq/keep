@@ -70,15 +70,15 @@ class IOHandler:
         while i < len(text):
             if text[i : i + 5] == "keep.":
                 start = i
-                func_end = text.find("(", start)
-                if func_end > -1:  # Opening '(' found after "keep."
-                    i = func_end + 1  # Move i to the character after '('
-                    paren_count = 1
+                func_start = text.find("(", start)
+                if func_start > -1:  # Opening '(' found after "keep."
+                    i = func_start + 1  # Move i to the character after '('
+                    parent_count = 1
                     in_string = False
                     escape_next = False
                     quote_char = ""
-
-                    while i < len(text) and (paren_count > 0 or in_string):
+                    escapes = {}
+                    while i < len(text) and (parent_count > 0 or in_string):
                         if text[i] == "\\" and in_string and not escape_next:
                             escape_next = True
                             i += 1
@@ -87,19 +87,28 @@ class IOHandler:
                             if not in_string:
                                 in_string = True
                                 quote_char = text[i]
-                            elif text[i] == quote_char and not escape_next:
+                            elif (
+                                text[i] == quote_char
+                                and not escape_next
+                                and str(text[i + 1]).isalpha()
+                                == False  # end of statement, arg, etc. if it's a letter, we need to escape it
+                            ):
                                 in_string = False
                                 quote_char = ""
+                            elif text[i] == quote_char and not escape_next:
+                                escapes[i] = text[
+                                    i
+                                ]  # Save the quote character where we need to escape for valid ast parsing
                         elif text[i] == "(" and not in_string:
-                            paren_count += 1
+                            parent_count += 1
                         elif text[i] == ")" and not in_string:
-                            paren_count -= 1
+                            parent_count -= 1
 
                         escape_next = False
                         i += 1
 
-                    if paren_count == 0:
-                        matches.append(text[start:i])
+                    if parent_count == 0:
+                        matches.append((text[start:i], escapes))
                     continue  # Skip the increment at the end of the loop to continue from the current position
                 else:
                     # If no '(' found, increment i to move past "keep."
@@ -154,8 +163,12 @@ class IOHandler:
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
-            token = "".join(tokens[0])
+            token, escapes = tokens[0]
+            token_to_replace = token
             try:
+                if escapes:
+                    for escape in escapes:
+                        token = token[:escape] + "\\" + token[escape:]
                 val = self._parse_token(token)
             except Exception as e:
                 # trim stacktrace since we have limitation on the error message
@@ -164,12 +177,16 @@ class IOHandler:
                 raise Exception(
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
-            parsed_string = parsed_string.replace(token, str(val))
+            parsed_string = parsed_string.replace(token_to_replace, str(val))
             return parsed_string
         # this basically for complex expressions with functions and operators
         for token in tokens:
-            token = "".join(token)
+            token, escapes = token
+            token_to_replace = token
             try:
+                if escapes:
+                    for escape in escapes:
+                        token = token[:escape] + "\\" + token[escape:]
                 val = self._parse_token(token)
             except Exception as e:
                 trimmed_token = self._trim_token_error(token)
@@ -177,7 +194,7 @@ class IOHandler:
                 raise Exception(
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
-            parsed_string = parsed_string.replace(token, str(val))
+            parsed_string = parsed_string.replace(token_to_replace, str(val))
 
         return parsed_string
 
@@ -394,3 +411,17 @@ class IOHandler:
                 )
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
+
+
+if __name__ == "__main__":
+    # debug & test
+    context_manager = ContextManager("keep")
+    context_manager.event_context = {
+        "notexist": "it actually exists",
+        "name": "this is a test",
+    }
+    iohandler = IOHandler(context_manager)
+    iohandler.parse(
+        "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
+        safe=True,
+    )
