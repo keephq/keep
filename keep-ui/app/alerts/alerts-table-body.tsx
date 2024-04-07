@@ -8,39 +8,38 @@ import { Table, flexRender } from "@tanstack/react-table";
 interface Props {
   table: Table<AlertDto>;
   showSkeleton: boolean;
+  theme: { [key: string]: string };
 }
 
-export function AlertsTableBody({ table, showSkeleton }: Props) {
+
+export function AlertsTableBody({ table, showSkeleton, theme }: Props) {
   return (
     <TableBody>
-      {table.getRowModel().rows.map((row) => (
-        <TableRow key={row.id}>
-          {row.getVisibleCells().map((cell) => (
-            <TableCell
-              key={cell.id}
-              className={`bg-white ${
-                cell.column.columnDef.meta?.tdClassName
-                  ? cell.column.columnDef.meta?.tdClassName
-                  : ""
-              }`}
-            >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-      {showSkeleton && (
-        <TableRow>
-          {table
-            .getAllColumns()
-            .filter((col) => col.getIsVisible())
-            .map((col) => (
-              <TableCell key={col.id}>
-                <Skeleton />
+      {table.getRowModel().rows.map((row) => {
+        // Assuming the severity can be accessed like this, adjust if needed
+        const severity = row.original.severity || "info";
+        const rowBgColor = theme[severity] || 'bg-white'; // Fallback to 'bg-white' if no theme color
+
+        return (
+          <TableRow key={row.id} className={rowBgColor}>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className={
+                  cell.column.columnDef.meta?.tdClassName
+                    ? cell.column.columnDef.meta?.tdClassName
+                    : ""
+                }
+              >
+                {showSkeleton
+                  ? <Skeleton />
+                  : flexRender(cell.column.columnDef.cell, cell.getContext())
+                }
               </TableCell>
             ))}
-        </TableRow>
-      )}
+          </TableRow>
+        );
+      })}
     </TableBody>
   );
 }

@@ -25,6 +25,7 @@
     "@svgr/webpack": "^8.0.1",
     "@tanstack/react-table": "^8.11.0",
     "@tremor/react": "^3.14.0",
+    "@types/react-select": "^5.0.1",
     "add": "^2.0.6",
     "ajv": "^6.12.6",
     "ansi-regex": "^5.0.1",
