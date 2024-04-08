@@ -363,6 +363,8 @@ class GrafanaProvider(BaseProvider):
                         ]
                     ):
                         # This is so we won't override the default receiver if customer has one.
+                        if "routes" not in all_policies:
+                            all_policies["routes"] = []
                         all_policies["routes"].append(
                             {"receiver": all_policies["receiver"], "continue": True}
                         )
@@ -563,5 +565,5 @@ if __name__ == "__main__":
         provider_type="grafana",
         provider_config=config,
     )
-    alerts = provider.setup_webhook("http://localhost:8000", "1234", True)
+    alerts = provider.setup_webhook("test", "http://localhost:8000", "1234", True)
     print(alerts)
