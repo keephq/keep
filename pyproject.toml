@@ -123,7 +123,7 @@ prerelease_token = "rc"
 prerelease = false
 
 [tool.semantic_release.changelog]
-template_dir = "templates/"
+template_dir = "./"
 changelog_file = "CHANGELOG.md"
 exclude_commit_patterns = []
 
