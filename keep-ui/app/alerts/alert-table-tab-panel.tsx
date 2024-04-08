@@ -30,6 +30,7 @@ interface Props {
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
   setDismissModalAlert: (alert: AlertDto | null) => void;
+  setViewAlertModal: (alert: AlertDto) => void;
 }
 
 export default function AlertTableTabPanel({
@@ -40,6 +41,7 @@ export default function AlertTableTabPanel({
   setNoteModalAlert,
   setRunWorkflowModalAlert,
   setDismissModalAlert,
+  setViewAlertModal,
 }: Props) {
   const sortedPresetAlerts = alerts
     .filter((alert) => getPresetAlerts(alert, preset.name))
@@ -62,6 +64,7 @@ export default function AlertTableTabPanel({
     setNoteModalAlert: setNoteModalAlert,
     setRunWorkflowModalAlert: setRunWorkflowModalAlert,
     setDismissModalAlert: setDismissModalAlert,
+    setViewAlertModal: setViewAlertModal,
     presetName: preset.name,
   });
 
