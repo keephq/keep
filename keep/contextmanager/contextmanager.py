@@ -5,7 +5,7 @@ import os
 import click
 from pympler.asizeof import asizeof
 
-from keep.api.core.db import get_session
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.logging import WorkflowLoggerAdapter
 
 
@@ -24,10 +24,25 @@ class ContextManager:
         self.foreach_context = {
             "value": None,
         }
+        # cli context
         try:
             self.click_context = click.get_current_context()
         except RuntimeError:
             self.click_context = {}
+        # last workflow context
+        self.last_workflow_execution_results = {}
+        if self.workflow_id:
+            try:
+                last_workflow_execution = get_last_workflow_execution_by_workflow_id(
+                    workflow_id, tenant_id
+                )
+                if last_workflow_execution is not None:
+                    self.last_workflow_execution_results = (
+                        last_workflow_execution.results
+                    )
+            except Exception:
+                self.logger.exception("Failed to get last workflow execution")
+                pass
         self.aliases = {}
         # dependencies are used so iohandler will be able to use the output class of the providers
         # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row
@@ -86,6 +101,7 @@ class ContextManager:
             "steps": self.steps_context,
             "foreach": self.foreach_context,
             "event": self.event_context,
+            "last_workflow_results": self.last_workflow_execution_results,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
         }
 
