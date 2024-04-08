@@ -15,6 +15,7 @@ from sqlalchemy import and_, desc, func, null, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -1270,6 +1271,7 @@ def assign_alert_to_group(
                 fingerprint,
                 {"group_expired": True},
             )
+            logger.info(f"Enriched group {group.id} with group_expired flag")
             # change the group status to resolve so it won't spam the UI
             #   this was asked by @bhuvanesh and should be configurable in the future (how to handle status of expired groups)
             group_alert = session.exec(
@@ -1284,12 +1286,29 @@ def assign_alert_to_group(
                     f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
                 )
             else:
-                group_alert.event["status"] = AlertStatus.RESOLVED.value
-                # mark the event as modified so it will be updated in the database
-                flag_modified(group_alert, "event")
-            # commit the changes
-            session.commit()
-            logger.info(f"Enriched group {group.id} with group_expired flag")
+                try:
+                    session.refresh(group_alert)
+                    group_alert.event["status"] = AlertStatus.RESOLVED.value
+                    # mark the event as modified so it will be updated in the database
+                    flag_modified(group_alert, "event")
+                    # commit the changes
+                    session.commit()
+                    logger.info(
+                        f"Updated the alert {group_alert.id} to RESOLVED status"
+                    )
+                except StaleDataError as e:
+                    logger.warning(
+                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
+                        extra={"exception": e},
+                    )
+                    pass
+                # some other unknown error, we want to log it and continue
+                except Exception as e:
+                    logger.exception(
+                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
+                        extra={"exception": e},
+                    )
+                    pass
 
         # if there is no group with the group_fingerprint, create it
         if not group or is_group_expired:
