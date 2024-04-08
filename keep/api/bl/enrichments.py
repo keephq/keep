@@ -7,10 +7,13 @@ from keep.api.models.alert import AlertDto
 from keep.api.models.db.mapping import MappingRule
 
 
-def get_nested_attribute(obj, attr_path: str):
+def get_nested_attribute(obj: AlertDto, attr_path: str):
     """
     Recursively get a nested attribute
     """
+    # Special case for source, since it's a list
+    if attr_path == "source" and obj.source is not None and len(obj.source) > 0:
+        return obj.source[0]
     attributes = attr_path.split(".")
     for attr in attributes:
         # @@ is used as a placeholder for . in cases where the attribute name has a .
