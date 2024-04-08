@@ -40,6 +40,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         {process.env.GIT_COMMIT_HASH ? (
           <div className="fixed right-2.5 bottom-2.5 text-gray-500 text-sm">
             Build: {process.env.GIT_COMMIT_HASH}
+            <br />
             Version: {process.env.KEEP_VERSION}
           </div>
         ) : (
