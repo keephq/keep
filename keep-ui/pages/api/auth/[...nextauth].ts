@@ -52,6 +52,13 @@ const multiTenantAuthOptions = {
         token.keep_role = (profile as any).keep_role;
       }
 
+      // on github, prefer given name over nickname (default?)
+      if ((profile as any)?.given_name) {
+        const givenName = (profile as any).given_name;
+        token.name = givenName;
+      }
+
+
       return token;
     },
     async session({ session, token }) {
