@@ -1,7 +1,6 @@
 import importlib
 
 from keep.throttles.base_throttle import BaseThrottle
-from keep.contextmanager.contextmanager import ContextManager
 
 
 class ThrottleFactory:
