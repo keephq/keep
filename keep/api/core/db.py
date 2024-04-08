@@ -317,7 +317,7 @@ def get_last_completed_execution(
             | (WorkflowExecution.status == "error")
             | (WorkflowExecution.status == "providers_not_configured")
         )
-        .order_by(WorkflowExecution.execution_number.desc())
+        .order_by(desc(WorkflowExecution.execution_number))
         .limit(1)
     ).first()
 
@@ -547,7 +547,7 @@ def get_last_workflow_execution_by_workflow_id(
             .filter(WorkflowExecution.workflow_id == workflow_id)
             .filter(WorkflowExecution.tenant_id == tenant_id)
             .filter(WorkflowExecution.status == "success")
-            .order_by(WorkflowExecution.started.desc())
+            .order_by(desc(WorkflowExecution.started))
             .first()
         )
     return workflow_execution
@@ -694,7 +694,7 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50):
                 WorkflowExecution.started
                 >= datetime.now(tz=timezone.utc) - timedelta(days=7)
             )
-            .order_by(WorkflowExecution.started.desc())
+            .order_by(desc(WorkflowExecution.started))
             .limit(limit)
         ).all()
     return workflow_executions
@@ -918,7 +918,7 @@ def get_alerts_with_filters(
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
-        query = query.order_by(Alert.timestamp.desc())
+        query = query.order_by(desc(Alert.timestamp))
 
         query = query.limit(10000)
 
@@ -969,7 +969,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             query = query.filter(Alert.provider_id == provider_id)
 
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+        query = query.order_by(desc(Alert.timestamp)).limit(limit)
         # Execute the query
         alerts = query.all()
 
@@ -999,7 +999,7 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
 
         query = query.filter(Alert.fingerprint == fingerprint)
 
-        query = query.order_by(Alert.timestamp.desc())
+        query = query.order_by(desc(Alert.timestamp))
 
         if limit:
             query = query.limit(limit)
@@ -1016,7 +1016,7 @@ def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert
             session.query(Alert)
             .filter(Alert.tenant_id == tenant_id)
             .filter(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
+            .order_by(desc(Alert.timestamp))
             .limit(2)
             .all()
         )
@@ -1135,7 +1135,7 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id != workflow_execution_id)
-            .order_by(WorkflowExecution.started.desc())
+            .order_by(desc(WorkflowExecution.started))
             .limit(1)
         ).first()
         if previous_execution:
@@ -1248,7 +1248,7 @@ def assign_alert_to_group(
             .where(Group.tenant_id == tenant_id)
             .where(Group.rule_id == rule_id)
             .where(Group.group_fingerprint == group_fingerprint)
-            .order_by(Group.creation_time.desc())
+            .order_by(desc(Group.creation_time))
         ).first()
 
         # if the last alert in the group is older than the timeframe, create a new group
@@ -1275,7 +1275,7 @@ def assign_alert_to_group(
             group_alert = session.exec(
                 select(Alert)
                 .where(Alert.fingerprint == fingerprint)
-                .order_by(Alert.timestamp.desc())
+                .order_by(desc(Alert.timestamp))
             ).first()
             # this is kinda wtf but sometimes we deleted manually
             #   these from the DB since it was too big
@@ -1415,7 +1415,7 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
             .where(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
+            .order_by(desc(Alert.timestamp))
         ).first()
     return alert_hash
 

@@ -1,6 +1,6 @@
 import logging
 
-from sqlmodel import Session
+from sqlmodel import Session, desc
 
 from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
@@ -42,7 +42,7 @@ class EnrichmentsBl:
             self.db_session.query(MappingRule)
             .filter(MappingRule.tenant_id == self.tenant_id)
             .filter(MappingRule.disabled == False)
-            .order_by(MappingRule.priority.desc())
+            .order_by(desc(MappingRule.priority))
             .all()
         )
 
