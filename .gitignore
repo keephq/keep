@@ -172,8 +172,10 @@ keep.yaml
 providers.yaml
 .vercel
 keepstate.json
+
 # keep single tenant id
 e1faa321-35df-486b-8fa8-3601ee714011*
+
 # sqlite db
 *.sqlite3
 state/*
