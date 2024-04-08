@@ -1,7 +1,7 @@
 export enum Severity {
   Critical = "critical",
   High = "high",
-  Medium = "medium",
+  Warning = "warning",
   Low = "low",
   Info = "info",
   Error = "error",
@@ -10,7 +10,7 @@ export enum Severity {
 export const severityMapping: { [id: number]: string } = {
   1: Severity.Info,
   2: Severity.Low,
-  3: Severity.Medium,
+  3: Severity.Warning,
   4: Severity.High,
   5: Severity.Critical,
 };

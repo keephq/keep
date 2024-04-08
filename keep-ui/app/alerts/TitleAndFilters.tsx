@@ -3,17 +3,24 @@ import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
 import { AlertDto } from "./models";
 import ColumnSelection from "./ColumnSelection";
 import { LastRecieved } from "./LastReceived";
+import { ThemeSelection } from './ThemeSelection';
+
+type Theme = {
+  [key: string]: string;
+};
 
 type TableHeaderProps = {
   presetName: string;
   alerts: AlertDto[];
   table: Table<AlertDto>;
+  onThemeChange: (newTheme: Theme) => void;
 };
 
 export const TitleAndFilters = ({
   presetName,
   alerts,
   table,
+  onThemeChange,
 }: TableHeaderProps) => {
   const onDateRangePickerChange = ({
     from: start,
@@ -46,7 +53,10 @@ export const TitleAndFilters = ({
           onValueChange={onDateRangePickerChange}
           enableYearNavigation
         />
-        <ColumnSelection table={table} presetName={presetName} />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <ColumnSelection table={table} presetName={presetName} />
+          <ThemeSelection onThemeChange={onThemeChange} />
+        </div>
         <LastRecieved />
       </div>
     </div>

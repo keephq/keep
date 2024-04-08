@@ -83,6 +83,7 @@ export default function ColumnSelection({
     closePopover();
   };
 
+
   return (
     <Popover as={Fragment}>
       {({ close }) => (
