@@ -19,6 +19,8 @@ jobs:
 
     - name: Release Keep
       uses: python-semantic-release/python-semantic-release@v9.4.0
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         git_committer_name: Keep Release Bot
         git_committer_email: no-reply@keephq.dev
