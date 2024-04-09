@@ -8,10 +8,11 @@ import {
   Textarea,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
-import { CorrelationForm } from ".";
+import { CorrelationForm as CorrelationFormType } from ".";
 
 export const CorrelationForm = () => {
-  const { control, register, formState } = useFormContext<CorrelationForm>();
+  const { control, register, formState } =
+    useFormContext<CorrelationFormType>();
   const { errors } = formState;
 
   return (

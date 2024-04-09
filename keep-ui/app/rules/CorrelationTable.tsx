@@ -67,8 +67,10 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   useEffect(() => {
     if (selectedRule) {
       onCorrelationClick();
+    } else {
+      router.replace("/rules");
     }
-  }, [selectedRule]);
+  }, [selectedRule, router]);
 
   const CORRELATION_TABLE_COLS = useMemo(
     () => [

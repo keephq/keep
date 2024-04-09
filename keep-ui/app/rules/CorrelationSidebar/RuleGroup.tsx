@@ -1,8 +1,5 @@
 import { Button } from "@tremor/react";
-import {
-  RuleGroupType,
-  RuleGroupProps as QueryRuleGroupProps,
-} from "react-querybuilder";
+import { RuleGroupProps as QueryRuleGroupProps } from "react-querybuilder";
 import { RuleFields } from "./RuleFields";
 
 export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {

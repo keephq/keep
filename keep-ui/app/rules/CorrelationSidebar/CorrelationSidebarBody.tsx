@@ -10,6 +10,7 @@ import { CorrelationSubmission } from "./CorrelationSubmission";
 import { useSession } from "next-auth/react";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
   seconds: (amount) => amount,
@@ -20,16 +21,24 @@ const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
+
   defaultValue: CorrelationFormType;
 };
 
 export const CorrelationSidebarBody = ({
   toggle,
+
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
+
   const { mutate } = useRules();
   const { data: session } = useSession();
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams ? searchParams.get("id") : null;
+
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
@@ -38,10 +47,8 @@ export const CorrelationSidebarBody = ({
   const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
 
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
-    data
+    correlationFormData
   ) => {
-    console.log(data);
-
     const {
       name,
       query,
@@ -49,30 +56,34 @@ export const CorrelationSidebarBody = ({
       timeUnit,
       timeAmount,
       groupedAttributes,
-    } = data;
+    } = correlationFormData;
 
     const timeframeInSeconds = TIMEFRAME_UNITS[timeUnit](+timeAmount);
 
     if (session) {
-      const response = await fetch(`${apiUrl}/rules`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({
-          sqlQuery: formatQuery(query, "parameterized_named"),
-          ruleName: name,
-          celQuery: formatQuery(query, "cel"),
-          timeframeInSeconds,
-          grouping_criteria: groupedAttributes,
-          item_description: description,
-        }),
-      });
+      const response = await fetch(
+        `${apiUrl}/rules${selectedId ? `/${selectedId}` : ""}`,
+        {
+          method: selectedId ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            sqlQuery: formatQuery(query, "parameterized_named"),
+            ruleName: name,
+            celQuery: formatQuery(query, "cel"),
+            timeframeInSeconds,
+            grouping_criteria: groupedAttributes,
+            item_description: description,
+          }),
+        }
+      );
 
       if (response.ok) {
         toggle();
         mutate();
+        router.replace("/rules");
       }
     }
   };
