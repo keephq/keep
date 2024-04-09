@@ -4,7 +4,7 @@ import { Controller, useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 
 export const CreateCorrelationGroups = () => {
-  const { control, setError } = useFormContext<CorrelationForm>();
+  const { control } = useFormContext<CorrelationForm>();
 
   return (
     <div>

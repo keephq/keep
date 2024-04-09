@@ -93,7 +93,7 @@ const Field = ({
 
   return (
     <div key={ruleField.id}>
-      <div className="flex items-center gap-x-2">
+      <div className="flex items-start gap-x-2">
         <SearchSelect
           defaultValue={ruleField.field}
           onValueChange={onValueChange}
@@ -124,14 +124,21 @@ const Field = ({
           ))}
         </Select>
         {isValueEnabled && (
-          <TextInput
-            onValueChange={(newValue) => onFieldChange("value", newValue)}
-            defaultValue={ruleField.value}
-            required
-          />
+          <div>
+            <TextInput
+              onValueChange={(newValue) => onFieldChange("value", newValue)}
+              defaultValue={ruleField.value}
+              required
+              error={!ruleField.value}
+              errorMessage={
+                ruleField.value ? undefined : "Rule value is required"
+              }
+            />
+          </div>
         )}
 
         <Button
+          className="mt-2"
           onClick={onRemoveFieldClick}
           size="lg"
           color="red"
