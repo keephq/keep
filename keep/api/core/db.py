@@ -987,7 +987,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         # Convert result to list of Alert objects and include "startedAt" information if needed
         alerts = []
         for alert, startedAt in alerts_with_start:
-            alert.event["startedAt"] = startedAt
+            alert.event["startedAt"] = str(startedAt)
             alerts.append(alert)
 
     return alerts
