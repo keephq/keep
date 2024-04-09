@@ -1,14 +1,15 @@
-import { FormEvent, useState } from "react";
 import { Button, Callout, Icon } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
-import { RuleGroupType, formatQuery } from "react-querybuilder";
+import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { CreateCorrelationForm } from "./CreateCorrelationForm";
 import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
 import { CreateCorrelationSubmission } from "./CreateCorrelationSubmission";
 import { useSession } from "next-auth/react";
 import { useRules } from "utils/hooks/useRules";
+import { CorrelationForm } from ".";
 
 const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
   seconds: (amount) => amount,
@@ -17,26 +18,14 @@ const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
   days: (amount) => 86400 * amount,
 };
 
-const DEFAULT_QUERY: RuleGroupType = {
-  combinator: "and",
-  rules: [
-    {
-      combinator: "and",
-      rules: [{ field: "source", operator: "=", value: "" }],
-    },
-    {
-      combinator: "and",
-      rules: [{ field: "source", operator: "=", value: "" }],
-    },
-  ],
-};
-
 type CreateCorrelationSidebarBodyProps = {
   toggle: VoidFunction;
+  defaultValue: CorrelationForm;
 };
 
 export const CreateCorrelationSidebarBody = ({
   toggle,
+  defaultValue,
 }: CreateCorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
   const { mutate } = useRules();
@@ -46,29 +35,26 @@ export const CreateCorrelationSidebarBody = ({
     true
   );
 
-  const [query, setQuery] = useState<RuleGroupType>(DEFAULT_QUERY);
+  const methods = useForm<CorrelationForm>({ defaultValues: defaultValue });
 
-  const onCorrelationFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    console.log(Object.fromEntries(new FormData(event.currentTarget)));
+  const onCorrelationFormSubmit: SubmitHandler<CorrelationForm> = async (
+    data
+  ) => {
+    console.log(data);
 
     const {
       name,
+      query,
       description,
-      "time-units": timeUnits,
-      "time-amount": timeAmount,
-      severity,
-    } = Object.fromEntries(new FormData(event.currentTarget));
+      timeUnit,
+      timeAmount,
+      groupedAttributes,
+    } = data;
 
-    if (typeof timeUnits !== "string" || typeof timeAmount !== "string") {
-      return;
-    }
-
-    const timeframeInSeconds = TIMEFRAME_UNITS[timeUnits](+timeAmount);
+    const timeframeInSeconds = TIMEFRAME_UNITS[timeUnit](+timeAmount);
 
     if (session) {
-      fetch(`${apiUrl}/rules`, {
+      const response = await fetch(`${apiUrl}/rules`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,13 +65,15 @@ export const CreateCorrelationSidebarBody = ({
           ruleName: name,
           celQuery: formatQuery(query, "cel"),
           timeframeInSeconds,
+          grouping_criteria: groupedAttributes,
+          item_description: description,
         }),
-      })
-        .then((response) => response.json())
-        .then(() => {
-          toggle();
-          mutate();
-        });
+      });
+
+      if (response.ok) {
+        toggle();
+        mutate();
+      }
     }
   };
 
@@ -113,14 +101,16 @@ export const CreateCorrelationSidebarBody = ({
           </Button>
         </Callout>
       )}
-      <form
-        className="grid grid-cols-2 gap-x-10 flex-1"
-        onSubmit={onCorrelationFormSubmit}
-      >
-        <CreateCorrelationForm />
-        <CreateCorrelationGroups query={query} onQueryChange={setQuery} />
-        <CreateCorrelationSubmission />
-      </form>
+      <FormProvider {...methods}>
+        <form
+          className="grid grid-cols-2 gap-x-10 flex-1"
+          onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
+        >
+          <CreateCorrelationForm />
+          <CreateCorrelationGroups />
+          <CreateCorrelationSubmission />
+        </form>
+      </FormProvider>
     </div>
   );
 };

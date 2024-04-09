@@ -1,16 +1,49 @@
+import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { CreateCorrelationSidebarHeader } from "./CreateCorrelationSidebarHeader";
 import { CreateCorrelationSidebarBody } from "./CreateCorrelationSidebarBody";
-import { Fragment } from "react";
+import { RuleGroupType } from "react-querybuilder";
+
+export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
+  name: "",
+  description: "",
+  timeAmount: 5,
+  timeUnit: "minutes",
+  groupedAttributes: [],
+  query: {
+    combinator: "and",
+    rules: [
+      {
+        combinator: "and",
+        rules: [{ field: "source", operator: "=", value: "" }],
+      },
+      {
+        combinator: "and",
+        rules: [{ field: "source", operator: "=", value: "" }],
+      },
+    ],
+  },
+};
+
+export type CorrelationForm = {
+  name: string;
+  description: string;
+  timeAmount: number;
+  timeUnit: "minutes" | "seconds" | "hours" | "days";
+  groupedAttributes: string[];
+  query: RuleGroupType;
+};
 
 type CreateCorrelationSidebarProps = {
   isOpen: boolean;
   toggle: VoidFunction;
+  defaultValue?: CorrelationForm;
 };
 
 export const CreateCorrelationSidebar = ({
   isOpen,
   toggle,
+  defaultValue = DEFAULT_CORRELATION_FORM_VALUES,
 }: CreateCorrelationSidebarProps) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -37,7 +70,10 @@ export const CreateCorrelationSidebar = ({
         >
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <CreateCorrelationSidebarHeader toggle={toggle} />
-            <CreateCorrelationSidebarBody toggle={toggle} />
+            <CreateCorrelationSidebarBody
+              toggle={toggle}
+              defaultValue={defaultValue}
+            />
           </Dialog.Panel>
         </Transition.Child>
       </Dialog>

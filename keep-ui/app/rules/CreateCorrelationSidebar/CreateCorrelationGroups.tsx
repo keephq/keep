@@ -1,29 +1,29 @@
-import { memo, useState } from "react";
-import QueryBuilder, { RuleGroupType } from "react-querybuilder";
+import QueryBuilder from "react-querybuilder";
 import { RuleGroup } from "./RuleGroup";
-import "../query-builder.scss";
+import { Controller, useFormContext } from "react-hook-form";
+import { CorrelationForm } from ".";
 
-type CreateCorrelationGroupsProps = {
-  query: RuleGroupType;
-  onQueryChange: (newQuery: RuleGroupType) => void;
-};
+export const CreateCorrelationGroups = () => {
+  const { control, setError } = useFormContext<CorrelationForm>();
 
-export const CreateCorrelationGroups = ({
-  query,
-  onQueryChange,
-}: CreateCorrelationGroupsProps) => {
   return (
     <div>
       <p className="text-tremor-default font-medium text-tremor-content-strong mb-2">
         Add group(s) of conditions
       </p>
-      <QueryBuilder
-        query={query}
-        onQueryChange={onQueryChange}
-        addRuleToNewGroups
-        controlElements={{
-          ruleGroup: RuleGroup,
-        }}
+      <Controller
+        control={control}
+        name="query"
+        render={({ field: { value, onChange } }) => (
+          <QueryBuilder
+            query={value}
+            onQueryChange={onChange}
+            addRuleToNewGroups
+            controlElements={{
+              ruleGroup: RuleGroup,
+            }}
+          />
+        )}
       />
     </div>
   );

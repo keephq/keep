@@ -43,6 +43,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       return {
         name: selectedRule.name,
         description: "",
+        timeAmount: selectedRule.timeframe,
+        timeUnit: "seconds",
+        groupedAttributes: selectedRule.grouping_criteria,
         query: parseCEL(selectedRule.definition_cel),
       };
     }
@@ -145,7 +148,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       <CreateCorrelationSidebar
         isOpen={isSidebarOpen}
         toggle={onCloseCreateCorrelation}
-        defaultValues={correlationFormFromRule}
+        defaultValue={correlationFormFromRule}
       />
     </div>
   );

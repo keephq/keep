@@ -1,7 +1,13 @@
 import { Button } from "@tremor/react";
 import { useSearchParams } from "next/navigation";
+import { useFormContext } from "react-hook-form";
+import { CorrelationForm } from ".";
 
 export const CreateCorrelationSubmission = () => {
+  const {
+    formState: { isValid },
+  } = useFormContext<CorrelationForm>();
+
   const searchParams = useSearchParams();
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
 
@@ -11,7 +17,11 @@ export const CreateCorrelationSubmission = () => {
         <Button type="button" variant="light" color="orange">
           Cancel
         </Button>
-        <Button className="rounded-none" color="orange">
+        <Button
+          className="rounded-none"
+          color="orange"
+          disabled={isValid === false}
+        >
           {isRuleBeingEdited ? "Save correlation" : "Create correlation"}
         </Button>
       </div>
