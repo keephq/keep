@@ -56,6 +56,14 @@ const multiTenantAuthOptions = {
       if ((profile as any)?.given_name) {
         const givenName = (profile as any).given_name;
         token.name = givenName;
+      } else if ((profile as any)?.name) {
+        // split by " " and take the first part
+        const name = (profile as any).name as string;
+        const nameParts = name.split(" ");
+        // verify that the name is not empty (should not happen, but just in case)
+        if (nameParts.length > 0){
+          token.name = nameParts[0];
+        }
       }
 
 
