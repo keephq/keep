@@ -186,7 +186,9 @@ class LinearbProvider(BaseProvider):
                 )
 
             if result.ok:
-                self.logger.info("Notified LinearB successfully")
+                self.logger.info(
+                    "Notified LinearB successfully", extra={"payload": payload}
+                )
             else:
                 self.logger.warning("Failed to notify linearB", extra={**result.json()})
                 raise Exception(f"Failed to notify linearB {result.text}")
