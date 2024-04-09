@@ -931,28 +931,38 @@ def get_alerts_with_filters(
 
 def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
     """
-    Get the last alert for each fingerprint.
+    Get the last alert for each fingerprint along with the first time the alert was triggered.
 
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
 
     Returns:
-        List[Alert]: A list of Alert objects.
+        List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
     with Session(engine) as session:
-        # Start with a subquery that selects the max timestamp for each fingerprint.
+        # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
-                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+                Alert.fingerprint,
+                func.max(Alert.timestamp).label("max_timestamp"),
+                func.min(Alert.timestamp).label(
+                    "min_timestamp"
+                ),  # Include minimum timestamp
             )
             .filter(Alert.tenant_id == tenant_id)
             .group_by(Alert.fingerprint)
             .subquery()
         )
 
+        # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
-            session.query(Alert)
+            session.query(
+                Alert,
+                subquery.c.min_timestamp.label(
+                    "startedAt"
+                ),  # Include "startedAt" in the selected columns
+            )
             .join(
                 subquery,
                 and_(
@@ -972,7 +982,13 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         # Order by timestamp in descending order and limit the results
         query = query.order_by(Alert.timestamp.desc()).limit(limit)
         # Execute the query
-        alerts = query.all()
+        alerts_with_start = query.all()
+
+        # Convert result to list of Alert objects and include "startedAt" information if needed
+        alerts = []
+        for alert, startedAt in alerts_with_start:
+            alert.event["startedAt"] = str(startedAt)
+            alerts.append(alert)
 
     return alerts
 

@@ -73,7 +73,7 @@ class Step:
 
         throttling_type = throttling.get("type")
         throttling_config = throttling.get("with")
-        throttle = ThrottleFactory.get_instance(throttling_type, throttling_config)
+        throttle = ThrottleFactory.get_instance(self.context_manager, throttling_type, throttling_config)
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 

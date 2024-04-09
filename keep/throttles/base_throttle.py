@@ -17,7 +17,7 @@ class BaseThrottle(metaclass=abc.ABCMeta):
         Args:
             **kwargs: Provider configuration loaded from the provider yaml file.
         """
-        # Initalize logger for every provider
+        # Initialize logger for every provider
         self.logger = logging.getLogger(self.__class__.__name__)
         self.throttle_type = throttle_type
         self.throttle_config = throttle_config

@@ -68,7 +68,7 @@ class LinearbProvider(BaseProvider):
         http_url: str = "",
         title: str = "",
         teams="",
-        respository_urls="",
+        repository_urls="",
         services="",
         started_at="",
         ended_at="",
@@ -122,10 +122,10 @@ class LinearbProvider(BaseProvider):
                                 team_names.append(team)
                     payload["teams"] = team_names
 
-                if respository_urls:
-                    if isinstance(respository_urls, str):
-                        respository_urls = json.loads(respository_urls)
-                    payload["respository_urls"] = respository_urls
+                if repository_urls:
+                    if isinstance(repository_urls, str):
+                        repository_urls = json.loads(repository_urls)
+                    payload["repository_urls"] = repository_urls
 
                 if services:
                     if isinstance(services, str):
@@ -168,10 +168,10 @@ class LinearbProvider(BaseProvider):
                     "teams": teams,
                 }
 
-                if respository_urls:
-                    if isinstance(respository_urls, str):
-                        respository_urls = json.loads(respository_urls)
-                    payload["respository_urls"] = respository_urls
+                if repository_urls:
+                    if isinstance(repository_urls, str):
+                        repository_urls = json.loads(repository_urls)
+                    payload["repository_urls"] = repository_urls
 
                 if services:
                     if isinstance(services, str):
@@ -186,7 +186,9 @@ class LinearbProvider(BaseProvider):
                 )
 
             if result.ok:
-                self.logger.info("Notified LinearB successfully")
+                self.logger.info(
+                    "Notified LinearB successfully", extra={"payload": payload}
+                )
             else:
                 self.logger.warning("Failed to notify linearB", extra={**result.json()})
                 raise Exception(f"Failed to notify linearB {result.text}")
@@ -223,7 +225,7 @@ if __name__ == "__main__":
         http_url="https://www.google.com",
         title="Test",
         teams='["All Contributors"]',
-        respository_urls='["https://www.keephq.dev"]',
+        repository_urls='["https://www.keephq.dev"]',
         started_at=datetime.datetime.now().isoformat(),
         should_delete="true",
     )
