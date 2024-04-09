@@ -4,12 +4,12 @@ import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
-import { CreateCorrelationForm } from "./CreateCorrelationForm";
-import { CreateCorrelationGroups } from "./CreateCorrelationGroups";
-import { CreateCorrelationSubmission } from "./CreateCorrelationSubmission";
+import { CorrelationForm } from "./CorrelationForm";
+import { CorrelationGroups } from "./CorrelationGroups";
+import { CorrelationSubmission } from "./CorrelationSubmission";
 import { useSession } from "next-auth/react";
 import { useRules } from "utils/hooks/useRules";
-import { CorrelationForm } from ".";
+import { CorrelationForm as CorrelationFormType } from ".";
 
 const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
   seconds: (amount) => amount,
@@ -18,15 +18,15 @@ const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
   days: (amount) => 86400 * amount,
 };
 
-type CreateCorrelationSidebarBodyProps = {
+type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
-  defaultValue: CorrelationForm;
+  defaultValue: CorrelationFormType;
 };
 
-export const CreateCorrelationSidebarBody = ({
+export const CorrelationSidebarBody = ({
   toggle,
   defaultValue,
-}: CreateCorrelationSidebarBodyProps) => {
+}: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
   const { mutate } = useRules();
   const { data: session } = useSession();
@@ -35,9 +35,9 @@ export const CreateCorrelationSidebarBody = ({
     true
   );
 
-  const methods = useForm<CorrelationForm>({ defaultValues: defaultValue });
+  const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
 
-  const onCorrelationFormSubmit: SubmitHandler<CorrelationForm> = async (
+  const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     data
   ) => {
     console.log(data);
@@ -106,9 +106,9 @@ export const CreateCorrelationSidebarBody = ({
           className="grid grid-cols-2 gap-x-10 flex-1"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CreateCorrelationForm />
-          <CreateCorrelationGroups />
-          <CreateCorrelationSubmission />
+          <CorrelationForm />
+          <CorrelationGroups />
+          <CorrelationSubmission />
         </form>
       </FormProvider>
     </div>

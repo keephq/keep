@@ -14,9 +14,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Rule } from "utils/hooks/useRules";
 import {
   CorrelationForm,
-  CreateCorrelationSidebar,
+  CorrelationSidebar,
   DEFAULT_CORRELATION_FORM_VALUES,
-} from "./CreateCorrelationSidebar";
+} from "./CorrelationSidebar";
 import {
   createColumnHelper,
   flexRender,
@@ -55,18 +55,18 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const onCreateCorrelationClick = () => {
+  const onCorrelationClick = () => {
     setIsSidebarOpen(true);
   };
 
-  const onCloseCreateCorrelation = () => {
+  const onCloseCorrelation = () => {
     setIsSidebarOpen(false);
     router.replace("/rules");
   };
 
   useEffect(() => {
     if (selectedRule) {
-      onCreateCorrelationClick();
+      onCorrelationClick();
     }
   }, [selectedRule]);
 
@@ -109,7 +109,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             models.
           </Subtitle>
         </div>
-        <Button color="orange" onClick={() => onCreateCorrelationClick()}>
+        <Button color="orange" onClick={() => onCorrelationClick()}>
           Create Correlation
         </Button>
       </div>
@@ -145,9 +145,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           </TableBody>
         </Table>
       </Card>
-      <CreateCorrelationSidebar
+      <CorrelationSidebar
         isOpen={isSidebarOpen}
-        toggle={onCloseCreateCorrelation}
+        toggle={onCloseCorrelation}
         defaultValue={correlationFormFromRule}
       />
     </div>

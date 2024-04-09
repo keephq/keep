@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { CreateCorrelationSidebarHeader } from "./CreateCorrelationSidebarHeader";
-import { CreateCorrelationSidebarBody } from "./CreateCorrelationSidebarBody";
+import { CorrelationSidebarHeader } from "./CorrelationSidebarHeader";
+import { CorrelationSidebarBody } from "./CorrelationSidebarBody";
 import { RuleGroupType } from "react-querybuilder";
 
 export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
@@ -34,17 +34,17 @@ export type CorrelationForm = {
   query: RuleGroupType;
 };
 
-type CreateCorrelationSidebarProps = {
+type CorrelationSidebarProps = {
   isOpen: boolean;
   toggle: VoidFunction;
   defaultValue?: CorrelationForm;
 };
 
-export const CreateCorrelationSidebar = ({
+export const CorrelationSidebar = ({
   isOpen,
   toggle,
   defaultValue = DEFAULT_CORRELATION_FORM_VALUES,
-}: CreateCorrelationSidebarProps) => {
+}: CorrelationSidebarProps) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog onClose={toggle}>
@@ -69,8 +69,8 @@ export const CreateCorrelationSidebar = ({
           leaveTo="translate-x-full"
         >
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
-            <CreateCorrelationSidebarHeader toggle={toggle} />
-            <CreateCorrelationSidebarBody
+            <CorrelationSidebarHeader toggle={toggle} />
+            <CorrelationSidebarBody
               toggle={toggle}
               defaultValue={defaultValue}
             />

@@ -3,7 +3,7 @@ import { useSearchParams } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 
-export const CreateCorrelationSubmission = () => {
+export const CorrelationSubmission = () => {
   const {
     formState: { isValid },
   } = useFormContext<CorrelationForm>();

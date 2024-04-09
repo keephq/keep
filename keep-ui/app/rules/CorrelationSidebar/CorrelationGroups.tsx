@@ -3,7 +3,7 @@ import { RuleGroup } from "./RuleGroup";
 import { Controller, useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 
-export const CreateCorrelationGroups = () => {
+export const CorrelationGroups = () => {
   const { control } = useFormContext<CorrelationForm>();
 
   return (

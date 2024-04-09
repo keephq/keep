@@ -3,13 +3,13 @@ import { Dialog } from "@headlessui/react";
 import { IoMdClose } from "react-icons/io";
 import { useSearchParams } from "next/navigation";
 
-type CreateCorrelationSidebarHeaderProps = {
+type CorrelationSidebarHeaderProps = {
   toggle: VoidFunction;
 };
 
-export const CreateCorrelationSidebarHeader = ({
+export const CorrelationSidebarHeader = ({
   toggle,
-}: CreateCorrelationSidebarHeaderProps) => {
+}: CorrelationSidebarHeaderProps) => {
   const searchParams = useSearchParams();
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
 

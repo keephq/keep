@@ -10,7 +10,7 @@ import {
 import { Controller, get, useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 
-export const CreateCorrelationForm = () => {
+export const CorrelationForm = () => {
   const { control, register, formState } = useFormContext<CorrelationForm>();
   const { errors } = formState;
 
