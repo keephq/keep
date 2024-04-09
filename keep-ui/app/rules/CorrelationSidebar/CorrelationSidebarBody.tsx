@@ -21,13 +21,11 @@ const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
-
   defaultValue: CorrelationFormType;
 };
 
 export const CorrelationSidebarBody = ({
   toggle,
-
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();

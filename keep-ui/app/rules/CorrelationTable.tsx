@@ -25,6 +25,7 @@ import {
 } from "@tanstack/react-table";
 import { parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
+import { FormattedQueryCell } from "./FormattedQueryCell";
 
 const columnHelper = createColumnHelper<Rule>();
 
@@ -87,7 +88,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",
-        cell: (context) => JSON.stringify(parseCEL(context.getValue())),
+        cell: (context) => (
+          <FormattedQueryCell query={parseCEL(context.getValue())} />
+        ),
       }),
     ],
     []
@@ -133,7 +136,10 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           </TableHead>
           <TableBody>
             {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="cursor-pointer">
+              <TableRow
+                key={row.id}
+                className="cursor-pointer hover:bg-slate-50"
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}
