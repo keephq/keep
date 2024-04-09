@@ -494,6 +494,7 @@ def handle_formatted_events(
                     raw_alert=raw_event,
                 )
                 session.add(alert)
+        enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
 
@@ -549,6 +550,7 @@ def handle_formatted_events(
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
+            enriched_formatted_events.append(alert_dto)
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -575,7 +577,7 @@ def handle_formatted_events(
         workflow_manager = WorkflowManager.get_instance()
         # insert the events to the workflow manager process queue
         logger.info("Adding events to the workflow manager queue")
-        workflow_manager.insert_events(tenant_id, formatted_events)
+        workflow_manager.insert_events(tenant_id, enriched_formatted_events)
         logger.info("Added events to the workflow manager queue")
     except Exception:
         logger.exception(
