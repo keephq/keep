@@ -73,6 +73,7 @@ class AlertDto(BaseModel):
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
+    startedAt: str | None = None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
