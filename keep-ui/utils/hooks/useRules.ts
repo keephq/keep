@@ -6,13 +6,17 @@ import { fetcher } from "utils/fetcher";
 export type Rule = {
   id: string;
   name: string;
-  definition: string;
+  item_description: string | null;
+  group_description: string | null;
+  grouping_criteria: string[];
   definition_cel: string;
+  definition: { sql: string; params: {} };
   timeframe: number;
   created_by: string;
   creation_time: string;
-  updated_by: string;
-  update_time: string;
+  tenant_id: string;
+  updated_by: string | null;
+  update_time: string | null;
   distribution: { [group: string]: { [timestamp: string]: number } };
 };
 
