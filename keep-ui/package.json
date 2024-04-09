@@ -4,7 +4,7 @@
   "description": "Keep UI",
   "main": "next.config.js",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "./next_start.sh",
     "build": "./next_build.sh",
     "start": "next start",
     "lint": "next lint"
