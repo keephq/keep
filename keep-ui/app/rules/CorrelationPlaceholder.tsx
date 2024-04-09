@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { CorrelationSidebar } from "./CorrelationSidebar";
+import { PlaceholderSankey } from "./PlaceholderSankey";
 
 export const CorrelationPlaceholder = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,9 +20,14 @@ export const CorrelationPlaceholder = () => {
             dedicated place
           </Subtitle>
         </div>
-        <Button color="orange" onClick={() => onCorrelationClick()}>
+        <Button
+          className="mb-10"
+          color="orange"
+          onClick={() => onCorrelationClick()}
+        >
           Create Correlation
         </Button>
+        <PlaceholderSankey />
       </Card>
       <CorrelationSidebar
         isOpen={isSidebarOpen}
