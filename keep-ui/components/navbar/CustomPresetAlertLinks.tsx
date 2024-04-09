@@ -49,7 +49,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
     <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}>
       <span
         className={classNames(
-          "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
+          "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg group",
           {
             "bg-stone-200/50": isActive,
             "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50":
@@ -81,7 +81,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           </span>
         </Link>
         <button onClick={() => deletePreset(preset.id, preset.name)}>
-          <Icon className="text-slate-400 hover:text-red-500" icon={Trashcan} />
+          <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden" />
         </button>
       </span>
     </li>
