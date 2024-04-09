@@ -21,7 +21,7 @@ export const useRules = (options?: SWRConfiguration) => {
   const { data: session } = useSession();
 
   return useSWR<Rule[]>(
-    () => (session ? `${apiUrl}/workflows/executions` : null),
+    () => (session ? `${apiUrl}/rules` : null),
     async (url) => fetcher(url, session?.accessToken),
     options
   );
