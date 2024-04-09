@@ -1,4 +1,5 @@
 from keep.throttles.base_throttle import BaseThrottle
+from keep.contextmanager.contextmanager import ContextManager
 
 
 class OneUntilResolvedThrottle(BaseThrottle):
@@ -8,8 +9,8 @@ class OneUntilResolvedThrottle(BaseThrottle):
         BaseThrottle (_type_): _description_
     """
 
-    def __init__(self, throttle_type, throttle_config):
-        super().__init__(throttle_type, throttle_config)
+    def __init__(self, context_manager: ContextManager, throttle_type, throttle_config):
+        super().__init__(context_manager=context_manager, throttle_type=throttle_type, throttle_config=throttle_config)
 
     def check_throttling(self, action_name, alert_id, **kwargs) -> bool:
         last_alert_run = self.context_manager.get_last_workflow_run(alert_id)

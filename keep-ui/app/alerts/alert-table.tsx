@@ -11,6 +11,8 @@ import {
   VisibilityState,
   ColumnSizingState,
   getFilteredRowModel,
+  SortingState,
+  getSortedRowModel,
 } from "@tanstack/react-table";
 
 import AlertPagination from "./alert-pagination";
@@ -26,6 +28,8 @@ import AlertActions from "./alert-actions";
 import AlertPresets from "./alert-presets";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
+import { severityMapping } from "./models";
+import { useState } from "react";
 
 interface Props {
   alerts: AlertDto[];
@@ -43,6 +47,14 @@ export function AlertTable({
   presetName,
   isRefreshAllowed = true,
 }: Props) {
+  const [theme, setTheme] = useLocalStorage('alert-table-theme',
+    Object.values(severityMapping).reduce<{ [key: string]: string }>((acc, severity) => {
+      acc[severity] = 'bg-white';
+      return acc;
+    }, {})
+  );
+
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -60,6 +72,12 @@ export function AlertTable({
     {}
   );
 
+  const handleThemeChange = (newTheme: any) => {
+    setTheme(newTheme);
+  };
+
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const table = useReactTable({
     data: alerts,
     columns: columns,
@@ -71,7 +89,10 @@ export function AlertTable({
         left: ["checkbox"],
         right: ["alertMenu"],
       },
+      sorting: sorting,
     },
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: { pageSize: 10 },
     },
@@ -86,6 +107,7 @@ export function AlertTable({
     columnResizeMode: "onChange",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
+    enableSorting: true,
   });
 
   const selectedRowIds = Object.entries(
@@ -96,7 +118,7 @@ export function AlertTable({
 
   return (
     <>
-      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} />
+      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
       <Card className="mt-7 px-4 pb-4 md:pb-10 md:px-4 pt-6">
         {selectedRowIds.length ? (
           <AlertActions
@@ -127,7 +149,7 @@ export function AlertTable({
             table={table}
             presetName={presetName}
           />
-          <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
+          <AlertsTableBody table={table} showSkeleton={isAsyncLoading} theme={theme} />
         </Table>
         <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       </Card>

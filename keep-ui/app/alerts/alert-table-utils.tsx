@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ColumnDef,
   FilterFn,
+  Row,
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
@@ -17,6 +18,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
+import { Severity, severityMapping } from "./models";
 
 export const DEFAULT_COLS = [
   "checkbox",
@@ -80,6 +82,24 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
 
 const columnHelper = createColumnHelper<AlertDto>();
 
+const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: string]: number }>((acc, [key, value]) => {
+  acc[value as keyof typeof acc] = Number(key);
+  return acc;
+}, {});
+
+
+const customSeveritySortFn = (rowA: any, rowB: any) => {
+  // Assuming rowA and rowB contain the data in a property (like 'original' or directly)
+  // Adjust the way to access severity values according to your data structure
+  const severityValueA = rowA.original?.severity; // or rowA.severity;
+  const severityValueB = rowB.original?.severity; // or rowB.severity;
+
+  // Use the inverted mapping to get ranks
+  const rankA = invertedSeverityMapping[severityValueA] || 0;
+  const rankB = invertedSeverityMapping[severityValueB] || 0;
+
+  return rankA > rankB ? 1 : rankA < rankB ? -1 : 0;
+};
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -89,6 +109,7 @@ interface GenerateAlertTableColsArg {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
+  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = (
@@ -101,6 +122,7 @@ export const useAlertTableCols = (
     setRunWorkflowModalAlert,
     setDismissModalAlert,
     presetName,
+    setViewAlertModal,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -164,6 +186,8 @@ export const useAlertTableCols = (
       header: "Severity",
       minSize: 100,
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
+      sortingFn: customSeveritySortFn,
+
     }),
     columnHelper.display({
       id: "name",
@@ -271,6 +295,7 @@ export const useAlertTableCols = (
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                 setDismissModalAlert={setDismissModalAlert}
+                setViewAlertModal={setViewAlertModal}
               />
             ),
           }),
