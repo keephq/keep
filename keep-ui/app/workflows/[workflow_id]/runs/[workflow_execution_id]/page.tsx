@@ -122,11 +122,11 @@ export default function WorkflowExecutionPage({
                   <TableCell className="w-1/4 break-words whitespace-normal">
                     {stepId}
                   </TableCell>
-                  <TableCell className="w-3/4 break-words whitespace-normal">
+                  <TableCell className="w-3/4 break-words whitespace-normal max-w-xl">
                     <Accordion>
                       <AccordionHeader>Value</AccordionHeader>
                       <AccordionBody>
-                        <pre className="overflow-scroll max-w-lg">
+                        <pre className="overflow-scroll">
                           {JSON.stringify(stepResults, null, 2)}
                         </pre>
                       </AccordionBody>
