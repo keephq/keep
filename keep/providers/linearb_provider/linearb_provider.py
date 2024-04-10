@@ -74,6 +74,7 @@ class LinearbProvider(BaseProvider):
         ended_at="",
         git_ref="",
         should_delete="",
+        issued_at="",
         **kwargs: dict,
     ):
         """
@@ -165,7 +166,7 @@ class LinearbProvider(BaseProvider):
                         "At least 1 team is required for creating an incident"
                     )
 
-                issued_at = datetime.datetime.now().isoformat()
+                issued_at = issued_at or datetime.datetime.now().isoformat()
 
                 payload = {
                     "provider_id": incident_id,
