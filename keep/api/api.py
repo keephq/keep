@@ -6,6 +6,7 @@ import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -134,6 +135,9 @@ def get_app(
         version="0.1.0",
     )
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
+    app.add_middleware(
+        GZipMiddleware, minimum_size=30 * 1024 * 1024
+    )  # Approximately 30 MiB, https://cloud.google.com/run/quotas
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
