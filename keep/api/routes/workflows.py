@@ -382,7 +382,9 @@ def get_workflow_by_id(
 ) -> List[WorkflowExecutionDTO]:
     tenant_id = authenticated_entity.tenant_id
     with tracer.start_as_current_span("get_workflow_executions"):
-        workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
+        workflow_executions = get_workflow_executions_db(
+            tenant_id, workflow_id, limit=10
+        )
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:

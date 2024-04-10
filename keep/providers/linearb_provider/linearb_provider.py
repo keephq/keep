@@ -135,6 +135,8 @@ class LinearbProvider(BaseProvider):
                 if services:
                     if isinstance(services, str):
                         services = json.loads(services)
+                    if len(services) > 0 and isinstance(services[0], dict):
+                        services = [service["name"] for service in services]
                     payload["services"] = services
                 elif "services" in payload:
                     service_names = [service["name"] for service in payload["services"]]
