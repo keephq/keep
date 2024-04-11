@@ -142,7 +142,7 @@ def create_db_and_tables():
             logger.info("Migrating WorkflowToAlertExecution table")
             # get the foreign key constraint name
             results = session.exec(
-                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint' AND COLUMN_NAME = 'event_id';"
+                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
             )
             # now remove it
             for row in results:
@@ -153,6 +153,17 @@ def create_db_and_tables():
                         f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
                     )
                     logger.info(f"Dropped constraint {constraint_name}")
+            # now add the new column
+            try:
+                session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
             # also add grouping_criteria to the workflow table
             logger.info("Migrating Rule table")
             try:

@@ -56,7 +56,7 @@ class WorkflowToAlertExecution(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     alert_fingerprint: str
-    event_id: str
+    event_id: str | None
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
     )

@@ -1,5 +1,8 @@
+import logging
+
 from keep.api.core.db import get_alert_by_fingerprint_and_event_id, \
     get_workflow_to_alert_execution_by_workflow_execution_id
+from keep.api.models.alert import AlertStatus
 from keep.throttles.base_throttle import BaseThrottle
 from keep.contextmanager.contextmanager import ContextManager
 
@@ -31,7 +34,7 @@ class OneUntilResolvedThrottle(BaseThrottle):
             return False
 
         # if the last time the alert were triggered it was in resolved status, return false
-        if alert.event.get("status").lower() == "resolved":
+        if AlertStatus(alert.event.get("status")) == AlertStatus.RESOLVED:
             return False
 
         # else, return true because its already firing
