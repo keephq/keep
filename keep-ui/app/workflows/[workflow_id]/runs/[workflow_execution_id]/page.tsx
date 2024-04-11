@@ -122,11 +122,11 @@ export default function WorkflowExecutionPage({
                   <TableCell className="w-1/4 break-words whitespace-normal">
                     {stepId}
                   </TableCell>
-                  <TableCell className="w-3/4 break-words whitespace-normal">
+                  <TableCell className="w-3/4 break-words whitespace-normal max-w-xl">
                     <Accordion>
                       <AccordionHeader>Value</AccordionHeader>
                       <AccordionBody>
-                        <pre className="overflow-scroll max-w-lg">
+                        <pre className="overflow-scroll">
                           {JSON.stringify(stepResults, null, 2)}
                         </pre>
                       </AccordionBody>
@@ -140,43 +140,61 @@ export default function WorkflowExecutionPage({
       )}
       <div className={Object.keys(results).length > 0 ? "mt-8" : ""}>
         {executionStatus === "success" ? (
-          <Card>
-            <Title>Workflow Logs</Title>
-            <Table className="w-full">
-              <TableHead>
-                <TableRow>
-                  <TableCell className="w-1/3 break-words whitespace-normal">
-                    Timestamp
-                  </TableCell>
-                  <TableCell className="w-1/3 break-words whitespace-normal">
-                    Message
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {logs.map((log, index) => (
-                  <TableRow
-                    className={`${
-                      log.message?.includes("NOT to run")
-                        ? "bg-red-100"
-                        : log.message?.includes("evaluated to run")
-                        ? "bg-green-100"
-                        : ""
-                    }`}
-                    key={index}
-                  >
+          <>
+            {error && (
+              <Callout
+                className="mt-4"
+                title="Error during workflow execution"
+                icon={ExclamationCircleIcon}
+                color="rose"
+              >
+                {error
+                  ? error.split("\n").map((line, index) => (
+                      // Render each line as a separate paragraph or div.
+                      // The key is index, which is sufficient for simple lists like this.
+                      <p key={index}>{line}</p>
+                    ))
+                  : "An unknown error occurred during execution."}
+              </Callout>
+            )}
+            <Card>
+              <Title>Workflow Logs</Title>
+              <Table className="w-full">
+                <TableHead>
+                  <TableRow>
                     <TableCell className="w-1/3 break-words whitespace-normal">
-                      {log.timestamp}
+                      Timestamp
                     </TableCell>
                     <TableCell className="w-1/3 break-words whitespace-normal">
-                      {log.message}
+                      Message
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        ) : executionStatus === "in_progress" ? (
+                </TableHead>
+                <TableBody>
+                  {logs.map((log, index) => (
+                    <TableRow
+                      className={`${
+                        log.message?.includes("NOT to run")
+                          ? "bg-red-100"
+                          : log.message?.includes("evaluated to run")
+                          ? "bg-green-100"
+                          : ""
+                      }`}
+                      key={index}
+                    >
+                      <TableCell className="w-1/3 break-words whitespace-normal">
+                        {log.timestamp}
+                      </TableCell>
+                      <TableCell className="w-1/3 break-words whitespace-normal">
+                        {log.message}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
+        ) : (
           <div>
             <div className="flex items-center justify-center">
               <p>
@@ -186,22 +204,6 @@ export default function WorkflowExecutionPage({
             </div>
             <Loading></Loading>
           </div>
-        ) : (
-          <Callout
-            className="mt-4"
-            title="Error during workflow execution"
-            icon={ExclamationCircleIcon}
-            color="rose"
-          >
-            {error
-              ? error.split('\n').map((line, index) => (
-                  // Render each line as a separate paragraph or div.
-                  // The key is index, which is sufficient for simple lists like this.
-                  <p key={index}>{line}</p>
-                ))
-              : "An unknown error occurred during execution."
-            }
-          </Callout>
         )}
       </div>
     </div>

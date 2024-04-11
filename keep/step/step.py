@@ -73,7 +73,9 @@ class Step:
 
         throttling_type = throttling.get("type")
         throttling_config = throttling.get("with")
-        throttle = ThrottleFactory.get_instance(self.context_manager, throttling_type, throttling_config)
+        throttle = ThrottleFactory.get_instance(
+            self.context_manager, throttling_type, throttling_config
+        )
         alert_id = self.context_manager.get_workflow_id()
         return throttle.check_throttling(action_name, alert_id)
 
@@ -201,19 +203,24 @@ class Step:
         else:
             evaluated_if_met = True
 
+        action_name = self.config.get("name")
         if not evaluated_if_met:
             self.logger.info(
-                "Action %s evaluated NOT to run, Reason: %s evaluated to false.",
-                self.config.get("name"),
-                if_met,
+                f"Action {action_name} evaluated NOT to run, Reason: {if_met} evaluated to false.",
+                extra={
+                    "condition": if_conf,
+                    "rendered": if_met,
+                },
             )
             return
 
         if if_conf:
             self.logger.info(
-                "Action %s evaluated to run! Reason: %s evaluated to true.",
-                self.config.get("name"),
-                if_met,
+                f"Action {action_name} evaluated to run! Reason: {if_met} evaluated to true.",
+                extra={
+                    "condition": if_conf,
+                    "rendered": if_met,
+                },
             )
         else:
             self.logger.info(

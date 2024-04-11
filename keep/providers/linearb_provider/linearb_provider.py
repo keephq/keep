@@ -74,6 +74,7 @@ class LinearbProvider(BaseProvider):
         ended_at="",
         git_ref="",
         should_delete="",
+        issued_at="",
         **kwargs: dict,
     ):
         """
@@ -134,6 +135,8 @@ class LinearbProvider(BaseProvider):
                 if services:
                     if isinstance(services, str):
                         services = json.loads(services)
+                    if len(services) > 0 and isinstance(services[0], dict):
+                        services = [service["name"] for service in services]
                     payload["services"] = services
                 elif "services" in payload:
                     service_names = [service["name"] for service in payload["services"]]
@@ -165,7 +168,7 @@ class LinearbProvider(BaseProvider):
                         "At least 1 team is required for creating an incident"
                     )
 
-                issued_at = datetime.datetime.now().isoformat()
+                issued_at = issued_at or datetime.datetime.now().isoformat()
 
                 payload = {
                     "provider_id": incident_id,

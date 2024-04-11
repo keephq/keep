@@ -688,7 +688,15 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
 def get_workflow_executions(tenant_id, workflow_id, limit=50):
     with Session(engine) as session:
         workflow_executions = session.exec(
-            select(WorkflowExecution)
+            select(
+                WorkflowExecution.id,
+                WorkflowExecution.workflow_id,
+                WorkflowExecution.started,
+                WorkflowExecution.status,
+                WorkflowExecution.triggered_by,
+                WorkflowExecution.execution_time,
+                WorkflowExecution.error,
+            )
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(
