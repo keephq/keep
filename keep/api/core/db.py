@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 from uuid import uuid4
@@ -141,7 +142,7 @@ def create_db_and_tables():
             logger.info("Migrating WorkflowToAlertExecution table")
             # get the foreign key constraint name
             results = session.exec(
-                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
+                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint' AND COLUMN_NAME = 'event_id';"
             )
             # now remove it
             for row in results:
@@ -273,6 +274,7 @@ def create_workflow_execution(
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
+    event_id: str = None,
     fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
@@ -294,6 +296,7 @@ def create_workflow_execution(
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=workflow_execution.id,
                     alert_fingerprint=fingerprint,
+                    event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
 
@@ -488,6 +491,16 @@ def add_or_update_workflow(
         session.commit()
         return existing_workflow if existing_workflow else workflow
 
+
+def get_workflow_to_alert_execution_by_workflow_execution_id(
+    workflow_execution_id: str
+) -> WorkflowToAlertExecution:
+    with Session(engine) as session:
+        return (
+            session.query(WorkflowToAlertExecution)
+            .filter_by(workflow_execution_id=workflow_execution_id)
+            .first()
+        )
 
 def get_last_workflow_workflow_to_alert_executions(
     session: Session, tenant_id: str
@@ -1033,6 +1046,18 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
         alerts = query.all()
 
     return alerts
+
+
+def get_alert_by_fingerprint_and_event_id(tenant_id: str, fingerprint: str, event_id: str) -> Alert:
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(Alert.id == uuid.UUID(event_id))
+            .first()
+        )
+    return alert
 
 
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:

@@ -185,9 +185,7 @@ class ContextManager:
         self.steps_context_size = asizeof(self.steps_context)
 
     def get_last_workflow_run(self, workflow_id):
-        # TODO: fix for throttling
-        # no previous runs
-        return {}
+        return get_last_workflow_execution_by_workflow_id(workflow_id, self.tenant_id)
 
     def dump(self):
         self.logger.info("Dumping logs to db")
