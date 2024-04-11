@@ -44,7 +44,7 @@ def __get_conn() -> pymysql.connections.Connection:
     """
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             db="keepdb",
@@ -79,7 +79,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     # Create a new MySQL connection with the obtained access token
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             password=access_token,
