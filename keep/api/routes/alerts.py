@@ -523,8 +523,10 @@ def handle_formatted_events(
                 alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
-            formatted_event.event_id = alert.id
-            alert_dto = AlertDto(**alert.event)
+            session.flush()
+            session.refresh(alert)
+            formatted_event.event_id = str(alert.id)
+            alert_dto = AlertDto(**formatted_event.dict())
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
