@@ -44,7 +44,7 @@ def __get_conn() -> pymysql.connections.Connection:
     """
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             db="keepdb",
@@ -79,7 +79,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     # Create a new MySQL connection with the obtained access token
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             password=access_token,
@@ -688,7 +688,15 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
 def get_workflow_executions(tenant_id, workflow_id, limit=50):
     with Session(engine) as session:
         workflow_executions = session.exec(
-            select(WorkflowExecution)
+            select(
+                WorkflowExecution.id,
+                WorkflowExecution.workflow_id,
+                WorkflowExecution.started,
+                WorkflowExecution.status,
+                WorkflowExecution.triggered_by,
+                WorkflowExecution.execution_time,
+                WorkflowExecution.error,
+            )
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(
@@ -988,6 +996,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         alerts = []
         for alert, startedAt in alerts_with_start:
             alert.event["startedAt"] = str(startedAt)
+            alert.event["event_id"] = str(alert.id)
             alerts.append(alert)
 
     return alerts
