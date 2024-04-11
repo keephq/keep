@@ -996,7 +996,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         alerts = []
         for alert, startedAt in alerts_with_start:
             alert.event["startedAt"] = str(startedAt)
-            alert.event["event_id"] = str(alert.id)
+            alert.event["keep_event_id"] = str(alert.id)
             alerts.append(alert)
 
     return alerts
