@@ -31,12 +31,12 @@ export const Menu = ({ children }: MenuButtonProps) => {
 
   useHotkeys('[', () => {
     console.log('Opening menu ([)');
-    setisMenuMinimized(false); // Assuming false means the menu is not minimized (open)
+    setisMenuMinimized(false); // Open navbar
   }, [isMenuMinimized]);
 
   useHotkeys(']', () => {
     console.log('Closing menu (])');
-    setisMenuMinimized(true); // Assuming true means the menu is minimized (closed)
+    setisMenuMinimized(true); // Close navbar
   }, [isMenuMinimized]);
 
 
