@@ -30,13 +30,10 @@ export const Menu = ({ children }: MenuButtonProps) => {
   const [isMenuMinimized, setisMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
 
   useHotkeys('[', () => {
-    console.log('Opening menu ([)');
-    setisMenuMinimized(false); // Open navbar
-  }, [isMenuMinimized]);
-
-  useHotkeys(']', () => {
-    console.log('Closing menu (])');
-    setisMenuMinimized(true); // Close navbar
+    // Toggle the state based on its current value
+    const newState = !isMenuMinimized;
+    console.log(newState ? 'Closing menu ([)' : 'Opening menu ([)');
+    setisMenuMinimized(newState);
   }, [isMenuMinimized]);
 
 
