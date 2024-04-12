@@ -6,6 +6,7 @@ import { Icon } from "@tremor/react";
 import { AiOutlineMenu, AiOutlineClose } from "react-icons/ai";
 import { usePathname } from "next/navigation";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { useHotkeys } from 'react-hotkeys-hook';
 
 type CloseMenuOnRouteChangeProps = {
   closeMenu: () => void;
@@ -26,7 +27,18 @@ type MenuButtonProps = {
 };
 
 export const Menu = ({ children }: MenuButtonProps) => {
-  const [isMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
+  const [isMenuMinimized, setisMenuMinimized] = useLocalStorage<boolean>("menu-minimized", false);
+
+  useHotkeys('[', () => {
+    console.log('Opening menu ([)');
+    setisMenuMinimized(false); // Open navbar
+  }, [isMenuMinimized]);
+
+  useHotkeys(']', () => {
+    console.log('Closing menu (])');
+    setisMenuMinimized(true); // Close navbar
+  }, [isMenuMinimized]);
+
 
   return (
     <Popover as={Fragment}>
