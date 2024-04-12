@@ -117,7 +117,8 @@
             "providers/documentation/twilio-provider",
             "providers/documentation/zenduty-provider",
             "providers/documentation/resend-provider",
-            "providers/documentation/websocket-provider"
+            "providers/documentation/websocket-provider",
+            "providers/documentation/incidentmanager-provider"
           ]
         }
       ]
