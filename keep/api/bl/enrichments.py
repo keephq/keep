@@ -12,7 +12,7 @@ from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
 
-def get_nested_alert_dto_attribute(obj: AlertDto, attr_path: str):
+def get_nested_attribute(obj: AlertDto, attr_path: str):
     """
     Recursively get a nested attribute
     """
@@ -143,8 +143,7 @@ class EnrichmentsBl:
         for rule in rules:
             # Check if the alert has all the required attributes from matchers
             if not all(
-                get_nested_alert_dto_attribute(alert, attribute)
-                for attribute in rule.matchers
+                get_nested_attribute(alert, attribute) for attribute in rule.matchers
             ):
                 self.logger.debug(
                     "Alert does not have all the required attributes for the rule",
@@ -155,8 +154,7 @@ class EnrichmentsBl:
             # Check if the alert matches any of the rows
             for row in rule.rows:
                 if all(
-                    get_nested_alert_dto_attribute(alert, attribute)
-                    == row.get(attribute)
+                    get_nested_attribute(alert, attribute) == row.get(attribute)
                     or row.get(attribute) == "*"  # Wildcard
                     for attribute in rule.matchers
                 ):
