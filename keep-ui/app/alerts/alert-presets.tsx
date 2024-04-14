@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
-import { Button, TextInput } from "@tremor/react";
+import { Button, TextInput, Switch,Text } from "@tremor/react"; // Assuming Switch is a component from Tremor
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
@@ -9,17 +9,22 @@ import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
+import { preset } from "swr/dist/_internal";
 
 interface Props {
   presetNameFromApi: string;
   isLoading: boolean;
   table: Table<AlertDto>;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
 }
 
 export default function AlertPresets({
   presetNameFromApi,
   isLoading,
   table,
+  presetPrivate = false,
+  presetNoisy = false,
 }: Props) {
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
@@ -35,7 +40,8 @@ export default function AlertPresets({
       ? ""
       : presetNameFromApi
   );
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(presetPrivate);
+  const [isNoisy, setIsNoisy] = useState(presetNoisy);
   const [presetCEL, setPresetCEL] = useState("");
 
   const selectedPreset = savedPresets.find(
@@ -88,6 +94,7 @@ export default function AlertPresets({
               },
             ],
             is_private: isPrivate,
+            is_noisy: isNoisy, // Assuming backend support for this new field
           }),
         }
       );
@@ -102,7 +109,7 @@ export default function AlertPresets({
             type: "success",
           }
         );
-        await presetsMutator();
+        presetsMutator();
         router.push(`/alerts/${presetName.toLowerCase()}`);
       }
     }
@@ -138,13 +145,26 @@ export default function AlertPresets({
           </div>
 
           <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
+            <Switch
               id={"private"}
               checked={isPrivate}
               onChange={() => setIsPrivate(!isPrivate)}
+              color={"orange"}
             />
-            <label htmlFor={"private"}>Private</label>
+            <label htmlFor="private" className="text-sm text-gray-500">
+              <Text>Private</Text>
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={"noisy"}
+              checked={isNoisy}
+              onChange={() => setIsNoisy(!isNoisy)}
+              color={"orange"}
+            />
+            <label htmlFor="noisy" className="text-sm text-gray-500">
+              <Text>Noisy</Text>
+            </label>
           </div>
 
           <div className="flex justify-end space-x-2.5">

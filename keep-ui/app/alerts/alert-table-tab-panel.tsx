@@ -66,14 +66,17 @@ export default function AlertTableTabPanel({
     setDismissModalAlert: setDismissModalAlert,
     setViewAlertModal: setViewAlertModal,
     presetName: preset.name,
+    presetNoisy: preset.is_noisy,
   });
 
   return (
     <AlertTable
-      alerts={sortedPresetAlerts}
-      columns={alertTableColumns}
-      isAsyncLoading={isAsyncLoading}
-      presetName={preset.name}
+        alerts={sortedPresetAlerts}
+        columns={alertTableColumns}
+        isAsyncLoading={isAsyncLoading}
+        presetName={preset.name}
+        presetPrivate={preset.is_private}
+        presetNoisy={preset.is_noisy}
     />
   );
 }

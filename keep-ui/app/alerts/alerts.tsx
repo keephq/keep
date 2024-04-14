@@ -14,10 +14,10 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from './ViewAlertModal';
 
 const defaultPresets: Preset[] = [
-  { id: "feed", name: "feed", options: [], is_private: false },
-  { id: "deleted", name: "deleted", options: [], is_private: false },
-  { id: "dismissed", name: "dismissed", options: [], is_private: false },
-  { id: "groups", name: "groups", options: [], is_private: false },
+  { id: "feed", name: "feed", options: [], is_private: false, is_noisy: false},
+  { id: "deleted", name: "deleted", options: [], is_private: false, is_noisy: false},
+  { id: "dismissed", name: "dismissed", options: [], is_private: false, is_noisy: false},
+  { id: "groups", name: "groups", options: [], is_private: false , is_noisy: false},
 ];
 
 type AlertsProps = {

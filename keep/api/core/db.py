@@ -134,42 +134,6 @@ def create_db_and_tables():
     except Exception:
         logger.warning("Failed to create the database or detect if it exists.")
         pass
-
-    # migrate the workflowtoexecution table
-    with Session(engine) as session:
-        try:
-            logger.info("Migrating WorkflowToAlertExecution table")
-            # get the foreign key constraint name
-            results = session.exec(
-                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
-            )
-            # now remove it
-            for row in results:
-                constraint_name = row["CONSTRAINT_NAME"]
-                if constraint_name.startswith("workflowtoalertexecution"):
-                    logger.info(f"Dropping constraint {constraint_name}")
-                    session.exec(
-                        f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
-                    )
-                    logger.info(f"Dropped constraint {constraint_name}")
-            # also add grouping_criteria to the workflow table
-            logger.info("Migrating Rule table")
-            try:
-                session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate rule table")
-                    pass
-            logger.info("Migrated Rule table")
-            session.commit()
-            logger.info("Migrated succesfully")
-        except Exception:
-            logger.exception("Failed to migrate table")
-            pass
     SQLModel.metadata.create_all(engine)
 
 
@@ -241,12 +205,10 @@ def try_create_single_tenant(tenant_id: str) -> None:
     with Session(engine) as session:
         try:
             # TODO: remove this once we have a migration system
-            logger.info("Migrating TenantApiKey table")
+            # add is_noisy column to preset
             session.exec(
-                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
+                "ALTER TABLE preset ADD COLUMN is_noisy BOOLEAN NOT NULL DEFAULT 0;"
             )
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
             session.commit()
             logger.info("Migrated TenantApiKey table")
         except Exception:

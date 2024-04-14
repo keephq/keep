@@ -2,8 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select, or_
-
+from sqlmodel import Session, or_, select
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
@@ -45,6 +44,7 @@ class CreateOrUpdatePresetDto(BaseModel):
     name: str | None
     options: list[PresetOption]
     is_private: bool = False  # if true visible to all users of that tenant
+    is_noisy: bool = False  # if true, the preset will be noisy
 
 
 @router.post("", description="Create a preset for tenant")
@@ -68,6 +68,7 @@ def create_preset(
         name=body.name,
         created_by=created_by,
         is_private=body.is_private,
+        is_noisy=body.is_noisy,
     )
 
     session.add(preset)
@@ -124,6 +125,8 @@ def update_preset(
         if body.name != preset.name:
             preset.name = body.name
     preset.is_private = body.is_private
+    preset.is_noisy = body.is_noisy
+
     options_dict = [option.dict() for option in body.options]
     if not options_dict:
         raise HTTPException(400, "Options cannot be empty")

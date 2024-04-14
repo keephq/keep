@@ -1,4 +1,4 @@
-import { Table, Callout, Card } from "@tremor/react";
+import { Table, Callout, Card, Icon } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
@@ -31,11 +31,14 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import { useState } from "react";
 
+
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
 }
@@ -45,6 +48,8 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
+  presetPrivate = false,
+  presetNoisy = false,
   isRefreshAllowed = true,
 }: Props) {
   const [theme, setTheme] = useLocalStorage('alert-table-theme',
@@ -78,6 +83,7 @@ export function AlertTable({
 
   const [sorting, setSorting] = useState<SortingState>([]);
 
+
   const table = useReactTable({
     data: alerts,
     columns: columns,
@@ -86,7 +92,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["checkbox"],
+        left: presetNoisy ? ["noise", "checkbox"] : ["checkbox"],
         right: ["alertMenu"],
       },
       sorting: sorting,
@@ -131,6 +137,8 @@ export function AlertTable({
             table={table}
             presetNameFromApi={presetName}
             isLoading={isAsyncLoading}
+            presetPrivate={presetPrivate}
+            presetNoisy={presetNoisy}
           />
         )}
         {isAsyncLoading && (
@@ -148,6 +156,7 @@ export function AlertTable({
             columns={columns}
             table={table}
             presetName={presetName}
+            presetNoisy={presetNoisy}
           />
           <AlertsTableBody table={table} showSkeleton={isAsyncLoading} theme={theme} />
         </Table>

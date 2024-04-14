@@ -53,6 +53,7 @@ export interface Preset {
   name: string;
   options: Option[];
   is_private: boolean;
+  is_noisy: boolean;
 }
 
 export interface AlertToWorkflowExecution {

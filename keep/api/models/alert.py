@@ -161,6 +161,16 @@ class AlertDto(BaseModel):
         values.pop("deletedAt", None)
         return values
 
+    # after root_validator to ensure that the values are set
+    @root_validator(pre=False)
+    def validate_status(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # if dismissed, change status to SUPPRESSED
+        # note this is happen AFTER validate_dismissed which already consider
+        #   dismissed + dismissUntil
+        if values.get("dismissed"):
+            values["status"] = AlertStatus.SUPPRESSED
+        return values
+
     class Config:
         extra = Extra.allow
         schema_extra = {

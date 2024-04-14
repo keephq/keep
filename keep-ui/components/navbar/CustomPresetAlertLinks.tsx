@@ -22,6 +22,8 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { IoIosNotificationsOutline } from "react-icons/io";
+
 
 type PresetAlertProps = {
   preset: Preset;
@@ -80,9 +82,27 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
             {preset.name}
           </span>
         </Link>
-        <button onClick={() => deletePreset(preset.id, preset.name)}>
-          <Icon className="text-slate-400 hover:text-red-500" icon={Trashcan} />
-        </button>
+        <div className="flex items-center">
+  {preset.is_noisy && (
+    <Icon
+      icon={IoIosNotificationsOutline}
+      size="lg"
+      className="-mr-1 text-slate-400 hover:text-red-500"
+    />
+  )}
+  <button
+    onClick={() => deletePreset(preset.id, preset.name)}
+    className="flex items-center text-slate-400 hover:text-red-500 p-0"
+  >
+    <Icon
+      size="lg"
+      icon={Trashcan}
+      className="text-slate-400 hover:text-red-500 -ml-2"
+    />
+  </button>
+</div>
+
+
       </span>
     </li>
   );
@@ -115,6 +135,17 @@ export const CustomPresetAlertLinks = ({
       acc.find((p) => p.id === preset.id) ? acc : acc.concat(preset),
     presetsOrderFromLS
   );
+
+  // merge the newer data from the server with the saved order
+  if (presetsOrderFromLS.length > 0) {
+    const newPresetsOrder = presetsOrderFromLS.map((preset) => {
+      const newPreset = presets.find((p) => p.id === preset.id);
+      return newPreset || preset;
+    });
+
+    setPresetsOrderFromLS(newPresetsOrder);
+  }
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

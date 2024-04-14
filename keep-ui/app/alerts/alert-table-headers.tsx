@@ -137,6 +137,7 @@ export default function AlertsTableHeaders({
   table,
   presetName,
 }: Props) {
+
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(columns)
