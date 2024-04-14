@@ -650,13 +650,15 @@ async def receive_generic_event(
         session (Session, optional): Defaults to Depends(get_session).
     """
     tenant_id = authenticated_entity.tenant_id
+
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        event = enrichments_bl.run_extraction_rules(event)
+    except Exception:
+        logger.exception("Failed to run pre-formatting extraction rules")
+
     if isinstance(event, dict):
-        enrichments_bl = EnrichmentsBl(tenant_id, session)
-        # Pre format enrichment
-        try:
-            event = enrichments_bl.run_extraction_rules(event)
-        except Exception:
-            logger.exception("Failed to run pre-formatting extraction rules")
         event = [AlertDto(**event)]
 
     if isinstance(event, AlertDto):

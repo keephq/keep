@@ -12,7 +12,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", description="Get all extraction rules")
+@router.get("", description="Get all extraction rules")
 def get_extraction_rules(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:extraction"])
@@ -28,7 +28,7 @@ def get_extraction_rules(
     return [ExtractionRuleDtoOut(**rule.dict()) for rule in rules]
 
 
-@router.post("/", description="Create a new extraction rule")
+@router.post("", description="Create a new extraction rule")
 def create_extraction_rule(
     rule_dto: ExtractionRule,
     authenticated_entity: AuthenticatedEntity = Depends(
