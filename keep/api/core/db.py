@@ -155,7 +155,16 @@ def create_db_and_tables():
                     logger.info(f"Dropped constraint {constraint_name}")
             # now add the new column
             try:
-                session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                if session.bind.dialect.name == "sqlite":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                elif session.bind.dialect.name == "mysql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                elif session.bind.dialect.name == "postgresql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;")
+                elif session.bind.dialect.name == "mssql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);")
+                else:
+                    raise ValueError("Unsupported database type")
             except Exception as e:
                 # that's ok
                 if "Duplicate column name" in str(e):
@@ -506,12 +515,22 @@ def add_or_update_workflow(
 def get_workflow_to_alert_execution_by_workflow_execution_id(
     workflow_execution_id: str
 ) -> WorkflowToAlertExecution:
+    """
+    Get the WorkflowToAlertExecution entry for a given workflow execution ID.
+
+    Args:
+        workflow_execution_id (str): The workflow execution ID to filter the workflow execution by.
+
+    Returns:
+        WorkflowToAlertExecution: The WorkflowToAlertExecution object.
+    """
     with Session(engine) as session:
         return (
             session.query(WorkflowToAlertExecution)
             .filter_by(workflow_execution_id=workflow_execution_id)
             .first()
         )
+
 
 def get_last_workflow_workflow_to_alert_executions(
     session: Session, tenant_id: str
@@ -564,7 +583,7 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    workflow_id: str, tenant_id: str
+    tenant_id: str, workflow_id: str
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         workflow_execution = (
