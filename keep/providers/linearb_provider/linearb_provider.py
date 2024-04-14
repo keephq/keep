@@ -68,12 +68,13 @@ class LinearbProvider(BaseProvider):
         http_url: str = "",
         title: str = "",
         teams="",
-        respository_urls="",
+        repository_urls="",
         services="",
         started_at="",
         ended_at="",
         git_ref="",
         should_delete="",
+        issued_at="",
         **kwargs: dict,
     ):
         """
@@ -110,6 +111,7 @@ class LinearbProvider(BaseProvider):
             )
             if incident_response.ok:
                 incident = incident_response.json()
+                self.logger.info("Found LinearB Incident", extra={"incident": incident})
 
                 payload = {**incident}
 
@@ -122,15 +124,23 @@ class LinearbProvider(BaseProvider):
                                 team_names.append(team)
                     payload["teams"] = team_names
 
-                if respository_urls:
-                    if isinstance(respository_urls, str):
-                        respository_urls = json.loads(respository_urls)
-                    payload["respository_urls"] = respository_urls
+                if repository_urls:
+                    if isinstance(repository_urls, str):
+                        repository_urls = json.loads(repository_urls)
+                    payload["repository_urls"] = repository_urls
+                else:
+                    # Might received repository_urls as a key in the payload
+                    payload.pop("repository_urls", None)
 
                 if services:
                     if isinstance(services, str):
                         services = json.loads(services)
+                    if len(services) > 0 and isinstance(services[0], dict):
+                        services = [service["name"] for service in services]
                     payload["services"] = services
+                elif "services" in payload:
+                    service_names = [service["name"] for service in payload["services"]]
+                    payload["services"] = service_names
 
                 if started_at:
                     payload["started_at"] = started_at
@@ -158,7 +168,7 @@ class LinearbProvider(BaseProvider):
                         "At least 1 team is required for creating an incident"
                     )
 
-                issued_at = datetime.datetime.now().isoformat()
+                issued_at = issued_at or datetime.datetime.now().isoformat()
 
                 payload = {
                     "provider_id": incident_id,
@@ -168,10 +178,10 @@ class LinearbProvider(BaseProvider):
                     "teams": teams,
                 }
 
-                if respository_urls:
-                    if isinstance(respository_urls, str):
-                        respository_urls = json.loads(respository_urls)
-                    payload["respository_urls"] = respository_urls
+                if repository_urls:
+                    if isinstance(repository_urls, str):
+                        repository_urls = json.loads(repository_urls)
+                    payload["repository_urls"] = repository_urls
 
                 if services:
                     if isinstance(services, str):
@@ -186,9 +196,14 @@ class LinearbProvider(BaseProvider):
                 )
 
             if result.ok:
-                self.logger.info("Notified LinearB successfully")
+                self.logger.info(
+                    "Notified LinearB successfully", extra={"payload": payload}
+                )
             else:
-                self.logger.warning("Failed to notify linearB", extra={**result.json()})
+                self.logger.warning(
+                    "Failed to notify linearB",
+                    extra={**result.json(), "payload": payload},
+                )
                 raise Exception(f"Failed to notify linearB {result.text}")
 
             return result.text
@@ -223,7 +238,7 @@ if __name__ == "__main__":
         http_url="https://www.google.com",
         title="Test",
         teams='["All Contributors"]',
-        respository_urls='["https://www.keephq.dev"]',
+        repository_urls='["https://www.keephq.dev"]',
         started_at=datetime.datetime.now().isoformat(),
         should_delete="true",
     )
