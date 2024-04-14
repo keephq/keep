@@ -15,7 +15,7 @@ class ExtractionRule(SQLModel, table=True):
     created_by: Optional[str] = Field(max_length=255)
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     updated_by: Optional[str] = Field(max_length=255)
-    updated_at: Optional[datetime] = Column(onupdate=func.now())
+    updated_at: Optional[datetime] = Column(name="updated_at", onupdate=func.now())
     disabled: bool = Field(default=False)
     pre: bool = Field(default=False)
     condition: Optional[str] = Field(max_length=2000)  # cel

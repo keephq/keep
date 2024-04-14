@@ -5,7 +5,11 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.db.extraction import ExtractionRule, ExtractionRuleDtoOut
+from keep.api.models.db.extraction import (
+    ExtractionRule,
+    ExtractionRuleDtoBase,
+    ExtractionRuleDtoOut,
+)
 
 router = APIRouter()
 
@@ -30,7 +34,7 @@ def get_extraction_rules(
 
 @router.post("", description="Create a new extraction rule")
 def create_extraction_rule(
-    rule_dto: ExtractionRule,
+    rule_dto: ExtractionRuleDtoBase,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:extraction"])
     ),

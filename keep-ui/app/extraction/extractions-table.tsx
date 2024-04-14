@@ -1,6 +1,7 @@
 import {
   Badge,
   Button,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -21,8 +22,23 @@ import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { IoCheckmark } from "react-icons/io5";
+import { HiMiniXMark } from "react-icons/hi2";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
+
+export function extractNamedGroups(regex: string): string[] {
+  const namedGroupPattern = /\(\?P<([a-zA-Z0-9]+)>[^)]*\)/g;
+  let match;
+  const groupNames = [];
+
+  while ((match = namedGroupPattern.exec(regex)) !== null) {
+    groupNames.push(match[1]);
+  }
+
+  return groupNames;
+}
 
 interface Props {
   extractions: ExtractionRule[];
@@ -35,18 +51,6 @@ export default function RulesTable({
 }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
-
-  function extractNamedGroups(regex: string): string[] {
-    const namedGroupPattern = /\(\?<([a-zA-Z0-9]+)>[^)]*\)/g;
-    let match;
-    const groupNames = [];
-
-    while ((match = namedGroupPattern.exec(regex)) !== null) {
-      groupNames.push(match[1]);
-    }
-
-    return groupNames;
-  }
 
   const columns = [
     columnHelper.display({
@@ -67,7 +71,7 @@ export default function RulesTable({
             size="xs"
             variant="secondary"
             icon={MdRemoveCircle}
-            onClick={() => deleteRule(context.row.original.id!)}
+            onClick={() => deleteExtraction(context.row.original.id!)}
           />
         </div>
       ),
@@ -88,9 +92,17 @@ export default function RulesTable({
       cell: (context) => context.row.original.description,
     }),
     columnHelper.display({
-      id: "conditon",
-      header: "Condition",
-      cell: (context) => context.row.original.condition,
+      id: "pre",
+      header: "Pre-formatting",
+      cell: (context) => (
+        <div className="flex justify-center">
+          {context.row.original.pre ? (
+            <Icon icon={IoCheckmark} size="md" color="orange" />
+          ) : (
+            <Icon icon={HiMiniXMark} size="md" color="orange" />
+          )}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "attribute",
@@ -99,8 +111,42 @@ export default function RulesTable({
     }),
     columnHelper.display({
       id: "regex",
-      header: "Regex",
+      header: () => (
+        <div className="flex items-center">
+          Regex{" "}
+          <a
+            href="https://docs.python.org/3.11/library/re.html#match-objects"
+            target="_blank"
+          >
+            <Icon
+              icon={QuestionMarkCircleIcon}
+              variant="simple"
+              color="gray"
+              size="sm"
+              tooltip="Python regex pattern for group matching"
+            />
+          </a>
+        </div>
+      ),
       cell: (context) => context.row.original.regex,
+    }),
+    columnHelper.display({
+      id: "conditon",
+      header: () => (
+        <div className="flex items-center">
+          Condition{" "}
+          <a href="https://docs.keephq.dev/overview/presets" target="_blank">
+            <Icon
+              icon={QuestionMarkCircleIcon}
+              variant="simple"
+              color="gray"
+              size="sm"
+              tooltip="CEL based condition"
+            />
+          </a>
+        </div>
+      ),
+      cell: (context) => context.row.original.condition,
     }),
     columnHelper.display({
       id: "newAttributes",
@@ -123,10 +169,10 @@ export default function RulesTable({
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const deleteRule = (ruleId: number) => {
+  const deleteExtraction = (extractionId: number) => {
     const apiUrl = getApiURL();
     if (confirm("Are you sure you want to delete this rule?")) {
-      fetch(`${apiUrl}/mapping/${ruleId}`, {
+      fetch(`${apiUrl}/extraction/${extractionId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
@@ -134,9 +180,11 @@ export default function RulesTable({
       }).then((response) => {
         if (response.ok) {
           mutate();
-          toast.success("Rule deleted successfully");
+          toast.success("Extraction deleted successfully");
         } else {
-          toast.error("Failed to delete rule, contact us if this persists");
+          toast.error(
+            "Failed to delete extraction rule, contact us if this persists"
+          );
         }
       });
     }
