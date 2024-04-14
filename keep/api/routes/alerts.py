@@ -531,9 +531,10 @@ def handle_formatted_events(
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
             try:
+                enrichments_bl.run_extraction_rules(alert_dto)
                 enrichments_bl.run_mapping_rules(alert_dto)
             except Exception:
-                logger.exception("Failed to run mapping rules")
+                logger.exception("Failed to run mapping and extraction rules")
 
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
@@ -633,7 +634,7 @@ def handle_formatted_events(
     status_code=201,
 )
 async def receive_generic_event(
-    alert: AlertDto | list[AlertDto],
+    event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
@@ -649,10 +650,19 @@ async def receive_generic_event(
         session (Session, optional): Defaults to Depends(get_session).
     """
     tenant_id = authenticated_entity.tenant_id
-    if isinstance(alert, AlertDto):
-        alert = [alert]
+    if isinstance(event, dict):
+        enrichments_bl = EnrichmentsBl(tenant_id, session)
+        # Pre format enrichment
+        try:
+            event = enrichments_bl.run_extraction_rules(event)
+        except Exception:
+            logger.exception("Failed to run pre-formatting extraction rules")
+        event = [AlertDto(**event)]
 
-    for _alert in alert:
+    if isinstance(event, AlertDto):
+        event = [event]
+
+    for _alert in event:
         # if not source, set it to keep
         if not _alert.source:
             _alert.source = ["keep"]
@@ -663,14 +673,14 @@ async def receive_generic_event(
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert[0].source[0],
+        event[0].source[0],
         session,
-        alert,
-        alert,
+        event,
+        event,
         pusher_client,
     )
 
-    return alert
+    return event
 
 
 @router.post(
@@ -712,6 +722,14 @@ async def receive_event(
             "tenant_id": tenant_id,
         },
     )
+
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        enrichments_bl.run_extraction_rules(event)
+    except Exception:
+        logger.exception("Failed to run pre-formatting extraction rules")
+
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
