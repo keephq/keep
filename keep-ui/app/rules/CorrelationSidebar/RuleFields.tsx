@@ -219,6 +219,12 @@ export const RuleFields = ({
     return onRuleRemove([groupIndex, removedRuleFieldIndex]);
   };
 
+  const onRemoveGroupClick = () => {
+    if (groupsLength > 2) {
+      return onRuleRemove([groupIndex]);
+    }
+  };
+
   const onFieldChange = (
     prop: Parameters<QueryActions["onPropChange"]>[0],
     value: unknown,
@@ -259,15 +265,27 @@ export const RuleFields = ({
 
         return null;
       })}
-      <Button
-        onClick={onAddRuleFieldClick}
-        type="button"
-        variant="light"
-        color="orange"
-        disabled={availableFields.length === 0}
-      >
-        Add condition
-      </Button>
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={onAddRuleFieldClick}
+          type="button"
+          variant="light"
+          color="orange"
+          disabled={availableFields.length === 0}
+        >
+          Add condition
+        </Button>
+
+        <Button
+          type="button"
+          variant="light"
+          color="red"
+          disabled={groupsLength <= 2}
+          onClick={onRemoveGroupClick}
+        >
+          Remove group
+        </Button>
+      </div>
     </div>
   );
 };
