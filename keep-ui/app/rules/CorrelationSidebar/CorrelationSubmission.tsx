@@ -3,7 +3,13 @@ import { useSearchParams } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 
-export const CorrelationSubmission = () => {
+type CorrelationSubmissionProps = {
+  toggle: VoidFunction;
+};
+
+export const CorrelationSubmission = ({
+  toggle,
+}: CorrelationSubmissionProps) => {
   const {
     formState: { isValid },
   } = useFormContext<CorrelationForm>();
@@ -14,7 +20,7 @@ export const CorrelationSubmission = () => {
   return (
     <div className="col-span-2 flex justify-end items-end">
       <div className="flex items-center gap-x-4">
-        <Button type="button" variant="light" color="orange">
+        <Button type="button" variant="light" color="orange" onClick={toggle}>
           Cancel
         </Button>
         <Button

@@ -117,7 +117,7 @@ export const CorrelationSidebarBody = ({
         >
           <CorrelationForm />
           <CorrelationGroups />
-          <CorrelationSubmission />
+          <CorrelationSubmission toggle={toggle} />
         </form>
       </FormProvider>
     </div>
