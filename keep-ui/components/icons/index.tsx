@@ -183,6 +183,41 @@ const DoorbellNotification = () => (
   </svg>
 );
 
+const ExportIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4.5 1.875V1H1.4375C1.19586 1 1 1.19586 1 1.4375V4.5H1.875V2.49188L5.93937 6.55625L6.55625 5.93937L2.49188 1.875H4.5Z"
+      fill="#A58BB6"
+      stroke="#A58BB6"
+      stroke-width="0.1"
+    />
+    <path
+      d="M14.5626 1H11.5001V1.875H13.5082L9.44385 5.93937L10.0607 6.55625L14.1251 2.49188V4.5H15.0001V1.4375C15.0001 1.19586 14.8042 1 14.5626 1Z"
+      fill="#A58BB6"
+      stroke="#A58BB6"
+      stroke-width="0.1"
+    />
+    <path
+      d="M14.1251 13.5077L10.0607 9.44336L9.44385 10.0602L13.5082 14.1246H11.5001V14.9996H14.5626C14.8042 14.9996 15.0001 14.8037 15.0001 14.5621V11.4996H14.1251V13.5077Z"
+      fill="#A58BB6"
+      stroke="#A58BB6"
+      stroke-width="0.1"
+    />
+    <path
+      d="M5.93937 9.43945L1.875 13.5082V11.5001H1V14.5626C1 14.8042 1.19586 15.0001 1.4375 15.0001H4.5V14.1251H2.49188L6.55625 10.0607L5.93937 9.43945Z"
+      fill="#A58BB6"
+      stroke="#A58BB6"
+      stroke-width="0.1"
+    />
+  </svg>
+);
+
 const SilencedDoorbellNotification = () => (
   <svg
     className="tremor-Icon-icon shrink-0 h-5 w-5"
@@ -225,4 +260,5 @@ export {
   DoorbellNotification,
   SilencedDoorbellNotification,
   Trashcan,
+  ExportIcon
 };
