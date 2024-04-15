@@ -2,7 +2,7 @@
 
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { Mapping, Rules, Workflows } from "components/icons";
+import { Mapping, Rules, Workflows, ExportIcon } from "components/icons";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
@@ -47,8 +47,13 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/mapping" icon={Mapping}>
+          <LinkWithIcon href="/mapping" icon={Mapping} isBeta={true}>
             Mapping
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/extraction" icon={ExportIcon} isBeta={true}>
+            Extraction
           </LinkWithIcon>
         </li>
       </Disclosure.Panel>
