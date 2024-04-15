@@ -33,7 +33,10 @@
         "overview/presets",
         {
           "group": "Enrichments",
-          "pages": ["overview/enrichment/mapping"]
+          "pages": [
+            "overview/enrichment/extraction",
+            "overview/enrichment/mapping"
+          ]
         },
         "overview/examples",
         "overview/comparison"
