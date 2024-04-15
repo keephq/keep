@@ -1,9 +1,14 @@
+import json
 import logging
+import re
 
+import celpy
+import chevron
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
 
@@ -32,6 +37,88 @@ class EnrichmentsBl:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.db_session = db
+
+    def run_extraction_rules(self, event: AlertDto | dict) -> AlertDto | dict:
+        """
+        Run the extraction rules for the event
+        """
+        self.logger.info("Running extraction rules for incoming event")
+        rules: list[ExtractionRule] = (
+            self.db_session.query(ExtractionRule)
+            .filter(ExtractionRule.tenant_id == self.tenant_id)
+            .filter(ExtractionRule.disabled == False)
+            .filter(
+                ExtractionRule.pre == False if isinstance(event, AlertDto) else True
+            )
+            .order_by(ExtractionRule.priority.desc())
+            .all()
+        )
+
+        if not rules:
+            self.logger.debug("No extraction rules found for tenant")
+            return event
+
+        is_alert_dto = False
+        if isinstance(event, AlertDto):
+            is_alert_dto = True
+            event = json.loads(json.dumps(event.dict(), default=str))
+
+        for rule in rules:
+            attribute = rule.attribute
+            if (
+                attribute.startswith("{{") is False
+                and attribute.endswith("}}") is False
+            ):
+                # Wrap the attribute in {{ }} to make it a valid chevron template
+                attribute = f"{{{{ {attribute} }}}}"
+            attribute_value = chevron.render(attribute, event)
+
+            if not attribute_value:
+                self.logger.info(
+                    "Attribute value is empty, skipping extraction",
+                    extra={"rule_id": rule.id},
+                )
+                continue
+
+            if rule.condition is None or rule.condition == "*" or rule.condition == "":
+                self.logger.info(
+                    "No condition specified for the rule, enriching...",
+                    extra={"rule_id": rule.id},
+                )
+            else:
+                env = celpy.Environment()
+                ast = env.compile(rule.condition)
+                prgm = env.program(ast)
+                activation = celpy.json_to_cel(event)
+                relevant = prgm.evaluate(activation)
+                if not relevant:
+                    self.logger.debug(
+                        "Condition did not match, skipping extraction",
+                        extra={"rule_id": rule.id},
+                    )
+                    continue
+            match_result = re.match(rule.regex, attribute_value)
+            if match_result:
+                match_dict = match_result.groupdict()
+
+                # handle source as a special case
+                if "source" in match_dict:
+                    source = match_dict.pop("source")
+                    if source and isinstance(source, str):
+                        event["source"] = [source]
+
+                event.update(match_dict)
+                self.logger.info(
+                    "Event enriched with extraction rule",
+                    extra={"rule_id": rule.id},
+                )
+            else:
+                self.logger.info(
+                    "Regex did not match, skipping extraction",
+                    extra={"rule_id": rule.id},
+                )
+
+        return AlertDto(**event) if is_alert_dto else event
 
     def run_mapping_rules(self, alert: AlertDto):
         """
