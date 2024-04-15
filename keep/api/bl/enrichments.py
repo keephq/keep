@@ -58,12 +58,12 @@ class EnrichmentsBl:
             self.logger.debug("No extraction rules found for tenant")
             return event
 
-        for rule in rules:
-            is_alert_dto = False
-            if isinstance(event, AlertDto):
-                is_alert_dto = True
-                event = json.loads(json.dumps(event.dict(), default=str))
+        is_alert_dto = False
+        if isinstance(event, AlertDto):
+            is_alert_dto = True
+            event = json.loads(json.dumps(event.dict(), default=str))
 
+        for rule in rules:
             attribute = rule.attribute
             if (
                 attribute.startswith("{{") is False
