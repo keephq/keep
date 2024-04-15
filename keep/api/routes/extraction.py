@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -55,14 +56,14 @@ def create_extraction_rule(
 @router.put("/{rule_id}", description="Update an existing extraction rule")
 def update_extraction_rule(
     rule_id: int,
-    rule_dto: ExtractionRule,
+    rule_dto: ExtractionRuleDtoBase,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:extraction"])
     ),
     session: Session = Depends(get_session),
 ) -> ExtractionRuleDtoOut:
     logger.info("Updating an extraction rule")
-    rule = (
+    rule: ExtractionRule | None = (
         session.query(ExtractionRule)
         .filter(
             ExtractionRule.id == rule_id,
@@ -75,6 +76,8 @@ def update_extraction_rule(
 
     for key, value in rule_dto.dict(exclude_unset=True).items():
         setattr(rule, key, value)
+    rule.updated_by = authenticated_entity.email
+    rule.updated_at = datetime.datetime.now(datetime.timezone.utc)
     session.commit()
     session.refresh(rule)
     return ExtractionRuleDtoOut(**rule.dict())

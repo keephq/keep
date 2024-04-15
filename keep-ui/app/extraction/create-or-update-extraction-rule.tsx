@@ -20,6 +20,7 @@ import { getApiURL } from "utils/apiUrl";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
+import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -115,11 +116,13 @@ export default function CreateOrUpdateExtractionRule({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: extractionToEdit?.id,
           priority: priority,
           name: extractionName,
           description: mapDescription,
-          matchers: extractedAttributes,
+          pre: isPreFormatting,
+          attribute: attribute,
+          regex: regex,
+          condition: condition,
         }),
       }
     );
@@ -271,12 +274,14 @@ export default function CreateOrUpdateExtractionRule({
             />
           </a>
         </Text>
-        <Textarea
-          placeholder="CEL expression to filter events by. If empty or *, all events will be matched."
-          required={false}
-          value={condition}
-          onValueChange={setCondition}
-        />
+        <div className="mb-5">
+          <AlertsRulesBuilder
+            defaultQuery={condition}
+            updateOutputCEL={setCondition}
+            showSave={false}
+            showSqlImport={false}
+          />
+        </div>
       </div>
       <div className="mt-2.5">
         <Text>Extracted Attributes</Text>
