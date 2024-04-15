@@ -74,7 +74,7 @@ class EnrichmentsBl:
             attribute_value = chevron.render(attribute, event)
 
             if not attribute_value:
-                self.logger.debug(
+                self.logger.info(
                     "Attribute value is empty, skipping extraction",
                     extra={"rule_id": rule.id},
                 )
@@ -113,7 +113,7 @@ class EnrichmentsBl:
                     extra={"rule_id": rule.id},
                 )
             else:
-                self.logger.debug(
+                self.logger.info(
                     "Regex did not match, skipping extraction",
                     extra={"rule_id": rule.id},
                 )
