@@ -47,12 +47,12 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/mapping" icon={Mapping}>
+          <LinkWithIcon href="/mapping" icon={Mapping} isBeta={true}>
             Mapping
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/extraction" icon={ExportIcon}>
+          <LinkWithIcon href="/extraction" icon={ExportIcon} isBeta={true}>
             Extraction
           </LinkWithIcon>
         </li>

@@ -3,13 +3,14 @@
 import { AnchorHTMLAttributes, ReactNode } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
-import { Icon } from "@tremor/react";
+import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
 
 type LinkWithIconProps = {
   children: ReactNode;
   icon: IconType;
+  isBeta?: boolean;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -17,6 +18,7 @@ export const LinkWithIcon = ({
   icon,
   children,
   tabIndex = 0,
+  isBeta = false,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -33,16 +35,25 @@ export const LinkWithIcon = ({
       tabIndex={tabIndex}
       {...restOfLinkProps}
     >
-      <Icon
-        className={classNames("group-hover:text-orange-400", {
-          "text-orange-400": isActive,
-          "text-slate-400": !isActive,
-        })}
-        icon={icon}
-      />
-      <span className={classNames({ "text-orange-400": isActive })}>
-        {children}
-      </span>
+      <div className="flex w-full justify-between items-center">
+        <div className="flex items-center">
+          <Icon
+            className={classNames("group-hover:text-orange-400", {
+              "text-orange-400": isActive,
+              "text-slate-400": !isActive,
+            })}
+            icon={icon}
+          />
+          <span className={classNames({ "text-orange-400": isActive })}>
+            {children}
+          </span>
+        </div>
+        {isBeta && (
+          <Badge color="orange" size="xs">
+            Beta
+          </Badge>
+        )}
+      </div>
     </Link>
   );
 };

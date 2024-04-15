@@ -253,6 +253,8 @@ export default function CreateOrUpdateExtractionRule({
           placeholder="The regex rule to extract by"
           required={true}
           value={regex}
+          error={extractedAttributes.length === 0 && regex !== ""}
+          errorMessage="Invalid regex pattern. Must contain named groups."
           onValueChange={setRegex}
         />
       </div>
