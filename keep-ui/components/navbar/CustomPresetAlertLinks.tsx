@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import { CSSProperties, useState } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
 import { Trashcan } from "components/icons";
@@ -33,6 +33,7 @@ type PresetAlertProps = {
 };
 
 const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
+  const [isHovered, setIsHovered] = useState(false);
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
 
@@ -49,7 +50,10 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
   };
 
   return (
-    <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}>
+    <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <span
         className={classNames(
           "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
@@ -84,28 +88,22 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           </span>
         </Link>
         <div className="flex items-center">
-        {preset.is_noisy && (
-          <Icon
-          icon={IoIosNotificationsOutline}
-          size="lg"
-          className={`-mr-1 ${
-            preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'
-          } hover:text-red-500`}
-        />
-       )}
-  <button
-    onClick={() => deletePreset(preset.id, preset.name)}
-    className="flex items-center text-slate-400 hover:text-red-500 p-0"
-  >
-    <Icon
-      size="lg"
-      icon={Trashcan}
-      className="text-slate-400 hover:text-red-500 -ml-2"
-    />
-  </button>
-</div>
-
-
+          {preset.is_noisy && (
+            <Icon
+            icon={IoIosNotificationsOutline}
+            size="lg"
+            className={` ${isHovered ? '-mr-4' : 'position absolute right-2'} ${
+              preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'
+            } hover:text-red-500`}
+          />
+        )}
+          <button
+            onClick={() => deletePreset(preset.id, preset.name)}
+            className="flex items-center text-slate-400 hover:text-red-500 p-0 ml-2"
+          >
+            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden" />
+          </button>
+        </div>
       </span>
     </li>
   );
