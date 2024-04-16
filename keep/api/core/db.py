@@ -25,6 +25,7 @@ from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -44,7 +45,7 @@ def __get_conn() -> pymysql.connections.Connection:
     """
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             db="keepdb",
@@ -79,7 +80,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     # Create a new MySQL connection with the obtained access token
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             password=access_token,
@@ -996,6 +997,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         alerts = []
         for alert, startedAt in alerts_with_start:
             alert.event["startedAt"] = str(startedAt)
+            alert.event["event_id"] = str(alert.id)
             alerts.append(alert)
 
     return alerts

@@ -33,7 +33,10 @@
         "overview/presets",
         {
           "group": "Enrichments",
-          "pages": ["overview/enrichment/mapping"]
+          "pages": [
+            "overview/enrichment/extraction",
+            "overview/enrichment/mapping"
+          ]
         },
         "overview/examples",
         "overview/comparison"
@@ -82,8 +85,7 @@
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
-            "providers/documentation/cloudwatch-logs",
-            "providers/documentation/cloudwatch-metrics",
+            "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/datadog-provider",
             "providers/documentation/ilert-provider",
