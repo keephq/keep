@@ -1,9 +1,8 @@
 """
-AppDynamics Provider is a class that allows to ingest/digest data from AppDynamics.
+AppDynamics Provider is a class that allows to install webhooks in AppDynamics.
 """
 
 import dataclasses
-import datetime
 import json
 import tempfile
 from typing import Optional, List
@@ -12,16 +11,10 @@ import logging
 
 import pydantic
 import requests
-from grafana_api.model import APIEndpoints
 
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.base.provider_exceptions import GetAlertException
-# from keep.providers.grafana_provider.grafana_alert_format_description import (
-#     AppDynamicsAlertFormatDescription,
-# )
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -34,7 +27,7 @@ class HTTPActionTemplateAlreadyExists(Exception):
 
 
 @pydantic.dataclasses.dataclass
-class AppDynamicsProviderAuthConfig:
+class AppdynamicsProviderAuthConfig:
     """
     AppDynamics authentication configuration.
     """
@@ -42,60 +35,57 @@ class AppDynamicsProviderAuthConfig:
     appDynamicsUsername: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Token",
-            "hint": "AppDynamics Token"
+            "description": "AppDynamics Username",
+            "hint": "Your Username"
         },
     )
     appDynamicsAccountName: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Token",
-            "hint": "AppDynamics Token"
+            "description": "AppDynamics Account Name",
+            "hint": "AppDynamics Account Name"
         },
     )
     appDynamicsPassword: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Token",
-            "hint": "AppDynamics Token",
+            "description": "Password",
+            "hint": "Password associated with yur account",
             "sensitive": True,
         },
     )
     appName: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "AppDynamics host",
-            "hint": "e.g. https://keephq.grafana.net",
+            "description": "AppDynamics appName",
+            "hint": "the app instance in which the webhook should be installed",
         },
     )
     host: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "AppDynamics host",
-            "hint": "e.g. https://keephq.grafana.net",
+            "hint": "e.g. https://baseball202404101029219.saas.appdynamics.com",
         },
     )
 
 
-class AppDynamicsProvider(BaseProvider):
+class AppdynamicsProvider(BaseProvider):
     """Pull/Push alerts from AppDynamics."""
 
-    KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
             mandatory=True,
-            mandatory_for_webhook=False,
-            documentation_url="https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/",
+            mandatory_for_webhook=True,
             alias="Rules Reader",
         ),
         ProviderScope(
             name="administrator",
             description="Administrator privileges",
             mandatory=True,
-            mandatory_for_webhook=False,
-            documentation_url="https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/access-control/custom-role-actions-scopes/",
+            mandatory_for_webhook=True,
             alias="Rules Reader",
         ),
 
