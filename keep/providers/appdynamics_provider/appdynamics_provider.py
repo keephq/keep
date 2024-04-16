@@ -203,7 +203,7 @@ class AppdynamicsProvider(BaseProvider):
     ):
         try:
             self.__create_http_response_template(keep_api_url=keep_api_url)
-        except HTTPActionTemplateAlreadyExists as e:
+        except HTTPActionTemplateAlreadyExists:
             logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:
             raise e
