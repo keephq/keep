@@ -42,7 +42,15 @@ class EnrichmentsBl:
         """
         Run the extraction rules for the event
         """
-        self.logger.info("Running extraction rules for incoming event")
+        fingerprint = (
+            event.get("fingerprint")
+            if isinstance(event, dict)
+            else getattr(event, "fingerprint", None)
+        )
+        self.logger.info(
+            "Running extraction rules for incoming event",
+            extra={"tenant_id": self.tenant_id, "fingerprint": fingerprint},
+        )
         rules: list[ExtractionRule] = (
             self.db_session.query(ExtractionRule)
             .filter(ExtractionRule.tenant_id == self.tenant_id)
@@ -83,7 +91,11 @@ class EnrichmentsBl:
             if rule.condition is None or rule.condition == "*" or rule.condition == "":
                 self.logger.info(
                     "No condition specified for the rule, enriching...",
-                    extra={"rule_id": rule.id},
+                    extra={
+                        "rule_id": rule.id,
+                        "tenant_id": self.tenant_id,
+                        "fingerprint": fingerprint,
+                    },
                 )
             else:
                 env = celpy.Environment()
@@ -110,12 +122,22 @@ class EnrichmentsBl:
                 event.update(match_dict)
                 self.logger.info(
                     "Event enriched with extraction rule",
-                    extra={"rule_id": rule.id},
+                    extra={
+                        "rule_id": rule.id,
+                        "tenant_id": self.tenant_id,
+                        "fingerprint": fingerprint,
+                    },
                 )
+                # Stop after the first match
+                break
             else:
                 self.logger.info(
                     "Regex did not match, skipping extraction",
-                    extra={"rule_id": rule.id},
+                    extra={
+                        "rule_id": rule.id,
+                        "tenant_id": self.tenant_id,
+                        "fingerprint": fingerprint,
+                    },
                 )
 
         return AlertDto(**event) if is_alert_dto else event
@@ -126,7 +148,7 @@ class EnrichmentsBl:
         """
         self.logger.info(
             "Running mapping rules for incoming alert",
-            extra={"fingerprint": alert.fingerprint},
+            extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
         )
         rules: list[MappingRule] = (
             self.db_session.query(MappingRule)
@@ -160,7 +182,10 @@ class EnrichmentsBl:
                 ):
                     self.logger.info(
                         "Alert matched a mapping rule, enriching...",
-                        extra={"fingerprint": alert.fingerprint},
+                        extra={
+                            "fingerprint": alert.fingerprint,
+                            "tenant_id": self.tenant_id,
+                        },
                     )
                     # This is where you match the row, add your enrichment logic here
                     # For example: alert.enrich(row)
@@ -180,6 +205,10 @@ class EnrichmentsBl:
                         self.tenant_id, alert.fingerprint, enrichments, self.db_session
                     )
                     self.logger.info(
-                        "Alert enriched", extra={"fingerprint": alert.fingerprint}
+                        "Alert enriched",
+                        extra={
+                            "fingerprint": alert.fingerprint,
+                            "tenant_id": self.tenant_id,
+                        },
                     )
                     break

@@ -244,7 +244,7 @@ export default function RulesTable({
                 <TableCell colSpan={columns.length}>
                   <div className="flex space-x-2 divide-x">
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold">{" > "}Created At:</span>
+                      <span className="font-bold">Created At:</span>
                       <span>
                         {new Date(
                           row.original.created_at + "Z"
