@@ -71,7 +71,9 @@ class AppdynamicsProviderAuthConfig:
 
 
 class AppdynamicsProvider(BaseProvider):
-    """Pull/Push alerts from AppDynamics."""
+    """Install Webhooks and receive alerts from AppDynamics."""
+
+    PROVIDER_DISPLAY_NAME = "AppDynamics"
 
     PROVIDER_SCOPES = [
         ProviderScope(
