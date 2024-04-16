@@ -113,7 +113,7 @@ class AppdynamicsProvider(BaseProvider):
         Validates required configuration for AppDynamics provider.
 
         """
-        self.authentication_config = AppDynamicsProviderAuthConfig(
+        self.authentication_config = AppdynamicsProviderAuthConfig(
             **self.config.authentication
         )
         if not self.authentication_config.host.startswith(
