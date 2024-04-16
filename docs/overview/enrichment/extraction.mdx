@@ -15,7 +15,8 @@ Handling a variety of alert formats and extracting relevant information can be c
 1. **Rule Definition**: Users create extraction rules specifying the regex patterns to apply to certain alert attributes.
 2. **Attribute Specification**: Each rule defines which attribute of the alert should be examined by the regex.
 3. **Data Extraction**: When an alert is received, the system applies the regex to the specified attribute. If the pattern matches, named groups within the regex define new attributes to be extracted and added to the alert.
-4. **Alert Enrichment**: Extracted values are added to the alert, enhancing its data with additional attributes for improved analysis.
+4. **First Match Enforcement**: The extraction process is designed to stop after the first successful match. Once a rule successfully applies and enriches the alert, no further rules are processed. This ensures efficiency and prevents overlapping or redundant data extraction.
+5. **Alert Enrichment**: Extracted values are added to the alert, enhancing its data with additional attributes for improved analysis.
 
 ## Practical Example
 
