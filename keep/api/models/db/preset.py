@@ -25,7 +25,11 @@ class PresetDto(BaseModel, extra="ignore"):
     options: list = []
     created_by: Optional[str] = None
     is_private: Optional[bool] = Field(default=False)
+    # whether the preset is noisy or not
     is_noisy: Optional[bool] = Field(default=False)
+    # if true, the preset should be do noise now
+    #   meaning is_noisy + at least one alert is doing noise
+    should_do_noise_now: Optional[bool] = Field(default=False)
 
 
 class PresetOption(BaseModel, extra="ignore"):

@@ -39,7 +39,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       </Disclosure.Button>
       <Disclosure.Panel
         as="ul"
-        className="space-y-2 max-h-[40vh] overflow-auto min-w-[max-content] p-2 pr-4"
+        className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
       >
         <li>
           <LinkWithIcon href="/alerts/feed" icon={DoorbellNotification}>

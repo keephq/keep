@@ -23,7 +23,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoIosNotificationsOutline } from "react-icons/io";
-
+// import css
+import "./CustomPresetAlertLink.css";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -83,13 +84,15 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           </span>
         </Link>
         <div className="flex items-center">
-  {preset.is_noisy && (
-    <Icon
-      icon={IoIosNotificationsOutline}
-      size="lg"
-      className="-mr-1 text-slate-400 hover:text-red-500"
-    />
-  )}
+        {preset.is_noisy && (
+          <Icon
+          icon={IoIosNotificationsOutline}
+          size="lg"
+          className={`-mr-1 ${
+            preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'
+          } hover:text-red-500`}
+        />
+       )}
   <button
     onClick={() => deletePreset(preset.id, preset.name)}
     className="flex items-center text-slate-400 hover:text-red-500 p-0"
