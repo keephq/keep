@@ -139,7 +139,17 @@ export default function WorkflowExecutionPage({
         </Card>
       )}
       <div className={Object.keys(results).length > 0 ? "mt-8" : ""}>
-        {executionStatus === "success" ? (
+        {executionStatus === "in_progress" ? (
+          <div>
+            <div className="flex items-center justify-center">
+              <p>
+                The workflow is in progress, will check again in one second
+                (times checked: {checks})
+              </p>
+            </div>
+            <Loading></Loading>
+          </div>
+        ) : (
           <>
             {error && (
               <Callout
@@ -194,16 +204,6 @@ export default function WorkflowExecutionPage({
               </Table>
             </Card>
           </>
-        ) : (
-          <div>
-            <div className="flex items-center justify-center">
-              <p>
-                The workflow is in progress, will check again in one second
-                (times checked: {checks})
-              </p>
-            </div>
-            <Loading></Loading>
-          </div>
         )}
       </div>
     </div>
