@@ -21,7 +21,7 @@ from keep.providers.providers_factory import ProvidersFactory
 logger = logging.getLogger(__name__)
 
 
-class HTTPActionTemplateAlreadyExists(Exception):
+class ResourceAlreadyExists(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -54,10 +54,10 @@ class AppdynamicsProviderAuthConfig:
             "sensitive": True,
         },
     )
-    appName: str = dataclasses.field(
+    appId: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "AppDynamics appName",
+            "description": "AppDynamics appId",
             "hint": "the app instance in which the webhook should be installed",
         },
     )
@@ -179,8 +179,8 @@ class AppdynamicsProvider(BaseProvider):
         temp = tempfile.NamedTemporaryFile(mode='w+t', delete=True)
 
         template = json.load(open(r'./httpactiontemplate.json'))
-        template["host"] = keep_api_host
-        template["path"] = keep_api_path
+        template[0]["host"] = keep_api_host
+        template[0]["path"] = keep_api_path
 
         temp.write(json.dumps(template))
         temp.seek(0)
@@ -193,46 +193,74 @@ class AppdynamicsProvider(BaseProvider):
             logger.info("HTTP Response template Successfully Created")
         else:
             logger.info("HTTP Response template creation failed", extra=res)
-            if 'already exists' in res['error'][0]:
+            if 'already exists' in res['errors'][0]:
                 logger.info("HTTP Response template creation failed as it already exists", extra=res)
-                raise HTTPActionTemplateAlreadyExists()
+                raise ResourceAlreadyExists()
             raise Exception(res["errors"])
+
+    def __create_action(self):
+        response = requests.post(
+            url=self.__get_url(paths=["alerting/rest/v1/applications", self.authentication_config.appId, "actions"]),
+            auth=self.__get_auth(),
+            json={'actionType': 'HTTP_REQUEST', 'name': 'KeepAction', 'httpRequestTemplateName': 'KeepWebhook',
+                  'customTemplateVariables': []}
+        )
+        if response.ok:
+            logger.info("Action Created")
+        else:
+            response = response.json()
+            logger.info("Action Creation failed")
+            if 'already exists' in response['message']:
+                raise ResourceAlreadyExists()
+            raise Exception(response['message'])
 
     def setup_webhook(
             self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         try:
             self.__create_http_response_template(keep_api_url=keep_api_url)
-        except HTTPActionTemplateAlreadyExists:
+        except ResourceAlreadyExists:
+            logger.info("Template already exists, proceeding with webhook setup")
+        except Exception as e:
+            raise e
+        try:
+            self.__create_action()
+        except ResourceAlreadyExists:
             logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:
             raise e
 
         # Listing all policies in the specified app
         policies_response = requests.get(
-            url=self.__get_url(paths=["alerting/rest/v1/applications", self.authentication_config.appName, "policies"]),
+            url=self.__get_url(paths=["alerting/rest/v1/applications", self.authentication_config.appId, "policies"]),
             auth=self.__get_auth(),
         )
 
         policies = policies_response.json()
         policy_config = {
-            "actionName": "KeepWebhook",
+            "actionName": "KeepAction",
             "actionType": "HTTP_REQUEST",
         }
         for policy in policies:
-            if policy_config not in policy["actions"]:
-                policy["actions"].append(policy_config)
+            curr_policy = requests.get(url=self.__get_url(
+                paths=["alerting/rest/v1/applications", self.authentication_config.appId, "policies", policy['id']]),
+                auth=self.__get_auth(),
+            ).json()
+            if policy_config not in curr_policy["actions"]:
+                curr_policy["actions"].append(policy_config)
+            if 'executeActionsInBatch' not in curr_policy:
+                curr_policy['executeActionsInBatch'] = True
             request = requests.put(
                 url=self.__get_url(
-                    paths=["/alerting/rest/v1/applications", self.authentication_config.appName, "policies",
+                    paths=["/alerting/rest/v1/applications", self.authentication_config.appId, "policies",
                            policy["id"]]),
                 auth=self.__get_auth(),
-                data=policy,
+                json=curr_policy,
             )
             if not request.ok:
-                logger.error("Failed to add Webhook", extra=request.json())
+                logger.info("Failed to add Webhook")
                 raise Exception("Could not create webhook")
-            logger.info("Webhook created")
+        logger.info("Webhook created")
 
     @staticmethod
     def _format_alert(
@@ -265,7 +293,7 @@ if __name__ == "__main__":
     appDynamicsUsername = os.environ.get("APPDYNAMICS_USERNAME")
     appDynamicsPassword = os.environ.get("APPDYNAMICS_PASSWORD")
     appDynamicsAccountName = os.environ.get("APPDYNAMICS_ACCOUNT_NAME")
-    appName = os.environ.get("APPDYNAMICS_APP_NAME")
+    appId = os.environ.get("APPDYNAMICS_APP_Id")
     context_manager = ContextManager(
         tenant_id="singletenant",
         workflow_id="test",
@@ -274,7 +302,7 @@ if __name__ == "__main__":
         "authentication": {"host": host, "appDynamicsUsername": appDynamicsUsername,
                            "appDynamicsPassword": appDynamicsPassword,
                            "appDynamicsAccountName": appDynamicsAccountName,
-                           "appName": appName},
+                           "appName": appId},
     }
     provider = ProvidersFactory.get_provider(
         context_manager,
