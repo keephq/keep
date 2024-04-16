@@ -498,6 +498,13 @@ def handle_formatted_events(
         for formatted_event in formatted_events:
             formatted_event.pushed = True
 
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Post format enrichment
+            try:
+                formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
+            except Exception:
+                logger.exception("Failed to run post-formatting extraction rules")
+
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
             # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
@@ -528,13 +535,11 @@ def handle_formatted_events(
             formatted_event.event_id = str(alert.id)
             alert_dto = AlertDto(**formatted_event.dict())
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
             try:
-                enrichments_bl.run_extraction_rules(alert_dto)
                 enrichments_bl.run_mapping_rules(alert_dto)
             except Exception:
-                logger.exception("Failed to run mapping and extraction rules")
+                logger.exception("Failed to run mapping rules")
 
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
@@ -729,8 +734,11 @@ async def receive_event(
     # Pre format enrichment
     try:
         enrichments_bl.run_extraction_rules(event)
-    except Exception:
-        logger.exception("Failed to run pre-formatting extraction rules")
+    except Exception as exc:
+        logger.warning(
+            "Failed to run pre-formatting extraction rules",
+            extra={"exception": str(exc)},
+        )
 
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
@@ -803,7 +811,6 @@ async def receive_event(
 def get_alert(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    session: Session = Depends(get_session),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
