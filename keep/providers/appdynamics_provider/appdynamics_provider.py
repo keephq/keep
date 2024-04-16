@@ -235,11 +235,11 @@ class AppdynamicsProvider(BaseProvider):
     @staticmethod
     def _format_alert(
             event: dict,
-            provider_instance: Optional["AppDynamicsProvider"],
+            provider_instance: Optional["AppdynamicsProvider"],
     ) -> AlertDto:
         return AlertDto(
             **event,
-            severity=AppDynamicsProvider.SEVERITIES_MAP.get(event['severity']),
+            severity=AppdynamicsProvider.SEVERITIES_MAP.get(event['severity']),
             source=['appdynamics']
         )
 
