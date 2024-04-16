@@ -43,7 +43,9 @@ class EnrichmentsBl:
         Run the extraction rules for the event
         """
         fingerprint = (
-            event.get("fingerprint") if isinstance(event, dict) else event.fingerprint
+            event.get("fingerprint")
+            if isinstance(event, dict)
+            else getattr(event, "fingerprint", None)
         )
         self.logger.info(
             "Running extraction rules for incoming event",
