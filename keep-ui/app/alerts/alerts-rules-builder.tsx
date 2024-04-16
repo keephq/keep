@@ -179,6 +179,13 @@ const sanitizeCELIntoJS = (celExpression: string): string => {
 
 // this pattern is far from robust
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
+const jsReservedWords = new Set([
+  "break", "case", "catch", "class", "const", "continue", "debugger",
+  "default", "delete", "do", "else", "export", "extends", "finally",
+  "for", "function", "if", "import", "in", "instanceof", "new", "return",
+  "super", "switch", "this", "throw", "try", "typeof", "var", "void",
+  "while", "with", "yield"
+]);
 
 export const evalWithContext = (context: AlertDto, celExpression: string) => {
   try {
@@ -187,10 +194,12 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
     }
 
     const jsExpression = sanitizeCELIntoJS(celExpression);
-    const variables = (
+    let variables = (
       getAllMatches(variablePattern, jsExpression) ?? []
     ).filter((variable) => variable !== "true" && variable !== "false");
 
+    // filter reserved words from variables
+    variables = variables.filter((variable) => !jsReservedWords.has(variable));
     const func = new Function(...variables, `return (${jsExpression})`);
 
     const args = variables.map((arg) =>
@@ -363,6 +372,8 @@ export const AlertsRulesBuilder = ({
         celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
         celRules === "";
       setIsValidCEL(isValidCEL);
+      // close the menu
+      setShowSuggestions(false);
       if (isValidCEL) {
         onApplyFilter();
         updateOutputCEL?.(celRules);
