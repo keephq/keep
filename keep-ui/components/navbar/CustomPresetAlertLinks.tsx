@@ -51,63 +51,62 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 
   return (
     <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    onMouseEnter={() => setIsHovered(true)}
+    onMouseLeave={() => setIsHovered(false)}
+  >
+    <span
+      className={classNames(
+        "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
+        {
+          "bg-stone-200/50": isActive,
+          "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50":
+            !isDragging,
+        }
+      )}
     >
-      <span
-        className={classNames(
-          "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
-          {
-            "bg-stone-200/50": isActive,
-            "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50":
-              !isDragging,
-          }
-        )}
+      <Link
+        className={classNames("flex items-center flex-1", {
+          "pointer-events-none cursor-auto": isDragging,
+        })}
+        tabIndex={0}
+        href={href}
       >
-        <Link
-          className={classNames("flex items-center flex-1", {
-            "pointer-events-none cursor-auto": isDragging,
+        <Icon
+          className={classNames("group-hover:text-orange-400", {
+            "text-orange-400": isActive,
+            "text-slate-400": !isActive,
           })}
-          tabIndex={0}
-          href={href}
+          icon={AiOutlineSwap}
+        />
+        <span
+          className={classNames("truncate max-w-[7.5rem]", {
+            "text-orange-400": isActive,
+          })}
+          title={preset.name}
         >
+          {preset.name}
+        </span>
+      </Link>
+      <div className="flex items-center justify-end flex-1">
+        {preset.is_noisy && (
           <Icon
-            className={classNames("group-hover:text-orange-400", {
-              "text-orange-400": isActive,
-              "text-slate-400": !isActive,
-            })}
-            icon={AiOutlineSwap}
-          />
-          <span
-            className={classNames("truncate max-w-[7.5rem]", {
-              "text-orange-400": isActive,
-            })}
-            title={preset.name}
-          >
-            {preset.name}
-          </span>
-        </Link>
-        <div className="flex items-center">
-          {preset.is_noisy && (
-            <Icon
             icon={IoIosNotificationsOutline}
             size="lg"
-            className={` ${isHovered ? '-mr-4' : 'position absolute right-2'} ${
-              preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'
-            } hover:text-red-500`}
+            className={`transition-transform duration-100 ease-in-out ${
+              isHovered ? 'translate-x-[16px]' : 'translate-x-[20px]'
+            } ${preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'} hover:text-red-500`}
           />
         )}
-          <button
+         <button
             onClick={() => deletePreset(preset.id, preset.name)}
             className="flex items-center text-slate-400 hover:text-red-500 p-0 ml-2"
           >
             <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden" />
           </button>
-        </div>
-      </span>
-    </li>
-  );
-};
+      </div>
+    </span>
+  </li>
+  );};
 
 type CustomPresetAlertLinksProps = {
   session: Session;
