@@ -163,7 +163,7 @@ class AppdynamicsProvider(BaseProvider):
                     administrator = True
                     break
         else:
-            authenticated = False
+            authenticated = response.json()
         return {
             "authenticated": authenticated,
             "administrator": administrator
@@ -240,8 +240,14 @@ class AppdynamicsProvider(BaseProvider):
             provider_instance: Optional["AppdynamicsProvider"],
     ) -> AlertDto:
         return AlertDto(
-            **event,
+            id=event['id'],
+            name=event['name'],
             severity=AppdynamicsProvider.SEVERITIES_MAP.get(event['severity']),
+            lastReceived=event['lastReceived'],
+            message=event['message'],
+            description=event['description'],
+            event_id=event['event_id'],
+            url=event['url'],
             source=['appdynamics']
         )
 
