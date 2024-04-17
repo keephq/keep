@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 from uuid import uuid4
@@ -153,6 +154,26 @@ def create_db_and_tables():
                         f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
                     )
                     logger.info(f"Dropped constraint {constraint_name}")
+            # now add the new column
+            try:
+                if session.bind.dialect.name == "sqlite":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                elif session.bind.dialect.name == "mysql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                elif session.bind.dialect.name == "postgresql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;")
+                elif session.bind.dialect.name == "mssql":
+                    session.exec("ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);")
+                else:
+                    raise ValueError("Unsupported database type")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
             # also add grouping_criteria to the workflow table
             logger.info("Migrating Rule table")
             try:
@@ -274,6 +295,7 @@ def create_workflow_execution(
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
+    event_id: str = None,
     fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
@@ -295,6 +317,7 @@ def create_workflow_execution(
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=workflow_execution.id,
                     alert_fingerprint=fingerprint,
+                    event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
 
@@ -490,6 +513,26 @@ def add_or_update_workflow(
         return existing_workflow if existing_workflow else workflow
 
 
+def get_workflow_to_alert_execution_by_workflow_execution_id(
+    workflow_execution_id: str
+) -> WorkflowToAlertExecution:
+    """
+    Get the WorkflowToAlertExecution entry for a given workflow execution ID.
+
+    Args:
+        workflow_execution_id (str): The workflow execution ID to filter the workflow execution by.
+
+    Returns:
+        WorkflowToAlertExecution: The WorkflowToAlertExecution object.
+    """
+    with Session(engine) as session:
+        return (
+            session.query(WorkflowToAlertExecution)
+            .filter_by(workflow_execution_id=workflow_execution_id)
+            .first()
+        )
+
+
 def get_last_workflow_workflow_to_alert_executions(
     session: Session, tenant_id: str
 ) -> list[WorkflowToAlertExecution]:
@@ -541,7 +584,7 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    workflow_id: str, tenant_id: str
+    tenant_id: str, workflow_id: str
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         workflow_execution = (
@@ -1035,6 +1078,18 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
         alerts = query.all()
 
     return alerts
+
+
+def get_alert_by_fingerprint_and_event_id(tenant_id: str, fingerprint: str, event_id: str) -> Alert:
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(Alert.id == uuid.UUID(event_id))
+            .first()
+        )
+    return alert
 
 
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:

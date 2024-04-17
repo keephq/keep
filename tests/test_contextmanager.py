@@ -1,12 +1,13 @@
 """
 Test the context manager
 """
-
 import json
 import tempfile
 
 import pytest
 
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.db.workflow import WorkflowExecution
 from keep.contextmanager.contextmanager import ContextManager
 
 STATE_FILE_MOCK_DATA = {
@@ -179,17 +180,27 @@ def test_context_manager_set_step_context(context_manager: ContextManager):
     assert context_manager.steps_context[step_id]["results"] == results
 
 
-def test_context_manager_get_last_alert_run(context_manager_with_state: ContextManager):
+def test_context_manager_get_last_alert_run(context_manager_with_state: ContextManager, db_session):
     alert_id = "mock_alert"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
+    context_manager_with_state.tenant_id = SINGLE_TENANT_UUID
     last_run = context_manager_with_state.get_last_workflow_run(alert_id)
-    assert last_run == {}
+    if last_run is None:
+        pytest.fail("No workflow run found with the given alert_id")
+    assert last_run == WorkflowExecution(
+            id="test-execution-id-1",
+            workflow_id="mock_alert",
+            tenant_id=SINGLE_TENANT_UUID,
+            started=last_run.started,
+            triggered_by="keep-test",
+            status="success",
+            execution_number=1,
+            results={},
+        )
     context_manager_with_state.set_last_workflow_run(
         alert_id, alert_context, alert_status
     )
-    # last_run = context_manager_with_state.get_last_workflow_run(alert_id)
-    # assert last_run["workflow_status"] == alert_status
 
 
 def test_context_manager_singleton(context_manager: ContextManager):
