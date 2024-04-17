@@ -538,7 +538,6 @@ class CloudwatchProvider(BaseProvider):
     @classmethod
     def simulate_alert(cls) -> dict:
         # Choose a random alert type
-        import hashlib
         import random
 
         from keep.providers.cloudwatch_provider.alerts_mock import ALERTS

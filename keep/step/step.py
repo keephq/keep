@@ -76,8 +76,9 @@ class Step:
         throttle = ThrottleFactory.get_instance(
             self.context_manager, throttling_type, throttling_config
         )
-        alert_id = self.context_manager.get_workflow_id()
-        return throttle.check_throttling(action_name, alert_id)
+        workflow_id = self.context_manager.get_workflow_id()
+        event_id = self.context_manager.event_context.event_id
+        return throttle.check_throttling(action_name, workflow_id, event_id)
 
     def _get_foreach_items(self) -> list | list[list]:
         """Get the items to iterate over, when using the `foreach` attribute (see foreach.md)"""
