@@ -293,37 +293,3 @@ class AppdynamicsProvider(BaseProvider):
             url=event['url'],
             source=['appdynamics']
         )
-
-
-if __name__ == "__main__":
-    # Output debug messages
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-
-    # Load environment variables
-    import os
-
-    host = os.environ.get("APPDYNAMICS_HOST")
-    appDynamicsUsername = os.environ.get("APPDYNAMICS_USERNAME")
-    appDynamicsPassword = os.environ.get("APPDYNAMICS_PASSWORD")
-    appDynamicsAccountName = os.environ.get("APPDYNAMICS_ACCOUNT_NAME")
-    appId = os.environ.get("APPDYNAMICS_APP_Id")
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
-    )
-    config = {
-        "authentication": {"host": host, "appDynamicsUsername": appDynamicsUsername,
-                           "appDynamicsPassword": appDynamicsPassword,
-                           "appDynamicsAccountName": appDynamicsAccountName,
-                           "appId": appId},
-    }
-    provider = ProvidersFactory.get_provider(
-        context_manager,
-        provider_id="appdynamics-keephq",
-        provider_type="appdynamics",
-        provider_config=config,
-    )
-    alerts = provider.setup_webhook("test", "http://localhost:8000", "1234", True)
-    print(alerts)
