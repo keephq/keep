@@ -8,7 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, List
 from urllib.parse import urljoin, urlencode
-import logging
 
 import pydantic
 import requests
@@ -17,7 +16,6 @@ from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.providers.providers_factory import ProvidersFactory
 
 
 class ResourceAlreadyExists(Exception):
