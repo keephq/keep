@@ -4,7 +4,6 @@ CloudwatchProvider is a class that provides a way to read data from AWS Cloudwat
 
 import dataclasses
 import datetime
-import hashlib
 import json
 import logging
 import os
@@ -538,7 +537,6 @@ class CloudwatchProvider(BaseProvider):
     @classmethod
     def simulate_alert(cls) -> dict:
         # Choose a random alert type
-        import hashlib
         import random
 
         from keep.providers.cloudwatch_provider.alerts_mock import ALERTS
