@@ -19,8 +19,6 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
-logger = logging.getLogger(__name__)
-
 
 class ResourceAlreadyExists(Exception):
     def __init__(self, *args):
@@ -151,7 +149,9 @@ class AppdynamicsProvider(BaseProvider):
         return url
 
     def validate_scopes(self) -> dict[str, bool | str]:
+        authenticated = False
         administrator = "Missing Administrator Privileges"
+        self.logger.info("Validating AppDynamics Scopes")
         response = requests.get(
             url=self.__get_url(
                 paths=['controller/api/rbac/v1/users/name', self.authentication_config.appDynamicsUsername]),
@@ -162,9 +162,11 @@ class AppdynamicsProvider(BaseProvider):
             for role in response['roles']:
                 if role['name'] == 'Account Administrator' or role['name'] == 'Administrator':
                     administrator = True
+                    self.logger.info("All scopes validated successfully for AppDynamics")
                     break
         else:
-            authenticated = response.json()
+            self.logger.error("Error while validating scopes for AppDynamics", extra=response.json())
+
         return {
             "authenticated": authenticated,
             "administrator": administrator
@@ -194,11 +196,11 @@ class AppdynamicsProvider(BaseProvider):
         res = res.json()
         temp.close()
         if res["success"] == "True":
-            logger.info("HTTP Response template Successfully Created")
+            self.logger.info("HTTP Response template Successfully Created")
         else:
-            logger.info("HTTP Response template creation failed", extra=res)
+            self.logger.info("HTTP Response template creation failed", extra=res)
             if 'already exists' in res['errors'][0]:
-                logger.info("HTTP Response template creation failed as it already exists", extra=res)
+                self.logger.info("HTTP Response template creation failed as it already exists", extra=res)
                 raise ResourceAlreadyExists()
             raise Exception(res["errors"])
 
@@ -210,10 +212,10 @@ class AppdynamicsProvider(BaseProvider):
                   'customTemplateVariables': []}
         )
         if response.ok:
-            logger.info("Action Created")
+            self.logger.info("Action Created")
         else:
             response = response.json()
-            logger.info("Action Creation failed")
+            self.logger.info("Action Creation failed")
             if 'already exists' in response['message']:
                 raise ResourceAlreadyExists()
             raise Exception(response['message'])
@@ -224,13 +226,13 @@ class AppdynamicsProvider(BaseProvider):
         try:
             self.__create_http_response_template(keep_api_url=keep_api_url, api_key=api_key)
         except ResourceAlreadyExists:
-            logger.info("Template already exists, proceeding with webhook setup")
+            self.logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:
             raise e
         try:
             self.__create_action()
         except ResourceAlreadyExists:
-            logger.info("Template already exists, proceeding with webhook setup")
+            self.logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:
             raise e
 
@@ -270,9 +272,9 @@ class AppdynamicsProvider(BaseProvider):
                 json=curr_policy,
             )
             if not request.ok:
-                logger.info("Failed to add Webhook")
+                self.logger.info("Failed to add Webhook")
                 raise Exception("Could not create webhook")
-        logger.info("Webhook created")
+        self.logger.info("Webhook created")
 
     @staticmethod
     def _format_alert(
