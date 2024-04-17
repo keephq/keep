@@ -3,7 +3,6 @@ import { RuleGroup } from "./RuleGroup";
 import { Controller, useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 import { Button } from "@tremor/react";
-import { QuestionMarkIcon } from "@radix-ui/react-icons";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 export const CorrelationGroups = () => {
