@@ -113,6 +113,7 @@ const Field = ({
           )}
         </SearchSelect>
         <Select
+          className="[&_ul]:max-h-96"
           defaultValue={ruleField.operator}
           onValueChange={onOperatorSelect}
           required
@@ -280,6 +281,9 @@ export const RuleFields = ({
           type="button"
           variant="light"
           color="red"
+          title={
+            groupsLength <= 2 ? "You must have at least two groups" : undefined
+          }
           disabled={groupsLength <= 2}
           onClick={onRemoveGroupClick}
         >
