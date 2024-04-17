@@ -58,6 +58,8 @@ def create_rule(
         **rule.dict(),
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
+        updated_by=authenticated_entity.email,
+        last_updated_at=datetime.datetime.utcnow(),
     )
     session.add(new_rule)
     session.commit()
