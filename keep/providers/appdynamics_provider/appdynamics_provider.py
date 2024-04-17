@@ -5,6 +5,7 @@ AppDynamics Provider is a class that allows to install webhooks in AppDynamics.
 import dataclasses
 import json
 import tempfile
+from pathlib import Path
 from typing import Optional, List
 from urllib.parse import urljoin, urlencode
 import logging
@@ -178,7 +179,7 @@ class AppdynamicsProvider(BaseProvider):
 
         temp = tempfile.NamedTemporaryFile(mode='w+t', delete=True)
 
-        template = json.load(open(r'./httpactiontemplate.json'))
+        template = json.load(open(rf'{Path(__file__).parent}/httpactiontemplate.json'))
         template[0]["host"] = keep_api_host
         template[0]["path"] = keep_api_path
 
@@ -250,6 +251,14 @@ class AppdynamicsProvider(BaseProvider):
                 curr_policy["actions"].append(policy_config)
             if 'executeActionsInBatch' not in curr_policy:
                 curr_policy['executeActionsInBatch'] = True
+            new_events_dictionary = {}
+            for event_key, event_value in curr_policy['events'].items():
+                if event_value is None or len(event_value) == 0:
+                    continue
+                else:
+                    new_events_dictionary[event_key] = event_value
+
+            curr_policy['events'] = new_events_dictionary
             request = requests.put(
                 url=self.__get_url(
                     paths=["/alerting/rest/v1/applications", self.authentication_config.appId, "policies",
@@ -302,7 +311,7 @@ if __name__ == "__main__":
         "authentication": {"host": host, "appDynamicsUsername": appDynamicsUsername,
                            "appDynamicsPassword": appDynamicsPassword,
                            "appDynamicsAccountName": appDynamicsAccountName,
-                           "appName": appId},
+                           "appId": appId},
     }
     provider = ProvidersFactory.get_provider(
         context_manager,
