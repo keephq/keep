@@ -134,7 +134,7 @@ class AppdynamicsProvider(BaseProvider):
         query_params = {"projectKeys": "key1"}
         url = __get_url("test", paths, query_params)
 
-        # url = https://test.atlassian.net/rest/api/2/issue/createmeta?projectKeys=key1
+        # url = https://baseballxyz.saas.appdynamics.com/rest/api/2/issue/createmeta?projectKeys=key1
         """
 
         url = urljoin(
@@ -179,6 +179,7 @@ class AppdynamicsProvider(BaseProvider):
     def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)
 
+        # The httpactiontemplate.json is a template/skeleton for creating a new HTTP Request Action in AppDynamics
         temp = tempfile.NamedTemporaryFile(mode='w+t', delete=True)
 
         template = json.load(open(rf'{Path(__file__).parent}/httpactiontemplate.json'))
