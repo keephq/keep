@@ -4,6 +4,7 @@ CloudwatchProvider is a class that provides a way to read data from AWS Cloudwat
 
 import dataclasses
 import datetime
+import hashlib
 import json
 import logging
 import os
