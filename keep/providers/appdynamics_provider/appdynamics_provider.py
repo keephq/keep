@@ -174,14 +174,17 @@ class AppdynamicsProvider(BaseProvider):
         return (f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
                 self.authentication_config.appDynamicsPassword)
 
-    def __create_http_response_template(self, keep_api_url: str):
+    def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)
 
         temp = tempfile.NamedTemporaryFile(mode='w+t', delete=True)
 
         template = json.load(open(rf'{Path(__file__).parent}/httpactiontemplate.json'))
-        template[0]["host"] = keep_api_host
-        template[0]["path"] = keep_api_path
+        template[0]["host"] = keep_api_host.lstrip("http://").lstrip("https://")
+        template[0]["path"], template[0]['query'] = keep_api_path.split("?")
+        template[0]["path"] = "/" + template[0]["path"].rstrip("/")
+
+        template[0]["headers"][0]["value"] = api_key
 
         temp.write(json.dumps(template))
         temp.seek(0)
@@ -219,7 +222,7 @@ class AppdynamicsProvider(BaseProvider):
             self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         try:
-            self.__create_http_response_template(keep_api_url=keep_api_url)
+            self.__create_http_response_template(keep_api_url=keep_api_url, api_key=api_key)
         except ResourceAlreadyExists:
             logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:

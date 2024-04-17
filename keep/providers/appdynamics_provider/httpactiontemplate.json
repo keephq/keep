@@ -9,15 +9,22 @@
     "scheme": "HTTPS",
     "host": "",
     "port": 0,
-    "path": "/home",
+    "path": "",
     "query": "",
     "urlCharset": "UTF_8",
     "authType": "NONE",
     "authUsername": null,
     "authPassword": "",
-    "headers": [],
+    "headers": [
+      {
+        "id": 0,
+        "version": 0,
+        "name": "X-API-KEY",
+        "value": ""
+      }
+    ],
     "payloadTemplate": {
-      "httpRequestActionMediaType": "text/plain",
+      "httpRequestActionMediaType": "application/json",
       "charset": "UTF_8",
       "formDataPairs": [],
       "payload": "{\"id\": \"${latestEvent.id}\", \"name\": \"${latestEvent.displayName}\", \"severity\": \"${latestEvent.severity}\", \"lastReceived\": \"${latestEvent.eventTime}\", \"message\": \"${latestEvent.eventMessage}\", \"description\": \"${latestEvent.summaryMessage}\", \"event_id\": \"${latestEvent.guid}\", \"url\": \"${latestEvent.deepLink}\"}"
