@@ -535,6 +535,40 @@ class CloudwatchProvider(BaseProvider):
             **alert,
         )
 
+    @classmethod
+    def simulate_alert(cls) -> dict:
+        # Choose a random alert type
+        import hashlib
+        import random
+
+        from keep.providers.cloudwatch_provider.alerts_mock import ALERTS
+
+        alert_type = random.choice(list(ALERTS.keys()))
+        alert_data = ALERTS[alert_type]
+
+        # Start with the base payload
+        simulated_alert = alert_data["payload"].copy()
+        # Apply variability based on parameters
+        for param, choices in alert_data.get("parameters", {}).items():
+            # Split param on '.' for nested parameters (if any)
+            param_parts = param.split(".")
+            target = simulated_alert
+            for part in param_parts[:-1]:
+                target = target.setdefault(part, {})
+
+            # Choose a random value for the parameter
+            target[param_parts[-1]] = random.choice(choices)
+
+        # Set StateChangeTime to current time
+        simulated_alert["Message"]["StateChangeTime"] = datetime.datetime.now().isoformat()
+
+        # Provider expects all keys as string
+        for key in simulated_alert:
+            value = simulated_alert[key]
+            simulated_alert[key] = json.dumps(value)
+
+        return simulated_alert
+
 
 if __name__ == "__main__":
     config = ProviderConfig(
