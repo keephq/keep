@@ -25,6 +25,8 @@ class MappingRule(SQLModel, table=True):
         sa_column=Column(JSON),
         nullable=False,
     )  # max_length=204800)
+    last_updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_by: Optional[str] = Field(max_length=255, default=None)
 
 
 class MappRuleDtoBase(BaseModel):
@@ -40,6 +42,8 @@ class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
     created_by: Optional[str]
     created_at: datetime
     attributes: list[str] = []
+    updated_by: Optional[str] | None
+    last_updated_at: Optional[datetime] | None
 
 
 class MappingRuleDtoIn(MappRuleDtoBase):
