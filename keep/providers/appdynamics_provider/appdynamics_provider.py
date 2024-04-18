@@ -6,8 +6,8 @@ import dataclasses
 import json
 import tempfile
 from pathlib import Path
-from typing import Optional, List
-from urllib.parse import urljoin, urlencode
+from typing import List, Optional
+from urllib.parse import urlencode, urljoin
 
 import pydantic
 import requests
@@ -33,14 +33,14 @@ class AppdynamicsProviderAuthConfig:
         metadata={
             "required": True,
             "description": "AppDynamics Username",
-            "hint": "Your Username"
+            "hint": "Your Username",
         },
     )
     appDynamicsAccountName: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "AppDynamics Account Name",
-            "hint": "AppDynamics Account Name"
+            "hint": "AppDynamics Account Name",
         },
     )
     appDynamicsPassword: str = dataclasses.field(
@@ -87,7 +87,6 @@ class AppdynamicsProvider(BaseProvider):
             mandatory_for_webhook=True,
             alias="Rules Reader",
         ),
-
     ]
 
     SEVERITIES_MAP = {
@@ -97,7 +96,7 @@ class AppdynamicsProvider(BaseProvider):
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -116,7 +115,7 @@ class AppdynamicsProvider(BaseProvider):
             **self.config.authentication
         )
         if not self.authentication_config.host.startswith(
-                "https://"
+            "https://"
         ) and not self.authentication_config.host.startswith("http://"):
             self.authentication_config.host = (
                 f"https://{self.authentication_config.host}"
@@ -152,37 +151,48 @@ class AppdynamicsProvider(BaseProvider):
         self.logger.info("Validating AppDynamics Scopes")
         response = requests.get(
             url=self.__get_url(
-                paths=['controller/api/rbac/v1/users/name', self.authentication_config.appDynamicsUsername]),
-            auth=self.__get_auth())
+                paths=[
+                    "controller/api/rbac/v1/users/name",
+                    self.authentication_config.appDynamicsUsername,
+                ]
+            ),
+            auth=self.__get_auth(),
+        )
         if response.ok:
             authenticated = True
             response = response.json()
-            for role in response['roles']:
-                if role['name'] == 'Account Administrator' or role['name'] == 'Administrator':
+            for role in response["roles"]:
+                if (
+                    role["name"] == "Account Administrator"
+                    or role["name"] == "Administrator"
+                ):
                     administrator = True
-                    self.logger.info("All scopes validated successfully for AppDynamics")
+                    self.logger.info(
+                        "All scopes validated successfully for AppDynamics"
+                    )
                     break
         else:
-            self.logger.error("Error while validating scopes for AppDynamics", extra=response.json())
+            self.logger.error(
+                "Error while validating scopes for AppDynamics", extra=response.json()
+            )
 
-        return {
-            "authenticated": authenticated,
-            "administrator": administrator
-        }
+        return {"authenticated": authenticated, "administrator": administrator}
 
     def __get_auth(self) -> tuple[str, str]:
-        return (f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
-                self.authentication_config.appDynamicsPassword)
+        return (
+            f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
+            self.authentication_config.appDynamicsPassword,
+        )
 
     def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)
 
         # The httpactiontemplate.json is a template/skeleton for creating a new HTTP Request Action in AppDynamics
-        temp = tempfile.NamedTemporaryFile(mode='w+t', delete=True)
+        temp = tempfile.NamedTemporaryFile(mode="w+t", delete=True)
 
-        template = json.load(open(rf'{Path(__file__).parent}/httpactiontemplate.json'))
+        template = json.load(open(rf"{Path(__file__).parent}/httpactiontemplate.json"))
         template[0]["host"] = keep_api_host.lstrip("http://").lstrip("https://")
-        template[0]["path"], template[0]['query'] = keep_api_path.split("?")
+        template[0]["path"], template[0]["query"] = keep_api_path.split("?")
         template[0]["path"] = "/" + template[0]["path"].rstrip("/")
 
         template[0]["headers"][0]["value"] = api_key
@@ -190,40 +200,58 @@ class AppdynamicsProvider(BaseProvider):
         temp.write(json.dumps(template))
         temp.seek(0)
 
-        res = requests.post(self.__get_url(paths=["controller/actiontemplate/httprequest"]),
-                            files={"template": temp}, auth=self.__get_auth())
+        res = requests.post(
+            self.__get_url(paths=["controller/actiontemplate/httprequest"]),
+            files={"template": temp},
+            auth=self.__get_auth(),
+        )
         res = res.json()
         temp.close()
         if res["success"] == "True":
             self.logger.info("HTTP Response template Successfully Created")
         else:
             self.logger.info("HTTP Response template creation failed", extra=res)
-            if 'already exists' in res['errors'][0]:
-                self.logger.info("HTTP Response template creation failed as it already exists", extra=res)
+            if "already exists" in res["errors"][0]:
+                self.logger.info(
+                    "HTTP Response template creation failed as it already exists",
+                    extra=res,
+                )
                 raise ResourceAlreadyExists()
             raise Exception(res["errors"])
 
     def __create_action(self):
         response = requests.post(
-            url=self.__get_url(paths=["alerting/rest/v1/applications", self.authentication_config.appId, "actions"]),
+            url=self.__get_url(
+                paths=[
+                    "alerting/rest/v1/applications",
+                    self.authentication_config.appId,
+                    "actions",
+                ]
+            ),
             auth=self.__get_auth(),
-            json={'actionType': 'HTTP_REQUEST', 'name': 'KeepAction', 'httpRequestTemplateName': 'KeepWebhook',
-                  'customTemplateVariables': []}
+            json={
+                "actionType": "HTTP_REQUEST",
+                "name": "KeepAction",
+                "httpRequestTemplateName": "KeepWebhook",
+                "customTemplateVariables": [],
+            },
         )
         if response.ok:
             self.logger.info("Action Created")
         else:
             response = response.json()
             self.logger.info("Action Creation failed")
-            if 'already exists' in response['message']:
+            if "already exists" in response["message"]:
                 raise ResourceAlreadyExists()
-            raise Exception(response['message'])
+            raise Exception(response["message"])
 
     def setup_webhook(
-            self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         try:
-            self.__create_http_response_template(keep_api_url=keep_api_url, api_key=api_key)
+            self.__create_http_response_template(
+                keep_api_url=keep_api_url, api_key=api_key
+            )
         except ResourceAlreadyExists:
             self.logger.info("Template already exists, proceeding with webhook setup")
         except Exception as e:
@@ -237,7 +265,13 @@ class AppdynamicsProvider(BaseProvider):
 
         # Listing all policies in the specified app
         policies_response = requests.get(
-            url=self.__get_url(paths=["alerting/rest/v1/applications", self.authentication_config.appId, "policies"]),
+            url=self.__get_url(
+                paths=[
+                    "alerting/rest/v1/applications",
+                    self.authentication_config.appId,
+                    "policies",
+                ]
+            ),
             auth=self.__get_auth(),
         )
 
@@ -247,26 +281,38 @@ class AppdynamicsProvider(BaseProvider):
             "actionType": "HTTP_REQUEST",
         }
         for policy in policies:
-            curr_policy = requests.get(url=self.__get_url(
-                paths=["alerting/rest/v1/applications", self.authentication_config.appId, "policies", policy['id']]),
+            curr_policy = requests.get(
+                url=self.__get_url(
+                    paths=[
+                        "alerting/rest/v1/applications",
+                        self.authentication_config.appId,
+                        "policies",
+                        policy["id"],
+                    ]
+                ),
                 auth=self.__get_auth(),
             ).json()
             if policy_config not in curr_policy["actions"]:
                 curr_policy["actions"].append(policy_config)
-            if 'executeActionsInBatch' not in curr_policy:
-                curr_policy['executeActionsInBatch'] = True
+            if "executeActionsInBatch" not in curr_policy:
+                curr_policy["executeActionsInBatch"] = True
             new_events_dictionary = {}
-            for event_key, event_value in curr_policy['events'].items():
+            for event_key, event_value in curr_policy["events"].items():
                 if event_value is None or len(event_value) == 0:
                     continue
                 else:
                     new_events_dictionary[event_key] = event_value
 
-            curr_policy['events'] = new_events_dictionary
+            curr_policy["events"] = new_events_dictionary
             request = requests.put(
                 url=self.__get_url(
-                    paths=["/alerting/rest/v1/applications", self.authentication_config.appId, "policies",
-                           policy["id"]]),
+                    paths=[
+                        "/alerting/rest/v1/applications",
+                        self.authentication_config.appId,
+                        "policies",
+                        policy["id"],
+                    ]
+                ),
                 auth=self.__get_auth(),
                 json=curr_policy,
             )
@@ -277,17 +323,17 @@ class AppdynamicsProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-            event: dict,
-            provider_instance: Optional["AppdynamicsProvider"],
+        event: dict,
+        provider_instance: Optional["AppdynamicsProvider"] = None,
     ) -> AlertDto:
         return AlertDto(
-            id=event['id'],
-            name=event['name'],
-            severity=AppdynamicsProvider.SEVERITIES_MAP.get(event['severity']),
-            lastReceived=event['lastReceived'],
-            message=event['message'],
-            description=event['description'],
-            event_id=event['event_id'],
-            url=event['url'],
-            source=['appdynamics']
+            id=event["id"],
+            name=event["name"],
+            severity=AppdynamicsProvider.SEVERITIES_MAP.get(event["severity"]),
+            lastReceived=event["lastReceived"],
+            message=event["message"],
+            description=event["description"],
+            event_id=event["event_id"],
+            url=event["url"],
+            source=["appdynamics"],
         )

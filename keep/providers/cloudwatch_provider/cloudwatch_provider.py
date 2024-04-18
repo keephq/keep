@@ -282,8 +282,7 @@ class CloudwatchProvider(BaseProvider):
             except Exception:
                 self.logger.exception("Error validating AWS logs:DescribeQueries scope")
                 scopes[
-                    "logs:GetQueryResults",
-                    "logs:DescribeQueries"
+                    "logs:GetQueryResults", "logs:DescribeQueries"
                 ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
             try:
                 logs_client.get_query_results(queryId=query_id)
@@ -301,7 +300,7 @@ class CloudwatchProvider(BaseProvider):
             except Exception as e:
                 self.logger.exception("Error validating AWS logs:GetQueryResults scope")
                 scopes["logs:GetQueryResults"] = str(e)
-        
+
         # Finally
         return scopes
 
@@ -441,7 +440,8 @@ class CloudwatchProvider(BaseProvider):
                         topics = [sns_topic]
                     except Exception:
                         self.logger.exception(
-                            "Error adding SNS action to alarm %s", alarm.get("AlarmName")
+                            "Error adding SNS action to alarm %s",
+                            alarm.get("AlarmName"),
                         )
                         continue
                 self.logger.info(
@@ -494,7 +494,7 @@ class CloudwatchProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["CloudwatchProvider"]
+        event: dict, provider_instance: Optional["CloudwatchProvider"] = None
     ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription
@@ -559,7 +559,9 @@ class CloudwatchProvider(BaseProvider):
             target[param_parts[-1]] = random.choice(choices)
 
         # Set StateChangeTime to current time
-        simulated_alert["Message"]["StateChangeTime"] = datetime.datetime.now().isoformat()
+        simulated_alert["Message"][
+            "StateChangeTime"
+        ] = datetime.datetime.now().isoformat()
 
         # Provider expects all keys as string
         for key in simulated_alert:
