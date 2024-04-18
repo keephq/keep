@@ -112,7 +112,7 @@ def update_rule(
     existing_rule.file_name = rule.file_name
     existing_rule.priority = rule.priority
     existing_rule.updated_by = authenticated_entity.email
-    existing_rule.last_updated_at = datetime.datetime.utcnow()
+    existing_rule.last_updated_at = datetime.datetime.now(tz=datetime.timezone.utc)
     if rule.rows is not None:
         existing_rule.rows = rule.rows
     session.commit()
