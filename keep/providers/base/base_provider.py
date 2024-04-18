@@ -232,7 +232,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["BaseProvider"]
+        event: dict, provider_instance: Optional["BaseProvider"] = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.

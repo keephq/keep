@@ -160,7 +160,7 @@ receivers:
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["PrometheusProvider"]
+        event: dict, provider_instance: Optional["PrometheusProvider"] = None
     ) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
