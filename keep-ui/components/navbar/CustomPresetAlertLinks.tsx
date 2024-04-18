@@ -1,4 +1,4 @@
-import { CSSProperties, useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
 import { Trashcan } from "components/icons";
@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { AiOutlineSound } from "react-icons/ai";
+import ReactPlayer from 'react-player';
 // import css
 import "./CustomPresetAlertLink.css";
 
@@ -132,6 +133,13 @@ export const CustomPresetAlertLinks = ({
 
   const pathname = usePathname();
   const router = useRouter();
+  const [playAlertSound, setPlayAlertSound] = useState(false);
+
+  // Check for noisy presets and control sound playback
+  useEffect(() => {
+    const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
+    setPlayAlertSound(anyNoisyNow);
+  }, [presets]);
 
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
     "presets-order",
@@ -243,6 +251,16 @@ export const CustomPresetAlertLinks = ({
           />
         ))}
       </SortableContext>
+       {/* React Player for playing alert sound */}
+       <ReactPlayer
+        url="/music/alert.mp3"
+        playing={playAlertSound}
+        volume={0.5}
+        loop={true}
+        width="0"
+        height="0"
+        playsinline
+      />
     </DndContext>
   );
 };
