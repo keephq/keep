@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
-import { Button, TextInput, Switch,Text } from "@tremor/react"; // Assuming Switch is a component from Tremor
+import { Button, TextInput, Switch,Text } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
@@ -103,7 +103,7 @@ export default function AlertPresets({
               }
             ],
             is_private: isPrivate,
-            is_noisy: isNoisy, // Assuming backend support for this new field
+            is_noisy: isNoisy,
           }),
         }
       );

@@ -91,7 +91,6 @@ const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: s
 
 
 const customSeveritySortFn = (rowA: any, rowB: any) => {
-  // Assuming rowA and rowB contain the data in a property (like 'original' or directly)
   // Adjust the way to access severity values according to your data structure
   const severityValueA = rowA.original?.severity; // or rowA.severity;
   const severityValueB = rowB.original?.severity; // or rowB.severity;
@@ -172,7 +171,7 @@ export const useAlertTableCols = (
             header: () => <></>,
             cell: (context) => {
               // Get the status of the alert
-              const status = context.row.original.status;  // Assuming status is a direct field on the row data object
+              const status = context.row.original.status;
 
               // Return null if presetNoisy is not true
               if (!presetNoisy) {
