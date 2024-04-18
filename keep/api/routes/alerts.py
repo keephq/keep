@@ -641,6 +641,7 @@ def handle_formatted_events(
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -674,6 +675,9 @@ async def receive_generic_event(
         if not _alert.source:
             _alert.source = ["keep"]
 
+        if fingerprint:
+            _alert.fingerprint = fingerprint
+
         if authenticated_entity.api_key_name:
             _alert.apiKeyRef = authenticated_entity.api_key_name
 
@@ -698,6 +702,7 @@ async def receive_event(
     request: Request,
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -765,6 +770,9 @@ async def receive_event(
         formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
+            # override the fingerprint if it's provided
+            if fingerprint:
+                formatted_events.fingerprint = fingerprint
             formatted_events = [formatted_events]
 
         logger.info(
