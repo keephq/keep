@@ -266,7 +266,18 @@ def try_create_single_tenant(tenant_id: str) -> None:
             logger.info("Migrated Preset table")
         except Exception:
             pass
-
+    #migrating mappingrule table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating Mappingrule Table")
+            session.exec(
+            "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR DEFAULT NULL;")
+            session.exec(
+                "ALTER TABLE mappingrule ADD COLUMN updated_at DATETIME DEFAULT NULL;")
+            session.commit()
+            logger.info("Migrated Mappingrule Table")
+        except Exception as e:
+            pass
 
 def create_workflow_execution(
     workflow_id: str,

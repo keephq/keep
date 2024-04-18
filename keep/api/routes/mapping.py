@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
-
+from datetime import datetime, timezone
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.mapping import (
@@ -108,6 +108,8 @@ def update_rule(
     existing_rule.matchers = rule.matchers
     existing_rule.file_name = rule.file_name
     existing_rule.priority = rule.priority
+    existing_rule.updated_at = datetime.now(timezone.utc)
+    existing_rule.updated_by= authenticated_entity.email
     if rule.rows is not None:
         existing_rule.rows = rule.rows
     session.commit()

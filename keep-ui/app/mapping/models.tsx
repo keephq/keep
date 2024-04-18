@@ -13,4 +13,6 @@ export interface MappingRule {
   matchers: string[];
   rows: { [key: string]: any }[];
   attributes?: string[];
+  updated_by?:string;
+  updated_at?:Date;
 }

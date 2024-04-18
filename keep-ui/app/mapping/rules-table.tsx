@@ -95,6 +95,16 @@ export default function RulesTable({ mappings, editCallback }: Props) {
         </div>
       ),
     }),
+    columnHelper.display({
+      id: "updated_at",
+      header: "Updated At",
+      cell: (context) => context.row.original.updated_at,
+    }),
+    columnHelper.display({
+      id: "updated_by",
+      header: "Updated By",
+      cell: (context) => context.row.original.updated_by,
+    }),
   ] as DisplayColumnDef<MappingRule>[];
 
   const table = useReactTable({
