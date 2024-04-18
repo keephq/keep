@@ -1,6 +1,7 @@
 """
 Kafka Provider is a class that allows to ingest/digest data from Grafana.
 """
+
 import base64
 import dataclasses
 import datetime
@@ -210,7 +211,7 @@ class DynatraceProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["DynatraceProvider"]
+        event: dict, provider_instance: Optional["DynatraceProvider"] = None
     ) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
