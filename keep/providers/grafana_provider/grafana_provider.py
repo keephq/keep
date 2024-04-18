@@ -194,7 +194,7 @@ class GrafanaProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["GrafanaProvider"]
+        event: dict, provider_instance: Optional["GrafanaProvider"] = None
     ) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []

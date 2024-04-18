@@ -129,6 +129,7 @@ export const CustomPresetAlertLinks = ({
   const { useAllPresets } = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
+    revalidateOnFocus: false,
   });
 
   const pathname = usePathname();

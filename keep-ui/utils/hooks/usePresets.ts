@@ -15,7 +15,7 @@ export const usePresets = () => {
     return useSWR<Preset[]>(
       () => (session ? `${apiUrl}/preset` : null),
       url => fetcher(url, session?.accessToken),
-      options
+      { ...options, refreshInterval: 25000 }
     );
   };
 

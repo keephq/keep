@@ -76,7 +76,7 @@ class KeepProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["KeepProvider"]
+        event: dict, provider_instance: Optional["KeepProvider"] = None
     ) -> AlertDto:
         return AlertDto(
             **event,

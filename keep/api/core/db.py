@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 from uuid import uuid4
@@ -25,6 +26,7 @@ from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -134,6 +136,70 @@ def create_db_and_tables():
     except Exception:
         logger.warning("Failed to create the database or detect if it exists.")
         pass
+
+    # migrate the workflowtoexecution table
+    with Session(engine) as session:
+        try:
+            logger.info("Migrating WorkflowToAlertExecution table")
+            # get the foreign key constraint name
+            results = session.exec(
+                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
+            )
+            # now remove it
+            for row in results:
+                constraint_name = row["CONSTRAINT_NAME"]
+                if constraint_name.startswith("workflowtoalertexecution"):
+                    logger.info(f"Dropping constraint {constraint_name}")
+                    session.exec(
+                        f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
+                    )
+                    logger.info(f"Dropped constraint {constraint_name}")
+            # now add the new column
+            try:
+                if session.bind.dialect.name == "sqlite":
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
+                elif session.bind.dialect.name == "mysql":
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
+                elif session.bind.dialect.name == "postgresql":
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;"
+                    )
+                elif session.bind.dialect.name == "mssql":
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);"
+                    )
+                else:
+                    raise ValueError("Unsupported database type")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
+            # also add grouping_criteria to the workflow table
+            logger.info("Migrating Rule table")
+            try:
+                session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
+            logger.info("Migrated Rule table")
+            session.commit()
+            logger.info("Migrated succesfully")
+        except Exception:
+            logger.exception("Failed to migrate table")
+            pass
     SQLModel.metadata.create_all(engine)
 
 
@@ -235,6 +301,7 @@ def create_workflow_execution(
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
+    event_id: str = None,
     fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
@@ -256,6 +323,7 @@ def create_workflow_execution(
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=workflow_execution.id,
                     alert_fingerprint=fingerprint,
+                    event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
 
@@ -451,6 +519,26 @@ def add_or_update_workflow(
         return existing_workflow if existing_workflow else workflow
 
 
+def get_workflow_to_alert_execution_by_workflow_execution_id(
+    workflow_execution_id: str,
+) -> WorkflowToAlertExecution:
+    """
+    Get the WorkflowToAlertExecution entry for a given workflow execution ID.
+
+    Args:
+        workflow_execution_id (str): The workflow execution ID to filter the workflow execution by.
+
+    Returns:
+        WorkflowToAlertExecution: The WorkflowToAlertExecution object.
+    """
+    with Session(engine) as session:
+        return (
+            session.query(WorkflowToAlertExecution)
+            .filter_by(workflow_execution_id=workflow_execution_id)
+            .first()
+        )
+
+
 def get_last_workflow_workflow_to_alert_executions(
     session: Session, tenant_id: str
 ) -> list[WorkflowToAlertExecution]:
@@ -502,13 +590,14 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    workflow_id: str, tenant_id: str
+    tenant_id: str, workflow_id: str
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
         workflow_execution = (
             session.query(WorkflowExecution)
             .filter(WorkflowExecution.workflow_id == workflow_id)
             .filter(WorkflowExecution.tenant_id == tenant_id)
+            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
             .filter(WorkflowExecution.status == "success")
             .order_by(WorkflowExecution.started.desc())
             .first()
@@ -995,6 +1084,20 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
         alerts = query.all()
 
     return alerts
+
+
+def get_alert_by_fingerprint_and_event_id(
+    tenant_id: str, fingerprint: str, event_id: str
+) -> Alert:
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(Alert.id == uuid.UUID(event_id))
+            .first()
+        )
+    return alert
 
 
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:

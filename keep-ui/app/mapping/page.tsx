@@ -5,6 +5,6 @@ export default function Page() {
 }
 
 export const metadata = {
-  title: "Keep - Alert Mapping",
+  title: "Keep - Event Mapping",
   description: "Add dynamic context to your alerts with mapping",
 };

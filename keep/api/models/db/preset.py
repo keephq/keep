@@ -2,10 +2,12 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class Preset(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("tenant_id", "name"),)
     # Unique ID for each preset
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
