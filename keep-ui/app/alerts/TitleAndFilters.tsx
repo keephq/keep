@@ -42,12 +42,6 @@ export const TitleAndFilters = ({
     table.resetPagination();
   };
 
-  // use evalWithContext to filter the alerts
-  // based on the current table filters
-  const filteredAlerts = evalWithContext
-    ? alerts.filter((alert) => evalWithContext(alert, table))
-    : alerts;
-
   return (
     <div className="flex justify-between">
       <div className="pt-4 text-xl">

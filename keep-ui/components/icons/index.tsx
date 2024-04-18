@@ -275,6 +275,6 @@ export {
   DoorbellNotification,
   SilencedDoorbellNotification,
   Trashcan,
-  Notification
+  Notification,
   ExportIcon
 };
