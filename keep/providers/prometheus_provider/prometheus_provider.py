@@ -14,7 +14,7 @@ from requests.auth import HTTPBasicAuth
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -77,6 +77,12 @@ receivers:
         "resolved": AlertStatus.RESOLVED,
     }
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="connectivity", description="Connectivity Test", mandatory=True
+        )
+    ]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -89,6 +95,14 @@ receivers:
         self.authentication_config = PrometheusProviderAuthConfig(
             **self.config.authentication
         )
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {"connectivity": True}
+        try:
+            self._get_alerts()
+        except Exception as e:
+            validated_scopes["connectivity"] = str(e)
+        return validated_scopes
 
     def _query(self, query):
         """
@@ -109,10 +123,12 @@ receivers:
         response = requests.get(
             f"{self.authentication_config.url}/api/v1/query",
             params={"query": query},
-            auth=auth
-            if self.authentication_config.username
-            and self.authentication_config.password
-            else None,
+            auth=(
+                auth
+                if self.authentication_config.username
+                and self.authentication_config.password
+                else None
+            ),
         )
 
         if response.status_code != 200:
@@ -130,6 +146,7 @@ receivers:
             f"{self.authentication_config.url}/api/v1/alerts",
             auth=auth,
         )
+        response.raise_for_status()
         if not response.ok:
             return []
         alerts_data = response.json().get("data", {})
