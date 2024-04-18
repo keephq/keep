@@ -8,13 +8,41 @@ export const usePresets = () => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  const useAllPresets = (options?: SWRConfiguration) => {
+  const useFetchAllPresets = (options?: SWRConfiguration) => {
+    const apiUrl = getApiURL();
+    const { data: session } = useSession();
+
     return useSWR<Preset[]>(
       () => (session ? `${apiUrl}/preset` : null),
-      async (url) => fetcher(url, session?.accessToken),
+      url => fetcher(url, session?.accessToken),
       options
     );
   };
 
-  return { useAllPresets };
+  const useAllPresets = (options?: SWRConfiguration) => {
+    const { data: presets, error, isValidating, mutate } = useFetchAllPresets(options);
+
+    const filteredPresets = presets?.filter(preset => !['feed', 'deleted', 'dismissed', 'groups'].includes(preset.name));
+
+    return {
+      data: filteredPresets,
+      error,
+      isValidating,
+      mutate,
+    };
+  };
+  const useStaticPresets = (options?: SWRConfiguration) => {
+    const { data: presets, error, isValidating, mutate } = useFetchAllPresets(options);
+
+    const staticPresets = presets?.filter(preset => ['feed', 'deleted', 'dismissed', 'groups'].includes(preset.name));
+
+    return {
+      data: staticPresets,
+      error,
+      isValidating,
+      mutate,
+    };
+  };
+
+  return { useAllPresets, useStaticPresets};
 };

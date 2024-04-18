@@ -4,6 +4,7 @@ import { AlertDto } from "./models";
 import ColumnSelection from "./ColumnSelection";
 import { LastRecieved } from "./LastReceived";
 import { ThemeSelection } from './ThemeSelection';
+import { evalWithContext } from "./alerts-rules-builder";
 
 type Theme = {
   [key: string]: string;
@@ -40,6 +41,12 @@ export const TitleAndFilters = ({
 
     table.resetPagination();
   };
+
+  // use evalWithContext to filter the alerts
+  // based on the current table filters
+  const filteredAlerts = evalWithContext
+    ? alerts.filter((alert) => evalWithContext(alert, table))
+    : alerts;
 
   return (
     <div className="flex justify-between">

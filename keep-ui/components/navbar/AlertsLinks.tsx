@@ -1,6 +1,6 @@
 "use client";
 
-import { Subtitle } from "@tremor/react";
+import { Badge, Subtitle } from "@tremor/react";
 
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
@@ -14,12 +14,23 @@ import { AiOutlineGroup } from "react-icons/ai";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { Session } from "next-auth";
+import { usePresets } from "utils/hooks/usePresets";
 
 type AlertsLinksProps = {
   session: Session | null;
 };
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
+  const { useStaticPresets } = usePresets();
+  const { data: presets = [] } = useStaticPresets({
+    revalidateIfStale: false,
+  });
+
+  const mainPreset = presets.find((preset) => preset.name === "feed");
+  const deletedPreset = presets.find((preset) => preset.name === "deleted");
+  const dismissedPreset = presets.find((preset) => preset.name === "dismissed");
+  const groupsPreset = presets.find((preset) => preset.name === "groups");
+
   return (
     <Disclosure as="div" className="space-y-1" defaultOpen>
       <Disclosure.Button className="w-full flex justify-between items-center p-2">
@@ -42,13 +53,13 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
         className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
       >
         <li>
-          <LinkWithIcon href="/alerts/feed" icon={DoorbellNotification}>
-            Feed [All]
+          <LinkWithIcon href="/alerts/feed" icon={DoorbellNotification} count={mainPreset?.alerts_count}>
+          Feed
           </LinkWithIcon>
         </li>
         {session && <CustomPresetAlertLinks session={session} />}
         <li>
-          <LinkWithIcon href="/alerts/groups" icon={AiOutlineGroup}>
+          <LinkWithIcon href="/alerts/groups" icon={AiOutlineGroup} count={groupsPreset?.alerts_count}>
             Correlation
           </LinkWithIcon>
         </li>
@@ -56,12 +67,13 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
           <LinkWithIcon
             href="/alerts/dismissed"
             icon={SilencedDoorbellNotification}
+            count={dismissedPreset?.alerts_count}
           >
             Dismissed
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/alerts/deleted" icon={Trashcan}>
+          <LinkWithIcon href="/alerts/deleted" icon={Trashcan} count={deletedPreset?.alerts_count}>
             Deleted
           </LinkWithIcon>
         </li>

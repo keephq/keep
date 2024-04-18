@@ -1,10 +1,11 @@
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, or_, select
 
-from keep.api.core.db import get_alerts_with_filters, get_session
+from keep.api.core.db import get_last_alerts, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
@@ -44,35 +45,36 @@ def get_presets(
     # TODO: improve performance e.g. using status as a filter
     # TODO: move this duplicate code to a module
     presets_dto = []
+    # get the alerts
+    alerts = get_last_alerts(tenant_id=tenant_id)
+    # convert the alerts to DTO
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     for preset in presets:
         logger.info("Checking if preset is noisy")
         preset_dto = PresetDto(**preset.dict())
+        # calculate the number of alerts
+        query = [
+            option
+            for option in preset.options
+            if option.get("label", "").lower() == "cel"
+        ]
+        if not query:
+            # should not happen, maybe on old presets
+            logger.warning("No CEL query found in preset options")
+            presets_dto.append(preset_dto)
+            continue
+        elif len(query) > 1:
+            # should not happen
+            logger.warning("Multiple CEL queries found in preset options")
+            presets_dto.append(preset_dto)
+            continue
+
+        preset_query = query[0].get("value", "")
+        # filter the alerts based on the search query
+        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, preset_query)
+        preset_dto.alerts_count = len(filtered_alerts)
+        # update noisy
         if preset.is_noisy:
-            # check if any firing alerts are present
-            query = [
-                option
-                for option in preset.options
-                if option.get("label", "").lower() == "cel"
-            ]
-            if not query:
-                # should not happen
-                logger.warning("No CEL query found in preset options")
-                continue
-            elif len(query) > 1:
-                # should not happen
-                logger.warning("Multiple CEL queries found in preset options")
-                continue
-            preset_query = query[0].get("value", "")
-            # TODO: do this configurable
-            timeframe_in_days = 3600 / 86400  # 1 hour in days
-            # get the alerts
-            alerts = get_alerts_with_filters(
-                tenant_id=tenant_id, time_delta=timeframe_in_days
-            )
-            # convert the alerts to DTO
-            alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-            # filter the alerts based on the search query
-            filtered_alerts = RulesEngine.filter_alerts(alerts_dto, preset_query)
             firing_filtered_alerts = list(
                 filter(
                     lambda alert: alert.status == AlertStatus.FIRING.value,
@@ -87,6 +89,52 @@ def get_presets(
                 logger.info("Noisy preset is not noisy")
                 preset_dto.should_do_noise_now = False
         presets_dto.append(preset_dto)
+
+    # add static preset - feed, correlation, deleted and dismissed
+    feed_preset = PresetDto(
+        id=str(uuid.uuid4()),
+        name="feed",
+        options=[],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        alerts_count=len(alerts_dto),
+    )
+    deleted_preset = PresetDto(
+        id=str(uuid.uuid4()),
+        name="deleted",
+        options=[],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        alerts_count=len([alert for alert in alerts_dto if alert.deleted]),
+    )
+    dismissed_preset = PresetDto(
+        id=str(uuid.uuid4()),
+        name="dismissed",
+        options=[],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        alerts_count=len([alert for alert in alerts_dto if alert.dismissed]),
+    )
+    groups_preset = PresetDto(
+        id=str(uuid.uuid4()),
+        name="groups",
+        options=[],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        alerts_count=len([alert for alert in alerts_dto if alert.group]),
+    )
+    presets_dto.append(feed_preset)
+    presets_dto.append(deleted_preset)
+    presets_dto.append(dismissed_preset)
+    presets_dto.append(groups_preset)
     return presets_dto
 
 

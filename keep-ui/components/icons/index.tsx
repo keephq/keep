@@ -201,7 +201,7 @@ const SilencedDoorbellNotification = () => (
 
 const Trashcan = ({ className }: { className?: string }) => (
   <svg
-    className={`tremor-Icon-icon shrink-0 h-4 w-4 ${className}`}
+    className={`tremor-Icon-icon shrink-0 ${className}`}
     width="16"
     height="16"
     viewBox="0 0 16 16"

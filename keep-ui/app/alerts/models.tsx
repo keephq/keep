@@ -55,6 +55,7 @@ export interface Preset {
   is_private: boolean;
   is_noisy: boolean;
   should_do_noise_now: boolean;
+  alerts_count: number;
 }
 
 export interface AlertToWorkflowExecution {

@@ -6,7 +6,7 @@ import { getApiURL } from "utils/apiUrl";
 import { usePresets } from "utils/hooks/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
-import { Icon } from "@tremor/react";
+import { Badge, Icon } from "@tremor/react";
 import classNames from "classnames";
 import Link from "next/link";
 import {
@@ -22,7 +22,7 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { IoIosNotificationsOutline } from "react-icons/io";
+import { AiOutlineSound } from "react-icons/ai";
 // import css
 import "./CustomPresetAlertLink.css";
 
@@ -71,13 +71,22 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         tabIndex={0}
         href={href}
       >
-        <Icon
-          className={classNames("group-hover:text-orange-400", {
-            "text-orange-400": isActive,
-            "text-slate-400": !isActive,
-          })}
-          icon={AiOutlineSwap}
-        />
+        {
+          preset.is_noisy ? (
+            <Icon
+              icon={AiOutlineSound}
+              className={`${preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'} hover:text-red-500`}
+            />
+          ) : (
+            <Icon
+              className={classNames("group-hover:text-orange-400", {
+                "text-orange-400": isActive,
+                "text-slate-400": !isActive,
+              })}
+              icon={AiOutlineSwap}
+            />
+          )
+        }
         <span
           className={classNames("truncate max-w-[7.5rem]", {
             "text-orange-400": isActive,
@@ -88,20 +97,19 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         </span>
       </Link>
       <div className="flex items-center justify-end flex-1">
-        {preset.is_noisy && (
-          <Icon
-            icon={IoIosNotificationsOutline}
-            size="lg"
-            className={`transition-transform duration-100 ease-in-out ${
-              isHovered ? 'translate-x-[16px]' : 'translate-x-[20px]'
-            } ${preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'} hover:text-red-500`}
-          />
-        )}
+        <Badge
+          className="right-0 z-10"
+          size="xs"
+          color="orange"
+        >
+          {preset.alerts_count}
+        </Badge>
          <button
             onClick={() => deletePreset(preset.id, preset.name)}
-            className="flex items-center text-slate-400 hover:text-red-500 p-0 ml-2"
+            className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${
+              isHovered ? 'ml-2' : ''}`}
           >
-            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden" />
+            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
           </button>
       </div>
     </span>

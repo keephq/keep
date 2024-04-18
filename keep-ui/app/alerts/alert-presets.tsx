@@ -9,7 +9,10 @@ import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
-import { preset } from "swr/dist/_internal";
+import QueryBuilder, {
+  formatQuery,
+  parseCEL,
+} from "react-querybuilder";
 
 interface Props {
   presetNameFromApi: string;
@@ -75,6 +78,8 @@ export default function AlertPresets({
 
   async function addOrUpdatePreset() {
     if (presetName) {
+      // translate the CEL to SQL
+      const sqlQuery = formatQuery(parseCEL(presetCEL), { format: 'parameterized_named', parseNumbers: true });
       const response = await fetch(
         selectedPreset?.id
           ? `${apiUrl}/preset/${selectedPreset?.id}`
@@ -92,6 +97,10 @@ export default function AlertPresets({
                 label: "CEL",
                 value: presetCEL,
               },
+              {
+                label: "SQL",
+                value: sqlQuery,
+              }
             ],
             is_private: isPrivate,
             is_noisy: isNoisy, // Assuming backend support for this new field
