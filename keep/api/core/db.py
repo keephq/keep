@@ -195,6 +195,33 @@ def create_db_and_tables():
                     logger.exception("Failed to migrate rule table")
                     pass
             logger.info("Migrated Rule table")
+            # migrating presets table
+            logger.info("Migrating Preset table")
+            try:
+                if session.bind.dialect.name == "sqlite":
+                    session.exec(
+                        "ALTER TABLE preset ADD COLUMN is_noisy BOOLEAN NOT NULL DEFAULT 0;"
+                    )
+                elif session.bind.dialect.name == "mysql":
+                    session.exec(
+                        "ALTER TABLE preset ADD COLUMN is_noisy TINYINT(1) DEFAULT 0;"
+                    )
+                elif session.bind.dialect.name == "postgresql":
+                    session.exec(
+                        "ALTER TABLE preset ADD COLUMN is_noisy BOOLEAN DEFAULT FALSE;"
+                    )
+                elif session.bind.dialect.name == "mssql":
+                    session.exec("ALTER TABLE preset ADD is_noisy BIT DEFAULT 0;")
+                else:
+                    raise ValueError("Unsupported database type")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate rule table")
+                    pass
             session.commit()
             logger.info("Migrated succesfully")
         except Exception:
