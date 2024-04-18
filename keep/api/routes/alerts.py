@@ -494,8 +494,16 @@ def handle_formatted_events(
                     raw_alert=raw_event,
                 )
                 session.add(alert)
+        enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Post format enrichment
+            try:
+                formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
+            except Exception:
+                logger.exception("Failed to run post-formatting extraction rules")
 
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
@@ -522,10 +530,11 @@ def handle_formatted_events(
                 alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
-            formatted_event.event_id = alert.id
-            alert_dto = AlertDto(**alert.event)
+            session.flush()
+            session.refresh(alert)
+            formatted_event.event_id = str(alert.id)
+            alert_dto = AlertDto(**formatted_event.dict())
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -549,6 +558,7 @@ def handle_formatted_events(
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
+            enriched_formatted_events.append(alert_dto)
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -575,7 +585,7 @@ def handle_formatted_events(
         workflow_manager = WorkflowManager.get_instance()
         # insert the events to the workflow manager process queue
         logger.info("Adding events to the workflow manager queue")
-        workflow_manager.insert_events(tenant_id, formatted_events)
+        workflow_manager.insert_events(tenant_id, enriched_formatted_events)
         logger.info("Added events to the workflow manager queue")
     except Exception:
         logger.exception(
@@ -629,7 +639,7 @@ def handle_formatted_events(
     status_code=201,
 )
 async def receive_generic_event(
-    alert: AlertDto | list[AlertDto],
+    event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
@@ -645,10 +655,21 @@ async def receive_generic_event(
         session (Session, optional): Defaults to Depends(get_session).
     """
     tenant_id = authenticated_entity.tenant_id
-    if isinstance(alert, AlertDto):
-        alert = [alert]
 
-    for _alert in alert:
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        event = enrichments_bl.run_extraction_rules(event)
+    except Exception:
+        logger.exception("Failed to run pre-formatting extraction rules")
+
+    if isinstance(event, dict):
+        event = [AlertDto(**event)]
+
+    if isinstance(event, AlertDto):
+        event = [event]
+
+    for _alert in event:
         # if not source, set it to keep
         if not _alert.source:
             _alert.source = ["keep"]
@@ -659,14 +680,14 @@ async def receive_generic_event(
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert[0].source[0],
+        event[0].source[0],
         session,
-        alert,
-        alert,
+        event,
+        event,
         pusher_client,
     )
 
-    return alert
+    return event
 
 
 @router.post(
@@ -708,6 +729,17 @@ async def receive_event(
             "tenant_id": tenant_id,
         },
     )
+
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        enrichments_bl.run_extraction_rules(event)
+    except Exception as exc:
+        logger.warning(
+            "Failed to run pre-formatting extraction rules",
+            extra={"exception": str(exc)},
+        )
+
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
@@ -779,7 +811,6 @@ async def receive_event(
 def get_alert(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    session: Session = Depends(get_session),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

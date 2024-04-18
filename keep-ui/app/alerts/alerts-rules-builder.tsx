@@ -16,25 +16,23 @@ import { AlertDto, Preset, severityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
-import Select, { components, MenuListProps } from 'react-select';
+import Select, { components, MenuListProps } from "react-select";
 
-import { IoSearchOutline } from 'react-icons/io5';
-import { FiExternalLink } from 'react-icons/fi';
-
+import { IoSearchOutline } from "react-icons/io5";
+import { FiExternalLink } from "react-icons/fi";
 
 const staticOptions = [
-  { value: 'severity > 1', label: 'severity > info' },
-  { value: 'status=="firing"', label: 'status is firing' },
-  { value: 'source=="grafana"', label: 'source is grafana' },
-  { value: 'message.contains("CPU")', label: 'cpu is high' },
+  { value: "severity > 1", label: "severity > info" },
+  { value: 'status=="firing"', label: "status is firing" },
+  { value: 'source=="grafana"', label: "source is grafana" },
+  { value: 'message.contains("CPU")', label: "cpu is high" },
 ];
-
 
 const CustomOption = (props: any) => {
   return (
     <components.Option {...props}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <IoSearchOutline style={{ marginRight: '8px' }} />
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <IoSearchOutline style={{ marginRight: "8px" }} />
         {props.children}
       </div>
     </components.Option>
@@ -42,11 +40,11 @@ const CustomOption = (props: any) => {
 };
 
 const kbdStyle = {
-  background: '#eee',
-  borderRadius: '3px',
-  padding: '2px 4px',
-  margin: '0 2px',
-  fontWeight: 'bold',
+  background: "#eee",
+  borderRadius: "3px",
+  padding: "2px 4px",
+  margin: "0 2px",
+  fontWeight: "bold",
 };
 
 // Custom MenuList with a static line at the end
@@ -56,37 +54,50 @@ const CustomMenuList = (props: MenuListProps<{}>) => {
       {props.children}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '8px',
-          background: 'lightgray',
-          color: 'black',
-          fontSize: '0.9em',
-          borderTop: '1px solid #ddd', // Add a separator if you like
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "8px",
+          background: "lightgray",
+          color: "black",
+          fontSize: "0.9em",
+          borderTop: "1px solid #ddd", // Add a separator if you like
         }}
       >
-        <span>Wildcard: <kbd style={kbdStyle}>source.contains(&quot;&quot;)</kbd></span>
-        <span>OR: <kbd style={kbdStyle}> || </kbd></span>
-        <span>AND: <kbd style={kbdStyle}> && </kbd></span>
-        <span><kbd style={kbdStyle}>Enter</kbd> to update query</span>
+        <span>
+          Wildcard: <kbd style={kbdStyle}>source.contains(&quot;&quot;)</kbd>
+        </span>
+        <span>
+          OR: <kbd style={kbdStyle}> || </kbd>
+        </span>
+        <span>
+          AND: <kbd style={kbdStyle}> && </kbd>
+        </span>
+        <span>
+          <kbd style={kbdStyle}>Enter</kbd> to update query
+        </span>
         <a
           href="https://docs.keephq.dev/overview/presets"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ textDecoration: 'none', color: 'black', display: 'flex', alignItems: 'center' }}
+          style={{
+            textDecoration: "none",
+            color: "black",
+            display: "flex",
+            alignItems: "center",
+          }}
         >
-          See Syntax Documentation <FiExternalLink style={{ marginLeft: '5px' }} />
+          See Syntax Documentation{" "}
+          <FiExternalLink style={{ marginLeft: "5px" }} />
         </a>
       </div>
     </components.MenuList>
   );
 };
 
-
 const customComponents = {
-  Control: () => null,  // This hides the input field control
-  DropdownIndicator: null,  // Optionally, hides the dropdown indicator if desired
+  Control: () => null, // This hides the input field control
+  DropdownIndicator: null, // Optionally, hides the dropdown indicator if desired
   IndicatorSeparator: null,
   Option: CustomOption,
   MenuList: CustomMenuList,
@@ -96,20 +107,19 @@ const customComponents = {
 const customStyles = {
   option: (provided: any, state: any) => ({
     ...provided,
-    color: state.isFocused ? 'black' : 'black',
-    backgroundColor: state.isFocused ? 'rgba(255, 165, 0, 0.4)' : 'white', // Orange with opacity
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center', // Align items in the center vertically
+    color: state.isFocused ? "black" : "black",
+    backgroundColor: state.isFocused ? "rgba(255, 165, 0, 0.4)" : "white", // Orange with opacity
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center", // Align items in the center vertically
   }),
   menu: (provided: any) => ({
     ...provided,
     margin: 0, // Remove the margin around the dropdown menu
-    borderRadius: '0', // Optional: Align with the border-radius of the Textarea if necessary
+    borderRadius: "0", // Optional: Align with the border-radius of the Textarea if necessary
   }),
   // You can add more style customizations for other parts of the Select here if needed
 };
-
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
 const getAllMatches = (pattern: RegExp, string: string) =>
@@ -169,6 +179,13 @@ const sanitizeCELIntoJS = (celExpression: string): string => {
 
 // this pattern is far from robust
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
+const jsReservedWords = new Set([
+  "break", "case", "catch", "class", "const", "continue", "debugger",
+  "default", "delete", "do", "else", "export", "extends", "finally",
+  "for", "function", "if", "import", "in", "instanceof", "new", "return",
+  "super", "switch", "this", "throw", "try", "typeof", "var", "void",
+  "while", "with", "yield"
+]);
 
 export const evalWithContext = (context: AlertDto, celExpression: string) => {
   try {
@@ -177,10 +194,12 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
     }
 
     const jsExpression = sanitizeCELIntoJS(celExpression);
-    const variables = (
+    let variables = (
       getAllMatches(variablePattern, jsExpression) ?? []
     ).filter((variable) => variable !== "true" && variable !== "false");
 
+    // filter reserved words from variables
+    variables = variables.filter((variable) => !jsReservedWords.has(variable));
     const func = new Function(...variables, `return (${jsExpression})`);
 
     const args = variables.map((arg) =>
@@ -207,12 +226,16 @@ const getOperators = (id: string): Operator[] => {
 };
 
 type AlertsRulesBuilderProps = {
-  table: Table<AlertDto>;
+  table?: Table<AlertDto>;
   selectedPreset?: Preset;
   defaultQuery: string | undefined;
-  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  deletePreset: (presetId: string) => Promise<void>;
-  setPresetCEL: React.Dispatch<React.SetStateAction<string>>;
+  setIsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  deletePreset?: (presetId: string) => Promise<void>;
+  setPresetCEL?: React.Dispatch<React.SetStateAction<string>>;
+  updateOutputCEL?: React.Dispatch<React.SetStateAction<string>>;
+  showSqlImport?: boolean;
+  customFields?: Field[];
+  showSave?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -226,6 +249,10 @@ export const AlertsRulesBuilder = ({
   setIsModalOpen,
   deletePreset,
   setPresetCEL,
+  updateOutputCEL,
+  customFields,
+  showSqlImport = true,
+  showSave = true,
 }: AlertsRulesBuilderProps) => {
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
@@ -325,7 +352,7 @@ export const AlertsRulesBuilder = ({
 
   const handleClearInput = () => {
     setCELRules("");
-    table.resetGlobalFilter();
+    table?.resetGlobalFilter();
     setIsValidCEL(true);
   };
 
@@ -341,18 +368,21 @@ export const AlertsRulesBuilder = ({
         celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
         celRules === "";
       setIsValidCEL(isValidCEL);
+      // close the menu
+      setShowSuggestions(false);
       if (isValidCEL) {
         onApplyFilter();
+        updateOutputCEL?.(celRules);
       }
     }
   };
 
   const onApplyFilter = () => {
     if (celRules.length === 0) {
-      return table.resetGlobalFilter();
+      return table?.resetGlobalFilter();
     }
 
-    return table.setGlobalFilter(celRules);
+    return table?.setGlobalFilter(celRules);
   };
 
   const onGenerateQuery = () => {
@@ -361,13 +391,17 @@ export const AlertsRulesBuilder = ({
   };
 
   const fields: Field[] = table
-    .getAllColumns()
-    .filter(({ getIsPinned }) => getIsPinned() === false)
-    .map(({ id, columnDef }) => ({
-      name: id,
-      label: columnDef.header as string,
-      operators: getOperators(id),
-    }));
+    ? table
+        .getAllColumns()
+        .filter(({ getIsPinned }) => getIsPinned() === false)
+        .map(({ id, columnDef }) => ({
+          name: id,
+          label: columnDef.header as string,
+          operators: getOperators(id),
+        }))
+    : customFields
+    ? customFields
+    : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);
@@ -414,8 +448,8 @@ export const AlertsRulesBuilder = ({
 
     if (isValidCEL && celExpression.length) {
       // If CEL is valid and not empty, set the CEL rules for the preset and open the modal
-      setPresetCEL(celExpression);
-      setIsModalOpen(true);
+      setPresetCEL?.(celExpression);
+      setIsModalOpen?.(true);
     } else {
       // If CEL is invalid or empty, inform the user
       alert("You can only save a valid CEL expression.");
@@ -552,19 +586,22 @@ export const AlertsRulesBuilder = ({
         </div>
 
         {/* Buttons next to the Textarea */}
-        <Button
-          icon={FiSave}
-          color="orange"
-          size="sm"
-          disabled={!celRules.length}
-          onClick={() => validateAndOpenSaveModal(celRules)}
-          tooltip="Save current filter as a view"
-        ></Button>
+        {showSave && (
+          <Button
+            icon={FiSave}
+            color="orange"
+            size="sm"
+            disabled={!celRules.length}
+            onClick={() => validateAndOpenSaveModal(celRules)}
+            tooltip="Save current filter as a view"
+          />
+        )}
         {selectedPreset &&
           selectedPreset.name &&
           selectedPreset?.name !== "deleted" &&
           selectedPreset?.name !== "feed" &&
-          selectedPreset?.name !== "dismissed" && (
+          selectedPreset?.name !== "dismissed" &&
+          deletePreset && (
             <Button
               icon={TrashIcon}
               color="orange"
@@ -572,14 +609,16 @@ export const AlertsRulesBuilder = ({
               onClick={async () => await deletePreset(selectedPreset!.id!)}
             ></Button>
           )}
-        <Button
-          color="orange"
-          type="button"
-          onClick={onImportSQL}
-          icon={TbDatabaseImport}
-          size="sm"
-          tooltip="Import from SQL"
-        ></Button>
+        {showSqlImport && (
+          <Button
+            color="orange"
+            type="button"
+            onClick={onImportSQL}
+            icon={TbDatabaseImport}
+            size="sm"
+            tooltip="Import from SQL"
+          />
+        )}
       </div>
     </div>
   );

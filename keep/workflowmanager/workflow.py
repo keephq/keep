@@ -47,8 +47,9 @@ class Workflow:
         for step in self.workflow_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step.run()
-                self.logger.info("Step %s ran successfully", step.step_id)
+                step_ran = step.run()
+                if step_ran:
+                    self.logger.info("Step %s ran successfully", step.step_id)
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 raise
@@ -57,14 +58,15 @@ class Workflow:
     def run_action(self, action: Step):
         self.logger.info("Running action %s", action.name)
         try:
-            action_status = action.run()
+            action_ran = action.run()
             action_error = None
-            self.logger.info("Action %s ran successfully", action.name)
+            if action_ran:
+                self.logger.info("Action %s ran successfully", action.name)
         except Exception as e:
             self.logger.error(f"Action {action.name} failed: {e}")
-            action_status = False
+            action_ran = False
             action_error = f"Failed to run action {action.name}: {str(e)}"
-        return action_status, action_error
+        return action_ran, action_error
 
     def run_actions(self):
         self.logger.debug("Running actions")

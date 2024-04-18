@@ -6,6 +6,7 @@ import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -21,6 +22,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     alerts,
+    extraction,
     groups,
     healthcheck,
     mapping,
@@ -135,6 +137,9 @@ def get_app(
     )
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
+        GZipMiddleware, minimum_size=30 * 1024 * 1024
+    )  # Approximately 30 MiB, https://cloud.google.com/run/quotas
+    app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=True,
@@ -159,7 +164,12 @@ def get_app(
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
     app.include_router(groups.router, prefix="/groups", tags=["groups"])
     app.include_router(users.router, prefix="/users", tags=["users"])
-    app.include_router(mapping.router, prefix="/mapping", tags=["mapping"])
+    app.include_router(
+        mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
+    )
+    app.include_router(
+        extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
+    )
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
