@@ -98,6 +98,8 @@ class OpenshiftProvider(BaseProvider):
                     try:
                         oc.invoke('login')
                     except OpenShiftPythonException:
+                        traceback.print_exc()
+                        self.logger.error(f'Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n')
                         self.logger.error("Error logging into the API server")
                         raise Exception("Error logging into the API server")
             scopes = {
