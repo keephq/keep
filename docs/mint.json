@@ -101,6 +101,7 @@
             "providers/documentation/mock-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/new-relic-provider",
+            "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
             "providers/documentation/pingdom-provider",
