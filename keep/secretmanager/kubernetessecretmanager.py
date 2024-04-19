@@ -35,17 +35,33 @@ class KubernetesSecretManager(BaseSecretManager):
         secret_name = secret_name.replace("_", "-")
         self.logger.info("Writing secret", extra={"secret_name": secret_name})
 
+        body = kubernetes.client.V1Secret(
+            metadata=kubernetes.client.V1ObjectMeta(name=secret_name),
+            data={"value": base64.b64encode(secret_value.encode()).decode()},
+        )
         try:
-            body = kubernetes.client.V1Secret(
-                metadata=kubernetes.client.V1ObjectMeta(name=secret_name),
-                data={"value": base64.b64encode(secret_value.encode()).decode()},
-            )
             self.api.create_namespaced_secret(namespace=self.namespace, body=body)
             self.logger.info(
                 "Secret created/updated successfully",
                 extra={"secret_name": secret_name},
             )
         except ApiException as e:
+            if e.status == 409:
+                # Secret exists, try to patch it
+                try:
+                    self.api.patch_namespaced_secret(
+                        name=secret_name, namespace=self.namespace, body=body
+                    )
+                    self.logger.info(
+                        "Secret updated successfully",
+                        extra={"secret_name": secret_name},
+                    )
+                except kubernetes.client.exceptions.ApiException as patch_error:
+                    self.logger.error(
+                        "Error updating secret",
+                        extra={"secret_name": secret_name, "error": str(patch_error)},
+                    )
+                    raise patch_error
             self.logger.error(
                 "Error writing secret",
                 extra={"secret_name": secret_name, "error": str(e)},

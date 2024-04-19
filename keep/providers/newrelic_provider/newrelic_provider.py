@@ -400,9 +400,9 @@ class NewrelicProvider(BaseProvider):
                 )
             alert = AlertDto(
                 id=issue["issueId"],
-                name=issue["title"][0]
-                if issue["title"]
-                else None,  # Assuming the first title in the list
+                name=(
+                    issue["title"][0] if issue["title"] else None
+                ),  # Assuming the first title in the list
                 status=issue["state"],
                 lastReceived=lastReceived,
                 severity=issue["priority"],
@@ -422,7 +422,7 @@ class NewrelicProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["NewrelicProvider"]
+        event: dict, provider_instance: Optional["NewrelicProvider"] = None
     ) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         lastReceived = event["lastReceived"] if "lastReceived" in event else None

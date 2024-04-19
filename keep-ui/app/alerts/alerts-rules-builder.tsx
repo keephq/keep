@@ -337,10 +337,6 @@ export const AlertsRulesBuilder = ({
     // This effect should only run when celRules updates and on initial render
   }, [celRules]);
 
-  useEffect(() => {
-    setCELRules(defaultQuery);
-  }, [defaultQuery]);
-
   // Adjust the height of the textarea based on its content
   const adjustTextAreaHeight = () => {
     const textArea = textAreaRef.current;
