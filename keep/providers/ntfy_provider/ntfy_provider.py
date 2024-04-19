@@ -6,6 +6,7 @@ import dataclasses
 
 import pydantic
 import requests
+from urllib.parse import urljoin
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -65,32 +66,35 @@ class NtfyProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _notify(self, **kwargs: dict):
-        self.logger.debug(
-            f"Sending notification to {self.authentication_config.subcription_topic}"
-        )
+    def __get_auth_headers(self):
+        return {
+            "Authorization": f"Bearer {self.authentication_config.access_token}"
+        }
 
-        message = kwargs.get("message")
+    def __send_alert(self, message=""):
+        self.logger.debug(f"Sending notification to {self.authentication_config.subcription_topic}")
 
-        NTFY_ACCESS_TOKEN = self.authentication_config.access_token
         NTFY_SUBSCRIPTION_TOPIC = self.authentication_config.subcription_topic
-        NTFY_URL = "https://ntfy.sh/" + NTFY_SUBSCRIPTION_TOPIC
-
-        headers = {"Authorization": f"Bearer {NTFY_ACCESS_TOKEN}"}
+        NTFY_URL = urljoin(base="https://ntfy.sh/", url=NTFY_SUBSCRIPTION_TOPIC)
 
         try:
-            response = requests.post(NTFY_URL, headers=headers, data=message)
+            response = requests.post(NTFY_URL, headers=self.__get_auth_headers(), data=message)
 
-            if response.status_code != 200:
+            if response.status_code == 401:
                 raise ProviderException(
-                    f"Failed to send notification to {NTFY_URL}. Response: {response.text}"
+                    f"Failed to send notification to {NTFY_URL}. Error: Unauthorized"
                 )
-
+            
+            response.raise_for_status()
+            return response.json()
+        
         except Exception as e:
             raise ProviderException(
                 f"Failed to send notification to {NTFY_URL}. Error: {e}"
             )
 
+    def _notify(self, message=""):
+        return self.__send_alert(message)
 
 if __name__ == "__main__":
     import logging
@@ -107,12 +111,17 @@ if __name__ == "__main__":
     ntfy_subscription_topic = os.environ.get("NTFY_SUBSCRIPTION_TOPIC")
 
     config = ProviderConfig(
-        description="Ntfy Input Provider",
+        description="Ntfy Provider",
         authentication={
             "access_token": ntfy_access_token,
             "subcription_topic": ntfy_subscription_topic,
         },
     )
-    provider = NtfyProvider(context_manager, provider_id="ntfy", config=config)
-    provider.validate_scopes()
-    provider.notify(message="Keep Alert")
+
+    provider = NtfyProvider(
+        context_manager,
+        provider_id="ntfy-keephq",
+        config=config,
+    )
+
+    provider.notify(message="Test message from Keephq")
