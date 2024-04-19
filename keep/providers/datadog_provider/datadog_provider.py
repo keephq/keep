@@ -750,7 +750,7 @@ class DatadogProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["DatadogProvider"]
+        event: dict, provider_instance: Optional["DatadogProvider"] = None
     ) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")

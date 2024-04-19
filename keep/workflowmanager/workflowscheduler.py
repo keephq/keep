@@ -148,6 +148,7 @@ class WorkflowScheduler:
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
                 fingerprint=alert.fingerprint,
+                event_id=alert.event_id,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -256,6 +257,7 @@ class WorkflowScheduler:
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
                         fingerprint=event.fingerprint,
+                        event_id=event.event_id,
                     )
                 # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
                 except IntegrityError:
