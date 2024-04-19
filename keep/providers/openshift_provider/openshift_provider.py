@@ -43,7 +43,7 @@ class OpenshiftProviderAuthConfig:
 
 
 class OpenshiftProvider(BaseProvider):
-    """Enrich alerts with data from Openshift."""
+    """Perform rollout restart actions on Openshift."""
 
     provider_id: str
     PROVIDER_DISPLAY_NAME = "Openshift"
@@ -114,6 +114,7 @@ class OpenshiftProvider(BaseProvider):
         """Rollout restart the specified kind."""
         client = self.__get_ocp_client()
         client.project_name = project_name
+        self.logger.info(f"Performing rollout restart for {kind} {name} using openshift provider")
         with oc.timeout(60 * 30), oc.tracking() as t, client:
             if oc.get_config_context() is None:
                 self.logger.error(f'Current context not set! Logging into API server: {client.api_server}\n')
