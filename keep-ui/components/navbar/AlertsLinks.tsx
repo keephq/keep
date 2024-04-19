@@ -21,10 +21,14 @@ type AlertsLinksProps = {
 };
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
-  const { useStaticPresets } = usePresets();
-  const { data: presets = [] } = useStaticPresets({
+  const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
+  // Fetch static presets; initially fallback to local storage
+  const { data: fetchedPresets = [] } = useStaticPresets({
     revalidateIfStale: false,
   });
+
+  // Determine whether to use fetched presets or fall back to local storage
+  const presets = fetchedPresets.length > 0 ? fetchedPresets : staticPresetsOrderFromLS;
 
   const mainPreset = presets.find((preset) => preset.name === "feed");
   const deletedPreset = presets.find((preset) => preset.name === "deleted");

@@ -126,7 +126,7 @@ export const CustomPresetAlertLinks = ({
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
-  const { useAllPresets } = usePresets();
+  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS} = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -136,33 +136,20 @@ export const CustomPresetAlertLinks = ({
   const router = useRouter();
   const [playAlertSound, setPlayAlertSound] = useState(false);
 
+  const presetsOrderFromLSWithoutStatic = presetsOrderFromLS.filter(
+    (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
+  );
   // Check for noisy presets and control sound playback
   useEffect(() => {
     const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
     setPlayAlertSound(anyNoisyNow);
   }, [presets]);
 
-  const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
-    "presets-order",
-    []
-  );
-
   const presetsOrder = presets.reduce<Preset[]>(
     (acc, preset) =>
       acc.find((p) => p.id === preset.id) ? acc : acc.concat(preset),
-    presetsOrderFromLS
+    presetsOrderFromLSWithoutStatic
   );
-
-  // merge the newer data from the server with the saved order
-  if (presetsOrderFromLS.length > 0) {
-    const newPresetsOrder = presetsOrderFromLS.map((preset) => {
-      const newPreset = presets.find((p) => p.id === preset.id);
-      return newPreset || preset;
-    });
-
-    setPresetsOrderFromLS(newPresetsOrder);
-  }
-
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
