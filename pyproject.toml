@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.3.0"
+version = "0.4.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -79,6 +79,7 @@ hvac = "^2.1.0"
 mailchimp-transactional = "^1.0.56"
 sqlalchemy-utils = "^0.41.1"
 splunk-sdk = "^1.7.4"
+openshift-client = "^2.0.4"
 
 
 [tool.poetry.group.dev.dependencies]
