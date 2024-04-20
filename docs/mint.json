@@ -90,6 +90,7 @@
             "providers/documentation/datadog-provider",
             "providers/documentation/ilert-provider",
             "providers/documentation/kibana-provider",
+            "providers/documentation/kubernetes-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
