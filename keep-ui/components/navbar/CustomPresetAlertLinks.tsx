@@ -21,7 +21,6 @@ import {
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { AiOutlineSound } from "react-icons/ai";
 import ReactPlayer from 'react-player';
 // import css
@@ -135,21 +134,33 @@ export const CustomPresetAlertLinks = ({
   const pathname = usePathname();
   const router = useRouter();
   const [playAlertSound, setPlayAlertSound] = useState(false);
+  const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
-  const presetsOrderFromLSWithoutStatic = presetsOrderFromLS.filter(
-    (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
-  );
   // Check for noisy presets and control sound playback
   useEffect(() => {
     const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
     setPlayAlertSound(anyNoisyNow);
   }, [presets]);
 
-  const presetsOrder = presets.reduce<Preset[]>(
-    (acc, preset) =>
-      acc.find((p) => p.id === preset.id) ? acc : acc.concat(preset),
-    presetsOrderFromLSWithoutStatic
-  );
+  useEffect(() => {
+    const filteredLS = presetsOrderFromLS.filter(
+      (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
+    );
+
+    // Combine live presets and local storage order
+    const combinedOrder = presets.reduce<Preset[]>((acc, preset) => {
+      if (!acc.find(p => p.id === preset.id)) {
+        acc.push(preset);
+      }
+      return acc;
+    }, [...filteredLS]);
+
+    // Only update state if there's an actual change to prevent infinite loops
+    if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
+      setPresetsOrder(combinedOrder);
+    }
+  }, [presets, presetsOrderFromLS]);  // ensure dependencies are correct
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

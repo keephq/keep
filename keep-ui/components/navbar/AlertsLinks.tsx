@@ -15,6 +15,7 @@ import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { Session } from "next-auth";
 import { usePresets } from "utils/hooks/usePresets";
+import { useEffect, useState } from "react";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -28,7 +29,16 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   });
 
   // Determine whether to use fetched presets or fall back to local storage
-  const presets = fetchedPresets.length > 0 ? fetchedPresets : staticPresetsOrderFromLS;
+  const [presets, setPresets] = useState(staticPresetsOrderFromLS);
+
+  useEffect(() => {
+    // Convert both arrays to string to perform a comparison
+    if (fetchedPresets.length > 0 && JSON.stringify(presets) !== JSON.stringify(staticPresetsOrderFromLS)) {
+      setPresets(staticPresetsOrderFromLS);
+    }
+  }, [fetchedPresets]);
+
+
 
   const mainPreset = presets.find((preset) => preset.name === "feed");
   const deletedPreset = presets.find((preset) => preset.name === "deleted");

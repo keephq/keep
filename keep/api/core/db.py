@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
 import pymysql
@@ -18,7 +18,7 @@ from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, or_, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -1678,3 +1678,27 @@ def get_provider_distribution(tenant_id: str) -> dict:
                 ] += hits
 
     return provider_distribution
+
+
+def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Preset.is_private == False,
+                    Preset.created_by == email,
+                )
+            )
+        )
+        presets = session.exec(statement).all()
+    return presets
+
+
+def get_all_presets(tenant_id: str) -> List[Preset]:
+    with Session(engine) as session:
+        presets = session.exec(
+            select(Preset).where(Preset.tenant_id == tenant_id)
+        ).all()
+    return presets
