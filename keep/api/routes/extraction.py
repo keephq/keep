@@ -45,7 +45,9 @@ def create_extraction_rule(
     new_rule = ExtractionRule(
         **rule_dto.dict(),
         created_by=authenticated_entity.email,
-        tenant_id=authenticated_entity.tenant_id
+        tenant_id=authenticated_entity.tenant_id,
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
+        updated_by=authenticated_entity.email,
     )
     session.add(new_rule)
     session.commit()
