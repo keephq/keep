@@ -104,6 +104,10 @@ class NtfyProvider(BaseProvider):
                 "Subcription Topic is required"
             )
         if self.authentication_config.host is not None:
+            if self.authentication_config.host.startswith("https://") or self.authentication_config.host.startswith("http://"):
+                raise ProviderException(
+                    "Host should not start with https:// or http://"
+                )
             if self.authentication_config.username is None:
                 raise ProviderException(
                     "Username is required when host is provided"
@@ -135,8 +139,6 @@ class NtfyProvider(BaseProvider):
 
         if self.authentication_config.host is not None:
             base_url = self.authentication_config.host
-            if not base_url.startswith("https://"):
-                base_url = f"https://{base_url}"
             if not base_url.endswith("/"):
                 base_url += "/"
             NTFY_URL = urljoin(base=base_url, url=NTFY_SUBSCRIPTION_TOPIC)
