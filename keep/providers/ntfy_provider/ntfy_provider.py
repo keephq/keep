@@ -5,6 +5,7 @@ NtfyProvider is a class that provides a way to send notifications to the user.
 import dataclasses
 
 import pydantic
+import base64
 import requests
 from urllib.parse import urljoin
 
@@ -22,10 +23,38 @@ class NtfyProviderAuthConfig:
 
     access_token: str = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "Ntfy Access Token",
             "sensitive": True,
         },
+        default=None,
+    )
+
+    host: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Ntfy Host URL (For self-hosted Ntfy only)",
+            "sensitive": False,
+        },
+        default=None,
+    )
+
+    username: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Ntfy Username (For self-hosted Ntfy only)",
+            "sensitive": False,
+        },
+        default=None,
+    )
+
+    password: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Ntfy Password (For self-hosted Ntfy only)",
+            "sensitive": True,
+        },
+        default=None,
     )
 
     subcription_topic: str = dataclasses.field(
@@ -34,6 +63,7 @@ class NtfyProviderAuthConfig:
             "description": "Ntfy Subcription Topic",
             "sensitive": False,
         },
+        default=None,
     )
 
 
@@ -65,17 +95,53 @@ class NtfyProvider(BaseProvider):
         self.authentication_config = NtfyProviderAuthConfig(
             **self.config.authentication
         )
+        if self.authentication_config.access_token is None and self.authentication_config.host is None:
+            raise ProviderException(
+                "Either Access Token or Host is required"
+            )
+        if self.authentication_config.subcription_topic is None:
+            raise ProviderException(
+                "Subcription Topic is required"
+            )
+        if self.authentication_config.host is not None:
+            if self.authentication_config.username is None:
+                raise ProviderException(
+                    "Username is required when host is provided"
+                )
+            if self.authentication_config.password is None:
+                raise ProviderException(
+                    "Password is required when host is provided"
+                )
 
     def __get_auth_headers(self):
-        return {
-            "Authorization": f"Bearer {self.authentication_config.access_token}"
-        }
+        if self.authentication_config.access_token is not None:
+            return {
+                "Authorization": f"Bearer {self.authentication_config.access_token}"
+            }
+
+        else:
+            username = self.authentication_config.username
+            password = self.authentication_config.password
+            token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("utf-8")
+
+            return {
+                "Authorization": f"Basic {token}"
+            }
 
     def __send_alert(self, message=""):
         self.logger.debug(f"Sending notification to {self.authentication_config.subcription_topic}")
 
         NTFY_SUBSCRIPTION_TOPIC = self.authentication_config.subcription_topic
-        NTFY_URL = urljoin(base="https://ntfy.sh/", url=NTFY_SUBSCRIPTION_TOPIC)
+
+        if self.authentication_config.host is not None:
+            base_url = self.authentication_config.host
+            if not base_url.startswith("https://"):
+                base_url = f"https://{base_url}"
+            if not base_url.endswith("/"):
+                base_url += "/"
+            NTFY_URL = urljoin(base=base_url, url=NTFY_SUBSCRIPTION_TOPIC)
+        else:
+            NTFY_URL = urljoin(base="https://ntfy.sh/", url=NTFY_SUBSCRIPTION_TOPIC)
 
         try:
             response = requests.post(NTFY_URL, headers=self.__get_auth_headers(), data=message)
@@ -108,15 +174,39 @@ if __name__ == "__main__":
     import os
 
     ntfy_access_token = os.environ.get("NTFY_ACCESS_TOKEN")
+    ntfy_host = os.environ.get("NTFY_HOST")
+    ntfy_username = os.environ.get("NTFY_USERNAME")
+    ntfy_password = os.environ.get("NTFY_PASSWORD")
     ntfy_subscription_topic = os.environ.get("NTFY_SUBSCRIPTION_TOPIC")
 
-    config = ProviderConfig(
-        description="Ntfy Provider",
-        authentication={
-            "access_token": ntfy_access_token,
-            "subcription_topic": ntfy_subscription_topic,
-        },
-    )
+    if ntfy_access_token is None and ntfy_host is None:
+        raise Exception("NTFY_ACCESS_TOKEN or NTFY_HOST is required")
+    
+    if ntfy_host is not None:
+        if ntfy_username is None:
+            raise Exception("NTFY_USERNAME is required")
+        if ntfy_password is None:
+            raise Exception("NTFY_PASSWORD is required")
+        
+    if ntfy_access_token is not None:
+        config = ProviderConfig(
+            description="Ntfy Provider",
+            authentication={
+                "access_token": ntfy_access_token,
+                "subcription_topic": ntfy_subscription_topic,
+            },
+        )
+
+    else:
+        config = ProviderConfig(
+            description="Ntfy Provider",
+            authentication={
+                "host": ntfy_host,
+                "username": ntfy_username,
+                "password": ntfy_password,
+                "subcription_topic": ntfy_subscription_topic,
+            },
+        )
 
     provider = NtfyProvider(
         context_manager,
