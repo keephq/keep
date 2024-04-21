@@ -2,9 +2,6 @@
 name: "Sync Keep Workflows"
 
 on:
-    push:
-        paths:
-          - 'examples/workflows/**'
     workflow_dispatch:
         inputs:
             keep_api_key:
@@ -14,6 +11,9 @@ on:
               description: 'Keep API URL'
               required: false
               default: 'https://api.keephq.dev'
+    # push:
+    #     paths:
+    #       - 'examples/workflows/**'
 
 jobs:
     sync-workflows:
