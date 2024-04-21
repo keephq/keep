@@ -187,6 +187,26 @@ def create_db_and_tables():
                     logger.exception("Failed to migrate rule table")
                     pass
             logger.info("Migrated Rule table")
+            # add updated_by and last_updated_at to the mapping rule table
+            logger.info("Migrating MappingRule table")
+            try:
+                if session.bind.dialect.name == "postgresql":
+                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
+                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;")
+                elif session.bind.dialect.name == "mssql":
+                    session.exec("ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);")
+                    session.exec("ALTER TABLE mappingrule ADD last_updated_at DATETIME;")
+                else:
+                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
+                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;")
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate mapping rule table")
+                    pass
             session.commit()
             logger.info("Migrated succesfully")
         except Exception:
