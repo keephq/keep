@@ -18,6 +18,7 @@ import {
   DEFAULT_CORRELATION_FORM_VALUES,
 } from "./CorrelationSidebar";
 import {
+  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
@@ -26,6 +27,10 @@ import {
 import { parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
+import { TrashIcon } from "@radix-ui/react-icons";
+import { getApiURL } from "utils/apiUrl";
+import { Session } from "next-auth";
+import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 
 const columnHelper = createColumnHelper<Rule>();
 
@@ -92,6 +97,10 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
           <FormattedQueryCell query={parseCEL(context.getValue())} />
         ),
       }),
+      columnHelper.display({
+        id: "menu",
+        cell: (context) => <DeleteRuleCell ruleId={context.row.original.id} />,
+      }),
     ],
     []
   );
@@ -138,7 +147,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             {table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="cursor-pointer hover:bg-slate-50"
+                className="cursor-pointer hover:bg-slate-50 group"
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
