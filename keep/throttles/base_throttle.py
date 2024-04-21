@@ -24,12 +24,13 @@ class BaseThrottle(metaclass=abc.ABCMeta):
         self.context_manager = context_manager
 
     @abc.abstractmethod
-    def check_throttling(self, action_name, alert_id, **kwargs) -> bool:
+    def check_throttling(self, action_name, workflow_id, event_id, **kwargs) -> bool:
         """
         Validate provider configuration.
 
         Args:
             action_name (str): The name of the action to check throttling for.
-            alert_id (str): The id of the alert to check throttling for.
+            workflow_id (str): The id of the workflow to check throttling for.
+            event_id (str): The id of the event to check throttling for.
         """
         raise NotImplementedError("apply() method not implemented")

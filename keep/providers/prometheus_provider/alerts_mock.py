@@ -5,7 +5,7 @@ ALERTS = {
             "labels": {
                 "instance": "example1",
                 "job": "example2",
-                "workfload": "somecoolworkload",
+                "workload": "somecoolworkload",
                 "severity": "critical",
             },
         },

@@ -202,7 +202,7 @@ class SentryProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["SentryProvider"]
+        event: dict, provider_instance: Optional["SentryProvider"] = None
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.info(

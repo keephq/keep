@@ -498,6 +498,13 @@ def handle_formatted_events(
         for formatted_event in formatted_events:
             formatted_event.pushed = True
 
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Post format enrichment
+            try:
+                formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
+            except Exception:
+                logger.exception("Failed to run post-formatting extraction rules")
+
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
             # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
@@ -528,13 +535,11 @@ def handle_formatted_events(
             formatted_event.event_id = str(alert.id)
             alert_dto = AlertDto(**formatted_event.dict())
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
             try:
-                enrichments_bl.run_extraction_rules(alert_dto)
                 enrichments_bl.run_mapping_rules(alert_dto)
             except Exception:
-                logger.exception("Failed to run mapping and extraction rules")
+                logger.exception("Failed to run mapping rules")
 
             alert_enrichment = get_enrichment(
                 tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
@@ -636,6 +641,7 @@ def handle_formatted_events(
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -669,6 +675,9 @@ async def receive_generic_event(
         if not _alert.source:
             _alert.source = ["keep"]
 
+        if fingerprint:
+            _alert.fingerprint = fingerprint
+
         if authenticated_entity.api_key_name:
             _alert.apiKeyRef = authenticated_entity.api_key_name
 
@@ -693,6 +702,7 @@ async def receive_event(
     request: Request,
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -729,8 +739,11 @@ async def receive_event(
     # Pre format enrichment
     try:
         enrichments_bl.run_extraction_rules(event)
-    except Exception:
-        logger.exception("Failed to run pre-formatting extraction rules")
+    except Exception as exc:
+        logger.warning(
+            "Failed to run pre-formatting extraction rules",
+            extra={"exception": str(exc)},
+        )
 
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
@@ -757,6 +770,9 @@ async def receive_event(
         formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
+            # override the fingerprint if it's provided
+            if fingerprint:
+                formatted_events.fingerprint = fingerprint
             formatted_events = [formatted_events]
 
         logger.info(
@@ -803,7 +819,6 @@ async def receive_event(
 def get_alert(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    session: Session = Depends(get_session),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

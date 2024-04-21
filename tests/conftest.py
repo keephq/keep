@@ -173,6 +173,21 @@ def db_session(request, mysql_container):
             interval=0,
             workflow_raw="test workflow raw",
         ),
+        WorkflowExecution(
+            id="test-execution-id-1",
+            workflow_id="mock_alert",
+            tenant_id=SINGLE_TENANT_UUID,
+            triggered_by="keep-test",
+            status="success",
+            execution_number=1,
+            results={},
+        ),
+        WorkflowToAlertExecution(
+            id=1,
+            workflow_execution_id="test-execution-id-1",
+            alert_fingerprint="mock_alert",
+            event_id="mock_event_id",
+        ),
         # Add more data as needed
     ]
     session.add_all(workflow_data)

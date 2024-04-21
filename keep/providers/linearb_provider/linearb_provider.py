@@ -117,11 +117,10 @@ class LinearbProvider(BaseProvider):
 
                 if "teams" in payload:
                     team_names = [team["name"] for team in payload["teams"]]
-                    if teams:
-                        teams = json.loads(teams)
-                        for team in teams:
-                            if team not in team_names:
-                                team_names.append(team)
+                    teams = json.loads(teams) if isinstance(teams, str) else teams
+                    for team in teams:
+                        if team not in team_names:
+                            team_names.append(team)
                     payload["teams"] = team_names
 
                 if repository_urls:
