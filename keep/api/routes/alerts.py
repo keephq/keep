@@ -205,6 +205,67 @@ def pull_alerts_from_providers(
                         new_compressed_batch,
                     )
                 logger.info("Sent batch of pulled alerts via pusher")
+                # Also update the presets
+                try:
+                    presets = get_all_presets(tenant_id)
+                    presets_do_update = []
+                    for preset in presets:
+                        # filter the alerts based on the search query
+                        preset_dto = PresetDto(**preset.dict())
+                        filtered_alerts = RulesEngine.filter_alerts(
+                            last_alerts, preset_dto.cel_query
+                        )
+                        # if not related alerts, no need to update
+                        if not filtered_alerts:
+                            continue
+                        presets_do_update.append(preset_dto)
+                        preset_dto.alerts_count = len(filtered_alerts)
+                        # update noisy
+                        if preset.is_noisy:
+                            firing_filtered_alerts = list(
+                                filter(
+                                    lambda alert: alert.status
+                                    == AlertStatus.FIRING.value,
+                                    filtered_alerts,
+                                )
+                            )
+                            # if there are firing alerts, then do noise
+                            if firing_filtered_alerts:
+                                logger.info("Noisy preset is noisy")
+                                preset_dto.should_do_noise_now = True
+                    # also, update the feed preset
+                    feed_preset_dto = PresetDto(
+                        id="11111111-1111-1111-1111-111111111111",
+                        name="feed",
+                        options=[],
+                        created_by=None,
+                        is_private=False,
+                        is_noisy=False,
+                        should_do_noise_now=False,
+                        alerts_count=len(last_alerts),
+                    )
+                    presets_do_update.append(feed_preset_dto)
+                    # send with pusher
+                    if pusher_client:
+                        try:
+                            pusher_client.trigger(
+                                f"private-{tenant_id}",
+                                "async-presets",
+                                json.dumps(
+                                    [p.dict() for p in presets_do_update], default=str
+                                ),
+                            )
+                        except Exception:
+                            logger.exception("Failed to send presets via pusher")
+                except Exception:
+                    logger.exception(
+                        "Failed to send presets via pusher",
+                        extra={
+                            "provider_type": provider.type,
+                            "provider_id": provider.id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
             logger.info(
                 f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                 extra={

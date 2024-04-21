@@ -124,7 +124,7 @@ export function AlertTable({
 
   return (
     <>
-      <TitleAndFilters table={table} alerts={alerts} presetName={presetName}  onThemeChange={handleThemeChange}/>
+      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
       <Card className="mt-7 px-4 pb-4 md:pb-10 md:px-4 pt-6">
         {selectedRowIds.length ? (
           <AlertActions

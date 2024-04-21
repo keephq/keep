@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Preset } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import Pusher from "pusher-js";
+import Pusher, {Channel} from "pusher-js";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
+import useSWRSubscription from "swr/subscription";
 
 export const usePresets = () => {
   const { data: session } = useSession();
@@ -15,67 +16,87 @@ export const usePresets = () => {
 
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>("presets-order", []);
   const [staticPresetsOrderFromLS, setStaticPresetsOrderFromLS] = useLocalStorage<Preset[]>("static-presets-order", []);
+  // used to sync the presets with the server
+  const [isLocalStorageReady, setIsLocalStorageReady] = useState(false);
+  const presetsOrderRef = useRef(presetsOrderFromLS);
+  const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
+
+  useEffect(() => {
+    presetsOrderRef.current = presetsOrderFromLS;
+    staticPresetsOrderRef.current = staticPresetsOrderFromLS;
+  }, [presetsOrderFromLS, staticPresetsOrderFromLS]);
 
   const updateLocalPresets = (newPresets: Preset[]) => {
-    // Helper function to update presets
     const updatePresets = (currentPresets: Preset[], newPresets: Preset[]) => {
-      const presetMap = new Map(currentPresets.map(p => [p.id, p]));
+      const newPresetMap = new Map(newPresets.map(p => [p.id, p]));
+      let updatedPresets = new Map(currentPresets.map(p => [p.id, p]));
 
-      newPresets.forEach(newPreset => {
-        const existingPreset = presetMap.get(newPreset.id);
-        if (existingPreset) {
-          // Update alerts count or any other properties that are expected to change
-          existingPreset.alerts_count = (existingPreset.alerts_count || 0) + (newPreset.alerts_count || 0);
+      newPresetMap.forEach((newPreset, newPresetId) => {
+        const currentPreset = updatedPresets.get(newPresetId);
+        if (currentPreset) {
+          // Update existing preset with new alerts count
+          updatedPresets.set(newPresetId, {
+            ...currentPreset,
+            ...newPreset,
+            alerts_count: currentPreset.alerts_count + newPreset.alerts_count
+          });
         } else {
-          // Add new preset if not already in the map
-          presetMap.set(newPreset.id, newPreset);
+          // If the preset is not in the current presets, add it
+          updatedPresets.set(newPresetId, {
+            ...newPreset,
+            alerts_count: newPreset.alerts_count
+          });
         }
       });
 
-      return Array.from(presetMap.values());
+      return Array.from(updatedPresets.values());
     };
 
-    // Update non-static presets
-    setPresetsOrderFromLS(currentPresets => updatePresets(currentPresets, newPresets.filter(p => !['feed', 'deleted', 'dismissed', 'groups'].includes(p.name))));
-
-    // Update static presets
-    setStaticPresetsOrderFromLS(currentPresets => updatePresets(currentPresets, newPresets.filter(p => ['feed', 'deleted', 'dismissed', 'groups'].includes(p.name))));
+    setPresetsOrderFromLS(current => updatePresets(presetsOrderRef.current, newPresets.filter(p => !['feed', 'deleted', 'dismissed', 'groups'].includes(p.name))));
+    setStaticPresetsOrderFromLS(current => updatePresets(staticPresetsOrderRef.current, newPresets.filter(p => ['feed', 'deleted', 'dismissed', 'groups'].includes(p.name))));
   };
 
-  useEffect(() => {
-    if (!session || configData?.PUSHER_DISABLED) return;
-
-    const pusher = new Pusher(configData.PUSHER_APP_KEY, {
-      wsHost: configData.PUSHER_HOST,
-      wsPort: configData.PUSHER_PORT,
-      forceTLS: false,
-      disableStats: true,
-      enabledTransports: ["ws", "wss"],
-      cluster: configData.PUSHER_CLUSTER || "local",
-      channelAuthorization: {
-        transport: "ajax",
-        endpoint: `${apiUrl}/pusher/auth`,
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+  const subscription = useSWRSubscription(
+    () => (configData?.PUSHER_DISABLED === false && session && isLocalStorageReady) ? "presets" : null,
+    (_, { next }) => {
+      console.log("Subscribing to presets channel")
+      const pusher = new Pusher(configData.PUSHER_APP_KEY, {
+        wsHost: configData.PUSHER_HOST,
+        wsPort: configData.PUSHER_PORT,
+        forceTLS: false,
+        disableStats: true,
+        enabledTransports: ["ws", "wss"],
+        cluster: configData.PUSHER_CLUSTER || "local",
+        channelAuthorization: {
+          transport: "ajax",
+          endpoint: `${apiUrl}/pusher/auth`,
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`
+          },
         },
-      },
-    });
+      });
 
-    const channelName = `private-${session.tenantId}`;
-    const channel = pusher.subscribe(channelName);
+      const channelName = `private-${session.tenantId}`;
+      const channel = pusher.subscribe(channelName);
 
-    channel.bind("async-presets", (newPresets: Preset[]) => {
-      // Logic to handle incoming preset data
-      console.log("Received new presets via Pusher", newPresets);
-      // iterate over the new presets and update the local storage
-      // we need to iterate the new preset and add preset.alerts_count to the current
-      updateLocalPresets(newPresets);
-    });
+      channel.bind("async-presets", (newPresets: Preset[]) => {
+        console.log("Received new presets from server", newPresets);
+        updateLocalPresets(newPresets);
+        next(null, {
+          presets: newPresets,
+          isAsyncLoading: false,
+          lastSubscribedDate: new Date(),
+          pusherChannel: channel
+        });
+      });
 
-    return () => {
-      pusher.unsubscribe(channelName);
-    };
-  }, [session, configData, updateLocalPresets]);
+      return () => {
+        console.log("Unsubscribing from presets channel")
+        pusher.unsubscribe(channelName);
+      };
+    },
+    { revalidateOnFocus: false }
+  );
 
 
   const useFetchAllPresets = (options?: SWRConfiguration) => {
@@ -84,7 +105,6 @@ export const usePresets = () => {
       url => fetcher(url, session?.accessToken),
       {
         ...options,
-        refreshInterval: 25000,
         onSuccess: (data) => {
           if (data) {
             const dynamicPresets = data.filter(p => !['feed', 'deleted', 'dismissed', 'groups'].includes(p.name));
@@ -106,6 +126,7 @@ export const usePresets = () => {
     const newServerPresets = serverPresets.filter(sp => !localPresets.some(lp => lp.id === sp.id));
     const combinedPresets = updatedLocalPresets.concat(newServerPresets);
     setter(combinedPresets);
+    setIsLocalStorageReady(true);
   };
 
   const useAllPresets = (options?: SWRConfiguration) => {

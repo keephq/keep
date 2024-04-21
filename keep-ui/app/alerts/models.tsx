@@ -8,8 +8,8 @@ export enum Severity {
 }
 
 export const severityMapping: { [id: number]: string } = {
-  1: Severity.Info,
-  2: Severity.Low,
+  1: Severity.Low,
+  2: Severity.Info,
   3: Severity.Warning,
   4: Severity.High,
   5: Severity.Critical,

@@ -76,7 +76,9 @@ def get_presets(
         is_private=False,
         is_noisy=False,
         should_do_noise_now=False,
-        alerts_count=len(alerts_dto),
+        alerts_count=len(
+            [alert for alert in alerts_dto if not alert.deleted and not alert.dismissed]
+        ),
     )
     deleted_preset = PresetDto(
         id="11111111-1111-1111-1111-111111111112",

@@ -183,7 +183,7 @@ export const CustomPresetAlertLinks = ({
     );
 
     if (isDeleteConfirmed) {
-      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
+    const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
