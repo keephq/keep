@@ -1,6 +1,6 @@
 import {
-  MultiSelect,
-  MultiSelectItem,
+  // MultiSelect,
+  // MultiSelectItem,
   NumberInput,
   Select,
   SelectItem,
@@ -62,7 +62,7 @@ export const CorrelationForm = () => {
           />
         </span>
       </fieldset>
-      <label className="text-tremor-default font-medium text-tremor-content-strong hidden">
+      {/* <label className="text-tremor-default font-medium text-tremor-content-strong hidden">
         When all condition meets set alert severity to
         <Select className="mt-2" name="severity">
           <SelectItem value="low">Low</SelectItem>
@@ -85,7 +85,7 @@ export const CorrelationForm = () => {
             </MultiSelect>
           )}
         />
-      </label>
+      </label> */}
     </div>
   );
 };
