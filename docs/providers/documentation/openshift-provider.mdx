@@ -1,0 +1,34 @@
+---
+title: "Openshift"
+description: "Openshift provider to perform rollout restart action on specific resources."
+---
+
+## Inputs
+
+- **kind** (required): Kind of the object which will be run rollout restart action run (`deployments`, `statefulset`, `daemonset`).
+- **name** (required): Name of the object which will be run rollout restart action run.
+
+## Outputs
+
+- **message**: Message for the action performed.
+
+## Authentication Parameters
+
+This provider offers you to authenticate with Openshift using: api_server, token and insecure.
+
+- **api_server** (required): The api server url of your Openshift cluster.
+- **token** (required): The token of your user to authenticate with Openshift.
+- **insecure** (optional): If you want to skip the certificate verification, set this to `True`.
+
+## Connecting with the Provider
+
+To connect to Openshift, follow below steps:
+
+1. Log in to your Openshift cluster and create a new service account with required roles.
+2. Get the token of the service account.
+3. Use the token to authenticate with Openshift.
+
+## Notes
+
+- This provider allows you to interact with Openshift to perform rollout restart actions.
+
