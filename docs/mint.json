@@ -82,23 +82,26 @@
         {
           "group": "Supported Providers",
           "pages": [
+            "providers/documentation/appdynamics-provider",
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
             "providers/documentation/azuremonitoring-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/datadog-provider",
-            "providers/documentation/ilert-provider",
-            "providers/documentation/kibana-provider",
-            "providers/documentation/kubernetes-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
-            "providers/documentation/grafana-provider",
+            "providers/documentation/gitlab-provider",
             "providers/documentation/grafana-oncall-provider",
+            "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
+            "providers/documentation/ilert-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/kibana-provider",
+            "providers/documentation/kubernetes-provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/mailchimp-provider",
             "providers/documentation/mock-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/new-relic-provider",
@@ -106,23 +109,26 @@
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
+            "providers/documentation/pagertree-provider",
             "providers/documentation/pingdom-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
+            "providers/documentation/resend-provider",
             "providers/documentation/sentry-provider",
             "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
-            "providers/documentation/zabbix-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/splunk-provider",
+            "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
-            "providers/documentation/zenduty-provider",
-            "providers/documentation/resend-provider",
-            "providers/documentation/websocket-provider"
+            "providers/documentation/websocket-provider",
+            "providers/documentation/zabbix-provider",
+            "providers/documentation/zenduty-provider"
           ]
         }
       ]
@@ -179,7 +185,9 @@
         },
         {
           "group": "Examples",
-          "pages": ["workflows/examples/multi-step-alert"]
+          "pages": [
+            "workflows/examples/multi-step-alert"
+          ]
         },
         "workflows/state"
       ]
@@ -204,15 +212,22 @@
         },
         {
           "group": "Healthcheck",
-          "pages": ["api-ref/healthcheck/healthcheck"]
+          "pages": [
+            "api-ref/healthcheck/healthcheck"
+          ]
         },
         {
           "group": "Alerts",
-          "pages": ["api-ref/alerts/get-alerts", "api-ref/alerts/receive-event"]
+          "pages": [
+            "api-ref/alerts/get-alerts",
+            "api-ref/alerts/receive-event"
+          ]
         },
         {
           "group": "Webhook settings",
-          "pages": ["api-ref/settings/webhook-settings"]
+          "pages": [
+            "api-ref/settings/webhook-settings"
+          ]
         },
         {
           "group": "Workflows",
@@ -260,7 +275,10 @@
                 "cli/commands/workflow-run",
                 {
                   "group": "keep workflow runs",
-                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
                 }
               ]
             },
