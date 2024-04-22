@@ -185,9 +185,7 @@
         },
         {
           "group": "Examples",
-          "pages": [
-            "workflows/examples/multi-step-alert"
-          ]
+          "pages": ["workflows/examples/multi-step-alert"]
         },
         "workflows/state"
       ]
@@ -212,22 +210,15 @@
         },
         {
           "group": "Healthcheck",
-          "pages": [
-            "api-ref/healthcheck/healthcheck"
-          ]
+          "pages": ["api-ref/healthcheck/healthcheck"]
         },
         {
           "group": "Alerts",
-          "pages": [
-            "api-ref/alerts/get-alerts",
-            "api-ref/alerts/receive-event"
-          ]
+          "pages": ["api-ref/alerts/get-alerts", "api-ref/alerts/receive-event"]
         },
         {
           "group": "Webhook settings",
-          "pages": [
-            "api-ref/settings/webhook-settings"
-          ]
+          "pages": ["api-ref/settings/webhook-settings"]
         },
         {
           "group": "Workflows",
@@ -275,10 +266,7 @@
                 "cli/commands/workflow-run",
                 {
                   "group": "keep workflow runs",
-                  "pages": [
-                    "cli/commands/runs-logs",
-                    "cli/commands/runs-list"
-                  ]
+                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
                 }
               ]
             },
