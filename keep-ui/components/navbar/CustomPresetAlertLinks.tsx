@@ -22,9 +22,9 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
-import ReactPlayer from 'react-player';
 // import css
 import "./CustomPresetAlertLink.css";
+import ReactPlayer from "react-player";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -72,21 +72,30 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         href={href}
       >
         {
-          preset.is_noisy ? (
+          preset.should_do_noise_now ? (
+            // If we should do noise now, show the pulse-icon
             <Icon
               icon={AiOutlineSound}
-              className={`${preset.should_do_noise_now ? 'pulse-icon' : 'text-slate-400'} hover:text-red-500`}
+              className="pulse-icon hover:text-red-500"
+            />
+          ) : preset.is_noisy ? (
+            // Else if it's just noisy, show the AiOutlineSound icon without pulse
+            <Icon
+              icon={AiOutlineSound}
+              className="text-slate-400 hover:text-red-500"
             />
           ) : (
+            // Otherwise, show the default icon
             <Icon
+              icon={AiOutlineSwap}
               className={classNames("group-hover:text-orange-400", {
                 "text-orange-400": isActive,
                 "text-slate-400": !isActive,
               })}
-              icon={AiOutlineSwap}
             />
           )
         }
+
         <span
           className={classNames("truncate max-w-[7.5rem]", {
             "text-orange-400": isActive,
@@ -118,10 +127,12 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 
 type CustomPresetAlertLinksProps = {
   session: Session;
+  setPlayAlertSound: (play: boolean) => void;
 };
 
 export const CustomPresetAlertLinks = ({
   session,
+  setPlayAlertSound,
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
@@ -133,7 +144,6 @@ export const CustomPresetAlertLinks = ({
 
   const pathname = usePathname();
   const router = useRouter();
-  const [playAlertSound, setPlayAlertSound] = useState(false);
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
@@ -250,16 +260,6 @@ export const CustomPresetAlertLinks = ({
           />
         ))}
       </SortableContext>
-       {/* React Player for playing alert sound */}
-       <ReactPlayer
-        url="/music/alert.mp3"
-        playing={playAlertSound}
-        volume={0.5}
-        loop={true}
-        width="0"
-        height="0"
-        playsinline
-      />
     </DndContext>
   );
 };

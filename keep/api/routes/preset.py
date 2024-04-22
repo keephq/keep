@@ -65,9 +65,20 @@ def get_presets(
             else:
                 logger.info("Noisy preset is not noisy")
                 preset_dto.should_do_noise_now = False
+        # else if one of the alerts are isNoisy
+        elif any(
+            alert.isNoisy and alert.status == AlertStatus.FIRING.value
+            for alert in filtered_alerts
+        ):
+            logger.info("Preset is noisy")
+            preset_dto.should_do_noise_now = True
         presets_dto.append(preset_dto)
 
     # add static preset - feed, correlation, deleted and dismissed
+    isNoisy = any(
+        alert.isNoisy and AlertStatus.FIRING.value == alert.status
+        for alert in alerts_dto
+    )
     feed_preset = PresetDto(
         id="11111111-1111-1111-1111-111111111111",
         name="feed",
@@ -75,7 +86,7 @@ def get_presets(
         created_by=None,
         is_private=False,
         is_noisy=False,
-        should_do_noise_now=False,
+        should_do_noise_now=isNoisy,
         alerts_count=len(
             [alert for alert in alerts_dto if not alert.deleted and not alert.dismissed]
         ),

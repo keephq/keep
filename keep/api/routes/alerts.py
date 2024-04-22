@@ -233,6 +233,14 @@ def pull_alerts_from_providers(
                             if firing_filtered_alerts:
                                 logger.info("Noisy preset is noisy")
                                 preset_dto.should_do_noise_now = True
+                        # else if at least one of the alerts has .isNoisy
+                        elif any(
+                            alert.isNoisy
+                            for alert in filtered_alerts
+                            if hasattr(alert, "isNoisy")
+                        ):
+                            logger.info("Noisy preset is noisy")
+                            preset_dto.should_do_noise_now = True
                     # also, update the feed preset
                     feed_preset_dto = PresetDto(
                         id="11111111-1111-1111-1111-111111111111",
@@ -723,7 +731,18 @@ def handle_formatted_events(
                 if firing_filtered_alerts:
                     logger.info("Noisy preset is noisy")
                     preset_dto.should_do_noise_now = True
+            # else if at least one of the alerts has .isNoisy
+            elif any(
+                alert.isNoisy for alert in filtered_alerts if hasattr(alert, "isNoisy")
+            ):
+                logger.info("Noisy preset is noisy")
+                preset_dto.should_do_noise_now = True
         # also, update the feed preset
+        isNoisy = any(
+            alert.isNoisy and alert.status == AlertStatus.FIRING.value
+            for alert in enriched_formatted_events
+            if hasattr(alert, "isNoisy")
+        )
         feed_preset_dto = PresetDto(
             id="11111111-1111-1111-1111-111111111111",
             name="feed",
@@ -731,7 +750,7 @@ def handle_formatted_events(
             created_by=None,
             is_private=False,
             is_noisy=False,
-            should_do_noise_now=False,
+            should_do_noise_now=isNoisy,
             alerts_count=len(enriched_formatted_events),
         )
         presets_do_update.append(feed_preset_dto)

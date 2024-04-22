@@ -37,7 +37,6 @@ export const usePresets = () => {
           // Update existing preset with new alerts count
           updatedPresets.set(newPresetId, {
             ...currentPreset,
-            ...newPreset,
             alerts_count: currentPreset.alerts_count + newPreset.alerts_count
           });
         } else {
