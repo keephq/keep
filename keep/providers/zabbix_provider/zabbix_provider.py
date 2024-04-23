@@ -297,7 +297,7 @@ class ZabbixProvider(BaseProvider):
                 # This is a hack to check if the error is related to permissions
                 error = getattr(e, "message", e.args[0])
                 # If we got here, it means it's an exception from Zabbix
-                if "permission" in error or "not authorized" in error.lower():
+                if "permission" in str(error) or "not authorized" in str(error).lower():
                     validated_scopes[scope.name] = error
                     continue
             validated_scopes[scope.name] = True
