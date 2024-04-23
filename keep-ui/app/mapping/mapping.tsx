@@ -7,6 +7,7 @@ import { MdWarning } from "react-icons/md";
 import Loading from "app/loading";
 import {MappingRule} from "./models";
 import {useState} from "react";
+
 export default function Mapping() {
   const { data: mappings, isLoading } = useMappings();
 
