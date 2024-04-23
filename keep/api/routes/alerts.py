@@ -17,7 +17,7 @@ from sqlmodel import Session
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
-from keep.api.core.db import enrich_alert as enrich_alert_db
+from keep.api.core.db import enrich_alert as enrich_alert_db, update_alert_by_id
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_with_filters,
@@ -333,13 +333,13 @@ def delete_alert(
     )
 
     deleted_last_received = []  # the last received(s) that are deleted
-    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    assignees_last_received = {}  # the last received(s) that are assigned to someone
 
     # If we enriched before, get the enrichment
     enrichment = get_enrichment(tenant_id, delete_alert.fingerprint)
     if enrichment:
         deleted_last_received = enrichment.enrichments.get("deletedAt", [])
-        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+        assignees_last_received = enrichment.enrichments.get("assignees", {})
 
     if (
         delete_alert.restore is True
@@ -354,9 +354,9 @@ def delete_alert(
         # Delete the alert if it's not already deleted (wtf basically, shouldn't happen)
         deleted_last_received.append(delete_alert.lastReceived)
 
-    if delete_alert.lastReceived not in assignees_last_receievd:
+    if delete_alert.lastReceived not in assignees_last_received:
         # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+        assignees_last_received[delete_alert.lastReceived] = user_email
 
     # overwrite the enrichment
     enrich_alert_db(
@@ -364,7 +364,7 @@ def delete_alert(
         fingerprint=delete_alert.fingerprint,
         enrichments={
             "deletedAt": deleted_last_received,
-            "assignees": assignees_last_receievd,
+            "assignees": assignees_last_received,
         },
     )
 
@@ -398,20 +398,20 @@ def assign_alert(
         },
     )
 
-    assignees_last_receievd = {}  # the last received(s) that are assigned to someone
+    assignees_last_received = {}  # the last received(s) that are assigned to someone
     enrichment = get_enrichment(tenant_id, fingerprint)
     if enrichment:
-        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+        assignees_last_received = enrichment.enrichments.get("assignees", {})
 
     if unassign:
-        assignees_last_receievd.pop(last_received, None)
+        assignees_last_received.pop(last_received, None)
     else:
-        assignees_last_receievd[last_received] = user_email
+        assignees_last_received[last_received] = user_email
 
     enrich_alert_db(
         tenant_id=tenant_id,
         fingerprint=fingerprint,
-        enrichments={"assignees": assignees_last_receievd},
+        enrichments={"assignees": assignees_last_received},
     )
 
     try:
@@ -569,6 +569,37 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+        logger.info(
+            "Updating the alerts event_id in the DB",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        updated_alert = update_alert_by_id(tenant_id, formatted_event.event_id, formatted_event.dict())
+        if updated_alert is None:
+            logger.warning(
+                "Failed to update the alert event_id in the DB",
+                extra={
+                    "provider_type": provider_type,
+                    "num_of_alerts": len(formatted_events),
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
+        else:
+            logger.info(
+                "Updated the alerts event_id in the DB successfully",
+                extra={
+                    "provider_type": provider_type,
+                    "num_of_alerts": len(formatted_events),
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
+
     except Exception:
         logger.exception(
             "Failed to push alerts to the DB",

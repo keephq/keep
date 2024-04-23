@@ -1110,6 +1110,19 @@ def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert
         return None
 
 
+def update_alert_by_id(tenant_id: str, alert_id: str, event: dict) -> Alert:
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id == alert_id)
+            .first()
+        )
+        alert.event = event
+        session.commit()
+    return alert
+
+
 def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
