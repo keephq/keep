@@ -6,9 +6,13 @@ from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
 
-class WorkflowStatus(enum.Enum):
-    RESOLVED = "resolved"
-    FIRING = "firing"
+class WorkflowStrategy(enum.Enum):
+    # if a workflow run on the same fingerprint, skip the workflow
+    NONPARALLEL = "nonparallel"
+    # if a workflow run on the same fingerprint, add the workflow back to the queue and run it again on the next interval
+    NONPARALLEL_WITH_RETRY = "nonparallel_with_retry"
+    # if a workflow run on the same fingerprint, run
+    PARALLEL = "parallel"
 
 
 class Workflow:
@@ -25,6 +29,7 @@ class Workflow:
         workflow_description: str = None,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
+        workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL.value,
         on_failure: Step = None,
     ):
         self.workflow_id = workflow_id
@@ -94,21 +99,6 @@ class Workflow:
             )
             raise
         actions_firing, actions_errors = self.run_actions()
-        # Save the state
-        #   workflow is firing if one its actions is firing
-        workflow_status = (
-            WorkflowStatus.FIRING.value
-            if any(actions_firing)
-            else WorkflowStatus.RESOLVED.value
-        )
-        # TODO: state management should be done in db (how will it work distributed?)
-        self.context_manager.set_last_workflow_run(
-            workflow_id=self.workflow_id,
-            workflow_context={
-                "steps_context": self.context_manager.steps_context,
-            },
-            workflow_status=workflow_status,
-        )
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
