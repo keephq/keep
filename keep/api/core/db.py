@@ -157,13 +157,21 @@ def create_db_and_tables():
             # now add the new column
             try:
                 if session.bind.dialect.name == "sqlite":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
                 elif session.bind.dialect.name == "mysql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
                 elif session.bind.dialect.name == "postgresql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;"
+                    )
                 elif session.bind.dialect.name == "mssql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);"
+                    )
                 else:
                     raise ValueError("Unsupported database type")
             except Exception as e:
@@ -191,14 +199,26 @@ def create_db_and_tables():
             logger.info("Migrating MappingRule table")
             try:
                 if session.bind.dialect.name == "postgresql":
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;"
+                    )
                 elif session.bind.dialect.name == "mssql":
-                    session.exec("ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD last_updated_at DATETIME;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD last_updated_at DATETIME;"
+                    )
                 else:
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;"
+                    )
             except Exception as e:
                 # that's ok
                 if "Duplicate column name" in str(e):
@@ -534,7 +554,7 @@ def add_or_update_workflow(
 
 
 def get_workflow_to_alert_execution_by_workflow_execution_id(
-    workflow_execution_id: str
+    workflow_execution_id: str,
 ) -> WorkflowToAlertExecution:
     """
     Get the WorkflowToAlertExecution entry for a given workflow execution ID.
@@ -825,6 +845,7 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             session.query(WorkflowExecution)
             .filter(
                 WorkflowExecution.id == workflow_execution_id,
+                WorkflowExecution.tenant_id == tenant_id,
             )
             .options(joinedload(WorkflowExecution.logs))
             .one()
@@ -1100,7 +1121,9 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
     return alerts
 
 
-def get_alert_by_fingerprint_and_event_id(tenant_id: str, fingerprint: str, event_id: str) -> Alert:
+def get_alert_by_fingerprint_and_event_id(
+    tenant_id: str, fingerprint: str, event_id: str
+) -> Alert:
     with Session(engine) as session:
         alert = (
             session.query(Alert)
