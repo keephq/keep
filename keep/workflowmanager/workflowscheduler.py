@@ -18,7 +18,7 @@ from keep.api.core.db import get_workflows_that_should_run
 from keep.api.models.alert import AlertDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
-from keep.workflowmanager.workflow import Workflow
+from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
@@ -178,12 +178,19 @@ class WorkflowScheduler:
             )
         return workflow_execution_id
 
-    def _get_unique_execution_number(self):
+    def _get_unique_execution_number(self, fingerprint=None):
         """
+        Translates the fingerprint to a unique execution number
+
         Returns:
             int: an int represents unique execution number
         """
-        payload = str(uuid.uuid4()).encode()
+        # if fingerprint supplied
+        if fingerprint:
+            payload = str(fingerprint).encode()
+        # else, just return random
+        else:
+            payload = str(uuid.uuid4()).encode()
         return int(hashlib.sha256(payload).hexdigest(), 16) % (
             WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1
         )
@@ -247,10 +254,16 @@ class WorkflowScheduler:
 
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
-            # TODO: one more robust way to do it
             if not workflow_execution_id:
                 try:
-                    workflow_execution_number = self._get_unique_execution_number()
+                    # if the workflow can run in parallel, we just to create a some random execution number
+                    if workflow.strategy == WorkflowStrategy.PARALLEL.value:
+                        workflow_execution_number = self._get_unique_execution_number()
+                    # else, we want to enforce that no workflow already run with the same fingerprint
+                    else:
+                        workflow_execution_number = self._get_unique_execution_number(
+                            event.fingerprint
+                        )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
                         tenant_id=tenant_id,
@@ -259,12 +272,46 @@ class WorkflowScheduler:
                         fingerprint=event.fingerprint,
                         event_id=event.event_id,
                     )
-                # This is kinda wtf exception since create workflow execution shouldn't fail for events other than interval
+                # If there is already running workflow from the same event
                 except IntegrityError:
-                    self.logger.exception(
-                        "Collision with workflow execution! will retry next time"
-                    )
-                    continue
+                    # if the strategy is with RETRY, just put a warning and add it back to the queue
+                    if (
+                        workflow.workflow_strategy
+                        == WorkflowStrategy.NONPARALLEL_WITH_RETRY.value
+                    ):
+                        self.logger.warning(
+                            "Collision with workflow execution! will retry next time"
+                        )
+                        with self.lock:
+                            self.workflows_to_run.append(
+                                {
+                                    "workflow_id": workflow_id,
+                                    "workflow_execution_id": workflow_execution_id,
+                                    "tenant_id": tenant_id,
+                                    "triggered_by": triggered_by,
+                                    "event": event,
+                                }
+                            )
+                        continue
+                    # else if NONPARALLEL, just finish the execution
+                    elif (
+                        workflow.workflow_strategy == WorkflowStrategy.NONPARALLEL.value
+                    ):
+                        self.logger.error(
+                            "Collision with workflow execution! will not retry"
+                        )
+                        self._finish_workflow_execution(
+                            tenant_id=tenant_id,
+                            workflow_id=workflow_id,
+                            workflow_execution_id=workflow_execution_id,
+                            status=WorkflowStatus.ERROR,
+                            error="Workflow already running with the same fingerprint",
+                        )
+                        continue
+                    # else, just raise the exception (that should not happen)
+                    else:
+                        self.logger.exception("Collision with workflow execution!")
+                        continue
                 except Exception as e:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
