@@ -873,6 +873,7 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             session.query(WorkflowExecution)
             .filter(
                 WorkflowExecution.id == workflow_execution_id,
+                WorkflowExecution.tenant_id == tenant_id,
             )
             .options(joinedload(WorkflowExecution.logs))
             .one()
