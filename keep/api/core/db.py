@@ -337,7 +337,6 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
-    avoid_duplicate: bool = False,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
