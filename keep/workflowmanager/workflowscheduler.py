@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
-from keep.api.core.db import get_previous_execution_id
+from keep.api.core.db import get_enrichment, get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.models.alert import AlertDto
@@ -257,7 +257,7 @@ class WorkflowScheduler:
             if not workflow_execution_id:
                 try:
                     # if the workflow can run in parallel, we just to create a some random execution number
-                    if workflow.strategy == WorkflowStrategy.PARALLEL.value:
+                    if workflow.workflow_strategy == WorkflowStrategy.PARALLEL.value:
                         workflow_execution_number = self._get_unique_execution_number()
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
@@ -279,7 +279,7 @@ class WorkflowScheduler:
                         workflow.workflow_strategy
                         == WorkflowStrategy.NONPARALLEL_WITH_RETRY.value
                     ):
-                        self.logger.warning(
+                        self.logger.info(
                             "Collision with workflow execution! will retry next time"
                         )
                         with self.lock:
@@ -290,6 +290,7 @@ class WorkflowScheduler:
                                     "tenant_id": tenant_id,
                                     "triggered_by": triggered_by,
                                     "event": event,
+                                    "retry": True,
                                 }
                             )
                         continue
@@ -315,6 +316,33 @@ class WorkflowScheduler:
                 except Exception as e:
                     self.logger.error(f"Error creating workflow execution: {e}")
                     continue
+
+            # if thats a retry, we need to re-pull the alert to update the enrichments
+            # for example: 2 alerts arrived within a 0.1 seconds the first one is "firing" and the second one is "resolved"
+            #               - the first alert will trigger a workflow that will create a ticket with "firing"
+            #                    and enrich the alert with the ticket_url
+            #               - the second one will wait for the next iteration
+            #               - on the next iteratino, the second alert enriched with the ticket_url
+            #                    and will trigger a workflow that will update the ticket with "resolved"
+            if workflow_to_run.get("retry", False):
+                try:
+                    self.logger.info("Updating enrichment")
+                    new_enrichment = get_enrichment(tenant_id, event.fingerprint)
+                    # merge the new enrichment with the original event
+                    if new_enrichment:
+                        event = AlertDto(**event.dict(), **new_enrichment.enrichments)
+                    self.logger.info("Enrichment updated")
+                except Exception as e:
+                    self.logger.error(f"Failed to get enrichment: {e}")
+                    self._finish_workflow_execution(
+                        tenant_id=tenant_id,
+                        workflow_id=workflow_id,
+                        workflow_execution_id=workflow_execution_id,
+                        status=WorkflowStatus.ERROR,
+                        error=f"Error getting alert by id: {e}",
+                    )
+                    continue
+            # Last, run the workflow
             thread = threading.Thread(
                 target=self._run_workflow,
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],

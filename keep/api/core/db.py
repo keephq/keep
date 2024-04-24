@@ -157,13 +157,21 @@ def create_db_and_tables():
             # now add the new column
             try:
                 if session.bind.dialect.name == "sqlite":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
                 elif session.bind.dialect.name == "mysql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
                 elif session.bind.dialect.name == "postgresql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;"
+                    )
                 elif session.bind.dialect.name == "mssql":
-                    session.exec("ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);")
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);"
+                    )
                 else:
                     raise ValueError("Unsupported database type")
             except Exception as e:
@@ -191,14 +199,26 @@ def create_db_and_tables():
             logger.info("Migrating MappingRule table")
             try:
                 if session.bind.dialect.name == "postgresql":
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;"
+                    )
                 elif session.bind.dialect.name == "mssql":
-                    session.exec("ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD last_updated_at DATETIME;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD last_updated_at DATETIME;"
+                    )
                 else:
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);")
-                    session.exec("ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;")
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
+                    )
+                    session.exec(
+                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;"
+                    )
             except Exception as e:
                 # that's ok
                 if "Duplicate column name" in str(e):
@@ -317,21 +337,23 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
+    avoid_duplicate: bool = False,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
-            workflow_execution = WorkflowExecution(
-                id=str(uuid4()),
-                workflow_id=workflow_id,
-                tenant_id=tenant_id,
-                started=datetime.now(tz=timezone.utc),
-                triggered_by=triggered_by,
-                execution_number=execution_number,
-                status="in_progress",
-            )
-            session.add(workflow_execution)
+            else:
+                workflow_execution = WorkflowExecution(
+                    id=str(uuid4()),
+                    workflow_id=workflow_id,
+                    tenant_id=tenant_id,
+                    started=datetime.now(tz=timezone.utc),
+                    triggered_by=triggered_by,
+                    execution_number=execution_number,
+                    status="in_progress",
+                )
+                session.add(workflow_execution)
 
             if fingerprint:
                 workflow_to_alert_execution = WorkflowToAlertExecution(
@@ -534,7 +556,7 @@ def add_or_update_workflow(
 
 
 def get_workflow_to_alert_execution_by_workflow_execution_id(
-    workflow_execution_id: str
+    workflow_execution_id: str,
 ) -> WorkflowToAlertExecution:
     """
     Get the WorkflowToAlertExecution entry for a given workflow execution ID.
@@ -737,7 +759,8 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id == execution_id)
         ).first()
-
+        # some random number to avoid collisions
+        workflow_execution.is_running = str(uuid.uuid4()).encode()
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
@@ -1100,7 +1123,9 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
     return alerts
 
 
-def get_alert_by_fingerprint_and_event_id(tenant_id: str, fingerprint: str, event_id: str) -> Alert:
+def get_alert_by_fingerprint_and_event_id(
+    tenant_id: str, fingerprint: str, event_id: str
+) -> Alert:
     with Session(engine) as session:
         alert = (
             session.query(Alert)

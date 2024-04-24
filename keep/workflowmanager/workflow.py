@@ -9,8 +9,8 @@ from keep.step.step import Step, StepError
 class WorkflowStrategy(enum.Enum):
     # if a workflow run on the same fingerprint, skip the workflow
     NONPARALLEL = "nonparallel"
-    # if a workflow run on the same fingerprint, add the workflow back to the queue and run it again on the next interval
-    NONPARALLEL_WITH_RETRY = "nonparallel_with_retry"
+    # if a workflow run on the same fingerprint, add the workflow back to the queue and run it again on the next cycle
+    NONPARALLEL_WITH_RETRY = "nonparallel_with_retry"  # DEFAULT
     # if a workflow run on the same fingerprint, run
     PARALLEL = "parallel"
 
@@ -29,7 +29,7 @@ class Workflow:
         workflow_description: str = None,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
-        workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL.value,
+        workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
         on_failure: Step = None,
     ):
         self.workflow_id = workflow_id
@@ -42,6 +42,7 @@ class Workflow:
         self.workflow_description = workflow_description
         self.workflow_providers = workflow_providers
         self.workflow_providers_type = workflow_providers_type
+        self.workflow_strategy = workflow_strategy
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.io_nandler = IOHandler(context_manager)
