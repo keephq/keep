@@ -239,7 +239,7 @@ def create_db_and_tables():
         if session.bind.dialect.name == "mysql":
             try:
                 session.exec(
-                    "ALTER TABLE workflowexecution ADD COLUMN is_running INT DEFAULT 1, ADD COLUMN timeslot INT;"
+                    "ALTER TABLE workflowexecution ADD COLUMN is_running INT DEFAULT 1, ADD COLUMN timeslot INT DEFAULT 0;"
                 )
                 # Shahar: run manually for safety
                 # session.exec(
