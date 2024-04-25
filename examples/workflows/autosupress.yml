@@ -1,5 +1,6 @@
 workflow:
   id: autosupress
+  strategy: parallel
   description: demonstrates how to automatically suppress alerts
   triggers:
     - type: alert
