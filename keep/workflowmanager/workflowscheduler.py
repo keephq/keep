@@ -330,7 +330,9 @@ class WorkflowScheduler:
                     new_enrichment = get_enrichment(tenant_id, event.fingerprint)
                     # merge the new enrichment with the original event
                     if new_enrichment:
-                        event = AlertDto(**event.dict(), **new_enrichment.enrichments)
+                        new_event = event.dict()
+                        new_event.update(new_enrichment.enrichments)
+                        event = AlertDto(**new_event)
                     self.logger.info("Enrichment updated")
                 except Exception as e:
                     self.logger.error(f"Failed to get enrichment: {e}")
