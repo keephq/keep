@@ -176,15 +176,33 @@ class StatuscakeProvider(BaseProvider):
   def _get_alerts(self) -> list[AlertDto]:
     alerts = []
     try:
-      alerts.extend(self.__get_heartbeat_alerts())
-      alerts.extend(self.__get_pagespeed_alerts())
-      alerts.extend(self.__get_ssl_alerts())
-      alerts.extend(self.__get_uptime_alerts())
-
+      self.logger.info("Collecting alerts (heartbeats) from Statuscake")
+      heartbeat_alerts = self.__get_heartbeat_alerts()
+      alerts.extend(heartbeat_alerts)
     except Exception as e:
-      self.logger.error("Error getting alerts from Statuscake: %s", e)
-      raise Exception(f"Error getting alerts from Statuscake: {e}")
-    
+      self.logger.error("Error getting heartbeat from Statuscake: %s", e)
+
+    try:
+      self.logger.info("Collecting alerts (pagespeed) from Statuscake")
+      pagespeed_alerts = self.__get_pagespeed_alerts()
+      alerts.extend(pagespeed_alerts)
+    except Exception as e:
+      self.logger.error("Error getting pagespeed from Statuscake: %s", e)
+
+    try:
+      self.logger.info("Collecting alerts (ssl) from Statuscake")
+      ssl_alerts = self.__get_ssl_alerts()
+      alerts.extend(ssl_alerts)
+    except Exception as e:
+      self.logger.error("Error getting ssl from Statuscake: %s", e)
+
+    try:
+      self.logger.info("Collecting alerts (uptime) from Statuscake")
+      uptime_alerts = self.__get_uptime_alerts()
+      alerts.extend(uptime_alerts)
+    except Exception as e:
+      self.logger.error("Error getting uptime from Statuscake: %s", e)
+      
     return alerts
 
 if __name__ == "__main__":
