@@ -368,17 +368,17 @@ def create_workflow_execution(
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
-            else:
-                workflow_execution = WorkflowExecution(
-                    id=str(uuid4()),
-                    workflow_id=workflow_id,
-                    tenant_id=tenant_id,
-                    started=datetime.now(tz=timezone.utc),
-                    triggered_by=triggered_by,
-                    execution_number=execution_number,
-                    status="in_progress",
-                )
-                session.add(workflow_execution)
+
+            workflow_execution = WorkflowExecution(
+                id=str(uuid4()),
+                workflow_id=workflow_id,
+                tenant_id=tenant_id,
+                started=datetime.now(tz=timezone.utc),
+                triggered_by=triggered_by,
+                execution_number=execution_number,
+                status="in_progress",
+            )
+            session.add(workflow_execution)
 
             if fingerprint:
                 workflow_to_alert_execution = WorkflowToAlertExecution(
