@@ -11,7 +11,7 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
-from keep.workflowmanager.workflow import Workflow
+from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 
 
 class Parser:
@@ -134,6 +134,9 @@ class Parser:
                 workflow_steps, workflow_actions
             )
         )
+        workflow_strategy = workflow.get(
+            "strategy", WorkflowStrategy.NONPARALLEL_WITH_RETRY.value
+        )
         workflow = Workflow(
             workflow_id=workflow_id,
             workflow_description=workflow.get("description"),
@@ -146,6 +149,7 @@ class Parser:
             on_failure=on_failure_action,
             context_manager=context_manager,
             workflow_providers_type=workflow_provider_types,
+            workflow_strategy=workflow_strategy,
         )
         self.logger.debug("Workflow parsed successfully")
         return workflow

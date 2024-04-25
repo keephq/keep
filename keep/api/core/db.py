@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import random
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple
@@ -160,6 +161,9 @@ def create_db_and_tables():
                     session.exec(
                         "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
                     )
+                    session.exec(
+                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
+                    )
                 elif session.bind.dialect.name == "mysql":
                     session.exec(
                         "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
@@ -259,6 +263,60 @@ def create_db_and_tables():
         except Exception:
             logger.exception("Failed to migrate table")
             pass
+
+    # migrate the new workflowexecution table
+    with Session(engine) as session:
+        if session.bind.dialect.name == "mysql":
+            try:
+                session.exec(
+                    "ALTER TABLE workflowexecution ADD COLUMN is_running INT DEFAULT 1, ADD COLUMN timeslot INT DEFAULT 0;"
+                )
+                # Shahar: run manually for safety
+                # session.exec(
+                #    "ALTER TABLE workflowexecution DROP INDEX workflow_id, ADD UNIQUE KEY `workflow_id` (`workflow_id`,`execution_number`,`is_running`,`timeslot`)"
+                # )
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate workflowexecution table")
+                    pass
+        elif session.bind.dialect.name == "sqlite":
+            try:
+                session.exec(
+                    "ALTER TABLE workflowexecution ADD COLUMN is_running INTEGER DEFAULT 1, ADD COLUMN timeslot INTEGER;"
+                )
+                session.exec(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS workflow_id ON workflowexecution (workflow_id, execution_number, is_running, timeslot);"
+                )
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate workflowexecution table")
+                    pass
+        elif session.bind.dialect.name == "mssql":
+            try:
+                session.exec(
+                    "ALTER TABLE workflowexecution ADD is_running INT DEFAULT 1, ADD timeslot INT;"
+                )
+                # Shahar: Run manually
+                # session.exec(
+                #     "CREATE UNIQUE INDEX workflow_id ON workflowexecution (workflow_id, execution_number, is_running, timeslot);"
+                # )
+            except Exception as e:
+                # that's ok
+                if "Duplicate column name" in str(e):
+                    pass
+                # else, log
+                else:
+                    logger.exception("Failed to migrate workflowexecution table")
+                    pass
+
     SQLModel.metadata.create_all(engine)
 
 
@@ -330,10 +388,12 @@ def try_create_single_tenant(tenant_id: str) -> None:
     with Session(engine) as session:
         try:
             # TODO: remove this once we have a migration system
-            # add is_noisy column to preset
+            logger.info("Migrating TenantApiKey table")
             session.exec(
-                "ALTER TABLE preset ADD COLUMN is_noisy BOOLEAN NOT NULL DEFAULT 0;"
+                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
             )
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
+            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
             session.commit()
             logger.info("Migrated TenantApiKey table")
         except Exception:
@@ -367,6 +427,7 @@ def create_workflow_execution(
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
+
             workflow_execution = WorkflowExecution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
@@ -782,7 +843,8 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id == execution_id)
         ).first()
-
+        # some random number to avoid collisions
+        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
@@ -870,6 +932,7 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             session.query(WorkflowExecution)
             .filter(
                 WorkflowExecution.id == workflow_execution_id,
+                WorkflowExecution.tenant_id == tenant_id,
             )
             .options(joinedload(WorkflowExecution.logs))
             .one()
