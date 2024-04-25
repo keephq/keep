@@ -127,12 +127,10 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 
 type CustomPresetAlertLinksProps = {
   session: Session;
-  setPlayAlertSound: (play: boolean) => void;
 };
 
 export const CustomPresetAlertLinks = ({
   session,
-  setPlayAlertSound,
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
@@ -147,10 +145,7 @@ export const CustomPresetAlertLinks = ({
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
-  useEffect(() => {
-    const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
-    setPlayAlertSound(anyNoisyNow);
-  }, [presets]);
+  const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
 
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
@@ -169,7 +164,7 @@ export const CustomPresetAlertLinks = ({
     if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
       setPresetsOrder(combinedOrder);
     }
-  }, [presets, presetsOrderFromLS]);  // ensure dependencies are correct
+  }, [presets, presetsOrderFromLS]);
 
 
   const sensors = useSensors(
@@ -260,6 +255,16 @@ export const CustomPresetAlertLinks = ({
           />
         ))}
       </SortableContext>
+      {/* React Player for playing alert sound */}
+      <ReactPlayer
+        url="/music/alert.mp3"
+        playing={anyNoisyNow}
+        volume={0.5}
+        loop={true}
+        width="0"
+        height="0"
+        playsinline
+      />
     </DndContext>
   );
 };

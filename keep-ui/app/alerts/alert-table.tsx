@@ -92,7 +92,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: presetNoisy ? ["noise", "checkbox"] : ["checkbox"],
+        left: ["noise", "checkbox"],
         right: ["alertMenu"],
       },
       sorting: sorting,

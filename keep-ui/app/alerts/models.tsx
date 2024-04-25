@@ -41,6 +41,7 @@ export interface AlertDto {
   providerId?: string;
   group?: boolean;
   note?: string;
+  isNoisy?: boolean;
 }
 
 interface Option {

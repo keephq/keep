@@ -54,7 +54,9 @@ def get_presets(
         if preset.is_noisy:
             firing_filtered_alerts = list(
                 filter(
-                    lambda alert: alert.status == AlertStatus.FIRING.value,
+                    lambda alert: alert.status == AlertStatus.FIRING.value
+                    and not alert.deleted
+                    and not alert.dismissed,
                     filtered_alerts,
                 )
             )
@@ -67,7 +69,10 @@ def get_presets(
                 preset_dto.should_do_noise_now = False
         # else if one of the alerts are isNoisy
         elif any(
-            alert.isNoisy and alert.status == AlertStatus.FIRING.value
+            alert.isNoisy
+            and alert.status == AlertStatus.FIRING.value
+            and not alert.deleted
+            and not alert.dismissed
             for alert in filtered_alerts
         ):
             logger.info("Preset is noisy")
@@ -76,7 +81,10 @@ def get_presets(
 
     # add static preset - feed, correlation, deleted and dismissed
     isNoisy = any(
-        alert.isNoisy and AlertStatus.FIRING.value == alert.status
+        alert.isNoisy
+        and AlertStatus.FIRING.value == alert.status
+        and not alert.deleted
+        and not alert.dismissed
         for alert in alerts_dto
     )
     feed_preset = PresetDto(

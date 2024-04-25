@@ -31,7 +31,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   // Determine whether to use fetched presets or fall back to local storage
   const [staticPresets, setStaticPresets] = useState(staticPresetsOrderFromLS);
-  const [playAlertSound, setPlayAlertSound] = useState(false);
 
   useEffect(() => {
     // Convert both arrays to string to perform a comparison
@@ -46,16 +45,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const deletedPreset = staticPresets.find((preset) => preset.name === "deleted");
   const dismissedPreset = staticPresets.find((preset) => preset.name === "dismissed");
   const groupsPreset = staticPresets.find((preset) => preset.name === "groups");
-
-  // if feed or groups are should do noise now, play alert sound
-  useEffect(() => {
-    // filter out dismissed and deleted
-    const noisyPresets = staticPresets.filter(
-      (preset) => !["deleted", "dismissed"].includes(preset.name)
-    );
-    const anyNoisyNow = noisyPresets.some((preset) => preset.should_do_noise_now);
-    setPlayAlertSound(anyNoisyNow);
-  }, [staticPresets]);
 
   return (
     <>
@@ -83,17 +72,12 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
             <LinkWithIcon
               href="/alerts/feed"
               icon={AiOutlineSwap}
-              iconOverride={
-                mainPreset?.should_do_noise_now ? AiOutlineSound :
-                mainPreset?.is_noisy ? AiOutlineSound : undefined
-              }
               count={mainPreset?.alerts_count}
-              shouldPulse={mainPreset?.should_do_noise_now}
             >
               Feed
             </LinkWithIcon>
           </li>
-          {session && <CustomPresetAlertLinks session={session} setPlayAlertSound={setPlayAlertSound}/>}
+          {session && <CustomPresetAlertLinks session={session}/>}
           <li>
             <LinkWithIcon href="/alerts/groups" icon={AiOutlineGroup} count={groupsPreset?.alerts_count}>
               Correlation
@@ -115,16 +99,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
           </li>
         </Disclosure.Panel>
       </Disclosure>
-      {/* React Player for playing alert sound */}
-      <ReactPlayer
-        url="/music/alert.mp3"
-        playing={playAlertSound}
-        volume={0.5}
-        loop={true}
-        width="0"
-        height="0"
-        playsinline
-      />
    </>
 
   );

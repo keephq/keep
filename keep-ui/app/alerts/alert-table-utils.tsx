@@ -162,33 +162,40 @@ export const useAlertTableCols = (
   ) as ColumnDef<AlertDto>[];
 
   return [
-     // noisy column only of preset is noisy
-     ...(presetNoisy
-      ? [
-          columnHelper.display({
-            id: "noise",
-            size: 5,
-            header: () => <></>,
-            cell: (context) => {
-              // Get the status of the alert
-              const status = context.row.original.status;
+      // noisy column
+      columnHelper.display({
+        id: "noise",
+        size: 5,
+        header: () => <></>,
+        cell: (context) => {
+          // Get the status of the alert
+          const status = context.row.original.status;
+          const isNoisy = context.row.original.isNoisy;
 
-              // Return null if presetNoisy is not true
-              if (!presetNoisy) {
-                return null;
-              }
-
-              // Decide which icon to display based on the status
+          // Return null if presetNoisy is not true
+          if (!presetNoisy && !isNoisy) {
+            return null;
+          }
+          else if (presetNoisy) {
+                // Decide which icon to display based on the status
               if (status === "firing") {
                 return <Icon icon={MdOutlineNotificationsActive} color="red" />;
               } else {
                 return <Icon icon={MdOutlineNotificationsOff} color="red" />;
               }
-            },
-            enableSorting: false,
-          }),
-        ]
-      : []),
+          }
+          // else, noisy alert in non noisy preset
+          else {
+            if (status === "firing") {
+              return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+            } else {
+              return null;
+            }
+          }
+        },
+        enableSorting: false,
+      }),
+    ,
     ...(isCheckboxDisplayed
       ? [
           columnHelper.display({
