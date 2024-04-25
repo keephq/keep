@@ -785,7 +785,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.id == execution_id)
         ).first()
         # some random number to avoid collisions
-        workflow_execution.is_running = random.randint(1, 10**10)
+        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
