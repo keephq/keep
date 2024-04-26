@@ -9,7 +9,7 @@ from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.preset import Preset, PresetDto, PresetOption
+from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
 from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
 
@@ -79,7 +79,7 @@ def get_presets(
             preset_dto.should_do_noise_now = True
         presets_dto.append(preset_dto)
 
-    # add static preset - feed, correlation, deleted and dismissed
+    # add static presets - feed, correlation, deleted and dismissed
     isNoisy = any(
         alert.isNoisy
         and AlertStatus.FIRING.value == alert.status
@@ -88,7 +88,7 @@ def get_presets(
         for alert in alerts_dto
     )
     feed_preset = PresetDto(
-        id="11111111-1111-1111-1111-111111111111",
+        id=StaticPresetsId.FEED_PRESET_ID.value,
         name="feed",
         options=[],
         created_by=None,
@@ -100,7 +100,7 @@ def get_presets(
         ),
     )
     deleted_preset = PresetDto(
-        id="11111111-1111-1111-1111-111111111112",
+        id=StaticPresetsId.DELETED_PRESET_ID.value,
         name="deleted",
         options=[],
         created_by=None,
@@ -110,7 +110,7 @@ def get_presets(
         alerts_count=len([alert for alert in alerts_dto if alert.deleted]),
     )
     dismissed_preset = PresetDto(
-        id="11111111-1111-1111-1111-111111111113",
+        id=StaticPresetsId.DISMISSED_PRESET_ID.value,
         name="dismissed",
         options=[],
         created_by=None,
@@ -120,7 +120,7 @@ def get_presets(
         alerts_count=len([alert for alert in alerts_dto if alert.dismissed]),
     )
     groups_preset = PresetDto(
-        id="11111111-1111-1111-1111-111111111114",
+        id=StaticPresetsId.GROUPS_PRESET_ID.value,
         name="groups",
         options=[],
         created_by=None,

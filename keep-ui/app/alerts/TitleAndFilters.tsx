@@ -4,7 +4,6 @@ import { AlertDto } from "./models";
 import ColumnSelection from "./ColumnSelection";
 import { LastRecieved } from "./LastReceived";
 import { ThemeSelection } from './ThemeSelection';
-import { evalWithContext } from "./alerts-rules-builder";
 
 type Theme = {
   [key: string]: string;

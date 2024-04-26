@@ -46,7 +46,7 @@
     const sortedPresetAlerts = alerts
       .filter((alert) => getPresetAlerts(alert, preset.name))
       .sort((a, b) => {
-          // Check if either alert is noisy
+          // Shahar: we want noise alert first. If no noisy (most of the cases) we want the most recent first.
           const noisyA = (a.isNoisy && a.status == "firing") ? 1 : 0;
           const noisyB = (b.isNoisy && b.status == "firing") ? 1 : 0;
 

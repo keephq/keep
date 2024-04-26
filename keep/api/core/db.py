@@ -161,9 +161,6 @@ def create_db_and_tables():
                     session.exec(
                         "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
                     )
-                    session.exec(
-                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
-                    )
                 elif session.bind.dialect.name == "mysql":
                     session.exec(
                         "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
@@ -382,35 +379,6 @@ def try_create_single_tenant(tenant_id: str) -> None:
         except IntegrityError:
             # Tenant already exists
             pass
-        except Exception:
-            pass
-    # New session since the previous might be in a bad state
-    with Session(engine) as session:
-        try:
-            # TODO: remove this once we have a migration system
-            logger.info("Migrating TenantApiKey table")
-            session.exec(
-                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
-            )
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
-            session.commit()
-            logger.info("Migrated TenantApiKey table")
-        except Exception:
-            pass
-
-    # migrating presets table
-    with Session(engine) as session:
-        try:
-            logger.info("Migrating Preset table")
-            session.exec(
-                "ALTER TABLE preset ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0;"
-            )
-            session.exec(
-                "ALTER TABLE preset ADD COLUMN created_by VARCHAR(1024) DEFAULT '';"
-            )
-            session.commit()
-            logger.info("Migrated Preset table")
         except Exception:
             pass
 

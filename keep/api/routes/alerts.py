@@ -235,24 +235,12 @@ def pull_alerts_from_providers(
                                 preset_dto.should_do_noise_now = True
                         # else if at least one of the alerts has .isNoisy
                         elif any(
-                            alert.isNoisy
+                            alert.isNoisy and alert.status == AlertStatus.FIRING.value
                             for alert in filtered_alerts
                             if hasattr(alert, "isNoisy")
                         ):
                             logger.info("Noisy preset is noisy")
                             preset_dto.should_do_noise_now = True
-                    # also, update the feed preset
-                    feed_preset_dto = PresetDto(
-                        id="11111111-1111-1111-1111-111111111111",
-                        name="feed",
-                        options=[],
-                        created_by=None,
-                        is_private=False,
-                        is_noisy=False,
-                        should_do_noise_now=False,
-                        alerts_count=len(last_alerts),
-                    )
-                    presets_do_update.append(feed_preset_dto)
                     # send with pusher
                     if pusher_client:
                         try:
@@ -731,29 +719,14 @@ def handle_formatted_events(
                 if firing_filtered_alerts:
                     logger.info("Noisy preset is noisy")
                     preset_dto.should_do_noise_now = True
-            # else if at least one of the alerts has .isNoisy
+            # else if at least one of the alerts has isNoisy and should fire:
             elif any(
-                alert.isNoisy for alert in filtered_alerts if hasattr(alert, "isNoisy")
+                alert.isNoisy and alert.status == AlertStatus.FIRING.value
+                for alert in filtered_alerts
+                if hasattr(alert, "isNoisy")
             ):
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
-        # also, update the feed preset
-        isNoisy = any(
-            alert.isNoisy and alert.status == AlertStatus.FIRING.value
-            for alert in enriched_formatted_events
-            if hasattr(alert, "isNoisy")
-        )
-        feed_preset_dto = PresetDto(
-            id="11111111-1111-1111-1111-111111111111",
-            name="feed",
-            options=[],
-            created_by=None,
-            is_private=False,
-            is_noisy=False,
-            should_do_noise_now=isNoisy,
-            alerts_count=len(enriched_formatted_events),
-        )
-        presets_do_update.append(feed_preset_dto)
         # send with pusher
         if pusher_client:
             try:

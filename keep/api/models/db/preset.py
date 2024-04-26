@@ -1,9 +1,18 @@
+import enum
 from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
+
+
+class StaticPresetsId(enum.Enum):
+    # ID of the default preset
+    FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
+    DELETED_PRESET_ID = "11111111-1111-1111-1111-111111111112"
+    DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
+    GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
 
 
 class Preset(SQLModel, table=True):
