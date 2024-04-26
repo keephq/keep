@@ -3,15 +3,11 @@ Site24x7Provider is a class that allows to install webhooks and get alerts in Si
 """
 
 import dataclasses
-import json
-import tempfile
-from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlencode, urljoin
 
 import pydantic
 import requests
-from requests import Response
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager

@@ -112,6 +112,7 @@
             "providers/documentation/sentry-provider",
             "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
+            "providers/documentation/site24x7-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
