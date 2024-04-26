@@ -7,6 +7,8 @@ export interface MappingRule {
   file_name?: string;
   created_by?: string;
   created_at: Date;
+  updated_by?: string;
+  last_updated_at: Date;
   disabled: boolean;
   override: boolean;
   condition?: string;

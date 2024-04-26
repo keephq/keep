@@ -228,6 +228,12 @@ class SignalfxProvider(BaseProvider):
         description = event.pop("description", "")
         name = event.pop("messageTitle", "")
         lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
+        inputs: dict = event.pop("inputs", {})
+        new_inputs = []
+        for key, value in inputs.items():
+            value["id"] = key
+            new_inputs.append(value)
+        event["inputs"] = new_inputs
         url = event.pop("detectorUrl")
         url = SignalfxProvider.sanitize_url(url)
         _id = event.pop("incidentId")
