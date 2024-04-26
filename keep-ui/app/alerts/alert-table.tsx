@@ -29,7 +29,7 @@ import AlertPresets from "./alert-presets";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 
 interface Props {
@@ -81,8 +81,7 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([]);
-
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'noise', desc: true } ]);
 
   const table = useReactTable({
     data: alerts,

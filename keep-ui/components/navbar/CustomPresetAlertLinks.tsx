@@ -139,7 +139,6 @@ export const CustomPresetAlertLinks = ({
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
-
   const pathname = usePathname();
   const router = useRouter();
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
