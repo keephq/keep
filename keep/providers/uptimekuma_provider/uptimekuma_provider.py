@@ -16,9 +16,9 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from uptime_kuma_api import UptimeKumaApi
 
 @pydantic.dataclasses.dataclass
-class UptimeKumaProviderAuthConfig:
+class UptimekumaProviderAuthConfig:
   """
-  UptimeKumaProviderAuthConfig is a class that holds the authentication information for the UptimeKumaProvider.
+  UptimekumaProviderAuthConfig is a class that holds the authentication information for the UptimekumaProvider.
   """
 
   host_url: str = dataclasses.field(
@@ -48,7 +48,7 @@ class UptimeKumaProviderAuthConfig:
     default=None,
   )
 
-class UptimeKumaProvider(BaseProvider):
+class UptimekumaProvider(BaseProvider):
   PROVIDER_DISPLAY_NAME = "UptimeKuma"
   PROVIDER_TAGS = ["alert"]
 
@@ -88,7 +88,7 @@ class UptimeKumaProvider(BaseProvider):
     return {"alerts": False}
     
   def validate_config(self):
-    self.authentication_config = UptimeKumaProviderAuthConfig(**self.config.authentication)
+    self.authentication_config = UptimekumaProviderAuthConfig(**self.config.authentication)
     if self.authentication_config.host_url is None:
       raise ProviderException("UptimeKuma Host URL is required")
     if self.authentication_config.username is None:
@@ -137,10 +137,10 @@ class UptimeKumaProvider(BaseProvider):
   
   @staticmethod
   def _format_alert(
-    event: dict, provider_instance: Optional["UptimeKumaProvider"] = None
+    event: dict, provider_instance: Optional["UptimekumaProvider"] = None
     ) -> AlertDto:
 
-    status = UptimeKumaProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
+    status = UptimekumaProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
 
     # UptimeKuma does not provide severity information
     severity = AlertSeverity.HIGH
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     },
   )
 
-  provider = UptimeKumaProvider(
+  provider = UptimekumaProvider(
     context_manager=context_manager,
     provider_id="uptimekuma",
     config=config,
