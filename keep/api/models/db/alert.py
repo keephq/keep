@@ -33,8 +33,11 @@ else:
         else:
             datetime_column_type = DateTime
     except Exception:
-        logger.error("Failed to get dialect from connection string")
-        raise
+        logger.warning(
+            "Could not determine the database dialect, falling back to default datetime column type"
+        )
+        # give it a default
+        datetime_column_type = DateTime
 
 
 # many to many map between alerts and groups

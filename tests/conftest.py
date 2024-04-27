@@ -11,17 +11,17 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
-load_dotenv(find_dotenv())
-
 # This import is required to create the tables
-from keep.api.core.dependencies import SINGLE_TENANT_UUID  # noqa: E402
-from keep.api.models.db.alert import *  # noqa: E402
-from keep.api.models.db.provider import *  # noqa: E402
-from keep.api.models.db.rule import *  # noqa: E402
-from keep.api.models.db.tenant import *  # noqa: E402
-from keep.api.models.db.user import *  # noqa: E402
-from keep.api.models.db.workflow import *  # noqa: E402
-from keep.contextmanager.contextmanager import ContextManager  # noqa: E402
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.db.alert import *
+from keep.api.models.db.provider import *
+from keep.api.models.db.rule import *
+from keep.api.models.db.tenant import *
+from keep.api.models.db.user import *
+from keep.api.models.db.workflow import *
+from keep.contextmanager.contextmanager import ContextManager
+
+load_dotenv(find_dotenv())
 
 
 @pytest.fixture
