@@ -117,6 +117,7 @@
             "providers/documentation/sentry-provider",
             "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
+            "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
             "providers/documentation/splunk-provider",
@@ -127,10 +128,11 @@
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/websocket-provider",
+            "providers/documentation/incidentmanager-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider"
           ]
-        }
+        } 
       ]
     },
     {
