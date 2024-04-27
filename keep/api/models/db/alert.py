@@ -1,11 +1,40 @@
 import hashlib
+import logging
 from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
+from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
+from sqlalchemy.engine.url import make_url
+from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
 
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
+from keep.api.core.config import config
 from keep.api.models.db.tenant import Tenant
+
+db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+logger = logging.getLogger(__name__)
+# managed (mysql)
+if RUNNING_IN_CLOUD_RUN or db_connection_string == "impersonate":
+    # Millisecond precision
+    datetime_column_type = MySQL_DATETIME(fsp=3)
+# self hosted (mysql, sql server, sqlite / postgres)
+else:
+    try:
+        url = make_url(db_connection_string)
+        dialect = url.get_dialect().name
+        if dialect == "mssql":
+            # Millisecond precision
+            datetime_column_type = MSSQL_DATETIME2(precision=3)
+        elif dialect == "mysql":
+            # Millisecond precision
+            datetime_column_type = MySQL_DATETIME(fsp=3)
+        else:
+            datetime_column_type = DateTime
+    except Exception:
+        logger.error("Failed to get dialect from connection string")
+        raise
 
 
 # many to many map between alerts and groups
@@ -44,7 +73,12 @@ class Alert(SQLModel, table=True):
     # index=True added because we query top 1000 alerts order by timestamp. On a large dataset, this will be slow without an index.
     #            with 1M alerts, we see queries goes from >30s to 0s with the index
     #            todo: on MSSQL, the index is "nonclustered" index which cannot be controlled by SQLModel
-    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    timestamp: datetime = Field(
+        sa_column=Column(datetime_column_type, index=True, nullable=False),
+        default_factory=lambda: datetime.utcnow().replace(
+            microsecond=int(datetime.utcnow().microsecond / 1000) * 1000
+        ),
+    )
     provider_type: str
     provider_id: str | None
     event: dict = Field(sa_column=Column(JSON))

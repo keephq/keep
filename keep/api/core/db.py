@@ -936,6 +936,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
                     "startedAt"
                 ),  # Include "startedAt" in the selected columns
             )
+            .filter(Alert.tenant_id == tenant_id)
             .join(
                 subquery,
                 and_(
@@ -946,9 +947,6 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .options(joinedload(Alert.alert_enrichment))
         )
 
-        # Filter by tenant_id
-        query = query.filter(Alert.tenant_id == tenant_id)
-
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
@@ -956,7 +954,6 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         query = query.order_by(Alert.timestamp.desc()).limit(limit)
         # Execute the query
         alerts_with_start = query.all()
-
         # Convert result to list of Alert objects and include "startedAt" information if needed
         alerts = []
         for alert, startedAt in alerts_with_start:
