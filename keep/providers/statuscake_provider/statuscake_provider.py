@@ -222,13 +222,14 @@ class StatuscakeProvider(BaseProvider):
     
     status = StatuscakeProvider.STATUS_MAP.get(event.get("status"),AlertStatus.FIRING)
 
-    severity = StatuscakeProvider.SEVERITIES_MAP.get(event["severity"], AlertSeverity.HIGH)
+    # Statuscake does not provide severity information
+    severity = AlertSeverity.HIGH
 
     alert = AlertDto(
       id=event.get("id"),
       name=event.get("name"),
       status=status if status is not None else AlertStatus.FIRING,
-      severity=severity if severity is not None else AlertSeverity.INFO,
+      severity=severity,
       url=event["website_url"] if "website_url" in event else None,
       source="statuscake"
     )
