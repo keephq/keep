@@ -6,8 +6,9 @@ import dataclasses
 
 import pydantic
 import requests
+from typing import Optional
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -37,6 +38,15 @@ class StatuscakeProvider(BaseProvider):
       description="Read alerts from Statuscake",
     )
   ]
+
+  SEVERITIES_MAP = {
+    "high": AlertSeverity.HIGH,
+  }
+
+  STATUS_MAP = {
+    "up": AlertStatus.RESOLVED,
+    "down": AlertStatus.FIRING,
+  }
 
   def __init__(
       self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -204,6 +214,26 @@ class StatuscakeProvider(BaseProvider):
       self.logger.error("Error getting uptime from Statuscake: %s", e)
       
     return alerts
+  
+  @staticmethod
+  def _format_alert(
+    event: dict, provider_instance: Optional["StatuscakeProvider"] = None
+  ) -> AlertDto:
+    
+    status = StatuscakeProvider.STATUS_MAP.get(event.get("status"),AlertStatus.FIRING)
+
+    severity = StatuscakeProvider.SEVERITIES_MAP.get(event["severity"], AlertSeverity.HIGH)
+
+    alert = AlertDto(
+      id=event.get("id"),
+      name=event.get("name"),
+      status=status if status is not None else AlertStatus.FIRING,
+      severity=severity if severity is not None else AlertSeverity.INFO,
+      url=event["website_url"] if "website_url" in event else None,
+      source="statuscake"
+    )
+
+    return alert
 
 if __name__ == "__main__":
   pass
