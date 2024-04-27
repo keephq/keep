@@ -59,23 +59,23 @@ export const usePresets = () => {
     () => (configData?.PUSHER_DISABLED === false && session && isLocalStorageReady) ? "presets" : null,
     (_, { next }) => {
       console.log("Subscribing to presets channel")
-      const pusher = new Pusher(configData.PUSHER_APP_KEY, {
-        wsHost: configData.PUSHER_HOST,
-        wsPort: configData.PUSHER_PORT,
+      const pusher = new Pusher(configData!.PUSHER_APP_KEY, {
+        wsHost: configData!.PUSHER_HOST,
+        wsPort: configData!.PUSHER_PORT,
         forceTLS: false,
         disableStats: true,
         enabledTransports: ["ws", "wss"],
-        cluster: configData.PUSHER_CLUSTER || "local",
+        cluster: configData!.PUSHER_CLUSTER || "local",
         channelAuthorization: {
           transport: "ajax",
           endpoint: `${apiUrl}/pusher/auth`,
           headers: {
-            Authorization: `Bearer ${session.accessToken}`
+            Authorization: `Bearer ${session!.accessToken}`
           },
         },
       });
 
-      const channelName = `private-${session.tenantId}`;
+      const channelName = `private-${session!.tenantId}`;
       const channel = pusher.subscribe(channelName);
 
       channel.bind("async-presets", (newPresets: Preset[]) => {
@@ -116,7 +116,7 @@ export const usePresets = () => {
     );
   };
 
-  const mergePresetsWithLocalStorage = (serverPresets, localPresets, setter) => {
+  const mergePresetsWithLocalStorage = (serverPresets: Preset[], localPresets: Preset[], setter: (presets: Preset[]) => void) => {
     const updatedLocalPresets = localPresets.map(lp => {
         const serverPreset = serverPresets.find(sp => sp.id === lp.id);
         return serverPreset ? {...lp, ...serverPreset} : lp;
