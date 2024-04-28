@@ -1,6 +1,6 @@
-import NextAuth, { AuthOptions } from "next-auth";
+import NextAuth, { type AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import KeycloakProvider from "next-auth/providers/keycloak";
+import KeycloakProvider, { KeycloakProfile } from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
 import {
@@ -8,8 +8,11 @@ import {
   NoAuthUserEmail,
   NoAuthTenant,
 } from "utils/authenticationType";
+import { OAuthConfig } from "next-auth/providers";
+import { JWT } from "next-auth/jwt";
 
 const authType = process.env.AUTH_TYPE as AuthenticationType;
+
 /*
 
 This file implements three different authentication flows:
@@ -202,7 +205,7 @@ const noAuthOptions = {
 } as AuthOptions;
 
 
-const keycloakAuthOptions = {
+const keycloakAuthOptions  = {
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
@@ -224,6 +227,7 @@ const keycloakAuthOptions = {
     async jwt({ token, account, profile, user }) {
       if (account) {
         token.accessToken = account.access_token;
+        token.id_token = account.id_token;
       }
       return token;
     },
@@ -232,8 +236,38 @@ const keycloakAuthOptions = {
       return session;
     },
   },
+  events: {
+    async signOut({ token }: { token: any }) {
+      console.log("Signing out from Keycloak");
+      const issuerUrl = (authOptions.providers.find(p => p.id === "keycloak") as OAuthConfig<KeycloakProfile>).options!.issuer!
+      const logOutUrl = new URL(`${issuerUrl}/protocol/openid-connect/logout`)
+      logOutUrl.searchParams.set("id_token_hint", token.id_token);
+      try {
+        // Perform the logout request.
+        const response = await fetch(logOutUrl.toString(), {
+            method: 'GET', // or 'POST' if required by your Keycloak server
+            headers: {
+                // If your logout endpoint requires authentication, you may need to add an Authorization header
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        // Check if the HTTP request was successful.
+        if (!response.ok) {
+            throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
+        }
+
+        // Optionally, log or handle the response body
+        const data = await response.text(); // or `response.text()` if expecting non-JSON response
+        console.log("Response from Keycloak:", data);
+    } catch (error) {
+        console.error("Error signing out from Keycloak:", error);
+    }
+      console.log("Signed out from Keycloak");
+    },
+  }
   // Include any additional NextAuth options here
-} as AuthOptions;;
+} as AuthOptions;
 
 
 console.log("Starting Keep frontend with auth type: ", authType);
