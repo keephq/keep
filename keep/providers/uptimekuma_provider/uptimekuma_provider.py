@@ -59,10 +59,6 @@ class UptimekumaProvider(BaseProvider):
     )
   ]
 
-  SEVERITIES_MAP = {
-    "high": AlertSeverity.HIGH,
-  }
-
   STATUS_MAP = {
     "up": AlertStatus.RESOLVED,
     "down": AlertStatus.FIRING,
@@ -116,7 +112,6 @@ class UptimekumaProvider(BaseProvider):
           monitor_id=heartbeat["monitor_id"],
           description=heartbeat["msg"],
           status=heartbeat["status"].name.lower(),
-          severity=heartbeat["important"],
           time=heartbeat["time"],
           ping=heartbeat["ping"],
           source="uptimekuma"
@@ -142,14 +137,10 @@ class UptimekumaProvider(BaseProvider):
 
     status = UptimekumaProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
 
-    # UptimeKuma does not provide severity information
-    severity = AlertSeverity.HIGH
-
     alert = AlertDto(
       id=event["id"],
       name=event["monitor_id"],
-      status=status if status is not None else AlertStatus.FIRING,
-      severity=severity,
+      status=AlertStatus.FIRING,
       description=event["description"],
       time=event["time"],
       ping=event["ping"],
