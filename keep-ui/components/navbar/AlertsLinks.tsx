@@ -5,7 +5,6 @@ import { Badge, Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 import {
-  DoorbellNotification,
   SilencedDoorbellNotification,
   Trashcan,
 } from "components/icons";
@@ -16,7 +15,6 @@ import classNames from "classnames";
 import { Session } from "next-auth";
 import { usePresets } from "utils/hooks/usePresets";
 import { useEffect, useState } from "react";
-import ReactPlayer from 'react-player';
 
 type AlertsLinksProps = {
   session: Session | null;

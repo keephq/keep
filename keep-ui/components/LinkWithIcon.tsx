@@ -4,8 +4,6 @@ import { IconType } from "react-icons/lib";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
-// import css
-import "./LinkWithIcon.css";
 
 type LinkWithIconProps = {
   children: ReactNode;
