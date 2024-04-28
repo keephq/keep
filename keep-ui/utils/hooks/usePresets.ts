@@ -117,16 +117,28 @@ export const usePresets = () => {
   };
 
   const mergePresetsWithLocalStorage = (serverPresets: Preset[], localPresets: Preset[], setter: (presets: Preset[]) => void) => {
-    const updatedLocalPresets = localPresets.map(lp => {
+    // This map quickly checks presence by ID
+    const serverPresetIds = new Set(serverPresets.map(sp => sp.id));
+
+    // Filter localPresets to remove those not present in serverPresets
+    const updatedLocalPresets = localPresets.filter(lp => serverPresetIds.has(lp.id)).map(lp => {
+        // Find the server version of this local preset
         const serverPreset = serverPresets.find(sp => sp.id === lp.id);
+        // If found, merge, otherwise just return local (though filtered above)
         return serverPreset ? {...lp, ...serverPreset} : lp;
     });
 
+    // Filter serverPresets to find those not in local storage, to add new presets from server
     const newServerPresets = serverPresets.filter(sp => !localPresets.some(lp => lp.id === sp.id));
+
+    // Combine the updated local presets with any new server presets
     const combinedPresets = updatedLocalPresets.concat(newServerPresets);
+
+    // Update state with combined list
     setter(combinedPresets);
     setIsLocalStorageReady(true);
-  };
+};
+
 
   const useAllPresets = (options?: SWRConfiguration) => {
     const { data: presets, error, isValidating, mutate } = useFetchAllPresets(options);
