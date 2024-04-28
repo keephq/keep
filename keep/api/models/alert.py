@@ -73,7 +73,10 @@ class AlertDto(BaseModel):
     providerId: str | None = None  # The provider id
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
-    startedAt: str | None = None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
+    startedAt: str | None = (
+        None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
+    )
+    isNoisy: bool = False  # Whether the alert is noisy
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -159,6 +162,16 @@ class AlertDto(BaseModel):
 
         values.pop("assignees", None)
         values.pop("deletedAt", None)
+        return values
+
+    # after root_validator to ensure that the values are set
+    @root_validator(pre=False)
+    def validate_status(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # if dismissed, change status to SUPPRESSED
+        # note this is happen AFTER validate_dismissed which already consider
+        #   dismissed + dismissUntil
+        if values.get("dismissed"):
+            values["status"] = AlertStatus.SUPPRESSED
         return values
 
     class Config:

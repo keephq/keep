@@ -14,6 +14,7 @@ import { useState } from "react";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { format, set } from "date-fns";
+import { usePresets } from "utils/hooks/usePresets";
 
 interface Props {
   alert: AlertDto | null | undefined;
@@ -33,6 +34,10 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
     const [timeSelected, setTimeSelected] = useState(false);
 
     const [selectedOption, setSelectedOption] = useState({ value: '', label: 'Dismiss Forever' });
+
+
+  const { useAllPresets } = usePresets();
+  const { mutate: presetsMutator } = useAllPresets();
 
   const { data: session } = useSession();
   // if this modal should not be open, do nothing
@@ -118,6 +123,8 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
         console.error("Failed to dismiss alert");
         clearAndClose();
       }
+      // fetch presets
+      await presetsMutator();
     }
 
   const formats = [
