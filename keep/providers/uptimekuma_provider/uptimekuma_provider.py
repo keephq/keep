@@ -135,8 +135,6 @@ class UptimekumaProvider(BaseProvider):
     event: dict, provider_instance: Optional["UptimekumaProvider"] = None
     ) -> AlertDto:
 
-    status = UptimekumaProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
-
     alert = AlertDto(
       id=event["id"],
       name=event["monitor_id"],
