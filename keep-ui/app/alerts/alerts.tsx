@@ -45,7 +45,16 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
-  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription();
+  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription(
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount:false,
+      revalidateOnReconnect: false,
+      refreshWhenOffline: false,
+      refreshWhenHidden: false,
+      refreshInterval: 0
+
+    });
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -60,6 +69,7 @@ export default function Alerts({ presetName }: AlertsProps) {
     return null;
   }
 
+  console.log("number of alerts: ", alerts.length)
   return (
     <>
       <AlertTableTabPanel

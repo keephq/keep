@@ -121,6 +121,9 @@ export function AlertTable({
     return acc.concat(alertId);
   }, []);
 
+  // show skeleton if no alerts are loaded
+  let showSkeleton = table.getFilteredRowModel().rows.length === 0;
+
   return (
     <>
       <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
@@ -156,7 +159,7 @@ export function AlertTable({
             table={table}
             presetName={presetName}
           />
-          <AlertsTableBody table={table} showSkeleton={isAsyncLoading} theme={theme} />
+          <AlertsTableBody table={table} showSkeleton={showSkeleton} theme={theme} />
         </Table>
         <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       </Card>

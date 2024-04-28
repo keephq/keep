@@ -944,7 +944,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
                     Alert.timestamp == subquery.c.max_timestamp,
                 ),
             )
-            .options(joinedload(Alert.alert_enrichment))
+            .options(subqueryload(Alert.alert_enrichment))
         )
 
         if provider_id:
