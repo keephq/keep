@@ -1,0 +1,27 @@
+name: Keep Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Release Keep
+      uses: python-semantic-release/python-semantic-release@v9.4.0
+      env:
+        GH_TOKEN: ${{ secrets.SHAHAR_PAT }}
+      with:
+        git_committer_name: Keep Release Bot
+        git_committer_email: no-reply@keephq.dev
+        github_token: ${{ secrets.SHAHAR_PAT }}

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import {
   ColumnDef,
-  PaginationState,
+  FilterFn,
+  Row,
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
 } from "@tanstack/react-table";
 import { AlertDto } from "./models";
-import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
+import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertSeverity from "./alert-severity";
 import AlertName from "./alert-name";
@@ -16,8 +17,12 @@ import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
+import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
+import { Severity, severityMapping } from "./models";
+import { MdOutlineNotificationsActive, MdOutlineNotificationsOff } from "react-icons/md";
 
 export const DEFAULT_COLS = [
+  "noise",
   "checkbox",
   "severity",
   "name",
@@ -33,16 +38,6 @@ export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
   (acc, colId) => ({ ...acc, [colId]: true }),
   {}
 );
-
-export const getPaginatedData = (
-  alerts: AlertDto[],
-  { pageIndex, pageSize }: PaginationState
-) => alerts.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
-
-export const getDataPageCount = (
-  dataLength: number,
-  { pageSize }: PaginationState
-) => Math.ceil(dataLength / pageSize);
 
 export const getColumnsIds = (columns: ColumnDef<AlertDto>[]) =>
   columns.map((column) => column.id as keyof AlertDto);
@@ -63,8 +58,49 @@ export const getOnlyVisibleCols = (
     return { ...acc, [columnId]: false };
   }, columnVisibility);
 
+export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
+  const date = new Date(row.getValue(columnId));
+
+  const { start, end } = value;
+
+  if (!date) {
+    return true;
+  }
+
+  if (isValid(start) && isValid(end)) {
+    return isWithinInterval(startOfDay(date), { start, end });
+  }
+
+  if (isValid(start)) {
+    return isSameDay(start, date);
+  }
+
+  if (isValid(end)) {
+    return isSameDay(end, date);
+  }
+
+  return true;
+};
+
 const columnHelper = createColumnHelper<AlertDto>();
 
+const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: string]: number }>((acc, [key, value]) => {
+  acc[value as keyof typeof acc] = Number(key);
+  return acc;
+}, {});
+
+
+const customSeveritySortFn = (rowA: any, rowB: any) => {
+  // Adjust the way to access severity values according to your data structure
+  const severityValueA = rowA.original?.severity; // or rowA.severity;
+  const severityValueB = rowB.original?.severity; // or rowB.severity;
+
+  // Use the inverted mapping to get ranks
+  const rankA = invertedSeverityMapping[severityValueA] || 0;
+  const rankB = invertedSeverityMapping[severityValueB] || 0;
+
+  return rankA > rankB ? 1 : rankA < rankB ? -1 : 0;
+};
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -72,7 +108,10 @@ interface GenerateAlertTableColsArg {
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
+  presetNoisy?: boolean;
+  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = (
@@ -83,7 +122,10 @@ export const useAlertTableCols = (
     setNoteModalAlert,
     setTicketModalAlert,
     setRunWorkflowModalAlert,
+    setDismissModalAlert,
     presetName,
+    presetNoisy = false,
+    setViewAlertModal,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -120,11 +162,45 @@ export const useAlertTableCols = (
   ) as ColumnDef<AlertDto>[];
 
   return [
+      // noisy column
+      columnHelper.display({
+        id: "noise",
+        size: 5,
+        header: () => <></>,
+        cell: (context) => {
+          // Get the status of the alert
+          const status = context.row.original.status;
+          const isNoisy = context.row.original.isNoisy;
+
+          // Return null if presetNoisy is not true
+          if (!presetNoisy && !isNoisy) {
+            return null;
+          }
+          else if (presetNoisy) {
+                // Decide which icon to display based on the status
+              if (status === "firing") {
+                return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+              } else {
+                return <Icon icon={MdOutlineNotificationsOff} color="red" />;
+              }
+          }
+          // else, noisy alert in non noisy preset
+          else {
+            if (status === "firing") {
+              return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+            } else {
+              return null;
+            }
+          }
+        },
+        enableSorting: false,
+      }),
+    ,
     ...(isCheckboxDisplayed
       ? [
           columnHelper.display({
             id: "checkbox",
-            size: 50,
+            size: 10,
             header: (context) => (
               <AlertTableCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -147,6 +223,8 @@ export const useAlertTableCols = (
       header: "Severity",
       minSize: 100,
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
+      sortingFn: customSeveritySortFn,
+
     }),
     columnHelper.display({
       id: "name",
@@ -178,6 +256,7 @@ export const useAlertTableCols = (
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
       header: "Last Received",
+      filterFn: isDateWithinRange,
       minSize: 100,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
@@ -221,14 +300,14 @@ export const useAlertTableCols = (
             // because all fingerprints are the same. (it's the history of that fingerprint :P)
             isMenuDisplayed
               ? expandedToggles[context.row.original.fingerprint]
-              : expandedToggles[context.row.original.id]
+              : expandedToggles[context.row.id]
           }
           setIsToggled={(newValue) =>
             setExpandedToggles({
               ...expandedToggles,
               [isMenuDisplayed
                 ? context.row.original.fingerprint
-                : context.row.original.id]: newValue,
+                : context.row.id]: newValue,
             })
           }
         />
@@ -240,7 +319,7 @@ export const useAlertTableCols = (
           columnHelper.display({
             id: "alertMenu",
             meta: {
-              tdClassName: "flex justify-end",
+              tdClassName: "sticky right-0",
             },
             size: 50,
             cell: (context) => (
@@ -252,6 +331,8 @@ export const useAlertTableCols = (
                 }
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                setDismissModalAlert={setDismissModalAlert}
+                setViewAlertModal={setViewAlertModal}
               />
             ),
           }),

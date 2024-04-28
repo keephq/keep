@@ -1,158 +1,94 @@
-import { useEffect, useState } from "react";
-import { PaginationState, RowSelectionState } from "@tanstack/react-table";
-import AlertPresets, { Option } from "./alert-presets";
-import { AlertTable } from "./alert-table";
-import { useAlertTableCols } from "./alert-table-utils";
-import { AlertDto, AlertKnownKeys, Preset } from "./models";
-import AlertActions from "./alert-actions";
+  import { AlertTable } from "./alert-table";
+  import { useAlertTableCols } from "./alert-table-utils";
+  import { AlertDto, AlertKnownKeys, Preset } from "./models";
 
-const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
-  if (presetName === "deleted") {
-    return alert.deleted === true;
+  const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
+    if (presetName === "deleted") {
+      return alert.deleted === true;
+    }
+
+    if (presetName === "groups") {
+      return alert.group === true;
+    }
+
+    if (presetName === "feed") {
+      return alert.deleted === false && alert.dismissed === false;
+    }
+
+    if (presetName === "dismissed") {
+      return alert.dismissed === true;
+    }
+
+    return true;
+  };
+
+  interface Props {
+    alerts: AlertDto[];
+    preset: Preset;
+    isAsyncLoading: boolean;
+    setTicketModalAlert: (alert: AlertDto | null) => void;
+    setNoteModalAlert: (alert: AlertDto | null) => void;
+    setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
+    setDismissModalAlert: (alert: AlertDto | null) => void;
+    setViewAlertModal: (alert: AlertDto) => void;
   }
 
-  if (presetName === "groups") {
-    return alert.group === true;
-  }
+  export default function AlertTableTabPanel({
+    alerts,
+    preset,
+    isAsyncLoading,
+    setTicketModalAlert,
+    setNoteModalAlert,
+    setRunWorkflowModalAlert,
+    setDismissModalAlert,
+    setViewAlertModal,
+  }: Props) {
+    const sortedPresetAlerts = alerts
+      .filter((alert) => getPresetAlerts(alert, preset.name))
+      .sort((a, b) => {
+          // Shahar: we want noise alert first. If no noisy (most of the cases) we want the most recent first.
+          const noisyA = (a.isNoisy && a.status == "firing") ? 1 : 0;
+          const noisyB = (b.isNoisy && b.status == "firing") ? 1 : 0;
 
-  if (presetName === "feed") {
-    return alert.deleted === false;
-  }
-
-  return true;
-};
-
-const getOptionAlerts = (alert: AlertDto, options: Option[]): boolean =>
-  options.length > 0
-    ? options.some((option) => {
-        const [key, value] = option.value.split("=");
-
-        if (key && value) {
-          const attribute = key.toLowerCase() as keyof AlertDto;
-          const lowercaseAttributeValue = value.toLowerCase();
-
-          const alertAttributeValue = alert[attribute];
-
-          if (Array.isArray(alertAttributeValue)) {
-            return alertAttributeValue.every((v) =>
-              lowercaseAttributeValue.split(",").includes(v)
-            );
+          // Primary sort based on noisy flag (true first)
+          if (noisyA !== noisyB) {
+              return noisyB - noisyA;
           }
 
-          if (typeof alertAttributeValue === "string") {
-            return alertAttributeValue
-              .toLowerCase()
-              .includes(lowercaseAttributeValue);
-          }
-        }
+          // Secondary sort based on time (most recent first)
+          return b.lastReceived.getTime() - a.lastReceived.getTime();
+    });
 
-        return false;
-      })
-    : true;
+    const additionalColsToGenerate = [
+      ...new Set(
+        alerts
+          .flatMap((alert) => Object.keys(alert))
+          .filter((key) => AlertKnownKeys.includes(key) === false)
+      ),
+    ];
 
-const getPresetAndOptionsAlerts = (
-  alert: AlertDto,
-  options: Option[],
-  presetName: string
-) => getPresetAlerts(alert, presetName) && getOptionAlerts(alert, options);
+    const alertTableColumns = useAlertTableCols({
+      additionalColsToGenerate: additionalColsToGenerate,
+      isCheckboxDisplayed:
+        preset.name !== "deleted" && preset.name !== "dismissed",
+      isMenuDisplayed: true,
+      setTicketModalAlert: setTicketModalAlert,
+      setNoteModalAlert: setNoteModalAlert,
+      setRunWorkflowModalAlert: setRunWorkflowModalAlert,
+      setDismissModalAlert: setDismissModalAlert,
+      setViewAlertModal: setViewAlertModal,
+      presetName: preset.name,
+      presetNoisy: preset.is_noisy,
+    });
 
-interface Props {
-  alerts: AlertDto[];
-  preset: Preset;
-  isAsyncLoading: boolean;
-  setTicketModalAlert: (alert: AlertDto | null) => void;
-  setNoteModalAlert: (alert: AlertDto | null) => void;
-  setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
-}
-
-const defaultRowPaginationState = {
-  pageSize: 10,
-  pageIndex: 0,
-};
-
-export default function AlertTableTabPanel({
-  alerts,
-  preset,
-  isAsyncLoading,
-  setTicketModalAlert,
-  setNoteModalAlert,
-  setRunWorkflowModalAlert,
-}: Props) {
-  const [selectedOptions, setSelectedOptions] = useState<Option[]>(
-    preset.options
-  );
-
-  const [rowPagination, setRowPagination] = useState<PaginationState>(
-    defaultRowPaginationState
-  );
-
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const selectedRowIds = Object.entries(rowSelection).reduce<string[]>(
-    (acc, [alertId, isSelected]) => {
-      if (isSelected) {
-        return acc.concat(alertId);
-      }
-      return acc;
-    },
-    []
-  );
-
-  const sortedPresetAlerts = alerts
-    .filter((alert) =>
-      getPresetAndOptionsAlerts(alert, selectedOptions, preset.name)
-    )
-    .sort((a, b) => b.lastReceived.getTime() - a.lastReceived.getTime());
-
-  const additionalColsToGenerate = [
-    ...new Set(
-      alerts
-        .flatMap((alert) => Object.keys(alert))
-        .filter((key) => AlertKnownKeys.includes(key) === false)
-    ),
-  ];
-
-  const alertTableColumns = useAlertTableCols({
-    additionalColsToGenerate: additionalColsToGenerate,
-    isCheckboxDisplayed: preset.name !== "deleted",
-    isMenuDisplayed: true,
-    setTicketModalAlert: setTicketModalAlert,
-    setNoteModalAlert: setNoteModalAlert,
-    setRunWorkflowModalAlert: setRunWorkflowModalAlert,
-    presetName: preset.name,
-  });
-
-  useEffect(() => {
-    setRowPagination(defaultRowPaginationState);
-  }, [selectedOptions]);
-
-  return (
-    <>
-      {selectedRowIds.length ? (
-        <AlertActions
-          selectedRowIds={selectedRowIds}
-          alerts={sortedPresetAlerts}
-          clearRowSelection={() => setRowSelection({})}
-        />
-      ) : (
-        <AlertPresets
-          preset={preset}
-          alerts={sortedPresetAlerts}
-          selectedOptions={selectedOptions}
-          setSelectedOptions={setSelectedOptions}
-          isLoading={isAsyncLoading}
-        />
-      )}
+    return (
       <AlertTable
-        alerts={sortedPresetAlerts}
-        columns={alertTableColumns}
-        isAsyncLoading={isAsyncLoading}
-        rowSelection={{ state: rowSelection, onChange: setRowSelection }}
-        rowPagination={{
-          state: rowPagination,
-          onChange: setRowPagination,
-        }}
-        presetName={preset.name}
+          alerts={sortedPresetAlerts}
+          columns={alertTableColumns}
+          isAsyncLoading={isAsyncLoading}
+          presetName={preset.name}
+          presetPrivate={preset.is_private}
+          presetNoisy={preset.is_noisy}
       />
-    </>
-  );
-}
+    );
+  }

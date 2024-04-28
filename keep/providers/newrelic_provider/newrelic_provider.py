@@ -5,6 +5,7 @@ NewrelicProvider is a provider that provides a way to interact with New Relic.
 import dataclasses
 import json
 from datetime import datetime
+from typing import Optional
 
 import pydantic
 import requests
@@ -46,6 +47,8 @@ class NewrelicProviderAuthConfig:
 
 
 class NewrelicProvider(BaseProvider):
+    """Get alerts from New Relic into Keep."""
+
     NEWRELIC_WEBHOOK_NAME = "keep-webhook"
     PROVIDER_DISPLAY_NAME = "New Relic"
     PROVIDER_SCOPES = [
@@ -397,9 +400,9 @@ class NewrelicProvider(BaseProvider):
                 )
             alert = AlertDto(
                 id=issue["issueId"],
-                name=issue["title"][0]
-                if issue["title"]
-                else None,  # Assuming the first title in the list
+                name=(
+                    issue["title"][0] if issue["title"] else None
+                ),  # Assuming the first title in the list
                 status=issue["state"],
                 lastReceived=lastReceived,
                 severity=issue["priority"],
@@ -418,12 +421,14 @@ class NewrelicProvider(BaseProvider):
         return formatted_alerts
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["NewrelicProvider"] = None
+    ) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         lastReceived = event["lastReceived"] if "lastReceived" in event else None
         if lastReceived:
             lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%SZ",
             )
             event["lastReceived"] = lastReceived
         # format status and severity to Keep format

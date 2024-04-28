@@ -82,6 +82,14 @@ class WorkflowExecutionLogsDTO(BaseModel):
     context: Optional[dict]
 
 
+class WorkflowToAlertExecutionDTO(BaseModel):
+    workflow_id: str
+    workflow_execution_id: str
+    alert_fingerprint: str
+    workflow_status: str
+    workflow_started: datetime
+
+
 class WorkflowExecutionDTO(BaseModel):
     id: str
     workflow_id: str

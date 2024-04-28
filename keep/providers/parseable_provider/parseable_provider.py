@@ -1,11 +1,13 @@
 """
 Parseable Provider is a class that allows to ingest/digest data from Parseable.
 """
+
 import dataclasses
 import datetime
 import json
 import logging
 import os
+from typing import Optional
 from uuid import uuid4
 
 import pydantic
@@ -118,7 +120,9 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["ParseableProvider"] = None
+    ) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")

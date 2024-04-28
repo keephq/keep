@@ -1,0 +1,15 @@
+workflow:
+  id: squadcast
+  description: squadcast
+  triggers:
+    - type: alert
+  actions:
+    - name: create-incident
+      provider:
+          config: "{{ providers.squadcast }}"
+          type: squadcast
+          with:
+            additional_json: '{{ alert }}'
+            description: TEST
+            message: '{{ alert.name }}-test'
+            notify_type: incident

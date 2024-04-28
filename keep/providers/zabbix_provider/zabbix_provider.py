@@ -1,12 +1,13 @@
 """
 Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 """
+
 import dataclasses
 import datetime
 import json
 import os
 import random
-from typing import Literal
+from typing import Literal, Optional
 
 import pydantic
 import requests
@@ -296,7 +297,7 @@ class ZabbixProvider(BaseProvider):
                 # This is a hack to check if the error is related to permissions
                 error = getattr(e, "message", e.args[0])
                 # If we got here, it means it's an exception from Zabbix
-                if "permission" in error or "not authorized" in error.lower():
+                if "permission" in str(error) or "not authorized" in str(error).lower():
                     validated_scopes[scope.name] = error
                     continue
             validated_scopes[scope.name] = True
@@ -554,7 +555,9 @@ class ZabbixProvider(BaseProvider):
         self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: Optional["ZabbixProvider"] = None
+    ) -> AlertDto:
         environment = "unknown"
         tags = {
             tag.get("tag"): tag.get("value")

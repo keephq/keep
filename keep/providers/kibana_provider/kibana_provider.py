@@ -1,11 +1,12 @@
 """
 Kibana provider.
 """
+
 import dataclasses
 import datetime
 import json
 import uuid
-from typing import Literal
+from typing import Literal, Optional
 from urllib.parse import urlparse
 
 import pydantic
@@ -312,11 +313,15 @@ class KibanaProvider(BaseProvider):
             for status in ["Alert", "Recovered", "No Data"]:
                 alert_actions.append(
                     {
-                        "group": "custom_threshold.fired"
-                        if status == "Alert"
-                        else "recovered"
-                        if status == "Recovered"
-                        else "custom_threshold.nodata",
+                        "group": (
+                            "custom_threshold.fired"
+                            if status == "Alert"
+                            else (
+                                "recovered"
+                                if status == "Recovered"
+                                else "custom_threshold.nodata"
+                            )
+                        ),
                         "id": connector_id,
                         "params": {"body": KibanaProvider.WEBHOOK_PAYLOAD},
                         "frequency": {
@@ -466,7 +471,9 @@ class KibanaProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: Optional["KibanaProvider"] = None
+    ) -> AlertDto | list[AlertDto]:
         """
         Formats an alert from Kibana to a standard format.
 

@@ -23,6 +23,14 @@ class MockProvider(BaseProvider):
         """
         return kwargs.get("command_output")
 
+    def _notify(self, **kwargs):
+        """This is mock provider that just return the command output.
+
+        Returns:
+            _type_: _description_
+        """
+        return kwargs
+
     def dispose(self):
         """
         No need to dispose of anything, so just do nothing.

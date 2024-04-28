@@ -1,0 +1,37 @@
+---
+title: "Splunk"
+sidebarTitle: "Splunk Provider"
+description: "Splunk provider allows you to get Splunk `saved searches` via webhook installation"
+---
+
+## Authentication Parameters
+The Splunk provider requires the following authentication parameter:
+
+- `Splunk UseAPI Key`: Required. This is your Splunk account username, which you use to log in to the Splunk platform.
+- `Host`: This is the hostname or IP address of the Splunk instance you wish to connect to. It identifies the Splunk server that the API will interact with.
+- `Port`: This is the network port on the Splunk server that is listening for API connections. The default port for Splunk's management API is typically 8089.
+- ``
+
+## Connecting with the Provider
+
+Obtain Splunk API Token:
+1. Ensure you have a Splunk account with the necessary [permissions](https://docs.splunk.com/Documentation/Splunk/9.2.0/Security/Rolesandcapabilities). The basic permissions required are `list_all_objects` & `edit_own_objects`.
+2. Get an API token for authenticating API requests. [Read More](https://docs.splunk.com/Documentation/Splunk/9.2.0/Security/Setupauthenticationwithtokens) on how to set up and get API Keys.
+
+Identify Your Splunk Instance Details:
+1. Determine the Host (IP address or hostname) and Port (default is 8089 for Splunk's management API) of the Splunk instance you wish to connect to.
+
+---
+**NOTE**
+Make sure to follow this [Guide](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/ConfigureWebhookAllowList) to configure your webhook allow list to allow your `keep` deployment.
+---
+
+
+## Useful Links
+
+- [Splunk Python SDK](https://dev.splunk.com/view/python-sdk/SP-CAAAEBB)
+- [Splunk Webhook](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/Webhooks)
+- [Splunk Webhook Allow List](https://docs.splunk.com/Documentation/Splunk/9.2.0/Alert/ConfigureWebhookAllowList)
+- [Splunk Permissions and Roles](https://docs.splunk.com/Documentation/Splunk/9.2.0/Security/Rolesandcapabilities)
+- [Splunk API tokens](https://docs.splunk.com/Documentation/Splunk/9.2.0/Security/Setupauthenticationwithtokens)
+

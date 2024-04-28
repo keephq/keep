@@ -20,7 +20,7 @@ const ProviderRow = ({ provider }: { provider: Provider }) => {
                 height={150}
                 onError={(event) => {
                   const target = event.target as HTMLImageElement;
-                  target.src = "keep.svg"; // Set fallback icon
+                  target.src = "/keep.svg"; // Set fallback icon
                 }}
               />
             </div>

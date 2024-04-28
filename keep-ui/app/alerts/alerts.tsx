@@ -1,23 +1,23 @@
-import { Card } from "@tremor/react";
-import { Preset } from "./models";
 import { useMemo, useState } from "react";
-import AlertStreamline from "./alert-streamline";
+import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
-import { useRouter } from "next/navigation";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
 import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
 import AlertRunWorkflowModal from "./alert-run-workflow-modal";
+import AlertDismissModal from "./alert-dismiss-modal";
+import { ViewAlertModal } from './ViewAlertModal';
 
 const defaultPresets: Preset[] = [
-  { name: "feed", options: [] },
-  { name: "deleted", options: [] },
-  { name: "groups", options: [] },
+  { id: "feed", name: "feed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "deleted", name: "deleted", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "dismissed", name: "dismissed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "groups", name: "groups", options: [], is_private: false , is_noisy: false, alerts_count: 0, should_do_noise_now: false},
 ];
 
 type AlertsProps = {
@@ -41,16 +41,20 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
-
+  const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto | null>();
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
-  const router = useRouter();
 
-  const {
-    data: alerts,
-    isAsyncLoading,
-    lastSubscribedDate,
-    pusherChannel,
-  } = useAllAlertsWithSubscription();
+  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription(
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount:false,
+      revalidateOnReconnect: false,
+      refreshWhenOffline: false,
+      refreshWhenHidden: false,
+      refreshInterval: 0
+
+    });
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -62,28 +66,24 @@ export default function Alerts({ presetName }: AlertsProps) {
   );
 
   if (selectedPreset === undefined) {
-    router.push("/alerts/feed");
+    return null;
   }
 
+  console.log("number of alerts: ", alerts.length)
   return (
-    <Card className="mt-10 p-4 md:p-10 mx-auto">
-      {pusherChannel && (
-        <AlertStreamline
-          pusherChannel={pusherChannel}
-          lastSubscribedDate={lastSubscribedDate}
-        />
-      )}
-      {selectedPreset && (
-        <AlertTableTabPanel
-          key={selectedPreset.name}
-          preset={selectedPreset}
-          alerts={alerts}
-          isAsyncLoading={isAsyncLoading}
-          setTicketModalAlert={setTicketModalAlert}
-          setNoteModalAlert={setNoteModalAlert}
-          setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-        />
-      )}
+    <>
+      <AlertTableTabPanel
+        key={selectedPreset.name}
+        preset={selectedPreset}
+        alerts={alerts}
+        isAsyncLoading={isAsyncLoading}
+        setTicketModalAlert={setTicketModalAlert}
+        setNoteModalAlert={setNoteModalAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setViewAlertModal={setViewAlertModal}
+      />
+
       {selectedPreset && (
         <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       )}
@@ -101,6 +101,15 @@ export default function Alerts({ presetName }: AlertsProps) {
         alert={runWorkflowModalAlert}
         handleClose={() => setRunWorkflowModalAlert(null)}
       />
-    </Card>
+      <AlertDismissModal
+        alert={dismissModalAlert}
+        handleClose={() => setDismissModalAlert(null)}
+      />
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => setViewAlertModal(null)}
+      />
+
+    </>
   );
 }

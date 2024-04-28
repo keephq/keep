@@ -32,10 +32,10 @@ export default function AlertSeverity({ severity }: Props) {
       color = "orange";
       severityText = Severity.High.toString();
       break;
-    case "medium":
+    case "warning":
       color = "yellow";
       icon = ArrowRightIcon;
-      severityText = Severity.Medium.toString();
+      severityText = Severity.Warning.toString();
       break;
     case "low":
       icon = ArrowDownRightIcon;

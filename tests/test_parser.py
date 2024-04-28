@@ -1,8 +1,6 @@
 # here we are going to create all needed tests for the parser.py parse function
 import builtins
 import json
-import os
-import unittest.mock as mock
 from pathlib import Path
 
 import pytest
@@ -16,7 +14,6 @@ from keep.parser.parser import Parser
 from keep.providers.mock_provider.mock_provider import MockProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.step.step import Step
-from keep.storagemanager.storagemanagerfactory import StorageManagerTypes
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
@@ -24,7 +21,7 @@ def test_parse_with_nonexistent_file(db_session):
     workflow_store = WorkflowStore()
     # Expected error when a given input does not describe an existing file
     with pytest.raises(HTTPException) as e:
-        workflow = workflow_store.get_workflow(SINGLE_TENANT_UUID, "test-not-found")
+        workflow_store.get_workflow(SINGLE_TENANT_UUID, "test-not-found")
     assert e.value.status_code == 404
 
 
@@ -161,7 +158,7 @@ class TestProviderFromEnv:
         monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", providers_str)
 
         # ACT
-        parser = parse_env_setup(context_manager)
+        parse_env_setup(context_manager)
 
         # ASSERT
         assert context_manager.providers_context == {}
@@ -175,7 +172,7 @@ class TestProviderFromEnv:
         monkeypatch.setenv(f"KEEP_PROVIDER_{provider_name}", json.dumps(provider_dict))
 
         # ACT
-        parser = parse_env_setup(context_manager)
+        parse_env_setup(context_manager)
 
         # ASSERT
         expected = {provider_name.replace("_", "-").lower(): provider_dict}
@@ -214,7 +211,7 @@ class TestProvidersFromFile:
         monkeypatch.setattr(yaml, "safe_load", mock_safeload)
 
         # ACT
-        parser = parse_file_setup(context_manager)
+        parse_file_setup(context_manager)
 
         # ASSERT
         assert context_manager.providers_context == providers_dict

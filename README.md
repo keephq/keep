@@ -111,6 +111,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/newrelic-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/appdynamics-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/datadog-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/cloudwatch-icon.png?raw=true"/>
@@ -122,10 +124,21 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/prometheus-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/zabbix-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
+<p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sentry-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/dynatrace-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/signalfx-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/azuremonitoring-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/gcpmonitoring-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/splunk-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/incidentmanager-icon.png"/>
 </p>
 <h3 align="center">Databases and data warehouses</h3>
 <p align="center">
@@ -149,21 +162,37 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/resend-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/mailchimp-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/discord-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/twilio-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/ntfy-icon.png?raw=true"/>
 </p>
 <h3 align="center">Incident Management tools</h2>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pagerduty-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pagertree-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/site24x7-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/opsgenie-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/zenduty-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/squadcast-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/oncall-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/statuscake-icon.png?raw=true"/>
 </p>
 <h3 align="center">Ticketing tools</h2>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/jira-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/gitlab-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/trello-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -171,7 +200,12 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/servicenow-icon.png?raw=true"/>
 </p>
-
+<h3 align="center">Container Orchestration platforms</h2>
+<p align="center">
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/openshift-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/kubernetes-icon.png?raw=true"/>
+</p>
 
 ## Getting Started
 ### Overview
@@ -190,15 +224,34 @@ The easiest way to start with Keep is to run it via docker-compose:
 curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 ```
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
+
+#### Spinning up Keep with Helm on Kubernetes/Openshift
+To install Keep to your Kubernetes ease free with Helm, run the following commands:
+
+```shell
+helm repo add keephq https://keephq.github.io/helm-charts
+helm pull keephq/keep
+helm install keep keephq/keep
+```
+
+More information about the Helm chart can be found [here](https://github.com/keephq/helm-charts).
+
 #### Local development
 You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
-
-
 
 #### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
 ## 🫵 Keepers
 
+### Top Contributors
+A special thanks to our top contributors who help us make Keep great. You are more than awesome!
+
+- [Furkan](https://github.com/pehlicd)
+- [Asharon](https://github.com/asharonbaltazar)
+
+Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
+
+### Contributors 
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
 <a href="https://github.com/keephq/keep/graphs/contributors">

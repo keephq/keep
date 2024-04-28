@@ -1,47 +1,46 @@
-import { Table, Callout } from "@tremor/react";
+import { Table, Callout, Card, Icon } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
 import {
-  OnChangeFn,
-  RowSelectionState,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
-  PaginationState,
   ColumnDef,
   ColumnOrderState,
   VisibilityState,
   ColumnSizingState,
+  getFilteredRowModel,
+  SortingState,
+  getSortedRowModel,
 } from "@tanstack/react-table";
+
 import AlertPagination from "./alert-pagination";
-import AlertColumnsSelect from "./alert-columns-select";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import {
-  getDataPageCount,
   getColumnsIds,
-  getPaginatedData,
   getOnlyVisibleCols,
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
 } from "./alert-table-utils";
+import AlertActions from "./alert-actions";
+import AlertPresets from "./alert-presets";
+import { evalWithContext } from "./alerts-rules-builder";
+import { TitleAndFilters } from "./TitleAndFilters";
+import { severityMapping } from "./models";
+import { useEffect, useState } from "react";
+
 
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
-  rowSelection?: {
-    state: RowSelectionState;
-    onChange: OnChangeFn<RowSelectionState>;
-  };
-  rowPagination?: {
-    state: PaginationState;
-    onChange: OnChangeFn<PaginationState>;
-  };
 }
 
 export function AlertTable({
@@ -49,10 +48,18 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
-  rowSelection,
-  rowPagination,
+  presetPrivate = false,
+  presetNoisy = false,
   isRefreshAllowed = true,
 }: Props) {
+  const [theme, setTheme] = useLocalStorage('alert-table-theme',
+    Object.values(severityMapping).reduce<{ [key: string]: string }>((acc, severity) => {
+      acc[severity] = 'bg-white';
+      return acc;
+    }, {})
+  );
+
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -70,63 +77,92 @@ export function AlertTable({
     {}
   );
 
+  const handleThemeChange = (newTheme: any) => {
+    setTheme(newTheme);
+  };
+
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'noise', desc: true } ]);
+
   const table = useReactTable({
-    data: rowPagination
-      ? getPaginatedData(alerts, rowPagination.state)
-      : alerts,
+    data: alerts,
     columns: columns,
     state: {
       columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
       columnOrder: columnOrder,
       columnSizing: columnSizing,
-      rowSelection: rowSelection?.state,
-      pagination: rowPagination?.state,
       columnPinning: {
-        left: ["checkbox"],
+        left: ["noise", "checkbox"],
         right: ["alertMenu"],
       },
+      sorting: sorting,
     },
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: { pageSize: 10 },
     },
+    globalFilterFn: ({ original }, _id, value) => {
+      return evalWithContext(original, value);
+    },
     getCoreRowModel: getCoreRowModel(),
-    pageCount: rowPagination
-      ? getDataPageCount(alerts.length, rowPagination.state)
-      : undefined,
-    getPaginationRowModel: rowPagination ? undefined : getPaginationRowModel(),
-    enableRowSelection: rowSelection !== undefined,
-    manualPagination: rowPagination !== undefined,
-    onPaginationChange: rowPagination?.onChange,
-    onRowSelectionChange: rowSelection?.onChange,
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
+    autoResetPageIndex: false,
+    enableGlobalFilter: true,
+    enableSorting: true,
   });
+
+  const selectedRowIds = Object.entries(
+    table.getSelectedRowModel().rowsById
+  ).reduce<string[]>((acc, [alertId]) => {
+    return acc.concat(alertId);
+  }, []);
+
+  // show skeleton if no alerts are loaded
+  let showSkeleton = table.getFilteredRowModel().rows.length === 0;
 
   return (
     <>
-      {presetName && (
-        <AlertColumnsSelect presetName={presetName} table={table} />
-      )}
-      {isAsyncLoading && (
-        <Callout
-          title="Getting your alerts..."
-          icon={CircleStackIcon}
-          color="gray"
-          className="mt-5"
-        >
-          Alerts will show up in this table as they are added to Keep...
-        </Callout>
-      )}
-      <Table className="[&>table]:table-fixed [&>table]:w-full">
-        <AlertsTableHeaders
-          columns={columns}
-          table={table}
-          presetName={presetName}
-        />
-        <AlertsTableBody table={table} showSkeleton={isAsyncLoading} />
-      </Table>
-      <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
+      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
+      <Card className="mt-7 px-4 pb-4 md:pb-10 md:px-4 pt-6">
+        {selectedRowIds.length ? (
+          <AlertActions
+            selectedRowIds={selectedRowIds}
+            alerts={alerts}
+            clearRowSelection={table.resetRowSelection}
+          />
+        ) : (
+          <AlertPresets
+            table={table}
+            presetNameFromApi={presetName}
+            isLoading={isAsyncLoading}
+            presetPrivate={presetPrivate}
+            presetNoisy={presetNoisy}
+          />
+        )}
+        {isAsyncLoading && (
+          <Callout
+            title="Getting your alerts..."
+            icon={CircleStackIcon}
+            color="gray"
+            className="mt-5"
+          >
+            Alerts will show up in this table as they are added to Keep...
+          </Callout>
+        )}
+        <Table className="mt-4 [&>table]:table-fixed [&>table]:w-full">
+          <AlertsTableHeaders
+            columns={columns}
+            table={table}
+            presetName={presetName}
+          />
+          <AlertsTableBody table={table} showSkeleton={showSkeleton} theme={theme} />
+        </Table>
+        <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
+      </Card>
     </>
   );
 }

@@ -6,9 +6,13 @@ from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
 
-class WorkflowStatus(enum.Enum):
-    RESOLVED = "resolved"
-    FIRING = "firing"
+class WorkflowStrategy(enum.Enum):
+    # if a workflow run on the same fingerprint, skip the workflow
+    NONPARALLEL = "nonparallel"
+    # if a workflow run on the same fingerprint, add the workflow back to the queue and run it again on the next cycle
+    NONPARALLEL_WITH_RETRY = "nonparallel_with_retry"  # DEFAULT
+    # if a workflow run on the same fingerprint, run
+    PARALLEL = "parallel"
 
 
 class Workflow:
@@ -25,6 +29,7 @@ class Workflow:
         workflow_description: str = None,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
+        workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
         on_failure: Step = None,
     ):
         self.workflow_id = workflow_id
@@ -37,6 +42,7 @@ class Workflow:
         self.workflow_description = workflow_description
         self.workflow_providers = workflow_providers
         self.workflow_providers_type = workflow_providers_type
+        self.workflow_strategy = workflow_strategy
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.io_nandler = IOHandler(context_manager)
@@ -47,8 +53,9 @@ class Workflow:
         for step in self.workflow_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step.run()
-                self.logger.info("Step %s ran successfully", step.step_id)
+                step_ran = step.run()
+                if step_ran:
+                    self.logger.info("Step %s ran successfully", step.step_id)
             except StepError as e:
                 self.logger.error(f"Step {step.step_id} failed: {e}")
                 raise
@@ -57,14 +64,15 @@ class Workflow:
     def run_action(self, action: Step):
         self.logger.info("Running action %s", action.name)
         try:
-            action_status = action.run()
+            action_ran = action.run()
             action_error = None
-            self.logger.info("Action %s ran successfully", action.name)
+            if action_ran:
+                self.logger.info("Action %s ran successfully", action.name)
         except Exception as e:
             self.logger.error(f"Action {action.name} failed: {e}")
-            action_status = False
-            action_error = str(e)
-        return action_status, action_error
+            action_ran = False
+            action_error = f"Failed to run action {action.name}: {str(e)}"
+        return action_ran, action_error
 
     def run_actions(self):
         self.logger.debug("Running actions")
@@ -72,8 +80,9 @@ class Workflow:
         actions_errors = []
         for action in self.workflow_actions:
             action_status, action_error = self.run_action(action)
-            actions_firing.append(action_status)
-            actions_errors.append(action_error)
+            if action_error:
+                actions_firing.append(action_status)
+                actions_errors.append(action_error)
         self.logger.debug("Actions run")
         return actions_firing, actions_errors
 
@@ -91,21 +100,6 @@ class Workflow:
             )
             raise
         actions_firing, actions_errors = self.run_actions()
-        # Save the state
-        #   workflow is firing if one its actions is firing
-        workflow_status = (
-            WorkflowStatus.FIRING.value
-            if any(actions_firing)
-            else WorkflowStatus.RESOLVED.value
-        )
-        # TODO: state management should be done in db (how will it work distributed?)
-        self.context_manager.set_last_workflow_run(
-            workflow_id=self.workflow_id,
-            workflow_context={
-                "steps_context": self.context_manager.steps_context,
-            },
-            workflow_status=workflow_status,
-        )
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 

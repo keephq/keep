@@ -1,19 +1,19 @@
+import datetime
 import json
 import logging
 import time
 import uuid
-import yaml
 from typing import Callable, Optional
 
 import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from fastapi import UploadFile as fastapiuploadfile
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import get_session
+from keep.api.core.db import get_provider_distribution, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
@@ -67,12 +67,29 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
+    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
+
+    providers_distribution = get_provider_distribution(tenant_id)
+
+    for provider in linked_providers + installed_providers:
+        provider.alertsDistribution = providers_distribution.get(
+            f"{provider.id}_{provider.type}", {}
+        ).get("alert_last_24_hours", [])
+        last_alert_received = providers_distribution.get(
+            f"{provider.id}_{provider.type}", {}
+        ).get("last_alert_received", None)
+        if last_alert_received and not provider.last_alert_received:
+            provider.last_alert_received = last_alert_received.replace(
+                tzinfo=datetime.timezone.utc
+            ).isoformat()
+
     is_localhost = _is_localhost()
 
     try:
         return {
             "providers": providers,
             "installed_providers": installed_providers,
+            "linked_providers": linked_providers,
             "is_localhost": is_localhost,
         }
     except Exception:
@@ -80,13 +97,12 @@ def get_providers(
         return {
             "providers": providers,
             "installed_providers": [],
+            "linked_providers": [],
             "is_localhost": is_localhost,
         }
-    
-@router.get(
-    "/export",
-    description="export all installed providers"
-)
+
+
+@router.get("/export", description="export all installed providers")
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:providers"])
@@ -104,15 +120,13 @@ def get_installed_providers(
     try:
         return {
             "installed_providers": installed_providers,
-            "is_localhost": is_localhost
+            "is_localhost": is_localhost,
         }
     except Exception as e:
         logger.info(f"execption in {e}")
         logger.exception("Failed to get providers")
-        return {
-            "installed_providers": [],
-            "is_localhost": is_localhost
-        }
+        return {"installed_providers": [], "is_localhost": is_localhost}
+
 
 @router.get(
     "/{provider_type}/{provider_id}/configured-alerts",
@@ -421,7 +435,6 @@ def validate_provider_scopes(
 async def update_provider(
     provider_id: str,
     request: Request,
-    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["update:providers"])
     ),
@@ -435,7 +448,12 @@ async def update_provider(
             "provider_id": provider_id,
         },
     )
-    provider_info = await __get_provider_raw_data(request, file)
+    try:
+        provider_info = await request.json()
+    except Exception:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
@@ -481,22 +499,9 @@ async def update_provider(
     }
 
 
-async def __get_provider_raw_data(request: Request, file: fastapiuploadfile) -> dict:
-    try:
-        if file:
-            provider_raw_data = await file.read()
-        else:
-            provider_raw_data = await request.body()
-        provider_data = yaml.safe_load(provider_raw_data)
-    except yaml.YAMLError:
-        raise HTTPException(status_code=400, detail="Invalid YAML format")
-    return provider_data
-
-
 @router.post("/install")
 async def install_provider(
     request: Request,
-    file: fastapiuploadfile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:providers"])
     ),
@@ -504,7 +509,12 @@ async def install_provider(
 ):
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
-    provider_info = await __get_provider_raw_data(request, file)
+    try:
+        provider_info = await request.json()
+    except Exception:
+        # If error occurs (likely not JSON), try to get as form data
+        form_data = await request.form()
+        provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
@@ -569,6 +579,11 @@ async def install_provider(
     try:
         session.add(provider_model)
         session.commit()
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Provider already installed",
+        )
     except Exception as e:
         logger.exception("Failed to add provider to db")
         return JSONResponse(
@@ -632,6 +647,8 @@ async def install_provider_oauth2(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
+        validated_scopes = validate_scopes(provider)
+
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
         secret_manager.write_secret(
@@ -647,6 +664,7 @@ async def install_provider_oauth2(
             installed_by=installed_by,
             installation_time=time.time(),
             configuration_key=secret_name,
+            validatedScopes=validated_scopes,
         )
         session.add(provider)
         session.commit()
@@ -786,6 +804,15 @@ def get_webhook_settings(
         "https://", f"https://keep:{webhook_api_key}@"
     )
 
+    try:
+        webhookMarkdown = provider_class.webhook_markdown.format(
+            keep_webhook_api_url=keep_webhook_api_url,
+            api_key=webhook_api_key,
+            keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
+        )
+    except AttributeError:
+        webhookMarkdown = None
+
     logger.info("Got webhook settings", extra={"provider_type": provider_type})
     return ProviderWebhookSettings(
         webhookDescription=provider_class.webhook_description.format(
@@ -798,4 +825,5 @@ def get_webhook_settings(
             api_key=webhook_api_key,
             keep_webhook_api_url_with_auth=keep_webhook_api_url_with_auth,
         ),
+        webhookMarkdown=webhookMarkdown,
     )

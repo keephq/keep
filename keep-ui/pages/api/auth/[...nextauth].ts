@@ -49,9 +49,24 @@ const multiTenantAuthOptions = {
       if ((profile as any)?.keep_tenant_id) {
         token.keep_tenant_id = (profile as any).keep_tenant_id;
       }
-      if ((profile as any)?.keep_role){
+      if ((profile as any)?.keep_role) {
         token.keep_role = (profile as any).keep_role;
       }
+
+      // on github, prefer given name over nickname (default?)
+      if ((profile as any)?.given_name) {
+        const givenName = (profile as any).given_name;
+        token.name = givenName;
+      } else if ((profile as any)?.name) {
+        // split by " " and take the first part
+        const name = (profile as any).name as string;
+        const nameParts = name.split(" ");
+        // verify that the name is not empty (should not happen, but just in case)
+        if (nameParts.length > 0){
+          token.name = nameParts[0];
+        }
+      }
+
 
       return token;
     },
@@ -99,7 +114,7 @@ const singleTenantAuthOptions = {
               ...user,
               accessToken,
               tenantId,
-              role
+              role,
             };
           } else {
             return null;
@@ -230,6 +245,5 @@ export const authOptions =
     : authType === AuthenticationType.KEYCLOAK
     ? keycloakAuthOptions
     : noAuthOptions;
-
 
 export default NextAuth(authOptions);

@@ -2,7 +2,10 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+import random
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
 import pymysql
@@ -10,16 +13,21 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, text, update
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import and_, desc, func, null, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy_utils import create_database, database_exists
+from sqlmodel import Session, SQLModel, create_engine, or_, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
+from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -39,7 +47,7 @@ def __get_conn() -> pymysql.connections.Connection:
     """
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             db="keepdb",
@@ -74,7 +82,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     # Create a new MySQL connection with the obtained access token
     with Connector() as connector:
         conn = connector.connect(
-            "keephq-sandbox:us-central1:keep",  # Todo: get from configuration
+            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
             "pymysql",
             user="keep-api",
             password=access_token,
@@ -89,6 +97,7 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 
 if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
@@ -101,7 +110,12 @@ elif db_connection_string == "impersonate":
         creator=__get_conn_impersonate,
     )
 elif db_connection_string:
-    engine = create_engine(db_connection_string)
+    try:
+        logger.info(f"Creating a connection pool with size {pool_size}")
+        engine = create_engine(db_connection_string, pool_size=pool_size)
+    # SQLite does not support pool_size
+    except TypeError:
+        engine = create_engine(db_connection_string)
 else:
     engine = create_engine(
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
@@ -114,26 +128,17 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
+    try:
+        if not database_exists(engine.url):
+            logger.info("Creating the database")
+            create_database(engine.url)
+            logger.info("Database created")
+    # On Cloud Run, it fails to check if the database exists
+    except Exception:
+        logger.warning("Failed to create the database or detect if it exists.")
+        pass
+
     SQLModel.metadata.create_all(engine)
-    # migration add column
-
-    # todo: remove this
-
-    # Execute the ALTER TABLE command
-    with engine.connect() as connection:
-        try:
-            connection.execute(
-                text("ALTER TABLE alert ADD COLUMN alert_hash VARCHAR(255);")
-            )
-        except OperationalError as e:
-            # that's ok
-            if "duplicate column" in str(e).lower():
-                return
-            logger.exception("Failed to add column alert_hash to alert table")
-            raise
-        except Exception:
-            logger.exception("Failed to add column alert_hash to alert table")
-            raise
 
 
 def get_session() -> Session:
@@ -161,36 +166,43 @@ def try_create_single_tenant(tenant_id: str) -> None:
         pass
     with Session(engine) as session:
         try:
-            # Do everything related with single tenant creation in here
-            session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-            default_password = hashlib.sha256(
-                os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-            ).hexdigest()
-            default_user = User(
-                username=default_username,
-                password_hash=default_password,
-                role=AdminRole.get_name(),
-            )
-            session.add(default_user)
+            # check if the tenant exist:
+            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+            if not tenant:
+                # Do everything related with single tenant creation in here
+                logger.info("Creating single tenant")
+                session.add(Tenant(id=tenant_id, name="Single Tenant"))
+            else:
+                logger.info("Single tenant already exists")
+
+            # now let's create the default user
+
+            # check if at least one user exists:
+            user = session.exec(select(User)).first()
+            # if no users exist, let's create the default user
+            if not user:
+                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                default_user = User(
+                    username=default_username,
+                    password_hash=default_password,
+                    role=AdminRole.get_name(),
+                )
+                session.add(default_user)
+            # else, if the user want to force the refresh of the default user password
+            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
+                # update the password of the default user
+                default_password = hashlib.sha256(
+                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
+                ).hexdigest()
+                user.password_hash = default_password
+            # commit the changes
             session.commit()
         except IntegrityError:
             # Tenant already exists
             pass
-        except Exception:
-            pass
-    # New session since the previous might be in a bad state
-    with Session(engine) as session:
-        try:
-            # TODO: remove this once we have a migration system
-            logger.info("Migrating TenantApiKey table")
-            session.exec(
-                "ALTER TABLE tenantapikey ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0;"
-            )
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN created_at DATETIME;")
-            session.exec("ALTER TABLE tenantapikey ADD COLUMN last_used DATETIME;")
-            session.commit()
-            logger.info("Migrated TenantApiKey table")
         except Exception:
             pass
 
@@ -200,15 +212,19 @@ def create_workflow_execution(
     tenant_id: str,
     triggered_by: str,
     execution_number: int = 1,
+    event_id: str = None,
     fingerprint: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
+            if len(triggered_by) > 255:
+                triggered_by = triggered_by[:255]
+
             workflow_execution = WorkflowExecution(
                 id=str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
-                started=datetime.utcnow(),
+                started=datetime.now(tz=timezone.utc),
                 triggered_by=triggered_by,
                 execution_number=execution_number,
                 status="in_progress",
@@ -219,6 +235,7 @@ def create_workflow_execution(
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=workflow_execution.id,
                     alert_fingerprint=fingerprint,
+                    event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
 
@@ -414,6 +431,92 @@ def add_or_update_workflow(
         return existing_workflow if existing_workflow else workflow
 
 
+def get_workflow_to_alert_execution_by_workflow_execution_id(
+    workflow_execution_id: str,
+) -> WorkflowToAlertExecution:
+    """
+    Get the WorkflowToAlertExecution entry for a given workflow execution ID.
+
+    Args:
+        workflow_execution_id (str): The workflow execution ID to filter the workflow execution by.
+
+    Returns:
+        WorkflowToAlertExecution: The WorkflowToAlertExecution object.
+    """
+    with Session(engine) as session:
+        return (
+            session.query(WorkflowToAlertExecution)
+            .filter_by(workflow_execution_id=workflow_execution_id)
+            .first()
+        )
+
+
+def get_last_workflow_workflow_to_alert_executions(
+    session: Session, tenant_id: str
+) -> list[WorkflowToAlertExecution]:
+    """
+    Get the latest workflow executions for each alert fingerprint.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant_id to filter the workflow executions by.
+
+    Returns:
+        list[WorkflowToAlertExecution]: A list of WorkflowToAlertExecution objects.
+    """
+    # Subquery to find the max started timestamp for each alert_fingerprint
+    max_started_subquery = (
+        session.query(
+            WorkflowToAlertExecution.alert_fingerprint,
+            func.max(WorkflowExecution.started).label("max_started"),
+        )
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+        .group_by(WorkflowToAlertExecution.alert_fingerprint)
+    ).subquery("max_started_subquery")
+
+    # Query to find WorkflowToAlertExecution entries that match the max started timestamp
+    latest_workflow_to_alert_executions: list[WorkflowToAlertExecution] = (
+        session.query(WorkflowToAlertExecution)
+        .join(
+            WorkflowExecution,
+            WorkflowToAlertExecution.workflow_execution_id == WorkflowExecution.id,
+        )
+        .join(
+            max_started_subquery,
+            and_(
+                WorkflowToAlertExecution.alert_fingerprint
+                == max_started_subquery.c.alert_fingerprint,
+                WorkflowExecution.started == max_started_subquery.c.max_started,
+            ),
+        )
+        .filter(WorkflowExecution.tenant_id == tenant_id)
+        .limit(1000)
+        .all()
+    )
+    return latest_workflow_to_alert_executions
+
+
+def get_last_workflow_execution_by_workflow_id(
+    tenant_id: str, workflow_id: str
+) -> Optional[WorkflowExecution]:
+    with Session(engine) as session:
+        workflow_execution = (
+            session.query(WorkflowExecution)
+            .filter(WorkflowExecution.workflow_id == workflow_id)
+            .filter(WorkflowExecution.tenant_id == tenant_id)
+            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+            .filter(WorkflowExecution.status == "success")
+            .order_by(WorkflowExecution.started.desc())
+            .first()
+        )
+    return workflow_execution
+
+
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
     with Session(engine) as session:
         latest_execution_cte = (
@@ -421,7 +524,13 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
                 WorkflowExecution.workflow_id,
                 func.max(WorkflowExecution.started).label("last_execution_time"),
             )
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .group_by(WorkflowExecution.workflow_id)
+            .limit(1000)
             .cte("latest_execution_cte")
         )
 
@@ -445,7 +554,7 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
-        )
+        ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
 
@@ -526,9 +635,13 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id == execution_id)
         ).first()
-
+        # some random number to avoid collisions
+        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
-        workflow_execution.error = error
+        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
+        #   we need to fix it in the future, create a migration that increases the size of the error field
+        #   and then we can remove the [:255] from here
+        workflow_execution.error = error[:255] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
@@ -539,9 +652,21 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
 def get_workflow_executions(tenant_id, workflow_id, limit=50):
     with Session(engine) as session:
         workflow_executions = session.exec(
-            select(WorkflowExecution)
+            select(
+                WorkflowExecution.id,
+                WorkflowExecution.workflow_id,
+                WorkflowExecution.started,
+                WorkflowExecution.status,
+                WorkflowExecution.triggered_by,
+                WorkflowExecution.execution_time,
+                WorkflowExecution.error,
+            )
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(
+                WorkflowExecution.started
+                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            )
             .order_by(WorkflowExecution.started.desc())
             .limit(limit)
         ).all()
@@ -599,6 +724,7 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
             session.query(WorkflowExecution)
             .filter(
                 WorkflowExecution.id == workflow_execution_id,
+                WorkflowExecution.tenant_id == tenant_id,
             )
             .options(joinedload(WorkflowExecution.logs))
             .one()
@@ -695,7 +821,9 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
-def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[Alert]:
+def get_alerts_with_filters(
+    tenant_id, provider_id=None, filters=None, time_delta=1
+) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
@@ -706,8 +834,14 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
 
+        # Filter by time_delta
+        query = query.filter(
+            Alert.timestamp
+            >= datetime.now(tz=timezone.utc) - timedelta(days=time_delta)
+        )
+
         # Ensure Alert and AlertEnrichment are joined for subsequent filters
-        query = query.join(Alert.alert_enrichment)
+        query = query.outerjoin(Alert.alert_enrichment)
 
         # Apply filters if provided
         if filters:
@@ -716,12 +850,22 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    query = query.filter(
-                        func.json_type(AlertEnrichment.enrichments, f"$.{filter_key}")
-                        != null()
-                    )
+                    if session.bind.dialect.name in ["mysql", "postgresql"]:
+                        query = query.filter(
+                            func.json_extract(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
+                            != null()
+                        )
+                    elif session.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            func.json_type(
+                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            )
+                            != null()
+                        )
                 elif isinstance(filter_value, (str, int)):
-                    if session.bind.dialect.name == "mysql":
+                    if session.bind.dialect.name in ["mysql", "postgresql"]:
                         query = query.filter(
                             func.json_unquote(
                                 func.json_extract(
@@ -748,6 +892,10 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
+        query = query.order_by(Alert.timestamp.desc())
+
+        query = query.limit(10000)
+
         # Execute the query
         alerts = query.all()
 
@@ -756,28 +904,39 @@ def get_alerts_with_filters(tenant_id, provider_id=None, filters=None) -> list[A
 
 def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
     """
-    Get the last alert for each fingerprint.
+    Get the last alert for each fingerprint along with the first time the alert was triggered.
 
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
 
     Returns:
-        List[Alert]: A list of Alert objects.
+        List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
     with Session(engine) as session:
-        # Start with a subquery that selects the max timestamp for each fingerprint.
+        # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
-                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+                Alert.fingerprint,
+                func.max(Alert.timestamp).label("max_timestamp"),
+                func.min(Alert.timestamp).label(
+                    "min_timestamp"
+                ),  # Include minimum timestamp
             )
             .filter(Alert.tenant_id == tenant_id)
             .group_by(Alert.fingerprint)
             .subquery()
         )
 
+        # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
-            session.query(Alert)
+            session.query(
+                Alert,
+                subquery.c.min_timestamp.label(
+                    "startedAt"
+                ),  # Include "startedAt" in the selected columns
+            )
+            .filter(Alert.tenant_id == tenant_id)
             .join(
                 subquery,
                 and_(
@@ -788,16 +947,19 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .options(subqueryload(Alert.alert_enrichment))
         )
 
-        # Filter by tenant_id
-        query = query.filter(Alert.tenant_id == tenant_id)
-
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
         # Order by timestamp in descending order and limit the results
         query = query.order_by(Alert.timestamp.desc()).limit(limit)
         # Execute the query
-        alerts = query.all()
+        alerts_with_start = query.all()
+        # Convert result to list of Alert objects and include "startedAt" information if needed
+        alerts = []
+        for alert, startedAt in alerts_with_start:
+            alert.event["startedAt"] = str(startedAt)
+            alert.event["event_id"] = str(alert.id)
+            alerts.append(alert)
 
     return alerts
 
@@ -833,6 +995,20 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
         alerts = query.all()
 
     return alerts
+
+
+def get_alert_by_fingerprint_and_event_id(
+    tenant_id: str, fingerprint: str, event_id: str
+) -> Alert:
+    with Session(engine) as session:
+        alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(Alert.id == uuid.UUID(event_id))
+            .first()
+        )
+    return alert
 
 
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
@@ -1097,6 +1273,43 @@ def assign_alert_to_group(
                 {"group_expired": True},
             )
             logger.info(f"Enriched group {group.id} with group_expired flag")
+            # change the group status to resolve so it won't spam the UI
+            #   this was asked by @bhuvanesh and should be configurable in the future (how to handle status of expired groups)
+            group_alert = session.exec(
+                select(Alert)
+                .where(Alert.fingerprint == fingerprint)
+                .order_by(Alert.timestamp.desc())
+            ).first()
+            # this is kinda wtf but sometimes we deleted manually
+            #   these from the DB since it was too big
+            if not group_alert:
+                logger.warning(
+                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
+                )
+            else:
+                try:
+                    session.refresh(group_alert)
+                    group_alert.event["status"] = AlertStatus.RESOLVED.value
+                    # mark the event as modified so it will be updated in the database
+                    flag_modified(group_alert, "event")
+                    # commit the changes
+                    session.commit()
+                    logger.info(
+                        f"Updated the alert {group_alert.id} to RESOLVED status"
+                    )
+                except StaleDataError as e:
+                    logger.warning(
+                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
+                        extra={"exception": e},
+                    )
+                    pass
+                # some other unknown error, we want to log it and continue
+                except Exception as e:
+                    logger.exception(
+                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
+                        extra={"exception": e},
+                    )
+                    pass
 
         # if there is no group with the group_fingerprint, create it
         if not group or is_group_expired:
@@ -1155,7 +1368,7 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name == "mysql":
+        if session.bind.dialect.name in ["mysql", "postgresql"]:
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
@@ -1214,11 +1427,162 @@ def get_all_filters(tenant_id):
     return filters
 
 
-def get_alert_by_hash(tenant_id, alert_hash):
+def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+    # get the last alert for a given fingerprint
+    # to check deduplication
     with Session(engine) as session:
-        alert = session.exec(
-            select(Alert)
+        alert_hash = session.exec(
+            select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
-            .where(Alert.alert_hash == alert_hash)
+            .where(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
         ).first()
-    return alert
+    return alert_hash
+
+
+def update_key_last_used(
+    tenant_id: str,
+    reference_id: str,
+) -> str:
+    """
+    Updates API key last used.
+
+    Args:
+        session (Session): _description_
+        tenant_id (str): _description_
+        reference_id (str): _description_
+
+    Returns:
+        str: _description_
+    """
+    with Session(engine) as session:
+        # Get API Key from database
+        statement = (
+            select(TenantApiKey)
+            .where(TenantApiKey.reference_id == reference_id)
+            .where(TenantApiKey.tenant_id == tenant_id)
+        )
+
+        tenant_api_key_entry = session.exec(statement).first()
+
+        # Update last used
+        if not tenant_api_key_entry:
+            # shouldn't happen but somehow happened to specific tenant so logging it
+            logger.error(
+                "API key not found",
+                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+            )
+            return
+        tenant_api_key_entry.last_used = datetime.utcnow()
+        session.add(tenant_api_key_entry)
+        session.commit()
+
+
+def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
+    with Session(engine) as session:
+        providers = (
+            session.query(
+                Alert.provider_type,
+                Alert.provider_id,
+                func.max(Alert.timestamp).label("last_alert_timestamp"),
+            )
+            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.provider_type != "group",
+                Provider.id
+                == None,  # Filters for alerts with a provider_id not in Provider table
+            )
+            .group_by(Alert.provider_type, Alert.provider_id)
+            .all()
+        )
+
+    return providers
+
+
+def get_provider_distribution(tenant_id: str) -> dict:
+    """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        if session.bind.dialect.name in ["mysql", "postgresql"]:
+            timestamp_format = func.date_format(Alert.timestamp, time_format)
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Alert.timestamp)
+
+        # Adjusted query to include max timestamp
+        query = (
+            session.query(
+                Alert.provider_id,
+                Alert.provider_type,
+                timestamp_format.label("time"),
+                func.count().label("hits"),
+                func.max(Alert.timestamp).label(
+                    "last_alert_timestamp"
+                ),  # Include max timestamp
+            )
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.timestamp >= twenty_four_hours_ago,
+            )
+            .group_by(Alert.provider_id, Alert.provider_type, "time")
+            .order_by(Alert.provider_id, Alert.provider_type, "time")
+        )
+
+        results = query.all()
+
+        provider_distribution = {}
+
+        for provider_id, provider_type, time, hits, last_alert_timestamp in results:
+            provider_key = f"{provider_id}_{provider_type}"
+
+            if provider_key not in provider_distribution:
+                provider_distribution[provider_key] = {
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "alert_last_24_hours": [
+                        {"hour": i, "number": 0} for i in range(24)
+                    ],
+                    "last_alert_received": last_alert_timestamp,  # Initialize with the first seen timestamp
+                }
+            else:
+                # Update the last alert timestamp if the current one is more recent
+                provider_distribution[provider_key]["last_alert_received"] = max(
+                    provider_distribution[provider_key]["last_alert_received"],
+                    last_alert_timestamp,
+                )
+
+            time = datetime.strptime(time, time_format)
+            index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+
+            if 0 <= index < 24:
+                provider_distribution[provider_key]["alert_last_24_hours"][index][
+                    "number"
+                ] += hits
+
+    return provider_distribution
+
+
+def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Preset.is_private == False,
+                    Preset.created_by == email,
+                )
+            )
+        )
+        presets = session.exec(statement).all()
+    return presets
+
+
+def get_all_presets(tenant_id: str) -> List[Preset]:
+    with Session(engine) as session:
+        presets = session.exec(
+            select(Preset).where(Preset.tenant_id == tenant_id)
+        ).all()
+    return presets

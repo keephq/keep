@@ -1,6 +1,6 @@
 import os
 import random
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
@@ -173,6 +173,21 @@ def db_session(request, mysql_container):
             interval=0,
             workflow_raw="test workflow raw",
         ),
+        WorkflowExecution(
+            id="test-execution-id-1",
+            workflow_id="mock_alert",
+            tenant_id=SINGLE_TENANT_UUID,
+            triggered_by="keep-test",
+            status="success",
+            execution_number=1,
+            results={},
+        ),
+        WorkflowToAlertExecution(
+            id=1,
+            workflow_execution_id="test-execution-id-1",
+            alert_fingerprint="mock_alert",
+            event_id="mock_event_id",
+        ),
         # Add more data as needed
     ]
     session.add_all(workflow_data)
@@ -185,3 +200,24 @@ def db_session(request, mysql_container):
     SQLModel.metadata.drop_all(mock_engine)
     # Clean up after the test
     session.close()
+
+
+@pytest.fixture
+def mocked_context_manager():
+    context_manager = Mock(spec=ContextManager)
+    # Simulate contexts as needed for each test case
+    context_manager.steps_context = {}
+    context_manager.providers_context = {}
+    context_manager.event_context = {}
+    context_manager.click_context = {}
+    context_manager.foreach_context = {"value": None}
+    context_manager.dependencies = set()
+    context_manager.get_full_context.return_value = {
+        "steps": {},
+        "providers": {},
+        "event": {},
+        "alert": {},
+        "foreach": {"value": None},
+        "env": {},
+    }
+    return context_manager

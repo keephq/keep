@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -14,23 +15,27 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import (
     get_installed_providers,
     get_last_workflow_executions,
+    get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.db import get_workflow_id_by_name
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
     WorkflowExecutionLogsDTO,
+    WorkflowToAlertExecutionDTO,
 )
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
@@ -39,6 +44,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @router.get(
@@ -181,8 +187,23 @@ def run_workflow(
 
     # Finally, run it
     try:
+        # if its event that was triggered by the UI with the Modal
+        if "test-workflow" in body.get("fingerprint", "") or not body:
+            # some random
+            body["id"] = body.get("fingerprint", "manual-run")
+            body["name"] = body.get("fingerprint", "manual-run")
+            body["lastReceived"] = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
+        try:
+            alert = AlertDto(**body)
+        except TypeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid alert format",
+            )
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, body
+            workflow_id, tenant_id, created_by, alert
         )
     except Exception as e:
         logger.exception(
@@ -222,6 +243,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
             workflow_data = workflow_data.pop("workflow")
 
     except yaml.YAMLError:
+        logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
     return workflow_data
 
@@ -298,6 +320,7 @@ async def update_workflow_by_id(
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
     workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
     session.refresh(workflow_from_db)
@@ -324,6 +347,32 @@ def get_raw_workflow_by_id(
     )
 
 
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecutionDTO]:
+    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
+        latest_workflow_to_alert_executions = (
+            get_last_workflow_workflow_to_alert_executions(
+                session=session, tenant_id=authenticated_entity.tenant_id
+            )
+        )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
+        )
+        for workflow_execution in latest_workflow_to_alert_executions
+    ]
+
+
 @router.get("/{workflow_id}", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
@@ -332,22 +381,23 @@ def get_workflow_by_id(
     ),
 ) -> List[WorkflowExecutionDTO]:
     tenant_id = authenticated_entity.tenant_id
-    workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
+    with tracer.start_as_current_span("get_workflow_executions"):
+        workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
     workflow_executions_dtos = []
-    for workflow_execution in workflow_executions:
-        workflow_execution_dto = WorkflowExecutionDTO(
-            id=workflow_execution.id,
-            workflow_id=workflow_execution.workflow_id,
-            status=workflow_execution.status,
-            started=workflow_execution.started,
-            triggered_by=workflow_execution.triggered_by,
-            error=workflow_execution.error,
-            execution_time=workflow_execution.execution_time,
-            results=workflow_execution.results,
-        )
-        workflow_executions_dtos.append(workflow_execution_dto)
+    with tracer.start_as_current_span("create_workflow_dtos"):
+        for workflow_execution in workflow_executions:
+            workflow_execution_dto = {
+                "id": workflow_execution.id,
+                "workflow_id": workflow_execution.workflow_id,
+                "status": workflow_execution.status,
+                "started": workflow_execution.started.isoformat(),
+                "triggered_by": workflow_execution.triggered_by,
+                "error": workflow_execution.error,
+                "execution_time": workflow_execution.execution_time,
+            }
+            workflow_executions_dtos.append(workflow_execution_dto)
 
-    return workflow_executions_dtos
+    return JSONResponse(content=workflow_executions_dtos)
 
 
 @router.delete("/{workflow_id}", description="Delete workflow")

@@ -64,6 +64,74 @@ class IOHandler:
         replacement = r"'{{ \1 }}'"
         return re.sub(pattern, replacement, template)
 
+    def extract_keep_functions(self, text):
+        matches = []
+        i = 0
+        while i < len(text):
+            if text[i : i + 5] == "keep.":
+                start = i
+                func_start = text.find("(", start)
+                if func_start > -1:  # Opening '(' found after "keep."
+                    i = func_start + 1  # Move i to the character after '('
+                    parent_count = 1
+                    in_string = False
+                    escape_next = False
+                    quote_char = ""
+                    escapes = {}
+                    while i < len(text) and (parent_count > 0 or in_string):
+                        if text[i] == "\\" and in_string and not escape_next:
+                            escape_next = True
+                            i += 1
+                            continue
+                        elif text[i] in ('"', "'"):
+                            if not in_string:
+                                in_string = True
+                                quote_char = text[i]
+                            elif (
+                                text[i] == quote_char
+                                and not escape_next
+                                and (
+                                    str(text[i + 1]).isalnum() == False
+                                    and str(text[i + 1]) != " "
+                                )  # end of statement, arg, etc. if its alpha numeric or whitespace, we just need to escape it
+                            ):
+                                in_string = False
+                                quote_char = ""
+                            elif text[i] == quote_char and not escape_next:
+                                escapes[i] = text[
+                                    i
+                                ]  # Save the quote character where we need to escape for valid ast parsing
+                        elif text[i] == "(" and not in_string:
+                            parent_count += 1
+                        elif text[i] == ")" and not in_string:
+                            parent_count -= 1
+
+                        escape_next = False
+                        i += 1
+
+                    if parent_count == 0:
+                        matches.append((text[start:i], escapes))
+                    continue  # Skip the increment at the end of the loop to continue from the current position
+                else:
+                    # If no '(' found, increment i to move past "keep."
+                    i += 5
+            else:
+                i += 1
+        return matches
+
+    def _trim_token_error(self, token):
+        # trim too long tokens so that the error message will be readable
+        if len(token) > 64:
+            try:
+                func_name = token.split("keep.")[1].split("(")[0]
+                err = f"keep.{func_name}(...)"
+            except Exception:
+                err = token
+            finally:
+                return err
+        else:
+            return token
+
     def parse(self, string, safe=False, default=""):
         """Use AST module to parse 'call stack'-like string and return the result
 
@@ -92,25 +160,49 @@ class IOHandler:
         string = self._render(string, safe, default)
 
         # Now, extract the token if exists -
-        pattern = (
-            r"\bkeep\.\w+\((?:[^()]*|\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\))*\)"
-        )
         parsed_string = copy.copy(string)
-        matches = re.findall(pattern, parsed_string)
-        tokens = list(matches)
-
+        tokens = self.extract_keep_functions(parsed_string)
         if len(tokens) == 0:
             return parsed_string
         elif len(tokens) == 1:
-            token = "".join(tokens[0])
-            val = self._parse_token(token)
-            parsed_string = parsed_string.replace(token, str(val))
+            token, escapes = tokens[0]
+            token_to_replace = token
+            try:
+                escapes_counter = 0
+                if escapes:
+                    for escape in escapes:
+                        token = (
+                            token[: escape + escapes_counter]
+                            + "\\"
+                            + token[escape + escapes_counter :]
+                        )
+                        escapes_counter += 1  # we need to increment the counter because we added a character
+                val = self._parse_token(token)
+            except Exception as e:
+                # trim stacktrace since we have limitation on the error message
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
+                raise Exception(
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
+                )
+            parsed_string = parsed_string.replace(token_to_replace, str(val))
             return parsed_string
         # this basically for complex expressions with functions and operators
         for token in tokens:
-            token = "".join(token)
-            val = self._parse_token(token)
-            parsed_string = parsed_string.replace(token, str(val))
+            token, escapes = token
+            token_to_replace = token
+            try:
+                if escapes:
+                    for escape in escapes:
+                        token = token[:escape] + "\\" + token[escape:]
+                val = self._parse_token(token)
+            except Exception as e:
+                trimmed_token = self._trim_token_error(token)
+                err_message = str(e).splitlines()[-1]
+                raise Exception(
+                    f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
+                )
+            parsed_string = parsed_string.replace(token_to_replace, str(val))
 
         return parsed_string
 
@@ -130,7 +222,7 @@ class IOHandler:
                     if isinstance(arg, ast.Call):
                         _arg = _parse(self, arg)
                     elif isinstance(arg, ast.Str) or isinstance(arg, ast.Constant):
-                        _arg = arg.s
+                        _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
                     # set is basically {{ value }}
@@ -179,28 +271,47 @@ class IOHandler:
                 # https://github.com/keephq/keep/issues/137
                 import html
 
-                tree = ast.parse(html.unescape(token))
+                tree = ast.parse(
+                    html.unescape(token.replace("\r\n", "").replace("\n", ""))
+                )
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
         return _parse(self, tree)
 
-    def _render(self, key, safe=False, default=""):
+    def _render(self, key: str, safe=False, default=""):
         # change [] to . for the key because thats what chevron uses
         _key = key.replace("[", ".").replace("]", "")
+
+        if "{{^" in key or "{{ ^" in key:
+            self.logger.debug(
+                "Safe render is not supported when there are inverted sections."
+            )
+            safe = False
 
         context = self.context_manager.get_full_context()
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
         rendered = chevron.render(_key, context, warn=True)
+        # chevron.render will escape the quotes, we need to unescape them
+        rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
         sys.stderr = original_stderr
         # If render should failed if value does not exists
         if safe and "Could not find key" in stderr_output:
-            raise RenderException(
-                f"Could not find key {key} in context - {stderr_output}"
-            )
+            # if more than one keys missing, pretiffy the error
+            if stderr_output.count("Could not find key") > 1:
+                missing_keys = stderr_output.split("Could not find key")
+                missing_keys = [
+                    missing_key.strip().replace("\n", "")
+                    for missing_key in missing_keys[1:]
+                ]
+                missing_keys = list(set(missing_keys))
+                err = "Could not find keys: " + ", ".join(missing_keys)
+            else:
+                err = stderr_output.replace("\n", "")
+            raise RenderException(f"{err} in the context.")
         if not rendered:
             return default
         return rendered
@@ -310,3 +421,14 @@ class IOHandler:
                 )
         except Exception:
             self.logger.exception("Failed to request short URLs from API")
+
+
+if __name__ == "__main__":
+    # debug & test
+    context_manager = ContextManager("keep")
+    context_manager.event_context = {"name": ""}
+    iohandler = IOHandler(context_manager)
+    iohandler.parse(
+        "keep.slice('{{alert.name}}', 0, 254)",
+        safe=True,
+    )

@@ -33,7 +33,7 @@ def test_deduplication_sanity(db_session):
             provider_type="test",
             provider_id="test",
             event=alert.dict(),
-            fingerprint="test",
+            fingerprint=alert.fingerprint,
             alert_hash=alert_hash,
         )
     )
@@ -76,7 +76,7 @@ def test_deduplication_with_matcher(db_session):
             provider_type="test",
             provider_id="test",
             event=alert.dict(),
-            fingerprint="test",
+            fingerprint=alert.fingerprint,
             alert_hash=alert_hash,
         )
     )
@@ -128,7 +128,7 @@ def test_deduplication_with_unrelated_filter(db_session):
             provider_type="test",
             provider_id="test",
             event=alert.dict(),
-            fingerprint="test",
+            fingerprint=alert.fingerprint,
             alert_hash=alert_hash,
         )
     )

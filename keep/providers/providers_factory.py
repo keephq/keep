@@ -1,16 +1,24 @@
 """
 The providers factory module.
 """
+
 import copy
+import datetime
 import importlib
 import inspect
 import json
 import logging
 import os
+import types
+import typing
 from dataclasses import fields
 from typing import get_args
 
-from keep.api.core.db import get_consumer_providers, get_installed_providers
+from keep.api.core.db import (
+    get_consumer_providers,
+    get_installed_providers,
+    get_linked_providers,
+)
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -136,6 +144,45 @@ class ProvidersFactory:
             )
             return {}
 
+    def _get_method_param_type(param: inspect.Parameter) -> str:
+        """
+        Get the type name from a function parameter annotation.
+        Handles generic types like Union by returning the first non-NoneType arg.
+        Falls back to 'str' if it can't determine the type.
+
+        Args:
+            param (inspect.Parameter): The parameter to get the type from.
+
+        Returns:
+            str: The type name.
+
+        """
+        annotation_type = param.annotation
+        if annotation_type is inspect.Parameter.empty:
+            # if no annotation, defaults to str
+            return "str"
+
+        if isinstance(annotation_type, type):
+            # it's a simple type
+            return annotation_type.__name__
+
+        annotation_type_origin = typing.get_origin(annotation_type)
+        annotation_type_args = typing.get_args(annotation_type)
+        if annotation_type_args and annotation_type_origin in [
+            typing.Union,
+            types.UnionType,
+        ]:
+            # get the first annotation type argument which type is not NoneType
+            arg_type = next(
+                item.__name__
+                for item in annotation_type_args
+                if item.__name__ != "NoneType"
+            )
+            return arg_type
+        else:
+            # otherwise fallback to str
+            return "str"
+
     def __get_methods(provider_class: BaseProvider) -> list[ProviderMethodDTO]:
         methods = []
         for method in provider_class.PROVIDER_METHODS:
@@ -157,7 +204,7 @@ class ProvidersFactory:
                 func_params.append(
                     ProviderMethodParam(
                         name=param,
-                        type=params[param].annotation.__name__,
+                        type=ProvidersFactory._get_method_param_type(params[param]),
                         mandatory=mandatory,
                         default=default,
                         expected_values=expected_values,
@@ -410,3 +457,43 @@ class ProvidersFactory:
             provider_config=provider_config,
         )
         return provider_class
+
+    @staticmethod
+    def get_linked_providers(tenant_id: str) -> list[Provider]:
+        """
+        Get the linked providers.
+
+        Args:
+            tenant_id (str): The tenant id.
+
+        Returns:
+            list: The linked providers.
+        """
+        linked_providers = get_linked_providers(tenant_id)
+        available_providers = ProvidersFactory.get_all_providers()
+
+        _linked_providers = []
+        for p in linked_providers:
+            provider_type, provider_id, last_alert_received = p[0], p[1], p[2]
+            provider: Provider = next(
+                filter(
+                    lambda provider: provider.type == provider_type,
+                    available_providers,
+                ),
+                None,
+            )
+            if not provider:
+                logger.warning(
+                    f"Linked provider {provider_type} does not exist anymore?"
+                )
+                continue
+            provider = provider.copy()
+            provider.linked = True
+            provider.id = provider_id
+            if last_alert_received:
+                provider.last_alert_received = last_alert_received.replace(
+                    tzinfo=datetime.timezone.utc
+                ).isoformat()
+            _linked_providers.append(provider)
+
+        return _linked_providers

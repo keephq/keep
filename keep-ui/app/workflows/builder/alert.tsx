@@ -7,6 +7,7 @@ interface Provider {
 interface Step {
   name: string;
   provider: Provider;
+  if?: string;
 }
 
 interface Condition {

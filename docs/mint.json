@@ -30,9 +30,13 @@
         "overview/keyconcepts",
         "overview/usecases",
         "overview/ruleengine",
+        "overview/presets",
         {
           "group": "Enrichments",
-          "pages": ["overview/enrichment/mapping"]
+          "pages": [
+            "overview/enrichment/extraction",
+            "overview/enrichment/mapping"
+          ]
         },
         "overview/examples",
         "overview/comparison"
@@ -61,7 +65,8 @@
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",
-        "deployment/openshift"
+        "deployment/openshift",
+        "deployment/ecs"
       ]
     },
     {
@@ -85,42 +90,56 @@
         {
           "group": "Supported Providers",
           "pages": [
+            "providers/documentation/appdynamics-provider",
             "providers/documentation/aks-provider",
             "providers/documentation/axiom-provider",
-            "providers/documentation/cloudwatch-logs",
-            "providers/documentation/cloudwatch-metrics",
+            "providers/documentation/azuremonitoring-provider",
+            "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/datadog-provider",
-            "providers/documentation/ilert-provider",
-            "providers/documentation/kibana-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
-            "providers/documentation/grafana-provider",
+            "providers/documentation/gcpmonitoring-provider",
+            "providers/documentation/gitlab-provider",
             "providers/documentation/grafana-oncall-provider",
+            "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
+            "providers/documentation/ilert-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/kibana-provider",
+            "providers/documentation/kubernetes-provider",
             "providers/documentation/linearb-provider",
+            "providers/documentation/mailchimp-provider",
             "providers/documentation/mock-provider",
             "providers/documentation/mysql-provider",
             "providers/documentation/new-relic-provider",
+            "providers/documentation/ntfy-provider",
+            "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
+            "providers/documentation/pagertree-provider",
             "providers/documentation/pingdom-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
+            "providers/documentation/resend-provider",
             "providers/documentation/sentry-provider",
+            "providers/documentation/signalfx-provider",
             "providers/documentation/signl4-provider",
-            "providers/documentation/zabbix-provider",
+            "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/statuscake-provider",
+            "providers/documentation/splunk-provider",
+            "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
-            "providers/documentation/zenduty-provider",
-            "providers/documentation/resend-provider",
-            "providers/documentation/websocket-provider"
+            "providers/documentation/websocket-provider",
+            "providers/documentation/incidentmanager-provider",
+            "providers/documentation/zabbix-provider",
+            "providers/documentation/zenduty-provider"
           ]
         }
       ]
@@ -260,6 +279,14 @@
                   "group": "keep workflow runs",
                   "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
                 }
+              ]
+            },
+            {
+              "group": "keep mappings",
+              "pages": [
+                "cli/commands/mappings-list",
+                "cli/commands/mappings-create",
+                "cli/commands/mappings-delete"
               ]
             },
             "cli/commands/cli-api",

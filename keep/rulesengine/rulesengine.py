@@ -1,6 +1,7 @@
 import itertools
 import json
 import logging
+import re
 
 import celpy
 import chevron
@@ -17,14 +18,28 @@ class RulesEngine:
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
 
-    def _calc_max_severity(self, severities):
-        if not severities:
+    def _calc_max_severity(self, alerts):
+        if not alerts:
+            # should not happen
             self.logger.info(
                 "Could not calculate max severity from empty list - fallbacking to info"
             )
             return str(AlertSeverity.INFO)
 
-        severities = [AlertSeverity(severity) for severity in severities]
+        alerts_by_fingerprint = {}
+        for alert in alerts:
+            if alert.fingerprint not in alerts_by_fingerprint:
+                alerts_by_fingerprint[alert.fingerprint] = [alert]
+            else:
+                alerts_by_fingerprint[alert.fingerprint].append(alert)
+
+        # now take the latest (by timestamp) for each fingerprint:
+        alerts = [
+            max(alerts, key=lambda alert: alert.event["lastReceived"])
+            for alerts in alerts_by_fingerprint.values()
+        ]
+        # if all alerts are with the same status, just use it
+        severities = [AlertSeverity(alert.event["severity"]) for alert in alerts]
         max_severity = max(severities, key=lambda severity: severity.order)
         return str(max_severity)
 
@@ -96,9 +111,7 @@ class RulesEngine:
                 **group.alerts[0].event,
             }
             group_description = chevron.render(rule.group_description, context)
-            group_severity = self._calc_max_severity(
-                [alert.event["severity"] for alert in group.alerts]
-            )
+            group_severity = self._calc_max_severity(group.alerts)
             # group all the sources from all the alerts
             group_source = list(
                 set(
@@ -117,7 +130,8 @@ class RulesEngine:
 
             group_status = self._calc_group_status(group.alerts)
             # get the payload of the group
-            group_payload = self._generate_group_payload(group.alerts)
+            # todo: this is not scaling, needs to find another solution
+            # group_payload = self._generate_group_payload(group.alerts)
             # create the alert
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
@@ -134,7 +148,7 @@ class RulesEngine:
                     "status": group_status,
                     "pushed": True,
                     "group": True,
-                    "groupPayload": group_payload,
+                    # "groupPayload": group_payload,
                     "fingerprint": group_fingerprint,
                     **group_attributes,
                 },
@@ -204,7 +218,7 @@ class RulesEngine:
         # note: group_fingerprint is not a unique id, since different rules can lead to the same group_fingerprint
         #       hence, the actual fingerprint is composed of the group_fingerprint and the group id
         event_payload = event.dict()
-        grouping_criteria = rule.grouping_criteria
+        grouping_criteria = rule.grouping_criteria or []
         group_fingerprint = []
         for criteria in grouping_criteria:
             # we need to extract the value from the event
@@ -220,6 +234,12 @@ class RulesEngine:
         if not group_fingerprint:
             self.logger.warning(
                 f"Failed to calculate group fingerprint for event {event.id} and rule {rule.name}"
+            )
+            return "none"
+        # if any of the values is None, we will return "none"
+        if any([fingerprint is None for fingerprint in group_fingerprint]):
+            self.logger.warning(
+                f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
             )
             return "none"
         return ",".join(group_fingerprint)
@@ -269,6 +289,7 @@ class RulesEngine:
         Returns:
             dict: the payload of the group alert
         """
+
         # first, group by fingerprints
         alerts_by_fingerprint = {}
         for alert in alerts:
@@ -290,3 +311,103 @@ class RulesEngine:
             }
 
         return group_payload
+
+    @staticmethod
+    def preprocess_cel_expression(cel_expression: str) -> str:
+        """Preprocess CEL expressions to replace string-based comparisons with numeric values where applicable."""
+
+        # Construct a regex pattern that matches any severity level or other comparisons
+        # and accounts for both single and double quotes as well as optional spaces around the operator
+        severities = "|".join(
+            [f"\"{severity.value}\"|'{severity.value}'" for severity in AlertSeverity]
+        )
+        pattern = rf"(\w+)\s*([=><!]=?)\s*({severities})"
+
+        def replace_matched(match):
+            field_name, operator, matched_value = (
+                match.group(1),
+                match.group(2),
+                match.group(3).strip("\"'"),
+            )
+
+            # Handle severity-specific replacement
+            if field_name.lower() == "severity":
+                severity_order = next(
+                    (
+                        severity.order
+                        for severity in AlertSeverity
+                        if severity.value == matched_value.lower()
+                    ),
+                    None,
+                )
+                if severity_order is not None:
+                    return f"{field_name} {operator} {severity_order}"
+
+            # Return the original match if it's not a severity comparison or if no replacement is necessary
+            return match.group(0)
+
+        modified_expression = re.sub(
+            pattern, replace_matched, cel_expression, flags=re.IGNORECASE
+        )
+
+        return modified_expression
+
+    @staticmethod
+    def filter_alerts(alerts: list[AlertDto], cel: str):
+        """This function filters alerts according to a CEL
+
+        Args:
+            alerts (list[AlertDto]): list of alerts
+            cel (str): CEL expression
+
+        Returns:
+            list[AlertDto]: list of alerts that are related to the cel
+        """
+        logger = logging.getLogger(__name__)
+        env = celpy.Environment()
+        # if the cel is empty, return all the alerts
+        if not cel:
+            logger.debug("No CEL expression provided")
+            return alerts
+        # preprocess the cel expression
+        cel = RulesEngine.preprocess_cel_expression(cel)
+        ast = env.compile(cel)
+        prgm = env.program(ast)
+        filtered_alerts = []
+        for alert in alerts:
+            payload = alert.dict()
+            # TODO: workaround since source is a list
+            #       should be fixed in the future
+            payload["source"] = ",".join(payload["source"])
+            payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+
+            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+            try:
+                r = prgm.evaluate(activation)
+            except celpy.evaluation.CELEvalError as e:
+                # this is ok, it means that the subrule is not relevant for this event
+                if "no such member" in str(e):
+                    continue
+                # unknown
+                elif "no such overload" in str(e):
+                    logger.debug(
+                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
+                    )
+                    continue
+                elif "found no matching overload" in str(e):
+                    logger.debug(
+                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
+                    )
+                    continue
+                logger.warning(
+                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id} - {e}"
+                )
+                continue
+            except Exception:
+                logger.exception(
+                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id}"
+                )
+                continue
+            if r:
+                filtered_alerts.append(alert)
+        return filtered_alerts

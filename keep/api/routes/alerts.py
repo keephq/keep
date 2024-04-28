@@ -6,8 +6,10 @@ import json
 import logging
 import os
 
+import celpy
 import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
@@ -18,6 +20,8 @@ from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
+    get_alerts_with_filters,
+    get_all_presets,
     get_enrichment,
     get_last_alerts,
     get_session,
@@ -27,11 +31,17 @@ from keep.api.core.dependencies import (
     AuthVerifier,
     get_pusher_client,
 )
-from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
+from keep.api.models.alert import (
+    AlertDto,
+    AlertStatus,
+    DeleteRequestBody,
+    EnrichAlertRequestBody,
+    SearchAlertsRequest,
+)
 from keep.api.models.db.alert import Alert, AlertRaw
+from keep.api.models.db.preset import PresetDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
-from keep.api.utils.tenant_utils import update_key_last_used
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -42,7 +52,7 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-def __enrich_alerts(alerts: list[Alert]) -> list[AlertDto]:
+def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
     """
     Enriches the alerts with the enrichment data.
 
@@ -195,6 +205,63 @@ def pull_alerts_from_providers(
                         new_compressed_batch,
                     )
                 logger.info("Sent batch of pulled alerts via pusher")
+                # Also update the presets
+                try:
+                    presets = get_all_presets(tenant_id)
+                    presets_do_update = []
+                    for preset in presets:
+                        # filter the alerts based on the search query
+                        preset_dto = PresetDto(**preset.dict())
+                        filtered_alerts = RulesEngine.filter_alerts(
+                            last_alerts, preset_dto.cel_query
+                        )
+                        # if not related alerts, no need to update
+                        if not filtered_alerts:
+                            continue
+                        presets_do_update.append(preset_dto)
+                        preset_dto.alerts_count = len(filtered_alerts)
+                        # update noisy
+                        if preset.is_noisy:
+                            firing_filtered_alerts = list(
+                                filter(
+                                    lambda alert: alert.status
+                                    == AlertStatus.FIRING.value,
+                                    filtered_alerts,
+                                )
+                            )
+                            # if there are firing alerts, then do noise
+                            if firing_filtered_alerts:
+                                logger.info("Noisy preset is noisy")
+                                preset_dto.should_do_noise_now = True
+                        # else if at least one of the alerts has .isNoisy
+                        elif any(
+                            alert.isNoisy and alert.status == AlertStatus.FIRING.value
+                            for alert in filtered_alerts
+                            if hasattr(alert, "isNoisy")
+                        ):
+                            logger.info("Noisy preset is noisy")
+                            preset_dto.should_do_noise_now = True
+                    # send with pusher
+                    if pusher_client:
+                        try:
+                            pusher_client.trigger(
+                                f"private-{tenant_id}",
+                                "async-presets",
+                                json.dumps(
+                                    [p.dict() for p in presets_do_update], default=str
+                                ),
+                            )
+                        except Exception:
+                            logger.exception("Failed to send presets via pusher")
+                except Exception:
+                    logger.exception(
+                        "Failed to send presets via pusher",
+                        extra={
+                            "provider_type": provider.type,
+                            "provider_id": provider.id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
             logger.info(
                 f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                 extra={
@@ -204,7 +271,7 @@ def pull_alerts_from_providers(
                 },
             )
         except Exception as e:
-            logger.warn(
+            logger.warning(
                 f"Could not fetch alerts from provider due to {e}",
                 extra={
                     "provider_id": provider.id,
@@ -237,7 +304,7 @@ def get_all_alerts(
         },
     )
     db_alerts = get_last_alerts(tenant_id=tenant_id)
-    enriched_alerts_dto = __enrich_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -272,9 +339,9 @@ def get_alert_history(
         },
     )
     db_alerts = get_alerts_by_fingerprint(
-        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=None
+        tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
-    enriched_alerts_dto = __enrich_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
 
     if provider_id is not None and provider_type is not None:
         try:
@@ -288,7 +355,7 @@ def get_alert_history(
             ).get(fingerprint, [])
             enriched_alerts_dto.extend(pulled_alerts_history)
         except Exception:
-            logger.warn(
+            logger.warning(
                 "Failed to pull alerts history from installed provider",
                 extra={
                     "provider_id": provider_id,
@@ -442,9 +509,11 @@ def assign_alert(
 
 
 # this is super important function and does three things:
+# 0. Checks for deduplications using alertdeduplicator
 # 1. adds the alerts to the DB
 # 2. runs workflows based on the alerts
 # 3. runs the rules engine
+# 4. update the presets
 # TODO: add appropriate logs, trace and all of that so we can track errors
 def handle_formatted_events(
     tenant_id,
@@ -487,8 +556,16 @@ def handle_formatted_events(
                     raw_alert=raw_event,
                 )
                 session.add(alert)
+        enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+
+            enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Post format enrichment
+            try:
+                formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
+            except Exception:
+                logger.exception("Failed to run post-formatting extraction rules")
 
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
@@ -515,10 +592,11 @@ def handle_formatted_events(
                 alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
-            formatted_event.event_id = alert.id
-            alert_dto = AlertDto(**alert.event)
+            session.flush()
+            session.refresh(alert)
+            formatted_event.event_id = str(alert.id)
+            alert_dto = AlertDto(**formatted_event.dict())
 
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -542,6 +620,7 @@ def handle_formatted_events(
                     )
                 except Exception:
                     logger.exception("Failed to push alert to the client")
+            enriched_formatted_events.append(alert_dto)
         session.commit()
         logger.info(
             "Asyncronusly added new alerts to the DB",
@@ -568,7 +647,7 @@ def handle_formatted_events(
         workflow_manager = WorkflowManager.get_instance()
         # insert the events to the workflow manager process queue
         logger.info("Adding events to the workflow manager queue")
-        workflow_manager.insert_events(tenant_id, formatted_events)
+        workflow_manager.insert_events(tenant_id, enriched_formatted_events)
         logger.info("Added events to the workflow manager queue")
     except Exception:
         logger.exception(
@@ -613,6 +692,61 @@ def handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    # Now we need to update the presets
+    try:
+        presets = get_all_presets(tenant_id)
+        presets_do_update = []
+        for preset in presets:
+            # filter the alerts based on the search query
+            preset_dto = PresetDto(**preset.dict())
+            filtered_alerts = RulesEngine.filter_alerts(
+                enriched_formatted_events, preset_dto.cel_query
+            )
+            # if not related alerts, no need to update
+            if not filtered_alerts:
+                continue
+            presets_do_update.append(preset_dto)
+            preset_dto.alerts_count = len(filtered_alerts)
+            # update noisy
+            if preset.is_noisy:
+                firing_filtered_alerts = list(
+                    filter(
+                        lambda alert: alert.status == AlertStatus.FIRING.value,
+                        filtered_alerts,
+                    )
+                )
+                # if there are firing alerts, then do noise
+                if firing_filtered_alerts:
+                    logger.info("Noisy preset is noisy")
+                    preset_dto.should_do_noise_now = True
+            # else if at least one of the alerts has isNoisy and should fire:
+            elif any(
+                alert.isNoisy and alert.status == AlertStatus.FIRING.value
+                for alert in filtered_alerts
+                if hasattr(alert, "isNoisy")
+            ):
+                logger.info("Noisy preset is noisy")
+                preset_dto.should_do_noise_now = True
+        # send with pusher
+        if pusher_client:
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-presets",
+                    json.dumps([p.dict() for p in presets_do_update], default=str),
+                )
+            except Exception:
+                logger.exception("Failed to send presets via pusher")
+    except Exception:
+        logger.exception(
+            "Failed to send presets via pusher",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
 
 
 @router.post(
@@ -622,8 +756,9 @@ def handle_formatted_events(
     status_code=201,
 )
 async def receive_generic_event(
-    alert: AlertDto | list[AlertDto],
+    event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -638,13 +773,27 @@ async def receive_generic_event(
         session (Session, optional): Defaults to Depends(get_session).
     """
     tenant_id = authenticated_entity.tenant_id
-    if isinstance(alert, AlertDto):
-        alert = [alert]
 
-    for _alert in alert:
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        event = enrichments_bl.run_extraction_rules(event)
+    except Exception:
+        logger.exception("Failed to run pre-formatting extraction rules")
+
+    if isinstance(event, dict):
+        event = [AlertDto(**event)]
+
+    if isinstance(event, AlertDto):
+        event = [event]
+
+    for _alert in event:
         # if not source, set it to keep
         if not _alert.source:
             _alert.source = ["keep"]
+
+        if fingerprint:
+            _alert.fingerprint = fingerprint
 
         if authenticated_entity.api_key_name:
             _alert.apiKeyRef = authenticated_entity.api_key_name
@@ -652,21 +801,14 @@ async def receive_generic_event(
     bg_tasks.add_task(
         handle_formatted_events,
         tenant_id,
-        alert[0].source[0],
+        event[0].source[0],
         session,
-        alert,
-        alert,
+        event,
+        event,
         pusher_client,
     )
 
-    if authenticated_entity.api_key_name:
-        logger.debug("Updating API Key last used")
-        update_key_last_used(
-            session, tenant_id, unique_api_key_id=authenticated_entity.api_key_name
-        )
-        logger.debug("Successfully updated API Key last used")
-
-    return alert
+    return event
 
 
 @router.post(
@@ -677,6 +819,7 @@ async def receive_event(
     request: Request,
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
+    fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
@@ -708,6 +851,17 @@ async def receive_event(
             "tenant_id": tenant_id,
         },
     )
+
+    enrichments_bl = EnrichmentsBl(tenant_id, session)
+    # Pre format enrichment
+    try:
+        enrichments_bl.run_extraction_rules(event)
+    except Exception as exc:
+        logger.warning(
+            "Failed to run pre-formatting extraction rules",
+            extra={"exception": str(exc)},
+        )
+
     try:
         # Each provider should implement a format_alert method that returns an AlertDto
         # object that will later be returned to the client.
@@ -719,11 +873,23 @@ async def receive_event(
                 "tenant_id": tenant_id,
             },
         )
-        # tb: if we want to have fingerprint_fields configured by the user, format_alert
-        #   needs to be called from an initalized provider instance instead of a static method.
-        formatted_events = provider_class.format_alert(event)
+
+        # if we have provider id, let's try to init the provider class with it
+        provider_instance = None
+        if provider_id:
+            try:
+                provider_instance = ProvidersFactory.get_installed_provider(
+                    tenant_id, provider_id, provider_type
+                )
+            except Exception as e:
+                logger.warning(f"Failed to get provider instance due to {str(e)}")
+
+        formatted_events = provider_class.format_alert(event, provider_instance)
 
         if isinstance(formatted_events, AlertDto):
+            # override the fingerprint if it's provided
+            if fingerprint:
+                formatted_events.fingerprint = fingerprint
             formatted_events = [formatted_events]
 
         logger.info(
@@ -770,7 +936,6 @@ async def receive_event(
 def get_alert(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    session: Session = Depends(get_session),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -826,16 +991,20 @@ def enrich_alert(
             )
             return {"status": "failed"}
 
-        enriched_alerts_dto = __enrich_alerts(alert)
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
         # use pusher to push the enriched alert to the client
         if pusher_client:
             logger.info("Pushing enriched alert to the client")
-            pusher_client.trigger(
-                f"private-{tenant_id}",
-                "async-alerts",
-                json.dumps([enriched_alerts_dto[0].dict()]),
-            )
-            logger.info("Pushed enriched alert to the client")
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-alerts",
+                    json.dumps([enriched_alerts_dto[0].dict()]),
+                )
+                logger.info("Pushed enriched alert to the client")
+            except Exception:
+                logger.exception("Failed to push alert to the client")
+                pass
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
@@ -845,3 +1014,65 @@ def enrich_alert(
     except Exception as e:
         logger.exception("Failed to enrich alert", extra={"error": str(e)})
         return {"status": "failed"}
+
+
+@router.post(
+    "/search",
+    description="Search alerts",
+)
+async def search_alerts(
+    search_request: SearchAlertsRequest,  # Use the model directly
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Searching alerts",
+        extra={"tenant_id": tenant_id},
+    )
+    try:
+        search_query = search_request.query
+        timeframe_in_seconds = search_request.timeframe
+        if timeframe_in_seconds is None:
+            timeframe_in_seconds = 86400
+        elif timeframe_in_seconds < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Timeframe cannot be negative",
+            )
+        # convert the timeframe to days
+        timeframe_in_days = timeframe_in_seconds / 86400
+        # limit the timeframe to 14 days
+        if timeframe_in_days > 14:
+            raise HTTPException(
+                status_code=400,
+                detail="Timeframe cannot be more than 14 days",
+            )
+        # get the alerts
+        alerts = get_alerts_with_filters(
+            tenant_id=tenant_id, time_delta=timeframe_in_days
+        )
+        # convert the alerts to DTO
+        alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+        # filter the alerts based on the search query
+        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+        logger.info(
+            "Searched alerts",
+            extra={"tenant_id": tenant_id},
+        )
+        # return the filtered alerts
+        return filtered_alerts
+    except celpy.celparser.CELParseError as e:
+        logger.warning("Failed to parse the search query", extra={"error": str(e)})
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Failed to parse the search query",
+                "query": search_request.query,
+                "line": e.line,
+                "column": e.column,
+            },
+        )
+
+    except Exception as e:
+        logger.exception("Failed to search alerts", extra={"error": str(e)})
+        raise HTTPException(status_code=500, detail="Failed to search alerts")

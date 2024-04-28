@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import useSWR from "swr";
 import { Callout, Subtitle } from "@tremor/react";
 import {
-  ArrowDownOnSquareIcon,
+  ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -51,39 +51,51 @@ export default function WorkflowsPage() {
   }
 
   const onDrop = async (files: any) => {
+    const fileUpload = async (formData: FormData, reload: boolean) => {
+      try {
+        const response = await fetch(`${apiUrl}/workflows`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: formData,
+        });
+  
+        if (response.ok) {
+          setFileError(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+          if (reload) {
+            window.location.reload();
+          }
+        } else {
+          const errorMessage = await response.text();
+          setFileError(errorMessage);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        }
+      } catch (error) {
+        setFileError("An error occurred during file upload");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+
     const formData = new FormData();
-    const file = files.target.files[0];
-    formData.append("file", file);
+    var reload = false;
 
-    try {
-      const response = await fetch(`${apiUrl}/workflows`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        setFileError(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        window.location.reload();
-      } else {
-        const errorMessage = await response.text();
-        setFileError(errorMessage);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+    for (let i = 0; i < files.target.files.length; i++) {
+      const file = files.target.files[i];
+      formData.set("file", file);
+      if (files.target.files.length === i + 1) {
+        reload = true;
       }
-    } catch (error) {
-      setFileError("An error occurred during file upload");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
+      await fileUpload(formData, reload);
+    };
+  }
 
   function handleStaticExampleSelect(example: string) {
     // todo: something less static
@@ -165,21 +177,22 @@ export default function WorkflowsPage() {
             onClick={() => {
               setIsModalOpen(true);
             }}
-            icon={ArrowDownOnSquareIcon}
+            icon={ArrowUpOnSquareStackIcon}
           >
-            Upload a Workflow
+            Upload Workflows
           </Button>
         </div>
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Upload a Workflow file"
+          title="Upload Workflow files"
         >
           <div className="bg-white p-4 rounded max-w-lg max-h-fit	 mx-auto z-20">
             <input
               type="file"
               id="workflowFile"
               accept=".yml, .yaml" // accept only yamls
+              multiple
               onChange={(e) => {
                 onDrop(e);
                 setIsModalOpen(false); // Add this line to close the modal

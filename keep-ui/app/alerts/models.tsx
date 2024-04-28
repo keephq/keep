@@ -1,13 +1,19 @@
-import { Option } from "./alert-presets";
-
 export enum Severity {
   Critical = "critical",
   High = "high",
-  Medium = "medium",
+  Warning = "warning",
   Low = "low",
   Info = "info",
   Error = "error",
 }
+
+export const severityMapping: { [id: number]: string } = {
+  1: Severity.Low,
+  2: Severity.Info,
+  3: Severity.Warning,
+  4: Severity.High,
+  5: Severity.Critical,
+};
 
 export interface AlertDto {
   id: string;
@@ -27,6 +33,7 @@ export interface AlertDto {
   generatorURL?: string;
   fingerprint: string;
   deleted: boolean;
+  dismissed: boolean;
   assignee?: string;
   ticket_url: string;
   ticket_status?: string;
@@ -34,12 +41,30 @@ export interface AlertDto {
   providerId?: string;
   group?: boolean;
   note?: string;
+  isNoisy?: boolean;
+}
+
+interface Option {
+  readonly label: string;
+  readonly value: string;
 }
 
 export interface Preset {
-  id?: string;
+  id: string;
   name: string;
   options: Option[];
+  is_private: boolean;
+  is_noisy: boolean;
+  should_do_noise_now: boolean;
+  alerts_count: number;
+}
+
+export interface AlertToWorkflowExecution {
+  workflow_id: string;
+  workflow_execution_id: string;
+  alert_fingerprint: string;
+  workflow_status: "timeout" | "in_progress" | "success" | "error" | "providers_not_configured";
+  workflow_started: Date;
 }
 
 export const AlertKnownKeys = [

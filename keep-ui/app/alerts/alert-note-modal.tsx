@@ -118,6 +118,7 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
         <Button // Use Tremor button for Cancel
           onClick={handleNoteClose}
           variant="secondary"
+          color="orange"
         >
           Cancel
         </Button>

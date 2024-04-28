@@ -1,5 +1,11 @@
 name: Tests
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'keep/**'
+  pull_request:
+    paths:
+      - 'keep/**'
 
 env:
   PYTHON_VERSION: 3.11

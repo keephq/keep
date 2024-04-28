@@ -8,6 +8,7 @@ from opsgenie_sdk.rest import ApiException
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 
 
 @pydantic.dataclasses.dataclass
@@ -38,6 +39,23 @@ class OpsgenieProvider(BaseProvider):
             description="Create OpsGenie alerts",
             mandatory=True,
             alias="Create alerts",
+        ),
+    ]
+
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Close an alert",
+            func_name="close_alert",
+            scopes=["opsgenie:create"],
+            description="Close an alert",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Comment an alert",
+            func_name="comment_alert",
+            scopes=["opsgenie:create"],
+            description="Comment an alert",
+            type="action",
         ),
     ]
 
@@ -112,6 +130,47 @@ class OpsgenieProvider(BaseProvider):
             api_instance.create_alert(create_alert_payload)
         except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
+            raise
+
+    # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CloseAlertPayload.md
+    def close_alert(
+        self,
+        alert_id: str,
+    ):
+        """
+        Close OpsGenie Alert.
+
+        """
+        self.logger.info("Closing Opsgenie alert", extra={"alert_id": alert_id})
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
+        close_alert_payload = opsgenie_sdk.CloseAlertPayload()
+        try:
+            api_instance.close_alert(alert_id, close_alert_payload=close_alert_payload)
+            self.logger.info("Opsgenie Alert Closed", extra={"alert_id": alert_id})
+        except ApiException:
+            self.logger.exception("Failed to close OpsGenie alert")
+            raise
+
+    # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/AddNoteToAlertPayload.md
+    def comment_alert(
+        self,
+        alert_id: str,
+        note: str,
+    ):
+        """
+        Add comment or note to an OpsGenie Alert.
+
+        """
+        self.logger.info("Commenting Opsgenie alert", extra={"alert_id": alert_id})
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
+        add_note_to_alert_payload = opsgenie_sdk.AddNoteToAlertPayload(
+            note=note,
+        )
+        try:
+            api_instance.add_note(alert_id, add_note_to_alert_payload)
+            self.logger.info("Opsgenie Alert Commented", extra={"alert_id": alert_id})
+        except ApiException:
+            self.logger.exception("Failed to comment OpsGenie alert")
             raise
 
     def dispose(self):

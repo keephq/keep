@@ -1,155 +1,63 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { Dispatch, SetStateAction } from "react";
+import React, { useState } from "react";
 import { AlertDto, Preset } from "./models";
-import CreatableSelect from "react-select/creatable";
-import { Button, Subtitle } from "@tremor/react";
-import { CheckIcon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import Modal from "@/components/ui/Modal";
+import { Button, TextInput, Switch,Text } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
-
-export interface Option {
-  readonly label: string;
-  readonly value: string;
-}
+import { Table } from "@tanstack/react-table";
+import { AlertsRulesBuilder } from "./alerts-rules-builder";
+import QueryBuilder, {
+  formatQuery,
+  parseCEL,
+} from "react-querybuilder";
 
 interface Props {
-  preset: Preset | null;
-  alerts: AlertDto[];
-  selectedOptions: Option[];
-  setSelectedOptions: Dispatch<SetStateAction<Option[]>>;
+  presetNameFromApi: string;
   isLoading: boolean;
+  table: Table<AlertDto>;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
 }
 
 export default function AlertPresets({
-  preset,
-  alerts,
-  selectedOptions,
-  setSelectedOptions,
+  presetNameFromApi,
   isLoading,
+  table,
+  presetPrivate = false,
+  presetNoisy = false,
 }: Props) {
   const apiUrl = getApiURL();
   const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets({
+  const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
   const { data: session } = useSession();
   const router = useRouter();
 
-  const selectRef = useRef(null);
-  const [options, setOptions] = useState<Option[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const uniqueValuesMap = useMemo(() => {
-    const newUniqueValuesMap = new Map<string, Set<string>>();
-    if (alerts) {
-      // Populating the map with keys and values
-      alerts.forEach((alert) => {
-        Object.entries(alert).forEach(([key, value]) => {
-          if (typeof value !== "string" && key !== "source") return;
-          if (!newUniqueValuesMap.has(key)) {
-            newUniqueValuesMap.set(key, new Set());
-          }
-          if (key === "source") {
-            value = value?.join(",");
-          }
-          if (!newUniqueValuesMap.get(key)?.has(value?.trim()))
-            newUniqueValuesMap.get(key)?.add(value?.toString().trim());
-        });
-      });
-    }
-    return newUniqueValuesMap;
-  }, [alerts]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [presetName, setPresetName] = useState(
+    presetNameFromApi === "feed" || presetNameFromApi === "deleted"
+      ? ""
+      : presetNameFromApi
+  );
+  const [isPrivate, setIsPrivate] = useState(presetPrivate);
+  const [isNoisy, setIsNoisy] = useState(presetNoisy);
+  const [presetCEL, setPresetCEL] = useState("");
 
-  // Initially, set options to keys
-  useEffect(() => {
-    setOptions(
-      Array.from(uniqueValuesMap.keys()).map((key) => ({
-        label: key,
-        value: key,
-      }))
-    );
-  }, [uniqueValuesMap]);
-
-  const isValidNewOption = () => {
-    // Only allow creating new options if the input includes '='
-    return inputValue.includes("=");
-  };
-
-  // Handler for key down events
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-    const inputElement = event.target as HTMLInputElement; // Cast to HTMLInputElement
-
-    if (event.key === "Enter") {
-      if (!inputElement.value.includes("=")) {
-        event.preventDefault();
-      }
-    }
-
-    if (event.key === "Tab") {
-      event.preventDefault();
-      // Only add to selectedOptions if focusedOption is not null
-      const select = selectRef.current as any;
-      if (select?.state.focusedOption) {
-        const value = select.state.focusedOption.value;
-        if (value.includes("=")) {
-          handleInputChange(select.state.focusedOption.value);
-        } else {
-          handleInputChange(`${value}=`);
-        }
-      }
-    }
-  };
-
-  const handleChange = (selected: any, actionMeta: any) => {
-    if (
-      actionMeta.action === "select-option" &&
-      selected.some((option: any) => !option.value.includes("="))
-    ) {
-      // Handle invalid option selection
-      handleInputChange(`${actionMeta.option.value}=`);
-      // Optionally, you can prevent the selection or handle it differently
-    } else {
-      setSelectedOptions(selected);
-      setIsMenuOpen(false);
-    }
-  };
-
-  const handleInputChange = (inputValue: string) => {
-    setInputValue(inputValue);
-    if (inputValue.includes("=")) {
-      const [inputKey, inputValuePart] = inputValue.split("=");
-      if (uniqueValuesMap.has(inputKey)) {
-        const filteredValues = Array.from(
-          uniqueValuesMap.get(inputKey) || []
-        ).filter((value) => value?.startsWith(inputValuePart));
-        const newOptions = filteredValues.map((value) => ({
-          label: `${inputKey}=${value}`,
-          value: `${inputKey}=${value}`,
-        }));
-        setOptions(newOptions);
-      } else {
-        setOptions([]);
-      }
-    } else {
-      setOptions(
-        Array.from(uniqueValuesMap.keys()).map((key) => ({
-          label: key,
-          value: key,
-        }))
-      );
-    }
-  };
-
-  const filterOption = ({ label }: Option, input: string) => {
-    return label.toLowerCase().includes(input.toLowerCase());
-  };
+  const selectedPreset = savedPresets.find(
+    (savedPreset) =>
+      savedPreset.name.toLowerCase() ===
+      decodeURIComponent(presetNameFromApi).toLowerCase()
+  ) as Preset | undefined;
 
   async function deletePreset(presetId: string) {
     if (
-      confirm(`You are about to delete preset ${preset!.name}, are you sure?`)
+      confirm(
+        `You are about to delete preset ${presetNameFromApi}, are you sure?`
+      )
     ) {
       const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
@@ -158,116 +66,146 @@ export default function AlertPresets({
         },
       });
       if (response.ok) {
-        toast(`Preset ${preset!.name} deleted!`, {
+        toast(`Preset ${presetNameFromApi} deleted!`, {
           position: "top-left",
           type: "success",
         });
         presetsMutator();
+        router.push("/alerts/feed");
       }
     }
   }
 
   async function addOrUpdatePreset() {
-    const newPresetName = prompt(
-      `${preset?.name ? "Update preset name?" : "Enter new preset name"}`,
-      preset?.name === "feed" || preset?.name === "deleted" ? "" : preset?.name
-    );
-    if (newPresetName) {
-      const options = selectedOptions.map((option) => {
-        return {
-          value: option.value,
-          label: option.label,
-        };
-      });
+    if (presetName) {
+      // translate the CEL to SQL
+      const sqlQuery = formatQuery(parseCEL(presetCEL), { format: 'parameterized_named', parseNumbers: true });
       const response = await fetch(
-        preset?.id ? `${apiUrl}/preset/${preset?.id}` : `${apiUrl}/preset`,
+        selectedPreset?.id
+          ? `${apiUrl}/preset/${selectedPreset?.id}`
+          : `${apiUrl}/preset`,
         {
-          method: preset?.id ? "PUT" : "POST",
+          method: selectedPreset?.id ? "PUT" : "POST",
           headers: {
             Authorization: `Bearer ${session?.accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name: newPresetName, options: options }),
+          body: JSON.stringify({
+            name: presetName,
+            options: [
+              {
+                label: "CEL",
+                value: presetCEL,
+              },
+              {
+                label: "SQL",
+                value: sqlQuery,
+              }
+            ],
+            is_private: isPrivate,
+            is_noisy: isNoisy,
+          }),
         }
       );
       if (response.ok) {
+        setIsModalOpen(false);
         toast(
-          preset?.name
-            ? `Preset ${newPresetName} updated!`
-            : `Preset ${newPresetName} created!`,
+          selectedPreset
+            ? `Preset ${presetName} updated!`
+            : `Preset ${presetName} created!`,
           {
             position: "top-left",
             type: "success",
           }
         );
-        await presetsMutator();
-        router.push(`/alerts/${newPresetName.toLowerCase()}`);
+        presetsMutator();
+        router.push(`/alerts/${presetName.toLowerCase()}`);
       }
     }
   }
 
   return (
     <>
-      <Subtitle>Filters</Subtitle>
-      <div className="flex w-full">
-        <CreatableSelect
-          isMulti
-          options={options}
-          value={selectedOptions}
-          onChange={handleChange}
-          onInputChange={handleInputChange}
-          inputValue={inputValue}
-          filterOption={filterOption}
-          onKeyDown={handleKeyDown}
-          isValidNewOption={isValidNewOption}
-          ref={selectRef}
-          className="w-full"
-          menuIsOpen={isMenuOpen}
-          onFocus={() => setIsMenuOpen(true)}
-          onBlur={() => setIsMenuOpen(false)}
-          isClearable={false}
-          isDisabled={isLoading}
-        />
-        {preset?.name === "feed" && (
-          <Button
-            icon={PlusIcon}
-            size="xs"
-            color="orange"
-            className="ml-2.5"
-            disabled={selectedOptions.length <= 0}
-            onClick={async () => await addOrUpdatePreset()}
-            tooltip="Save current filter as a view"
-          >
-            Create Preset
-          </Button>
-        )}
-        {preset?.name !== "deleted" && preset?.name !== "feed" && (
-          <div className="flex ml-2.5">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        className="w-[30%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
+      >
+        <div className="space-y-2">
+          <div className="text-lg font-semibold">
+            <p>
+              {presetName ? "Update preset name?" : "Enter new preset name"}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <TextInput
+              error={!presetName}
+              errorMessage="Preset name is required"
+              placeholder={
+                presetName === "feed" || presetName === "deleted"
+                  ? ""
+                  : presetName
+              }
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={"private"}
+              checked={isPrivate}
+              onChange={() => setIsPrivate(!isPrivate)}
+              color={"orange"}
+            />
+            <label htmlFor="private" className="text-sm text-gray-500">
+              <Text>Private</Text>
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={"noisy"}
+              checked={isNoisy}
+              onChange={() => setIsNoisy(!isNoisy)}
+              color={"orange"}
+            />
+            <label htmlFor="noisy" className="text-sm text-gray-500">
+              <Text>Noisy</Text>
+            </label>
+          </div>
+
+          <div className="flex justify-end space-x-2.5">
             <Button
-              icon={CheckIcon}
-              size="xs"
+              size="lg"
+              variant="secondary"
               color="orange"
-              title="Save preset"
-              className="mr-1"
-              disabled={selectedOptions.length <= 0}
-              onClick={async () => await addOrUpdatePreset()}
+              onClick={() => setIsModalOpen(false)}
+              tooltip="Close Modal"
             >
-              Save Preset
+              Close
             </Button>
             <Button
-              icon={TrashIcon}
-              size="xs"
+              size="lg"
               color="orange"
-              variant="secondary"
-              title="Delete preset"
-              onClick={async () => {
-                await deletePreset(preset!.id!);
-              }}
+              onClick={addOrUpdatePreset}
+              tooltip="Save Modal"
             >
-              Delete Preset
+              Save
             </Button>
           </div>
-        )}
+        </div>
+      </Modal>
+      <div className="flex w-full items-start mt-6">
+        <AlertsRulesBuilder
+          table={table}
+          defaultQuery=""
+          selectedPreset={selectedPreset}
+          setIsModalOpen={setIsModalOpen}
+          deletePreset={deletePreset}
+          setPresetCEL={setPresetCEL}
+        />
       </div>
     </>
   );

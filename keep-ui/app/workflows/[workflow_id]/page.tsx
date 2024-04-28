@@ -100,7 +100,7 @@ export default function WorkflowDetailPage({
             <TableBody>
               {workflowExecutions.map((execution) => (
                 <TableRow key={execution.id}>
-                  <TableCell>{execution.started}</TableCell>
+                  <TableCell>{new Date(execution.started + "Z").toLocaleString()}</TableCell>
                   <TableCell>{execution.id}</TableCell>
                   <TableCell>{execution.triggered_by}</TableCell>
                   <TableCell>{execution.status}</TableCell>

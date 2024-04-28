@@ -14,25 +14,55 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  useReactTable,
+  useReactTable, ExpandedState,
 } from "@tanstack/react-table";
-import { MdRemoveCircle } from "react-icons/md";
+import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
+import {useState} from "react";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
-export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
+interface Props {
+  mappings: MappingRule[];
+  editCallback: (rule: MappingRule) => void;
+}
+
+export default function RulesTable({ mappings, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
+  const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
     columnHelper.display({
-      id: "id",
-      header: "#",
-      cell: (context) => context.row.original.id,
+      id: "delete",
+      header: "",
+      cell: (context) => (
+        <div className={"space-x-1 flex flex-row items-center justify-center"}>
+          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            onClick={() => editCallback(context.row.original!)}
+          />
+          <Button
+            color="red"
+            size="xs"
+            variant="secondary"
+            icon={MdRemoveCircle}
+            onClick={() => deleteRule(context.row.original.id!)}
+          />
+        </div>
+      ),
+    }),
+    columnHelper.display({
+      id: "priority",
+      header: "Priority",
+      cell: (context) => context.row.original.priority,
     }),
     columnHelper.display({
       id: "name",
@@ -67,25 +97,14 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
         </div>
       ),
     }),
-    columnHelper.display({
-      id: "delete",
-      header: "",
-      cell: (context) => (
-        <Button
-          color="red"
-          size="xs"
-          variant="secondary"
-          icon={MdRemoveCircle}
-          onClick={() => deleteRule(context.row.original.id!)}
-        />
-      ),
-    }),
   ] as DisplayColumnDef<MappingRule>[];
 
   const table = useReactTable({
     columns,
-    data: mappings,
+    data: mappings.sort((a, b) => b.priority - a.priority),
+    state: { expanded },
     getCoreRowModel: getCoreRowModel(),
+    onExpandedChange: setExpanded,
   });
 
   const deleteRule = (ruleId: number) => {
@@ -133,9 +152,11 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
       </TableHead>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
+          <>
           <TableRow
             className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
             key={row.id}
+            onClick={() => row.toggleExpanded()}
           >
             {row.getVisibleCells().map((cell) => (
               <TableCell key={cell.id}>
@@ -143,6 +164,43 @@ export default function RulesTable({ mappings }: { mappings: MappingRule[] }) {
               </TableCell>
             ))}
           </TableRow>
+            {row.getIsExpanded() && (
+              <TableRow className="pl-2.5">
+                <TableCell colSpan={columns.length}>
+                  <div className="flex space-x-2 divide-x">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold">Created At:</span>
+                      <span>
+                        {new Date(
+                          row.original.created_at + "Z"
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 pl-2.5">
+                      <span className="font-bold">Created By:</span>
+                      <span>{row.original.created_by}</span>
+                    </div>
+                    {row.original.last_updated_at && (
+                      <>
+                        <div className="flex items-center space-x-2 pl-2.5">
+                          <span className="font-bold">Updated At:</span>
+                          <span>
+                            {new Date(
+                              row.original.last_updated_at + "Z"
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 pl-2.5">
+                          <span className="font-bold">Updated By:</span>
+                          <span>{row.original.updated_by}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </>
         ))}
       </TableBody>
     </Table>

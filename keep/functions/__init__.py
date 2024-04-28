@@ -1,4 +1,6 @@
+import copy
 import datetime
+import json
 import urllib.parse
 from itertools import groupby
 
@@ -24,8 +26,20 @@ def len(iterable=[]) -> int:
     return _len(iterable)
 
 
+def uppercase(string) -> str:
+    return string.upper()
+
+
+def lowercase(string) -> str:
+    return string.lower()
+
+
 def split(string, delimeter) -> list:
     return string.strip().split(delimeter)
+
+
+def index(iterable, index) -> any:
+    return iterable[index]
 
 
 def strip(string) -> str:
@@ -34,6 +48,10 @@ def strip(string) -> str:
 
 def first(iterable):
     return iterable[0]
+
+
+def last(iterable):
+    return iterable[-1]
 
 
 def utcnow() -> datetime.datetime:
@@ -71,9 +89,34 @@ def datetime_compare(t1, t2) -> float:
     return diff
 
 
+def json_dumps(data: str | dict) -> str:
+    if isinstance(data, str):
+        data = json.loads(data)
+    return json.dumps(data, indent=4, default=str)
+
+
+def replace(string: str, old: str, new: str) -> str:
+    return string.replace(old, new)
+
+
 def encode(string) -> str:
     return urllib.parse.quote(string)
 
 
 def dict_to_key_value_list(d: dict) -> list:
     return [f"{k}:{v}" for k, v in d.items()]
+
+
+def slice(str_to_slice: str, start: int = 0, end: int = 0) -> str:
+    if end == 0 or end == "0":
+        return str_to_slice[int(start) :]
+    return str_to_slice[int(start) : int(end)]
+
+
+def dict_pop(data: str | dict, *args) -> dict:
+    if isinstance(data, str):
+        data = json.loads(data)
+    dict_copy = copy.deepcopy(data)
+    for arg in args:
+        dict_copy.pop(arg, None)
+    return dict_copy
