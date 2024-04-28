@@ -7,7 +7,7 @@ import dataclasses
 import pydantic
 from typing import Optional
 
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.exceptions.provider_exception import ProviderException
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
