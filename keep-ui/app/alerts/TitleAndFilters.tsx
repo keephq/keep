@@ -45,7 +45,7 @@ export const TitleAndFilters = ({
     <div className="flex justify-between">
       <div className="pt-4 text-xl">
         <Title className="capitalize inline">{presetName}</Title>{" "}
-        <span className="text-gray-400">({alerts.length})</span>
+        <span className="text-gray-400">({table.getFilteredRowModel().rows.length})</span>
       </div>
 
       <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">

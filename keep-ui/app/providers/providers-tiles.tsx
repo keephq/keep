@@ -134,7 +134,7 @@ const ProvidersTiles = ({
 </div>
 
       <div className="flex flex-wrap mb-5 gap-5">
-        {providersWithConfig.map((provider, index) => (
+        {providers.map((provider, index) => (
           <ProviderTile
             key={provider.id}
             provider={provider}

@@ -87,13 +87,15 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlertsWithSubscription = () => {
+  const useAllAlertsWithSubscription = (
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
     const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
       new Map()
     );
 
     const { data: alertsFromEndpoint = [], ...restOfAllAlerts } =
-      useAllAlerts();
+      useAllAlerts(options);
 
     const { data: alertSubscription = getDefaultSubscriptionObj() } =
       useAlertsFromPusher();
