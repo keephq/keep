@@ -14,10 +14,10 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from './ViewAlertModal';
 
 const defaultPresets: Preset[] = [
-  { id: "feed", name: "feed", options: [], is_private: false },
-  { id: "deleted", name: "deleted", options: [], is_private: false },
-  { id: "dismissed", name: "dismissed", options: [], is_private: false },
-  { id: "groups", name: "groups", options: [], is_private: false },
+  { id: "feed", name: "feed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "deleted", name: "deleted", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "dismissed", name: "dismissed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  { id: "groups", name: "groups", options: [], is_private: false , is_noisy: false, alerts_count: 0, should_do_noise_now: false},
 ];
 
 type AlertsProps = {
@@ -45,7 +45,16 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
-  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription();
+  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription(
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount:false,
+      revalidateOnReconnect: false,
+      refreshWhenOffline: false,
+      refreshWhenHidden: false,
+      refreshInterval: 0
+
+    });
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -60,6 +69,7 @@ export default function Alerts({ presetName }: AlertsProps) {
     return null;
   }
 
+  console.log("number of alerts: ", alerts.length)
   return (
     <>
       <AlertTableTabPanel

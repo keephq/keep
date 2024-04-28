@@ -212,21 +212,28 @@ def get_api_keys_secret(
             )
             continue
 
-        secret = secret_manager.read_secret(
-            f"{api_key.tenant_id}-{api_key.reference_id}"
-        )
+        try:
+            secret = secret_manager.read_secret(
+                f"{api_key.tenant_id}-{api_key.reference_id}"
+            )
 
-        api_keys_with_secret.append(
-            {
-                "reference_id": api_key.reference_id,
-                "tenant": api_key.tenant,
-                "is_deleted": api_key.is_deleted,
-                "created_at": api_key.created_at,
-                "created_by": api_key.created_by,
-                "last_used": api_key.last_used,
-                "secret": secret,
-            }
-        )
+            api_keys_with_secret.append(
+                {
+                    "reference_id": api_key.reference_id,
+                    "tenant": api_key.tenant,
+                    "is_deleted": api_key.is_deleted,
+                    "created_at": api_key.created_at,
+                    "created_by": api_key.created_by,
+                    "last_used": api_key.last_used,
+                    "secret": secret,
+                }
+            )
+        except Exception as e:
+            logger.error(
+                "Error reading secret",
+                extra={"error": str(e)},
+            )
+            continue
 
     return api_keys_with_secret
 

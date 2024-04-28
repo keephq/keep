@@ -8,7 +8,7 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import { AlertDto } from "./models";
-import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
+import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertSeverity from "./alert-severity";
 import AlertName from "./alert-name";
@@ -19,8 +19,10 @@ import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
 import { Severity, severityMapping } from "./models";
+import { MdOutlineNotificationsActive, MdOutlineNotificationsOff } from "react-icons/md";
 
 export const DEFAULT_COLS = [
+  "noise",
   "checkbox",
   "severity",
   "name",
@@ -89,7 +91,6 @@ const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: s
 
 
 const customSeveritySortFn = (rowA: any, rowB: any) => {
-  // Assuming rowA and rowB contain the data in a property (like 'original' or directly)
   // Adjust the way to access severity values according to your data structure
   const severityValueA = rowA.original?.severity; // or rowA.severity;
   const severityValueB = rowB.original?.severity; // or rowB.severity;
@@ -109,6 +110,7 @@ interface GenerateAlertTableColsArg {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto) => void;
   presetName: string;
+  presetNoisy?: boolean;
   setViewAlertModal?: (alert: AlertDto) => void;
 }
 
@@ -122,6 +124,7 @@ export const useAlertTableCols = (
     setRunWorkflowModalAlert,
     setDismissModalAlert,
     presetName,
+    presetNoisy = false,
     setViewAlertModal,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
@@ -159,11 +162,45 @@ export const useAlertTableCols = (
   ) as ColumnDef<AlertDto>[];
 
   return [
+      // noisy column
+      columnHelper.display({
+        id: "noise",
+        size: 5,
+        header: () => <></>,
+        cell: (context) => {
+          // Get the status of the alert
+          const status = context.row.original.status;
+          const isNoisy = context.row.original.isNoisy;
+
+          // Return null if presetNoisy is not true
+          if (!presetNoisy && !isNoisy) {
+            return null;
+          }
+          else if (presetNoisy) {
+                // Decide which icon to display based on the status
+              if (status === "firing") {
+                return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+              } else {
+                return <Icon icon={MdOutlineNotificationsOff} color="red" />;
+              }
+          }
+          // else, noisy alert in non noisy preset
+          else {
+            if (status === "firing") {
+              return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+            } else {
+              return null;
+            }
+          }
+        },
+        enableSorting: false,
+      }),
+    ,
     ...(isCheckboxDisplayed
       ? [
           columnHelper.display({
             id: "checkbox",
-            size: 50,
+            size: 10,
             header: (context) => (
               <AlertTableCheckbox
                 checked={context.table.getIsAllRowsSelected()}

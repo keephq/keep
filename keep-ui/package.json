@@ -4,7 +4,7 @@
   "description": "Keep UI",
   "main": "next.config.js",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "./next_start.sh -p 3000",
     "build": "./next_build.sh",
     "start": "next start",
     "lint": "next lint"
@@ -289,6 +289,7 @@
     "react-modal": "^3.16.1",
     "react-name-initials-avatar": "^0.0.7",
     "react-papaparse": "^4.4.0",
+    "react-player": "^2.16.0",
     "react-querybuilder": "^6.5.4",
     "react-quill": "^2.0.0",
     "react-select": "^5.8.0",
