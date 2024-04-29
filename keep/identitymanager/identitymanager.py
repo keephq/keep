@@ -13,6 +13,23 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         else:
             self.logger = logging.getLogger(__name__)
 
+    # default identity manager does not support sso
+    @property
+    def support_sso(self) -> bool:
+        return False
+
+    def get_sso_providers(self) -> list[str]:
+        raise NotImplementedError(
+            "get_sso_providers() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )
+
+    def get_sso_wizard_url(self) -> str:
+        raise NotImplementedError(
+            "get_sso_wizard_url() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )
+
     def on_start(self, app) -> None:
         """
         Initialize the identity manager.

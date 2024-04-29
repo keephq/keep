@@ -15,6 +15,7 @@ from keycloak import KeycloakAdmin, KeycloakOpenID
 class KeycloakIdentityManager(BaseIdentityManager):
     def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
         super().__init__(tenant_id, context_manager, **kwargs)
+        self.server_url = os.environ.get("KEYCLOAK_URL")
         try:
             self.keycloak_admin = KeycloakAdmin(
                 server_url=os.environ["KEYCLOAK_URL"] + "/admin",
@@ -30,23 +31,44 @@ class KeycloakIdentityManager(BaseIdentityManager):
             raise
         self.logger.info("Keycloak Identity Manager initialized")
 
+    @property
+    def support_sso(self) -> bool:
+        return True
+
+    def get_sso_providers(self) -> list[str]:
+        return []
+
+    def get_sso_wizard_url(self) -> str:
+        # http://localhost:8181/auth/realms/keep/wizard/?org_id=cb75352e-1faf-4cd5-8173-626a224e4894#iss=http%3A%2F%2Flocalhost%3A8181%2Fauth%2Frealms%2Fkeep
+        tenant_realm = "keep"  # TODO fetch it from token/tenant
+        org_id = (
+            "cb75352e-1faf-4cd5-8173-626a224e4894"  # TODO: fetch it from token/tenant
+        )
+        return f"{self.server_url}realms/{tenant_realm}/wizard/?org_id={org_id}/#iss={self.server_url}/realms/{tenant_realm}"
+
     def get_users(self) -> list[User]:
         try:
             users = self.keycloak_admin.get_users({})
             # we want only users with 'keep_role' attribute so we know they are related to Keep
             # todo: created_at for users spinned up
-            users = [
-                user for user in users if "keep_role" in user.get("attributes", {})
-            ]
-            return [
-                User(
+            # todo: support groups
+
+            # users = [
+            #     user for user in users if "keep_role" in user.get("attributes", {})
+            # ]
+            users = [user for user in users if "firstName" in user]
+
+            users_dto = []
+            for user in users:
+                role = user.get("attributes", {}).get("keep_role", ["admin"])[0]
+                user_dto = User(
                     email=user["email"],
-                    name=user["username"],
-                    role=user["attributes"]["keep_role"][0],
+                    name=user["firstName"],
+                    role=role,
                     created_at=user.get("createdTimestamp", ""),
                 )
-                for user in users
-            ]
+                users_dto.append(user_dto)
+            return users_dto
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch users from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch users")
@@ -141,11 +163,13 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             )
             tenant_id = payload.get("keep_tenant_id")
             email = payload.get("preferred_username")
-            role_name = payload.get("keep_role")
-            if not role_name:
-                raise HTTPException(
-                    status_code=401, detail="Invalid Keycloak token - no role in token"
-                )
+            role_name = "admin"
+            # TODO: add groups
+            # role_name = payload.get("keep_role")
+            # if not role_name:
+            #    raise HTTPException(
+            #        status_code=401, detail="Invalid Keycloak token - no role in token"
+            #    )
             role = get_role_by_role_name(role_name)
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid Keycloak token")

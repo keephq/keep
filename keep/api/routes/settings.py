@@ -409,3 +409,26 @@ def delete_api_key(
     else:
         logger.info(f"Api key ({keyId}) not found")
         raise HTTPException(status_code=404, detail=f"Api key ({keyId}) not found")
+
+
+@router.get("/sso")
+async def get_sso_settings(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
+    ),
+):
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        tenant_id=authenticated_entity.tenant_id,
+        identity_manager_type=auth_type,
+        context_manager=ContextManager(tenant_id=authenticated_entity.tenant_id),
+    )
+
+    if identity_manager.support_sso:
+        providers = identity_manager.get_sso_providers()
+        return {
+            "sso": True,
+            "providers": providers,
+            "wizardUrl": identity_manager.get_sso_wizard_url(),
+        }
+    else:
+        return {"sso": False}
