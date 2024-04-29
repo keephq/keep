@@ -174,7 +174,7 @@ def get_app(
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
     identity_manager = IdentityManagerFactory.get_identity_manager(
-        None, None, auth_type
+        None, None, AUTH_TYPE
     )
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)

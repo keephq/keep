@@ -7,10 +7,10 @@ from sqlmodel import Session, select
 from keep.api.core.db import get_last_alerts
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
 from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.rulesengine.rulesengine import RulesEngine
 

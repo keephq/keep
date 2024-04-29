@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends
 
 from keep.api.core.db import get_groups as get_groups_db
 from keep.api.core.db import get_rule as get_rule_db
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.group import AlertSummaryDto, GroupDto
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -17,7 +18,9 @@ logger = logging.getLogger(__name__)
     description="Get groups",
 )
 def get_groups(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[dict]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

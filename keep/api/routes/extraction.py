@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.extraction import (
     ExtractionRule,
     ExtractionRuleDtoBase,
     ExtractionRuleDtoOut,
 )
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 @router.get("", description="Get all extraction rules")
 def get_extraction_rules(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:extraction"])
+        IdentityManagerFactory.get_auth_verifier(["read:extraction"])
     ),
     session: Session = Depends(get_session),
 ) -> list[ExtractionRuleDtoOut]:
@@ -37,7 +38,7 @@ def get_extraction_rules(
 def create_extraction_rule(
     rule_dto: ExtractionRuleDtoBase,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:extraction"])
+        IdentityManagerFactory.get_auth_verifier(["write:extraction"])
     ),
     session: Session = Depends(get_session),
 ) -> ExtractionRuleDtoOut:
@@ -58,7 +59,7 @@ def update_extraction_rule(
     rule_id: int,
     rule_dto: ExtractionRuleDtoBase,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:extraction"])
+        IdentityManagerFactory.get_auth_verifier(["write:extraction"])
     ),
     session: Session = Depends(get_session),
 ) -> ExtractionRuleDtoOut:
@@ -87,7 +88,7 @@ def update_extraction_rule(
 def delete_extraction_rule(
     rule_id: int,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:extraction"])
+        IdentityManagerFactory.get_auth_verifier(["write:extraction"])
     ),
     session: Session = Depends(get_session),
 ):

@@ -27,7 +27,6 @@ from keep.api.core.db import (
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.core.db import get_workflow_id_by_name
-from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
@@ -37,6 +36,7 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
     WorkflowToAlertExecutionDTO,
 )
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory

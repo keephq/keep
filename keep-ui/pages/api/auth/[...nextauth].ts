@@ -163,6 +163,42 @@ const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
+async function refreshAccessToken(token) {
+  const issuerUrl = process.env.KEYCLOAK_ISSUER;
+  const refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
+
+  const params = new URLSearchParams({
+      client_id: process.env.KEYCLOAK_ID!,  // Using non-null assertion (!) because it is required
+      client_secret: process.env.KEYCLOAK_SECRET!,  // Using non-null assertion (!)
+      grant_type: 'refresh_token',
+      refresh_token: token.refreshToken  // Assuming refreshToken is correctly stored and is a string
+  });
+
+  const response = await fetch(refreshTokenUrl, {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params  // Directly using URLSearchParams instance
+  });
+
+  const refreshedTokens = await response.json();
+
+  if (!response.ok) {
+      console.error('Failed to refresh token:', refreshedTokens);
+      throw new Error(`Refresh token failed: ${response.status} ${response.statusText}`);
+  }
+
+  return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,  // Using the new refresh token if available
+  };
+}
+
+
+
 // No authentication
 const noAuthOptions = {
   providers: [
@@ -225,11 +261,19 @@ const keycloakAuthOptions  = {
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
+      // account is populated on login
       if (account) {
         token.accessToken = account.access_token;
         token.id_token = account.id_token;
+        token.refreshToken = account.refresh_token;
+        token.accessTokenExpires = Date.now() + account.refresh_expires_in * 1000;
+      } else if (Date.now() < token.accessTokenExpires) {
+        // Return previous token if it has not expired yet
+        return token;
       }
-      return token;
+      // Access token has expired, try to update it
+      console.log("Refreshing access token")
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken;

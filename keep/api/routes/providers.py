@@ -14,12 +14,12 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_provider_distribution, get_session
-from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import (

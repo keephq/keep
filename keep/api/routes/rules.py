@@ -7,7 +7,7 @@ from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
-from keep.api.core.dependencies import AuthenticatedEntity
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()

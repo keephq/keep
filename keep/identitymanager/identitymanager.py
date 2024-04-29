@@ -1,15 +1,18 @@
 import abc
+import logging
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 
 
 class BaseIdentityManager(metaclass=abc.ABCMeta):
-    def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
+    def __init__(self, tenant_id, context_manager: ContextManager = None, **kwargs):
         self.tenant_id = tenant_id
-        self.logger = context_manager.get_logger()
+        if context_manager:
+            self.logger = context_manager.get_logger()
+        else:
+            self.logger = logging.getLogger(__name__)
 
-    @abc.abstractmethod
     def on_start(self, app) -> None:
         """
         Initialize the identity manager.

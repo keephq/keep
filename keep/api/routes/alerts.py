@@ -26,7 +26,7 @@ from keep.api.core.db import (
     get_last_alerts,
     get_session,
 )
-from keep.api.core.dependencies import AuthenticatedEntity, get_pusher_client
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
@@ -39,6 +39,7 @@ from keep.api.models.db.preset import PresetDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine

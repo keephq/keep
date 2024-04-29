@@ -2,7 +2,8 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -13,7 +14,9 @@ logger = logging.getLogger(__name__)
     description="Get tenant id",
 )
 def get_tenant_id(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     return {

@@ -17,34 +17,53 @@ class IdentityManagerTypes(enum.Enum):
 class IdentityManagerFactory:
     @staticmethod
     def get_identity_manager(
-        tenant_id: str,
-        context_manager: ContextManager,
+        tenant_id: str = None,
+        context_manager: ContextManager = None,
         identity_manager_type: IdentityManagerTypes = None,
         **kwargs,
     ) -> BaseIdentityManager:
         if not identity_manager_type:
             identity_manager_type = IdentityManagerTypes[
-                config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH).upper()
-            ]
+                config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH)
+            ].value.lower()
+        else:
+            # Cast to lower to avoid case sensitivity
+            identity_manager_type = identity_manager_type.lower()
+
+        # backward compatibility - cast old values to new ones
+        if identity_manager_type == "no_auth":
+            identity_manager_type = "noauth"  # new
+        elif identity_manager_type == "multi_tenant":
+            identity_manager_type = "auth0"  # new
+        elif identity_manager_type == "single_tenant":
+            identity_manager_type = "db"  # new
+        elif identity_manager_type == "keycloak":
+            identity_manager_type = "keycloak"
+        # new values are allowed
+        elif identity_manager_type in IdentityManagerTypes.__members__:
+            pass
+        else:
+            raise ValueError(f"Invalid AUTH_TYPE: {identity_manager_type}")
+
         # Auth0 (multi tenant)
-        if identity_manager_type == IdentityManagerTypes.AUTH0:
+        if identity_manager_type == IdentityManagerTypes.AUTH0.value:
             from keep.identitymanager.auth0identitymanager import Auth0IdentityManager
 
             return Auth0IdentityManager(tenant_id, context_manager, **kwargs)
         # Database (single tenant)
-        elif identity_manager_type == IdentityManagerTypes.DB:
+        elif identity_manager_type == IdentityManagerTypes.DB.value:
             from keep.identitymanager.dbidentitymanager import DBIdentityManager
 
             return DBIdentityManager(tenant_id, context_manager, **kwargs)
         # Keycloak (multi tenant)
-        elif identity_manager_type == IdentityManagerTypes.KEYCLOAK:
+        elif identity_manager_type == IdentityManagerTypes.KEYCLOAK.value:
             from keep.identitymanager.keycloakidentitymanager import (
                 KeycloakIdentityManager,
             )
 
             return KeycloakIdentityManager(tenant_id, context_manager, **kwargs)
         # No Auth (no authentication)
-        elif identity_manager_type == IdentityManagerTypes.NOAUTH:
+        elif identity_manager_type == IdentityManagerTypes.NOAUTH.value:
             from keep.identitymanager.noauthidentitymanager import NoAuthIdentityManager
 
             return NoAuthIdentityManager(tenant_id, context_manager, **kwargs)
@@ -76,8 +95,29 @@ class IdentityManagerFactory:
         else:
             raise ValueError(f"Invalid AUTH_TYPE: {auth_type}")
 
-        identity_manager = IdentityManagerFactory.get_identity_manager(
-            None, None, auth_type
-        )
+        # Auth0 (multi tenant)
+        if auth_type == IdentityManagerTypes.AUTH0.value:
+            from keep.identitymanager.auth0identitymanager import Auth0AuthVerifier
 
-        return identity_manager.get_auth_verifier(scopes)
+            return Auth0AuthVerifier(scopes)
+        # Database (single tenant)
+        elif auth_type == IdentityManagerTypes.DB.value:
+            from keep.identitymanager.dbidentitymanager import DBAuthVerifier
+
+            return DBAuthVerifier(scopes)
+        # Keycloak (multi tenant)
+        elif auth_type == IdentityManagerTypes.KEYCLOAK.value:
+            from keep.identitymanager.keycloakidentitymanager import (
+                KeycloakAuthVerifier,
+            )
+
+            return KeycloakAuthVerifier(scopes)
+        # No Auth (no authentication)
+        elif auth_type == IdentityManagerTypes.NOAUTH.value:
+            from keep.identitymanager.noauthidentitymanager import NoAuthVerifier
+
+            return NoAuthVerifier(scopes)
+
+        raise NotImplementedError(
+            f"Identity manager type {str(auth_type)} not implemented"
+        )
