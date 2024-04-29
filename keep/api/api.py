@@ -5,7 +5,7 @@ from importlib import metadata
 import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from opentelemetry import trace
@@ -17,8 +17,6 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_user
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     alerts,
@@ -37,6 +35,7 @@ from keep.api.routes import (
     workflows,
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -174,39 +173,11 @@ def get_app(
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
-    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
-
-        @app.post("/signin")
-        def signin(body: dict):
-            # validate the user/password
-            user = get_user(body.get("username"), body.get("password"))
-
-            if not user:
-                return JSONResponse(
-                    status_code=401,
-                    content={"message": "Invalid username or password"},
-                )
-            # generate a JWT secret
-            jwt_secret = os.environ.get("KEEP_JWT_SECRET")
-            if not jwt_secret:
-                logger.info("missing KEEP_JWT_SECRET environment variable")
-                raise HTTPException(status_code=401, detail="Missing JWT secret")
-            token = jwt.encode(
-                {
-                    "email": user.username,
-                    "tenant_id": SINGLE_TENANT_UUID,
-                    "role": user.role,
-                },
-                jwt_secret,
-                algorithm="HS256",
-            )
-            # return the token
-            return {
-                "accessToken": token,
-                "tenantId": SINGLE_TENANT_UUID,
-                "email": user.username,
-                "role": user.role,
-            }
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        None, None, auth_type
+    )
+    # if any endpoints needed, add them on_start
+    identity_manager.on_start(app)
 
     @app.on_event("startup")
     async def on_startup():

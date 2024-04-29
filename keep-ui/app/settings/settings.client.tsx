@@ -6,6 +6,7 @@ import {
   EnvelopeIcon,
   KeyIcon,
 } from "@heroicons/react/24/outline";
+import { MdOutlineSecurity } from "react-icons/md";
 import UsersSettings from "./users-settings";
 import WebhookSettings from "./webhook-settings";
 import APIKeySettings from "./api-key-settings";
@@ -14,6 +15,7 @@ import Loading from "app/loading";
 import SmtpSettings from "./smtp-settings";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import SSOSettings from "./sso-settings";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -50,7 +52,9 @@ export default function SettingsPage() {
         ? 1
         : newSelectedTab === "smtp"
         ? 2
-        : 3;
+        : newSelectedTab === "api-key"
+        ? 3
+        : 4;
     setTabIndex(tabIndex);
     setSelectedTab(newSelectedTab);
   }, [searchParams]);
@@ -72,6 +76,9 @@ export default function SettingsPage() {
         </Tab>
         <Tab icon={KeyIcon} onClick={() => handleTabChange("api-key")}>
           API Key
+        </Tab>
+        <Tab icon={MdOutlineSecurity} onClick={() => handleTabChange("sso")}>
+          SSO
         </Tab>
       </TabList>
       <TabPanels>
@@ -96,6 +103,12 @@ export default function SettingsPage() {
         </TabPanel>
         <TabPanel>
           <APIKeySettings
+            accessToken={session?.accessToken!}
+            selectedTab={selectedTab}
+          />
+        </TabPanel>
+        <TabPanel>
+          <SSOSettings
             accessToken={session?.accessToken!}
             selectedTab={selectedTab}
           />

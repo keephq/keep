@@ -14,12 +14,13 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import get_provider_distribution, get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import (
     GetAlertException,
@@ -57,7 +58,7 @@ def _is_localhost():
 )
 def get_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -105,7 +106,7 @@ def get_providers(
 @router.get("/export", description="export all installed providers")
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -136,7 +137,7 @@ def get_alerts_configuration(
     provider_type: str,
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
 ) -> list:
     tenant_id = authenticated_entity.tenant_id
@@ -168,7 +169,7 @@ def get_logs(
     provider_id: str,
     limit: int = 5,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
 ) -> list:
     try:
@@ -230,7 +231,9 @@ def add_alert(
     provider_id: str,
     alert: dict,
     alert_id: Optional[str] = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> JSONResponse:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -264,7 +267,7 @@ def add_alert(
 def test_provider(
     provider_info: dict = Body(...),
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
 ) -> JSONResponse:
     # Extract parameters from the provider_info dictionary
@@ -307,7 +310,7 @@ def delete_provider(
     provider_type: str,
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["delete:providers"])
+        IdentityManagerFactory.get_auth_verifier(["delete:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -397,7 +400,7 @@ def validate_scopes(
 def validate_provider_scopes(
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:providers"])
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -436,7 +439,7 @@ async def update_provider(
     provider_id: str,
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["update:providers"])
+        IdentityManagerFactory.get_auth_verifier(["update:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -503,7 +506,7 @@ async def update_provider(
 async def install_provider(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:providers"])
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -616,7 +619,7 @@ async def install_provider_oauth2(
     provider_type: str,
     provider_info: dict = Body(...),
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:providers"])
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -690,7 +693,7 @@ def invoke_provider_method(
     method: str,
     method_params: dict,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:providers"])
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -742,7 +745,7 @@ def install_provider_webhook(
     provider_type: str,
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:providers"])
+        IdentityManagerFactory.get_auth_verifier(["write:providers"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -783,7 +786,7 @@ def install_provider_webhook(
 def get_webhook_settings(
     provider_type: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:providers"])
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
     ),
     session: Session = Depends(get_session),
 ) -> ProviderWebhookSettings:

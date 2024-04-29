@@ -7,10 +7,11 @@ from sqlmodel import Session, select
 from keep.api.core.db import get_last_alerts
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
 from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.rulesengine.rulesengine import RulesEngine
 
 router = APIRouter()
@@ -22,7 +23,9 @@ logger = logging.getLogger(__name__)
     description="Get all presets for tenant",
 )
 def get_presets(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
     session: Session = Depends(get_session),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
@@ -161,7 +164,9 @@ class CreateOrUpdatePresetDto(BaseModel):
 @router.post("", description="Create a preset for tenant")
 def create_preset(
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
@@ -195,7 +200,9 @@ def create_preset(
 )
 def delete_preset(
     uuid: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -219,7 +226,9 @@ def delete_preset(
 def update_preset(
     uuid: str,
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id

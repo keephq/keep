@@ -26,11 +26,7 @@ from keep.api.core.db import (
     get_last_alerts,
     get_session,
 )
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import AuthenticatedEntity, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
@@ -43,6 +39,7 @@ from keep.api.models.db.preset import PresetDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -293,7 +290,9 @@ def pull_alerts_from_providers(
 def get_all_alerts(
     background_tasks: BackgroundTasks,
     sync: bool = False,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
@@ -329,7 +328,9 @@ def get_alert_history(
     fingerprint: str,
     provider_id: str | None = None,
     provider_type: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching alert history",
@@ -377,7 +378,9 @@ def get_alert_history(
 @router.delete("", description="Delete alert by finerprint and last received time")
 def delete_alert(
     delete_alert: DeleteRequestBody,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -446,7 +449,9 @@ def assign_alert(
     fingerprint: str,
     last_received: str,
     unassign: bool = False,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -759,7 +764,9 @@ async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ):
@@ -820,7 +827,9 @@ async def receive_event(
     bg_tasks: BackgroundTasks,
     provider_id: str | None = None,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
@@ -935,7 +944,9 @@ async def receive_event(
 )
 def get_alert(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -964,7 +975,9 @@ def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     background_tasks: BackgroundTasks,
     pusher_client: Pusher = Depends(get_pusher_client),
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -1022,7 +1035,9 @@ def enrich_alert(
 )
 async def search_alerts(
     search_request: SearchAlertsRequest,  # Use the model directly
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

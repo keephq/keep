@@ -245,28 +245,20 @@ const keycloakAuthOptions  = {
       try {
         // Perform the logout request.
         const response = await fetch(logOutUrl.toString(), {
-            method: 'GET', // or 'POST' if required by your Keycloak server
+            method: 'GET',
             headers: {
-                // If your logout endpoint requires authentication, you may need to add an Authorization header
                 'Authorization': `Bearer ${token}`
             }
         });
-
-        // Check if the HTTP request was successful.
         if (!response.ok) {
             throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
         }
-
-        // Optionally, log or handle the response body
-        const data = await response.text(); // or `response.text()` if expecting non-JSON response
-        console.log("Response from Keycloak:", data);
     } catch (error) {
         console.error("Error signing out from Keycloak:", error);
     }
-      console.log("Signed out from Keycloak");
+    console.log("Logged out from Keycloak") // :)
     },
   }
-  // Include any additional NextAuth options here
 } as AuthOptions;
 
 

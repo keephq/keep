@@ -7,7 +7,8 @@ from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.dependencies import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -19,7 +20,9 @@ logger = logging.getLogger(__name__)
     description="Get Rules",
 )
 def get_rules(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting rules")
@@ -41,7 +44,9 @@ def get_rules(
 )
 async def create_rule(
     request: Request,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
@@ -95,7 +100,9 @@ async def create_rule(
 async def delete_rule(
     rule_id: str,
     request: Request,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:rules"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Deleting rule {rule_id}")
@@ -114,7 +121,9 @@ async def delete_rule(
 async def update_rule(
     rule_id: str,
     request: Request,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["update:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["update:rules"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     updated_by = authenticated_entity.email
