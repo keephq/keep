@@ -135,14 +135,16 @@ class UptimekumaProvider(BaseProvider):
     event: dict, provider_instance: Optional["UptimekumaProvider"] = None
     ) -> AlertDto:
 
+    status = AlertStatus.RESOLVED if event['heartbeat']['status'] == 1 else AlertStatus.FIRING
+
     alert = AlertDto(
-      id=event["id"],
-      name=event["monitor_id"],
-      status=AlertStatus.FIRING,
-      description=event["description"],
-      time=event["time"],
-      ping=event["ping"],
-      source="uptimekuma"
+      monitor_id=event['monitor']['id'],
+      monitor_name=event['monitor']['name'],
+      monitor_url=event['monitor']['url'],
+      status=status,
+      time=event['heartbeat']['time'],
+      msg=event['heartbeat']['msg'],
+      ping=event['heartbeat']['ping']
     )
 
     return alert
