@@ -116,7 +116,7 @@ class UptimekumaProvider(BaseProvider):
           status=heartbeat["status"].name.lower(),
           lastReceived=heartbeat["time"],
           ping=heartbeat["ping"],
-          source="uptimekuma"
+          source=["uptimekuma"]
         )
       
     except Exception as e:
@@ -137,18 +137,15 @@ class UptimekumaProvider(BaseProvider):
     event: dict, provider_instance: Optional["UptimekumaProvider"] = None
     ) -> AlertDto:
 
-    status = AlertStatus.RESOLVED if event['heartbeat']['status'] == 1 else AlertStatus.FIRING
-
     alert = AlertDto(
       id=event['monitor']['id'],
       name=event['monitor']['name'],
       monitor_url=event['monitor']['url'],
-      status=status,
+      status=event['heartbeat']['status'],
       description=event['msg'],
-      lastReceived=event['heartbeat']['time'],
+      lastReceived=event['heartbeat']['localDateTime'],
       msg=event['heartbeat']['msg'],
-      ping=event['heartbeat']['ping'],
-      source="uptimekuma"
+      source=["uptimekuma"]
     )
 
     return alert
