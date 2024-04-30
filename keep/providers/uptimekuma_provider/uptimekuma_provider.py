@@ -143,7 +143,7 @@ class UptimekumaProvider(BaseProvider):
       monitor_url=event['monitor']['url'],
       status=event['heartbeat']['status'],
       description=event['msg'],
-      lastReceived=event['heartbeat']['time'],
+      lastReceived=event['heartbeat']['localDateTime'],
       msg=event['heartbeat']['msg'],
       source=["uptimekuma"]
     )
