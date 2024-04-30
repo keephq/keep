@@ -1,0 +1,96 @@
+---
+title: "Redmine"
+sidebarTitle: "Redmine Provider"
+---
+
+# Redmine Provider
+
+`RedmineProvider` is a class that integrates with Redmine to manage issue tracking through Keep.
+
+## Inputs
+The `_notify` function of `RedmineProvider` takes the following arguments:
+
+- `project_id` (str): Required. The ID of the Redmine project.
+- `subject` (str): Required. The subject of the issue to be created.
+- `priority_id` (str): Required. The priority ID for the issue.
+- `description` (str): Optional. The description of the issue.
+- `**kwargs` (dict): Optional. Additional parameters that can be passed as key-value pairs for the issue.
+
+## Outputs
+The `_notify` function of `RedmineProvider` outputs the following format i.e. the created issue (example):
+
+```json
+[
+  {
+    "issue": {
+      "id": 2,
+      "project": {
+        "id": 1,
+        "name": "KeepHQ"
+      },
+      "tracker": {
+        "id": 1,
+        "name": "Bug"
+      },
+      "status": {
+        "id": 1,
+        "name": "New",
+        "is_closed": false
+      },
+      "priority": {
+        "id": 4,
+        "name": "Urgent"
+      },
+      "author": {
+        "id": 1,
+        "name": "UserName LastName"
+      },
+      "subject": "Issue1",
+      "description": "A new Issue from KeepHQ",
+      "start_date": "2024-04-30",
+      "due_date": null,
+      "done_ratio": 0,
+      "is_private": false,
+      "estimated_hours": null,
+      "total_estimated_hours": null,
+      "created_on": "2024-04-30T11:59:17Z",
+      "updated_on": "2024-04-30T11:59:17Z",
+      "closed_on": null
+    }
+  }
+]
+```
+
+## Authentication Parameters
+The Redmine provider requires the following authentication parameters:
+
+- `host` (str): Required. The host URL of the Redmine server.
+- `api_access_key` (str): Required. Redmine API Access Key. Refer to the [Redmine REST API documentation](https://www.redmine.org/projects/redmine/wiki/rest_api#Authentication) for details on obtaining an API key.
+
+## Connecting with the Provider
+To connect with the Redmine provider and manage issues through Keep, follow these steps:
+
+1. Obtain a Redmine Personal Access Token: Visit the [Redmine API documentation](https://www.redmine.org/projects/redmine/wiki/rest_api#Authentication) to see the steps to get an API key.
+2. Use the following YAML example to create an issue using the Redmine provider, all these are [valid arguments](https://www.redmine.org/projects/redmine/wiki/Rest_Issues#Creating-an-issue):
+
+```yaml title=examples/issue_creation_example.yml
+# Create an issue using the Redmine provider.
+task:
+  id: create-redmine-issue
+  description: Create an issue in Redmine
+  actions:
+    - name: create-issue
+      provider:
+        type: redmine
+        config: "{{ providers.redmine-provider }}"
+        with:
+          project_id: "example_project"
+          subject: "Issue Subject"
+          priority_id: "2"
+          description: "This is the issue description."
+```
+
+## Useful Links
+- [Redmine REST API](https://www.redmine.org/projects/redmine/wiki/rest_api)
+- [Authentication Guide](https://www.redmine.org/projects/redmine/wiki/rest_api#Authentication)
+- [Valid arguments while creating issue](https://www.redmine.org/projects/redmine/wiki/Rest_Issues#Creating-an-issue)
