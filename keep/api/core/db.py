@@ -951,7 +951,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             query = query.filter(Alert.provider_id == provider_id)
 
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+        query = query.limit(limit)
         # Execute the query
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
