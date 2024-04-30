@@ -248,7 +248,7 @@ const keycloakAuthOptions  = {
       clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
       authorization: {
-        params: { scope: "openid email profile" },
+        params: { scope: "openid email profile roles" },
       }
     }),
   ],
@@ -267,6 +267,8 @@ const keycloakAuthOptions  = {
         token.id_token = account.id_token;
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = Date.now() + account.refresh_expires_in * 1000;
+        // token.tenantId = profile?.active_organization.id;
+        token.keep_tenant_id = "keep";
       } else if (Date.now() < token.accessTokenExpires) {
         // Return previous token if it has not expired yet
         return token;
@@ -277,6 +279,7 @@ const keycloakAuthOptions  = {
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken;
+      session.tenantId = token.keep_tenant_id;
       return session;
     },
   },

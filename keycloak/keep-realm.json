@@ -36,7 +36,7 @@
       "attributes": {
         "access.token.lifespan": "3600"
       },
-      "secret": "keep-keycloak-secret",
+      "secret": "${KEEP_KEYCLOAK_SECRET}",
       "directAccessGrantsEnabled": true,
       "publicClient": false,
       "standardFlowEnabled": true,
@@ -44,6 +44,8 @@
       "fullScopeAllowed": true,
       "authorizationServicesEnabled": true,
       "serviceAccountsEnabled": true,
+      "defaultClientScopes": ["email", "roles", "web-origins", "profile", "active_organization"],
+      "optionalClientScopes": ["offline_access", "microprofile-jwt", "phone", "address"],
       "access": {
         "view": true,
         "configure": true,
@@ -85,6 +87,22 @@
             "access.token.claim": "true",
             "claim.name": "keep_role",
             "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "keep-organization-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-active-organization-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "active_organization",
+            "included.active.organization.properties": "id, name, role, attribute",
+            "jsonType.label": "JSON"
           }
         }
       ]
