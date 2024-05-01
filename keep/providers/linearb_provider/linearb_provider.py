@@ -4,6 +4,7 @@ import json
 
 import pydantic
 import requests
+from asteval import Interpreter
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -157,7 +158,8 @@ class LinearbProvider(BaseProvider):
                         "Got services from workflow", extra={"services": services}
                     )
                     if isinstance(services, str):
-                        services = json.loads(services)
+                        aeval = Interpreter()
+                        services: list = aeval(services)
                     if len(services) > 0 and isinstance(services[0], dict):
                         services = [service["name"] for service in services]
                     payload["services"] = services
