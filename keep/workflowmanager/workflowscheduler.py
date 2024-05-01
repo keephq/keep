@@ -450,6 +450,8 @@ class WorkflowScheduler:
 
             # send the email (commented out)
             try:
+                # from keep.api.core.config import config
+                # from keep.api.utils.email_utils import EmailTemplates, send_email
                 # TODO - should be handled
                 # keep_platform_url = config(
                 #     "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
