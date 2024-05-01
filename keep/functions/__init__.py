@@ -7,6 +7,8 @@ from itertools import groupby
 import pytz
 from dateutil import parser
 
+from keep.api.bl.enrichments import EnrichmentsBl
+
 _len = len
 _all = all
 
@@ -120,3 +122,47 @@ def dict_pop(data: str | dict, *args) -> dict:
     for arg in args:
         dict_copy.pop(arg, None)
     return dict_copy
+
+
+def run_mapping(
+    id: int, lst: str | list, search_key: str, matcher: str, key: str, **kwargs
+) -> list:
+    """
+    Run a mapping rule by ID
+
+    For example, given the following lst:
+    [
+        {"firstName": "John"},
+        {"firstName": "Jane"}
+    ]
+    and the following mapping rule rows:
+    [
+            {"name": "John", "age": 30},
+            {"name": "Jane", "age": 25}
+    ]
+    The following search_key, matcher and key:
+    search_key = "firstName"
+    matcher = "name"
+    key = "age"
+    The function will return: [30, 25]
+
+    Args:
+        id (int): The rule ID from the database
+        lst (str | list): The list of dictionaries to search
+        search_key (str): The key to search in the list
+        matcher (str): The key to match in the mapping rule
+        key (str): The key to return from the mapping rule
+
+    Returns:
+        list: The list of values from the mapping rule
+    """
+    if isinstance(lst, str):
+        lst = json.loads(lst)
+
+    tenant_id = kwargs.get("tenant_id")
+    if not tenant_id:
+        return []
+
+    enrichments_bl = EnrichmentsBl(tenant_id)
+    result = enrichments_bl.run_mapping_rule_by_id(id, lst, search_key, matcher, key)
+    return result

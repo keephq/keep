@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
@@ -12,6 +13,15 @@ from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
+
+
+class RuleCreateDto(BaseModel):
+    ruleName: str
+    sqlQuery: dict
+    celQuery: str
+    timeframeInSeconds: int
+    groupingCriteria: list = []
+    groupDescription: str = None
 
 
 @router.get(
@@ -40,23 +50,19 @@ def get_rules(
     description="Create Rule",
 )
 async def create_rule(
-    request: Request,
+    rule_create_request: RuleCreateDto,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
 ):
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     logger.info("Creating rule")
-    try:
-        body = await request.json()
-        rule_name = body["ruleName"]
-        sql_query = body["sqlQuery"]
-        cel_query = body["celQuery"]
-        timeframe = body["timeframeInSeconds"]
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid request body")
-
-    sql = sql_query.get("sql")
-    params = sql_query.get("params")
+    rule_name = rule_create_request.ruleName
+    cel_query = rule_create_request.celQuery
+    timeframe = rule_create_request.timeframeInSeconds
+    grouping_creteria = rule_create_request.groupingCriteria
+    group_description = rule_create_request.groupDescription
+    sql = rule_create_request.sqlQuery.get("sql")
+    params = rule_create_request.sqlQuery.get("params")
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -83,6 +89,8 @@ async def create_rule(
         timeframe=timeframe,
         definition_cel=cel_query,
         created_by=created_by,
+        grouping_criteria=grouping_creteria,
+        group_description=group_description,
     )
     logger.info("Rule created")
     return rule
