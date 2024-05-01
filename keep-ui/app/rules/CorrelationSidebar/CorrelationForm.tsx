@@ -30,7 +30,7 @@ export const CorrelationForm = () => {
           errorMessage={get(errors, "name.message")}
         />
       </label>
-      <label className="text-tremor-default font-medium text-tremor-content-strong">
+      {/* <label className="text-tremor-default font-medium text-tremor-content-strong">
         Description
         <Textarea
           placeholder="Type here..."
@@ -41,7 +41,7 @@ export const CorrelationForm = () => {
           error={!!get(errors, "description.message")}
           errorMessage={get(errors, "description.message")}
         />
-      </label>
+      </label> */}
       <fieldset>
         <legend className="text-tremor-default font-medium text-tremor-content-strong">
           Scan every
