@@ -9,14 +9,12 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
-from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_enrichment, get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.models.alert import AlertDto
-from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -449,25 +447,27 @@ class WorkflowScheduler:
             self.logger.info(
                 f"Sending email to {workflow.created_by} for failed workflow {workflow_id}"
             )
-            # TODO - should be handled
-            keep_platform_url = config(
-                "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
-            )
-            error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
-            # send the email
+
+            # send the email (commented out)
             try:
-                send_email(
-                    to_email=workflow.created_by,
-                    template_id=EmailTemplates.WORKFLOW_RUN_FAILED,
-                    workflow_id=workflow_id,
-                    workflow_name=workflow.name,
-                    workflow_execution_id=workflow_execution_id,
-                    error=error,
-                    url=error_logs_url,
-                )
-                self.logger.info(
-                    f"Email sent to {workflow.created_by} for failed workflow {workflow_id}"
-                )
+                # TODO - should be handled
+                # keep_platform_url = config(
+                #     "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
+                # )
+                # error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+                # send_email(
+                #     to_email=workflow.created_by,
+                #     template_id=EmailTemplates.WORKFLOW_RUN_FAILED,
+                #     workflow_id=workflow_id,
+                #     workflow_name=workflow.name,
+                #     workflow_execution_id=workflow_execution_id,
+                #     error=error,
+                #     url=error_logs_url,
+                # )
+                # self.logger.info(
+                #     f"Email sent to {workflow.created_by} for failed workflow {workflow_id}"
+                # )
+                pass
             except Exception as e:
                 self.logger.error(
                     f"Failed to send email to {workflow.created_by} for failed workflow {workflow_id}: {e}"
