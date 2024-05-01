@@ -21,6 +21,7 @@ from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_with_filters,
+    get_all_presets,
     get_enrichment,
     get_last_alerts,
     get_session,
@@ -32,11 +33,13 @@ from keep.api.core.dependencies import (
 )
 from keep.api.models.alert import (
     AlertDto,
+    AlertStatus,
     DeleteRequestBody,
     EnrichAlertRequestBody,
     SearchAlertsRequest,
 )
 from keep.api.models.db.alert import Alert, AlertRaw
+from keep.api.models.db.preset import PresetDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
@@ -202,6 +205,63 @@ def pull_alerts_from_providers(
                         new_compressed_batch,
                     )
                 logger.info("Sent batch of pulled alerts via pusher")
+                # Also update the presets
+                try:
+                    presets = get_all_presets(tenant_id)
+                    presets_do_update = []
+                    for preset in presets:
+                        # filter the alerts based on the search query
+                        preset_dto = PresetDto(**preset.dict())
+                        filtered_alerts = RulesEngine.filter_alerts(
+                            last_alerts, preset_dto.cel_query
+                        )
+                        # if not related alerts, no need to update
+                        if not filtered_alerts:
+                            continue
+                        presets_do_update.append(preset_dto)
+                        preset_dto.alerts_count = len(filtered_alerts)
+                        # update noisy
+                        if preset.is_noisy:
+                            firing_filtered_alerts = list(
+                                filter(
+                                    lambda alert: alert.status
+                                    == AlertStatus.FIRING.value,
+                                    filtered_alerts,
+                                )
+                            )
+                            # if there are firing alerts, then do noise
+                            if firing_filtered_alerts:
+                                logger.info("Noisy preset is noisy")
+                                preset_dto.should_do_noise_now = True
+                        # else if at least one of the alerts has .isNoisy
+                        elif any(
+                            alert.isNoisy and alert.status == AlertStatus.FIRING.value
+                            for alert in filtered_alerts
+                            if hasattr(alert, "isNoisy")
+                        ):
+                            logger.info("Noisy preset is noisy")
+                            preset_dto.should_do_noise_now = True
+                    # send with pusher
+                    if pusher_client:
+                        try:
+                            pusher_client.trigger(
+                                f"private-{tenant_id}",
+                                "async-presets",
+                                json.dumps(
+                                    [p.dict() for p in presets_do_update], default=str
+                                ),
+                            )
+                        except Exception:
+                            logger.exception("Failed to send presets via pusher")
+                except Exception:
+                    logger.exception(
+                        "Failed to send presets via pusher",
+                        extra={
+                            "provider_type": provider.type,
+                            "provider_id": provider.id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
             logger.info(
                 f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                 extra={
@@ -449,9 +509,11 @@ def assign_alert(
 
 
 # this is super important function and does three things:
+# 0. Checks for deduplications using alertdeduplicator
 # 1. adds the alerts to the DB
 # 2. runs workflows based on the alerts
 # 3. runs the rules engine
+# 4. update the presets
 # TODO: add appropriate logs, trace and all of that so we can track errors
 def handle_formatted_events(
     tenant_id,
@@ -623,6 +685,61 @@ def handle_formatted_events(
     except Exception:
         logger.exception(
             "Failed to run rules engine",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+    # Now we need to update the presets
+    try:
+        presets = get_all_presets(tenant_id)
+        presets_do_update = []
+        for preset in presets:
+            # filter the alerts based on the search query
+            preset_dto = PresetDto(**preset.dict())
+            filtered_alerts = RulesEngine.filter_alerts(
+                enriched_formatted_events, preset_dto.cel_query
+            )
+            # if not related alerts, no need to update
+            if not filtered_alerts:
+                continue
+            presets_do_update.append(preset_dto)
+            preset_dto.alerts_count = len(filtered_alerts)
+            # update noisy
+            if preset.is_noisy:
+                firing_filtered_alerts = list(
+                    filter(
+                        lambda alert: alert.status == AlertStatus.FIRING.value,
+                        filtered_alerts,
+                    )
+                )
+                # if there are firing alerts, then do noise
+                if firing_filtered_alerts:
+                    logger.info("Noisy preset is noisy")
+                    preset_dto.should_do_noise_now = True
+            # else if at least one of the alerts has isNoisy and should fire:
+            elif any(
+                alert.isNoisy and alert.status == AlertStatus.FIRING.value
+                for alert in filtered_alerts
+                if hasattr(alert, "isNoisy")
+            ):
+                logger.info("Noisy preset is noisy")
+                preset_dto.should_do_noise_now = True
+        # send with pusher
+        if pusher_client:
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "async-presets",
+                    json.dumps([p.dict() for p in presets_do_update], default=str),
+                )
+            except Exception:
+                logger.exception("Failed to send presets via pusher")
+    except Exception:
+        logger.exception(
+            "Failed to send presets via pusher",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),

@@ -378,7 +378,7 @@ class RulesEngine:
             payload = alert.dict()
             # TODO: workaround since source is a list
             #       should be fixed in the future
-            payload["source"] = payload["source"][0]
+            payload["source"] = ",".join(payload["source"])
             payload["severity"] = AlertSeverity(payload["severity"].lower()).order
 
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))

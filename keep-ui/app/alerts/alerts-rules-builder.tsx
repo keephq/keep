@@ -22,10 +22,10 @@ import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
 
 const staticOptions = [
-  { value: "severity > 1", label: "severity > info" },
-  { value: 'status=="firing"', label: "status is firing" },
-  { value: 'source=="grafana"', label: "source is grafana" },
-  { value: 'message.contains("CPU")', label: "cpu is high" },
+  { value: 'severity > "info"', label: 'severity > "info"' },
+  { value: 'status=="firing"', label: 'status == "firing"' },
+  { value: 'source=="grafana"', label: 'source == "grafana"' },
+  { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
 ];
 
 const CustomOption = (props: any) => {

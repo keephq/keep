@@ -5,7 +5,7 @@ import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
 import pymysql
@@ -19,7 +19,7 @@ from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, or_, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -137,155 +137,6 @@ def create_db_and_tables():
     except Exception:
         logger.warning("Failed to create the database or detect if it exists.")
         pass
-
-    # migrate the workflowtoexecution table
-    with Session(engine) as session:
-        try:
-            logger.info("Migrating WorkflowToAlertExecution table")
-            # get the foreign key constraint name
-            results = session.exec(
-                f"SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE  WHERE TABLE_SCHEMA = '{engine.url.database}'  AND TABLE_NAME = 'workflowtoalertexecution' AND COLUMN_NAME = 'alert_fingerprint';"
-            )
-            # now remove it
-            for row in results:
-                constraint_name = row["CONSTRAINT_NAME"]
-                if constraint_name.startswith("workflowtoalertexecution"):
-                    logger.info(f"Dropping constraint {constraint_name}")
-                    session.exec(
-                        f"ALTER TABLE workflowtoalertexecution DROP FOREIGN KEY {constraint_name};"
-                    )
-                    logger.info(f"Dropped constraint {constraint_name}")
-            # now add the new column
-            try:
-                if session.bind.dialect.name == "sqlite":
-                    session.exec(
-                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
-                    )
-                elif session.bind.dialect.name == "mysql":
-                    session.exec(
-                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id VARCHAR(255);"
-                    )
-                elif session.bind.dialect.name == "postgresql":
-                    session.exec(
-                        "ALTER TABLE workflowtoalertexecution ADD COLUMN event_id TEXT;"
-                    )
-                elif session.bind.dialect.name == "mssql":
-                    session.exec(
-                        "ALTER TABLE workflowtoalertexecution ADD event_id NVARCHAR(255);"
-                    )
-                else:
-                    raise ValueError("Unsupported database type")
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate rule table")
-                    pass
-            # also add grouping_criteria to the workflow table
-            logger.info("Migrating Rule table")
-            try:
-                session.exec("ALTER TABLE rule ADD COLUMN grouping_criteria JSON;")
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate rule table")
-                    pass
-            logger.info("Migrated Rule table")
-            # add updated_by and last_updated_at to the mapping rule table
-            logger.info("Migrating MappingRule table")
-            try:
-                if session.bind.dialect.name == "postgresql":
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
-                    )
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at TIMESTAMP;"
-                    )
-                elif session.bind.dialect.name == "mssql":
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD updated_by NVARCHAR(255);"
-                    )
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD last_updated_at DATETIME;"
-                    )
-                else:
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD COLUMN updated_by VARCHAR(255);"
-                    )
-                    session.exec(
-                        "ALTER TABLE mappingrule ADD COLUMN last_updated_at DATETIME;"
-                    )
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate mapping rule table")
-                    pass
-            session.commit()
-            logger.info("Migrated succesfully")
-        except Exception:
-            logger.exception("Failed to migrate table")
-            pass
-
-    # migrate the new workflowexecution table
-    with Session(engine) as session:
-        if session.bind.dialect.name == "mysql":
-            try:
-                session.exec(
-                    "ALTER TABLE workflowexecution ADD COLUMN is_running INT DEFAULT 1, ADD COLUMN timeslot INT DEFAULT 0;"
-                )
-                # Shahar: run manually for safety
-                # session.exec(
-                #    "ALTER TABLE workflowexecution DROP INDEX workflow_id, ADD UNIQUE KEY `workflow_id` (`workflow_id`,`execution_number`,`is_running`,`timeslot`)"
-                # )
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate workflowexecution table")
-                    pass
-        elif session.bind.dialect.name == "sqlite":
-            try:
-                session.exec(
-                    "ALTER TABLE workflowexecution ADD COLUMN is_running INTEGER DEFAULT 1, ADD COLUMN timeslot INTEGER;"
-                )
-                session.exec(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS workflow_id ON workflowexecution (workflow_id, execution_number, is_running, timeslot);"
-                )
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate workflowexecution table")
-                    pass
-        elif session.bind.dialect.name == "mssql":
-            try:
-                session.exec(
-                    "ALTER TABLE workflowexecution ADD is_running INT DEFAULT 1, ADD timeslot INT;"
-                )
-                # Shahar: Run manually
-                # session.exec(
-                #     "CREATE UNIQUE INDEX workflow_id ON workflowexecution (workflow_id, execution_number, is_running, timeslot);"
-                # )
-            except Exception as e:
-                # that's ok
-                if "Duplicate column name" in str(e):
-                    pass
-                # else, log
-                else:
-                    logger.exception("Failed to migrate workflowexecution table")
-                    pass
 
     SQLModel.metadata.create_all(engine)
 
@@ -1085,6 +936,7 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
                     "startedAt"
                 ),  # Include "startedAt" in the selected columns
             )
+            .filter(Alert.tenant_id == tenant_id)
             .join(
                 subquery,
                 and_(
@@ -1095,17 +947,13 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .options(subqueryload(Alert.alert_enrichment))
         )
 
-        # Filter by tenant_id
-        query = query.filter(Alert.tenant_id == tenant_id)
-
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+        query = query.limit(limit)
         # Execute the query
         alerts_with_start = query.all()
-
         # Convert result to list of Alert objects and include "startedAt" information if needed
         alerts = []
         for alert, startedAt in alerts_with_start:
@@ -1714,3 +1562,27 @@ def get_provider_distribution(tenant_id: str) -> dict:
                 ] += hits
 
     return provider_distribution
+
+
+def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Preset.is_private == False,
+                    Preset.created_by == email,
+                )
+            )
+        )
+        presets = session.exec(statement).all()
+    return presets
+
+
+def get_all_presets(tenant_id: str) -> List[Preset]:
+    with Session(engine) as session:
+        presets = session.exec(
+            select(Preset).where(Preset.tenant_id == tenant_id)
+        ).all()
+    return presets
