@@ -48,7 +48,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     if (selectedRule) {
       return {
         name: selectedRule.name,
-        description: "",
+        description: selectedRule.group_description ?? "",
         timeAmount: selectedRule.timeframe,
         timeUnit: "seconds",
         groupedAttributes: selectedRule.grouping_criteria,

@@ -47,14 +47,8 @@ export const CorrelationSidebarBody = ({
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const {
-      name,
-      query,
-      description,
-      timeUnit,
-      timeAmount,
-      groupedAttributes,
-    } = correlationFormData;
+    const { name, query, description, timeUnit, timeAmount } =
+      correlationFormData;
 
     const timeframeInSeconds = TIMEFRAME_UNITS[timeUnit](+timeAmount);
 
@@ -69,11 +63,10 @@ export const CorrelationSidebarBody = ({
           },
           body: JSON.stringify({
             sqlQuery: formatQuery(query, "parameterized_named"),
+            groupDescription: description,
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
-            grouping_criteria: groupedAttributes,
-            item_description: description,
           }),
         }
       );
