@@ -157,7 +157,14 @@ def run_mapping(
         list: The list of values from the mapping rule
     """
     if isinstance(lst, str):
-        lst = json.loads(lst)
+        lst = lst.strip()
+        from asteval import Interpreter
+
+        aeval = Interpreter()
+        lst = aeval(lst)
+
+    if not lst:
+        return []
 
     tenant_id = kwargs.get("tenant_id")
     if not tenant_id:
