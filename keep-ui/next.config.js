@@ -25,9 +25,6 @@ const nextConfig = {
       }
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["@tremor/react"],
-  },
   compiler: {
     removeConsole:
       process.env.NODE_ENV === "production"

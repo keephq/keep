@@ -90,8 +90,10 @@ class IOHandler:
                             elif (
                                 text[i] == quote_char
                                 and not escape_next
-                                and str(text[i + 1]).isalpha()
-                                == False  # end of statement, arg, etc. if it's a letter, we need to escape it
+                                and (
+                                    str(text[i + 1]).isalnum() == False
+                                    and str(text[i + 1]) != " "
+                                )  # end of statement, arg, etc. if its alpha numeric or whitespace, we just need to escape it
                             ):
                                 in_string = False
                                 quote_char = ""
@@ -166,9 +168,15 @@ class IOHandler:
             token, escapes = tokens[0]
             token_to_replace = token
             try:
+                escapes_counter = 0
                 if escapes:
                     for escape in escapes:
-                        token = token[:escape] + "\\" + token[escape:]
+                        token = (
+                            token[: escape + escapes_counter]
+                            + "\\"
+                            + token[escape + escapes_counter :]
+                        )
+                        escapes_counter += 1  # we need to increment the counter because we added a character
                 val = self._parse_token(token)
             except Exception as e:
                 # trim stacktrace since we have limitation on the error message
@@ -263,7 +271,9 @@ class IOHandler:
                 # https://github.com/keephq/keep/issues/137
                 import html
 
-                tree = ast.parse(html.unescape(token))
+                tree = ast.parse(
+                    html.unescape(token.replace("\r\n", "").replace("\n", ""))
+                )
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
@@ -416,12 +426,9 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {
-        "notexist": "it actually exists",
-        "name": "this is a test",
-    }
+    context_manager.event_context = {"name": ""}
     iohandler = IOHandler(context_manager)
     iohandler.parse(
-        "{{#alert.notexist}}{{.}}{{/alert.notexist}}{{^alert.notexist}}{{alert.name}}{{/alert.notexist}}",
+        "keep.slice('{{alert.name}}', 0, 254)",
         safe=True,
     )

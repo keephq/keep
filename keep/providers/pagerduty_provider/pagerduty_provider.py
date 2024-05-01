@@ -246,7 +246,7 @@ class PagerdutyProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: typing.Optional["PagerdutyProvider"]
+        event: dict, provider_instance: typing.Optional["PagerdutyProvider"] = None
     ) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})

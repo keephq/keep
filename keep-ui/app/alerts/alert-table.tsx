@@ -1,4 +1,4 @@
-import { Table, Callout, Card } from "@tremor/react";
+import { Table, Callout, Card, Icon } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
@@ -29,13 +29,16 @@ import AlertPresets from "./alert-presets";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
 }
@@ -45,6 +48,8 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
+  presetPrivate = false,
+  presetNoisy = false,
   isRefreshAllowed = true,
 }: Props) {
   const [theme, setTheme] = useLocalStorage('alert-table-theme',
@@ -76,7 +81,7 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'noise', desc: true } ]);
 
   const table = useReactTable({
     data: alerts,
@@ -86,7 +91,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["checkbox"],
+        left: ["noise", "checkbox"],
         right: ["alertMenu"],
       },
       sorting: sorting,
@@ -116,6 +121,9 @@ export function AlertTable({
     return acc.concat(alertId);
   }, []);
 
+  // show skeleton if no alerts are loaded
+  let showSkeleton = table.getFilteredRowModel().rows.length === 0;
+
   return (
     <>
       <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
@@ -131,6 +139,8 @@ export function AlertTable({
             table={table}
             presetNameFromApi={presetName}
             isLoading={isAsyncLoading}
+            presetPrivate={presetPrivate}
+            presetNoisy={presetNoisy}
           />
         )}
         {isAsyncLoading && (
@@ -149,7 +159,7 @@ export function AlertTable({
             table={table}
             presetName={presetName}
           />
-          <AlertsTableBody table={table} showSkeleton={isAsyncLoading} theme={theme} />
+          <AlertsTableBody table={table} showSkeleton={showSkeleton} theme={theme} />
         </Table>
         <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       </Card>

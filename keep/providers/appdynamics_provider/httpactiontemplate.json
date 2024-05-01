@@ -1,0 +1,41 @@
+[
+  {
+    "actionPlanType": "httprequest",
+    "name": "KeepWebhook",
+    "oneRequestPerEvent": false,
+    "eventClampLimit": -1,
+    "defaultCustomProperties": [],
+    "method": "POST",
+    "scheme": "HTTPS",
+    "host": "",
+    "port": 0,
+    "path": "",
+    "query": "",
+    "urlCharset": "UTF_8",
+    "authType": "NONE",
+    "authUsername": null,
+    "authPassword": "",
+    "headers": [
+      {
+        "id": 0,
+        "version": 0,
+        "name": "X-API-KEY",
+        "value": ""
+      }
+    ],
+    "payloadTemplate": {
+      "httpRequestActionMediaType": "application/json",
+      "charset": "UTF_8",
+      "formDataPairs": [],
+      "payload": "{\"id\": \"${latestEvent.id}\", \"name\": \"${latestEvent.displayName}\", \"severity\": \"${latestEvent.severity}\", \"lastReceived\": \"${latestEvent.eventTime}\", \"message\": \"${latestEvent.eventMessage}\", \"description\": \"${latestEvent.summaryMessage}\", \"event_id\": \"${latestEvent.guid}\", \"url\": \"${latestEvent.deepLink}\"}"
+    },
+    "connectTimeoutInMillis": 5000,
+    "socketTimeoutInMillis": 15000,
+    "maxFollowRedirects": 0,
+    "responseMatchCriteriaAnyTemplate": [],
+    "responseMatchCriteriaNoneTemplate": [],
+    "testLogLevel": "DEBUG",
+    "testPropertiesPairs": [],
+    "eventTypeCountPairs": []
+  }
+]

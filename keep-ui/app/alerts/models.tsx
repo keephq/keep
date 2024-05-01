@@ -8,8 +8,8 @@ export enum Severity {
 }
 
 export const severityMapping: { [id: number]: string } = {
-  1: Severity.Info,
-  2: Severity.Low,
+  1: Severity.Low,
+  2: Severity.Info,
   3: Severity.Warning,
   4: Severity.High,
   5: Severity.Critical,
@@ -41,6 +41,7 @@ export interface AlertDto {
   providerId?: string;
   group?: boolean;
   note?: string;
+  isNoisy?: boolean;
 }
 
 interface Option {
@@ -53,6 +54,9 @@ export interface Preset {
   name: string;
   options: Option[];
   is_private: boolean;
+  is_noisy: boolean;
+  should_do_noise_now: boolean;
+  alerts_count: number;
 }
 
 export interface AlertToWorkflowExecution {

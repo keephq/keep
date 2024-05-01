@@ -212,7 +212,7 @@ class SignalfxProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["SignalfxProvider"]
+        event: dict, provider_instance: Optional["SignalfxProvider"] = None
     ) -> AlertDto:
         # Transform a SignalFx event into an AlertDto object
         #   see: https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
@@ -228,6 +228,12 @@ class SignalfxProvider(BaseProvider):
         description = event.pop("description", "")
         name = event.pop("messageTitle", "")
         lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
+        inputs: dict = event.pop("inputs", {})
+        new_inputs = []
+        for key, value in inputs.items():
+            value["id"] = key
+            new_inputs.append(value)
+        event["inputs"] = new_inputs
         url = event.pop("detectorUrl")
         url = SignalfxProvider.sanitize_url(url)
         _id = event.pop("incidentId")

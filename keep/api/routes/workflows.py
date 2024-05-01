@@ -386,19 +386,18 @@ def get_workflow_by_id(
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:
-            workflow_execution_dto = WorkflowExecutionDTO(
-                id=workflow_execution.id,
-                workflow_id=workflow_execution.workflow_id,
-                status=workflow_execution.status,
-                started=workflow_execution.started,
-                triggered_by=workflow_execution.triggered_by,
-                error=workflow_execution.error,
-                execution_time=workflow_execution.execution_time,
-                results=workflow_execution.results,
-            )
+            workflow_execution_dto = {
+                "id": workflow_execution.id,
+                "workflow_id": workflow_execution.workflow_id,
+                "status": workflow_execution.status,
+                "started": workflow_execution.started.isoformat(),
+                "triggered_by": workflow_execution.triggered_by,
+                "error": workflow_execution.error,
+                "execution_time": workflow_execution.execution_time,
+            }
             workflow_executions_dtos.append(workflow_execution_dto)
 
-    return workflow_executions_dtos
+    return JSONResponse(content=workflow_executions_dtos)
 
 
 @router.delete("/{workflow_id}", description="Delete workflow")

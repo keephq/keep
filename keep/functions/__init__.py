@@ -95,6 +95,10 @@ def json_dumps(data: str | dict) -> str:
     return json.dumps(data, indent=4, default=str)
 
 
+def replace(string: str, old: str, new: str) -> str:
+    return string.replace(old, new)
+
+
 def encode(string) -> str:
     return urllib.parse.quote(string)
 

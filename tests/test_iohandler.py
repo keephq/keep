@@ -712,3 +712,23 @@ def test_if_else_in_template_not_existing(mocked_context_manager):
         safe=True,
     )
     assert rendered == "this is a test"
+
+
+def test_escaped_quotes_with_with_space(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "keep.split('some string with 'quotes and with space' after', ',')"
+    extracted_functions = iohandler.extract_keep_functions(template)
+    # Assuming the method can handle escaped quotes within function arguments
+    assert (
+        len(extracted_functions) == 1
+    ), "Expected one function to be extracted with escaped quotes inside arguments."
+
+
+def test_escaped_quotes_with_with_newlines(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = "keep.split('some string with 'quotes and with space' \r\n after', ',')"
+    extracted_functions = iohandler.extract_keep_functions(template)
+    # Assuming the method can handle escaped quotes within function arguments
+    assert (
+        len(extracted_functions) == 1
+    ), "Expected one function to be extracted with escaped quotes inside arguments."

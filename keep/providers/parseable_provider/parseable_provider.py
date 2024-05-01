@@ -1,6 +1,7 @@
 """
 Parseable Provider is a class that allows to ingest/digest data from Parseable.
 """
+
 import dataclasses
 import datetime
 import json
@@ -120,7 +121,7 @@ class ParseableProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["ParseableProvider"]
+        event: dict, provider_instance: Optional["ParseableProvider"] = None
     ) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))

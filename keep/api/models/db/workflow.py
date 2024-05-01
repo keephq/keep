@@ -24,7 +24,9 @@ class Workflow(SQLModel, table=True):
 
 
 class WorkflowExecution(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("workflow_id", "execution_number"),)
+    __table_args__ = (
+        UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
+    )
 
     id: str = Field(default=None, primary_key=True, max_length=36)
     workflow_id: str = Field(foreign_key="workflow.id", max_length=36)
@@ -32,6 +34,10 @@ class WorkflowExecution(SQLModel, table=True):
     started: datetime = Field(default_factory=datetime.utcnow)
     triggered_by: str = Field(max_length=1024)
     status: str = Field(max_length=1024)
+    is_running: int = Field(default=1)
+    timeslot: int = Field(
+        default_factory=lambda: int(datetime.utcnow().timestamp() / 120)
+    )
     execution_number: int
     logs: Optional[str]
     error: Optional[str] = Field(max_length=10240)
@@ -58,6 +64,7 @@ class WorkflowToAlertExecution(SQLModel, table=True):
         foreign_key="workflowexecution.id", max_length=36
     )
     alert_fingerprint: str = Field(max_length=256)
+    event_id: str | None = Field(max_length=256, nullable=True)
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
     )

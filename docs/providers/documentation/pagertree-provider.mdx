@@ -1,0 +1,47 @@
+---
+title: "Pagertree Provider"
+description: "The Pagertree Provider facilitates interactions with the Pagertree API, allowing the retrieval and management of alerts."
+---
+
+## Inputs
+
+The `notify` function in the `PagertreeProvider` class takes the following parameters:
+
+```python
+kwargs(dict):
+    title (str): Title of the alert or incident. *Required*
+    urgency (Literal["low", "medium", "high", "critical"]): Defines the urgency of the alert. *Required*
+    incident (bool, default=False): If True, sends data as an incident. *Optional*
+    severities (Literal["SEV-1", "SEV-2", "SEV-3", "SEV-4", "SEV-5", "SEV_UNKNOWN"], default="SEV-5"): Specifies the severity level of the incident. *Optional*
+    incident_message (str, default=""): Message describing the incident. *Optional*
+    description (str, default=""): Detailed description of the alert or incident. *Optional*
+    status (Literal["queued", "open", "acknowledged", "resolved", "dropped"], default="queued"): Status of the alert or incident. *Optional*
+    destination_team_ids (list[str], default=[]): List of team IDs that the alert or incident will be sent to. *Optional*
+    destination_router_ids (list[str], default=[]): List of router IDs that the alert or incident will be sent to. *Optional*
+    destination_account_user_ids (list[str], default=[]): List of account user IDs that the alert or incident will be sent to. *Optional*
+    **kwargs (dict): Additional keyword arguments that might be needed for future use. *Optional*
+```
+
+
+### Authentication Parameters
+
+The `PagertreeProviderAuthConfig` class takes the following parameters:
+- api_token (str): Your Pagertree API Token. *Required*
+
+
+## Connecting with the Provider
+
+- To interact with the Pagertree API, you need to provide an api_token.
+- You can view and manage your API keys on your [User Settings](https://app.pagertree.com/user/settings) page.
+
+
+## Notes
+
+_This provider uses the Pagertree API to send alerts or mark them as incidents based on the parameters provided. Depending on whether an incident is flagged as true, it either calls `__send_alert` or `__send_incident` method._
+
+
+## Useful Links
+
+- Pagertree API documentation: [Pagertree API](https://pagertree.com/docs)
+- Pagertree Authentication: [Authentication](https://pagertree.com/docs/api/authentication)
+- Pagertree Alerts: [Alerts & Incident](https://pagertree.com/docs/api/alerts)
