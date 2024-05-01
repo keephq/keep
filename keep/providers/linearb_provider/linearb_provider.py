@@ -132,11 +132,17 @@ class LinearbProvider(BaseProvider):
                     payload.pop("repository_urls", None)
 
                 if services:
+                    self.logger.info(
+                        "Got services from workflow", extra={"services": services}
+                    )
                     if isinstance(services, str):
                         services = json.loads(services)
                     if len(services) > 0 and isinstance(services[0], dict):
                         services = [service["name"] for service in services]
                     payload["services"] = services
+                    self.logger.info(
+                        "Updated services", extra={"services": payload["services"]}
+                    )
                 elif "services" in payload:
                     service_names = [service["name"] for service in payload["services"]]
                     payload["services"] = service_names
