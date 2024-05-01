@@ -116,17 +116,35 @@ class LinearbProvider(BaseProvider):
                 payload = {**incident}
 
                 if "teams" in payload:
+                    self.logger.info(
+                        "Handling teams", extra={"teams": payload["teams"]}
+                    )
                     team_names = [team["name"] for team in payload["teams"]]
                     teams = json.loads(teams) if isinstance(teams, str) else teams
                     for team in teams:
                         if team not in team_names:
                             team_names.append(team)
                     payload["teams"] = team_names
+                    self.logger.info("Updated teams", extra={"teams": payload["teams"]})
 
                 if repository_urls:
+                    self.logger.info(
+                        "Handling repository_urls",
+                        extra={"repository_urls": repository_urls},
+                    )
                     if isinstance(repository_urls, str):
-                        repository_urls = json.loads(repository_urls)
+                        try:
+                            repository_urls = json.loads(repository_urls)
+                        except json.JSONDecodeError:
+                            self.logger.warning(
+                                "Failed to parse repository_urls to JSON"
+                            )
+                            pass
                     payload["repository_urls"] = repository_urls
+                    self.logger.info(
+                        "Updated repository_urls",
+                        extra={"repository_urls": payload["repository_urls"]},
+                    )
                 else:
                     # Might received repository_urls as a key in the payload
                     payload.pop("repository_urls", None)
@@ -213,7 +231,8 @@ class LinearbProvider(BaseProvider):
 
             return result.text
         except Exception as e:
-            raise ProviderException(f"Failed to notify linear: {e}")
+            self.logger.exception("Failed to notify LinearB")
+            raise ProviderException(f"Failed to notify LinearB: {e}")
 
 
 if __name__ == "__main__":
