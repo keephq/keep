@@ -120,10 +120,14 @@ class LinearbProvider(BaseProvider):
                         "Handling teams", extra={"teams": payload["teams"]}
                     )
                     team_names = [team["name"] for team in payload["teams"]]
-                    teams = json.loads(teams) if isinstance(teams, str) else teams
-                    for team in teams:
-                        if team not in team_names:
-                            team_names.append(team)
+                    if teams and isinstance(teams, str):
+                        try:
+                            teams = json.loads(teams)
+                            for team in teams:
+                                if team not in team_names:
+                                    team_names.append(team)
+                        except json.JSONDecodeError:
+                            self.logger.warning("Failed to parse teams to JSON")
                     payload["teams"] = team_names
                     self.logger.info("Updated teams", extra={"teams": payload["teams"]})
 
@@ -139,7 +143,6 @@ class LinearbProvider(BaseProvider):
                             self.logger.warning(
                                 "Failed to parse repository_urls to JSON"
                             )
-                            pass
                     payload["repository_urls"] = repository_urls
                     self.logger.info(
                         "Updated repository_urls",
