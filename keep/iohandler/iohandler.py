@@ -2,6 +2,7 @@ import ast
 import copy
 
 # TODO: fix this! It screws up the eval statement if these are not imported
+import inspect
 import io
 import logging
 import re
@@ -258,7 +259,15 @@ class IOHandler:
                         _arg = arg.id
                     if _arg:
                         _args.append(_arg)
-                val = getattr(keep_functions, func.attr)(*_args)
+                # check if we need to inject tenant_id
+                keep_func = getattr(keep_functions, func.attr)
+                func_signature = inspect.signature(keep_func)
+
+                kwargs = {}
+                if "kwargs" in func_signature.parameters:
+                    kwargs["tenant_id"] = self.context_manager.tenant_id
+
+                val = keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
                 return val
 
         try:
@@ -426,9 +435,16 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {"name": ""}
+    context_manager.event_context = {
+        "ticket_components": [
+            {
+                "id": "34101",
+                "name": "A",
+            }
+        ]
+    }
     iohandler = IOHandler(context_manager)
     iohandler.parse(
-        "keep.slice('{{alert.name}}', 0, 254)",
+        "keep.run_mapping(2, {{alert.ticket_components}}, 'name', 'jira_component_name', 'other_service_name')",
         safe=True,
     )

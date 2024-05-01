@@ -6,7 +6,7 @@ import celpy
 import chevron
 from sqlmodel import Session
 
-from keep.api.core.db import enrich_alert
+from keep.api.core.db import enrich_alert, get_mapping_rule_by_id
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
@@ -33,7 +33,7 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
 
 
 class EnrichmentsBl:
-    def __init__(self, tenant_id: str, db: Session):
+    def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.db_session = db
@@ -141,6 +141,35 @@ class EnrichmentsBl:
                 )
 
         return AlertDto(**event) if is_alert_dto else event
+
+    def run_mapping_rule_by_id(
+        self,
+        rule_id: int,
+        lst: list[dict],
+        entry_key: str,
+        matcher: str,
+        key: str,
+    ) -> list:
+        self.logger.info("Running mapping rule by ID", extra={"rule_id": rule_id})
+        mapping_rule = get_mapping_rule_by_id(self.tenant_id, rule_id)
+        if not mapping_rule:
+            self.logger.warning("Mapping rule not found", extra={"rule_id": rule_id})
+            return []
+
+        result = []
+        for entry in lst:
+            entry_key_value = entry.get(entry_key)
+            if entry_key_value is None:
+                self.logger.warning("Entry key not found", extra={"entry": entry})
+                continue
+            for row in mapping_rule.rows:
+                if row.get(matcher) == entry_key_value:
+                    result.append(row.get(key))
+                    break
+        self.logger.info(
+            "Mapping rule executed", extra={"rule_id": rule_id, "result": result}
+        )
+        return result
 
     def run_mapping_rules(self, alert: AlertDto):
         """
