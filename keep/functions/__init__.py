@@ -6,6 +6,7 @@ from itertools import groupby
 
 import pytz
 from dateutil import parser
+from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
 
@@ -81,7 +82,11 @@ def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
 
 def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
     if isinstance(dt, str):
-        dt = parser.parse(dt)
+        try:
+            dt = parser.parse(dt)
+        except ParserError:
+            # Failed to parse the date
+            return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
 
