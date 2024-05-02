@@ -22,14 +22,6 @@ from keep.providers.providers_factory import ProvidersFactory
 class SentryProviderAuthConfig:
     """Sentry authentication configuration."""
 
-    api_url: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Sentry API URL",
-            "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
-            "sensitive": False,
-        }
-    )
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
@@ -40,6 +32,15 @@ class SentryProviderAuthConfig:
     )
     organization_slug: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry organization slug"}
+    )
+    api_url: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Sentry API URL",
+            "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
+            "sensitive": False,
+        },
+        default="https://sentry.io/api/0",
     )
     project_slug: str = dataclasses.field(
         metadata={
@@ -97,8 +98,8 @@ class SentryProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.sentry_org_slug = self.config.authentication.get("organization_slug")
         self.project_slug = self.config.authentication.get("project_slug")
-        self.sentry_api = self.config.authentication.get(
-            "api_url", self.SENTRY_DEFAULT_API
+        self.sentry_api = (
+            self.config.authentication.get("api_url") or self.SENTRY_DEFAULT_API
         )
 
     @property

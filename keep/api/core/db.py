@@ -248,6 +248,18 @@ def create_workflow_execution(
             raise
 
 
+def get_mapping_rule_by_id(tenant_id: str, rule_id: str) -> MappingRule | None:
+    rule = None
+    with Session(engine) as session:
+        rule: MappingRule | None = (
+            session.query(MappingRule)
+            .filter(MappingRule.tenant_id == tenant_id)
+            .filter(MappingRule.id == rule_id)
+            .first()
+        )
+    return rule
+
+
 def get_last_completed_execution(
     session: Session, workflow_id: str
 ) -> WorkflowExecution:
