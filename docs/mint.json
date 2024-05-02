@@ -113,6 +113,7 @@
             "providers/documentation/pingdom-provider",
             "providers/documentation/postgresql-provider",
             "providers/documentation/pushover-provider",
+            "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
             "providers/documentation/sentry-provider",
             "providers/documentation/signalfx-provider",
