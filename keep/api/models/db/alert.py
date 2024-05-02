@@ -4,9 +4,11 @@ from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
+from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
+from sqlalchemy_utils import UUIDType
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -45,13 +47,23 @@ class AlertToGroup(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
-    group_id: UUID = Field(foreign_key="group.id", primary_key=True)
+    group_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("group.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
 
 
 class Group(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    rule_id: UUID = Field(foreign_key="rule.id")
+    rule_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False), ForeignKey("rule.id", ondelete="CASCADE")
+        ),
+    )
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
