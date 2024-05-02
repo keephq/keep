@@ -50,6 +50,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
   };
 
   return (
+
     <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}
     onMouseEnter={() => setIsHovered(true)}
     onMouseLeave={() => setIsHovered(false)}
