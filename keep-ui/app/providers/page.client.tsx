@@ -89,7 +89,7 @@ export const useFetchProviders = () => {
         installed: provider.installed ?? false,
       }));
 
-      const fetchedLinkedProviders = data.linked_providers.map((provider) => ({
+      const fetchedLinkedProviders = data.linked_providers?.map((provider) => ({
         ...defaultProvider,
         ...provider,
         linked: true,
@@ -100,7 +100,7 @@ export const useFetchProviders = () => {
       setProviders(fetchedProviders);
       setLinkedProviders(fetchedLinkedProviders); // Update state with linked providers
     }
-  }, [data, providers.length, installedProviders.length, linkedProviders.length]);
+  }, [data, providers.length, installedProviders.length, linkedProviders?.length]);
 
   return {
     providers,
@@ -200,7 +200,7 @@ export default function ProvidersPage({
           installedProvidersMode={true}
         />
       )}
-      {linkedProviders.length > 0 && (
+      {linkedProviders?.length > 0 && (
         <ProvidersTiles
           providers={linkedProviders}
           addProvider={addProvider}
