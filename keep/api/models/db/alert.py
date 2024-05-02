@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.orm import relationship
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -60,9 +61,9 @@ class Group(SQLModel, table=True):
     group_fingerprint: str
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="groups",
-        link_model=AlertToGroup,
-        sa_relationship_kwargs={"cascade": "delete"},
+        sa_relationship=relationship(
+            "AlertToGroup", back_populates="group", cascade="all, delete"
+        ),
     )
 
     def calculate_fingerprint(self):
@@ -89,9 +90,9 @@ class Alert(SQLModel, table=True):
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
     groups: List["Group"] = Relationship(
-        back_populates="alerts",
-        link_model=AlertToGroup,
-        sa_relationship_kwargs={"cascade": "delete"},
+        sa_relationship=relationship(
+            "AlertToGroup", back_populates="alerts", cascade="all, delete"
+        )
     )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
