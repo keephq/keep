@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
+from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.orm import relationship
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -46,13 +46,19 @@ class AlertToGroup(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
-    group_id: UUID = Field(foreign_key="group.id", primary_key=True)
+    group_id: UUID = Field(
+        primary_key=True,
+        sa_column_args=[ForeignKey("group.id", ondelete="CASCADE")],
+    )
 
 
 class Group(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    rule_id: UUID = Field(foreign_key="rule.id")
+    Column(UUID, "tenant.id")
+    rule_id: UUID = Field(
+        sa_column_args=[ForeignKey("rule.id", ondelete="CASCADE")],
+    )
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
@@ -61,9 +67,7 @@ class Group(SQLModel, table=True):
     group_fingerprint: str
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        sa_relationship=relationship(
-            "AlertToGroup", back_populates="groups", cascade="all, delete"
-        ),
+        back_populates="groups", link_model=AlertToGroup
     )
 
     def calculate_fingerprint(self):
@@ -90,9 +94,7 @@ class Alert(SQLModel, table=True):
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
     groups: List["Group"] = Relationship(
-        sa_relationship=relationship(
-            "AlertToGroup", back_populates="alerts", cascade="all, delete"
-        )
+        back_populates="alerts", link_model=AlertToGroup
     )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
