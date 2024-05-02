@@ -1,8 +1,7 @@
-import RulesPage from "./rules.client";
-
+import { Client } from "./client";
 
 export default function Page() {
-  return <RulesPage />;
+  return <Client />;
 }
 
 export const metadata = {
