@@ -62,7 +62,7 @@ class Group(SQLModel, table=True):
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
         sa_relationship=relationship(
-            "AlertToGroup", back_populates="group", cascade="all, delete"
+            "AlertToGroup", back_populates="groups", cascade="all, delete"
         ),
     )
 
