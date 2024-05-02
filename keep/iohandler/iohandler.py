@@ -289,9 +289,6 @@ class IOHandler:
         return _parse(self, tree)
 
     def _render(self, key: str, safe=False, default=""):
-        # change [] to . for the key because thats what chevron uses
-        _key = key.replace("[", ".").replace("]", "")
-
         if "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
@@ -302,7 +299,7 @@ class IOHandler:
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        rendered = chevron.render(_key, context, warn=True)
+        rendered = chevron.render(key, context, warn=True)
         # chevron.render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
@@ -437,14 +434,13 @@ if __name__ == "__main__":
     context_manager = ContextManager("keep")
     context_manager.event_context = {
         "ticket_id": "1234",
-        "ticket_status": "Resolved",
         "severity": "high",
         "ticket_created_at": "2021-09-01T00:00:00Z",
     }
     iohandler = IOHandler(context_manager)
     res = iohandler.render(
         iohandler.quote(
-            "not '{{ alert.ticket_id }}' or ('{{ alert.ticket_id }}' and (('{{ alert.ticket_status }}' == 'Resolved' or '{{ alert.ticket_status }}' == 'Closed' or '{{ alert.ticket_status }}' == 'Canceled') and '{{ alert.severity }}' == 'critical') or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168)"
+            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
         ),
         safe=False,
     )
