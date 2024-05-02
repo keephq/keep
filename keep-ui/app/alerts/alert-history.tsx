@@ -115,9 +115,7 @@ export function AlertHistory({ alerts, presetName }: Props) {
     <Modal
       isOpen={selectedAlert !== undefined}
       onClose={() => {
-        console.log(presetName);
-
-        router.replace(`/alerts/${presetName}`);
+        router.replace(`/alerts/${presetName.toLowerCase()}`);
       }}
       className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
