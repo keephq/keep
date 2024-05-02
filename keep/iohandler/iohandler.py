@@ -436,15 +436,20 @@ if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
     context_manager.event_context = {
-        "ticket_components": [
-            {
-                "id": "34101",
-                "name": "A",
-            }
-        ]
+        "ticket_id": "1234",
+        "ticket_status": "Resolved",
+        "severity": "high",
+        "ticket_created_at": "2021-09-01T00:00:00Z",
     }
     iohandler = IOHandler(context_manager)
-    iohandler.parse(
-        "keep.run_mapping(2, {{alert.ticket_components}}, 'name', 'jira_component_name', 'other_service_name')",
-        safe=True,
+    res = iohandler.render(
+        iohandler.quote(
+            "not '{{ alert.ticket_id }}' or ('{{ alert.ticket_id }}' and (('{{ alert.ticket_status }}' == 'Resolved' or '{{ alert.ticket_status }}' == 'Closed' or '{{ alert.ticket_status }}' == 'Canceled') and '{{ alert.severity }}' == 'critical') or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168)"
+        ),
+        safe=False,
     )
+    from asteval import Interpreter
+
+    aeval = Interpreter()
+    evaluated_if_met = aeval(res)
+    print(evaluated_if_met)

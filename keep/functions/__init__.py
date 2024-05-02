@@ -80,10 +80,10 @@ def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
     return dt - datetime.timedelta(minutes=minutes)
 
 
-def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
+def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
     if isinstance(dt, str):
         try:
-            dt = parser.parse(dt)
+            dt = parser.parse(dt.strip())
         except ParserError:
             # Failed to parse the date
             return ""
@@ -91,7 +91,9 @@ def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
     return utc_dt
 
 
-def datetime_compare(t1, t2) -> float:
+def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
+    if t1 is None or t2 is None:
+        return 0
     diff = (t1 - t2).total_seconds() / 3600
     return diff
 
