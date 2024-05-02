@@ -104,17 +104,17 @@ class SlackProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
+        self.logger.info(
+            f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",
+            extra={
+                "message": message,
+                "blocks": blocks,
+                "channel": channel,
+            },
+        )
         if not message:
             message = blocks[0].get("text")
         if self.authentication_config.webhook_url:
-            self.logger.info(
-                "Notifying message to Slack using webhook url",
-                extra={
-                    "message": message,
-                    "blocks": blocks,
-                    "channel": channel,
-                },
-            )
             response = requests.post(
                 self.authentication_config.webhook_url,
                 json={"text": message, "blocks": blocks},
@@ -124,14 +124,6 @@ class SlackProvider(BaseProvider):
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
                 )
         elif self.authentication_config.access_token:
-            self.logger.info(
-                "Notifying message to Slack using access token",
-                extra={
-                    "message": message,
-                    "blocks": blocks,
-                    "channel": channel,
-                },
-            )
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
             payload = {
