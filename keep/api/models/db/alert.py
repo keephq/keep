@@ -60,7 +60,9 @@ class Group(SQLModel, table=True):
     group_fingerprint: str
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="groups", link_model=AlertToGroup
+        back_populates="groups",
+        link_model=AlertToGroup,
+        sa_relationship_kwargs={"cascade": "delete"},
     )
 
     def calculate_fingerprint(self):
@@ -87,7 +89,9 @@ class Alert(SQLModel, table=True):
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
     groups: List["Group"] = Relationship(
-        back_populates="alerts", link_model=AlertToGroup
+        back_populates="alerts",
+        link_model=AlertToGroup,
+        sa_relationship_kwargs={"cascade": "delete"},
     )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
