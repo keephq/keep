@@ -150,61 +150,47 @@ class SplunkProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: Optional["SplunkProvider"] = None
     ) -> AlertDto:
-        if not provider_instance:
-            result = event.get("result", event.get("_result", {}))
-            message = result.get("message")
-            name = message or event["search_name"]
-            service = result.get("service")
-            environment = result.get("environment", result.get("env", "undefined"))
-            exception = event.get(
-                "exception", result.get("exception", result.get("exception_class"))
-            )
-            logger = event.get("logger", result.get("logger"))
-            alert = AlertDto(
-                id=event["sid"],
-                name=name,
-                source=["splunk"],
-                url=event["results_link"],
-                lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                severity=SplunkProvider.SEVERITIES_MAP.get("1"),
-                status="firing",
-                message=message,
-                service=service,
-                environment=environment,
-                exception=exception,
-                logger=logger,
-                **event
-            )
-            alert.fingerprint = SplunkProvider.get_alert_fingerprint(
-                alert,
-                (
-                    SplunkProvider.FINGERPRINT_FIELDS
-                    if (exception is not None or logger is not None)
-                    else ["name"]
-                ),
-            )
-            return alert
+        result = event.get("result", event.get("_result", {}))
 
-        search_id = event["sid"]
-        splunk_service = connect(
-            token=provider_instance.authentication_config.api_key,
-            host=provider_instance.authentication_config.host,
-            port=provider_instance.authentication_config.port,
+        # export k8s specifics
+        kubernetes = {}
+        for key in result:
+            if key.startswith("kubernetes"):
+                kubernetes[key.replace("kubernetes.", "")] = result[key]
+
+        message = result.get("message")
+        name = message or event["search_name"]
+        service = result.get("service")
+        environment = result.get("environment", result.get("env", "undefined"))
+        exception = event.get(
+            "exception", result.get("exception", result.get("exception_class"))
         )
-        saved_search = splunk_service.saved_searches[search_id]
-        return AlertDto(
+        logger = event.get("logger", result.get("logger"))
+        alert = AlertDto(
             id=event["sid"],
-            name=event["search_name"],
+            name=name,
             source=["splunk"],
             url=event["results_link"],
-            severity=SplunkProvider.SEVERITIES_MAP.get(
-                saved_search["_state"]["content"]["alert.severity"]
-            ),
             lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            description=saved_search["_state"]["content"]["description"],
+            severity=SplunkProvider.SEVERITIES_MAP.get("1"),
             status="firing",
+            message=message,
+            service=service,
+            environment=environment,
+            exception=exception,
+            logger=logger,
+            kubernetes=kubernetes,
             **event
         )
+        alert.fingerprint = SplunkProvider.get_alert_fingerprint(
+            alert,
+            (
+                SplunkProvider.FINGERPRINT_FIELDS
+                if (exception is not None or logger is not None)
+                else ["name"]
+            ),
+        )
+        return alert
 
 
 if __name__ == "__main__":
