@@ -107,7 +107,7 @@ class SlackProvider(BaseProvider):
         self.logger.info(
             f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",
             extra={
-                "message": message,
+                "slack_message": message,
                 "blocks": blocks,
                 "channel": channel,
             },
