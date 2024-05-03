@@ -49,6 +49,10 @@ def strip(string) -> str:
     return string.strip()
 
 
+def remove_newlines(string: str = "") -> str:
+    return string.replace("\r\n", "").replace("\n", "").replace("\t", "")
+
+
 def first(iterable):
     return iterable[0]
 
