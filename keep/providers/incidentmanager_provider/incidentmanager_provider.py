@@ -441,7 +441,7 @@ class IncidentmanagerProvider(BaseProvider):
             severity=severity,
             lastReceived=str(alert.get("creationTime")),
             description=alert.get("summary"),
-            source=[alert.get("incidentRecordSource")["createdBy"]],
+            source=["incidentmanager"],
             **alert,
         )
 
