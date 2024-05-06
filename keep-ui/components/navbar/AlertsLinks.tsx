@@ -4,10 +4,7 @@ import { Badge, Subtitle } from "@tremor/react";
 
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
-import {
-  SilencedDoorbellNotification,
-  Trashcan,
-} from "components/icons";
+import { SilencedDoorbellNotification, Trashcan } from "components/icons";
 import { IoChevronUp } from "react-icons/io5";
 import { AiOutlineGroup, AiOutlineSound, AiOutlineSwap } from "react-icons/ai";
 import { Disclosure } from "@headlessui/react";
@@ -32,21 +29,23 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   useEffect(() => {
     // Convert both arrays to string to perform a comparison
-    if (fetchedPresets.length > 0 && JSON.stringify(staticPresets) !== JSON.stringify(staticPresetsOrderFromLS)) {
+    if (
+      fetchedPresets.length > 0 &&
+      JSON.stringify(staticPresets) !== JSON.stringify(staticPresetsOrderFromLS)
+    ) {
       setStaticPresets(staticPresetsOrderFromLS);
     }
   }, [fetchedPresets]);
 
-
-
   const mainPreset = staticPresets.find((preset) => preset.name === "feed");
-  const deletedPreset = staticPresets.find((preset) => preset.name === "deleted");
-  const dismissedPreset = staticPresets.find((preset) => preset.name === "dismissed");
+  const dismissedPreset = staticPresets.find(
+    (preset) => preset.name === "dismissed"
+  );
   const groupsPreset = staticPresets.find((preset) => preset.name === "groups");
 
   return (
     <>
-        <Disclosure as="div" className="space-y-1" defaultOpen>
+      <Disclosure as="div" className="space-y-1" defaultOpen>
         <Disclosure.Button className="w-full flex justify-between items-center p-2">
           {({ open }) => (
             <>
@@ -75,9 +74,13 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               Feed
             </LinkWithIcon>
           </li>
-          {session && <CustomPresetAlertLinks session={session}/>}
+          {session && <CustomPresetAlertLinks session={session} />}
           <li>
-            <LinkWithIcon href="/alerts/groups" icon={AiOutlineGroup} count={groupsPreset?.alerts_count}>
+            <LinkWithIcon
+              href="/alerts/groups"
+              icon={AiOutlineGroup}
+              count={groupsPreset?.alerts_count}
+            >
               Correlation
             </LinkWithIcon>
           </li>
@@ -90,14 +93,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               Dismissed
             </LinkWithIcon>
           </li>
-          <li>
-            <LinkWithIcon href="/alerts/deleted" icon={Trashcan} count={deletedPreset?.alerts_count}>
-              Deleted
-            </LinkWithIcon>
-          </li>
         </Disclosure.Panel>
       </Disclosure>
-   </>
-
+    </>
   );
 };
