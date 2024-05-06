@@ -1,12 +1,11 @@
 import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
-import Select from 'react-select';
-
+import Select from "react-select";
 
 // Assuming AlertDto is already defined elsewhere as in your example
 import { AlertDto } from "./models";
@@ -15,41 +14,49 @@ import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { format, set } from "date-fns";
 import { usePresets } from "utils/hooks/usePresets";
+import { useAlerts } from "utils/hooks/useAlerts";
+import { toast } from "react-toastify";
 
 interface Props {
-  alert: AlertDto | null | undefined;
+  alert: AlertDto[] | null | undefined;
   handleClose: () => void;
 }
 
-export default function AlertDismissModal({ alert, handleClose }: Props) {
-    const [dismissComment, setDismissComment] = useState<string>("");
-    const [dismissOption, setDismissOption] = useState('');
-    // State to track if the date has been set
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [selectedTime, setSelectedTime] = useState(new Date());
+export default function AlertDismissModal({
+  alert: alerts,
+  handleClose,
+}: Props) {
+  const [dismissComment, setDismissComment] = useState<string>("");
+  const [dismissOption, setDismissOption] = useState("");
+  // State to track if the date has been set
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
 
-    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-    // State to track if the date has been set
-    const [dateSelected, setDateSelected] = useState(false);
-    const [timeSelected, setTimeSelected] = useState(false);
-
-    const [selectedOption, setSelectedOption] = useState({ value: '', label: 'Dismiss Forever' });
-
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  // State to track if the date has been set
+  const [dateSelected, setDateSelected] = useState(false);
+  const [timeSelected, setTimeSelected] = useState(false);
+  const [selectedOption, setSelectedOption] = useState({
+    value: "",
+    label: "Dismiss Forever",
+  });
 
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
+  const { useAllAlerts } = useAlerts();
+  const { mutate: alertsMutator } = useAllAlerts({ revalidateOnMount: false });
 
   const { data: session } = useSession();
   // if this modal should not be open, do nothing
-  if (!alert) return null;
+  if (!alerts) return null;
 
-  const isOpen = !!alert;
+  const isOpen = !!alerts;
 
   const handleDismissOptionChange = (selectedOption: any) => {
     setSelectedOption(selectedOption);
-    const custom = selectedOption.value === 'custom';
+    const custom = selectedOption.value === "custom";
     setIsDatePickerOpen(custom);
-    if(!custom){
+    if (!custom) {
       setDateSelected(false);
       setSelectedDate(new Date());
       setTimeSelected(false);
@@ -58,13 +65,15 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
   };
 
   const handleDateChange = (date: any) => {
-    const hasTimeChanged = date.getHours() !== selectedTime.getHours() ||
-                            date.getMinutes() !== selectedTime.getMinutes() ||
-                            date.getSeconds() !== selectedTime.getSeconds();
+    const hasTimeChanged =
+      date.getHours() !== selectedTime.getHours() ||
+      date.getMinutes() !== selectedTime.getMinutes() ||
+      date.getSeconds() !== selectedTime.getSeconds();
 
-    const hasDateChanged = date.getDate() !== selectedDate.getDate() ||
-                           date.getMonth() !== selectedDate.getMonth() ||
-                           date.getFullYear() !== selectedDate.getFullYear();
+    const hasDateChanged =
+      date.getDate() !== selectedDate.getDate() ||
+      date.getMonth() !== selectedDate.getMonth() ||
+      date.getFullYear() !== selectedDate.getFullYear();
 
     setTimeSelected(hasTimeChanged);
     setDateSelected(hasDateChanged);
@@ -75,11 +84,15 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
       setSelectedDate(date);
 
       // Update additional states as required
-      setSelectedOption({ value: date.toISOString(), label: `Until ${format(date, "MMMM d, yyyy h:mm:ss aa")}` });
+      setSelectedOption({
+        value: date.toISOString(),
+        label: `Until ${format(date, "MMMM d, yyyy h:mm:ss aa")}`,
+      });
       setDismissOption(date.toISOString());
 
       // Determine if both date and time have been selected
-      const bothSelected = (hasTimeChanged || timeSelected) && (hasDateChanged || dateSelected);
+      const bothSelected =
+        (hasTimeChanged || timeSelected) && (hasDateChanged || dateSelected);
       // Set the state to close the picker if both date and time have been selected
       // This is an optimistic update, assuming the state updates for date and time are synchronous
       if (bothSelected) {
@@ -89,24 +102,25 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
   };
 
   const clearAndClose = () => {
-    setSelectedOption({ value: 'forever', label: 'Forever' });
+    setSelectedOption({ value: "forever", label: "Forever" });
     setDateSelected(false);
     setIsDatePickerOpen(false);
-    setDismissComment('');
+    setDismissComment("");
     handleClose();
   };
 
   const handleDismissChange = async () => {
+    const requests = alerts.map((alert: AlertDto) => {
       const requestData = {
         enrichments: {
-            fingerprint: alert.fingerprint,
-            dismissed: !alert.dismissed, // Toggle the dismissed state
-            note: dismissComment, // use the note mechanism to store the dismiss comment
-            dismissUntil: dismissOption,
-          },
+          fingerprint: alert.fingerprint,
+          dismissed: !alert.dismissed, // Toggle the dismissed state
+          note: dismissComment, // use the note mechanism to store the dismiss comment
+          dismissUntil: dismissOption,
+        },
         fingerprint: alert.fingerprint,
       };
-      const response = await fetch(`${getApiURL()}/alerts/enrich`, {
+      return fetch(`${getApiURL()}/alerts/enrich`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -114,18 +128,21 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
         },
         body: JSON.stringify(requestData),
       });
-      if (response.ok) {
-        // Handle success
-        console.log("Alert dismissed successfully");
-        clearAndClose();
-      } else {
-        // Handle error
-        console.error("Failed to dismiss alert");
-        clearAndClose();
-      }
-      // fetch presets
-      await presetsMutator();
+    });
+    const responses = await Promise.all(requests);
+    const responsesOk = responses.every((response) => response.ok);
+    if (responsesOk) {
+      toast.success(`${alerts.length} alerts dismissed successfully!`, {
+        position: "top-right",
+      });
+      await alertsMutator();
+      clearAndClose();
+    } else {
+      clearAndClose();
     }
+    // fetch presets
+    await presetsMutator();
+  };
 
   const formats = [
     "header",
@@ -153,32 +170,30 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
     ],
   };
   const selectOptions = [
-    { value: 'forever', label: 'Dismiss Forever' },
+    { value: "forever", label: "Dismiss Forever" },
     // Include the 'Choose Date' option only if a custom date has not been selected or the date picker is open
-    ...(!dateSelected || isDatePickerOpen ? [{ value: 'custom', label: 'Choose Date' }] : []),
+    ...(!dateSelected || isDatePickerOpen
+      ? [{ value: "custom", label: "Choose Date" }]
+      : []),
     // Include the selected date option only if a custom date has been selected
     ...(dateSelected && !isDatePickerOpen ? [selectedOption] : []),
   ];
 
   return (
     <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
-      {alert && alert.dismissed? (
+      {alerts && alerts.length == 1 && alerts[0].dismissed ? (
         <>
-        <Subtitle className="text-center">Are you sure you want to restore this alert?</Subtitle>
-        <div className="flex justify-center mt-4 space-x-2">
-          <Button
-            onClick={handleDismissChange}
-            color="orange"
-          >
-            Restore
-          </Button>
-          <Button
-            onClick={clearAndClose}
-            variant="secondary"
-          >
-            Cancel
-          </Button>
-        </div>
+          <Subtitle className="text-center">
+            Are you sure you want to restore this alert?
+          </Subtitle>
+          <div className="flex justify-center mt-4 space-x-2">
+            <Button onClick={handleDismissChange} color="orange">
+              Restore
+            </Button>
+            <Button onClick={clearAndClose} variant="secondary">
+              Cancel
+            </Button>
+          </div>
         </>
       ) : (
         <>
@@ -189,24 +204,28 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
             options={selectOptions}
           />
           {isDatePickerOpen && (
-            <div style={{ position: 'absolute', zIndex: 1000 }}>
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={handleDateChange}
-                  showTimeSelect
-                  timeFormat="p"
-                  timeIntervals={15}
-                  timeCaption="Time"
-                  dateFormat="MMMM d, yyyy h:mm:ss aa"
-                  minDate={new Date()}
-                  minTime={set(new Date(), { hours: 0, minutes: 0, seconds: 0 })}
-                  maxTime={set(new Date(), { hours: 23, minutes: 59, seconds: 59 })}
-                  inline
-                />
+            <div style={{ position: "absolute", zIndex: 1000 }}>
+              <DatePicker
+                selected={selectedDate}
+                onChange={handleDateChange}
+                showTimeSelect
+                timeFormat="p"
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="MMMM d, yyyy h:mm:ss aa"
+                minDate={new Date()}
+                minTime={set(new Date(), { hours: 0, minutes: 0, seconds: 0 })}
+                maxTime={set(new Date(), {
+                  hours: 23,
+                  minutes: 59,
+                  seconds: 59,
+                })}
+                inline
+              />
             </div>
-            )}
-            <Title className="mt-2">Dismiss Comment</Title>
-            <ReactQuill
+          )}
+          <Title className="mt-2">Dismiss Comment</Title>
+          <ReactQuill
             value={dismissComment}
             onChange={(value: string) => setDismissComment(value)}
             theme="snow"
@@ -215,19 +234,19 @@ export default function AlertDismissModal({ alert, handleClose }: Props) {
             formats={formats}
           />
           <Button
-              onClick={handleDismissChange}
-              color="orange"
-              className="mr-2 mt-4"
-            >
-              Dismiss
-            </Button>
-            <Button // Use Tremor button for Cancel
-              onClick={clearAndClose}
-              variant="secondary"
-            >
-              Cancel
-              </Button>
-            </>
+            onClick={handleDismissChange}
+            color="orange"
+            className="mr-2 mt-4"
+          >
+            Dismiss
+          </Button>
+          <Button // Use Tremor button for Cancel
+            onClick={clearAndClose}
+            variant="secondary"
+          >
+            Cancel
+          </Button>
+        </>
       )}
     </Modal>
   );
