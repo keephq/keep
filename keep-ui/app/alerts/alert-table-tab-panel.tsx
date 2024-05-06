@@ -29,7 +29,7 @@
     setTicketModalAlert: (alert: AlertDto | null) => void;
     setNoteModalAlert: (alert: AlertDto | null) => void;
     setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
-    setDismissModalAlert: (alert: AlertDto | null) => void;
+    setDismissModalAlert: (alert: AlertDto[] | null) => void;
     setViewAlertModal: (alert: AlertDto) => void;
   }
 
@@ -85,6 +85,7 @@
       <AlertTable
           alerts={sortedPresetAlerts}
           columns={alertTableColumns}
+          setDismissedModalAlert={setDismissModalAlert}
           isAsyncLoading={isAsyncLoading}
           presetName={preset.name}
           presetPrivate={preset.is_private}

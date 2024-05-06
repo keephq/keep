@@ -31,7 +31,6 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import { useEffect, useState } from "react";
 
-
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
@@ -41,6 +40,7 @@ interface Props {
   presetNoisy?: boolean;
   isMenuColDisplayed?: boolean;
   isRefreshAllowed?: boolean;
+  setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
 }
 
 export function AlertTable({
@@ -51,14 +51,18 @@ export function AlertTable({
   presetPrivate = false,
   presetNoisy = false,
   isRefreshAllowed = true,
+  setDismissedModalAlert,
 }: Props) {
-  const [theme, setTheme] = useLocalStorage('alert-table-theme',
-    Object.values(severityMapping).reduce<{ [key: string]: string }>((acc, severity) => {
-      acc[severity] = 'bg-white';
-      return acc;
-    }, {})
+  const [theme, setTheme] = useLocalStorage(
+    "alert-table-theme",
+    Object.values(severityMapping).reduce<{ [key: string]: string }>(
+      (acc, severity) => {
+        acc[severity] = "bg-white";
+        return acc;
+      },
+      {}
+    )
   );
-
 
   const columnsIds = getColumnsIds(columns);
 
@@ -81,7 +85,9 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'noise', desc: true } ]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "noise", desc: true },
+  ]);
 
   const table = useReactTable({
     data: alerts,
@@ -126,13 +132,19 @@ export function AlertTable({
 
   return (
     <>
-      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
+      <TitleAndFilters
+        table={table}
+        alerts={alerts}
+        presetName={presetName}
+        onThemeChange={handleThemeChange}
+      />
       <Card className="mt-7 px-4 pb-4 md:pb-10 md:px-4 pt-6">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
             alerts={alerts}
             clearRowSelection={table.resetRowSelection}
+            setDismissModalAlert={setDismissedModalAlert}
           />
         ) : (
           <AlertPresets
@@ -159,7 +171,11 @@ export function AlertTable({
             table={table}
             presetName={presetName}
           />
-          <AlertsTableBody table={table} showSkeleton={showSkeleton} theme={theme} />
+          <AlertsTableBody
+            table={table}
+            showSkeleton={showSkeleton}
+            theme={theme}
+          />
         </Table>
         <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       </Card>
