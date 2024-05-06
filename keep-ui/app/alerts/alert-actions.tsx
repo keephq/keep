@@ -1,4 +1,3 @@
-import { TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
@@ -7,6 +6,7 @@ import { PlusIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
+import { SilencedDoorbellNotification } from "@/components/icons";
 
 interface Props {
   selectedRowIds: string[];
@@ -78,7 +78,7 @@ export default function AlertActions({
   return (
     <div className="w-full flex justify-end items-center">
       <Button
-        icon={TrashIcon}
+        icon={SilencedDoorbellNotification}
         size="xs"
         color="red"
         title="Delete"
