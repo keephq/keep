@@ -84,6 +84,7 @@ export default function AlertActions({
         title="Delete"
         onClick={() => {
           setDismissModalAlert?.(selectedAlerts);
+          clearRowSelection();
         }}
       >
         Dismiss {selectedRowIds.length} alert(s)

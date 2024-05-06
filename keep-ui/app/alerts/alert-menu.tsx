@@ -5,7 +5,6 @@ import {
   ArchiveBoxIcon,
   EllipsisHorizontalIcon,
   PlusIcon,
-  TrashIcon,
   UserPlusIcon,
   PlayIcon,
   EyeIcon
