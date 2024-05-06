@@ -15,7 +15,6 @@ import { ViewAlertModal } from './ViewAlertModal';
 
 const defaultPresets: Preset[] = [
   { id: "feed", name: "feed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
-  { id: "deleted", name: "deleted", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
   { id: "dismissed", name: "dismissed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
   { id: "groups", name: "groups", options: [], is_private: false , is_noisy: false, alerts_count: 0, should_do_noise_now: false},
 ];
@@ -41,7 +40,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
-  const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto | null>();
+  const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto[] | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
