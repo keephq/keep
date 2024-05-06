@@ -1,6 +1,13 @@
-import { Badge, Button, Icon, SparkAreaChart, Subtitle, Text, Title } from "@tremor/react";
+import {
+  Badge,
+  Button,
+  Icon,
+  SparkAreaChart,
+  Subtitle,
+  Text,
+  Title,
+} from "@tremor/react";
 import { Provider } from "./providers";
-import Image from "next/image";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
@@ -10,6 +17,7 @@ import {
 } from "@heroicons/react/20/solid";
 import "./provider-tile.css";
 import moment from "moment";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
 interface Props {
   provider: Provider;
@@ -66,18 +74,18 @@ const addOneToDistribution = (distribution: any[]) => {
     number: data.number + 1,
   }));
   return dist;
-}
+};
 
 const getEmptyDistribution = () => {
   let emptyDistribution = [];
   for (let i = 0; i < 24; i++) {
     emptyDistribution.push({
       hour: i.toString(),
-      number: 0.2
+      number: 0.2,
     });
   }
   return emptyDistribution;
-}
+};
 
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
@@ -87,7 +95,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
     >
       <div className="w-48">
         {(provider.can_setup_webhook || provider.supports_webhook) &&
-          !provider.installed && !provider.linked && (
+          !provider.installed &&
+          !provider.linked && (
             <Icon
               icon={WebhookIcon}
               className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
@@ -118,70 +127,68 @@ export default function ProviderTile({ provider, onClick }: Props) {
           <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
-        ) : null
-        }
+        ) : null}
         <div className="flex flex-col">
           <div>
-          <Title
-  className={`${!provider.linked ? 'group-hover:hidden' : ''} capitalize`}
-  title={provider.details?.name}
->
-  {provider.display_name}{" "}
-</Title>
+            <Title
+              className={`${
+                !provider.linked ? "group-hover:hidden" : ""
+              } capitalize`}
+              title={provider.details?.name}
+            >
+              {provider.display_name}{" "}
+            </Title>
 
             {provider.details && provider.details.name && (
               <Subtitle className="group-hover:hidden">
                 id: {provider.details.name}
               </Subtitle>
             )}
-            {
-              provider.last_alert_received ? (
-                <Text
-                  className={`${!provider.linked ? 'group-hover:hidden' : ''}`}
-                >
-                  Last alert: {moment(provider.last_alert_received).fromNow()}
-                </Text>
-              ) :
-              (
-                <p></p>
-              )
-            }
-            {
-              provider.linked && provider.id ? (
-                <Text>
-                  Id: {provider.id}
-                </Text>
-              ): (
-                <br></br>
-              )
-            }
-            {
-  (provider.installed || provider.linked) && provider.alertsDistribution && provider.alertsDistribution.length > 0 ? (
-    <SparkAreaChart
-      data={addOneToDistribution(provider.alertsDistribution)}
-      categories={['number']}
-      index={'hour'}
-      colors={['orange']}
-      showGradient={true}
-      autoMinValue={true}
-      className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
-    />
-  ) : (provider.installed || provider.linked) ? (
-    <SparkAreaChart
-      data={getEmptyDistribution()}
-      categories={['number']}
-      index={'hour'}
-      colors={['orange']}
-      className={`${!provider.linked ? 'group-hover:hidden' : ''} mt-2 h-8 w-20 sm:h-10 sm:w-36`}
-      autoMinValue={true}
-      maxValue={1}
-    />
-  ) : null
-}
-
+            {provider.last_alert_received ? (
+              <Text
+                className={`${!provider.linked ? "group-hover:hidden" : ""}`}
+              >
+                Last alert: {moment(provider.last_alert_received).fromNow()}
+              </Text>
+            ) : (
+              <p></p>
+            )}
+            {provider.linked && provider.id ? (
+              <Text>Id: {provider.id}</Text>
+            ) : (
+              <br></br>
+            )}
+            {(provider.installed || provider.linked) &&
+            provider.alertsDistribution &&
+            provider.alertsDistribution.length > 0 ? (
+              <SparkAreaChart
+                data={addOneToDistribution(provider.alertsDistribution)}
+                categories={["number"]}
+                index={"hour"}
+                colors={["orange"]}
+                showGradient={true}
+                autoMinValue={true}
+                className={`${
+                  !provider.linked ? "group-hover:hidden" : ""
+                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+              />
+            ) : provider.installed || provider.linked ? (
+              <SparkAreaChart
+                data={getEmptyDistribution()}
+                categories={["number"]}
+                index={"hour"}
+                colors={["orange"]}
+                className={`${
+                  !provider.linked ? "group-hover:hidden" : ""
+                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+                autoMinValue={true}
+                maxValue={1}
+              />
+            ) : null}
           </div>
           <div className="labels flex group-hover:hidden">
-            {!provider.installed && !provider.linked &&
+            {!provider.installed &&
+              !provider.linked &&
               provider.tags.map((tag) => {
                 const icon =
                   tag === "alert"
@@ -218,13 +225,16 @@ export default function ProviderTile({ provider, onClick }: Props) {
           )}
         </div>
       </div>
-      <Image
+      <ImageWithFallback
         src={`/icons/${provider.type}-icon.png`}
+        fallbackSrc={`/icons/keep-icon.png`}
         width={48}
         height={48}
         alt={provider.type}
         className={`${
-          (provider.installed || provider.linked) ? "" : "grayscale group-hover:grayscale-0"
+          provider.installed || provider.linked
+            ? ""
+            : "grayscale group-hover:grayscale-0"
         }`}
       />
     </div>
