@@ -43,18 +43,18 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   const correlationFormFromRule: CorrelationForm = useMemo(() => {
     if (selectedRule) {
       const query = parseCEL(selectedRule.definition_cel);
+      const anyCombinator = query.rules.some((rule) => "combinator" in rule);
 
       const queryInGroup: DefaultRuleGroupType = {
         ...query,
-        rules:
-          query.rules.length > 1
-            ? query.rules
-            : [
-                {
-                  combinator: "and",
-                  rules: query.rules,
-                },
-              ],
+        rules: anyCombinator
+          ? query.rules
+          : [
+              {
+                combinator: "and",
+                rules: query.rules,
+              },
+            ],
       };
 
       return {
