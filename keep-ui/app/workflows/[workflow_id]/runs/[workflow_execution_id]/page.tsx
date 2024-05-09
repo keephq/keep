@@ -153,7 +153,7 @@ export default function WorkflowExecutionPage({
           <>
             {error && (
               <Callout
-                className="mt-4"
+                className="mt-4 mb-2.5"
                 title="Error during workflow execution"
                 icon={ExclamationCircleIcon}
                 color="rose"
