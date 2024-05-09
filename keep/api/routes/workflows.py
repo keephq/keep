@@ -263,9 +263,19 @@ async def create_workflow(
     workflow = await __get_workflow_raw_data(request, file)
     workflowstore = WorkflowStore()
     # Create the workflow
-    workflow = workflowstore.create_workflow(
-        tenant_id=tenant_id, created_by=created_by, workflow=workflow
-    )
+    try:
+        workflow = workflowstore.create_workflow(
+            tenant_id=tenant_id, created_by=created_by, workflow=workflow
+        )
+    except Exception:
+        logger.exception(
+            "Failed to create workflow",
+            extra={"tenant_id": tenant_id, "workflow": workflow},
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to upload workflow. Please contact us via Slack for help.",
+        )
     if workflow.revision == 1:
         return WorkflowCreateOrUpdateDTO(
             workflow_id=workflow.id, status="created", revision=workflow.revision
