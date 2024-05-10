@@ -36,7 +36,7 @@ class WorkflowStore:
         interval = self.parser.parse_interval(workflow)
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
-            name=workflow_id,
+            name=workflow.get("name") or workflow_id,
             tenant_id=tenant_id,
             description=workflow.get("description"),
             created_by=created_by,
