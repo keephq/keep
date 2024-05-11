@@ -34,9 +34,14 @@ class WorkflowStore:
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
+        if workflow.get("name") == "":
+            workflow_name = workflow_id
+            workflow["name"] = workflow_name
+        else:
+            workflow_name = workflow.get("name")
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
-            name=workflow.get("name") or workflow_id,
+            name=workflow_name,
             tenant_id=tenant_id,
             description=workflow.get("description"),
             created_by=created_by,
