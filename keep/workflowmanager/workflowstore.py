@@ -62,7 +62,7 @@ class WorkflowStore:
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
         """
-        Parse an workflow to a dictionary from either a file or a URL.
+        Parse a workflow to a dictionary from either a file or a URL.
 
         Args:
             workflow_path (str): a URL or a file path
@@ -188,7 +188,7 @@ class WorkflowStore:
 
     def _read_workflow_from_stream(self, stream) -> dict:
         """
-        Parse an workflow from an IO stream.
+        Parse a workflow from an IO stream.
 
         Args:
             stream (IOStream): The stream to read from
