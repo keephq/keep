@@ -203,11 +203,7 @@ export const RuleFields = ({
 
   const onRemoveRuleFieldClick = (removedRuleFieldIndex: number) => {
     // prevent users from removing group if there are only two remaining
-    if (
-      groupsLength === 2 &&
-      ruleFields.length <= 1 &&
-      removedRuleFieldIndex === 0
-    ) {
+    if (groupsLength === 1 && ruleFields.length < 2) {
       return undefined;
     }
 
@@ -221,7 +217,7 @@ export const RuleFields = ({
   };
 
   const onRemoveGroupClick = () => {
-    if (groupsLength > 2) {
+    if (groupsLength > 1) {
       return onRuleRemove([groupIndex]);
     }
   };
@@ -240,11 +236,7 @@ export const RuleFields = ({
         if ("field" in ruleField) {
           const isInputRemovalDisabled =
             // groups length is only 2
-            groupsLength === 2 &&
-            // and remaining fields in group is down to one
-            ruleFields.length <= 1 &&
-            // and rule field is the first (and last) one
-            ruleFieldIndex === 0;
+            groupsLength === 1 && ruleFields.length < 2;
 
           return (
             <Field
@@ -282,9 +274,9 @@ export const RuleFields = ({
           variant="light"
           color="red"
           title={
-            groupsLength <= 2 ? "You must have at least two groups" : undefined
+            groupsLength <= 1 ? "You must have at least one group" : undefined
           }
-          disabled={groupsLength <= 2}
+          disabled={groupsLength <= 1}
           onClick={onRemoveGroupClick}
         >
           Remove group

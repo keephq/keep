@@ -7,6 +7,7 @@ import logging
 import os
 from typing import Optional
 from urllib.parse import urlparse
+from uuid import uuid4
 
 import boto3
 import pydantic
@@ -435,13 +436,14 @@ class IncidentmanagerProvider(BaseProvider):
         severity = IncidentmanagerProvider.SEVERITIES_MAP.get(alert.get("IMPACT"), 5)
 
         return AlertDto(
-            id=alert.get("arn"),
-            name=alert.get("title"),
+            id=alert.get("arn", str(uuid4())),
+            name=alert.get("title", alert.get("alertname")),
             status=status,
             severity=severity,
             lastReceived=str(alert.get("creationTime")),
             description=alert.get("summary"),
-            source=[alert.get("incidentRecordSource")["createdBy"]],
+            url=alert.pop("url", alert.get("generatorURL")),
+            source=["incidentmanager"],
             **alert,
         )
 

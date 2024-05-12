@@ -1,28 +1,27 @@
-import { TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { AlertDto } from "./models";
-import { useAlerts } from "utils/hooks/useAlerts";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
+import { SilencedDoorbellNotification } from "@/components/icons";
 
 interface Props {
   selectedRowIds: string[];
   alerts: AlertDto[];
   clearRowSelection: () => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
 }
 
 export default function AlertActions({
   selectedRowIds,
   alerts,
   clearRowSelection,
+  setDismissModalAlert,
 }: Props) {
   const router = useRouter();
-  const { useAllAlerts } = useAlerts();
-  const { mutate } = useAllAlerts({ revalidateOnFocus: false });
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
@@ -31,63 +30,6 @@ export default function AlertActions({
   const selectedAlerts = alerts.filter((_alert, index) =>
     selectedRowIds.includes(index.toString())
   );
-
-  const onDelete = async () => {
-    const confirmed = confirm(
-      `Are you sure you want to delete ${selectedRowIds.length} alert(s)?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const session = await getSession();
-    if (!session) {
-      toast(`Session expired.`, {
-        position: "top-left",
-        type: "error",
-      });
-      return;
-    }
-
-    const apiUrl = getApiURL();
-    const headers = {
-      Authorization: `Bearer ${session.accessToken}`,
-      "Content-Type": "application/json",
-    };
-
-    const deletionPromises = selectedAlerts.map((alert) =>
-      fetch(`${apiUrl}/alerts`, {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({
-          fingerprint: alert.fingerprint,
-          lastReceived: alert.lastReceived,
-          restore: false,
-        }),
-      })
-    );
-
-    const results = await Promise.allSettled(deletionPromises);
-
-    const allSucceeded = results.every(
-      (result) => result.status === "fulfilled" && result.value.ok
-    );
-
-    if (allSucceeded) {
-      toast(`${selectedRowIds.length} alert(s) deleted!`, {
-        position: "top-left",
-        type: "success",
-      });
-      mutate();
-      clearRowSelection();
-    } else {
-      toast(`Error deleting alerts`, {
-        position: "top-left",
-        type: "error",
-      });
-    }
-  };
 
   async function addOrUpdatePreset() {
     const newPresetName = prompt("Enter new preset name");
@@ -136,13 +78,16 @@ export default function AlertActions({
   return (
     <div className="w-full flex justify-end items-center">
       <Button
-        icon={TrashIcon}
+        icon={SilencedDoorbellNotification}
         size="xs"
         color="red"
         title="Delete"
-        onClick={onDelete}
+        onClick={() => {
+          setDismissModalAlert?.(selectedAlerts);
+          clearRowSelection();
+        }}
       >
-        Delete {selectedRowIds.length} alert(s)
+        Dismiss {selectedRowIds.length} alert(s)
       </Button>
       <Button
         icon={PlusIcon}

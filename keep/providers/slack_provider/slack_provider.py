@@ -1,6 +1,7 @@
 """
 Slack provider is an interface for Slack messages.
 """
+
 import dataclasses
 import os
 
@@ -103,11 +104,17 @@ class SlackProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self.logger.debug("Notifying alert message to Slack")
+        self.logger.info(
+            f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",
+            extra={
+                "slack_message": message,
+                "blocks": blocks,
+                "channel": channel,
+            },
+        )
         if not message:
             message = blocks[0].get("text")
         if self.authentication_config.webhook_url:
-            self.logger.debug("Notifying alert message to Slack using webhook url")
             response = requests.post(
                 self.authentication_config.webhook_url,
                 json={"text": message, "blocks": blocks},
@@ -117,7 +124,6 @@ class SlackProvider(BaseProvider):
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
                 )
         elif self.authentication_config.access_token:
-            self.logger.debug("Notifying alert message to Slack using access token")
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
             payload = {
@@ -134,7 +140,7 @@ class SlackProvider(BaseProvider):
                 raise ProviderException(
                     f"Failed to notify alert message to Slack: {response_json.get('error')}"
                 )
-        self.logger.debug("Alert message notified to Slack")
+        self.logger.info("Message notified to Slack")
 
 
 if __name__ == "__main__":

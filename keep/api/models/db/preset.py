@@ -10,7 +10,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 class StaticPresetsId(enum.Enum):
     # ID of the default preset
     FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
-    DELETED_PRESET_ID = "11111111-1111-1111-1111-111111111112"
+    # DELETED_PRESET_ID = "11111111-1111-1111-1111-111111111112"
     DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
     GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
 
@@ -23,7 +23,7 @@ class Preset(SQLModel, table=True):
     )
     tenant_id: str = Field(foreign_key="tenant.id", index=True, max_length=36)
     name: str = Field(unique=True, max_length=256)
-      
+
     # keeping index=True for better search
     created_by: Optional[str] = Field(index=True, nullable=False, max_length=255)
     is_private: Optional[bool] = Field(default=False)

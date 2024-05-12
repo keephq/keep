@@ -6,6 +6,7 @@ from itertools import groupby
 
 import pytz
 from dateutil import parser
+from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
 
@@ -48,6 +49,10 @@ def strip(string) -> str:
     return string.strip()
 
 
+def remove_newlines(string: str = "") -> str:
+    return string.replace("\r\n", "").replace("\n", "").replace("\t", "")
+
+
 def first(iterable):
     return iterable[0]
 
@@ -79,14 +84,20 @@ def substract_minutes(dt: datetime.datetime, minutes: int) -> datetime.datetime:
     return dt - datetime.timedelta(minutes=minutes)
 
 
-def to_utc(dt: datetime.datetime | str) -> datetime.datetime:
+def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
     if isinstance(dt, str):
-        dt = parser.parse(dt)
+        try:
+            dt = parser.parse(dt.strip())
+        except ParserError:
+            # Failed to parse the date
+            return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
 
 
-def datetime_compare(t1, t2) -> float:
+def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
+    if t1 is None or t2 is None:
+        return 0
     diff = (t1 - t2).total_seconds() / 3600
     return diff
 

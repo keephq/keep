@@ -87,13 +87,11 @@ export const CorrelationSidebarBody = ({
           title="What is alert correlations? and why grouping alerts together can ease your work"
           color="teal"
         >
-          Rapidiously aggregate parallel initiatives before client-focused
-          action items, Distinctively extend effective convergence with
-          ubiquitous deliverables. Rapidiously productize long-term high-impact
-          infomediaries through multifunctional &quot;outside the box&quot;
-          thinking. Assertively communicate business testing procedures before
-          accurate deliverables. Uniquely maintain accurate architectures
-          through functional benefits.
+          A versatile tool for grouping and consolidating alerts. Read more in
+          our{" "}
+          <a href="https://docs.keephq.dev/overview/ruleengine" target="_blank">
+            docs.
+          </a>
           <Button
             className="absolute top-0 right-0"
             onClick={() => setIsCalloutShown(false)}

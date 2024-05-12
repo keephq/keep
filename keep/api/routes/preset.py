@@ -1,4 +1,5 @@
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -23,7 +24,6 @@ logger = logging.getLogger(__name__)
 )
 def get_presets(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-    session: Session = Depends(get_session),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
@@ -61,9 +61,18 @@ def get_presets(
             presets_dto.append(preset_dto)
             continue
 
-        preset_query = preset_dto.cel_query
+        # preset_query = preset_dto.cel_query
         # filter the alerts based on the search query
-        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, preset_query)
+        start = time.time()
+        logger.info("Filtering alerts", extra={"preset_id": preset.id})
+        filtered_alerts = RulesEngine.filter_alerts_cel_sql(
+            tenant_id,
+            "(name like '%network%' or (name like '%mq%' and status = 'firing' and source = 'grafana') or source = 'prometheus' or (message like '%blablablablabla' and (severity > 'info')))",
+        )
+        logger.info(
+            "Filtered alerts",
+            extra={"preset_id": preset.id, "time": time.time() - start},
+        )
         preset_dto.alerts_count = len(filtered_alerts)
         # update noisy
         if preset.is_noisy:
@@ -114,16 +123,6 @@ def get_presets(
             [alert for alert in alerts_dto if not alert.deleted and not alert.dismissed]
         ),
     )
-    deleted_preset = PresetDto(
-        id=StaticPresetsId.DELETED_PRESET_ID.value,
-        name="deleted",
-        options=[],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        alerts_count=len([alert for alert in alerts_dto if alert.deleted]),
-    )
     dismissed_preset = PresetDto(
         id=StaticPresetsId.DISMISSED_PRESET_ID.value,
         name="dismissed",
@@ -145,7 +144,6 @@ def get_presets(
         alerts_count=len([alert for alert in alerts_dto if alert.group]),
     )
     presets_dto.append(feed_preset)
-    presets_dto.append(deleted_preset)
     presets_dto.append(dismissed_preset)
     presets_dto.append(groups_preset)
     return presets_dto

@@ -50,7 +50,9 @@ const AlertHistoryPanel = ({
     <Fragment>
       <Flex alignItems="center" justifyContent="between">
         <div className="w-11/12">
-          <Title className="truncate">History of: {alertsHistoryWithDate.at(0)?.name}</Title>
+          <Title className="truncate">
+            History of: {alertsHistoryWithDate.at(0)?.name}
+          </Title>
           <Subtitle>
             Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
           </Subtitle>
@@ -59,7 +61,7 @@ const AlertHistoryPanel = ({
         </div>
         <Button
           className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
-          onClick={() => router.replace(`/alerts/${presetName}`)}
+          onClick={() => router.replace(`/alerts/${presetName.toLowerCase()}`)}
         >
           Close
         </Button>
@@ -112,7 +114,9 @@ export function AlertHistory({ alerts, presetName }: Props) {
   return (
     <Modal
       isOpen={selectedAlert !== undefined}
-      onClose={() => router.replace(`/alerts/${presetName}`)}
+      onClose={() => {
+        router.replace(`/alerts/${presetName.toLowerCase()}`);
+      }}
       className="w-full max-w-screen-2xl max-h-[710px] transform overflow-scroll ring-tremor bg-white
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >

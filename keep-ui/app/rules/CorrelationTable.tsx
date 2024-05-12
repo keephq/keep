@@ -18,18 +18,14 @@ import {
   DEFAULT_CORRELATION_FORM_VALUES,
 } from "./CorrelationSidebar";
 import {
-  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { parseCEL } from "react-querybuilder";
+import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
-import { TrashIcon } from "@radix-ui/react-icons";
-import { getApiURL } from "utils/apiUrl";
-import { Session } from "next-auth";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 
 const columnHelper = createColumnHelper<Rule>();
@@ -46,13 +42,28 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
   const selectedRule = rules.find((rule) => rule.id === selectedId);
   const correlationFormFromRule: CorrelationForm = useMemo(() => {
     if (selectedRule) {
+      const query = parseCEL(selectedRule.definition_cel);
+      const anyCombinator = query.rules.some((rule) => "combinator" in rule);
+
+      const queryInGroup: DefaultRuleGroupType = {
+        ...query,
+        rules: anyCombinator
+          ? query.rules
+          : [
+              {
+                combinator: "and",
+                rules: query.rules,
+              },
+            ],
+      };
+
       return {
         name: selectedRule.name,
         description: selectedRule.group_description ?? "",
         timeAmount: selectedRule.timeframe,
         timeUnit: "seconds",
         groupedAttributes: selectedRule.grouping_criteria,
-        query: parseCEL(selectedRule.definition_cel),
+        query: queryInGroup,
       };
     }
 

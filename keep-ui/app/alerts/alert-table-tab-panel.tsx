@@ -29,8 +29,7 @@
     setTicketModalAlert: (alert: AlertDto | null) => void;
     setNoteModalAlert: (alert: AlertDto | null) => void;
     setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
-    setDismissModalAlert: (alert: AlertDto | null) => void;
-    setViewAlertModal: (alert: AlertDto) => void;
+    setDismissModalAlert: (alert: AlertDto[] | null) => void;
   }
 
   export default function AlertTableTabPanel({
@@ -41,7 +40,6 @@
     setNoteModalAlert,
     setRunWorkflowModalAlert,
     setDismissModalAlert,
-    setViewAlertModal,
   }: Props) {
     const sortedPresetAlerts = alerts
       .filter((alert) => getPresetAlerts(alert, preset.name))
@@ -76,7 +74,6 @@
       setNoteModalAlert: setNoteModalAlert,
       setRunWorkflowModalAlert: setRunWorkflowModalAlert,
       setDismissModalAlert: setDismissModalAlert,
-      setViewAlertModal: setViewAlertModal,
       presetName: preset.name,
       presetNoisy: preset.is_noisy,
     });
@@ -85,6 +82,7 @@
       <AlertTable
           alerts={sortedPresetAlerts}
           columns={alertTableColumns}
+          setDismissedModalAlert={setDismissModalAlert}
           isAsyncLoading={isAsyncLoading}
           presetName={preset.name}
           presetPrivate={preset.is_private}

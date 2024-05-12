@@ -5,10 +5,9 @@ import {
   ArchiveBoxIcon,
   EllipsisHorizontalIcon,
   PlusIcon,
-  TrashIcon,
   UserPlusIcon,
   PlayIcon,
-  EyeIcon
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 
@@ -27,9 +26,8 @@ interface Props {
   isMenuOpen: boolean;
   setIsMenuOpen: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
-  setDismissModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[]) => void;
   presetName: string;
-  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export default function AlertMenu({
@@ -39,7 +37,6 @@ export default function AlertMenu({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   presetName,
-  setViewAlertModal,
 }: Props) {
   const router = useRouter();
 
@@ -82,34 +79,8 @@ export default function AlertMenu({
     </svg>
   );
 
-  const onDelete = async () => {
-    const confirmed = confirm(
-      `Are you sure you want to ${
-        alert.deleted ? "restore" : "delete"
-      } this alert?`
-    );
-    if (confirmed) {
-      const body = {
-        fingerprint: fingerprint,
-        lastReceived: alert.lastReceived,
-        restore: alert.deleted,
-      };
-      const res = await fetch(`${apiUrl}/alerts`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        await mutate();
-      }
-    }
-  };
-
   const onDismiss = async () => {
-    setDismissModalAlert?.(alert);
+    setDismissModalAlert?.([alert]);
     await mutate();
   };
 
@@ -150,6 +121,16 @@ export default function AlertMenu({
       `/alerts/${presetName}?methodName=${method.name}&providerId=${
         provider!.id
       }&alertFingerprint=${alert.fingerprint}`,
+      {
+        scroll: false,
+      }
+    );
+    handleCloseMenu();
+  };
+
+  const openAlertPayloadModal = () => {
+    router.replace(
+      `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}`,
       {
         scroll: false,
       }
@@ -287,24 +268,18 @@ export default function AlertMenu({
                   )}
                   {/*View the alert */}
                   <Menu.Item>
-                      {({ active }) => (
-                        <button
-                          onClick={() => {
-                            setViewAlertModal?.(alert);
-                            handleCloseMenu();
-                          }}
-                          className={`${
-                            active ? "bg-slate-200" : "text-gray-900"
-                          } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                        >
-                          <EyeIcon
-                            className="mr-2 h-4 w-4"
-                            aria-hidden="true"
-                          />
-                          View Alert
-                        </button>
-                      )}
-                    </Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={openAlertPayloadModal}
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      >
+                        <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                        View Alert
+                      </button>
+                    )}
+                  </Menu.Item>
                 </div>
                 {provider?.methods && provider?.methods?.length > 0 && (
                   <div className="px-1 py-1">
@@ -359,25 +334,6 @@ export default function AlertMenu({
                           aria-hidden="true"
                         />
                         {alert.dismissed ? "Restore" : "Dismiss"}
-                      </button>
-                    )}
-                  </Menu.Item>
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={() => {
-                          onDelete();
-                          handleCloseMenu();
-                        }}
-                        className={`${
-                          active ? "bg-slate-200" : "text-gray-900"
-                        }  group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                      >
-                        <TrashIcon
-                          className="mr-2 h-4 w-4"
-                          aria-hidden="true"
-                        />
-                        {alert.deleted ? "Undelete" : "Delete"}
                       </button>
                     )}
                   </Menu.Item>

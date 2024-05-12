@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import random
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple
@@ -13,8 +14,8 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, text, update
-from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
+from sqlalchemy import and_, column, desc, func, null, select, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
@@ -830,6 +831,95 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
         .where(AlertEnrichment.alert_fingerprint == fingerprint)
     ).first()
     return alert_enrichment
+
+
+def __get_sqlite_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    pass
+
+
+def __get_mysql_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    alert_fields = ", ".join(
+        f"alert_{field} VARCHAR(1024) PATH '$.{field}'" for field in fields
+    )
+    enrichment_fields = ", ".join(
+        f"enrichment_{field} VARCHAR(1024) PATH '$.{field}'" for field in fields
+    )
+    subquery = text(
+        f"""
+    (SELECT a.fingerprint as fp, MAX(a.timestamp) as max_t
+    FROM alert as a
+    LEFT JOIN alertenrichment ae
+    ON a.fingerprint = ae.alert_fingerprint,
+    JSON_TABLE(a.event, '$' COLUMNS(
+        {alert_fields}
+    )) AS alerts,
+    JSON_TABLE(ae.enrichments, '$' COLUMNS(
+        {enrichment_fields}
+    )) AS enrichments
+    WHERE a.tenant_id = :tenant_id
+    AND (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
+    GROUP BY a.fingerprint) as subq
+"""
+    )
+    wrapped_subquery = (
+        select(
+            [
+                column("fp").label("fp"),  # Ensure columns are labeled
+                column("max_t").label("max_t"),
+            ]
+        )
+        .select_from(subquery)
+        .subquery()
+    )
+    return wrapped_subquery
+
+
+def get_alerts_by_cel_sql(tenant_id, cel_sql_where_query) -> list[Alert]:
+    # This doesn't work perfectly, refine it?
+    field_pattern = r"\b(\w+)\s*(?:like\s|in\s|=|>|<|between\s|!=)"
+    fields = set(re.findall(field_pattern, cel_sql_where_query, re.IGNORECASE))
+
+    cel_sql_where_query_alerts = cel_sql_where_query
+    cel_sql_where_query_enrichments = cel_sql_where_query
+    for field in fields:
+        cel_sql_where_query_alerts = cel_sql_where_query_alerts.replace(
+            field, f"alert_{field}"
+        )
+        cel_sql_where_query_enrichments = cel_sql_where_query_enrichments.replace(
+            field, f"enrichment_{field}"
+        )
+
+    with Session(engine) as session:
+        if session.bind.dialect.name == "mysql":
+            wrapped_subquery = __get_mysql_wrapped_subquery_for_filtering(
+                fields,
+                cel_sql_where_query_alerts,
+                cel_sql_where_query_enrichments,
+            )
+        elif session.bind.dialect.name == "sqlite":
+            wrapped_subquery = __get_sqlite_wrapped_subquery_for_filtering(
+                fields, cel_sql_where_query_alerts, cel_sql_where_query_enrichments
+            )
+        else:
+            return []
+        query = session.query(Alert).join(
+            wrapped_subquery,
+            and_(
+                Alert.fingerprint == wrapped_subquery.c.fp,
+                Alert.timestamp == wrapped_subquery.c.max_t,
+            ),
+        )
+        alerts = session.execute(query, {"tenant_id": tenant_id}).all()
+
+    return alerts
 
 
 def get_alerts_with_filters(
