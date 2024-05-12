@@ -61,11 +61,14 @@ def get_presets(
             presets_dto.append(preset_dto)
             continue
 
-        preset_query = preset_dto.cel_query
+        # preset_query = preset_dto.cel_query
         # filter the alerts based on the search query
         start = time.time()
         logger.info("Filtering alerts", extra={"preset_id": preset.id})
-        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, preset_query)
+        filtered_alerts = RulesEngine.filter_alerts_cel_sql(
+            tenant_id,
+            "(name like '%network%' or (name like '%mq%' and status = 'firing' and source = 'grafana') or source = 'prometheus' or (message like '%blablablablabla' and (severity > 'info')))",
+        )
         logger.info(
             "Filtered alerts",
             extra={"preset_id": preset.id, "time": time.time() - start},
