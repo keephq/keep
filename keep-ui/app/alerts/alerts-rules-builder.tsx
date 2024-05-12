@@ -20,6 +20,7 @@ import Select, { components, MenuListProps } from "react-select";
 
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -180,11 +181,39 @@ const sanitizeCELIntoJS = (celExpression: string): string => {
 // this pattern is far from robust
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
 const jsReservedWords = new Set([
-  "break", "case", "catch", "class", "const", "continue", "debugger",
-  "default", "delete", "do", "else", "export", "extends", "finally",
-  "for", "function", "if", "import", "in", "instanceof", "new", "return",
-  "super", "switch", "this", "throw", "try", "typeof", "var", "void",
-  "while", "with", "yield"
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "export",
+  "extends",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
 ]);
 
 export const evalWithContext = (context: AlertDto, celExpression: string) => {
@@ -194,9 +223,9 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
     }
 
     const jsExpression = sanitizeCELIntoJS(celExpression);
-    let variables = (
-      getAllMatches(variablePattern, jsExpression) ?? []
-    ).filter((variable) => variable !== "true" && variable !== "false");
+    let variables = (getAllMatches(variablePattern, jsExpression) ?? []).filter(
+      (variable) => variable !== "true" && variable !== "false"
+    );
 
     // filter reserved words from variables
     variables = variables.filter((variable) => !jsReservedWords.has(variable));
@@ -254,12 +283,34 @@ export const AlertsRulesBuilder = ({
   showSqlImport = true,
   showSave = true,
 }: AlertsRulesBuilderProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(defaultQuery);
-
+  const [celRules, setCELRules] = useState(
+    searchParams?.get("cel") || defaultQuery
+  );
   const parsedCELRulesToQuery = parseCEL(celRules);
+
+  const setQueryParam = (key: string, value: string) => {
+    const current = new URLSearchParams(
+      Array.from(searchParams ? searchParams.entries() : [])
+    );
+
+    if (value) {
+      current.set(key, value);
+    }
+
+    // cast to string
+    const search = current.toString();
+    // or const query = `${'?'.repeat(search.length && 1)}${search}`;
+    const query = search ? `?${search}` : "";
+    router.push(`${pathname}${query}`);
+  };
+
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
   const [sqlError, setSqlError] = useState<string | null>(null);
@@ -323,8 +374,15 @@ export const AlertsRulesBuilder = ({
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
     const initialCELRules = constructCELRules(selectedPreset);
-    setCELRules(initialCELRules);
-  }, [selectedPreset]);
+    if (
+      (!selectedPreset || selectedPreset.name === "feed") && // Only applies if no preset is selected or the preset is "feed"
+      searchParams?.get("cel") // Check if the cel query is present in the URL and set it as the initial value
+    ) {
+      setCELRules(searchParams.get("cel") || "");
+    } else {
+      setCELRules(initialCELRules);
+    }
+  }, [selectedPreset, searchParams]);
 
   useEffect(() => {
     // This effect waits for celRules to update and applies the filter only on the initial render
@@ -371,6 +429,7 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
+        setQueryParam("cel", celRules);
         onApplyFilter();
         updateOutputCEL?.(celRules);
       }
