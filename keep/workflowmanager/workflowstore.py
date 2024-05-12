@@ -34,9 +34,14 @@ class WorkflowStore:
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
+        if workflow.get("name") == "":
+            workflow_name = workflow_id
+            workflow["name"] = workflow_name
+        else:
+            workflow_name = workflow.get("name")
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
-            name=workflow_id,
+            name=workflow_name,
             tenant_id=tenant_id,
             description=workflow.get("description"),
             created_by=created_by,
@@ -57,7 +62,7 @@ class WorkflowStore:
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
         """
-        Parse an workflow to a dictionary from either a file or a URL.
+        Parse a workflow to a dictionary from either a file or a URL.
 
         Args:
             workflow_path (str): a URL or a file path
@@ -183,7 +188,7 @@ class WorkflowStore:
 
     def _read_workflow_from_stream(self, stream) -> dict:
         """
-        Parse an workflow from an IO stream.
+        Parse a workflow from an IO stream.
 
         Args:
             stream (IOStream): The stream to read from
