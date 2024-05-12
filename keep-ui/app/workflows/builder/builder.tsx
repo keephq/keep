@@ -140,6 +140,7 @@ function Builder({
           generateWorkflow(
             alertUuid,
             "",
+            "",
             [],
             [],
             triggers

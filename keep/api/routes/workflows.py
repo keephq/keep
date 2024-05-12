@@ -327,6 +327,11 @@ async def update_workflow_by_id(
     workflow = await __get_workflow_raw_data(request, None)
     parser = Parser()
     workflow_interval = parser.parse_interval(workflow)
+    # In case the workflow name changed to empty string, keep the old name
+    if workflow.get("name") != "":
+        workflow_from_db.name = workflow.get("name")
+    else:
+        workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
     workflow_from_db.workflow_raw = yaml.dump(workflow)
