@@ -60,6 +60,21 @@ class PresetDto(BaseModel, extra="ignore"):
             return ""
         return query[0].get("value", "")
 
+    @property
+    def sql_query(self) -> str:
+        query = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "sql"
+        ]
+        if not query:
+            # should not happen, maybe on old presets
+            return ""
+        elif len(query) > 1:
+            # should not happen
+            return ""
+        return query[0].get("value", "")
+
 
 class PresetOption(BaseModel, extra="ignore"):
     label: str

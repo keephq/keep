@@ -34,25 +34,10 @@ def get_presets(
     # TODO: improve performance e.g. using status as a filter
     # TODO: move this duplicate code to a module
     presets_dto = []
-    # get the alerts
-    alerts = get_last_alerts(tenant_id=tenant_id)
 
-    # deduplicate fingerprints
-    # shahar: this is backward compatibility for before we had milliseconds in the timestamp
-    #          note that we want to keep the order of the alerts
-    #          so we will keep the first alert and remove the rest
-    dedup_alerts = []
-    seen_fingerprints = set()
-    for alert in alerts:
-        if alert.fingerprint not in seen_fingerprints:
-            dedup_alerts.append(alert)
-            seen_fingerprints.add(alert.fingerprint)
-        # this shouldn't appear with time (after migrating to milliseconds in timestamp)
-        else:
-            logger.info("Skipping fingerprint", extra={"alert_id": alert.id})
-    alerts = dedup_alerts
-    # convert the alerts to DTO
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    # get the alerts, TODO: is this required?
+    alerts_dto = convert_db_alerts_to_dto_alerts(get_last_alerts(tenant_id=tenant_id))
+
     for preset in presets:
         logger.info("Checking if preset is noisy")
         preset_dto = PresetDto(**preset.dict())
@@ -66,9 +51,9 @@ def get_presets(
         start = time.time()
         logger.info("Filtering alerts", extra={"preset_id": preset.id})
         filtered_alerts = RulesEngine.filter_alerts_cel_sql(
-            tenant_id,
-            "(name like '%network%' or (name like '%mq%' and status = 'firing' and source = 'grafana') or source = 'prometheus' or (message like '%blablablablabla' and (severity > 'info')))",
+            tenant_id, preset_dto.sql_query
         )
+        filtered_alerts = convert_db_alerts_to_dto_alerts(filtered_alerts)
         logger.info(
             "Filtered alerts",
             extra={"preset_id": preset.id, "time": time.time() - start},

@@ -40,7 +40,7 @@ class WorkflowExecution(SQLModel, table=True):
     )
     execution_number: int
     logs: Optional[str]
-    error: Optional[str] = Field(max_length=10240)
+    error: Optional[str] = Field(max_length=8000)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
 

@@ -841,6 +841,47 @@ def __get_sqlite_wrapped_subquery_for_filtering(
     pass
 
 
+def __get_mssql_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    alert_fields = ", ".join(
+        f"alert_{field.replace('.', '_')} NVARCHAR(MAX) '$.{field}'" for field in fields
+    )
+    enrichment_fields = ", ".join(
+        f"enrichment_{field.replace('.', '_')} NVARCHAR(MAX) '$.{field}'"
+        for field in fields
+    )
+    subquery = text(
+        f"""
+    (SELECT subq1.fingerprint as fp, MAX(subq1.timestamp) as max_t FROM (
+        SELECT a.tenant_id, a.fingerprint, a.timestamp, ca.*, ae.enrichments
+        FROM alert as a
+        LEFT JOIN alertenrichment ae
+        ON a.fingerprint = ae.alert_fingerprint
+        CROSS APPLY OPENJSON(a.event)
+        WITH ({alert_fields}) ca
+    ) as subq1
+    OUTER APPLY OPENJSON(subq1.enrichments)
+    WITH ({enrichment_fields})
+    WHERE (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
+    GROUP BY subq1.fingerprint) as subq
+"""
+    )
+    wrapped_subquery = (
+        select(
+            [
+                column("fp").label("fp"),  # Ensure columns are labeled
+                column("max_t").label("max_t"),
+            ]
+        )
+        .select_from(subquery)
+        .subquery()
+    )
+    return wrapped_subquery
+
+
 def __get_mysql_wrapped_subquery_for_filtering(
     fields,
     cel_sql_where_query_alerts,
@@ -864,8 +905,7 @@ def __get_mysql_wrapped_subquery_for_filtering(
     JSON_TABLE(ae.enrichments, '$' COLUMNS(
         {enrichment_fields}
     )) AS enrichments
-    WHERE a.tenant_id = :tenant_id
-    AND (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
+    WHERE (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
     GROUP BY a.fingerprint) as subq
 """
     )
@@ -884,17 +924,18 @@ def __get_mysql_wrapped_subquery_for_filtering(
 
 def get_alerts_by_cel_sql(tenant_id, cel_sql_where_query) -> list[Alert]:
     # This doesn't work perfectly, refine it?
-    field_pattern = r"\b(\w+)\s*(?:like\s|in\s|=|>|<|between\s|!=)"
+    field_pattern = r"\b([\w\.]+)\s*(?=\s*(?:like|in|between|!=|=|>|<))"
     fields = set(re.findall(field_pattern, cel_sql_where_query, re.IGNORECASE))
 
     cel_sql_where_query_alerts = cel_sql_where_query
     cel_sql_where_query_enrichments = cel_sql_where_query
     for field in fields:
+        escaped_field = field.replace(".", "_")
         cel_sql_where_query_alerts = cel_sql_where_query_alerts.replace(
-            field, f"alert_{field}"
+            field, f"alert_{escaped_field}"
         )
         cel_sql_where_query_enrichments = cel_sql_where_query_enrichments.replace(
-            field, f"enrichment_{field}"
+            field, f"enrichment_{escaped_field}"
         )
 
     with Session(engine) as session:
@@ -908,16 +949,25 @@ def get_alerts_by_cel_sql(tenant_id, cel_sql_where_query) -> list[Alert]:
             wrapped_subquery = __get_sqlite_wrapped_subquery_for_filtering(
                 fields, cel_sql_where_query_alerts, cel_sql_where_query_enrichments
             )
+        elif session.bind.dialect.name == "mssql":
+            wrapped_subquery = __get_mssql_wrapped_subquery_for_filtering(
+                fields, cel_sql_where_query_alerts, cel_sql_where_query_enrichments
+            )
         else:
             return []
-        query = session.query(Alert).join(
-            wrapped_subquery,
-            and_(
-                Alert.fingerprint == wrapped_subquery.c.fp,
-                Alert.timestamp == wrapped_subquery.c.max_t,
-            ),
+        query = (
+            session.query(Alert)
+            .join(
+                wrapped_subquery,
+                and_(
+                    Alert.fingerprint == wrapped_subquery.c.fp,
+                    Alert.timestamp == wrapped_subquery.c.max_t,
+                    Alert.tenant_id == tenant_id,
+                ),
+            )
+            .options(subqueryload(Alert.alert_enrichment))
         )
-        alerts = session.execute(query, {"tenant_id": tenant_id}).all()
+        alerts = query.all()
 
     return alerts
 

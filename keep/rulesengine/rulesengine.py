@@ -355,8 +355,15 @@ class RulesEngine:
 
     @staticmethod
     def filter_alerts_cel_sql(tenant_id: str, cel_sql: str):
-        alerts = get_alerts_by_cel_sql(tenant_id=tenant_id, cel_sql_where_query=cel_sql)
-        return alerts
+        sql_where = cel_sql.get("sql")
+        if not sql_where:
+            return []
+        for param_key, param_value in cel_sql.get("params", {}).items():
+            sql_where = sql_where.replace(f":{param_key}", f"'{param_value}'")
+        filtered_alerts = get_alerts_by_cel_sql(
+            tenant_id=tenant_id, cel_sql_where_query=sql_where
+        )
+        return filtered_alerts
 
     @staticmethod
     def filter_alerts(alerts: list[AlertDto], cel: str):
