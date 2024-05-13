@@ -124,8 +124,14 @@ class NewrelicProvider(BaseProvider):
         Raises:
             ProviderConfigException: user or account is missing in authentication.
             ProviderConfigException: private key
+            ProviderConfigException: new_relic_api_url must start with https
         """
         self.newrelic_config = NewrelicProviderAuthConfig(**self.config.authentication)
+        if (
+            self.newrelic_config.new_relic_api_url
+            and not self.newrelic_config.new_relic_api_url.startswith("https")
+        ):
+            raise ProviderException("New Relic API URL must start with https", self.provider_id)
 
     def __make_add_webhook_destination_query(self, url: str, name: str) -> dict:
         query = f"""mutation {{
