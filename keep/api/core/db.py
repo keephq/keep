@@ -1693,24 +1693,42 @@ def get_provider_distribution(tenant_id: str) -> dict:
             timestamp_format = func.date_format(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
+        elif session.bind.dialect.name == "mssql":
+            timestamp_format = func.format(Alert.timestamp, "yyyy-MM-dd HH")
 
         # Adjusted query to include max timestamp
-        query = (
-            session.query(
-                Alert.provider_id,
-                Alert.provider_type,
-                timestamp_format.label("time"),
-                func.count().label("hits"),
-                func.max(Alert.timestamp).label(
-                    "last_alert_timestamp"
-                ),  # Include max timestamp
+        subquery = (
+            select(
+                Alert.provider_id.label("alert_provider_id"),
+                Alert.provider_type.label("alert_provider_type"),
+                timestamp_format.label("t"),
             )
-            .filter(
+            .where(
                 Alert.tenant_id == tenant_id,
                 Alert.timestamp >= twenty_four_hours_ago,
             )
-            .group_by(Alert.provider_id, Alert.provider_type, "time")
-            .order_by(Alert.provider_id, Alert.provider_type, "time")
+            .alias("sub")
+        )
+        query = (
+            select(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+                func.count().label("hits"),
+                func.max(subquery.c.t).label(
+                    "last_alert_timestamp"
+                ),  # Include max timestamp
+            )
+            .group_by(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+            )
+            .order_by(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+            )
         )
 
         results = query.all()
