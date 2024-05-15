@@ -7,10 +7,9 @@ import pydantic
 
 import datetime
 import requests
-from requests import HTTPError
 
 from typing import List, Optional
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urljoin
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.exceptions.provider_exception import ProviderException
