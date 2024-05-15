@@ -131,7 +131,7 @@ class NewrelicProvider(BaseProvider):
             self.newrelic_config.new_relic_api_url
             and not self.newrelic_config.new_relic_api_url.startswith("https")
         ):
-            raise ProviderException("New Relic API URL must start with https", self.provider_id)
+            raise ProviderConfigException("New Relic API URL must start with https", self.provider_id)
 
     def __make_add_webhook_destination_query(self, url: str, name: str) -> dict:
         query = f"""mutation {{
