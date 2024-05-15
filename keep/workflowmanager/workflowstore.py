@@ -34,7 +34,7 @@ class WorkflowStore:
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
-        if workflow.get("name") == "":
+        if not workflow.get("name"):  # workflow name is None or empty string
             workflow_name = workflow_id
             workflow["name"] = workflow_name
         else:
@@ -117,7 +117,7 @@ class WorkflowStore:
         # list all tenant's workflows
         workflows = get_workflows_with_last_execution(tenant_id)
         return workflows
-    
+
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
         workflow_yamls = get_all_workflows_yamls(tenant_id)
