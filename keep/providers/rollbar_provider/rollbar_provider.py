@@ -12,7 +12,6 @@ from typing import List, Optional
 from urllib.parse import urljoin
 
 from keep.api.models.alert import AlertDto, AlertSeverity
-from keep.exceptions.provider_exception import ProviderException
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
