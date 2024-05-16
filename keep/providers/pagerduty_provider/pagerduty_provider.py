@@ -11,7 +11,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 # Todo: think about splitting in to PagerdutyIncidentsProvider and PagerdutyAlertsProvider
@@ -40,6 +40,34 @@ class PagerdutyProviderAuthConfig:
 class PagerdutyProvider(BaseProvider):
     """Pull alerts and query incidents from PagerDuty."""
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="incidents_read",
+            description="Read incidents data.",
+            mandatory=True,
+            alias="Incidents Data Read",
+        ),
+        ProviderScope(
+            name="incidents_write",
+            description="Write incidents.",
+            mandatory=False,
+            alias="Incidents Write",
+        ),
+        ProviderScope(
+            name="webhook_subscriptions_read",
+            description="Read webhook data.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            alias="Webhooks Data Read",
+        ),
+        ProviderScope(
+            name="webhook_subscriptions_write",
+            description="Write webhooks.",
+            mandatory=False,
+            mandatory_for_webhook=True,
+            alias="Webhooks Write",
+        ),
+    ]
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
     PROVIDER_DISPLAY_NAME = "PagerDuty"
     SEVERITIES_MAP = {
@@ -71,6 +99,37 @@ class PagerdutyProvider(BaseProvider):
                 "PagerdutyProvider requires either routing_key or api_key",
                 provider_id=self.provider_id,
             )
+        
+    def validate_scopes(self):
+        """
+        Validate that the provider has the required scopes.
+        """
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Token token={self.authentication_config.api_key}",
+        }
+        scopes = {}
+        for scope in self.PROVIDER_SCOPES:
+            try:
+                # Todo: how to check validity for write scopes?
+                if scope.name.startswith("incidents"):
+                    response = requests.get(
+                        "https://api.pagerduty.com/incidents",
+                        headers=headers,
+                    )
+                elif scope.name.startswith("webhook_subscriptions"):
+                    response = requests.get(
+                        self.SUBSCRIPTION_API_URL,
+                        headers=headers,
+                    )
+                if response.ok:
+                    scopes[scope.name] = True
+                else:
+                    scopes[scope.name] = response.reason
+            except Exception as e:
+                self.logger.error("Error validating scopes", extra={"error": str(e)})
+                scopes[scope.name] = str(e)
+        return scopes
 
     def _build_alert(
         self, title: str, alert_body: str, dedup: str
