@@ -61,7 +61,10 @@ function KeepStepEditor({
   providerType,
   type,
 }: keepEditorProps) {
-  const stepParams = type?.includes("step-") ? properties.stepParams : properties.actionParams;
+  const stepParams =
+    ((type?.includes("step-")
+      ? properties.stepParams
+      : properties.actionParams) as string[]) ?? [];
   const existingParams = Object.keys((properties.with as object) ?? {});
   const params = [...stepParams, ...existingParams];
   const uniqueParams = params.filter(
@@ -344,30 +347,31 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
                     Add Filter
                   </Button>
                 </div>
-                {properties.alert && Object.keys(properties.alert as {}).map((filter) => {
-                  return (
-                    <>
-                      <Subtitle className="mt-2.5">{filter}</Subtitle>
-                      <div className="flex items-center mt-1" key={filter}>
-                        <TextInput
-                          key={filter}
-                          placeholder={`Set alert ${filter}`}
-                          onChange={(e: any) =>
-                            updateAlertFilter(filter, e.target.value)
-                          }
-                          value={(properties.alert as any)[filter] as string}
-                        />
-                        <Icon
-                          icon={BackspaceIcon}
-                          className="cursor-pointer"
-                          color="red"
-                          tooltip={`Remove ${filter} filter`}
-                          onClick={() => deleteFilter(filter)}
-                        />
-                      </div>
-                    </>
-                  );
-                })}
+                {properties.alert &&
+                  Object.keys(properties.alert as {}).map((filter) => {
+                    return (
+                      <>
+                        <Subtitle className="mt-2.5">{filter}</Subtitle>
+                        <div className="flex items-center mt-1" key={filter}>
+                          <TextInput
+                            key={filter}
+                            placeholder={`Set alert ${filter}`}
+                            onChange={(e: any) =>
+                              updateAlertFilter(filter, e.target.value)
+                            }
+                            value={(properties.alert as any)[filter] as string}
+                          />
+                          <Icon
+                            icon={BackspaceIcon}
+                            className="cursor-pointer"
+                            color="red"
+                            tooltip={`Remove ${filter} filter`}
+                            onClick={() => deleteFilter(filter)}
+                          />
+                        </div>
+                      </>
+                    );
+                  })}
               </>
             ) : (
               <TextInput
