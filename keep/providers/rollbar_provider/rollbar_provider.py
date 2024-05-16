@@ -163,6 +163,40 @@ class RollbarProvider(BaseProvider):
             labels={'level': item_data['level']},
             fingerprint=item_data['hash'],
         )
+
+    def setup_webhook(self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True):
+        self.logger.info("Setting up webhook for Rollbar")
+        self.logger.info("Enabling Webhook in Rollbar")
+        try:
+            response = requests.put(
+                self.__get_url("notifications/webhook"),
+                headers=self.__get_headers(),
+                json={
+                    "enabled": True,
+                    "url": f"{keep_api_url}?api_key={api_key}",
+                }
+            )
+
+            if response.ok:
+                response = requests.post(
+                    self.__get_url("notifications/webhook/rules"),
+                    headers=self.__get_headers(),
+                    json={
+                        {
+                            "trigger": "occurrence",
+                        }
+                    }
+                )
+                if response.ok:
+                    self.logger.info("Created occurrence rule in Rollbar")
+                else:
+                    self.logger.error("Failed to enable webhook in Rollbar: %s", response.json())
+                    raise Exception("Failed to enable webhook in Rollbar")
+            
+            self.logger.info("Webhook enabled in Rollbar")
+        except Exception as e:
+            self.logger.error("Error setting up webhook for Rollbar: %s", e)
+            raise Exception(f"Error setting up webhook for Rollbar: {e}")
     
 if __name__ == "__main__":
     import logging
