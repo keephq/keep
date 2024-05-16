@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alerts management and automation platform</h1>
+<h1 align="center">The open-source alerts management and automation platform.</h1>
 <br />
 
 
