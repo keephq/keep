@@ -1,10 +1,12 @@
 """
 Ilert Provider is a class that allows to create/close incidents in Ilert.
 """
+
 import dataclasses
 import enum
 import json
 import os
+from typing import Literal
 
 import pydantic
 import requests
@@ -165,14 +167,8 @@ class IlertProvider(BaseProvider):
         )
         return response.json()
 
-    def _notify(
-        self,
-        summary: str = "",
-        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
-        message: str = "",
-        affectedServices: str | list = "[]",
-        id: str = "0",
-        **kwargs: dict,
+    def __create_or_update_incident(
+        self, summary, status, message, affectedServices, id
     ):
         self.logger.info(
             "Creating/updating Ilert incident",
@@ -191,7 +187,6 @@ class IlertProvider(BaseProvider):
             "id": id,
             "status": str(status),
             "message": message,
-            **kwargs,
         }
 
         # if id is set, we update the incident, otherwise we create a new one
@@ -244,6 +239,76 @@ class IlertProvider(BaseProvider):
             extra={"status_code": response.status_code},
         )
         return response.json()
+
+    def __post_ilert_event(
+        self,
+        event_type: Literal["ALERT", "ACCEPT", "RESOLVE"] = "ALERT",
+        summary: str = "",
+        details: str = "",
+        alert_key: str = "",
+        priority: Literal["HIGH", "LOW"] = "HIGH",
+        images: list = [],
+        links: list = [],
+        custom_details: dict = {},
+        routing_key: str = "",
+    ):
+        payload = {
+            "eventType": event_type,
+            "summary": summary,
+            "details": details,
+            "alertKey": alert_key,
+            "priority": priority,
+            "images": images,
+            "links": links,
+            "customDetails": custom_details,
+            "routingKey": routing_key,
+        }
+        self.logger.info("Posting Ilert event", extra=payload)
+        payload["apiKey"] = self.authentication_config.ilert_token
+        response = requests.post(
+            f"{self.authentication_config.ilert_host}/events",
+            json=payload,
+        )
+        self.logger.info(
+            "Ilert event posted", extra={"status_code": response.status_code}
+        )
+        return response.json()
+
+    def _notify(
+        self,
+        _type: Literal["incident", "event"] = "event",
+        summary: str = "",
+        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
+        message: str = "",
+        affectedServices: str | list = "[]",
+        id: str = "0",
+        event_type: Literal["ALERT", "ACCEPT", "RESOLVE"] = "ALERT",
+        details: str = "",
+        alert_key: str = "",
+        priority: Literal["HIGH", "LOW"] = "HIGH",
+        images: list = [],
+        links: list = [],
+        custom_details: dict = {},
+        routing_key: str = "",
+        **kwargs: dict,
+    ):
+        self.logger.info("Notifying Ilert", extra=locals())
+        if _type == "incident":
+            return self.__create_or_update_incident(
+                summary, status, message, affectedServices, id
+            )
+        else:
+            return self.__post_ilert_event(
+                event_type,
+                summary,
+                details,
+                alert_key,
+                priority,
+                images,
+                links,
+                custom_details,
+                routing_key,
+            )
 
 
 if __name__ == "__main__":
