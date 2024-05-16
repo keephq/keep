@@ -65,8 +65,6 @@ class RollbarProvider(BaseProvider):
         self.authentication_config = RollbarProviderAuthConfig(
             **self.config.authentication
         )
-        if self.authentication_config.rollbarAccessToken is None:
-            raise ProviderException("Project Access Token is required")
 
     def __get_url(self, path: str):
         """
