@@ -47,7 +47,7 @@ class HttpProvider(BaseProvider):
         No configuration to validate here
         """
 
-    def notify(
+    def _notify(
         self,
         url: str,
         method: typing.Literal["GET", "POST", "PUT", "DELETE"],

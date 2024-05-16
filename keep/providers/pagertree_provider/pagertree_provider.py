@@ -179,7 +179,7 @@ class PagertreeProvider(BaseProvider):
         self.logger.info("Incident status: %s", response.status_code)
         self.logger.info("Incident created successfully", response.json())
 
-    def notify(self,
+    def _notify(self,
                title: str,
                urgency: Literal["low", "medium", "high", "critical"],
                incident: bool = False,

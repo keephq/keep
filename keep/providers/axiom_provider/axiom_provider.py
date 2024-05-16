@@ -57,6 +57,7 @@ class AxiomProvider(BaseProvider):
 
     def _query(
         self,
+        dataset=None,
         datasets_api_url=None,
         organization_id=None,
         startTime=None,
@@ -79,7 +80,6 @@ class AxiomProvider(BaseProvider):
         if not organization_id:
             raise Exception("organization_id is required for Axiom provider")
 
-        dataset = kwargs.get("dataset")
         if not dataset:
             raise Exception("dataset is required for Axiom provider")
 
