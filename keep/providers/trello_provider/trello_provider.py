@@ -47,7 +47,12 @@ class TrelloProvider(BaseProvider):
         """
         pass
 
-    def _query(self, **kwargs: dict):
+    def _query(
+            self,
+            board_id: str = "",
+            filter: str = "createCard",
+            **kwargs: dict
+            ):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
@@ -59,9 +64,6 @@ class TrelloProvider(BaseProvider):
 
         trello_api_key = self.authentication_config.api_key
         trello_api_token = self.authentication_config.api_token
-
-        board_id = kwargs.pop("board_id", "")
-        filter = kwargs.pop("filter", "createCard")
 
         request_url = f"https://api.trello.com/1/boards/{board_id}/actions?key={trello_api_key}&token={trello_api_token}&filter={filter}"
         response = requests.get(request_url)

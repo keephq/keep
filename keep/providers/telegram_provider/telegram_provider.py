@@ -44,7 +44,12 @@ class TelegramProvider(BaseProvider):
         """
         pass
 
-    async def _notify(self, **kwargs: dict):
+    async def _notify(
+            self,
+            chat_id: str = "",
+            message: str = "",
+            **kwargs: dict
+            ):
         """
         Notify alert message to Telegram using the Telegram Bot API
         https://core.telegram.org/bots/api
@@ -53,8 +58,6 @@ class TelegramProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Telegram")
-        chat_id = kwargs.pop("chat_id", "")
-        message = kwargs.pop("message", [])
 
         if not chat_id:
             raise ProviderException(

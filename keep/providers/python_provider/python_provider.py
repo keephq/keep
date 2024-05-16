@@ -22,14 +22,18 @@ class PythonProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def _query(self, **kwargs):
+    def _query(
+            self,
+            code: str = "",
+            imports: str = "",
+            **kwargs
+            ):
         """Python provider eval python code to get results
 
         Returns:
             _type_: _description_
         """
-        code = kwargs.pop("code", "")
-        modules = kwargs.pop("imports", "")
+        modules = imports
         loaded_modules = {}
         for module in modules.split(","):
             try:
