@@ -111,14 +111,17 @@ class TwilioProvider(BaseProvider):
         """
         pass
 
-    def _notify(self, **kwargs: dict):
+    def _notify(
+            self,
+            message_body: str = "",
+            to_phone_number: str = "",
+            **kwargs: dict
+            ):
         """
         Notify alert with twilio SMS
         """
         # extract the required params
         self.logger.debug("Notifying alert SMS via Twilio")
-        message_body = kwargs.get("message_body", "")
-        to_phone_number = kwargs.get("to_phone_number", "")
 
         if not to_phone_number:
             raise ProviderException(

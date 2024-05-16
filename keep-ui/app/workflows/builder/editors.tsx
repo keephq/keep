@@ -51,6 +51,7 @@ interface keepEditorProps {
   updateProperty: (key: string, value: any) => void;
   installedProviders?: Provider[] | null | undefined;
   providerType?: string;
+  type?: string;
 }
 
 function KeepStepEditor({
@@ -58,10 +59,9 @@ function KeepStepEditor({
   updateProperty,
   installedProviders,
   providerType,
+  type,
 }: keepEditorProps) {
-  const stepParams = (properties.stepParams ??
-    properties.actionParams ??
-    []) as string[];
+  const stepParams = type?.includes("step-") ? properties.stepParams : properties.actionParams;
   const existingParams = Object.keys((properties.with as object) ?? {});
   const params = [...stepParams, ...existingParams];
   const uniqueParams = params.filter(
@@ -413,6 +413,7 @@ export default function StepEditor({
           updateProperty={setProperty}
           installedProviders={installedProviders}
           providerType={providerType}
+          type={type}
         />
       ) : type === "condition-threshold" ? (
         <KeepThresholdConditionEditor

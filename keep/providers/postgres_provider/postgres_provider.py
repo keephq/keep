@@ -103,14 +103,17 @@ class PostgresProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, **kwargs: dict) -> list | tuple:
+    def _query(
+            self,
+            query: str,
+            **kwargs: dict
+            ) -> list | tuple:
         """
         Executes a query against the Postgres database.
 
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        query = kwargs.get("query")
         if not query:
             raise ValueError("Query is required")
 
@@ -131,12 +134,15 @@ class PostgresProvider(BaseProvider):
             # Close the database connection
             conn.close()
 
-    def notify(self, **kwargs):
+    def _notify(
+            self,
+            query: str,
+            **kwargs
+            ):
         """
         Notifies the Postgres database.
         """
         # notify and query are the same for Postgres
-        query = kwargs.get("query")
         if not query:
             raise ValueError("Query is required")
 

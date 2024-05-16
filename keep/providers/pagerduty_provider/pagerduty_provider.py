@@ -119,6 +119,7 @@ class PagerdutyProvider(BaseProvider):
 
         self.logger.debug("Alert status: %s", result.status_code)
         self.logger.debug("Alert response: %s", result.text)
+        return result.text
 
     def _trigger_incident(
         self,
@@ -155,6 +156,7 @@ class PagerdutyProvider(BaseProvider):
 
         print(f"Status Code: {r.status_code}")
         print(r.json())
+        return r.json()
 
     def dispose(self):
         """
@@ -284,7 +286,7 @@ class PagerdutyProvider(BaseProvider):
             service=service,
         )
 
-    def notify(
+    def _notify(
         self,
         title: str = "",
         alert_body: str = "",
@@ -303,9 +305,9 @@ class PagerdutyProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         if self.authentication_config.routing_key:
-            self._send_alert(title, alert_body, dedup=dedup, **kwargs)
+            return self._send_alert(title, alert_body, dedup=dedup, **kwargs)
         else:
-            self._trigger_incident(
+            return self._trigger_incident(
                 service_id, title, alert_body, requester, incident_id, **kwargs
             )
 
