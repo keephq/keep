@@ -178,6 +178,7 @@ export default function WorkflowsPage() {
               setIsModalOpen(true);
             }}
             icon={ArrowUpOnSquareStackIcon}
+            id="uploadWorkflowButton"
           >
             Upload Workflows
           </Button>
