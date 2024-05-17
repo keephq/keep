@@ -77,6 +77,7 @@ class MongodbProvider(BaseProvider):
         """
         try:
             client = self.__generate_client()
+            client.admin.command('ping') # will raise an exception if the server is not available
             client.close()
             scopes = {
                 "connect_to_server": True,
@@ -84,7 +85,7 @@ class MongodbProvider(BaseProvider):
         except Exception as e:
             self.logger.exception("Error validating scopes")
             scopes = {
-                "connect_to_server": str(e),
+                "connect_to_server": "Unable to connect to server. Please check the connection details.",
             }
         return scopes
 
@@ -117,7 +118,7 @@ class MongodbProvider(BaseProvider):
             and k != "additional_options"  # additional_options will go seperately
             and k != "database"
         }  # database is not a valid mongo option
-        client = MongoClient(**client_conf, **additional_options)
+        client = MongoClient(**client_conf, **additional_options, serverSelectionTimeoutMS=10000) # 10 seconds timeout
         return client
 
     def dispose(self):
