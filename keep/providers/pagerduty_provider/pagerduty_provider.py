@@ -127,7 +127,7 @@ class PagerdutyProvider(BaseProvider):
                 else:
                     scopes[scope.name] = response.reason
             except Exception as e:
-                self.logger.error("Error validating scopes", extra={"error": str(e)})
+                self.logger.exception("Error validating scopes")
                 scopes[scope.name] = str(e)
         return scopes
 

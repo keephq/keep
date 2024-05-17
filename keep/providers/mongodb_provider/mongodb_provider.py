@@ -82,7 +82,7 @@ class MongodbProvider(BaseProvider):
             scopes = {
                 "connect_to_server": True,
             }
-        except Exception as e:
+        except Exception:
             self.logger.exception("Error validating scopes")
             scopes = {
                 "connect_to_server": "Unable to connect to server. Please check the connection details.",
