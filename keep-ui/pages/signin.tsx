@@ -16,12 +16,6 @@ interface Providers {
     type: string;
     signinUrl: string;
   };
-  keycloak?: {
-    // Similarly define for keycloak provider
-    name: string;
-    type: string;
-    signinUrl: string;
-  };
 }
 
 
