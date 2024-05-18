@@ -50,9 +50,8 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
           signIn("auth0", { callbackUrl: "/" });
         }
       } else if (providersNew[0].id  == "credentials") {
-        debugger;
         console.log("Signing in with credentials provider");
-        signIn("credentials", { callbackUrl: "/keep-ui-fuck" });
+        signIn("credentials", { callbackUrl: "/" });
       }
     }
   }, []);
