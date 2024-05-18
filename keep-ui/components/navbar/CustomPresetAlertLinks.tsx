@@ -25,6 +25,7 @@ import { AiOutlineSound } from "react-icons/ai";
 // import css
 import "./CustomPresetAlertLink.css";
 import ReactPlayer from "react-player";
+import { useConfig } from "utils/hooks/useConfig";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -143,6 +144,7 @@ export const CustomPresetAlertLinks = ({
   const pathname = usePathname();
   const router = useRouter();
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
+  const { data: configData } = useConfig();
 
   // Check for noisy presets and control sound playback
   const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
@@ -256,15 +258,17 @@ export const CustomPresetAlertLinks = ({
         ))}
       </SortableContext>
       {/* React Player for playing alert sound */}
-      <ReactPlayer
-        url="/music/alert.mp3"
-        playing={anyNoisyNow}
-        volume={0.5}
-        loop={true}
-        width="0"
-        height="0"
-        playsinline
-      />
+      {configData &&
+          <ReactPlayer
+            url={`${configData?.KEEP_BASE_PATH}/music/alert.mp3`}
+            playing={anyNoisyNow}
+            volume={0.5}
+            loop={true}
+            width="0"
+            height="0"
+            playsinline
+          />
+    }
     </DndContext>
   );
 };

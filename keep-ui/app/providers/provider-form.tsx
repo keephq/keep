@@ -35,6 +35,7 @@ import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
+import {ImageWithFallback} from "@/components/ImageWithFallback";
 import "./provider-form.css";
 
 type ProviderFormProps = {
@@ -397,8 +398,8 @@ const ProviderForm = ({
         )}
         {Object.keys(provider.config).length > 0 && (
           <div className="flex items-center">
-            <Image
-              src={`/keep.png`}
+            <ImageWithFallback
+              src={'/keep.png'}
               width={55}
               height={64}
               alt={provider.type}
@@ -418,7 +419,7 @@ const ProviderForm = ({
                 className="py-0 pb-2.5"
               />
             </div>
-            <Image
+            <ImageWithFallback
               src={`/icons/${provider.type}-icon.png`}
               width={64}
               height={55}

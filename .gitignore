@@ -191,3 +191,5 @@ storage
 
 # otel files
 tempo-data/
+
+keep-ui/next_start.sh

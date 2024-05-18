@@ -20,6 +20,7 @@ import { useFloating } from "@floating-ui/react";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
+import ImageWithFallback from "components/ImageWithFallback";
 
 interface Props {
   alert: AlertDto;
@@ -70,7 +71,7 @@ export default function AlertMenu({
       {...props}
     >
       {" "}
-      <image
+      <ImageWithFallback
         id="image0"
         width={"24"}
         height={"24"}

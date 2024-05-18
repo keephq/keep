@@ -4,10 +4,13 @@ import { getApiURL } from "utils/apiUrl";
 
 export default withAuth(function middleware(req) {
   const { pathname, searchParams } = new URL(req.url);
+  console.log("Middleware: ", pathname, searchParams.toString());
+
+  const basePath = process.env.KEEP_BASE_PATH;
   // Redirect /backend/ to the API
-  if (pathname.startsWith("/backend/")) {
+  if (pathname.startsWith(`${basePath}/backend/`)) {
     let apiUrl = getApiURL();
-    const newURL = pathname.replace("/backend/", apiUrl + "/");
+    const newURL = pathname.replace(`${basePath}/backend/`, apiUrl + "/");
 
     // Convert searchParams back into a query string
     const queryString = searchParams.toString();
@@ -18,7 +21,7 @@ export default withAuth(function middleware(req) {
   }
 
   // api routes are ok too
-  if (pathname.startsWith("/api/")) {
+  if (pathname.startsWith(`${basePath}/api/`)) {
     return NextResponse.next();
   }
 
@@ -36,5 +39,7 @@ export default withAuth(function middleware(req) {
 });
 
 export const config = {
-  matcher: ["/((?!keep_big\\.svg$|gnip\\.webp|signin$|api\/aws\-marketplace$).*)"], // Adjust as needed
+  matcher: [
+    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api\/aws\-marketplace$).*)"
+  ], // Adjust as needed
 };

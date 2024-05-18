@@ -22,6 +22,8 @@ import {
   FunnelIcon,
   HandRaisedIcon,
 } from "@heroicons/react/24/outline";
+import { useConfig } from "utils/hooks/useConfig";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -61,6 +63,7 @@ function KeepStepEditor({
   providerType,
   type,
 }: keepEditorProps) {
+  const { data: configData } = useConfig();
   const stepParams =
     ((type?.includes("step-")
       ? properties.stepParams
@@ -91,7 +94,7 @@ function KeepStepEditor({
       {...props}
     >
       {" "}
-      <image
+      <ImageWithFallback
         id="image0"
         width={"24"}
         height={"24"}

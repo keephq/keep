@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
@@ -24,7 +25,6 @@ const AlertHistoryPanel = ({
   const router = useRouter();
 
   const alertTableColumns = useAlertTableCols();
-
   const sortedHistoryAlert = alertsHistoryWithDate.map((alert) =>
     alert.lastReceived.getTime()
   );
@@ -35,7 +35,7 @@ const AlertHistoryPanel = ({
   if (alertsHistoryWithDate.length === 0) {
     return (
       <div className="flex justify-center">
-        <Image
+        <ImageWithFallback
           className="animate-bounce"
           src="/keep.svg"
           alt="loading"

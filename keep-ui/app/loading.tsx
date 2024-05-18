@@ -8,6 +8,7 @@ export default function Loading({
   includeMinHeight?: boolean;
   slowLoading?: boolean;
 }) {
+  const basePath = process.env.KEEP_BASE_PATH || "";
   return (
     <main
       className={`flex flex-col items-center justify-center ${
@@ -16,7 +17,7 @@ export default function Loading({
     >
       <Image
         className="animate-bounce"
-        src="/keep.svg"
+        src={`${basePath}keep.svg`}
         alt="loading"
         width={200}
         height={200}

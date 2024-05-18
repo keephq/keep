@@ -1,5 +1,6 @@
 export interface InternalConfig {
   AUTH_TYPE: string;
+  KEEP_BASE_PATH: string;
   PUSHER_DISABLED: boolean;
   PUSHER_HOST?: string;
   PUSHER_PORT?: number;

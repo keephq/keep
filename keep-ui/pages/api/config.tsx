@@ -6,6 +6,7 @@ export default async function handler(
 ) {
   res.status(200).json({
     AUTH_TYPE: process.env.AUTH_TYPE,
+    KEEP_BASE_PATH: process.env.KEEP_BASE_PATH,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
     PUSHER_HOST: process.env.PUSHER_HOST,
     PUSHER_PORT: process.env.PUSHER_HOST

@@ -8,6 +8,8 @@ import {
   NoAuthTenant,
 } from "utils/authenticationType";
 
+console.log("Starting Keep with NEXTAUTH_URL: ", process.env.NEXTAUTH_URL)
+const basePath = process.env.KEEP_BASE_PATH;
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
 
@@ -36,7 +38,7 @@ const multiTenantAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: "/signin",
+    signIn: "/keep-ui/signin",
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -131,7 +133,7 @@ const singleTenantAuthOptions = {
   theme: {
     colorScheme: "auto", // "auto" | "dark" | "light"
     brandColor: "#000000", // Hex color code
-    logo: "/keep_big.svg", // Absolute URL to image
+    logo: `${basePath}/keep_big.svg`, // Absolute URL to image
     buttonText: "#000000", // Hex color code
   },
   session: {
@@ -196,7 +198,7 @@ const noAuthOptions = {
     },
   },
   pages: {
-    signIn: "/signin",
+    signIn: "/keep-ui/signin",
   },
 } as AuthOptions;
 

@@ -13,13 +13,13 @@ import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertSeverity from "./alert-severity";
 import AlertName from "./alert-name";
 import { getAlertLastReceieved } from "utils/helpers";
-import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
 import { Severity, severityMapping } from "./models";
 import { MdOutlineNotificationsActive, MdOutlineNotificationsOff } from "react-icons/md";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
 export const DEFAULT_COLS = [
   "noise",
@@ -128,6 +128,7 @@ export const useAlertTableCols = (
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [currentOpenMenu, setCurrentOpenMenu] = useState("");
+  const { data: configData } = useConfig();
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -268,7 +269,7 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) =>
         (context.getValue() ?? []).map((source, index) => (
-          <Image
+          <ImageWithFallback
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
             key={source}
             alt={source}

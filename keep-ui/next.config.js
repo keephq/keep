@@ -1,5 +1,37 @@
 /** @type {import('next').NextConfig} */
+
+const basePath = process.env.KEEP_BASE_PATH ?? ''
+
 const nextConfig = {
+  basePath: basePath,
+  // expose it in env:
+  env: {
+    basePath,
+  },
+  webpack(config, { isServer, dev }) {
+    // Ensures webpack config exists
+    if (!config) {
+      config = {};
+    }
+
+    // Modify webpack config only in development mode
+    if (dev) {
+      Object.defineProperty(config, 'devtool', {
+        get() {
+            return 'source-map';
+        },
+        set() {},
+      });
+      config.devtool = 'source-map';
+
+      // Optionally, configure to include source maps for server-side code
+      if (isServer) {
+        config.devtool = 'inline-source-map';
+      }
+    }
+
+    return config;
+  },
   reactStrictMode: false,
   images: {
     remotePatterns: [
@@ -36,14 +68,32 @@ const nextConfig = {
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
-    return process.env.DISABLE_REDIRECTS === "true"
+      return process.env.DISABLE_REDIRECTS === "true"
       ? []
       : [
+          {
+            source: "/backend/:path*",
+            destination: `${basePath}/backend/:path*`,
+            permanent: true,
+            basePath: false,
+          },
+          {
+            source: "/api/:path*",
+            destination: `${basePath}/api/:path*`,
+            permanent: false,
+            basePath: false,
+          },
           {
             source: "/",
             destination: "/providers",
             permanent: true,
           },
+          {
+            source: `${basePath}/`,
+            destination: `${basePath}/providers`,
+            permanent: true,
+            basePath: false,
+          }
         ];
   },
 };

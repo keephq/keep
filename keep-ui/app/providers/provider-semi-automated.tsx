@@ -8,7 +8,7 @@ import Image from "next/image";
 import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
 import Markdown from "react-markdown";
 import remarkGfm from 'remark-gfm'
-
+import ImageWithFallback from "@/components/ImageWithFallback";
 interface WebhookSettings {
   webhookDescription: string;
   webhookTemplate: string;
@@ -54,7 +54,7 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
         {provider.type.charAt(0).toLocaleUpperCase() + provider.display_name.slice(1)}
       </Title>
       <div className="flex">
-        <Image
+        <ImageWithFallback
           src={`/icons/${provider.type}-icon.png`}
           width={64}
           height={55}
@@ -62,8 +62,8 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
           className="mt-5 mb-9 mr-2.5"
         />
         <Icon icon={ArrowLongRightIcon} size="xl" color="orange" />
-        <Image
-          src={`/keep.png`}
+        <ImageWithFallback
+          src={'/keep.png'}
           width={55}
           height={64}
           alt={provider.type}

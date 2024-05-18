@@ -11,13 +11,14 @@ import { Provider } from "./providers";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
-  CircleStackIcon,
+CircleStackIcon,
   QueueListIcon,
   TicketIcon,
 } from "@heroicons/react/20/solid";
 import "./provider-tile.css";
 import moment from "moment";
 import ImageWithFallback from "@/components/ImageWithFallback";
+import { useConfig } from "utils/hooks/useConfig";
 
 interface Props {
   provider: Provider;
@@ -88,6 +89,7 @@ const getEmptyDistribution = () => {
 };
 
 export default function ProviderTile({ provider, onClick }: Props) {
+  const { data: configData } = useConfig();
   return (
     <div
       className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"

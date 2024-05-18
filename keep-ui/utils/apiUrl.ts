@@ -1,7 +1,6 @@
 export function getApiURL(): string {
   // https://github.com/vercel/next.js/issues/5354#issuecomment-520305040
   // https://stackoverflow.com/questions/49411796/how-do-i-detect-whether-i-am-on-server-on-client-in-next-js
-
   // Some background on this:
   // On docker-compose, the browser can't access the "http://keep-backend" url
   // since its the name of the container (and not accesible from the host)
@@ -10,7 +9,7 @@ export function getApiURL(): string {
 
   // if its client, use the same url as the browser but with the "/backend" prefix so that middleware.ts can proxy the request to the backend
   if (componentType === "client") {
-    return "/backend";
+    return `/backend`;
   }
 
   // SERVER ONLY FROM HERE ON

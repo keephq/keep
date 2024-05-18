@@ -29,7 +29,7 @@ import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
-import { set } from "date-fns";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
 function WorkflowMenuSection({
   onDelete,
@@ -75,6 +75,7 @@ function WorkflowMenuSection({
 }
 
 function TriggerTile({ trigger }: { trigger: Trigger }) {
+
   return (
     <ListItem>
       <span className="text-sm">{trigger.type}</span>
@@ -132,7 +133,7 @@ function ProviderTile({
           tooltip="Disconnected"
         />
       )}
-      <Image
+      <ImageWithFallback
         src={`/icons/${provider.type}-icon.png`}
         width={30}
         height={30}
@@ -448,9 +449,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             <span className="mr-1">Triggers:</span>
             {triggerTypes.map((t) => {
               if (t === "alert") {
-                const handleImageError = (event: any) => {
-                  event.target.href.baseVal = "/icons/keep-icon.png";
-                };
                 const alertSource = workflow.triggers
                   .find((w) => w.type === "alert")
                   ?.filters?.find((f) => f.key === "source")?.value;
@@ -464,12 +462,11 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                     {...props}
                   >
                     {" "}
-                    <image
+                    <ImageWithFallback
                       id="image0"
                       width={"24"}
                       height={"24"}
                       href={`/icons/${alertSource}-icon.png`}
-                      onError={handleImageError}
                     />
                   </svg>
                 );
