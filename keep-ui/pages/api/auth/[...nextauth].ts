@@ -38,7 +38,7 @@ const multiTenantAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: "/keep-ui/signin",
+    signIn: "signin",
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
@@ -198,7 +198,7 @@ const noAuthOptions = {
     },
   },
   pages: {
-    signIn: "/keep-ui/signin",
+    signIn: "signin",
   },
 } as AuthOptions;
 

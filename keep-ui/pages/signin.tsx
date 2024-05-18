@@ -1,8 +1,7 @@
 import { signIn, getProviders } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { authOptions } from "pages/api/auth/[...nextauth]";
-
-import {__NEXTAUTH} from "next-auth/client/_utils";
+import {useConfig} from "utils/hooks/useConfig";
 
 interface Providers {
   auth0?: {
@@ -33,17 +32,8 @@ export async function getServerSideProps(context: any) {
 }
 
 export default function SignIn({ params }: { params?: { amt: string } }) {
-  const [providers, setProviders] = useState<Providers | null>(null);
+
   const providersNew = authOptions.providers;
-
-  useEffect(() => {
-    async function fetchProviders() {
-      // const response = await getProviders();
-      setProviders(authOptions.providers as Providers);
-    }
-
-    fetchProviders();
-  }, []);
 
   useEffect(() => {
     if (providersNew) {
@@ -60,15 +50,12 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
           signIn("auth0", { callbackUrl: "/" });
         }
       } else if (providersNew[0].id  == "credentials") {
-        console.log("Signing in with credentials provider");
         debugger;
-        signIn("credentials", { callbackUrl: "/" });
-      } else if (providers.keycloak) {
-        console.log('Signing in with keycloak provider');
-        signIn('keycloak', { callbackUrl: "/" });
+        console.log("Signing in with credentials provider");
+        signIn("credentials", { callbackUrl: "/keep-ui-fuck" });
       }
     }
-  }, [providers]);
+  }, []);
 
   return <div>Redirecting for authentication...</div>;
 }
