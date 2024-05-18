@@ -260,7 +260,7 @@ export const CustomPresetAlertLinks = ({
       {/* React Player for playing alert sound */}
       {configData &&
           <ReactPlayer
-            url={`${configData?.KEEP_BASE_PATH}/music/alert.mp3`}
+            url={`${configData?.KEEP_BASE_PATH || ''}/music/alert.mp3`}
             playing={anyNoisyNow}
             volume={0.5}
             loop={true}

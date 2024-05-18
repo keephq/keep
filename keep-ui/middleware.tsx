@@ -6,7 +6,7 @@ export default withAuth(function middleware(req) {
   const { pathname, searchParams } = new URL(req.url);
   console.log("Middleware: ", pathname, searchParams.toString());
 
-  const basePath = process.env.KEEP_BASE_PATH;
+  const basePath = process.env.KEEP_BASE_PATH || "";
   // Redirect /backend/ to the API
   if (pathname.startsWith(`${basePath}/backend/`)) {
     let apiUrl = getApiURL();

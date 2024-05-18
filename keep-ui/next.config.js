@@ -68,33 +68,41 @@ const nextConfig = {
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
-      return process.env.DISABLE_REDIRECTS === "true"
-      ? []
-      : [
-          {
-            source: "/backend/:path*",
-            destination: `${basePath}/backend/:path*`,
-            permanent: true,
-            basePath: false,
-          },
-          {
-            source: "/api/:path*",
-            destination: `${basePath}/api/:path*`,
-            permanent: false,
-            basePath: false,
-          },
-          {
-            source: "/",
-            destination: "/providers",
-            permanent: true,
-          },
-          {
-            source: `${basePath}/`,
-            destination: `${basePath}/providers`,
-            permanent: true,
-            basePath: false,
-          }
-        ];
+      if (process.env.DISABLE_REDIRECTS === "true"){
+
+      }
+      let redirects = [
+        {
+          source: "/",
+          destination: "/providers",
+          permanent: true,
+        }
+      ];
+      // Add base path redirects
+      if (basePath !== '') {
+        redirects = redirects.concat([
+        {
+          source: "/backend/:path*",
+          destination: `${basePath}/backend/:path*`,
+          permanent: true,
+          basePath: false,
+        },
+        {
+          source: "/api/:path*",
+          destination: `${basePath}/api/:path*`,
+          permanent: false,
+          basePath: false,
+        },
+        {
+          source: `${basePath}/`,
+          destination: `${basePath}/providers`,
+          permanent: true,
+          basePath: false,
+        }
+      ]);
+    }
+
+    return redirects;
   },
 };
 

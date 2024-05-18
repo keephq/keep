@@ -9,7 +9,7 @@ import {
 } from "utils/authenticationType";
 
 console.log("Starting Keep with NEXTAUTH_URL: ", process.env.NEXTAUTH_URL)
-const basePath = process.env.KEEP_BASE_PATH;
+const basePath = process.env.KEEP_BASE_PATH || "";
 const authType = process.env.AUTH_TYPE as AuthenticationType;
 /*
 

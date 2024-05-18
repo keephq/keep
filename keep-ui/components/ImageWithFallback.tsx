@@ -10,12 +10,13 @@ const ImageWithFallback = (props: any) => {
   // if not config, return null
   if (!configData) return null;
 
+  const basePath = configData.KEEP_BASE_PATH || "";
 
   return (
     // eslint-disable-next-line jsx-a11y/alt-text
     <Image
       {...rest}
-      src={`${configData.KEEP_BASE_PATH}${imgSrc}`}
+      src={`${basePath}${imgSrc}`}
       width={width}
       height={height}
       alt={alt}
@@ -23,7 +24,7 @@ const ImageWithFallback = (props: any) => {
       // if image fails to load, set fallbackSrc
       onError={() => {
         if(fallbackSrc){
-          setImgSrc(`${configData.KEEP_BASE_PATH}${fallbackSrc}`);
+          setImgSrc(`${basePath}${fallbackSrc}`);
           return;
         }
       }}
