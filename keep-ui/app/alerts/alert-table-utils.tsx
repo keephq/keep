@@ -128,7 +128,6 @@ export const useAlertTableCols = (
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [currentOpenMenu, setCurrentOpenMenu] = useState("");
-  const { data: configData } = useConfig();
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
