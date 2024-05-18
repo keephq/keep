@@ -1,3 +1,5 @@
+'use client';
+import ImageWithFallback from "@/components/ImageWithFallback";
 import { Subtitle, Title } from "@tremor/react";
 import Image from "next/image";
 
@@ -8,16 +10,16 @@ export default function Loading({
   includeMinHeight?: boolean;
   slowLoading?: boolean;
 }) {
-  const basePath = process.env.KEEP_BASE_PATH || "";
+
   return (
     <main
       className={`flex flex-col items-center justify-center ${
         includeMinHeight ? "min-h-screen-minus-200" : ""
       }`}
     >
-      <Image
+      <ImageWithFallback
         className="animate-bounce"
-        src={`${basePath}keep.svg`}
+        src={`/keep.svg`}
         alt="loading"
         width={200}
         height={200}
