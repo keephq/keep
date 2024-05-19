@@ -4,7 +4,7 @@ import { Callout, Italic } from "@tremor/react";
 import Link from "next/link";
 
 const WorkflowsEmptyState = () => {
-  const loadAlert = () => document.getElementById("workflowFile")?.click();
+  const loadAlert = () => document.getElementById("uploadWorkflowButton")?.click();
 
   return (
     <div className="text-center mt-4">

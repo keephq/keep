@@ -19,14 +19,19 @@ class BashProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def _query(self, **kwargs):
+    def _query(
+            self,
+            timeout: int = 60,
+            command: str = "",
+            **kwargs
+            ):
         """Bash provider eval shell command to get results
 
         Returns:
             _type_: _description_
         """
-        timeout = kwargs.get("timeout", 60)
-        command = kwargs.get("command", "")
+        # timeout = kwargs.get("timeout", 60)
+        # command = kwargs.get("command", "")
         parsed_command = self.io_handler.parse(command)
         # parse by pipes
         parsed_commands = parsed_command.split("|")

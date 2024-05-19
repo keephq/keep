@@ -25,7 +25,11 @@ class ConsoleProvider(BaseProvider):
         # No need to dispose of anything, so just do nothing.
         pass
 
-    def _notify(self, **kwargs: dict):
+    def _notify(
+            self,
+            message: str = "",
+            **kwargs: dict
+            ):
         """
         Output alert message simply using the print method.
 
@@ -33,7 +37,7 @@ class ConsoleProvider(BaseProvider):
             alert_message (str): The alert message to be printed in to the console
         """
         self.logger.debug("Outputting alert message to console")
-        message = kwargs.get("alert_message")
+        # message = kwargs.get("alert_message")
         print(message)
         self.logger.debug("Alert message outputted to console")
         return message

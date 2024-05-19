@@ -76,7 +76,7 @@ const ProvidersTiles = ({
 
   const handleConnectProvider = (provider: Provider) => {
     // on linked providers, don't open the modal
-    if(provider.linked) return;
+    if (provider.linked) return;
 
     hideOrShowIntercom(true);
     setSelectedProvider(provider);
@@ -101,46 +101,44 @@ const ProvidersTiles = ({
     if (isConnected) handleCloseModal();
   };
 
-  const providersWithConfig = providers
-    .filter((provider) => {
-      const config = (provider as Provider).config;
-       // Filter out providers with empty config and providers that support webhooks
-      return (config && Object.keys(config).length > 0) || (provider.supports_webhook);
-    })
-    .sort(
-      (a, b) =>
-        Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
-        Number(b.supports_webhook) - Number(a.supports_webhook) ||
-        Number(b.oauth2_url ? true : false) -
-          Number(a.oauth2_url ? true : false)
-    ) as Providers;
-
   return (
     <div>
       <div className="flex items-center mb-2.5">
-  <Title>
-    {installedProvidersMode ? "Installed Providers" : linkedProvidersMode ? "Linked Providers" : "Available Providers"}
-  </Title>
-  {linkedProvidersMode && (
-    <div className="ml-2 relative">
-      <Icon
-        icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
-        className="text-gray-400 hover:text-gray-600"
-        size="sm"
-        tooltip="Providers which send alerts without being installed by Keep"
-      />
-    </div>
-  )}
-</div>
+        <Title>
+          {installedProvidersMode
+            ? "Installed Providers"
+            : linkedProvidersMode
+            ? "Linked Providers"
+            : "Available Providers"}
+        </Title>
+        {linkedProvidersMode && (
+          <div className="ml-2 relative">
+            <Icon
+              icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
+              className="text-gray-400 hover:text-gray-600"
+              size="sm"
+              tooltip="Providers which send alerts without being installed by Keep"
+            />
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap mb-5 gap-5">
-        {providers.map((provider, index) => (
-          <ProviderTile
-            key={provider.id}
-            provider={provider}
-            onClick={() => handleConnectProvider(provider)}
-          ></ProviderTile>
-        ))}
+        {providers
+          .sort(
+            (a, b) =>
+              Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
+              Number(b.supports_webhook) - Number(a.supports_webhook) ||
+              Number(b.oauth2_url ? true : false) -
+                Number(a.oauth2_url ? true : false)
+          )
+          .map((provider) => (
+            <ProviderTile
+              key={provider.id}
+              provider={provider}
+              onClick={() => handleConnectProvider(provider)}
+            ></ProviderTile>
+          ))}
       </div>
 
       <SlidingPanel
