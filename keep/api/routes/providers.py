@@ -4,6 +4,8 @@ import logging
 import time
 import uuid
 from typing import Callable, Optional
+from keep.exceptions.provider_config_exception import ProviderConfigException
+from keep.exceptions.provider_exception import ProviderException
 
 import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
@@ -552,9 +554,15 @@ async def install_provider(
 
     # Instantiate the provider object and perform installation process
     context_manager = ContextManager(tenant_id=tenant_id)
-    provider = ProvidersFactory.get_provider(
-        context_manager, provider_id, provider_type, provider_config
-    )
+    try:
+        provider = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider_type, provider_config
+        )
+    except (ProviderException, ProviderConfigException) as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+            )
 
     validated_scopes = validate_scopes(provider)
 

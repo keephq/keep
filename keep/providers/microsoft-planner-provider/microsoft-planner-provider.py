@@ -115,7 +115,7 @@ class PlannerProvider(BaseProvider):
 
         return response_data
 
-    def notify(
+    def _notify(
         self,
         plan_id="",
         title="",

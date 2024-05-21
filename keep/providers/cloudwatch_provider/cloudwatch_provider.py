@@ -310,10 +310,16 @@ class CloudwatchProvider(BaseProvider):
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
 
-    def _query(self, **kwargs: dict) -> dict:
-        log_group = kwargs.get("log_group")
-        query = kwargs.get("query")
-        hours = kwargs.get("hours", 24)
+    def _query(
+            self,
+            log_group: str = None,
+            query: str = None,
+            hours: int = 24,
+            **kwargs: dict
+            ) -> dict:
+        # log_group = kwargs.get("log_group")
+        # query = kwargs.get("query")
+        # hours = kwargs.get("hours", 24)
         logs_client = self.__generate_client("logs")
         try:
             start_query_response = logs_client.start_query(

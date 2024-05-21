@@ -44,9 +44,14 @@ class GithubWorkflowsProvider(BaseProvider):
         """
         pass
 
-    def notify(self, **kwargs):
-        url = kwargs.pop("github_url")
-        method = kwargs.pop("github_method").upper()
+    def _notify(
+            self,
+            github_url: str = "",
+            github_method: str = "",
+            **kwargs
+            ):
+        url = github_url
+        method = github_method.upper()
 
         result = self.query(url=url, method=method, **kwargs)
 

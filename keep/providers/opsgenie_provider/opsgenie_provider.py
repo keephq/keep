@@ -179,7 +179,7 @@ class OpsgenieProvider(BaseProvider):
         """
         pass
 
-    def notify(
+    def _notify(
         self,
         user: str | None = None,
         note: str | None = None,

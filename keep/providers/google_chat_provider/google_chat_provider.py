@@ -49,7 +49,7 @@ class GoogleChatProvider(BaseProvider):
         """
         pass
 
-    def notify(self, message="", **kwargs: dict):
+    def _notify(self, message="", **kwargs: dict):
         """
         Notify a message to a Google Chat room using a webhook URL.
 
@@ -79,6 +79,7 @@ class GoogleChatProvider(BaseProvider):
             )
 
         self.logger.debug("Alert message sent to Google Chat successfully")
+        return "Alert message sent to Google Chat successfully"
 
 
 if __name__ == "__main__":
