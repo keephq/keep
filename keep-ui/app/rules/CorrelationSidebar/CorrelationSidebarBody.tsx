@@ -11,13 +11,14 @@ import { useSession } from "next-auth/react";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 
-const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
-  seconds: (amount) => amount,
-  minutes: (amount) => 60 * amount,
-  hours: (amount) => 3600 * amount,
-  days: (amount) => 86400 * amount,
-};
+export const TIMEFRAME_UNITS = {
+  seconds: (amount: number) => amount,
+  minutes: (amount: number) => 60 * amount,
+  hours: (amount: number) => 3600 * amount,
+  days: (amount: number) => 86400 * amount,
+} as const;
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
@@ -79,6 +80,15 @@ export const CorrelationSidebarBody = ({
     }
   };
 
+  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
+    +methods.watch("timeAmount")
+  );
+
+  const { data: alertsFound = [] } = useSearchAlerts({
+    query: methods.watch("query"),
+    timeframe: timeframeInSeconds,
+  });
+
   return (
     <div className="space-y-4 pt-10 flex flex-col flex-1">
       {isCalloutShown && (
@@ -108,7 +118,7 @@ export const CorrelationSidebarBody = ({
         >
           <CorrelationForm />
           <CorrelationGroups />
-          <CorrelationSubmission toggle={toggle} />
+          <CorrelationSubmission toggle={toggle} alertsFound={alertsFound} />
         </form>
       </FormProvider>
     </div>
