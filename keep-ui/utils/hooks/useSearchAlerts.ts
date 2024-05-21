@@ -13,7 +13,7 @@ export const useSearchAlerts = (
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  const [debouncedArgs] = useDebouncedValue(args, 5000);
+  const [debouncedArgs] = useDebouncedValue(args, 2000);
   const { timeframe: debouncedTimeframe, query: debouncedRules } =
     debouncedArgs;
 
