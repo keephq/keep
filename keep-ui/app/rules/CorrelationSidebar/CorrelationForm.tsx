@@ -1,19 +1,33 @@
 import {
-  // MultiSelect,
-  // MultiSelectItem,
+  Button,
+  MultiSelect,
+  MultiSelectItem,
   NumberInput,
   Select,
   SelectItem,
   TextInput,
-  Textarea,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
 import { CorrelationForm as CorrelationFormType } from ".";
+import { AlertDto } from "app/alerts/models";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
-export const CorrelationForm = () => {
+type CorrelationFormProps = {
+  alertsFound: AlertDto[];
+};
+
+export const CorrelationForm = ({ alertsFound = [] }: CorrelationFormProps) => {
   const { control, register, formState } =
     useFormContext<CorrelationFormType>();
   const { errors } = formState;
+
+  const keys = [
+    ...alertsFound.reduce<Set<string>>((acc, alert) => {
+      const alertKeys = Object.keys(alert);
+
+      return new Set([...acc, ...alertKeys]);
+    }, new Set<string>()),
+  ];
 
   return (
     <div className="flex flex-col gap-y-4 flex-1">
@@ -52,7 +66,7 @@ export const CorrelationForm = () => {
             control={control}
             name="timeUnit"
             render={({ field: { value, onChange } }) => (
-              <Select value={value} onChange={onChange}>
+              <Select value={value} onValueChange={onChange}>
                 <SelectItem value="seconds">Seconds</SelectItem>
                 <SelectItem value="minutes">Minutes</SelectItem>
                 <SelectItem value="hours">Hours</SelectItem>
@@ -70,22 +84,44 @@ export const CorrelationForm = () => {
           <SelectItem value="high">High</SelectItem>
           <SelectItem value="critical">Critical</SelectItem>
         </Select>
-      </label>
-      <label className="text-tremor-default font-medium text-tremor-content-strong">
-        Select attribute(s) to group by
+      </label> */}
+      <div>
+        <label
+          className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+          htmlFor="groupedAttributes"
+        >
+          Select attribute(s) to group by{" "}
+          {keys.length < 1 && (
+            <Button
+              className="cursor-default ml-2"
+              type="button"
+              tooltip="You cannot calculate attributes to group by without alerts"
+              icon={QuestionMarkCircleIcon}
+              size="xs"
+              variant="light"
+              color="slate"
+            />
+          )}
+        </label>
         <Controller
           control={control}
           name="groupedAttributes"
           render={({ field: { value, onChange } }) => (
-            <MultiSelect className="mt-2" value={value} onChange={onChange}>
-              <MultiSelectItem value="low">Low</MultiSelectItem>
-              <MultiSelectItem value="medium">Medium</MultiSelectItem>
-              <MultiSelectItem value="high">High</MultiSelectItem>
-              <MultiSelectItem value="critical">Critical</MultiSelectItem>
+            <MultiSelect
+              className="mt-2"
+              value={value}
+              onValueChange={onChange}
+              disabled={!keys.length}
+            >
+              {keys.map((alertKey) => (
+                <MultiSelectItem key={alertKey} value={alertKey}>
+                  {alertKey}
+                </MultiSelectItem>
+              ))}
             </MultiSelect>
           )}
         />
-      </label> */}
+      </div>
     </div>
   );
 };

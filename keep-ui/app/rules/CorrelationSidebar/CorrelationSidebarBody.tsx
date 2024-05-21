@@ -31,6 +31,11 @@ export const CorrelationSidebarBody = ({
 }: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
 
+  const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
+  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
+    +methods.watch("timeAmount")
+  );
+
   const { mutate } = useRules();
   const { data: session } = useSession();
 
@@ -38,20 +43,20 @@ export const CorrelationSidebarBody = ({
   const searchParams = useSearchParams();
   const selectedId = searchParams ? searchParams.get("id") : null;
 
+  const { data: alertsFound = [] } = useSearchAlerts({
+    query: methods.watch("query"),
+    timeframe: timeframeInSeconds,
+  });
+
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
   );
 
-  const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
-
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const { name, query, description, timeUnit, timeAmount } =
-      correlationFormData;
-
-    const timeframeInSeconds = TIMEFRAME_UNITS[timeUnit](+timeAmount);
+    const { name, query, description, groupedAttributes } = correlationFormData;
 
     if (session) {
       const response = await fetch(
@@ -68,6 +73,7 @@ export const CorrelationSidebarBody = ({
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
+            grouping_criteria: alertsFound.length ? groupedAttributes : [],
           }),
         }
       );
@@ -79,15 +85,6 @@ export const CorrelationSidebarBody = ({
       }
     }
   };
-
-  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
-    +methods.watch("timeAmount")
-  );
-
-  const { data: alertsFound = [] } = useSearchAlerts({
-    query: methods.watch("query"),
-    timeframe: timeframeInSeconds,
-  });
 
   return (
     <div className="space-y-4 pt-10 flex flex-col flex-1">
@@ -116,7 +113,7 @@ export const CorrelationSidebarBody = ({
           className="grid grid-cols-2 gap-x-10 flex-1"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm />
+          <CorrelationForm alertsFound={alertsFound} />
           <CorrelationGroups />
           <CorrelationSubmission toggle={toggle} alertsFound={alertsFound} />
         </form>
