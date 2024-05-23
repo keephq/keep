@@ -81,6 +81,7 @@ sqlalchemy-utils = "^0.41.1"
 splunk-sdk = "^1.7.4"
 openshift-client = "^2.0.4"
 uptime-kuma-api = "^1.2.1"
+packaging = "^24.0"
 
 
 [tool.poetry.group.dev.dependencies]
