@@ -8,10 +8,7 @@ import pydantic
 import requests
 import datetime
 
-from urllib.parse import urljoin
-
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
-from keep.exceptions.provider_exception import ProviderException
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -80,8 +77,9 @@ class CentreonProvider(BaseProvider):
     self.authentication_config = CentreonProviderAuthConfig(**self.config.authentication)
 
   def __get_url(self, params: str):
-    return urljoin(self.authentication_config.host_url + "/centreon/api/index.php?", params)
-    
+    url = self.authentication_config.host_url + "/centreon/api/index.php?" + params
+    return url
+  
   def __get_headers(self):
     return {
        "Content-Type": "application/json",
@@ -93,10 +91,10 @@ class CentreonProvider(BaseProvider):
     Validate the scopes of the provider.
     """
     try:
-      response = requests.get(self.__get_url("object=centreon_realtime_hosts&action=list"), headers=self.__get_headers()) 
-      if response.status_code == 200:
+      response = requests.get(self.__get_url("object=centreon_realtime_hosts&action=list"), headers=self.__get_headers())
+      if response.ok:
         scopes = {
-          "authenticated": True,
+          "authenticated": True
         }
       else:
         scopes = {
@@ -123,8 +121,8 @@ class CentreonProvider(BaseProvider):
         name=host["name"],
         address=host["address"],
         description=host["output"],
-        status=self.STATUS_MAP[host["state"]],
-        severity=self.SEVERITY_MAP[host["output"].split()[0]],
+        status=host["state"],
+        severity=host["output"].split()[0],
         instance_name=host["instance_name"],
         acknowledged=host["acknowledged"],
         max_check_attempts=host["max_check_attempts"],
@@ -150,8 +148,8 @@ class CentreonProvider(BaseProvider):
         host_id=service["host_id"],
         name=service["name"],
         description=service["description"],
-        status=self.STATUS_MAP[service["state"]],
-        severity=self.SEVERITY_MAP[service["output"].split(":")[0]],
+        status=service["state"],
+        severity=service["output"].split(":")[0],
         acknowledged=service["acknowledged"],
         max_check_attempts=service["max_check_attempts"],
         lastReceived=datetime.datetime.fromtimestamp(service["last_check"]).isoformat(),
