@@ -9,6 +9,7 @@ import requests
 import datetime
 
 from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.exceptions.provider_exception import ProviderException
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -47,6 +48,11 @@ class CentreonProvider(BaseProvider):
       description="User is authenticated"
     ),
   ]
+
+  """
+  Centreon only supports the following host state (UP = 0, DOWN = 2, UNREA = 3)
+  https://docs.centreon.com/docs/api/rest-api-v1/#realtime-information
+  """
 
   STATUS_MAP = {
     2: AlertStatus.FIRING,
@@ -98,7 +104,7 @@ class CentreonProvider(BaseProvider):
         }
       else:
         scopes = {
-          "authenticated": False,
+          "authenticated": f"Error validating scopes: {response.status_code} {response.text}"
         }
     except Exception as e:
       scopes = {
@@ -114,7 +120,7 @@ class CentreonProvider(BaseProvider):
 
       if not response.ok:
         self.logger.error("Failed to get host status from Centreon: %s", response.json())
-        raise Exception("Failed to get host status from Centreon")
+        raise ProviderException("Failed to get host status from Centreon")
           
       return [AlertDto(
         id=host["id"],
@@ -132,7 +138,7 @@ class CentreonProvider(BaseProvider):
       
     except Exception as e:
       self.logger.error("Error getting host status from Centreon: %s", e)
-      raise Exception(f"Error getting host status from Centreon: {e}")
+      raise ProviderException(f"Error getting host status from Centreon: {e}")
       
   def __get_service_status(self) -> list[AlertDto]:
     try:
@@ -141,7 +147,7 @@ class CentreonProvider(BaseProvider):
 
       if not response.ok:
         self.logger.error("Failed to get service status from Centreon: %s", response.json())
-        raise Exception("Failed to get service status from Centreon")
+        raise ProviderException("Failed to get service status from Centreon")
           
       return [AlertDto(
         id=service["service_id"],
@@ -158,7 +164,7 @@ class CentreonProvider(BaseProvider):
       
     except Exception as e:
       self.logger.error("Error getting service status from Centreon: %s", e)
-      raise Exception(f"Error getting service status from Centreon: {e}")
+      raise ProviderException(f"Error getting service status from Centreon: {e}")
       
   def _get_alerts(self) -> list[AlertDto]:
     alerts = []
@@ -193,7 +199,7 @@ if __name__ == "__main__":
   api_token = os.environ.get("CENTREON_API_TOKEN")
 
   if host_url is None:
-    raise Exception("CENTREON_HOST_URL is required")
+    raise ProviderException("CENTREON_HOST_URL is not set")
   
   config = ProviderConfig(
     description="Centreon Provider",
