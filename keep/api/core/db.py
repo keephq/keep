@@ -28,6 +28,7 @@ from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
 from keep.api.models.db.extraction import *
+from keep.api.models.db.layout import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -1598,3 +1599,19 @@ def get_all_presets(tenant_id: str) -> List[Preset]:
             select(Preset).where(Preset.tenant_id == tenant_id)
         ).all()
     return presets
+
+
+def get_layouts(tenant_id: str, email=None) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(GridLayout)
+            .where(GridLayout.tenant_id == tenant_id)
+            .where(
+                or_(
+                    GridLayout.is_private == False,
+                    GridLayout.created_by == email,
+                )
+            )
+        )
+        layouts = session.exec(statement).all()
+    return layouts

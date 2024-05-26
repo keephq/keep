@@ -25,6 +25,7 @@ from keep.api.routes import (
     extraction,
     groups,
     healthcheck,
+    layout,
     mapping,
     preset,
     providers,
@@ -170,6 +171,7 @@ def get_app(
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
+    app.include_router(layout.router, prefix="/layout", tags=["layout"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
