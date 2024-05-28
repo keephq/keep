@@ -8,15 +8,19 @@ import { AlertDto } from "app/alerts/models";
 type CorrelationSubmissionProps = {
   toggle: VoidFunction;
   alertsFound: AlertDto[];
+  timeframeInSeconds: number;
 };
 
 export const CorrelationSubmission = ({
   toggle,
   alertsFound,
+  timeframeInSeconds,
 }: CorrelationSubmissionProps) => {
   const {
     formState: { isValid },
   } = useFormContext<CorrelationForm>();
+
+  const exceeds14Days = Math.floor(timeframeInSeconds / 86400) > 13;
 
   const searchParams = useSearchParams();
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
@@ -34,7 +38,7 @@ export const CorrelationSubmission = ({
         <Button
           className="rounded-none"
           color="orange"
-          disabled={isValid === false}
+          disabled={isValid === false || exceeds14Days}
         >
           {isRuleBeingEdited ? "Save correlation" : "Create correlation"}
         </Button>

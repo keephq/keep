@@ -44,24 +44,25 @@ export const CorrelationForm = ({ alertsFound = [] }: CorrelationFormProps) => {
           errorMessage={get(errors, "name.message")}
         />
       </label>
-      {/* <label className="text-tremor-default font-medium text-tremor-content-strong">
-        Description
-        <Textarea
-          placeholder="Type here..."
-          className="mt-2"
-          {...register("description", {
-            required: { message: "Description is required", value: true },
-          })}
-          error={!!get(errors, "description.message")}
-          errorMessage={get(errors, "description.message")}
-        />
-      </label> */}
       <fieldset>
-        <legend className="text-tremor-default font-medium text-tremor-content-strong">
-          Scan every
+        <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
+          Scan every{" "}
+          <Button
+            className="cursor-default ml-2"
+            type="button"
+            tooltip="Time cannot exceed 14 days"
+            icon={QuestionMarkCircleIcon}
+            size="xs"
+            variant="light"
+            color="slate"
+          />
         </legend>
         <span className="grid grid-cols-2 mt-2 gap-x-2">
-          <NumberInput defaultValue={5} min={1} {...register("timeAmount")} />
+          <NumberInput
+            defaultValue={5}
+            min={1}
+            {...register("timeAmount", { validate: (value) => value > 0 })}
+          />
           <Controller
             control={control}
             name="timeUnit"
@@ -76,15 +77,6 @@ export const CorrelationForm = ({ alertsFound = [] }: CorrelationFormProps) => {
           />
         </span>
       </fieldset>
-      {/* <label className="text-tremor-default font-medium text-tremor-content-strong hidden">
-        When all condition meets set alert severity to
-        <Select className="mt-2" name="severity">
-          <SelectItem value="low">Low</SelectItem>
-          <SelectItem value="medium">Medium</SelectItem>
-          <SelectItem value="high">High</SelectItem>
-          <SelectItem value="critical">Critical</SelectItem>
-        </Select>
-      </label> */}
       <div>
         <label
           className="flex items-center text-tremor-default font-medium text-tremor-content-strong"

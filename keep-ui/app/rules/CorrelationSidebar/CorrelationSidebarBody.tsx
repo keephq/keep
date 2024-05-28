@@ -31,7 +31,10 @@ export const CorrelationSidebarBody = ({
 }: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
 
-  const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
+  const methods = useForm<CorrelationFormType>({
+    defaultValues: defaultValue,
+    mode: "onChange",
+  });
   const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
     +methods.watch("timeAmount")
   );
@@ -115,7 +118,12 @@ export const CorrelationSidebarBody = ({
         >
           <CorrelationForm alertsFound={alertsFound} />
           <CorrelationGroups />
-          <CorrelationSubmission toggle={toggle} alertsFound={alertsFound} />
+
+          <CorrelationSubmission
+            toggle={toggle}
+            alertsFound={alertsFound}
+            timeframeInSeconds={timeframeInSeconds}
+          />
         </form>
       </FormProvider>
     </div>
