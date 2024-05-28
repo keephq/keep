@@ -16,6 +16,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
+from keep.exceptions.config_exception import ConfigException
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -129,6 +130,9 @@ def get_app(
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
+    elif os.environ.get("KEEP_API_URL").startswith("http://") and HOST != "0.0.0.0":
+        logger.warning("Wrong protocol for KEEP_API_URL")
+        raise ConfigException("For production KEEP Api must use HTTPS not HTTP")
 
     app = FastAPI(
         title="Keep API",
