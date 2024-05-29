@@ -7,7 +7,7 @@ import typing
 import uuid
 from collections import OrderedDict
 from importlib import metadata
-
+import asyncio
 import click
 import requests
 import yaml
@@ -1321,7 +1321,6 @@ def login(info: Info):
     from fastapi import FastAPI
     from fastapi.responses import PlainTextResponse
     from requests_oauthlib import OAuth2Session
-
     app = FastAPI()
 
     @app.get("/callback")
