@@ -19,6 +19,7 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.core.db import enrich_alert, get_enrichments
+from keep.api.core.dependencies import get_elastic_client
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
@@ -33,9 +34,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
-    PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue"]
-    ] = []
+    PROVIDER_TAGS: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = (
+        []
+    )
 
     def __init__(
         self,
@@ -185,6 +186,32 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
+            elastic_client = get_elastic_client()
+            if elastic_client:
+                # get the alert from elastic
+                alert = elastic_client.get(
+                    index=f"keep-alerts-{self.context_manager.tenant_id}",
+                    id=fingerprint,
+                )
+                # update the alert with the enrichments
+                if alert:
+                    alert["_source"].update(_enrichments)
+                    # now update the alert in elastic
+                    elastic_client.index(
+                        index=f"keep-alerts-{self.context_manager.tenant_id}",
+                        id=fingerprint,
+                        body=alert["_source"],
+                    )
+                else:
+                    # warning, the alert was not found
+                    self.logger.warning(
+                        "Alert not found in db",
+                        extra={
+                            "fingerprint": fingerprint,
+                            "provider": self.provider_id,
+                        },
+                    )
+
         except Exception as e:
             self.logger.error(
                 "Failed to enrich alert in db",
