@@ -7,7 +7,6 @@ import typing
 import uuid
 from collections import OrderedDict
 from importlib import metadata
-import asyncio
 import click
 import requests
 import yaml
