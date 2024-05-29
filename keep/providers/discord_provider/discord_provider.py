@@ -1,6 +1,7 @@
 """
 DiscordProvider is a class that implements the BaseOutputProvider interface for Discord messages.
 """
+
 import dataclasses
 
 import pydantic
@@ -59,16 +60,39 @@ class DiscordProvider(BaseProvider):
             raise ProviderException(
                 f"{self.__class__.__name__} Keyword Arguments Missing : content or components atleast one of them needed to trigger message"
             )
+        # verify components is a list
+        if components and not isinstance(components, list):
+            # omit it
+            self.logger.warning(
+                f"{self.__class__.__name__} components should be a list of components, omitting components"
+            )
+            components = []
 
+        # send the request
         response = requests.post(
             webhook_url,
             json={"content": content, "components": components},
         )
 
         if response.status_code != 204:
-            raise ProviderException(
-                f"{self.__class__.__name__} failed to notify alert message to Discord: {response.text}"
-            )
+            try:
+                r = response.json()
+            # unknown response
+            except Exception:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to notify alert message to Discord: {response.text}"
+                )
+
+            # there can be plenty of errors, will be added over time
+            if "components" in r and "ListType" in r["components"][0]:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to notify alert message to Discord: components should be a list of components"
+                )
+            # TODO: Add more error handling
+            else:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to notify alert message to Discord: {response.text}"
+                )
 
         self.logger.debug("Alert message notified to Discord")
 
@@ -96,6 +120,13 @@ if __name__ == "__main__":
         context_manager, provider_id="discord-test", config=config
     )
 
+    button_component = {
+        "type": 1,
+        "components": [
+            {"type": 2, "style": 1, "label": "Click Me!", "custom_id": "button_click"}
+        ],
+    }
+
     provider.notify(
-        content="Hey Discord By: Sakthi Ratnam",
+        content="Hey Discord By: Sakthi Ratnam", components=[button_component]
     )
