@@ -1,0 +1,13 @@
+workflow:
+  id: ntfy-example
+  description: ntfy-example
+  triggers:
+    - type: manual
+  actions:
+    - name: ntfy
+      provider:
+        type: ntfy
+        config: "{{ providers.ntfy }}"
+        with:
+          message: "test-message"
+          topic: "test-topic"

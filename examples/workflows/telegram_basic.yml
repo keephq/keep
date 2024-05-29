@@ -1,4 +1,4 @@
-alert:
+workflow:
   id: telegram-example
   description: telegram-example
   triggers:
