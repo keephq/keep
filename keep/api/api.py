@@ -1,7 +1,13 @@
+import asyncio
+import json
 import logging
 import os
 from importlib import metadata
+from random import randint
+from typing import Set
 
+from aiokafka import TopicPartition
+import aiokafka
 import jwt
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -43,6 +49,14 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
 logger = logging.getLogger(__name__)
+
+# Kafka
+consumer_task = None
+consumer = None
+KAFKA_TOPIC = "Keep"#os.getenv("KAFKA_TOPIC")
+KAFKA_CONSUMER_GROUP_PREFIX = os.getenv("KAFKA_CONSUMER_GROUP_PREFIX", "group")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9093")
+is_keep_kafka_consumer = os.getenv("IS_KAFKA_CONSUMER", "TRUE")
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
@@ -121,6 +135,79 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
         # Perform async tasks or flush events after the request is handled
         await self.flush()
         return response
+
+
+
+async def initialize():
+    loop = asyncio.get_event_loop()
+    global consumer
+    group_id = f"{KAFKA_CONSUMER_GROUP_PREFIX}-{randint(0, 10000)}"
+    consumer = aiokafka.AIOKafkaConsumer(
+        KAFKA_TOPIC,
+        loop=loop,
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        group_id=group_id,
+    )
+    # get cluster layout and join group
+    await consumer.start()
+
+    partitions: Set[TopicPartition] = consumer.assignment()
+    for tp in partitions:
+
+        # get the log_end_offset
+        end_offset_dict = await consumer.end_offsets([tp])
+        end_offset = end_offset_dict[tp]
+
+        if end_offset == 0:
+            return
+
+        consumer.seek(tp, end_offset - 1)
+        msg = await consumer.getone()
+
+        return
+
+
+async def consume():
+    global consumer_task
+    consumer_task = asyncio.create_task(recv_consumer_message(consumer))
+
+from keep.api.core.db import get_session
+from keep.api.core.dependencies import get_pusher_client
+from keep.api.routes.alerts import receive_generic_event
+from keep.api.models.alert import AlertDto
+from keep.api.routes.alerts import handle_formatted_events
+
+Kafka_mock_value = b'{"id": "34c4419b-b5fd-4d03-8d2d-53efcf6ffe90", "name": "Alert name", "status": "firing", "severity": "critical", "lastReceived": "2024-05-26T11:56:34.907Z", "environment": "production", "isDuplicate": null, "duplicateReason": "null", "service": "backend", "source": ["keep"], "apiKeyRef": "single_tenant_api_key", "message": "Keep: Alert message", "description": "Keep: Alert description", "pushed": true, "event_id": "1234", "url": "https://www.keephq.dev?alertId=1234", "labels": {"key": "value"}, "fingerprint": "81bf400e-f8a4-4a5d-9b11-34719399b5c4", "deleted": false, "dismissUntil": null, "dismissed": false, "assignee": null, "providerId": null, "group": false, "note": null, "startedAt": null, "isNoisy": false, "ticket_url": "https://www.keephq.dev?enrichedTicketId=456", "tenant_id": "keep"}'
+
+def handle_kafka_event(msg):
+    pusher_client = get_pusher_client()
+    session = get_session()
+    strvalue = Kafka_mock_value.decode('utf-8')
+    msgAsDict = json.loads(strvalue)
+    tenant_id = msgAsDict['tenant_id']
+    del msgAsDict['tenant_id'] #TODO Expand the JSON upon entry to the queue so you will have kafka_message['event'] and kafka_message['env_variables']
+    event = AlertDto(**msgAsDict)
+    event = [event]
+    for cyber in get_session(): #TODO: Logic of the session generator is unclear, do we have multi sessions we need to call handle_formatted_events for?
+        handle_formatted_events(
+        tenant_id,
+        event[0].source[0],
+        cyber,
+        event,
+        event,
+        pusher_client,
+        None)
+        break
+    
+
+
+async def recv_consumer_message(consumer):
+    # consume messages
+    async for msg in consumer:
+        # x = json.loads(msg.value)
+        logger.info(f"Consumed kafka msg: {msg}")
+        handle_kafka_event(msg.value)
+    
 
 
 def get_app(
@@ -235,6 +322,10 @@ def get_app(
             logger.info("Consumer started successfully")
         logger.info("Services started successfully")
 
+        if is_keep_kafka_consumer == "TRUE":
+            await initialize()
+            await consume()
+        
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(

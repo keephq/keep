@@ -1,33 +1,7 @@
+version: "3.9"
 services:
-  keep-frontend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-frontend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - API_URL=http://keep-backend:8080
-    volumes:
-      - ./state:/state
-    depends_on:
-      - keep-backend
+  
 
-  keep-backend:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
-    environment:
-      - AUTH_TYPE=NO_AUTH
-      - IS_KAFKA_PROVIDER=NO
-      - IS_KAFKA_CONSUMER=NO
-    volumes:
-      - ./state:/state
-  keep-websocket-server:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-websocket-server-common
-      
   kafka-ui:
     image: provectuslabs/kafka-ui
     container_name: kafka-ui
@@ -37,7 +11,6 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
-     
 
   kafka:
     image: obsidiandynamics/kafka
@@ -60,3 +33,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 15
+
+networks:
+  my-net:
+    external: true

@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse
 from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
-
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
@@ -46,11 +45,11 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
-
+from keep.kafka.kafka_provider import kafka_provider
 router = APIRouter()
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
-
+is_keep_kafka_provider = os.getenv("IS_KAFKA_PROVIDER", "FALSE") #Keep can be deployed to function only as a middleman between a keep provider and kafka
 
 def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
     """
@@ -797,6 +796,16 @@ async def receive_generic_event(
 
         if authenticated_entity.api_key_name:
             _alert.apiKeyRef = authenticated_entity.api_key_name
+    
+    #We recieve by HTTP only to push into kafka
+    if  is_keep_kafka_provider == "TRUE":
+        logger.info("Queueing new message into the kafka queue")
+        eventAsDict = json.loads(str(event[0]))
+        eventAsDict["tenant_id"] = tenant_id
+        value_json = json.dumps(eventAsDict).encode('utf-8')
+        await kafka_provider.enqueue_msg(value_json)
+        logger.info("Queued new message ot the kafka queue")
+        return event
 
     bg_tasks.add_task(
         handle_formatted_events,

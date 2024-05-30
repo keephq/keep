@@ -183,7 +183,7 @@ state/*
 examples/alerts/dd.yml
 keep-ui/node_modules
 keep-ui/node_modules/*
-
+node_modules/
 cov.xml
 keep.db
 RANDOM_USER_ID
