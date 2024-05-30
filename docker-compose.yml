@@ -19,6 +19,8 @@ services:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
+      - IS_KAFKA_PROVIDER=NO
+      - IS_KAFKA_CONSUMER=NO
     volumes:
       - ./state:/state
   keep-websocket-server:
