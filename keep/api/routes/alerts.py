@@ -46,6 +46,10 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.api.arq.arq_provider import is_keep_arq_provider
+from keep.api.arq.arq_provider import push_to_redis
+from keep.api.arq.arq_provider import init_redis
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -797,6 +801,18 @@ async def receive_generic_event(
 
         if authenticated_entity.api_key_name:
             _alert.apiKeyRef = authenticated_entity.api_key_name
+
+
+        #We recieve by HTTP only to push into kafka
+    if  is_keep_arq_provider == "TRUE":
+        logger.info("Queueing new message into the kafka queue")
+        eventAsDict = json.loads(str(event[0]))
+        eventAsDict["tenant_id"] = tenant_id
+        value_json = json.dumps(eventAsDict).encode('utf-8')
+        await init_redis()
+        await push_to_redis(value_json)
+        logger.info("Queued new message ot the kafka queue")
+        return event
 
     bg_tasks.add_task(
         handle_formatted_events,
