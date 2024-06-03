@@ -18,6 +18,14 @@ class SearchMode(enum.Enum):
     INTERNAL = "internal"
 
 
+# datatype represents a query with CEL (str) and SQL (dict)
+class SearchQuery:
+    def __init__(self, cel_query: str, sql_query: dict, limit: int = 1000):
+        self.cel_query = cel_query
+        self.sql_query = sql_query
+        self.limit = limit
+
+
 class SearchEngine:
     def __init__(self, tenant_id=None):
         self.tenant_id = tenant_id
@@ -28,6 +36,102 @@ class SearchEngine:
         self.search_mode = (
             SearchMode.ELASTIC if self.elastic_client.enabled else SearchMode.INTERNAL
         )
+
+    def _get_last_alerts(self, limit=1000) -> list[AlertDto]:
+        """Get the last alerts
+
+        Returns:
+            list[AlertDto]: The list of alerts
+        """
+        self.logger.info("Getting last alerts")
+        alerts = get_last_alerts(tenant_id=self.tenant_id, limit=limit)
+        # deduplicate fingerprints
+        # shahar: this is backward compatibility for before we had milliseconds in the timestamp
+        #          note that we want to keep the order of the alerts
+        #          so we will keep the first alert and remove the rest
+        dedup_alerts = []
+        seen_fingerprints = set()
+        for alert in alerts:
+            if alert.fingerprint not in seen_fingerprints:
+                dedup_alerts.append(alert)
+                seen_fingerprints.add(alert.fingerprint)
+            # this shouldn't appear with time (after migrating to milliseconds in timestamp)
+            else:
+                self.logger.info("Skipping fingerprint", extra={"alert_id": alert.id})
+        alerts = dedup_alerts
+        # convert the alerts to DTO
+        alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+        self.logger.info("Finished getting last alerts")
+        return alerts_dto
+
+    def _search_alerts_by_cel(
+        self, cel_query: str, alerts: list[AlertDto] = None, limit: int = 1000
+    ) -> list[AlertDto]:
+        """Search for alerts based on a CEL query
+
+        Args:
+            cel_query (str): The CEL query to search for
+            alerts (list[AlertDto]): The list of alerts to search in
+
+        Returns:
+            list[AlertDto]: The list of alerts that match the query
+        """
+        self.logger.info("Searching alerts by CEL")
+        # if alerts are not provided
+        if alerts is None:
+            # get the alerts
+            alerts = self._get_last_alerts(limit=limit)
+        # filter the alerts
+        filtered_alerts = self.rule_engine.filter_alerts(alerts, cel_query)
+        self.logger.info("Finished searching alerts by CEL")
+        return filtered_alerts
+
+    def _search_alerts_by_sql(self, sql_query: dict, limit=1000) -> list[AlertDto]:
+        """Search for alerts based on a SQL query
+
+        Args:
+            sql_query (dict): The SQL query to search for
+
+        Returns:
+            list[AlertDto]: The list of alerts that match the query
+        """
+        self.logger.info("Searching alerts by SQL")
+        query = self._create_raw_sql(sql_query.get("sql"), sql_query.get("params"))
+        # get the alerts from elastic
+        elastic_sql_query = (
+            f"""select * from "keep-alerts-{self.tenant_id}" where {query}"""
+        )
+        results = self.elastic_client.run_query(elastic_sql_query, limit)
+        # convert the results to DTO
+        filtered_alerts = self.elastic_client._construct_alert_dto_from_results(results)
+        self.logger.info("Finished searching alerts by SQL")
+        return filtered_alerts
+
+    def search_alerts(self, query: SearchQuery) -> list[AlertDto]:
+        """Search for alerts based on a query
+
+        Args:
+            query (dict | str): CEL (str) / SQL (dict) query
+
+        Returns:
+            list[AlertDto]: The list of alerts that match the query
+        """
+        self.logger.info("Searching alerts")
+        # if internal
+        if self.search_mode == SearchMode.INTERNAL:
+            filtered_alerts = self._search_alerts_by_cel(
+                query.cel_query, limit=query.limit
+            )
+        # if elastic
+        elif self.search_mode == SearchMode.ELASTIC:
+            filtered_alerts = self._search_alerts_by_sql(
+                query.sql_query, limit=query.limit
+            )
+        else:
+            self.logger.error("Invalid search mode")
+            return []
+        self.logger.info("Finished searching alerts")
+        return filtered_alerts
 
     def search_preset_alerts(
         self, presets: list[PresetDto]
@@ -45,26 +149,7 @@ class SearchEngine:
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
             # get the alerts
-            alerts = get_last_alerts(tenant_id=self.tenant_id)
-
-            # deduplicate fingerprints
-            # shahar: this is backward compatibility for before we had milliseconds in the timestamp
-            #          note that we want to keep the order of the alerts
-            #          so we will keep the first alert and remove the rest
-            dedup_alerts = []
-            seen_fingerprints = set()
-            for alert in alerts:
-                if alert.fingerprint not in seen_fingerprints:
-                    dedup_alerts.append(alert)
-                    seen_fingerprints.add(alert.fingerprint)
-                # this shouldn't appear with time (after migrating to milliseconds in timestamp)
-                else:
-                    self.logger.info(
-                        "Skipping fingerprint", extra={"alert_id": alert.id}
-                    )
-            alerts = dedup_alerts
-            # convert the alerts to DTO
-            alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+            alerts_dto = self._get_last_alerts()
             for preset in presets:
                 filtered_alerts = self.rule_engine.filter_alerts(
                     alerts_dto, preset.cel_query

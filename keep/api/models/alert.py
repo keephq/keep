@@ -30,6 +30,13 @@ class AlertSeverity(Enum):
     def __str__(self):
         return self._value_
 
+    @classmethod
+    def from_number(cls, n):
+        for severity in cls:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No AlertSeverity with order {n}")
+
 
 class AlertStatus(Enum):
     # Active alert
@@ -84,6 +91,27 @@ class AlertDto(BaseModel):
         # Convert the model instance to a dictionary
         model_dict = self.dict()
         return json.dumps(model_dict, indent=4, default=str)
+
+    def __eq__(self, other):
+        if isinstance(other, AlertDto):
+            # Convert both instances to dictionaries
+            dict_self = self.dict()
+            dict_other = other.dict()
+
+            # Fields to exclude from comparison since they are bit different in different db's
+            exclude_fields = {"lastReceived", "startedAt", "event_id"}
+
+            # Remove excluded fields from both dictionaries
+            for field in exclude_fields:
+                dict_self.pop(field, None)
+                dict_other.pop(field, None)
+
+            # Compare the dictionaries
+            return dict_self == dict_other
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
