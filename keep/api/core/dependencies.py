@@ -4,7 +4,6 @@ import os
 from typing import Optional
 
 import jwt
-from elasticsearch import Elasticsearch
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import (
     APIKeyHeader,
@@ -434,19 +433,3 @@ def get_pusher_client() -> Pusher | None:
         ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
         cluster=os.environ.get("PUSHER_CLUSTER"),
     )
-
-
-def get_elastic_client() -> Elasticsearch | None:
-    if os.environ.get("ELASTIC_DISABLED", "false") == "true":
-        return None
-
-    api_key = os.environ.get("ELASTIC_API_KEY")
-    hosts = os.environ.get("ELASTIC_HOSTS")
-
-    if not api_key or not hosts:
-        logger.warning("No Elastic configuration found although Elastic is enabled")
-        return None
-
-    client = Elasticsearch(hosts=hosts.split(","), api_key=api_key)
-
-    return client

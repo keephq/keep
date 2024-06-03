@@ -8,10 +8,8 @@ import os
 
 import celpy
 import dateutil.parser
-from elasticsearch import Elasticsearch
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from opentelemetry import trace
 from pusher import Pusher
 from sqlmodel import Session
 
@@ -30,9 +28,9 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
     AuthVerifier,
-    get_elastic_client,
     get_pusher_client,
 )
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
     AlertStatus,
@@ -43,7 +41,7 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.models.db.preset import PresetDto
 from keep.api.utils.email_utils import EmailTemplates, send_email
-from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -51,45 +49,8 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-tracer = trace.get_tracer(__name__)
 
-
-def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
-    """
-    Enriches the alerts with the enrichment data.
-
-    Args:
-        alerts (list[Alert]): The alerts to enrich.
-
-    Returns:
-        list[AlertDto]: The enriched alerts.
-    """
-    alerts_dto = []
-    with tracer.start_as_current_span("alerts_enrichment"):
-        # enrich the alerts with the enrichment data
-        for alert in alerts:
-            if alert.alert_enrichment:
-                alert.event.update(alert.alert_enrichment.enrichments)
-            try:
-                alert_dto = AlertDto(**alert.event)
-                if alert.alert_enrichment:
-                    parse_and_enrich_deleted_and_assignees(
-                        alert_dto, alert.alert_enrichment.enrichments
-                    )
-            except Exception:
-                # should never happen but just in case
-                logger.exception(
-                    "Failed to parse alert",
-                    extra={
-                        "alert": alert,
-                    },
-                )
-                continue
-            # enrich provider id when it's possible
-            if alert_dto.providerId is None:
-                alert_dto.providerId = alert.provider_id
-            alerts_dto.append(alert_dto)
-    return alerts_dto
+elastic_client = ElasticClient()
 
 
 def pull_alerts_from_providers(
@@ -528,7 +489,6 @@ def handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     pusher_client: Pusher,
-    elastic_client: Elasticsearch,
     provider_id: str | None = None,
 ):
     logger.info(
@@ -650,32 +610,30 @@ def handle_formatted_events(
         )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
-    if elastic_client:
-        for alert in enriched_formatted_events:
-            try:
-                logger.debug(
-                    "Pushing alert to elasticsearch",
-                    extra={
-                        "alert_event_id": alert.event_id,
-                        "alert_fingerprint": alert.fingerprint,
-                    },
-                )
-                elastic_client.index(
-                    index=f"keep-alerts-{tenant_id}",
-                    body=alert.dict(),
-                    id=alert.fingerprint,
-                )
-            except Exception:
-                logger.exception(
-                    "Failed to push alerts to elasticsearch",
-                    extra={
-                        "provider_type": provider_type,
-                        "num_of_alerts": len(formatted_events),
-                        "provider_id": provider_id,
-                        "tenant_id": tenant_id,
-                    },
-                )
-                continue
+    for alert in enriched_formatted_events:
+        try:
+            logger.debug(
+                "Pushing alert to elasticsearch",
+                extra={
+                    "alert_event_id": alert.event_id,
+                    "alert_fingerprint": alert.fingerprint,
+                },
+            )
+            elastic_client.index_alert(
+                tenant_id=tenant_id,
+                alert=alert,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to push alerts to elasticsearch",
+                extra={
+                    "provider_type": provider_type,
+                    "num_of_alerts": len(formatted_events),
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
+            continue
 
     try:
         # Now run any workflow that should run based on this alert
@@ -798,7 +756,6 @@ async def receive_generic_event(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
-    elastic_client: Elasticsearch = Depends(get_elastic_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -843,7 +800,6 @@ async def receive_generic_event(
         event,
         event,
         pusher_client,
-        elastic_client,
     )
 
     return event
@@ -861,7 +817,6 @@ async def receive_event(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
     session: Session = Depends(get_session),
     pusher_client: Pusher = Depends(get_pusher_client),
-    elastic_client: Elasticsearch = Depends(get_elastic_client),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
@@ -950,7 +905,6 @@ async def receive_event(
                 event_copy if isinstance(event_copy, list) else [event_copy],
                 formatted_events,
                 pusher_client,
-                elastic_client,
                 provider_id,
             )
         logger.info(
@@ -1004,7 +958,6 @@ def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     background_tasks: BackgroundTasks,
     pusher_client: Pusher = Depends(get_pusher_client),
-    elastic_client: Elasticsearch = Depends(get_elastic_client),
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
@@ -1034,18 +987,16 @@ def enrich_alert(
 
         enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
         # push the enriched alert to the elasticsearch
-        if elastic_client:
-            try:
-                logger.info("Pushing enriched alert to elasticsearch")
-                elastic_client.index(
-                    index=f"keep-alerts-{tenant_id}",
-                    body=enriched_alerts_dto[0].dict(),
-                    id=enriched_alerts_dto[0].fingerprint,
-                )
-                logger.info("Pushed enriched alert to elasticsearch")
-            except Exception:
-                logger.exception("Failed to push alert to elasticsearch")
-                pass
+        try:
+            logger.info("Pushing enriched alert to elasticsearch")
+            elastic_client.index_alert(
+                tenant_id=tenant_id,
+                alert=enriched_alerts_dto[0],
+            )
+            logger.info("Pushed enriched alert to elasticsearch")
+        except Exception:
+            logger.exception("Failed to push alert to elasticsearch")
+            pass
         # use pusher to push the enriched alert to the client
         if pusher_client:
             logger.info("Pushing enriched alert to the client")
