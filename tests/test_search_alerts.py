@@ -16,7 +16,7 @@ from keep.rulesengine.rulesengine import RulesEngine
 
 
 @pytest.fixture
-def setup_alerts(db_session, request):
+def setup_alerts(elastic_client, db_session, request):
     alert_details = request.param.get("alert_details")
     alerts = []
     for i, detail in enumerate(alert_details):
@@ -32,6 +32,8 @@ def setup_alerts(db_session, request):
         )
     db_session.add_all(alerts)
     db_session.commit()
+    # add all to elasticsearch
+    elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts)
 
 
 @pytest.fixture

@@ -43,6 +43,8 @@ class PresetDto(BaseModel, extra="ignore"):
     should_do_noise_now: Optional[bool] = Field(default=False)
     # number of alerts
     alerts_count: Optional[int] = Field(default=0)
+    # static presets
+    static: Optional[bool] = Field(default=False)
 
     @property
     def cel_query(self) -> str:
@@ -50,6 +52,21 @@ class PresetDto(BaseModel, extra="ignore"):
             option
             for option in self.options
             if option.get("label", "").lower() == "cel"
+        ]
+        if not query:
+            # should not happen, maybe on old presets
+            return ""
+        elif len(query) > 1:
+            # should not happen
+            return ""
+        return query[0].get("value", "")
+
+    @property
+    def sql_query(self) -> str:
+        query = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "sql"
         ]
         if not query:
             # should not happen, maybe on old presets

@@ -13,6 +13,7 @@ from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
@@ -68,6 +69,24 @@ def docker_services(
 
     # Else, start the docker services
     try:
+        import inspect
+
+        stack = inspect.stack()
+        # this is a hack to support more than one docker-compose file
+        for frame in stack:
+            # if its a db_session, then we need to use the mysql docker-compose file
+            if frame.function == "db_session":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-mysql.yml"
+                )
+                break
+            # if its a elastic_client, then we need to use the elastic docker-compose file
+            elif frame.function == "elastic_client":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-elastic.yml"
+                )
+                break
+
         with get_docker_services(
             docker_compose_command,
             docker_compose_file,
@@ -115,7 +134,7 @@ def mysql_container(docker_ip, docker_services):
                 "127.0.0.1", 3306, "root", "keep", "keep"
             ),
         )
-        yield
+        yield "mysql+pymysql://root:keep@localhost:3306/keep"
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
@@ -125,11 +144,13 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request, mysql_container):
-    # Few tests require a mysql database (mainly rules)
-    if request and hasattr(request, "param") and request.param == "mysql":
-        db_connection_string = "mysql+pymysql://root:keep@localhost:3306/keep"
+def db_session(request):
+    # Create a database connection
+    if request and hasattr(request, "param") and "db" in request.param:
+        db_type = request.param.get("db")
+        db_connection_string = request.getfixturevalue(f"{db_type}_container")
         mock_engine = create_engine(db_connection_string)
+    # sqlite
     else:
         db_connection_string = "sqlite:///:memory:"
         mock_engine = create_engine(
@@ -221,3 +242,51 @@ def mocked_context_manager():
         "env": {},
     }
     return context_manager
+
+
+def is_elastic_responsive(host, port, user, password):
+    try:
+        elastic_client = ElasticClient(
+            hosts=[f"http://{host}:{port}"],
+            basic_auth=(user, password),
+        )
+        info = elastic_client.client.info()
+        return True if info else False
+    except Exception:
+        print("Elastic still not up")
+        pass
+
+    return False
+
+
+@pytest.fixture(scope="session")
+def elastic_container(docker_ip, docker_services):
+    try:
+        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
+            print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
+            yield
+            return
+        docker_services.wait_until_responsive(
+            timeout=60.0,
+            pause=0.1,
+            check=lambda: is_elastic_responsive(
+                "127.0.0.1", 9200, "elastic", "keeptests"
+            ),
+        )
+        yield True
+    except Exception:
+        print("Exception occurred while waiting for MySQL to be responsive")
+    finally:
+        print("Tearing down ElasticSearch")
+        if docker_services:
+            docker_services.down()
+
+
+@pytest.fixture
+def elastic_client(request):
+    os.environ["ELASTIC_ENABLED"] = "true"
+    request.getfixturevalue("elastic_container")
+    elastic_client = ElasticClient(
+        hosts=["http://localhost:9200"], basic_auth=("elastic", "keeptests")
+    )
+    yield elastic_client
