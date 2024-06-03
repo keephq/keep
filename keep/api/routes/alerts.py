@@ -16,7 +16,6 @@ from sqlmodel import Session
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
-from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_with_filters,
@@ -382,8 +381,8 @@ def delete_alert(
         assignees_last_receievd[delete_alert.lastReceived] = user_email
 
     # overwrite the enrichment
-    enrich_alert_db(
-        tenant_id=tenant_id,
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_alert(
         fingerprint=delete_alert.fingerprint,
         enrichments={
             "deletedAt": deleted_last_received,
@@ -431,8 +430,8 @@ def assign_alert(
     else:
         assignees_last_receievd[last_received] = user_email
 
-    enrich_alert_db(
-        tenant_id=tenant_id,
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_alert(
         fingerprint=fingerprint,
         enrichments={"assignees": assignees_last_receievd},
     )
@@ -970,8 +969,8 @@ def enrich_alert(
     )
 
     try:
-        enrich_alert_db(
-            tenant_id=tenant_id,
+        enrichement_bl = EnrichmentsBl(tenant_id)
+        enrichement_bl.enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
         )

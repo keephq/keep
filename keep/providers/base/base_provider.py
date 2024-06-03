@@ -18,7 +18,8 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 
-from keep.api.core.db import enrich_alert, get_enrichments
+from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.core.db import get_enrichments
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -186,10 +187,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 continue
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
-            enrich_alert(self.context_manager.tenant_id, fingerprint, _enrichments)
-            self.elastic_client.enrich_alert(
-                self.context_manager.tenant_id, AlertDto(**_enrichments)
-            )
+            enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
+            enrichments_bl.enrich_alert(fingerprint, _enrichments)
 
         except Exception as e:
             self.logger.error(

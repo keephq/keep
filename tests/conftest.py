@@ -285,8 +285,9 @@ def elastic_container(docker_ip, docker_services):
 @pytest.fixture
 def elastic_client(request):
     os.environ["ELASTIC_ENABLED"] = "true"
+    os.environ["ELASTIC_USER"] = "elastic"
+    os.environ["ELASTIC_PASSWORD"] = "keeptests"
+    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
     request.getfixturevalue("elastic_container")
-    elastic_client = ElasticClient(
-        hosts=["http://localhost:9200"], basic_auth=("elastic", "keeptests")
-    )
+    elastic_client = ElasticClient()
     yield elastic_client
