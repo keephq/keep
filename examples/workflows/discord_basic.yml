@@ -1,0 +1,19 @@
+workflow:
+  id: discord-example
+  description: Discord example
+  triggers:
+    - type: manual
+  actions:
+    - name: discord
+      provider:
+        type: discord
+        config: "{{ providers.discordtest }}"
+        with:
+          content: Alerta!
+          components:
+          - type: 1  # Action row
+            components:
+              - type: 2  # Button
+                style: 1  # Primary style
+                label: "Click Me!"
+                custom_id: "button_click"
