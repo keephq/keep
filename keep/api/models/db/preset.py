@@ -1,8 +1,8 @@
 import enum
-from typing import Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, conint, constr
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -10,7 +10,6 @@ from sqlmodel import JSON, Column, Field, SQLModel
 class StaticPresetsId(enum.Enum):
     # ID of the default preset
     FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
-    # DELETED_PRESET_ID = "11111111-1111-1111-1111-111111111112"
     DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
     GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
 
@@ -28,6 +27,17 @@ class Preset(SQLModel, table=True):
     is_noisy: Optional[bool] = Field(default=False)
     name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
+
+
+# datatype represents a query with CEL (str) and SQL (dict)
+class PresetSearchQuery(BaseModel):
+    cel_query: constr(min_length=1)
+    sql_query: Dict[str, Any]
+    limit: conint(ge=0) = 1000
+    timeframe: conint(ge=0) = 0
+
+    class Config:
+        allow_mutation = False
 
 
 class PresetDto(BaseModel, extra="ignore"):
@@ -75,6 +85,13 @@ class PresetDto(BaseModel, extra="ignore"):
             # should not happen
             return ""
         return query[0].get("value", "")
+
+    @property
+    def query(self) -> str:
+        return PresetSearchQuery(
+            cel_query=self.cel_query,
+            sql_query=self.sql_query,
+        )
 
 
 class PresetOption(BaseModel, extra="ignore"):

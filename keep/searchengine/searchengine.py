@@ -1,13 +1,10 @@
 import enum
 import logging
-from typing import Any, Dict
-
-from pydantic import BaseModel, conint, constr
 
 from keep.api.core.db import get_last_alerts
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.preset import PresetDto
+from keep.api.models.db.preset import PresetDto, PresetSearchQuery
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
 
@@ -19,17 +16,6 @@ class SearchMode(enum.Enum):
     ELASTIC = "elastic"
     # use internal search to search alerts (for small-medium tenants)
     INTERNAL = "internal"
-
-
-# datatype represents a query with CEL (str) and SQL (dict)
-class SearchQuery(BaseModel):
-    cel_query: constr(min_length=1)
-    sql_query: Dict[str, Any]
-    limit: conint(ge=0) = 1000
-    timeframe: conint(ge=0) = 600
-
-    class Config:
-        allow_mutation = False
 
 
 class SearchEngine:
@@ -123,7 +109,7 @@ class SearchEngine:
         self.logger.info("Finished searching alerts by SQL")
         return filtered_alerts
 
-    def search_alerts(self, query: SearchQuery) -> list[AlertDto]:
+    def search_alerts(self, query: PresetSearchQuery) -> list[AlertDto]:
         """Search for alerts based on a query
 
         Args:

@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Extra, Field, validator
 
-from keep.searchengine.searchengine import SearchQuery
+from keep.api.models.db.preset import PresetSearchQuery
 
 
 class SearchAlertsRequest(BaseModel):
-    query: SearchQuery = Field(..., alias="query")
+    query: PresetSearchQuery = Field(..., alias="query")
     timeframe: int = Field(..., alias="timeframe")
 
     @validator("query")

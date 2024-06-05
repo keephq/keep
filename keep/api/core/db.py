@@ -1631,6 +1631,16 @@ def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
     return presets
 
 
+def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.name == preset_name)
+        ).first()
+    return preset
+
+
 def get_all_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
         presets = session.exec(

@@ -9,10 +9,10 @@ load_dotenv()
 TENANT_ID = "keep"
 
 if __name__ == "__main__":
-    elastic_client = ElasticClient(TENANT_ID)
+    elastic_client = ElasticClient()
     alerts = get_alerts_with_filters(TENANT_ID, time_delta=365)  # year ago
     print(f"Found {len(alerts)} alerts")
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     print(f"Converted {len(alerts_dto)} alerts")
-    elastic_client.index_alerts(alerts_dto)
+    elastic_client.index_alerts(TENANT_ID, alerts_dto)
     print("Done")
