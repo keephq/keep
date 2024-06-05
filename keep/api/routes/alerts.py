@@ -6,10 +6,8 @@ import json
 import logging
 import os
 
-import celpy
 import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
 from pusher import Pusher
 from sqlmodel import Session
 
@@ -18,7 +16,6 @@ from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
-    get_alerts_with_filters,
     get_all_presets,
     get_enrichment,
     get_last_alerts,
@@ -35,15 +32,16 @@ from keep.api.models.alert import (
     AlertStatus,
     DeleteRequestBody,
     EnrichAlertRequestBody,
-    SearchAlertsRequest,
 )
 from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.models.db.preset import PresetDto
+from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
+from keep.searchengine.searchengine import SearchEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
@@ -1025,58 +1023,22 @@ def enrich_alert(
     description="Search alerts",
 )
 async def search_alerts(
-    search_request: SearchAlertsRequest,  # Use the model directly
+    search_request: SearchAlertsRequest,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Searching alerts",
-        extra={"tenant_id": tenant_id},
-    )
     try:
-        search_query = search_request.query
-        timeframe_in_seconds = search_request.timeframe
-        if timeframe_in_seconds is None:
-            timeframe_in_seconds = 86400
-        elif timeframe_in_seconds < 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Timeframe cannot be negative",
-            )
-        # convert the timeframe to days
-        timeframe_in_days = timeframe_in_seconds / 86400
-        # limit the timeframe to 14 days
-        if timeframe_in_days > 14:
-            raise HTTPException(
-                status_code=400,
-                detail="Timeframe cannot be more than 14 days",
-            )
-        # get the alerts
-        alerts = get_alerts_with_filters(
-            tenant_id=tenant_id, time_delta=timeframe_in_days
+        logger.info(
+            "Searching alerts",
+            extra={"tenant_id": tenant_id},
         )
-        # convert the alerts to DTO
-        alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-        # filter the alerts based on the search query
-        filtered_alerts = RulesEngine.filter_alerts(alerts_dto, search_query)
+        search_engine = SearchEngine(tenant_id)
+        filtered_alerts = search_engine.search_alerts(search_request.query)
         logger.info(
             "Searched alerts",
             extra={"tenant_id": tenant_id},
         )
-        # return the filtered alerts
         return filtered_alerts
-    except celpy.celparser.CELParseError as e:
-        logger.warning("Failed to parse the search query", extra={"error": str(e)})
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Failed to parse the search query",
-                "query": search_request.query,
-                "line": e.line,
-                "column": e.column,
-            },
-        )
-
     except Exception as e:
         logger.exception("Failed to search alerts", extra={"error": str(e)})
         raise HTTPException(status_code=500, detail="Failed to search alerts")

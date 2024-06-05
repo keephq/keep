@@ -179,3 +179,9 @@ class ElasticClient:
         # index the enriched alert
         self.index_alert(tenant_id, enriched_alert)
         self.logger.debug(f"Alert {alert_fingerprint} enriched and indexed")
+
+    def drop_index(self, tenant_id):
+        if not self.enabled:
+            return
+
+        self.client.indices.delete(index=f"keep-alerts-{tenant_id}")

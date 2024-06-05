@@ -139,8 +139,6 @@ def mysql_container(docker_ip, docker_services):
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
         print("Tearing down MySQL")
-        if docker_services:
-            docker_services.down()
 
 
 @pytest.fixture
@@ -276,10 +274,9 @@ def elastic_container(docker_ip, docker_services):
         yield True
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
+        raise
     finally:
         print("Tearing down ElasticSearch")
-        if docker_services:
-            docker_services.down()
 
 
 @pytest.fixture
@@ -291,3 +288,6 @@ def elastic_client(request):
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient()
     yield elastic_client
+
+    # remove all from elasticsearch
+    elastic_client.drop_index(SINGLE_TENANT_UUID)
