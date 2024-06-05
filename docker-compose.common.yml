@@ -41,3 +41,8 @@ services:
       - SOKETI_DEFAULT_APP_ID=1
       - SOKETI_DEFAULT_APP_KEY=keepappkey
       - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+
+  keep-arq-redis-common:
+    image: redis
+    ports:
+      - "6379:6379"

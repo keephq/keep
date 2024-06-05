@@ -97,7 +97,7 @@ services:
       - /app/.next
     depends_on:
       - keep-backend-dev
-  
+
   keep-backend-dev:
     extends:
       file: docker-compose.common.yml
@@ -111,11 +111,16 @@ services:
     volumes:
       - .:/app
       - ./state:/state
-  
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+
+  keep-arq-redis:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-arq-redis-common
 
   log_collector:
     image: timberio/vector:0.32.2-debian
