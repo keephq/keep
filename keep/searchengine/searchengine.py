@@ -1,5 +1,8 @@
 import enum
 import logging
+from typing import Any, Dict
+
+from pydantic import BaseModel, conint, constr
 
 from keep.api.core.db import get_last_alerts
 from keep.api.core.elastic import ElasticClient
@@ -19,11 +22,14 @@ class SearchMode(enum.Enum):
 
 
 # datatype represents a query with CEL (str) and SQL (dict)
-class SearchQuery:
-    def __init__(self, cel_query: str, sql_query: dict, limit: int = 1000):
-        self.cel_query = cel_query
-        self.sql_query = sql_query
-        self.limit = limit
+class SearchQuery(BaseModel):
+    cel_query: constr(min_length=1)
+    sql_query: Dict[str, Any]
+    limit: conint(ge=0) = 1000
+    timeframe: conint(ge=0) = 600
+
+    class Config:
+        allow_mutation = False
 
 
 class SearchEngine:
@@ -37,14 +43,16 @@ class SearchEngine:
             SearchMode.ELASTIC if self.elastic_client.enabled else SearchMode.INTERNAL
         )
 
-    def _get_last_alerts(self, limit=1000) -> list[AlertDto]:
+    def _get_last_alerts(self, limit=1000, timeframe: int = 0) -> list[AlertDto]:
         """Get the last alerts
 
         Returns:
             list[AlertDto]: The list of alerts
         """
         self.logger.info("Getting last alerts")
-        alerts = get_last_alerts(tenant_id=self.tenant_id, limit=limit)
+        alerts = get_last_alerts(
+            tenant_id=self.tenant_id, limit=limit, timeframe=timeframe
+        )
         # deduplicate fingerprints
         # shahar: this is backward compatibility for before we had milliseconds in the timestamp
         #          note that we want to keep the order of the alerts
@@ -65,7 +73,11 @@ class SearchEngine:
         return alerts_dto
 
     def _search_alerts_by_cel(
-        self, cel_query: str, alerts: list[AlertDto] = None, limit: int = 1000
+        self,
+        cel_query: str,
+        alerts: list[AlertDto] = None,
+        limit: int = 1000,
+        timeframe: int = 0,
     ) -> list[AlertDto]:
         """Search for alerts based on a CEL query
 
@@ -80,13 +92,15 @@ class SearchEngine:
         # if alerts are not provided
         if alerts is None:
             # get the alerts
-            alerts = self._get_last_alerts(limit=limit)
+            alerts = self._get_last_alerts(limit=limit, timeframe=timeframe)
         # filter the alerts
         filtered_alerts = self.rule_engine.filter_alerts(alerts, cel_query)
         self.logger.info("Finished searching alerts by CEL")
         return filtered_alerts
 
-    def _search_alerts_by_sql(self, sql_query: dict, limit=1000) -> list[AlertDto]:
+    def _search_alerts_by_sql(
+        self, sql_query: dict, limit=1000, timeframe: int = 0
+    ) -> list[AlertDto]:
         """Search for alerts based on a SQL query
 
         Args:
@@ -101,6 +115,8 @@ class SearchEngine:
         elastic_sql_query = (
             f"""select * from "keep-alerts-{self.tenant_id}" where {query}"""
         )
+        if timeframe:
+            elastic_sql_query += f" and lastReceived > now() - {timeframe}s"
         results = self.elastic_client.run_query(elastic_sql_query, limit)
         # convert the results to DTO
         filtered_alerts = self.elastic_client._construct_alert_dto_from_results(results)
@@ -120,12 +136,12 @@ class SearchEngine:
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
             filtered_alerts = self._search_alerts_by_cel(
-                query.cel_query, limit=query.limit
+                query.cel_query, limit=query.limit, timeframe=query.timeframe
             )
         # if elastic
         elif self.search_mode == SearchMode.ELASTIC:
             filtered_alerts = self._search_alerts_by_sql(
-                query.sql_query, limit=query.limit
+                query.sql_query, limit=query.limit, timeframe=query.timeframe
             )
         else:
             self.logger.error("Invalid search mode")

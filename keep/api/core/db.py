@@ -936,7 +936,9 @@ def get_alerts_with_filters(
     return alerts
 
 
-def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
+def get_last_alerts(
+    tenant_id, provider_id=None, limit=1000, timeframe=None
+) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
 
@@ -961,7 +963,16 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .group_by(Alert.fingerprint)
             .subquery()
         )
-
+        # if timeframe is provided, filter the alerts by the timeframe
+        if timeframe:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp
+                    >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+                )
+                .subquery()
+            )
         # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
             session.query(
@@ -983,6 +994,12 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
+
+        if timeframe:
+            query = query.filter(
+                subquery.c.max_timestamp
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
 
         # Order by timestamp in descending order and limit the results
         query = query.limit(limit)

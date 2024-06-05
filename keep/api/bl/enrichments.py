@@ -233,7 +233,7 @@ class EnrichmentsBl:
                         setattr(alert, key, value)
 
                     # Save the enrichments to the database
-                    self.enrich_alert(alert.fingerprint, enrichments, self.db_session)
+                    self.enrich_alert(alert.fingerprint, enrichments)
                     self.logger.info(
                         "Alert enriched",
                         extra={
