@@ -71,9 +71,18 @@ class ElasticClient:
 
             # Translate severity to string
             if "severity" in nested_alert:
-                nested_alert["severity"] = AlertSeverity.from_number(
-                    nested_alert["severity"]
-                ).value
+                try:
+                    nested_alert["severity"] = AlertSeverity.from_number(
+                        int(nested_alert["severity"])
+                    ).value
+                # backward compatibility
+                except Exception:
+                    self.logger.error(
+                        f"Failed to convert severity to AlertSeverity: {nested_alert['severity']}"
+                    )
+                    nested_alert["severity"] = AlertSeverity[
+                        nested_alert["severity"].upper()
+                    ].value
 
             alert_dtos.append(AlertDto(**nested_alert))
 
