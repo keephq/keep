@@ -103,7 +103,11 @@ class SearchEngine:
         )
         if timeframe:
             elastic_sql_query += f" and lastReceived > now() - {timeframe}s"
-        results = self.elastic_client.run_query(elastic_sql_query, limit)
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("elastic_run_query"):
+            results = self.elastic_client.run_query(elastic_sql_query, limit)
         # convert the results to DTO
         filtered_alerts = self.elastic_client._construct_alert_dto_from_results(results)
         self.logger.info("Finished searching alerts by SQL")

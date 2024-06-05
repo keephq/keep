@@ -9,10 +9,20 @@ from keep.rulesengine.rulesengine import RulesEngine
 
 
 class ElasticClient:
+    _instance = None
+    _client = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ElasticClient, cls).__new__(cls)
+        return cls._instance
 
     def __init__(
         self, api_key=None, hosts: list[str] = None, basic_auth=None, **kwargs
     ):
+        if self._client is not None:
+            return
+
         # elastic is disabled by default
         self.enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
         if not self.enabled:
@@ -32,12 +42,12 @@ class ElasticClient:
         # if basic auth is provided, use it, otherwise use api key
         if any(basic_auth):
             self.logger.debug("Using basic auth for Elastic")
-            self.client = Elasticsearch(
+            self._client = Elasticsearch(
                 basic_auth=basic_auth, hosts=self.hosts, **kwargs
             )
         else:
             self.logger.debug("Using API key for Elastic")
-            self.client = Elasticsearch(
+            self._client = Elasticsearch(
                 api_key=self.api_key, hosts=self.hosts, **kwargs
             )
 
@@ -98,7 +108,7 @@ class ElasticClient:
         try:
             # TODO - handle source (array)
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
-            results = self.client.sql.query(
+            results = self._client.sql.query(
                 body={
                     "query": query,
                     "field_multi_value_leniency": True,
@@ -117,7 +127,7 @@ class ElasticClient:
         try:
             # TODO - handle source (array)
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
-            raw_alerts = self.client.sql.query(
+            raw_alerts = self._client.sql.query(
                 body={"query": query, "field_multi_value_leniency": True}
             )
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
@@ -134,7 +144,7 @@ class ElasticClient:
             # change severity to number so we can sort by it
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
-            self.client.index(
+            self._client.index(
                 index=f"keep-alerts-{tenant_id}",
                 body=alert.dict(),
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
@@ -163,7 +173,7 @@ class ElasticClient:
             actions.append(action)
 
         try:
-            success, failed = bulk(self.client, actions, refresh="true")
+            success, failed = bulk(self._client, actions, refresh="true")
             self.logger.info(
                 f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
             )
@@ -177,7 +187,7 @@ class ElasticClient:
 
         self.logger.debug(f"Enriching alert {alert_fingerprint}")
         # get the alert, enrich it and index it
-        alert = self.client.get(index=f"keep-alerts-{tenant_id}", id=alert_fingerprint)
+        alert = self._client.get(index=f"keep-alerts-{tenant_id}", id=alert_fingerprint)
         if not alert:
             self.logger.error(f"Alert with fingerprint {alert_fingerprint} not found")
             return
@@ -193,4 +203,4 @@ class ElasticClient:
         if not self.enabled:
             return
 
-        self.client.indices.delete(index=f"keep-alerts-{tenant_id}")
+        self._client.indices.delete(index=f"keep-alerts-{tenant_id}")
