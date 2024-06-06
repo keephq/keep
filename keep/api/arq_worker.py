@@ -2,7 +2,7 @@
 from typing import Optional
 
 # third-party
-from arq import Worker
+from arq import Worker, create_pool
 from arq.connections import RedisSettings
 from arq.worker import create_worker
 from pydantic.utils import import_string
@@ -32,6 +32,17 @@ async def startup(ctx):
 
 async def shutdown(ctx):
     pass
+
+
+async def get_pool():
+    return await create_pool(
+        RedisSettings(
+            host=config("REDIS_HOST", default="localhost"),
+            port=config("REDIS_PORT", cast=int, default=6379),
+            username=config("REDIS_USERNAME", default=None),
+            password=config("REDIS_PASSWORD", default=None),
+        )
+    )
 
 
 def get_worker() -> Worker:

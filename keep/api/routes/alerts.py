@@ -4,8 +4,7 @@ import json
 import logging
 import os
 
-from arq import ArqRedis, create_pool
-from arq.connections import RedisSettings
+from arq import ArqRedis
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -16,6 +15,7 @@ from fastapi import (
 )
 from pusher import Pusher
 
+from keep.api.arq_worker import get_pool
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import (
@@ -495,14 +495,7 @@ async def receive_generic_event(
         session (Session, optional): Defaults to Depends(get_session).
     """
     if REDIS:
-        redis: ArqRedis = await create_pool(
-            RedisSettings(
-                host=config("REDIS_HOST", default="localhost"),
-                port=config("REDIS_PORT", cast=int, default=6379),
-                username=config("REDIS_USERNAME", default=None),
-                password=config("REDIS_PASSWORD", default=None),
-            )
-        )
+        redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
             "process_event",
             authenticated_entity.tenant_id,
@@ -548,7 +541,7 @@ async def receive_event(
     event = provider_class.parse_event_raw_body(event)
 
     if REDIS:
-        redis: ArqRedis = await create_pool()
+        redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
             "process_event",
             authenticated_entity.tenant_id,
