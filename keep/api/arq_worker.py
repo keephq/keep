@@ -1,9 +1,14 @@
+# builtins
 from typing import Optional
 
+# third-party
+from arq import Worker
 from arq.connections import RedisSettings
+from arq.worker import create_worker
 from pydantic.utils import import_string
 from starlette.datastructures import CommaSeparatedStrings
 
+# internals
 from keep.api.core.config import config
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
@@ -27,6 +32,11 @@ async def startup(ctx):
 
 async def shutdown(ctx):
     pass
+
+
+def get_worker() -> Worker:
+    worker = create_worker(WorkerSettings)
+    return worker
 
 
 class WorkerSettings:

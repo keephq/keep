@@ -5,7 +5,6 @@ from importlib import metadata
 
 import jwt
 import uvicorn
-from arq.worker import create_worker
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -18,7 +17,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
-from keep.api.arq_worker import WorkerSettings
+from keep.api.arq_worker import get_worker
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -239,7 +238,7 @@ def get_app(
             logger.info("Consumer started successfully")
         if REDIS:
             event_loop = asyncio.get_event_loop()
-            worker = create_worker(WorkerSettings)
+            worker = get_worker()
             event_loop.create_task(worker.async_run())
         logger.info("Services started successfully")
 
