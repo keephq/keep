@@ -1033,7 +1033,7 @@ async def search_alerts(
             extra={"tenant_id": tenant_id},
         )
         search_engine = SearchEngine(tenant_id)
-        filtered_alerts = search_engine.search_alerts(search_request.query)
+        filtered_alerts = search_engine.search_alerts(tenant_id, search_request.query)
         logger.info(
             "Searched alerts",
             extra={"tenant_id": tenant_id},

@@ -9,9 +9,10 @@ import pytest
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.alert import Alert
+from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
-from keep.searchengine.searchengine import SearchEngine, SearchQuery
+from keep.searchengine.searchengine import SearchEngine
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
 
@@ -445,6 +446,111 @@ def test_not_equal(db_session, setup_alerts):
     )
     assert len(db_filtered_alerts) == 1
     assert db_filtered_alerts[0].severity == "warning"
+    # compare
+    assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
+
+
+@pytest.mark.parametrize(
+    "setup_alerts",
+    [
+        {
+            "alert_details": [
+                {
+                    "source": ["sentry", "datadog"],
+                    "severity": "warning",
+                    "some_list": ["a", "b"],
+                },
+                {"source": ["grafana"], "severity": "critical"},
+            ]
+        }
+    ],
+    indirect=True,
+)
+def test_list(db_session, setup_alerts):
+    search_query = SearchQuery(
+        sql_query={
+            "sql": "(severity != :severity_1)",
+            "params": {"severity_1": "critical"},
+        },
+        cel_query="(severity != 'critical')",
+    )
+    # first, use elastic
+    os.environ["ELASTIC_ENABLED"] = "true"
+    elastic_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    assert len(elastic_filtered_alerts) == 1
+    assert elastic_filtered_alerts[0].severity == "warning"
+    assert elastic_filtered_alerts[0].some_list == ["a", "b"]
+
+    # then, use db
+    os.environ["ELASTIC_ENABLED"] = "false"
+    db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    assert len(db_filtered_alerts) == 1
+    assert db_filtered_alerts[0].severity == "warning"
+    assert db_filtered_alerts[0].some_list == ["a", "b"]
+    # compare
+    assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
+
+
+@pytest.mark.parametrize(
+    "setup_alerts",
+    [
+        {
+            "alert_details": [
+                {
+                    "source": ["sentry", "datadog"],
+                    "severity": "warning",
+                    "some_dict": {
+                        "a": 1,
+                        "b": 2,
+                        "c": [1, 2, 3],
+                        "d": {"a": 1, "b": 2, "c": [1, 2, 3]},
+                    },
+                },
+                {"source": ["grafana"], "severity": "critical"},
+            ]
+        }
+    ],
+    indirect=True,
+)
+def test_dict(db_session, setup_alerts):
+    search_query = SearchQuery(
+        sql_query={
+            "sql": "(severity != :severity_1)",
+            "params": {"severity_1": "critical"},
+        },
+        cel_query="(severity != 'critical')",
+    )
+    # first, use elastic
+    os.environ["ELASTIC_ENABLED"] = "true"
+    elastic_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    assert len(elastic_filtered_alerts) == 1
+    assert elastic_filtered_alerts[0].severity == "warning"
+    assert elastic_filtered_alerts[0].some_dict == {
+        "a": 1,
+        "b": 2,
+        "c": [1, 2, 3],
+        "d": {"a": 1, "b": 2, "c": [1, 2, 3]},
+    }
+
+    # then, use db
+    os.environ["ELASTIC_ENABLED"] = "false"
+    db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    assert len(db_filtered_alerts) == 1
+    assert db_filtered_alerts[0].severity == "warning"
+    assert db_filtered_alerts[0].some_dict == {
+        "a": 1,
+        "b": 2,
+        "c": [1, 2, 3],
+        "d": {"a": 1, "b": 2, "c": [1, 2, 3]},
+    }
     # compare
     assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
 

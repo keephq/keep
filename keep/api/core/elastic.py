@@ -55,16 +55,34 @@ class ElasticClient:
         if not results:
             return []
 
-        columns = results["columns"]
-        columns = [col["name"] for col in columns]
-        rows = results["rows"]
-        if not rows:
-            return []
         alert_dtos = []
 
-        for row in rows:
-            alert = dict(zip(columns, row))
-            # Handle nested fields
+        for result in results["hits"]["hits"]:
+            alert = result["fields"]
+            for field in alert:
+                # Shahar: this is another constraint
+                # as elasticsearch returns a list for each field
+                # if the list contains only one element, we take the element
+                # we can overcome it by specific mapping in the index
+                # but this is a good workaround for now
+                try:
+                    if len(alert[field]) == 1:
+                        alert[field] = alert[field][0]
+                except TypeError:
+                    self.logger.warning(f"Failed to parse field {field}")
+            # translate severity
+            try:
+                alert["severity"] = AlertSeverity.from_number(
+                    int(alert["severity"])
+                ).value
+            # backward compatibility
+            except Exception:
+                alert["severity"] = AlertSeverity[alert["severity"].upper()].value
+            # source is a list
+            if not isinstance(alert["source"], list):
+                alert["source"] = [alert["source"]]
+
+            # now handle nested fields
             nested_alert = {}
             for key, value in alert.items():
                 if "." in key:
@@ -77,26 +95,7 @@ class ElasticClient:
                     d[parts[-1]] = value
                 else:
                     nested_alert[key] = value
-
-            # Ensure source is a list (due to limitations mentioned in Elasticsearch docs)
-            if "source" in nested_alert:
-                nested_alert["source"] = [nested_alert["source"]]
-
-            # Translate severity to string
-            if "severity" in nested_alert:
-                try:
-                    nested_alert["severity"] = AlertSeverity.from_number(
-                        int(nested_alert["severity"])
-                    ).value
-                # backward compatibility
-                except Exception:
-                    self.logger.error(
-                        f"Failed to convert severity to AlertSeverity: {nested_alert['severity']}"
-                    )
-                    nested_alert["severity"] = AlertSeverity[
-                        nested_alert["severity"].upper()
-                    ].value
-
+            # finally, build the dto
             alert_dtos.append(AlertDto(**nested_alert))
 
         return alert_dtos
@@ -131,15 +130,25 @@ class ElasticClient:
             self.logger.error(f"Failed to run query in Elastic: {e}")
             raise Exception(f"Failed to run query in Elastic: {e}")
 
-    def search_alerts(self, query: str) -> list[AlertDto]:
+    def search_alerts(self, tenant_id: str, query: str, limit: int) -> list[AlertDto]:
         if not self.enabled:
             return
 
         try:
-            # TODO - handle source (array)
+            # Shahar: due to limitation in Elasticsearch array fields, we translate the SQL to DSL
+            #         this is not 100% efficient since there are two requests (translate + query) instead of one but this could be improved with
+            #         either:
+            #           1. get the ES query from the client (react query builder support it)
+            #           2. use the translate when keeping the preset in the db since its not change (only for presets, not general queryes)
+            #           3. wait for ES to support array fields in SQL
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
-            raw_alerts = self._client.sql.query(
-                body={"query": query, "field_multi_value_leniency": True}
+            # preprocess severity
+            query = RulesEngine.preprocess_cel_expression(query)
+            dsl_query = self._client.sql.translate(
+                body={"query": query, "fetch_size": limit}
+            )
+            raw_alerts = self._client.search(
+                index=f"keep-alerts-{tenant_id}", body=dict(dsl_query)
             )
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
             return alerts_dtos
