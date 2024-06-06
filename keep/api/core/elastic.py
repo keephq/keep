@@ -51,7 +51,7 @@ class ElasticClient:
                 api_key=self.api_key, hosts=self.hosts, **kwargs
             )
 
-    def _construct_alert_dto_from_results(self, results):
+    def _construct_alert_dto_from_results(self, results, fields):
         if not results:
             return []
 
@@ -95,6 +95,10 @@ class ElasticClient:
                     d[parts[-1]] = value
                 else:
                     nested_alert[key] = value
+            # Shahar: since ES does not return None's, we will add them manually:
+            for field in fields:
+                if field not in nested_alert:
+                    nested_alert[field] = None
             # finally, build the dto
             alert_dtos.append(AlertDto(**nested_alert))
 
@@ -147,10 +151,11 @@ class ElasticClient:
             dsl_query = self._client.sql.translate(
                 body={"query": query, "fetch_size": limit}
             )
+            fields = [f.get("field") for f in dict(dsl_query)["fields"]]
             raw_alerts = self._client.search(
                 index=f"keep-alerts-{tenant_id}", body=dict(dsl_query)
             )
-            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
+            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts, fields)
             return alerts_dtos
         except BadRequestError as e:
             # means no index. if no alert was indexed, the index is not exist

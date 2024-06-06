@@ -24,11 +24,6 @@ from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
 
-os.environ["ELASTIC_ENABLED"] = "true"
-os.environ["ELASTIC_USER"] = "elastic"
-os.environ["ELASTIC_PASSWORD"] = "keeptests"
-os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-
 
 @pytest.fixture
 def ctx_store() -> dict:
@@ -288,7 +283,15 @@ def elastic_container(docker_ip, docker_services):
 def elastic_client(request):
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient()
+    os.environ["ELASTIC_ENABLED"] = "true"
+    os.environ["ELASTIC_USER"] = "elastic"
+    os.environ["ELASTIC_PASSWORD"] = "keeptests"
+    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+
     yield elastic_client
 
     # remove all from elasticsearch
     elastic_client.drop_index(SINGLE_TENANT_UUID)
+
+    # delete the _client from the elastic_client
+    ElasticClient._client = None
