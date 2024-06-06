@@ -49,7 +49,7 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName }: AlertsProps) {
-  const { usePresetAlerts, useAllAlertsWithSubscription } = useAlerts();
+  const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
 

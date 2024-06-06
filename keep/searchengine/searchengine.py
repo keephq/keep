@@ -199,8 +199,16 @@ class SearchEngine:
                 # get number of alerts and number of noisy alerts
                 elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "keep-alerts-{self.tenant_id}" where {query}"""
                 results = self.elastic_client.run_query(elastic_sql_query)
-                preset.alerts_count = results["rows"][0][0]
-                preset.should_do_noise_now = results["rows"][0][1] == 1
+                if results:
+                    preset.alerts_count = results["rows"][0][0]
+                    preset.should_do_noise_now = results["rows"][0][1] == 1
+                else:
+                    self.logger.warning(
+                        "No results found for preset",
+                        extra={"preset_id": preset.id, "preset_name": preset.name},
+                    )
+                    preset.alerts_count = 0
+                    preset.should_do_noise_now = False
         self.logger.info("Finished searching alerts for presets")
         return presets
 

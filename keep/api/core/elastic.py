@@ -1,7 +1,7 @@
 import logging
 import os
 
-from elasticsearch import Elasticsearch
+from elasticsearch import BadRequestError, Elasticsearch
 from elasticsearch.helpers import bulk
 
 from keep.api.models.alert import AlertDto, AlertSeverity
@@ -52,6 +52,9 @@ class ElasticClient:
             )
 
     def _construct_alert_dto_from_results(self, results):
+        if not results:
+            return []
+
         columns = results["columns"]
         columns = [col["name"] for col in columns]
         rows = results["rows"]
@@ -116,6 +119,14 @@ class ElasticClient:
                 }
             )
             return results
+        except BadRequestError as e:
+            # means no index. if no alert was indexed, the index is not exist
+            if "Unknown index" in str(e):
+                self.logger.warning("Index does not exist yet.")
+                return []
+            else:
+                self.logger.error(f"Failed to run query in Elastic: {e}")
+                raise Exception(f"Failed to run query in Elastic: {e}")
         except Exception as e:
             self.logger.error(f"Failed to run query in Elastic: {e}")
             raise Exception(f"Failed to run query in Elastic: {e}")
@@ -132,6 +143,14 @@ class ElasticClient:
             )
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
             return alerts_dtos
+        except BadRequestError as e:
+            # means no index. if no alert was indexed, the index is not exist
+            if "Unknown index" in str(e):
+                self.logger.warning("Index does not exist yet.")
+                return []
+            else:
+                self.logger.error(f"Failed to run query in Elastic: {e}")
+                raise Exception(f"Failed to run query in Elastic: {e}")
         except Exception as e:
             self.logger.error(f"Failed to search alerts in Elastic: {e}")
             raise Exception(f"Failed to search alerts in Elastic: {e}")
