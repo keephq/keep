@@ -111,6 +111,8 @@ services:
     volumes:
       - .:/app
       - ./state:/state
+    depends_on:
+      - keep-arq-redis
 
   keep-websocket-server:
     extends:

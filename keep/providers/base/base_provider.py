@@ -420,7 +420,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         raise NotImplementedError("oauth2_logic() method not implemented")
 
     @staticmethod
-    def parse_event_raw_body(raw_body: bytes) -> bytes:
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
         """
         Parse the raw body of an event and create an ingestable dict from it.
 

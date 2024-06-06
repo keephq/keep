@@ -1,17 +1,20 @@
 # TODO: this whole file needs to get refactored
 # mainly: pusher stuff, enrichment stuff and async stuff
-import copy
-import datetime
 import json
 import logging
 import os
 
-import dateutil.parser
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from arq import ArqRedis, create_pool
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+)
 from pusher import Pusher
-from sqlmodel import Session
 
-from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import (
@@ -19,7 +22,6 @@ from keep.api.core.db import (
     get_all_presets,
     get_enrichment,
     get_last_alerts,
-    get_session,
 )
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -33,21 +35,22 @@ from keep.api.models.alert import (
     DeleteRequestBody,
     EnrichAlertRequestBody,
 )
-from keep.api.models.db.alert import Alert, AlertRaw
 from keep.api.models.db.preset import PresetDto
 from keep.api.models.search_alert import SearchAlertsRequest
+from keep.api.tasks.event_handler import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.searchengine.searchengine import SearchEngine
-from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 elastic_client = ElasticClient()
+
+REDIS = os.environ.get("REDIS", "false") == "true"
 
 
 def pull_alerts_from_providers(
@@ -468,291 +471,18 @@ def assign_alert(
     return {"status": "ok"}
 
 
-# TODO: move to Kafka
-# this is super important function and does five things:
-# 0. checks for deduplications using alertdeduplicator
-# 1. adds the alerts to the DB
-# 2. adds the alerts to elasticsearch
-# 3. runs workflows based on the alerts
-# 4. runs the rules engine
-# 5. update the presets
-
-
-# TODO: add appropriate logs, trace and all of that so we can track errors
-def handle_formatted_events(
-    tenant_id,
-    provider_type,
-    session: Session,
-    raw_events: list[dict],
-    formatted_events: list[AlertDto],
-    pusher_client: Pusher,
-    provider_id: str | None = None,
-):
-    logger.info(
-        "Asyncronusly adding new alerts to the DB",
-        extra={
-            "provider_type": provider_type,
-            "num_of_alerts": len(formatted_events),
-            "provider_id": provider_id,
-            "tenant_id": tenant_id,
-        },
-    )
-    # first, filter out any deduplicated events
-    alert_deduplicator = AlertDeduplicator(tenant_id)
-
-    for event in formatted_events:
-        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
-        event.alert_hash = event_hash
-        event.isDuplicate = event_deduplicated
-
-    # filter out the deduplicated events
-    formatted_events = list(
-        filter(lambda event: not event.isDuplicate, formatted_events)
-    )
-
-    try:
-        # keep raw events in the DB if the user wants to
-        # this is mainly for debugging and research purposes
-        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
-            for raw_event in raw_events:
-                alert = AlertRaw(
-                    tenant_id=tenant_id,
-                    raw_alert=raw_event,
-                )
-                session.add(alert)
-        enriched_formatted_events = []
-        for formatted_event in formatted_events:
-            formatted_event.pushed = True
-
-            enrichments_bl = EnrichmentsBl(tenant_id, session)
-            # Post format enrichment
-            try:
-                formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
-            except Exception:
-                logger.exception("Failed to run post-formatting extraction rules")
-
-            # Make sure the lastReceived is a valid date string
-            # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
-            # TODO: `AlertDto` object `lastReceived` should be a datetime object so we can easily validate with pydantic
-            if not formatted_event.lastReceived:
-                formatted_event.lastReceived = datetime.datetime.now(
-                    tz=datetime.timezone.utc
-                ).isoformat()
-            else:
-                try:
-                    dateutil.parser.isoparse(formatted_event.lastReceived)
-                except ValueError:
-                    logger.warning("Invalid lastReceived date, setting to now")
-                    formatted_event.lastReceived = datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    ).isoformat()
-
-            alert = Alert(
-                tenant_id=tenant_id,
-                provider_type=provider_type,
-                event=formatted_event.dict(),
-                provider_id=provider_id,
-                fingerprint=formatted_event.fingerprint,
-                alert_hash=formatted_event.alert_hash,
-            )
-            session.add(alert)
-            session.flush()
-            session.refresh(alert)
-            formatted_event.event_id = str(alert.id)
-            alert_dto = AlertDto(**formatted_event.dict())
-
-            # Mapping
-            try:
-                enrichments_bl.run_mapping_rules(alert_dto)
-            except Exception:
-                logger.exception("Failed to run mapping rules")
-
-            alert_enrichment = get_enrichment(
-                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
-            )
-            if alert_enrichment:
-                for enrichment in alert_enrichment.enrichments:
-                    # set the enrichment
-                    value = alert_enrichment.enrichments[enrichment]
-                    setattr(alert_dto, enrichment, value)
-            if pusher_client:
-                try:
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
-                        json.dumps([alert_dto.dict()]),
-                    )
-                except Exception:
-                    logger.exception("Failed to push alert to the client")
-            enriched_formatted_events.append(alert_dto)
-        session.commit()
-        logger.info(
-            "Asyncronusly added new alerts to the DB",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-    except Exception:
-        logger.exception(
-            "Failed to push alerts to the DB",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-
-    # after the alert enriched and mapped, lets send it to the elasticsearch
-    for alert in enriched_formatted_events:
-        try:
-            logger.debug(
-                "Pushing alert to elasticsearch",
-                extra={
-                    "alert_event_id": alert.event_id,
-                    "alert_fingerprint": alert.fingerprint,
-                },
-            )
-            elastic_client.index_alert(
-                tenant_id=tenant_id,
-                alert=alert,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to push alerts to elasticsearch",
-                extra={
-                    "provider_type": provider_type,
-                    "num_of_alerts": len(formatted_events),
-                    "provider_id": provider_id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            continue
-
-    try:
-        # Now run any workflow that should run based on this alert
-        # TODO: this should publish event
-        workflow_manager = WorkflowManager.get_instance()
-        # insert the events to the workflow manager process queue
-        logger.info("Adding events to the workflow manager queue")
-        workflow_manager.insert_events(tenant_id, enriched_formatted_events)
-        logger.info("Added events to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on alerts",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-
-    # Now we need to run the rules engine
-    try:
-        rules_engine = RulesEngine(tenant_id=tenant_id)
-        grouped_alerts = rules_engine.run_rules(formatted_events)
-        # if new grouped alerts were created, we need to push them to the client
-        if grouped_alerts:
-            logger.info("Adding group alerts to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, grouped_alerts)
-            logger.info("Added group alerts to the workflow manager queue")
-            # Now send the grouped alerts to the client
-            logger.info("Sending grouped alerts to the client")
-            for grouped_alert in grouped_alerts:
-                if pusher_client:
-                    try:
-                        pusher_client.trigger(
-                            f"private-{tenant_id}",
-                            "async-alerts",
-                            json.dumps([grouped_alert.dict()]),
-                        )
-                    except Exception:
-                        logger.exception("Failed to push alert to the client")
-            logger.info("Sent grouped alerts to the client")
-    except Exception:
-        logger.exception(
-            "Failed to run rules engine",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-    # Now we need to update the presets
-    try:
-        presets = get_all_presets(tenant_id)
-        presets_do_update = []
-        for preset in presets:
-            # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.dict())
-            filtered_alerts = RulesEngine.filter_alerts(
-                enriched_formatted_events, preset_dto.cel_query
-            )
-            # if not related alerts, no need to update
-            if not filtered_alerts:
-                continue
-            presets_do_update.append(preset_dto)
-            preset_dto.alerts_count = len(filtered_alerts)
-            # update noisy
-            if preset.is_noisy:
-                firing_filtered_alerts = list(
-                    filter(
-                        lambda alert: alert.status == AlertStatus.FIRING.value,
-                        filtered_alerts,
-                    )
-                )
-                # if there are firing alerts, then do noise
-                if firing_filtered_alerts:
-                    logger.info("Noisy preset is noisy")
-                    preset_dto.should_do_noise_now = True
-            # else if at least one of the alerts has isNoisy and should fire:
-            elif any(
-                alert.isNoisy and alert.status == AlertStatus.FIRING.value
-                for alert in filtered_alerts
-                if hasattr(alert, "isNoisy")
-            ):
-                logger.info("Noisy preset is noisy")
-                preset_dto.should_do_noise_now = True
-        # send with pusher
-        if pusher_client:
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-presets",
-                    json.dumps([p.dict() for p in presets_do_update], default=str),
-                )
-            except Exception:
-                logger.exception("Failed to send presets via pusher")
-    except Exception:
-        logger.exception(
-            "Failed to send presets via pusher",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-
-
 @router.post(
     "/event",
     description="Receive a generic alert event",
     response_model=AlertDto | list[AlertDto],
-    status_code=201,
+    status_code=202,
 )
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
+    request: Request,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
-    session: Session = Depends(get_session),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -763,161 +493,77 @@ async def receive_generic_event(
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
         session (Session, optional): Defaults to Depends(get_session).
     """
-    tenant_id = authenticated_entity.tenant_id
-
-    enrichments_bl = EnrichmentsBl(tenant_id, session)
-    # Pre format enrichment
-    try:
-        event = enrichments_bl.run_extraction_rules(event)
-    except Exception:
-        logger.exception("Failed to run pre-formatting extraction rules")
-
-    if isinstance(event, dict):
-        event = [AlertDto(**event)]
-
-    if isinstance(event, AlertDto):
-        event = [event]
-
-    for _alert in event:
-        # if not source, set it to keep
-        if not _alert.source:
-            _alert.source = ["keep"]
-
-        if fingerprint:
-            _alert.fingerprint = fingerprint
-
-        if authenticated_entity.api_key_name:
-            _alert.apiKeyRef = authenticated_entity.api_key_name
-
-    bg_tasks.add_task(
-        handle_formatted_events,
-        tenant_id,
-        event[0].source[0],
-        session,
-        event,
-        event,
-        pusher_client,
-    )
-
-    return event
+    if REDIS:
+        redis: ArqRedis = await create_pool()
+        await redis.enqueue_job(
+            "process_event",
+            authenticated_entity.tenant_id,
+            None,
+            None,
+            fingerprint,
+            authenticated_entity.api_key_name,
+            request.state.trace_id,
+            event,
+        )
+    else:
+        bg_tasks.add_task(
+            process_event,
+            {},
+            authenticated_entity.tenant_id,
+            None,
+            None,
+            fingerprint,
+            authenticated_entity.api_key_name,
+            request.state.trace_id,
+            event,
+        )
+    return Response(status_code=202)
 
 
 @router.post(
-    "/event/{provider_type}", description="Receive an alert event from a provider"
+    "/event/{provider_type}",
+    description="Receive an alert event from a provider",
+    status_code=202,
 )
 async def receive_event(
     provider_type: str,
-    request: Request,
+    event: dict | bytes,
     bg_tasks: BackgroundTasks,
+    request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
-    session: Session = Depends(get_session),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
-    tenant_id = authenticated_entity.tenant_id
+    trace_id = request.state.trace_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
-    # if this request is just to confirm the sns subscription, return ok
-    # TODO: think of a more elegant way to do this
-    # Get the raw body as bytes
-    body = await request.body()
     # Parse the raw body
-    body = provider_class.parse_event_raw_body(body)
-    # Start process the event
-    # Attempt to parse as JSON if the content type is not text/plain
-    # content_type = request.headers.get("Content-Type")
-    # For example, SNS events (https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.prepare.html)
-    try:
-        event = json.loads(body.decode())
-        event_copy = copy.copy(event)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
+    event = provider_class.parse_event_raw_body(event)
 
-    # else, process the event
-    logger.info(
-        "Handling event",
-        extra={
-            "provider_type": provider_type,
-            "provider_id": provider_id,
-            "tenant_id": tenant_id,
-        },
-    )
-
-    enrichments_bl = EnrichmentsBl(tenant_id, session)
-    # Pre format enrichment
-    try:
-        enrichments_bl.run_extraction_rules(event)
-    except Exception as exc:
-        logger.warning(
-            "Failed to run pre-formatting extraction rules",
-            extra={"exception": str(exc)},
+    if REDIS:
+        redis: ArqRedis = await create_pool()
+        await redis.enqueue_job(
+            "process_event",
+            authenticated_entity.tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            authenticated_entity.api_key_name,
+            trace_id,
+            event,
         )
-
-    try:
-        # Each provider should implement a format_alert method that returns an AlertDto
-        # object that will later be returned to the client.
-        logger.info(
-            f"Trying to format alert with {provider_type}",
-            extra={
-                "provider_type": provider_type,
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
+    else:
+        bg_tasks.add_task(
+            process_event,
+            {},
+            provider_type,
+            authenticated_entity.tenant_id,
+            provider_id,
+            fingerprint,
+            authenticated_entity.api_key_name,
+            trace_id,
+            event,
         )
-
-        # if we have provider id, let's try to init the provider class with it
-        provider_instance = None
-        if provider_id:
-            try:
-                provider_instance = ProvidersFactory.get_installed_provider(
-                    tenant_id, provider_id, provider_type
-                )
-            except Exception as e:
-                logger.warning(f"Failed to get provider instance due to {str(e)}")
-
-        formatted_events = provider_class.format_alert(event, provider_instance)
-
-        if isinstance(formatted_events, AlertDto):
-            # override the fingerprint if it's provided
-            if fingerprint:
-                formatted_events.fingerprint = fingerprint
-            formatted_events = [formatted_events]
-
-        logger.info(
-            f"Formatted alerts with {provider_type}",
-            extra={
-                "provider_type": provider_type,
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-        # If the format_alert does not return an AlertDto object, it means that the event
-        # should not be pushed to the client.
-        if formatted_events:
-            bg_tasks.add_task(
-                handle_formatted_events,
-                tenant_id,
-                provider_type,
-                session,
-                event_copy if isinstance(event_copy, list) else [event_copy],
-                formatted_events,
-                pusher_client,
-                provider_id,
-            )
-        logger.info(
-            "Handled event successfully",
-            extra={
-                "provider_type": provider_type,
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-        return {"status": "ok"}
-    except Exception as e:
-        logger.exception(
-            "Failed to handle event", extra={"error": str(e), "tenant_id": tenant_id}
-        )
-        raise HTTPException(400, "Failed to handle event")
+    return Response(status_code=202)
 
 
 @router.get(

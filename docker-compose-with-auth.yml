@@ -24,6 +24,8 @@ services:
       - KEEP_DEFAULT_PASSWORD=keep
     volumes:
       - ./state:/state
+    depends_on:
+      - keep-arq-redis
 
   keep-websocket-server:
     extends:

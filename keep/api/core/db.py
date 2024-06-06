@@ -178,6 +178,16 @@ def get_session() -> Session:
             yield session
 
 
+def get_session_sync() -> Session:
+    """
+    Creates a database session.
+
+    Returns:
+        Session: A database session
+    """
+    return Session(engine)
+
+
 def try_create_single_tenant(tenant_id: str) -> None:
     try:
         # if Keep is not multitenant, let's import the User table too:

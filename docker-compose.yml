@@ -21,6 +21,8 @@ services:
       - AUTH_TYPE=NO_AUTH
     volumes:
       - ./state:/state
+    depends_on:
+      - keep-arq-redis
 
   keep-websocket-server:
     extends:
