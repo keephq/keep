@@ -133,7 +133,9 @@ def __handle_formatted_events(
 
             alert = Alert(
                 tenant_id=tenant_id,
-                provider_type=provider_type,
+                provider_type=(
+                    provider_type if provider_type else formatted_event.source[0]
+                ),
                 event=formatted_event.dict(),
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
@@ -190,6 +192,7 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+        raise
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
     for alert in enriched_formatted_events:

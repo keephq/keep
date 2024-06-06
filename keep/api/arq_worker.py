@@ -14,7 +14,7 @@ from keep.api.core.config import config
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     "ARQ_BACKGROUND_FUNCTIONS",
     cast=CommaSeparatedStrings,
-    default=["keep.api.tasks.event_handler.process_event"],
+    default=["keep.api.tasks.process_event_task.process_event"],
 )
 FUNCTIONS: list = (
     [

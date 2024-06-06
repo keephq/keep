@@ -38,7 +38,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.db.preset import PresetDto
 from keep.api.models.search_alert import SearchAlertsRequest
-from keep.api.tasks.event_handler import process_event
+from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
