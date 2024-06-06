@@ -37,7 +37,7 @@ static_presets = {
         name="groups",
         options=[
             {"label": "CEL", "value": "group"},
-            {"label": "SQL", "value": {"sql": "'group'=true", "params": {}}},
+            {"label": "SQL", "value": {"sql": '"group"=true', "params": {}}},
         ],
         created_by=None,
         is_private=False,

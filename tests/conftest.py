@@ -24,6 +24,11 @@ from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
 
+os.environ["ELASTIC_ENABLED"] = "true"
+os.environ["ELASTIC_USER"] = "elastic"
+os.environ["ELASTIC_PASSWORD"] = "keeptests"
+os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+
 
 @pytest.fixture
 def ctx_store() -> dict:
@@ -248,7 +253,7 @@ def is_elastic_responsive(host, port, user, password):
             hosts=[f"http://{host}:{port}"],
             basic_auth=(user, password),
         )
-        info = elastic_client.client.info()
+        info = elastic_client._client.info()
         return True if info else False
     except Exception:
         print("Elastic still not up")
@@ -281,10 +286,6 @@ def elastic_container(docker_ip, docker_services):
 
 @pytest.fixture
 def elastic_client(request):
-    os.environ["ELASTIC_ENABLED"] = "true"
-    os.environ["ELASTIC_USER"] = "elastic"
-    os.environ["ELASTIC_PASSWORD"] = "keeptests"
-    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient()
     yield elastic_client

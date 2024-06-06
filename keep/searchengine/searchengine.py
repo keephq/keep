@@ -107,9 +107,10 @@ class SearchEngine:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("elastic_run_query"):
-            results = self.elastic_client.run_query(elastic_sql_query, limit)
-        # convert the results to DTO
-        filtered_alerts = self.elastic_client._construct_alert_dto_from_results(results)
+            filtered_alerts = self.elastic_client.search_alerts(
+                self.tenant_id, elastic_sql_query, limit
+            )
+
         self.logger.info("Finished searching alerts by SQL")
         return filtered_alerts
 
