@@ -42,8 +42,8 @@ export const TitleAndFilters = ({
   };
 
   return (
-    <div className="flex justify-between">
-      <div className="pt-4 text-xl">
+    <div className="pt-4 flex justify-between">
+      <div className="text-xl">
         <Title className="capitalize inline">{presetName}</Title>
       </div>
       <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
@@ -51,11 +51,11 @@ export const TitleAndFilters = ({
           onValueChange={onDateRangePickerChange}
           enableYearNavigation
         />
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <ColumnSelection table={table} presetName={presetName} />
-          <ThemeSelection onThemeChange={onThemeChange} />
-        </div>
-        <LastRecieved />
+        <div className="flex items-center">
+        <ColumnSelection table={table} presetName={presetName} />
+        <ThemeSelection onThemeChange={onThemeChange} />
+      </div>
+        {/* <<LastRecieved /> */}
       </div>
     </div>
   );
