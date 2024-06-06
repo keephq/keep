@@ -44,10 +44,8 @@ export const TitleAndFilters = ({
   return (
     <div className="flex justify-between">
       <div className="pt-4 text-xl">
-        <Title className="capitalize inline">{presetName}</Title>{" "}
-        <span className="text-gray-400">({table.getFilteredRowModel().rows.length})</span>
+        <Title className="capitalize inline">{presetName}</Title>
       </div>
-
       <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
         <DateRangePicker
           onValueChange={onDateRangePickerChange}
