@@ -180,7 +180,7 @@ export function AlertTable({
             theme={theme}
           />
         </Table>
-        <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
+        <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
       </Card>
     </>
   );
