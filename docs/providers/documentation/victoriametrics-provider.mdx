@@ -1,0 +1,22 @@
+---
+title: 'VictoriametricsProvider'
+sidebarTitle: 'Victoriametrics Provider'
+description: 'The VictoriametricsProvider allows you to fetch alerts in Victoriametrics.'
+---
+
+## Authentication Parameters
+
+The Victoriametrics provider requires the following authentication parameters:
+
+- `VMAlertHost`: The hostname or IP address where VMAlert is running. Example: `localhost`, `192.168.1.100`, or `vmalert.mydomain.com`.
+- `VMAlertPort`: The port number on which VMAlert is listening. Example: 8880 (if VMAlert is set to listen on port 8880).
+
+## Connecting with the Provider
+
+1. Ensure you have a running instance of VMAlert accessible by the host and port specified.
+2. Include the host and port information in your Victoriametrics provider configuration when initializing the provider.
+
+## Useful Links
+
+- [Victoriametrics](https://victoriametrics.com/docs/)
+- [VMAlert](https://victoriametrics.github.io/vmalert.html)
