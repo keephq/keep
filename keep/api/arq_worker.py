@@ -35,8 +35,15 @@ async def shutdown(ctx):
 
 
 def get_worker() -> Worker:
-    worker = create_worker(WorkerSettings)
-    return worker
+    keep_result = config(
+        "ARQ_KEEP_RESULT", cast=int, default=3600
+    )  # duration to keep job results for
+    expires = config(
+        "ARQ_EXPIRES", cast=int, default=86_400_000
+    )  # the default length of time from when a job is expected to start after which the job expires, defaults to 1 day in ms
+    return create_worker(
+        WorkerSettings, keep_result=keep_result, expires_extra_ms=expires
+    )
 
 
 class WorkerSettings:
@@ -46,5 +53,12 @@ class WorkerSettings:
 
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = RedisSettings()
+    redis_settings = RedisSettings(
+        host=config("REDIS_HOST", default="localhost"),
+        port=config("REDIS_PORT", cast=int, default=6379),
+        username=config("REDIS_USERNAME", default=None),
+        password=config("REDIS_PASSWORD", default=None),
+        conn_retries=10,
+        conn_retry_delay=10,
+    )
     functions: list = FUNCTIONS

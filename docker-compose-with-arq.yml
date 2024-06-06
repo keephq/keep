@@ -19,10 +19,20 @@ services:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
+      - REDIS=true
+      - REDIS_HOST=keep-arq-redis
+      - REDIS_PORT=6379
     volumes:
       - ./state:/state
+    depends_on:
+      - keep-arq-redis
 
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+
+  keep-arq-redis:
+      extends:
+        file: docker-compose.common.yml
+        service: keep-arq-redis-common

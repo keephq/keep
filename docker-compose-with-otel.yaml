@@ -111,18 +111,11 @@ services:
     volumes:
       - .:/app
       - ./state:/state
-    depends_on:
-      - keep-arq-redis
 
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
-
-  keep-arq-redis:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-arq-redis-common
 
   log_collector:
     image: timberio/vector:0.32.2-debian

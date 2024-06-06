@@ -24,15 +24,8 @@ services:
       - KEEP_DEFAULT_PASSWORD=keep
     volumes:
       - ./state:/state
-    depends_on:
-      - keep-arq-redis
 
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
-
-  keep-arq-redis:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-arq-redis-common
