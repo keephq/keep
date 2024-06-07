@@ -3,6 +3,8 @@ VictoriametricsProvider is a class that allows to install webhooks and get alert
 """
 
 import dataclasses
+import datetime
+from typing import Optional
 
 import pydantic
 import requests
@@ -43,6 +45,26 @@ class VictoriametricsProviderAuthConfig:
 
 class VictoriametricsProvider(BaseProvider):
     """Install Webhooks and receive alerts from Victoriametrics."""
+
+    webhook_description = "This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:"
+    webhook_template = """route:
+  receiver: "keep"
+  group_by: ['alertname']
+  group_wait:      15s
+  group_interval:  15s
+  repeat_interval: 1m
+  continue: true
+
+receivers:
+- name: "keep"
+  webhook_configs:
+  - url: '{keep_webhook_api_url}'
+    send_resolved: true
+    http_config:
+      basic_auth:
+        username: api_key
+        password: {api_key}
+"""
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -131,6 +153,31 @@ class VictoriametricsProvider(BaseProvider):
         except Exception:
             return self.authentication_config.VMAlertHost.rstrip("/")
 
+    @staticmethod
+    def _format_alert(
+            event: dict, provider_instance: Optional["BaseProvider"] = None
+    ) -> AlertDto | list[AlertDto]:
+        alerts = []
+        for alert in event["alerts"]:
+            alerts.append(
+                AlertDto(
+                    name=alert["labels"]["alertname"],
+                    fingerprint=alert['fingerprint'],
+                    id=alert['fingerprint'],
+                    description=alert["annotations"]['description'],
+                    message=alert["annotations"]['summary'],
+                    status=VictoriametricsProvider.STATUS_MAP[alert["status"]],
+                    startedAt=alert["startsAt"],
+                    url=alert["generatorURL"],
+                    source=["victoriametrics"],
+                    labels=alert["labels"],
+                    lastReceived=datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
+                )
+            )
+        return alerts
+
     def _get_alerts(self) -> list[AlertDto]:
         response = requests.get(f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/alerts")
         if response.status_code == 200:
@@ -146,7 +193,8 @@ class VictoriametricsProvider(BaseProvider):
                         status=VictoriametricsProvider.STATUS_MAP[alert["state"]],
                         severity=VictoriametricsProvider.STATUS_MAP[alert["labels"]["severity"]],
                         startedAt=alert["activeAt"],
-                        source=alert["source"],
+                        url=alert["source"],
+                        source=["victoriametrics"],
                         event_id=alert["rule_id"],
                         labels=alert["labels"],
                     )
