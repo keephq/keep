@@ -33,6 +33,13 @@ services:
       service: keep-websocket-server-common
 
   keep-arq-redis:
-      extends:
-        file: docker-compose.common.yml
-        service: keep-arq-redis-common
+    image: redis
+    ports:
+      - "6379:6379"
+
+  keep-arq-dashboard:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-arq-dashboard
+    ports:
+      - "8081:8000"
+    environment:
+      - ARQ_DASHBOARD_REDIS_URL=redis://keep-arq-redis:6379
