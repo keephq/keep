@@ -132,6 +132,7 @@
             "providers/documentation/trello-provider",
             "providers/documentation/twilio-provider",
             "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victoriametrics-provider",
             "providers/documentation/websocket-provider",
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/zabbix-provider",
