@@ -33,13 +33,19 @@ services:
       service: keep-websocket-server-common
 
   keep-arq-redis:
-    image: redis
+    image: redis/redis-stack
     ports:
       - "6379:6379"
+      - "8081:8001"
 
   keep-arq-dashboard:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-arq-dashboard
     ports:
-      - "8081:8000"
+      - "8082:8000"
+    entrypoint:
+        - "uvicorn"
+        - "--host"
+        - "0.0.0.0"
+        - "arq_dashboard:app"
     environment:
       - ARQ_DASHBOARD_REDIS_URL=redis://keep-arq-redis:6379
