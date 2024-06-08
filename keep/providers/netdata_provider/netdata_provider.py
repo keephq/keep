@@ -27,7 +27,7 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
 6. Select Room(s) to apply the configuration.
 7. Select Notification(s) to apply the configuration.
 8. In the "Webhook URL" field, add {keep_webhook_api_url}.
-9. Add a request header with the key "x-api-key" and the value as {webhook_api_key}.
+9. Add a request header with the key "x-api-key" and the value as {api_key}.
 10. Leave the Authentication as "No Authentication".
 11. Add the "Challenge secret" as "keep-netdata-webhook-integration".
 12. Save the configuration.
