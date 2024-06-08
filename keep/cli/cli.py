@@ -867,7 +867,7 @@ def delete_mapping(info: Info, mapping_id: int):
 @cli.group()
 @pass_info
 def extraction(info: Info):
-    """Manage extraction."""
+    """Manage extractions."""
     pass
 
 
@@ -956,7 +956,7 @@ def list_extraction(info: Info):
 @click.option(
     "--pre",
     type=bool,
-    help="Whether this rule should be applied before or after the alert is standardized",
+    help="Whether this rule should be applied before or after the alert is standardized.",
     required=False,
     default=False,
 )
@@ -980,7 +980,7 @@ def list_extraction(info: Info):
     "--condition",
     "-c",
     type=str,
-    help="CEL based condition",
+    help="CEL based condition.",
     required=True,
     default="",
 )
