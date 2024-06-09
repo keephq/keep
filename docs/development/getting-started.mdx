@@ -43,6 +43,20 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         }
       },
       {
+        "name": "Keep Simulate Alerts",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "scripts/simulate_alerts.py",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "env": {
+          "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+          "PYTHONPATH": "${workspaceFolder}/",
+          "KEEP_API_URL": "http://localhost:8080",
+          "KEEP_API_KEY": "some-api-key"
+        }
+      },
+      {
         "name": "Keep Frontend",
         "type": "node-terminal",
         "request": "launch",
