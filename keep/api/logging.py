@@ -127,12 +127,22 @@ CONFIG = {
             "level": "CRITICAL",
             "propagate": False,
         },
+        "Environment": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
         "NameContainer": {
             "handlers": [],
             "level": "CRITICAL",
             "propagate": False,
         },
         "evaluation": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        "keep.providers.providers_factory": {
             "handlers": [],
             "level": "CRITICAL",
             "propagate": False,

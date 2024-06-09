@@ -100,6 +100,7 @@ load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 max_overflow = config("DATABASE_MAX_OVERFLOW", default=10, cast=int)
+echo = config("DATABASE_ECHO", default=False, cast=bool)
 
 
 def dumps(_json) -> str:
@@ -135,6 +136,7 @@ elif db_connection_string:
             pool_size=pool_size,
             max_overflow=max_overflow,
             json_serializer=dumps,
+            echo=echo,
         )
     # SQLite does not support pool_size
     except TypeError:
@@ -1092,37 +1094,76 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
     """
     with Session(engine) as session:
         # Subquery that selects the max and min timestamp for each fingerprint.
-        subquery = (
-            session.query(
-                Alert.fingerprint,
-                func.max(Alert.timestamp).label("max_timestamp"),
-                func.min(Alert.timestamp).label(
-                    "min_timestamp"
-                ),  # Include minimum timestamp
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+            subquery = (
+                session.query(
+                    Alert.fingerprint,
+                    func.max(Alert.timestamp).label("max_timestamp"),
+                    func.min(Alert.timestamp).label(
+                        "min_timestamp"
+                    ),  # Include minimum timestamp
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .group_by(Alert.fingerprint)
+                .order_by(func.max(Alert.timestamp).desc())
+                .limit(limit)
+                .with_hint("WITH (NOLOCK)", "mssql")
+                .subquery()
             )
-            .filter(Alert.tenant_id == tenant_id)
-            .group_by(Alert.fingerprint)
-            .subquery()
-        )
+        else:
+            subquery = (
+                session.query(
+                    Alert.fingerprint,
+                    func.max(Alert.timestamp).label("max_timestamp"),
+                    func.min(Alert.timestamp).label(
+                        "min_timestamp"
+                    ),  # Include minimum timestamp
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .group_by(Alert.fingerprint)
+                .subquery()
+            )
 
         # Main query joins the subquery to select alerts with their first and last occurrence.
-        query = (
-            session.query(
-                Alert,
-                subquery.c.min_timestamp.label(
-                    "startedAt"
-                ),  # Include "startedAt" in the selected columns
+        if session.bind.dialect.name == "mssql":
+            query = (
+                session.query(
+                    Alert,
+                    subquery.c.min_timestamp.label(
+                        "startedAt"
+                    ),  # Include "startedAt" in the selected columns
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .join(
+                    subquery,
+                    and_(
+                        Alert.fingerprint == subquery.c.fingerprint,
+                        Alert.timestamp == subquery.c.max_timestamp,
+                    ),
+                )
+                .options(subqueryload(Alert.alert_enrichment))
+                .with_hint("WITH (NOLOCK)", "mssql")
             )
-            .filter(Alert.tenant_id == tenant_id)
-            .join(
-                subquery,
-                and_(
-                    Alert.fingerprint == subquery.c.fingerprint,
-                    Alert.timestamp == subquery.c.max_timestamp,
-                ),
+        else:
+            query = (
+                session.query(
+                    Alert,
+                    subquery.c.min_timestamp.label(
+                        "startedAt"
+                    ),  # Include "startedAt" in the selected columns
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .join(
+                    subquery,
+                    and_(
+                        Alert.fingerprint == subquery.c.fingerprint,
+                        Alert.timestamp == subquery.c.max_timestamp,
+                    ),
+                )
+                .options(subqueryload(Alert.alert_enrichment))
             )
-            .options(subqueryload(Alert.alert_enrichment))
-        )
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
@@ -1208,6 +1249,9 @@ def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert
 
 def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
         tenant_api_key = session.exec(statement).first()
@@ -1226,6 +1270,9 @@ def get_user(username, password, update_sign_in=True):
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     with Session(engine, expire_on_commit=False) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         user = session.exec(
             select(User)
             .where(User.tenant_id == SINGLE_TENANT_UUID)
@@ -1636,6 +1683,9 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         alert_hash = session.exec(
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
@@ -1667,7 +1717,9 @@ def update_key_last_used(
             .where(TenantApiKey.reference_id == reference_id)
             .where(TenantApiKey.tenant_id == tenant_id)
         )
-
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         tenant_api_key_entry = session.exec(statement).first()
 
         # Update last used
