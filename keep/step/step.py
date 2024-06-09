@@ -1,5 +1,3 @@
-import asyncio
-import inspect
 import time
 from enum import Enum
 
@@ -31,9 +29,9 @@ class Step:
         self.step_id = step_id
         self.step_type = step_type
         self.provider = provider
-        self.provider_parameters: dict[
-            str, str | StepProviderParameter
-        ] = provider_parameters
+        self.provider_parameters: dict[str, str | StepProviderParameter] = (
+            provider_parameters
+        )
         self.on_failure = self.config.get("provider", {}).get("on-failure", {})
         self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
@@ -239,87 +237,50 @@ class Step:
         self.logger.info("Action %s is not throttled", self.config.get("name"))
 
         # Last, run the action
-        # if the provider is async, run it in a new event loop
-        if inspect.iscoroutinefunction(self.provider.notify):
-            self._run_single_async()
-        # else, just run the provider
-        else:
-            try:
-                rendered_providers_parameters = self.io_handler.render_context(
-                    self.provider_parameters
-                )
+        try:
+            rendered_providers_parameters = self.io_handler.render_context(
+                self.provider_parameters
+            )
 
-                for curr_retry_count in range(self.__retry_count + 1):
-                    self.logger.info(
-                        f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}"
-                    )
-                    try:
-                        if self.step_type == StepType.STEP:
-                            step_output = self.provider.query(
-                                **rendered_providers_parameters
-                            )
-                        else:
-                            step_output = self.provider.notify(
-                                **rendered_providers_parameters
-                            )
-                        # exiting the loop as step/action execution was successful
-                        self.context_manager.set_step_context(
-                            self.step_id, results=step_output, foreach=self.foreach
+            for curr_retry_count in range(self.__retry_count + 1):
+                self.logger.info(
+                    f"Running {self.step_id} {self.step_type}, current retry: {curr_retry_count}"
+                )
+                try:
+                    if self.step_type == StepType.STEP:
+                        step_output = self.provider.query(
+                            **rendered_providers_parameters
                         )
-                        break
-                    except Exception as e:
-                        if curr_retry_count == self.__retry_count:
-                            raise StepError(e)
-                        else:
-                            self.logger.info(
-                                "Retrying running %s step after %s second(s)...",
-                                self.step_id,
-                                self.__retry_interval,
-                            )
-
-                            time.sleep(self.__retry_interval)
-
-                extra_context = self.provider.expose()
-                rendered_providers_parameters.update(extra_context)
-                self.context_manager.set_step_provider_paremeters(
-                    self.step_id, rendered_providers_parameters
-                )
-            except Exception as e:
-                raise StepError(e)
-
-            return True
-
-    def _run_single_async(self):
-        """For async providers, run them in a new event loop
-
-        Raises:
-            ActionError: _description_
-        """
-        rendered_value = self.io_handler.render_context(self.provider_parameters)
-        # This is "magically solved" because of nest_asyncio but probably isn't best practice
-        loop = asyncio.new_event_loop()
-        if self.step_type == StepType.STEP:
-            task = loop.create_task(self.provider.query(**rendered_value))
-        else:
-            task = loop.create_task(self.provider.notify(**rendered_value))
-
-        for curr_retry_count in range(self.__retry_count + 1):
-            try:
-                loop.run_until_complete(task)
-
-                # exiting the loop as the task execution was successful
-                break
-            except Exception as e:
-                if curr_retry_count == self.__retry_count:
-                    raise ActionError(e)
-                else:
-                    self.logger.info(
-                        "Retrying running %s step after %s second(s)...",
-                        self.step_id,
-                        self.__retry_interval,
+                    else:
+                        step_output = self.provider.notify(
+                            **rendered_providers_parameters
+                        )
+                    # exiting the loop as step/action execution was successful
+                    self.context_manager.set_step_context(
+                        self.step_id, results=step_output, foreach=self.foreach
                     )
+                    break
+                except Exception as e:
+                    if curr_retry_count == self.__retry_count:
+                        raise StepError(e)
+                    else:
+                        self.logger.info(
+                            "Retrying running %s step after %s second(s)...",
+                            self.step_id,
+                            self.__retry_interval,
+                        )
 
-                    time.sleep(self.__retry_interval)
+                        time.sleep(self.__retry_interval)
+
+            extra_context = self.provider.expose()
+            rendered_providers_parameters.update(extra_context)
+            self.context_manager.set_step_provider_paremeters(
+                self.step_id, rendered_providers_parameters
+            )
+        except Exception as e:
+            raise StepError(e)
+
+        return True
 
 
 class StepError(Exception):

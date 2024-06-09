@@ -4,8 +4,6 @@ import logging
 import time
 import uuid
 from typing import Callable, Optional
-from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.exceptions.provider_exception import ProviderException
 
 import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
@@ -22,6 +20,8 @@ from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.exceptions.provider_config_exception import ProviderConfigException
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import (
     GetAlertException,
@@ -483,9 +483,12 @@ async def update_provider(
             ].decode()
 
     context_manager = ContextManager(tenant_id=tenant_id)
-    provider_instance = ProvidersFactory.get_provider(
-        context_manager, provider_id, provider.type, provider_config
-    )
+    try:
+        provider_instance = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider.type, provider_config
+        )
+    except (ProviderException, ProviderConfigException) as e:
+        raise HTTPException(status_code=400, detail=str(e))
     validated_scopes = validate_scopes(provider_instance)
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     secret_manager.write_secret(
@@ -559,10 +562,7 @@ async def install_provider(
             context_manager, provider_id, provider_type, provider_config
         )
     except (ProviderException, ProviderConfigException) as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-            )
+        raise HTTPException(status_code=400, detail=str(e))
 
     validated_scopes = validate_scopes(provider)
 
