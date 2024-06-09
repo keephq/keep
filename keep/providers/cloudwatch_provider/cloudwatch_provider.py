@@ -8,8 +8,9 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
-from typing import Optional
+from typing import Optional, Type
 from urllib.parse import urlparse
 
 import boto3
@@ -18,6 +19,7 @@ import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.config_exception import ConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
@@ -59,6 +61,13 @@ class CloudwatchProviderAuthConfig:
             "sensitive": False,
         },
     )
+    # cloudwatch_sns_webhook_url: str = dataclasses.field(
+    #     default=config("KEEP_API_URL"),
+    #     metadata={
+    #         "required": False,
+    #         "description": "The URL to which the SNS topic will be connected",
+    #     }
+    # )
 
 
 class CloudwatchProvider(BaseProvider):
@@ -394,10 +403,10 @@ class CloudwatchProvider(BaseProvider):
         )
 
     def setup_webhook(
-        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+        self, tenant_id: str, webhook_url: str, api_key: str, setup_alerts: bool = True
     ):
         # first, list all Cloudwatch alarms
-        self.logger.info("Setting up webhook with url %s", keep_api_url)
+        self.logger.info("Setting up webhook with url %s", webhook_url)
         cloudwatch_client = self.__generate_client("cloudwatch")
         sns_client = self.__generate_client("sns")
         resp = cloudwatch_client.describe_alarms()
@@ -472,20 +481,18 @@ class CloudwatchProvider(BaseProvider):
                         "Topic %s not found, skipping...", topic, exc_info=exc
                     )
                     continue
-                hostname = urlparse(keep_api_url).hostname
+                hostname = urlparse(webhook_url).hostname
                 already_subscribed = any(
                     hostname in sub["Endpoint"]
                     and not sub["SubscriptionArn"] == "PendingConfirmation"
                     for sub in subscriptions
                 )
                 if not already_subscribed:
-                    url_with_api_key = keep_api_url.replace(
-                        "https://", f"https://api_key:{api_key}@"
-                    )
+                    url_with_api_key = self.add_credentials_to_wh_url(webhook_url, api_key)
                     self.logger.info("Subscribing to topic %s...", topic)
                     sns_client.subscribe(
                         TopicArn=topic,
-                        Protocol="https",
+                        Protocol=re.search(url_with_api_key, r'(https?|http)').group(),
                         Endpoint=url_with_api_key,
                     )
                     self.logger.info("Subscribed to topic %s!", topic)
@@ -497,6 +504,17 @@ class CloudwatchProvider(BaseProvider):
                         "Already subscribed to topic %s, skipping...", topic
                     )
         self.logger.info("Webhook setup completed!")
+
+    @staticmethod
+    def add_credentials_to_wh_url(lg: Type[logging], webhook_url: str, api_key: str) -> str:
+        if re.match(r'^(https?|http)://', webhook_url):
+            protocol = re.split(r'^(https?://|http://)', webhook_url)[1]
+            new_url = webhook_url.replace(
+                protocol, f"{protocol}api_key:{api_key}@"
+            )
+            return new_url
+        lg.info("Url, provided for setting up webhook is incorrect, needs to be checked")
+        raise ConfigException("Incorrect webhook for cloudwatch provider")
 
     @staticmethod
     def _format_alert(

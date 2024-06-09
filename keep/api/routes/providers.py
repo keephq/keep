@@ -765,7 +765,8 @@ def install_provider_webhook(
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
     )
-    api_url = config("KEEP_API_URL")
+    api_url = config("WEBHOOK_URL", None)
+    api_url = config("KEEP_API_URL") if not api_url else api_url
     keep_webhook_api_url = (
         f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
     )

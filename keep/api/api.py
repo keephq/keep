@@ -1,6 +1,7 @@
 import logging
 import os
 from importlib import metadata
+from typing import Type
 
 import jwt
 import uvicorn
@@ -125,12 +126,12 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
 
 def get_app(
-    auth_type: AuthenticationType = AuthenticationType.NO_AUTH.value,
+    auth_type: AuthenticationType = AuthenticationType.NO_AUTH.value
 ) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
         logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
-    elif os.environ.get("KEEP_API_URL").startswith("http://") and HOST != "0.0.0.0":
+    if os.environ.get("KEEP_API_URL").startswith("http://") and HOST != "0.0.0.0":
         logger.warning("Wrong protocol for KEEP_API_URL")
         raise ConfigException("For production KEEP Api must use HTTPS not HTTP")
 
