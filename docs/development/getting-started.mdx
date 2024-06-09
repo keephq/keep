@@ -17,7 +17,7 @@ docker-compose -f docker-compose.dev.yml up
 ```
 
 ## VSCode
-You can run Keep from your VSCode (after cloning the repo) by adding this configurations to your `launch.json`:
+You can run Keep from your VSCode (after cloning the repo) by adding this configurations to your `.vscode/launch.json`:
 
 ```json
 {
@@ -25,13 +25,22 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
     "configurations": [
       {
         "name": "Keep Backend",
-        "type": "python",
+        "type": "debugpy",
         "request": "launch",
         "program": "keep/cli/cli.py",
         "console": "integratedTerminal",
         "justMyCode": false,
         "args": ["--json", "api","--multi-tenant"],
-        "env": {"PYDEVD_DISABLE_FILE_VALIDATION": "1"}
+        "env": {
+            "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+            "PYTHONPATH": "${workspaceFolder}/",
+            "PUSHER_APP_ID": "1",
+            "SECRET_MANAGER_DIRECTORY": "./state/",
+            "PUSHER_HOST": "localhost",
+            "PUSHER_PORT": "6001",
+            "PUSHER_APP_KEY": "keepappkey",
+            "PUSHER_APP_SECRET": "keepappsecret",
+        }
       },
       {
         "name": "Keep Frontend",
@@ -41,8 +50,21 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         "cwd": "${workspaceFolder}/keep-ui",
       }
     ]
-  }
+}
 ```
+
+Install dependencies:
+```
+pip install poetry'
+poetry install;
+cd keep-ui && npm i;
+```
+
+Launch Pusher in parallel:
+```bash
+docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
 
 ## VSCode + Docker
 <Info>For this guide to work, the VSCode Docker extension is required.</Info>
