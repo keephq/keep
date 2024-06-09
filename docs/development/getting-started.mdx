@@ -62,7 +62,7 @@ cd keep-ui && npm i;
 
 Launch Pusher in parallel:
 ```bash
-docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+docker run -d -p 6001:6001 -p 9601:9601 -e SOKETI_USER_AUTHENTICATION_TIMEOUT=3000 -e SOKETI_DEFAULT_APP_KEY=keepappkey -e SOKETI_DEFAULT_APP_SECRET=keepappsecret -e SOKETI_DEFAULT_APP_ID=1 quay.io/soketi/soketi:1.4-16-debian
 ```
 
 
