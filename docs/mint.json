@@ -194,7 +194,10 @@
         },
         {
           "group": "Examples",
-          "pages": ["workflows/examples/multi-step-alert"]
+          "pages": [
+            "workflows/examples/multi-step-alert",
+            "workflows/examples/reusable-action-alert"
+          ]
         },
         "workflows/state"
       ]
@@ -238,6 +241,15 @@
             "api-ref/workflows/get-workflow-by-id",
             "api-ref/workflows/delete-workflow-by-id",
             "api-ref/workflows/get-workflow-execution-status"
+          ]
+        },
+        {
+          "group": "Actions",
+          "pages": [
+            "api-ref/actions/get-actions",
+            "api-ref/actions/add-actions",
+            "api-ref/actions/update-action",
+            "api-ref/actions/delete-action"
           ]
         }
       ]

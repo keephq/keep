@@ -20,6 +20,7 @@ class ContextManager:
         self.steps_context = {}
         self.steps_context_size = 0
         self.providers_context = {}
+        self.actions_context = {}
         self.event_context = {}
         self.foreach_context = {
             "value": None,

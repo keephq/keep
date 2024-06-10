@@ -38,6 +38,7 @@ from keep.api.routes import (
     users,
     whoami,
     workflows,
+    actions
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
@@ -155,6 +156,7 @@ def get_app(
     # app.add_middleware(GZipMiddleware)
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
+    app.include_router(actions.router, prefix="/actions", tags=["actions"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
