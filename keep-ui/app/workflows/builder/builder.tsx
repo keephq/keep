@@ -108,7 +108,7 @@ function Builder({
 
   const runWorkflow = () => {
     const apiUrl = getApiURL();
-    const url = `${apiUrl}/workflows/run`;
+    const url = `${apiUrl}/workflows/test`;
     const method = "POST";
     const headers = {
       "Content-Type": "text/html",

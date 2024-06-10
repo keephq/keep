@@ -133,6 +133,44 @@ class WorkflowScheduler:
             )
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
+    def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
+        self.logger.info(f"Running test workflow {workflow.workflow_id}...")
+        try:
+            unique_execution_number = self._get_unique_execution_number()
+            self.logger.info(f"Unique execution number: {unique_execution_number}")
+            workflow_execution_id = create_workflow_execution(
+                workflow_id=workflow.workflow_id,
+                tenant_id=tenant_id,
+                triggered_by=f"manually by {triggered_by_user}",
+                execution_number=unique_execution_number,
+            )
+            self.logger.info(f"Workflow execution id: {workflow_execution_id}")
+        except Exception as e:
+            self.logger.error(f"WTF: error creating workflow execution: {e}")
+            raise e
+        self.logger.info(
+            "Adding workflow to run",
+            extra={
+                "workflow_id": workflow.workflow_id,
+                "workflow_execution_id": workflow_execution_id,
+                "tenant_id": tenant_id,
+                "triggered_by": "manual",
+                "triggered_by_user": triggered_by_user,
+            },
+        )
+        thread = threading.Thread(
+            target=self._run_workflow,
+            args=[
+                tenant_id,
+                workflow.workflow_id,
+                workflow,
+                workflow_execution_id,
+            ],
+        )
+        thread.start()
+        thread.join()
+        return workflow_execution_id
+
     def handle_manual_event_workflow(
         self, workflow_id, tenant_id, triggered_by_user, alert: AlertDto
     ):

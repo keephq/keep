@@ -230,7 +230,7 @@ def run_workflow(
 
 
 @router.post(
-    "/run",
+    "/test",
     description="Run a workflow from a definition",
 )
 async def run_workflow_from_definition(
@@ -243,16 +243,15 @@ async def run_workflow_from_definition(
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     workflow = await __get_workflow_raw_data(request, file)
-    logger.info("Running workflow")
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
-        workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow
+        workflow = workflowstore.get_workflow_from_dict(
+            tenant_id=tenant_id, workflow=workflow
         )
     except Exception:
         logger.exception(
-            "Failed to create workflow",
+            "Failed to parse workflow",
             extra={"tenant_id": tenant_id, "workflow": workflow},
         )
         raise HTTPException(
@@ -260,46 +259,22 @@ async def run_workflow_from_definition(
             detail="Failed to upload workflow. Please contact us via Slack for help.",
         )
 
-    workflow_id = workflow.id
-
-    logger.info("Created workflow", extra={"workflow_id": workflow_id})
-
-    # Finally, run it
     try:
-        body = {}
-        # some random
-        body["id"] = body.get("fingerprint", "manual-run")
-        body["name"] = body.get("fingerprint", "manual-run")
-        body["lastReceived"] = datetime.datetime.now(
-            tz=datetime.timezone.utc
-        ).isoformat()
-        try:
-            alert = AlertDto(**body)
-        except TypeError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid alert format",
-            )
-        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, alert
+        workflow_execution_id = workflowmanager.scheduler.handle_workflow_test(
+            workflow, tenant_id, created_by
         )
     except Exception as e:
         logger.exception(
-            "Failed to run workflow",
-            extra={"workflow_id": workflow_id},
+            "Failed to run test workflow",
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to run workflow {workflow_id}: {e}",
+            detail=f"Failed to run test workflow: {e}",
         )
     logger.info(
         "Workflow ran successfully",
-        extra={
-            "workflow_id": workflow_id,
-        },
     )
     return {
-        "workflow_id": workflow_id,
         "workflow_execution_id": workflow_execution_id,
         "status": "success",
     }
