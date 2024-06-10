@@ -69,7 +69,7 @@ export default function PageClient({
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>
-            Builder{" "}
+            Builder
             <Badge
               color="orange"
               size="xs"
@@ -81,16 +81,7 @@ export default function PageClient({
           <Subtitle>Workflow building kit</Subtitle>
         </div>
         {workflow ? (
-          <div>
-            <Button
-              color="orange"
-              size="md"
-              icon={ArrowUpOnSquareIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerSave(triggerSave + 1)}
-            >
-              Deploy
-            </Button>
+          <div className="flex gap-4">
             <Button
               color="orange"
               size="md"
@@ -99,7 +90,16 @@ export default function PageClient({
               disabled={!generateEnabled}
               onClick={() => setTriggerRun(triggerSave + 1)}
             >
-              Test Run
+              Run
+            </Button>
+            <Button
+              color="orange"
+              size="md"
+              icon={ArrowUpOnSquareIcon}
+              disabled={!generateEnabled}
+              onClick={() => setTriggerSave(triggerSave + 1)}
+            >
+              Deploy
             </Button>
           </div>
         ) : (
@@ -140,7 +140,7 @@ export default function PageClient({
               disabled={!generateEnabled}
               onClick={() => setTriggerRun(triggerSave + 1)}
             >
-              Test Run
+              Run
             </Button>
             <Button
               color="orange"

@@ -119,9 +119,6 @@ function Builder({
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
-          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
-          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-          // window.location.assign("/workflows");
           response.json().then((data) => {
             setRunningWorkflowExecution({
               id: data.workflow_id,
