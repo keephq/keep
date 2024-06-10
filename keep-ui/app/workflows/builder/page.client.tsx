@@ -7,6 +7,7 @@ import {
   ArrowDownOnSquareIcon,
   BoltIcon,
   ArrowUpOnSquareIcon,
+  PlayIcon,
 } from "@heroicons/react/20/solid";
 import { useSession } from "next-auth/react";
 import { BuilderCard } from "./builder-card";
@@ -23,6 +24,7 @@ export default function PageClient({
   const [generateEnabled, setGenerateEnabled] = useState(false);
   const [triggerGenerate, setTriggerGenerate] = useState(0);
   const [triggerSave, setTriggerSave] = useState(0);
+  const [triggerRun, setTriggerRun] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
@@ -67,7 +69,14 @@ export default function PageClient({
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>
-            Builder <Badge color="orange" size="xs" tooltip="Slack us if something isn't working properly :)">Beta</Badge>
+            Builder{" "}
+            <Badge
+              color="orange"
+              size="xs"
+              tooltip="Slack us if something isn't working properly :)"
+            >
+              Beta
+            </Badge>
           </Title>
           <Subtitle>Workflow building kit</Subtitle>
         </div>
@@ -81,6 +90,16 @@ export default function PageClient({
               onClick={() => setTriggerSave(triggerSave + 1)}
             >
               Deploy
+            </Button>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
+              icon={PlayIcon}
+              disabled={!generateEnabled}
+              onClick={() => setTriggerRun(triggerSave + 1)}
+            >
+              Test Run
             </Button>
           </div>
         ) : (
@@ -117,6 +136,16 @@ export default function PageClient({
               color="orange"
               size="md"
               className="mr-2"
+              icon={PlayIcon}
+              disabled={!generateEnabled}
+              onClick={() => setTriggerRun(triggerSave + 1)}
+            >
+              Test Run
+            </Button>
+            <Button
+              color="orange"
+              size="md"
+              className="mr-2"
               icon={ArrowUpOnSquareIcon}
               disabled={!generateEnabled}
               onClick={() => setTriggerSave(triggerSave + 1)}
@@ -142,6 +171,7 @@ export default function PageClient({
         enableButtons={enableButtons}
         enableGenerate={enableGenerate}
         triggerGenerate={triggerGenerate}
+        triggerRun={triggerRun}
         triggerSave={triggerSave}
         workflow={workflow}
         workflowId={workflowId}

@@ -36,6 +36,7 @@ import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import WorkflowExecutionResults from "./workflow-execution-results";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -44,6 +45,7 @@ interface Props {
   enableGenerate: (status: boolean) => void;
   triggerGenerate: number;
   triggerSave: number;
+  triggerRun: number;
   workflow?: string;
   workflowId?: string;
   accessToken?: string;
@@ -57,6 +59,7 @@ function Builder({
   enableGenerate,
   triggerGenerate,
   triggerSave,
+  triggerRun,
   workflow,
   workflowId,
   accessToken,
@@ -73,6 +76,10 @@ function Builder({
     string | null
   >(null);
   const [modalIsOpen, setIsOpen] = useState(false);
+  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<{
+    id: string;
+    execution_id: string;
+  } | null>(null);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
@@ -90,6 +97,37 @@ function Builder({
       .then((response) => {
         if (response.ok) {
           window.location.assign("/workflows");
+        } else {
+          throw new Error(response.statusText);
+        }
+      })
+      .catch((error) => {
+        alert(`Error: ${error}`);
+      });
+  };
+
+  const runWorkflow = () => {
+    const apiUrl = getApiURL();
+    const url = `${apiUrl}/workflows/run`;
+    const method = "POST";
+    const headers = {
+      "Content-Type": "text/html",
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    const body = stringify(buildAlert(definition.value));
+    fetch(url, { method, headers, body })
+      .then((response) => {
+        if (response.ok) {
+          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
+          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
+          // window.location.assign("/workflows");
+          response.json().then((data) => {
+            setRunningWorkflowExecution({
+              id: data.workflow_id,
+              execution_id: data.workflow_execution_id,
+            });
+          });
         } else {
           throw new Error(response.statusText);
         }
@@ -136,16 +174,7 @@ function Builder({
         triggers = { alert: { source: alertSource, name: alertName } };
       }
       setDefinition(
-        wrapDefinition(
-          generateWorkflow(
-            alertUuid,
-            "",
-            "",
-            [],
-            [],
-            triggers
-          )
-        )
+        wrapDefinition(generateWorkflow(alertUuid, "", "", [], [], triggers))
       );
     } else {
       setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
@@ -162,6 +191,13 @@ function Builder({
   }, [triggerGenerate]);
 
   useEffect(() => {
+    if (triggerRun) {
+      runWorkflow();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerRun]);
+
+  useEffect(() => {
     if (triggerSave) {
       if (workflowId) {
         updateWorkflow();
@@ -173,7 +209,12 @@ function Builder({
   }, [triggerSave]);
 
   useEffect(() => {
-    enableGenerate(definition.isValid && stepValidationError === null && globalValidationError === null || false);
+    enableGenerate(
+      (definition.isValid &&
+        stepValidationError === null &&
+        globalValidationError === null) ||
+        false
+    );
   }, [
     stepValidationError,
     globalValidationError,
@@ -231,6 +272,10 @@ function Builder({
     setIsOpen(false);
   }
 
+  const closeWorkflowExecutionResultsModal = () => {
+    setRunningWorkflowExecution(null);
+  };
+
   return (
     <>
       <Modal
@@ -243,7 +288,24 @@ function Builder({
           compiledAlert={compiledAlert}
         />
       </Modal>
-      {modalIsOpen ? null : (
+      <Modal
+        isOpen={!!runningWorkflowExecution}
+        onRequestClose={closeWorkflowExecutionResultsModal}
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl z-[999] mt-20 border border-orange-600/50 rounded-md"
+      >
+        {runningWorkflowExecution && (
+          <div className="max-w-1/2 z-50">
+            <button onClick={() => closeWorkflowExecutionResultsModal}>
+              Close
+            </button>
+            <WorkflowExecutionResults
+              workflow_execution_id={runningWorkflowExecution.execution_id}
+              workflow_id={runningWorkflowExecution.id}
+            />
+          </div>
+        )}
+      </Modal>
+      {modalIsOpen || !!runningWorkflowExecution ? null : (
         <>
           {stepValidationError || globalValidationError ? (
             <Callout
