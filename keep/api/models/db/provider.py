@@ -1,10 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class Provider(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("tenant_id", "name"),)
+
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str

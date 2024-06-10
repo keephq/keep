@@ -202,6 +202,7 @@ class WorkflowScheduler:
             },
         )
         with self.lock:
+            alert.trigger = "manual"
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
