@@ -210,7 +210,6 @@ def run_workflow(
             "Failed to run workflow",
             extra={"workflow_id": workflow_id},
         )
-        logger.info("reached point b")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to run workflow {workflow_id}: {e}",
@@ -221,7 +220,6 @@ def run_workflow(
             "workflow_id": workflow_id,
         },
     )
-    logger.info("reached point c")
     return {
         "workflow_id": workflow_id,
         "workflow_execution_id": workflow_execution_id,
@@ -231,7 +229,7 @@ def run_workflow(
 
 @router.post(
     "/test",
-    description="Run a workflow from a definition",
+    description="Test run a workflow from a definition",
 )
 async def run_workflow_from_definition(
     request: Request,
@@ -260,7 +258,7 @@ async def run_workflow_from_definition(
         )
 
     try:
-        workflow_execution_id = workflowmanager.scheduler.handle_workflow_test(
+        workflow_execution = workflowmanager.scheduler.handle_workflow_test(
             workflow, tenant_id, created_by
         )
     except Exception as e:
@@ -273,11 +271,9 @@ async def run_workflow_from_definition(
         )
     logger.info(
         "Workflow ran successfully",
+        extra={"workflow_execution": workflow_execution},
     )
-    return {
-        "workflow_execution_id": workflow_execution_id,
-        "status": "success",
-    }
+    return workflow_execution
 
 
 async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:

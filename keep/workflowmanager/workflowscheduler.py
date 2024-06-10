@@ -2,6 +2,7 @@ import enum
 import hashlib
 import logging
 import threading
+import queue
 import time
 import typing
 import uuid
@@ -100,7 +101,7 @@ class WorkflowScheduler:
         try:
             # set the event context, e.g. the event that triggered the workflow
             workflow.context_manager.set_event_context(event_context)
-            errors = self.workflow_manager._run_workflow(
+            errors, _ = self.workflow_manager._run_workflow(
                 workflow, workflow_execution_id
             )
         except Exception as e:
@@ -134,20 +135,9 @@ class WorkflowScheduler:
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
-        self.logger.info(f"Running test workflow {workflow.workflow_id}...")
-        try:
-            unique_execution_number = self._get_unique_execution_number()
-            self.logger.info(f"Unique execution number: {unique_execution_number}")
-            workflow_execution_id = create_workflow_execution(
-                workflow_id=workflow.workflow_id,
-                tenant_id=tenant_id,
-                triggered_by=f"manually by {triggered_by_user}",
-                execution_number=unique_execution_number,
-            )
-            self.logger.info(f"Workflow execution id: {workflow_execution_id}")
-        except Exception as e:
-            self.logger.error(f"WTF: error creating workflow execution: {e}")
-            raise e
+
+        workflow_execution_id = self._get_unique_execution_number()
+
         self.logger.info(
             "Adding workflow to run",
             extra={
@@ -158,18 +148,52 @@ class WorkflowScheduler:
                 "triggered_by_user": triggered_by_user,
             },
         )
+
+        result_queue = queue.Queue()
+
+        def run_workflow_wrapper(
+            run_workflow, workflow, workflow_execution_id, some_flag, result_queue
+        ):
+            try:
+                errors, results = run_workflow(
+                    workflow, workflow_execution_id, some_flag
+                )
+                result_queue.put((errors, results))
+            except Exception as e:
+                print(f"Exception in workflow: {e}")
+                result_queue.put((str(e), None))
+
         thread = threading.Thread(
-            target=self._run_workflow,
+            target=run_workflow_wrapper,
             args=[
-                tenant_id,
-                workflow.workflow_id,
+                self.workflow_manager._run_workflow,
                 workflow,
                 workflow_execution_id,
+                True,
+                result_queue,
             ],
         )
         thread.start()
         thread.join()
-        return workflow_execution_id
+        errors, results = result_queue.get()
+
+        self.logger.info(
+            f"Workflow {workflow.workflow_id} ran",
+            extra={"errors": errors, "results": results},
+        )
+
+        status = "success"
+        error = None
+        if any(errors):
+            error = "\n".join(str(e) for e in errors)
+            status = "error"
+
+        return {
+            "workflow_execution_id": workflow_execution_id,
+            "status": status,
+            "error": error,
+            "results": results,
+        }
 
     def handle_manual_event_workflow(
         self, workflow_id, tenant_id, triggered_by_user, alert: AlertDto
