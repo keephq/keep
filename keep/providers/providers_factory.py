@@ -445,11 +445,19 @@ class ProvidersFactory:
             BaseProvider: The instantiated provider class.
         """
         context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        provider_config = secret_manager.read_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
-            is_json=True,
-        )
+
+        # check if the provider is linked,
+        # if provider is linked it means the provider config is not stored in the secret manager
+        if not ProvidersFactory.check_if_linked_providers(tenant_id, provider_id, provider_type):
+            logger.debug("Provider not linked, trying to read secret from secret manager")
+            secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+            provider_config = secret_manager.read_secret(
+                secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+                is_json=True,
+            )
+        else:
+            logger.debug("Provider linked, no need to read secret from secret manager")
+            provider_config = {"authentication": {}}
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider_id,
@@ -501,3 +509,25 @@ class ProvidersFactory:
             _linked_providers.append(provider)
 
         return _linked_providers
+
+    @staticmethod
+    def check_if_linked_providers(tenant_id: str, provider_id: str, provider_type: str) -> bool:
+        """
+        Check if the provider is linked.
+
+        Args:
+            tenant_id (str): The tenant id.
+            provider_id (str): The provider id.
+            provider_type (str): The provider type.
+
+        Returns:
+            bool: True if the provider is linked, otherwise False.
+        """
+        linked_providers = get_linked_providers(tenant_id)
+
+        for p in linked_providers:
+            p_type, p_id, _ = p
+            if p_id == provider_id and p_type == provider_type:
+                return True
+
+        return False
