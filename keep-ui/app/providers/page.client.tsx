@@ -15,7 +15,6 @@ import useSWR from "swr";
 import Loading from "../loading";
 import { LayoutContext } from "./context";
 import { toast } from "react-toastify";
-import { updateIntercom } from "@/components/ui/Intercom";
 import { useRouter } from "next/navigation";
 
 export const useFetchProviders = () => {
@@ -73,7 +72,12 @@ export const useFetchProviders = () => {
   }, [isLocalhost]);
 
   useEffect(() => {
-    if (data && providers.length === 0 && installedProviders.length === 0 && linkedProviders.length === 0) {
+    if (
+      data &&
+      providers.length === 0 &&
+      installedProviders.length === 0 &&
+      linkedProviders.length === 0
+    ) {
       const fetchedInstalledProviders = data.installed_providers.map(
         (provider) => ({
           ...provider,
@@ -100,7 +104,12 @@ export const useFetchProviders = () => {
       setProviders(fetchedProviders);
       setLinkedProviders(fetchedLinkedProviders); // Update state with linked providers
     }
-  }, [data, providers.length, installedProviders.length, linkedProviders?.length]);
+  }, [
+    data,
+    providers.length,
+    installedProviders.length,
+    linkedProviders?.length,
+  ]);
 
   return {
     providers,
@@ -114,7 +123,6 @@ export const useFetchProviders = () => {
     isLocalhost,
   };
 };
-
 
 export default function ProvidersPage({
   searchParams,
@@ -146,9 +154,6 @@ export default function ProvidersPage({
       });
     }
   }, [searchParams]);
-  useEffect(() => {
-    updateIntercom(session?.user);
-  }, [session?.user]);
 
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
