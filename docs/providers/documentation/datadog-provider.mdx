@@ -67,3 +67,11 @@ _No information yet, feel free to contribute it using the "Edit this page" link 
 
 - [Datadog API Documentation](https://docs.datadoghq.com/api/)
 - [Datadog Query Language](https://docs.datadoghq.com/dashboards/querying/)
+
+## Webhook Integration Modifications
+
+The webhook integration adds Keep as a monitor within Datadog. It can be found under the "Monitors" section.
+The integration automatically gains access to the following scopes within Datadog:
+- `monitors_read`
+- `monitors_write`
+- `create_webhooks`
