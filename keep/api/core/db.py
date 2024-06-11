@@ -186,6 +186,13 @@ def try_create_single_tenant(tenant_id: str) -> None:
         create_db_and_tables()
     except Exception:
         pass
+    # TODO: temporary migration for result column
+    with Session(engine) as session:
+        try:
+            session.exec("ALTER TABLE workflow ADD COLUMN state JSON")
+            session.commit()
+        except Exception:
+            pass
     with Session(engine) as session:
         try:
             # check if the tenant exist:
@@ -780,6 +787,18 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         )
 
         return execution_with_logs
+
+
+def save_workflow_state(tenant_id: str, workflow_id: str, state: dict):
+    stmt = (
+        update(Workflow)
+        .where(Workflow.tenant_id == tenant_id)
+        .where(Workflow.id == workflow_id)
+        .values(state=state)
+    )
+    with Session(engine) as session:
+        session.execute(stmt)
+        session.commit()
 
 
 def _enrich_alert(session, tenant_id, fingerprint, enrichments):

@@ -328,21 +328,25 @@ class IOHandler:
         """
         # Don't modify the original context
         context_to_render = copy.deepcopy(context_to_render)
+        rendered_context = {}
         for key, value in context_to_render.items():
+            rendered_key = self._render_template_with_context(
+                key, safe=False, default=key
+            )
             if isinstance(value, str):
-                context_to_render[key] = self._render_template_with_context(
+                rendered_context[rendered_key] = self._render_template_with_context(
                     value, safe=True
                 )
             elif isinstance(value, list):
-                context_to_render[key] = self._render_list_context(value)
+                rendered_context[rendered_key] = self._render_list_context(value)
             elif isinstance(value, dict):
-                context_to_render[key] = self.render_context(value)
+                rendered_context[rendered_key] = self.render_context(value)
             elif isinstance(value, StepProviderParameter):
                 safe = value.safe and value.default is not None
-                context_to_render[key] = self._render_template_with_context(
+                rendered_context[rendered_key] = self._render_template_with_context(
                     value.key, safe=safe, default=value.default
                 )
-        return context_to_render
+        return rendered_context
 
     def _render_list_context(self, context_to_render: list):
         """

@@ -104,6 +104,7 @@ class SlackProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
+        return
         self.logger.info(
             f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",
             extra={

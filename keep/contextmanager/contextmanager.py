@@ -5,7 +5,11 @@ import os
 import click
 from pympler.asizeof import asizeof
 
-from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
+from keep.api.core.db import (
+    get_last_workflow_execution_by_workflow_id,
+    get_session,
+    get_workflow,
+)
 from keep.api.logging import WorkflowLoggerAdapter
 
 
@@ -31,8 +35,12 @@ class ContextManager:
             self.click_context = {}
         # last workflow context
         self.last_workflow_execution_results = {}
+        self.workflow_state = {}
         if self.workflow_id:
             try:
+                workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+                if workflow is not None and workflow.state is not None:
+                    self.workflow_state = workflow.state
                 last_workflow_execution = get_last_workflow_execution_by_workflow_id(
                     tenant_id, workflow_id
                 )
@@ -102,6 +110,7 @@ class ContextManager:
             "foreach": self.foreach_context,
             "event": self.event_context,
             "last_workflow_results": self.last_workflow_execution_results,
+            "workflow_state": self.workflow_state,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
         }
 

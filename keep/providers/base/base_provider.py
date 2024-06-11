@@ -18,6 +18,7 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 
+from keep.api.consts import ENRICH_WORKFLOW_STATE
 from keep.api.core.db import enrich_alert, get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -33,9 +34,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
-    PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue"]
-    ] = []
+    PROVIDER_TAGS: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = (
+        []
+    )
 
     def __init__(
         self,
@@ -119,6 +120,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # trigger the provider
         results = self._notify(**kwargs)
         self.results.append(results)
+
+        workflow_state = kwargs.get(ENRICH_WORKFLOW_STATE, {})
+        if workflow_state:
+            self._update_workflow_state(workflow_state)
+
         # if the alert should be enriched, enrich it
         enrich_alert = kwargs.get("enrich_alert", [])
         if not enrich_alert or results is None:
@@ -126,6 +132,26 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         self._enrich_alert(enrich_alert, results)
         return results
+
+    def _update_workflow_state(self, state: dict):
+        if not isinstance(state, dict):
+            self.logger.warning(
+                "Cannot enrich workflow, new enrichments is not a dict",
+                extra={"enrichments": state},
+            )
+            return
+
+        if not self.context_manager.workflow_id:
+            self.logger.warning(
+                "Cannot enrich workflow, not in context of a workflow",
+                extra={"enrichments": state},
+            )
+            return
+
+        workflow_state = self.context_manager.workflow_state
+        self.logger.info("Updating workflow state", extra={"old_state": state})
+        workflow_state.update(state)
+        self.logger.info("Updated workflow state", extra={"new_state": state})
 
     def _enrich_alert(self, enrichments, results):
         """
@@ -227,6 +253,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         enrich_alert = kwargs.get("enrich_alert", [])
         if enrich_alert:
             self._enrich_alert(enrich_alert, results)
+
+        workflow_state = kwargs.get(ENRICH_WORKFLOW_STATE, {})
+        if workflow_state:
+            self._update_workflow_state(workflow_state)
         # and return the results
         return results
 

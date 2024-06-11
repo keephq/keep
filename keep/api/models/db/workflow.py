@@ -18,6 +18,7 @@ class Workflow(SQLModel, table=True):
     is_deleted: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
+    state: dict = Field(sa_column=Column(JSON), default={})
 
     class Config:
         orm_mode = True

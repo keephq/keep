@@ -1,6 +1,8 @@
 import time
 from enum import Enum
 
+from keep.api.consts import ENRICH_WORKFLOW_STATE
+from keep.api.core.db import save_workflow_state
 from keep.conditions.condition_factory import ConditionFactory
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.action_error import ActionError
@@ -56,6 +58,14 @@ class Step:
                 did_action_run = self._run_foreach()
             else:
                 did_action_run = self._run_single()
+
+            if self.provider_parameters.get(ENRICH_WORKFLOW_STATE) is not None:
+                save_workflow_state(
+                    self.context_manager.tenant_id,
+                    self.context_manager.workflow_id,
+                    self.context_manager.workflow_state,
+                )
+
             return did_action_run
         except Exception as e:
             self.logger.error(
