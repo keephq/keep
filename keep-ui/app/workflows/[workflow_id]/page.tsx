@@ -21,18 +21,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Loading from "../../loading";
 import { useRouter } from "next/navigation";
-
-interface WorkflowExecution {
-  id: string;
-  workflow_id: string;
-  tenant_id: string;
-  started: string;
-  triggered_by: string;
-  status: string;
-  logs?: string | null;
-  error?: string | null;
-  execution_time?: number;
-}
+import { WorkflowExecution } from "../builder/types";
 
 export default function WorkflowDetailPage({
   params,
@@ -100,7 +89,9 @@ export default function WorkflowDetailPage({
             <TableBody>
               {workflowExecutions.map((execution) => (
                 <TableRow key={execution.id}>
-                  <TableCell>{new Date(execution.started + "Z").toLocaleString()}</TableCell>
+                  <TableCell>
+                    {new Date(execution.started + "Z").toLocaleString()}
+                  </TableCell>
                   <TableCell>{execution.id}</TableCell>
                   <TableCell>{execution.triggered_by}</TableCell>
                   <TableCell>{execution.status}</TableCell>

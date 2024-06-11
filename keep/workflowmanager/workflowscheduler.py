@@ -152,11 +152,11 @@ class WorkflowScheduler:
         result_queue = queue.Queue()
 
         def run_workflow_wrapper(
-            run_workflow, workflow, workflow_execution_id, some_flag, result_queue
+            run_workflow, workflow, workflow_execution_id, test_run, result_queue
         ):
             try:
                 errors, results = run_workflow(
-                    workflow, workflow_execution_id, some_flag
+                    workflow, workflow_execution_id, test_run
                 )
                 result_queue.put((errors, results))
             except Exception as e:

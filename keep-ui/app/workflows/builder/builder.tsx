@@ -37,6 +37,7 @@ import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
+import { WorkflowExecution } from "./types";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -76,11 +77,9 @@ function Builder({
     string | null
   >(null);
   const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
-  const [testRunModalOpen,setTestRunModalOpen] = useState(false);
-  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<{
-    id: string;
-    execution_id: string;
-  } | null>(null);
+  const [testRunModalOpen, setTestRunModalOpen] = useState(false);
+  const [runningWorkflowExecution, setRunningWorkflowExecution] =
+    useState<WorkflowExecution | null>(null);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
@@ -123,7 +122,7 @@ function Builder({
         if (response.ok) {
           response.json().then((data) => {
             setRunningWorkflowExecution({
-              ...data
+              ...data,
             });
           });
         } else {
@@ -292,8 +291,10 @@ function Builder({
         onRequestClose={closeWorkflowExecutionResultsModal}
         className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl z-[999] mt-20 border border-orange-600/50 rounded-md"
       >
-
-        <BuilderWorkflowTestRunModalContent closeModal={closeWorkflowExecutionResultsModal} workflowExecution={runningWorkflowExecution}/> 
+        <BuilderWorkflowTestRunModalContent
+          closeModal={closeWorkflowExecutionResultsModal}
+          workflowExecution={runningWorkflowExecution}
+        />
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>

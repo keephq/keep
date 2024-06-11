@@ -64,9 +64,7 @@ export default function PageClient({
       </div>
     );
 
-    const incrementState = (s:number) => s + 1;
-      
-
+  const incrementState = (s: number) => s + 1;
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full h-full">
@@ -84,7 +82,6 @@ export default function PageClient({
           </Title>
           <Subtitle>Workflow building kit</Subtitle>
         </div>
-
         <div className="flex gap-2">
           {workflow && (
             <>
@@ -134,15 +131,17 @@ export default function PageClient({
           >
             Deploy
           </Button>
-          {workflow && <Button
-            disabled={!generateEnabled}
-            color="orange"
-            size="md"
-            icon={BoltIcon}
-            onClick={() => setTriggerGenerate(incrementState)}
-          >
-            Generate
-          </Button>}
+          {workflow && (
+            <Button
+              disabled={!generateEnabled}
+              color="orange"
+              size="md"
+              icon={BoltIcon}
+              onClick={() => setTriggerGenerate(incrementState)}
+            >
+              Generate
+            </Button>
+          )}
         </div>
       </div>
       <BuilderCard

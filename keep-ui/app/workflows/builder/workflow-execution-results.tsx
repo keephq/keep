@@ -21,16 +21,12 @@ import {
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "../../../utils/fetcher";
-
-interface LogEntry {
-  timestamp: string;
-  message: string;
-  context: string;
-}
+import { WorkflowExecution } from "./types";
 
 interface WorkflowResultsProps {
   workflow_id: string;
-  workflow_execution_id: string;}
+  workflow_execution_id: string;
+}
 
 export default function WorkflowExecutionResults({
   workflow_id,
@@ -111,14 +107,14 @@ export function ExecutionResults({
   executionData,
   checks,
 }: {
-  executionData: any;
+  executionData: WorkflowExecution;
   checks?: number;
 }) {
   const status = executionData?.status;
-  const logs = (executionData?.logs as [LogEntry]) ?? [];
+  const logs = executionData?.logs ?? [];
   const results = executionData?.results ?? {};
   const error = executionData?.error;
-    
+
   return (
     <div>
       {Object.keys(results).length > 0 && (
