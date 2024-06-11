@@ -36,7 +36,8 @@ import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import WorkflowExecutionResults from "./workflow-execution-results";
+import { ExecutionResults } from "./workflow-execution-results";
+import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -290,17 +291,8 @@ function Builder({
         onRequestClose={closeWorkflowExecutionResultsModal}
         className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl z-[999] mt-20 border border-orange-600/50 rounded-md"
       >
-        {runningWorkflowExecution && (
-          <div className="max-w-1/2 z-50">
-            <button onClick={() => closeWorkflowExecutionResultsModal}>
-              Close
-            </button>
-            <WorkflowExecutionResults
-              workflow_execution_id={runningWorkflowExecution.execution_id}
-              workflow_id={runningWorkflowExecution.id}
-            />
-          </div>
-        )}
+
+        <BuilderWorkflowTestRunModalContent closeModal={closeWorkflowExecutionResultsModal} workflowExecution={runningWorkflowExecution}/> 
       </Modal>
       {modalIsOpen || !!runningWorkflowExecution ? null : (
         <>

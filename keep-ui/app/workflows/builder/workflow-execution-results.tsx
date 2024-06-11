@@ -30,8 +30,7 @@ interface LogEntry {
 
 interface WorkflowResultsProps {
   workflow_id: string;
-  workflow_execution_id: string;
-}
+  workflow_execution_id: string;}
 
 export default function WorkflowExecutionResults({
   workflow_id,
@@ -85,10 +84,6 @@ export default function WorkflowExecutionResults({
     console.error("Error fetching execution status", executionError);
   }
 
-  const executionStatus = executionData?.status;
-  const logs = (executionData?.logs as [LogEntry]) || [];
-  const results = executionData?.results || {};
-
   if (status === "loading" || !executionData) return <Loading />;
 
   if (executionError) {
@@ -103,6 +98,26 @@ export default function WorkflowExecutionResults({
       </Callout>
     );
   }
+
+  return (
+    <ExecutionResults
+      executionData={executionData}
+      checks={checks}
+    ></ExecutionResults>
+  );
+}
+
+export function ExecutionResults({
+  executionData,
+  checks,
+}: {
+  executionData: any;
+  checks?: number;
+}) {
+  const status = executionData?.status;
+  const logs = (executionData?.logs as [LogEntry]) ?? [];
+  const results = executionData?.results ?? {};
+  const error = executionData?.error;
 
   return (
     <div>
@@ -143,7 +158,7 @@ export default function WorkflowExecutionResults({
         </Card>
       )}
       <div className={Object.keys(results).length > 0 ? "mt-8" : ""}>
-        {executionStatus === "in_progress" ? (
+        {status === "in_progress" ? (
           <div>
             <div className="flex items-center justify-center">
               <p>
