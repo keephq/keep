@@ -124,11 +124,11 @@ export default function ProviderTile({ provider, onClick }: Props) {
           </Text>
         ) : null}
         {provider.linked ? (
-          <Text color={"green"} className="flex text-xs">
+          <Text color={"green"} className="flex text-xs md:top-3 md:left-2">
             Linked
           </Text>
         ) : null}
-        <div className="flex flex-col p-1">
+        <div className="flex flex-col">
           <div>
             <Title
               className={`${
