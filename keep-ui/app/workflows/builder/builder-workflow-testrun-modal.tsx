@@ -1,7 +1,7 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import ReactLoading from "react-loading";
-import WorkflowExecutionResults, { ExecutionResults } from "./workflow-execution-results";
+import { ExecutionResults } from "./workflow-execution-results";
 
 interface Props {
   closeModal: () => void;
@@ -12,14 +12,11 @@ export default function BuilderWorkflowTestRunModalContent({
   closeModal,
   workflowExecution,
 }: Props) {
-
-
   return (
     <>
       <div className="flex justify-between items-center">
         <div>
           <Title>Workflow Execution Results</Title>
-          {/* <Subtitle>Keep alert specification ready to use</Subtitle> */}
         </div>
         <div>
           <Button
@@ -35,10 +32,8 @@ export default function BuilderWorkflowTestRunModalContent({
       </div>
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 h-full`}>
         <div className="flex flex-col">
-          {!workflowExecution ? (
-            <>
-              <ExecutionResults executionData={workflowExecution} />
-            </>
+          {workflowExecution ? (
+            <ExecutionResults executionData={workflowExecution} />
           ) : (
             <div className="flex justify-center">
               <ReactLoading

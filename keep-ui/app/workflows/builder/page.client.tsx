@@ -64,6 +64,10 @@ export default function PageClient({
       </div>
     );
 
+    const incrementState = (s:number) => s + 1;
+      
+
+
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full h-full">
       <div className="flex justify-between">
@@ -80,89 +84,66 @@ export default function PageClient({
           </Title>
           <Subtitle>Workflow building kit</Subtitle>
         </div>
-        {workflow ? (
-          <div className="flex gap-4">
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              icon={PlayIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerRun(triggerSave + 1)}
-            >
-              Run
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              icon={ArrowUpOnSquareIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerSave(triggerSave + 1)}
-            >
-              Deploy
-            </Button>
-          </div>
-        ) : (
-          <div>
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              onClick={newAlert}
-              icon={PlusIcon}
-              variant="secondary"
-              disabled={!buttonsEnabled}
-            >
-              New
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              onClick={loadAlert}
-              variant="secondary"
-              icon={ArrowDownOnSquareIcon}
-              disabled={!buttonsEnabled}
-            >
-              Load
-            </Button>
-            <input
-              type="file"
-              id="alertFile"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              icon={PlayIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerRun(triggerSave + 1)}
-            >
-              Run
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              icon={ArrowUpOnSquareIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerSave(triggerSave + 1)}
-            >
-              Deploy
-            </Button>
-            <Button
-              disabled={!generateEnabled}
-              color="orange"
-              size="md"
-              icon={BoltIcon}
-              onClick={() => setTriggerGenerate(triggerGenerate + 1)}
-            >
-              Generate
-            </Button>
-          </div>
-        )}
+
+        <div className="flex gap-2">
+          {workflow && (
+            <>
+              <Button
+                color="orange"
+                size="md"
+                onClick={newAlert}
+                icon={PlusIcon}
+                variant="secondary"
+                disabled={!buttonsEnabled}
+              >
+                New
+              </Button>
+              <Button
+                color="orange"
+                size="md"
+                onClick={loadAlert}
+                variant="secondary"
+                icon={ArrowDownOnSquareIcon}
+                disabled={!buttonsEnabled}
+              >
+                Load
+              </Button>
+              <input
+                type="file"
+                id="alertFile"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </>
+          )}
+          <Button
+            color="orange"
+            size="md"
+            icon={PlayIcon}
+            disabled={!generateEnabled}
+            onClick={() => setTriggerRun(incrementState)}
+          >
+            Run
+          </Button>
+          <Button
+            color="orange"
+            size="md"
+            icon={ArrowUpOnSquareIcon}
+            disabled={!generateEnabled}
+            onClick={() => setTriggerSave(incrementState)}
+          >
+            Deploy
+          </Button>
+          {workflow && <Button
+            disabled={!generateEnabled}
+            color="orange"
+            size="md"
+            icon={BoltIcon}
+            onClick={() => setTriggerGenerate(incrementState)}
+          >
+            Generate
+          </Button>}
+        </div>
       </div>
       <BuilderCard
         accessToken={session?.accessToken!}

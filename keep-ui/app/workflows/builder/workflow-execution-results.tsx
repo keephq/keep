@@ -118,7 +118,7 @@ export function ExecutionResults({
   const logs = (executionData?.logs as [LogEntry]) ?? [];
   const results = executionData?.results ?? {};
   const error = executionData?.error;
-
+    
   return (
     <div>
       {Object.keys(results).length > 0 && (

@@ -36,7 +36,6 @@ import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { ExecutionResults } from "./workflow-execution-results";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 
 interface Props {
@@ -76,7 +75,8 @@ function Builder({
   const [globalValidationError, setGlobalValidationError] = useState<
     string | null
   >(null);
-  const [modalIsOpen, setIsOpen] = useState(false);
+  const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
+  const [testRunModalOpen,setTestRunModalOpen] = useState(false);
   const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<{
     id: string;
     execution_id: string;
@@ -107,7 +107,7 @@ function Builder({
       });
   };
 
-  const runWorkflow = () => {
+  const testRunWorkflow = () => {
     const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/test`;
     const method = "POST";
@@ -116,14 +116,14 @@ function Builder({
       Authorization: `Bearer ${accessToken}`,
     };
 
+    setTestRunModalOpen(true);
     const body = stringify(buildAlert(definition.value));
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
           response.json().then((data) => {
             setRunningWorkflowExecution({
-              id: data.workflow_id,
-              execution_id: data.workflow_execution_id,
+              ...data
             });
           });
         } else {
@@ -183,14 +183,14 @@ function Builder({
   useEffect(() => {
     if (triggerGenerate) {
       setCompiledAlert(buildAlert(definition.value));
-      if (!modalIsOpen) setIsOpen(true);
+      if (!generateModalIsOpen) setGenerateModalIsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerGenerate]);
 
   useEffect(() => {
     if (triggerRun) {
-      runWorkflow();
+      testRunWorkflow();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerRun]);
@@ -266,35 +266,36 @@ function Builder({
     isDraggable: IsStepDraggable,
   };
 
-  function closeModal() {
-    setIsOpen(false);
+  function closeGenerateModal() {
+    setGenerateModalIsOpen(false);
   }
 
   const closeWorkflowExecutionResultsModal = () => {
+    setTestRunModalOpen(false);
     setRunningWorkflowExecution(null);
   };
 
   return (
     <>
       <Modal
-        onRequestClose={closeModal}
-        isOpen={modalIsOpen}
+        onRequestClose={closeGenerateModal}
+        isOpen={generateModalIsOpen}
         className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
       >
         <BuilderModalContent
-          closeModal={closeModal}
+          closeModal={closeGenerateModal}
           compiledAlert={compiledAlert}
         />
       </Modal>
       <Modal
-        isOpen={!!runningWorkflowExecution}
+        isOpen={testRunModalOpen}
         onRequestClose={closeWorkflowExecutionResultsModal}
         className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl z-[999] mt-20 border border-orange-600/50 rounded-md"
       >
 
         <BuilderWorkflowTestRunModalContent closeModal={closeWorkflowExecutionResultsModal} workflowExecution={runningWorkflowExecution}/> 
       </Modal>
-      {modalIsOpen || !!runningWorkflowExecution ? null : (
+      {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {stepValidationError || globalValidationError ? (
             <Callout
