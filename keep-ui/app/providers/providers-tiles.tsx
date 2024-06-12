@@ -7,7 +7,6 @@ import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
-import { hideOrShowIntercom } from "@/components/ui/Intercom";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 const ProvidersTiles = ({
@@ -78,7 +77,6 @@ const ProvidersTiles = ({
     // on linked providers, don't open the modal
     if (provider.linked) return;
 
-    hideOrShowIntercom(true);
     setSelectedProvider(provider);
     if (installedProvidersMode) {
       setFormValues({
@@ -91,7 +89,6 @@ const ProvidersTiles = ({
 
   const handleCloseModal = () => {
     setOpenPanel(false);
-    hideOrShowIntercom(false);
     setSelectedProvider(null);
     setFormValues({});
     setFormErrors({});
