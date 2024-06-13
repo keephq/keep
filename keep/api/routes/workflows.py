@@ -41,6 +41,7 @@ from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
+import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -450,7 +451,8 @@ def get_workflow_execution_status(
             status_code=404,
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
-
+    
+    workflow_execution.results = json.loads(workflow_execution.results)
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,

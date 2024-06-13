@@ -13,14 +13,13 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
-
 @pydantic.dataclasses.dataclass
 class MongodbProviderAuthConfig:
     host: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Mongo host_uri",
-            "hint": "any valid mongo host_uri like host:port, user:paassword@host:port?authSource",
+            "hint": "any valid mongo host_uri like host:port, user:passsword@host:port?authSource",
         }
     )
     username: str = dataclasses.field(
@@ -145,6 +144,8 @@ class MongodbProvider(BaseProvider):
             list | tuple: list of results or single result if single_row is True
         """
         client = self.__generate_client()
+        if self.authentication_config.database is None:
+            raise Exception("Trying to query a database, but none was given in the provider, please update the provider to contain database name")
         database = client[self.authentication_config.database]
         results = list(database.cursor_command(query))
 

@@ -1146,7 +1146,7 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
-
+        workflow_results = json.dumps(workflow_results, default=str)
         workflow_execution.results = workflow_results
         session.commit()
 
