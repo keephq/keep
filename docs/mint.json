@@ -105,6 +105,7 @@
             "providers/documentation/mailchimp-provider",
             "providers/documentation/mock-provider",
             "providers/documentation/mysql-provider",
+            "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
             "providers/documentation/openshift-provider",
