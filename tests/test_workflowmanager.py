@@ -1,11 +1,14 @@
 import pytest
 from unittest.mock import Mock, patch
 from fastapi import HTTPException
+import threading
+import queue
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowstore import WorkflowStore
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 from keep.parser.parser import Parser
 from pathlib import Path
 
@@ -68,16 +71,13 @@ def test_get_workflow_results():
     mock_step2.name = "step2"
     mock_step2.provider.results = {"result": "value4"}
 
-    # Create a mock Workflow object with actions and steps
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.workflow_actions = [mock_action1, mock_action2]
     mock_workflow.workflow_steps = [mock_step1, mock_step2]
 
     workflow_manager = WorkflowManager()
-    # Call the method under test
     result = workflow_manager._get_workflow_results(mock_workflow)
 
-    # Define the expected result
     expected_result = {
         "action1": {"result": "value1"},
         "action2": {"result": "value2"},
@@ -85,5 +85,93 @@ def test_get_workflow_results():
         "step2": {"result": "value4"},
     }
 
-    # Assert that the result is as expected
     assert result == expected_result
+
+
+def test_handle_workflow_test():
+    mock_workflow = Mock(spec=Workflow)
+    mock_workflow.workflow_id = "workflow1"
+
+    mock_workflow_manager = Mock()
+    mock_workflow_manager._run_workflow.return_value = (
+        [],
+        {"result": "value1"},
+    )
+
+    mock_logger = Mock()
+
+    workflow_scheduler = WorkflowScheduler(workflow_manager=mock_workflow_manager)
+    workflow_scheduler.logger = mock_logger
+    workflow_scheduler.workflow_manager = mock_workflow_manager
+
+    workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
+
+    tenant_id = "test_tenant"
+    triggered_by_user = "test_user"
+
+    with patch.object(threading, "Thread", wraps=threading.Thread) as mock_thread:
+        with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
+            result = workflow_scheduler.handle_workflow_test(
+                workflow=mock_workflow,
+                tenant_id=tenant_id,
+                triggered_by_user=triggered_by_user,
+            )
+
+            mock_workflow_manager._run_workflow.assert_called_once_with(
+                mock_workflow, 123, True
+            )
+
+            assert mock_thread.call_count == 1
+            assert mock_queue.call_count == 1
+
+            expected_result = {
+                "workflow_execution_id": 123,
+                "status": "success",
+                "error": None,
+                "results": {"result": "value1"},
+            }
+            assert result == expected_result
+            assert mock_logger.info.call_count == 2
+
+
+def test_handle_workflow_test_with_error():
+    mock_workflow = Mock(spec=Workflow)
+    mock_workflow.workflow_id = "workflow1"
+
+    mock_workflow_manager = Mock()
+    mock_workflow_manager._run_workflow.return_value = (["Error occurred"], None)
+
+    mock_logger = Mock()
+
+    workflow_scheduler = WorkflowScheduler(workflow_manager=mock_workflow_manager)
+    workflow_scheduler.logger = mock_logger
+    workflow_scheduler.workflow_manager = mock_workflow_manager
+
+    workflow_scheduler._get_unique_execution_number = Mock(return_value=123)
+
+    tenant_id = "test_tenant"
+    triggered_by_user = "test_user"
+
+    with patch.object(threading, "Thread", wraps=threading.Thread) as mock_thread:
+        with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
+            result = workflow_scheduler.handle_workflow_test(
+                workflow=mock_workflow,
+                tenant_id=tenant_id,
+                triggered_by_user=triggered_by_user,
+            )
+
+            mock_workflow_manager._run_workflow.assert_called_once_with(
+                mock_workflow, 123, True
+            )
+
+            assert mock_thread.call_count == 1
+            assert mock_queue.call_count == 1
+
+            expected_result = {
+                "workflow_execution_id": 123,
+                "status": "error",
+                "error": "Error occurred",
+                "results": None,
+            }
+            assert result == expected_result
+            assert mock_logger.info.call_count == 2
