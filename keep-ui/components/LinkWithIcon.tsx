@@ -50,7 +50,6 @@ export const LinkWithIcon = ({
       <div className="flex items-center">
         {count !== undefined && count !== null && (
           <Badge
-            className="z-10"
             size="xs"
             color="orange"
           >
