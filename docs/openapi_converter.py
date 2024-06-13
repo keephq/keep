@@ -48,7 +48,6 @@ def convert_3_dot_1_to_3_dot_0(json: dict[str, Json]):
     inner(json)
     return json
 
-
 if __name__ == "__main__":
 
     parser = ArgumentParser(
