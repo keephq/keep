@@ -307,6 +307,8 @@ class WorkflowManager:
         Returns:
             dict: The results of the workflow.
         """
+        print("workflowssssss", workflow.workflow_actions)
+        print(workflow.workflow_steps)
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions
         }
