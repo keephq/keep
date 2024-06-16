@@ -191,3 +191,6 @@ storage
 
 # otel files
 tempo-data/
+
+# docs
+docs/node_modules/
