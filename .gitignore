@@ -191,3 +191,5 @@ storage
 
 # otel files
 tempo-data/
+
+scripts/automatic_extraction_rules.py

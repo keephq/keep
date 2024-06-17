@@ -30,6 +30,7 @@
     setNoteModalAlert: (alert: AlertDto | null) => void;
     setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
     setDismissModalAlert: (alert: AlertDto[] | null) => void;
+    setChangeStatusAlert: (alert: AlertDto | null) => void;
   }
 
   export default function AlertTableTabPanel({
@@ -40,6 +41,7 @@
     setNoteModalAlert,
     setRunWorkflowModalAlert,
     setDismissModalAlert,
+    setChangeStatusAlert,
   }: Props) {
     const sortedPresetAlerts = alerts
       .filter((alert) => getPresetAlerts(alert, preset.name))
@@ -74,6 +76,7 @@
       setNoteModalAlert: setNoteModalAlert,
       setRunWorkflowModalAlert: setRunWorkflowModalAlert,
       setDismissModalAlert: setDismissModalAlert,
+      setChangeStatusAlert: setChangeStatusAlert,
       presetName: preset.name,
       presetNoisy: preset.is_noisy,
     });
