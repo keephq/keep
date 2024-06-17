@@ -24,6 +24,10 @@ def main():
                             replace('.mdx', '')
                         provider_name = match.group(1).replace('Provider', '').strip()
 
+                        # Due to https://github.com/keephq/keep/pull/1239#discussion_r1643196800
+                        if "Slack" in provider_name:
+                            provider_name = "Slack"
+
                         if provider_name not in ["Mock"]:
                             files_to_docs_urls[provider_name] = url
                         break
