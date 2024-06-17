@@ -15,10 +15,19 @@ export const severityMapping: { [id: number]: string } = {
   5: Severity.Critical,
 };
 
+export enum Status {
+  Firing = "firing",
+  Resolved = "resolved",
+  Acknowledged = "acknowledged",
+  Suppressed = "suppressed",
+  Pending = "pending",
+}
+
+
 export interface AlertDto {
   id: string;
   name: string;
-  status: string;
+  status: Status;
   lastReceived: Date;
   environment: string;
   isDuplicate?: boolean;
