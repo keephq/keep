@@ -145,7 +145,7 @@ class MongodbProvider(BaseProvider):
         """
         client = self.__generate_client()
         if self.authentication_config.database is None:
-            raise Exception("Trying to query a database, but none was given in the provider, please update the provider to contain database name")
+            raise Exception("Trying to query a database, but none was given in the provider, please update the provider to include a database name")
         database = client[self.authentication_config.database]
         results = list(database.cursor_command(query))
 
