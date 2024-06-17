@@ -192,5 +192,9 @@ storage
 # otel files
 tempo-data/
 
+<<<<<<< Matvey-Kuk/competition
 # docs
 docs/node_modules/
+=======
+scripts/automatic_extraction_rules.py
+>>>>>>> main
