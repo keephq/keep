@@ -69,3 +69,10 @@ You can check that the Grafana Provider works by testing Keep's contact point (w
   <img height="10" src="/images/grafana_sa_5.png" />
 </Frame>
 5. Go to Keep - you should see an alert from Grafana!
+
+## Webhook Integration Modifications
+
+The webhook integration adds Keep as a contact point in the Grafana instance. This integration can be located under the "Contact Points" section.
+Keep also gains access to the following scopes:
+- `alert.provisioning:read`
+- `alert.provisioning:write`

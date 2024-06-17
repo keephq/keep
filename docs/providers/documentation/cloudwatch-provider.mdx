@@ -102,6 +102,12 @@ Connecting CloudWatch to Keep requires:
 - Verify that the SNS topics are correctly configured to send notifications to Keep.
 - Check the CloudWatch alarms to ensure they are active and correctly configured to trigger under the desired conditions.
 
+## Webhook Integration Modifications
+
+The webhook integration for CloudWatch adds Keep as a subscriber to the SNS topics associated with CloudWatch alarms. This integration allows Keep to receive notifications for all alarms triggered within the AWS environment.
+The integration automatically gains access to the following scopes within CloudWatch:
+- `cloudwatch:DescribeAlarms`
+
 ## Useful Links
 
 - [AWS CloudWatch Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/WhatIsCloudWatch.html)
