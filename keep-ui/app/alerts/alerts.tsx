@@ -13,6 +13,7 @@ import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
+import AlertChangeStatusModal from "./alert-change-status-modal";
 
 const defaultPresets: Preset[] = [
   {
@@ -71,6 +72,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [dismissModalAlert, setDismissModalAlert] = useState<
     AlertDto[] | null
   >();
+  const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
@@ -117,6 +119,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
       />
 
       {selectedPreset && (
@@ -139,6 +142,10 @@ export default function Alerts({ presetName }: AlertsProps) {
       <AlertDismissModal
         alert={dismissModalAlert}
         handleClose={() => setDismissModalAlert(null)}
+      />
+      <AlertChangeStatusModal
+        alert={changeStatusAlert}
+        handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal
         alert={viewAlertModal}
