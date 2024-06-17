@@ -140,7 +140,7 @@ elif db_connection_string:
         engine = create_engine(db_connection_string)
 else:
     engine = create_engine(
-        "sqlite:///./keep.db", connect_args={"check_same_thread": False}
+        "sqlite:///./keep.db", connect_args={"check_same_thread": False},  json_serializer=dumps
     )
 
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
@@ -1146,7 +1146,6 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
-        workflow_results = json.dumps(workflow_results, default=str)
         workflow_execution.results = workflow_results
         session.commit()
 

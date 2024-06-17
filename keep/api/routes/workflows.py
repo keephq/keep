@@ -452,7 +452,6 @@ def get_workflow_execution_status(
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
     
-    workflow_execution.results = json.loads(workflow_execution.results)
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,
