@@ -2,6 +2,7 @@ import { Menu, Portal, Transition } from "@headlessui/react";
 import { Fragment, useState } from "react";
 import { Icon } from "@tremor/react";
 import {
+  ChevronDoubleRightIcon,
   ArchiveBoxIcon,
   EllipsisHorizontalIcon,
   PlusIcon,
@@ -27,6 +28,7 @@ interface Props {
   setIsMenuOpen: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
 }
 
@@ -36,6 +38,7 @@ export default function AlertMenu({
   setIsMenuOpen,
   setRunWorkflowModalAlert,
   setDismissModalAlert,
+  setChangeStatusAlert,  // Added prop
   presetName,
 }: Props) {
   const router = useRouter();
@@ -87,7 +90,7 @@ export default function AlertMenu({
   const callAssignEndpoint = async (unassign: boolean = false) => {
     if (
       confirm(
-        "After assiging this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
+        "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
       )
     ) {
       const res = await fetch(
@@ -334,6 +337,26 @@ export default function AlertMenu({
                           aria-hidden="true"
                         />
                         {alert.dismissed ? "Restore" : "Dismiss"}
+                      </button>
+                    )}
+                  </Menu.Item>
+                  {/* Change Status */}
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => {
+                          setChangeStatusAlert?.(alert);
+                          handleCloseMenu();
+                        }}
+                        className={`${
+                          active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      >
+                        <ChevronDoubleRightIcon
+                          className="mr-2 h-4 w-4"
+                          aria-hidden="true"
+                        />
+                        Change Status
                       </button>
                     )}
                   </Menu.Item>
