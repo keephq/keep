@@ -71,7 +71,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               icon={AiOutlineSwap}
               count={mainPreset?.alerts_count}
             >
-              Feed
+              <Subtitle>Feed</Subtitle>
             </LinkWithIcon>
           </li>
           {session && <CustomPresetAlertLinks session={session} />}
@@ -81,7 +81,10 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               icon={AiOutlineGroup}
               count={groupsPreset?.alerts_count}
             >
+              <Subtitle>
               Correlation
+              </Subtitle>
+
             </LinkWithIcon>
           </li>
           <li>
@@ -90,7 +93,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               icon={SilencedDoorbellNotification}
               count={dismissedPreset?.alerts_count}
             >
-              Dismissed
+              <Subtitle>Dismissed</Subtitle>
             </LinkWithIcon>
           </li>
         </Disclosure.Panel>

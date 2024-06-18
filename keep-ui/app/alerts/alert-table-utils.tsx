@@ -109,6 +109,7 @@ interface GenerateAlertTableColsArg {
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
 }
@@ -122,6 +123,7 @@ export const useAlertTableCols = (
     setTicketModalAlert,
     setRunWorkflowModalAlert,
     setDismissModalAlert,
+    setChangeStatusAlert,
     presetName,
     presetNoisy = false,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
@@ -330,6 +332,7 @@ export const useAlertTableCols = (
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                 setDismissModalAlert={setDismissModalAlert}
+                setChangeStatusAlert={setChangeStatusAlert}
               />
             ),
           }),
