@@ -98,9 +98,11 @@ class LinearbProvider(BaseProvider):
                 if result.ok:
                     self.logger.info("Deleted incident successfully")
                 else:
-                    self.logger.warning(
-                        "Failed to delete incident", extra={**result.json()}
-                    )
+                    r = result.json()
+                    # don't override message
+                    if "message" in r:
+                        r["message_from_linearb"] = r.pop("message")
+                    self.logger.warning("Failed to delete incident", extra={**r})
                     raise Exception(f"Failed to notify linearB {result.text}")
                 return result.text
 
@@ -228,9 +230,13 @@ class LinearbProvider(BaseProvider):
                     "Notified LinearB successfully", extra={"payload": payload}
                 )
             else:
+                # don't override message
+                r = result.json()
+                if "message" in r:
+                    r["message_from_linearb"] = r.pop("message")
                 self.logger.warning(
                     "Failed to notify linearB",
-                    extra={**result.json(), "payload": payload},
+                    extra={**r, "payload": payload},
                 )
                 raise Exception(f"Failed to notify linearB {result.text}")
 
