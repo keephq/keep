@@ -247,14 +247,14 @@ async def run_workflow_from_definition(
         workflow = workflowstore.get_workflow_from_dict(
             tenant_id=tenant_id, workflow=workflow
         )
-    except Exception:
+    except Exception as e:
         logger.exception(
             "Failed to parse workflow",
             extra={"tenant_id": tenant_id, "workflow": workflow},
         )
         raise HTTPException(
             status_code=400,
-            detail="Failed to upload workflow. Please contact us via Slack for help.",
+            detail=f"Failed to parse test workflow: {e}",
         )
 
     try:

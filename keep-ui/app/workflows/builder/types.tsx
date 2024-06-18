@@ -19,3 +19,7 @@ export interface WorkflowExecution {
   error?: string | null;
   execution_time?: number;
 }
+
+export interface WorkflowExecutionFailure {
+  error: string;
+}

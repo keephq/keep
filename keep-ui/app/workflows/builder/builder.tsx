@@ -37,7 +37,7 @@ import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
-import { WorkflowExecution } from "./types";
+import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -78,8 +78,9 @@ function Builder({
   >(null);
   const [generateModalIsOpen, setGenerateModalIsOpen] = useState(false);
   const [testRunModalOpen, setTestRunModalOpen] = useState(false);
-  const [runningWorkflowExecution, setRunningWorkflowExecution] =
-    useState<WorkflowExecution | null>(null);
+  const [runningWorkflowExecution, setRunningWorkflowExecution] = useState<
+    WorkflowExecution | WorkflowExecutionFailure | null
+  >(null);
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
@@ -126,11 +127,16 @@ function Builder({
             });
           });
         } else {
-          throw new Error(response.statusText);
+          response.json().then((data) => {
+            setRunningWorkflowExecution({
+              error: data?.detail ?? "Unknown error",
+            });
+          });
         }
       })
       .catch((error) => {
         alert(`Error: ${error}`);
+        setTestRunModalOpen(false);
       });
   };
 
@@ -289,7 +295,7 @@ function Builder({
       <Modal
         isOpen={testRunModalOpen}
         onRequestClose={closeWorkflowExecutionResultsModal}
-        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl z-[999] mt-20 border border-orange-600/50 rounded-md"
+        className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
       >
         <BuilderWorkflowTestRunModalContent
           closeModal={closeWorkflowExecutionResultsModal}

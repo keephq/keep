@@ -2,11 +2,11 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import ReactLoading from "react-loading";
 import { ExecutionResults } from "./workflow-execution-results";
-import { WorkflowExecution } from "./types";
+import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 
 interface Props {
   closeModal: () => void;
-  workflowExecution: WorkflowExecution | null;
+  workflowExecution: WorkflowExecution | WorkflowExecutionFailure | null;
 }
 
 export default function BuilderWorkflowTestRunModalContent({
