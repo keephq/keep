@@ -1,6 +1,6 @@
 import React from "react";
 import Select, { components } from "react-select";
-import { Button, TextInput } from "@tremor/react";
+import { Button, TextInput, Text } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "./../providers/providers";
@@ -225,23 +225,27 @@ const AlertAssignTicketModal = ({
             </div>
             <div className="mt-6 flex gap-2">
               <Button color="orange" type="submit">
-                Assign Ticket
+                <Text>
+                  Assign Ticket
+                </Text>
               </Button>
               <Button
                 onClick={handleClose}
                 variant="secondary"
                 className="border border-orange-500 text-orange-500"
               >
-                Cancel
+                <Text>
+                  Cancel
+                </Text>
               </Button>
             </div>
           </form>
         ) : (
           <div className="text-center mt-4">
-            <p className="text-gray-700 text-sm">
+            <Text className="text-gray-700 text-sm">
               Please connect at least one ticketing provider to use this
               feature.
-            </p>
+            </Text>
             <Button
               onClick={() =>
                 window.open("/providers?labels=ticketing", "_blank")
@@ -249,10 +253,11 @@ const AlertAssignTicketModal = ({
               color="orange"
               className="mt-4 mr-4"
             >
-              Connect Ticketing Provider
+              <Text>Connect Ticketing Provider</Text>
             </Button>
             <Button
               onClick={handleClose}
+              color="orange"
               variant="secondary"
               className="mt-4 border border-orange-500 text-orange-500"
             >

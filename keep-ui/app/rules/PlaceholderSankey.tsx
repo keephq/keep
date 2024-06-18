@@ -1,4 +1,4 @@
-export const PlaceholderSankey = (props) => (
+export const PlaceholderSankey = (props: any) => (
   <svg
     width="962"
     height="419"
