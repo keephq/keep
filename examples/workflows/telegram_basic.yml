@@ -1,0 +1,13 @@
+workflow:
+  id: telegram-example
+  description: telegram-example
+  triggers:
+    - type: manual
+  actions:
+    - name: telegram
+      provider:
+        type: telegram
+        config: "{{ providers.telegram }}"
+        with:
+          message: "test"
+          chat_id:  " {{ os.environ['TELEGRAM_CHAT_ID'] }}"

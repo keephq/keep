@@ -57,7 +57,7 @@
     "binary-extensions": "^2.2.0",
     "bplist-parser": "^0.2.0",
     "brace-expansion": "^1.1.11",
-    "braces": "^3.0.2",
+    "braces": "^3.0.3",
     "browserslist": "^4.21.5",
     "bundle-name": "^3.0.0",
     "busboy": "^1.6.0",

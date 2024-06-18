@@ -99,6 +99,23 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 load_dotenv(find_dotenv())
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
+max_overflow = config("DATABASE_MAX_OVERFLOW", default=10, cast=int)
+
+
+def dumps(_json) -> str:
+    """
+    Overcome the issue of serializing datetime objects to JSON with the default json.dumps.
+       Usually seen with PostgreSQL JSONB fields.
+    https://stackoverflow.com/questions/36438052/using-a-custom-json-encoder-for-sqlalchemys-postgresql-jsonb-implementation
+
+    Args:
+        _json (object): The json object to serialize.
+
+    Returns:
+        str: The serialized JSON object.
+    """
+    return json.dumps(_json, default=str)
+
 
 if RUNNING_IN_CLOUD_RUN:
     engine = create_engine(
@@ -113,7 +130,12 @@ elif db_connection_string == "impersonate":
 elif db_connection_string:
     try:
         logger.info(f"Creating a connection pool with size {pool_size}")
-        engine = create_engine(db_connection_string, pool_size=pool_size)
+        engine = create_engine(
+            db_connection_string,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            json_serializer=dumps,
+        )
     # SQLite does not support pool_size
     except TypeError:
         engine = create_engine(db_connection_string)
