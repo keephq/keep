@@ -108,7 +108,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
       </Link>
       <div className="flex items-center justify-end flex-1">
         <Badge
-          className="right-0 z-10"
+          className="right-0"
           size="xs"
           color="orange"
         >
