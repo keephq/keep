@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   superset:
     image: apache/superset:latest
@@ -11,9 +10,6 @@ services:
       - "8088:8088"
     volumes:
       - ./superset_config.py:/app/pythonpath/superset_config.py
-      - ./dashboards:/app/pythonpath/dashboards
-    depends_on:
-      - mysql
     command:
       - /bin/sh
       - -c
@@ -21,22 +17,4 @@ services:
         superset db upgrade && \
         superset fab create-admin --username admin --firstname Admin --lastname User --email admin@superset.com --password admin && \
         superset init && \
-        superset load_examples && \
-        python /app/pythonpath/load_dashboards.py && \
         superset run -p 8088 --with-threads --reload --debugger
-
-  mysql:
-    image: mysql:8
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: superset_db
-      MYSQL_USER: superset_user
-      MYSQL_PASSWORD: superset_password
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-
-volumes:
-  mysql_data:
