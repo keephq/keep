@@ -87,7 +87,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
           })}
           title={preset.name}
         >
-          {preset.name}
+          {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)}
         </Subtitle>
       </LinkWithIcon>
     </li>
