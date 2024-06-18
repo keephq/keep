@@ -83,13 +83,14 @@ export default function PageClient({
           <Subtitle>Workflow building kit</Subtitle>
         </div>
         <div className="flex gap-2">
-          {workflow && (
+          {!workflow && (
             <>
               <Button
                 color="orange"
                 size="md"
                 onClick={newAlert}
                 icon={PlusIcon}
+                className="min-w-28"
                 variant="secondary"
                 disabled={!buttonsEnabled}
               >
@@ -99,6 +100,7 @@ export default function PageClient({
                 color="orange"
                 size="md"
                 onClick={loadAlert}
+                className="min-w-28"
                 variant="secondary"
                 icon={ArrowDownOnSquareIcon}
                 disabled={!buttonsEnabled}
@@ -116,6 +118,7 @@ export default function PageClient({
           <Button
             color="orange"
             size="md"
+            className="min-w-28"
             icon={PlayIcon}
             disabled={!generateEnabled}
             onClick={() => setTriggerRun(incrementState)}
@@ -125,17 +128,19 @@ export default function PageClient({
           <Button
             color="orange"
             size="md"
+            className="min-w-28"
             icon={ArrowUpOnSquareIcon}
             disabled={!generateEnabled}
             onClick={() => setTriggerSave(incrementState)}
           >
             Deploy
           </Button>
-          {workflow && (
+          {!workflow && (
             <Button
               disabled={!generateEnabled}
               color="orange"
               size="md"
+              className="min-w-28"
               icon={BoltIcon}
               onClick={() => setTriggerGenerate(incrementState)}
             >
