@@ -81,6 +81,7 @@ export default function AlertChangeStatusModal({ alert, handleClose }: Props) {
       return;
     }
 
+
     try {
       const response = await fetch(`${getApiURL()}/alerts/enrich`, {
         method: "POST",
