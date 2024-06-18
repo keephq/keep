@@ -218,7 +218,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               variant="secondary"
               size="xs"
               color={provider.installed ? "orange" : "green"}
-              className="hidden group-hover:block"
+              className="hidden group-hover:block pd-2"
             >
               {provider.installed ? "Modify" : "Connect"}
             </Button>
