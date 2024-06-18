@@ -53,6 +53,15 @@ Certain scopes may be required to perform specific actions or queries via the Pa
 
 The provider uses either the events API or the incidents API to create an alert or an incident. The choice of API to use is determined by the presence of either a routing_key or an api_key.
 
+An expired trial while using the free version of PagerDuty may result in the "pagerduty scopes are invalid" error at Keep.
+
+## Webhook Integration Modifications
+
+The webhook integration adds Keep as a destination within the "Integrations" API within Pagerduty.
+This grants Keep access to the following scopes within Pagerduty:
+- `webhook_subscriptions_read`
+- `webhook_subscriptions_write`
+
 ## Useful Links
 
 - Pagerduty Events API documentation: https://v2.developer.pagerduty.com/docs/send-an-event-events-api-v2

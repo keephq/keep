@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { NextAuthProvider } from "./auth-provider";
 import ErrorBoundary from "./error-boundary";
-import { Intercom } from "@/components/ui/Intercom";
 import { Mulish } from "next/font/google";
 
 import "./globals.css";
@@ -37,14 +36,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         </NextAuthProvider>
 
         {/** footer */}
-        {process.env.GIT_COMMIT_HASH ? (
+        {process.env.GIT_COMMIT_HASH && (
           <div className="fixed right-2.5 bottom-2.5 text-gray-500 text-sm">
             Build: {process.env.GIT_COMMIT_HASH}
             <br />
             Version: {process.env.KEEP_VERSION}
           </div>
-        ) : (
-          <Intercom />
         )}
       </body>
     </html>

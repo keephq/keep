@@ -5,6 +5,9 @@ import datetime
 import json
 import logging
 import os
+import hmac
+import hashlib
+import base64
 
 import dateutil.parser
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -800,6 +803,26 @@ async def receive_generic_event(
     )
 
     return event
+
+# https://learn.netdata.cloud/docs/alerts-&-notifications/notifications/centralized-cloud-notifications/webhook#challenge-secret
+@router.get(
+    "/event/netdata", description="Helper function to complete Netdata webhook challenge"
+)
+async def webhook_challenge():
+    token = Request.query_params.get("token").encode("ascii")
+    KEY = "keep-netdata-webhook-integration"
+
+    # creates HMAC SHA-256 hash from incomming token and your consumer secret
+    sha256_hash_digest = hmac.new(KEY.encode(),
+                                  msg=token,
+                                  digestmod=hashlib.sha256).digest()
+
+    # construct response data with base64 encoded hash
+    response = {
+      'response_token': 'sha256=' + base64.b64encode(sha256_hash_digest).decode('ascii')
+    }
+
+    return json.dumps(response)
 
 
 @router.post(
