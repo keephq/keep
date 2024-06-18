@@ -160,12 +160,10 @@ req.end();
       <Title>Webhook Settings</Title>
       <Subtitle>View your tenant webhook settings</Subtitle>
       <Card className="mt-2.5">
-        <div className="flex  flex-col divide-x gap-y-2">
-          <div className="flex-1 pr-1 flex flex-row gap-y-2 justify-between">
-            <div className="flex flex-col">
-              <Title>URL: {data.webhookApi}</Title>
-              <Subtitle>API Key: {data.apiKey}</Subtitle>
-            </div>
+        <div className="flex divide-x">
+          <div className="flex-1 pr-2 flex flex-col gap-y-2">
+            <Title>URL: {data.webhookApi}</Title>
+            <Subtitle>API Key: {data.apiKey}</Subtitle>
             <div>
               <Button icon={PlayIcon} color="orange" onClick={tryNow}>
                 Click to create an example Alert
