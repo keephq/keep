@@ -1763,7 +1763,7 @@ def create_actions(actions: List[Action]):
         session.commit()
 
 
-def delete_action(tenant_id: str, action_id: str) -> Union[Action, None]:
+def delete_action(tenant_id: str, action_id: str) -> bool:
     with Session(engine) as session:
         found_action = session.exec(
             select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
@@ -1771,8 +1771,8 @@ def delete_action(tenant_id: str, action_id: str) -> Union[Action, None]:
         if found_action:
             session.delete(found_action)
             session.commit()
-            return found_action
-        return None
+            return bool(found_action)
+        return False
 
 
 def update_action(tenant_id: str, action_id: str, update_payload: Action) -> Union[Action, None]:

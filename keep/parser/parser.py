@@ -9,7 +9,7 @@ from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
-from keep.actions.actions_factory import ActionsFactory
+from keep.actions.actions_factory import ActionsCRUD
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
@@ -411,7 +411,7 @@ class Parser:
         if not tenant_id: 
             return
         # Load actions from db
-        actions = ActionsFactory.get_all_actions(tenant_id)
+        actions = ActionsCRUD.get_all_actions(tenant_id)
         for action in actions:
             self.logger.debug("Loading action", extra={"action_id": action.use})
             try:

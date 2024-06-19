@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFi
 from fastapi.responses import JSONResponse
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.actions.actions_factory import ActionsFactory
-from keep.actions.actions_exception import ActionsFactoryException
+from keep.actions.actions_factory import ActionsCRUD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -19,14 +18,12 @@ def get_actions(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting installed actions", extra={tenant_id: tenant_id})
 
-    actions = ActionsFactory.get_all_actions(tenant_id)
+    actions = ActionsCRUD.get_all_actions(tenant_id)
     try:
         return actions
-    except Exception as e:
-        logger.exception("Failed to get actions", extra={
-            "error": str(e)
-        })
-        return []
+    except Exception:
+        logger.exception("Failed to get actions")
+        raise HTTPException(status_code=400, detail="Unknown exception when getting actions")
 
 
 async def _get_action_info(request: Request, file: UploadFile) -> dict:
@@ -54,16 +51,8 @@ async def create_actions(
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
     actions_dict = await _get_action_info(request, file)
-    try:
-        ActionsFactory.add_actions(tenant_id, installed_by, actions_dict.get("actions", []))
-        return {"message": "success"}
-    except ActionsFactoryException as e:
-        return JSONResponse(status_code=e.status_code, content=e.message)
-    except Exception as e:
-        return JSONResponse(
-            status_code=400,
-            content={"message": "Failed to create action", "error": str(e)},
-        )
+    ActionsCRUD.add_actions(tenant_id, installed_by, actions_dict.get("actions", []))
+    return {"message": "success"}
 
 
 # DELETE an action
@@ -75,15 +64,7 @@ def delete_action(
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
-    try:
-        return ActionsFactory.remove_action(tenant_id, action_id)
-    except ActionsFactoryException as e:
-        return JSONResponse(status_code=e.status_code, content=e.message)
-    except Exception as e:
-        return JSONResponse(
-            status_code=400,
-            content={"message": "Failed to delete the action", "error": str(e)},
-        )
+    return ActionsCRUD.remove_action(tenant_id, action_id)
 
 
 # UPDATE an action
@@ -97,18 +78,10 @@ async def put_action(
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
-    try:
-        action_dict: dict = await _get_action_info(request, file)
-        updated_action = ActionsFactory.update_action(
-            tenant_id, action_id, action_dict
-        )
-        if updated_action:
-            return updated_action
-        return JSONResponse(status_code=204, content={"message": "No content"})
-    except ActionsFactoryException as e:
-        return JSONResponse(status_code=e.status_code, content=e.message)
-    except Exception as e:
-        return JSONResponse(
-            status_code=400,
-            content={"message": "Failed to update the action", "error": str(e)},
-        )
+    action_dict: dict = await _get_action_info(request, file)
+    updated_action = ActionsCRUD.update_action(
+        tenant_id, action_id, action_dict
+    )
+    if updated_action:
+        return updated_action
+    return JSONResponse(status_code=204, content={"message": "No content"})
