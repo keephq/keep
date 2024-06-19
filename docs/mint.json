@@ -263,6 +263,12 @@
           ]
         },
         {
+          "group": "Whoami",
+          "pages": [
+            "api-ref/whoami/get-tenant-id"
+          ]
+        },
+        {
           "group": "Mapping",
           "pages": [
             "api-ref/mapping/create-mapping",
