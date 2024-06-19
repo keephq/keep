@@ -4,11 +4,21 @@ import { AlertDto } from "app/alerts/models";
 
 type AlertsFoundBadgeProps = {
   alertsFound: AlertDto[];
+  isLoading: boolean;
 };
 
-export const AlertsFoundBadge = ({ alertsFound }: AlertsFoundBadgeProps) => {
+export const AlertsFoundBadge = ({
+  alertsFound,
+  isLoading,
+}: AlertsFoundBadgeProps) => {
   if (alertsFound.length === 0) {
-    return null;
+    return (
+      <Badge className="mt-3 w-full" color="gray">
+        {isLoading
+          ? "Getting your alerts..."
+          : "No alerts were found with this condition. Please try something else."}
+      </Badge>
+    );
   }
 
   const images = alertsFound.reduce<string[]>(

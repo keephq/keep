@@ -14,11 +14,12 @@ export const useSearchAlerts = (
   const { data: session } = useSession();
 
   const [debouncedArgs] = useDebouncedValue(args, 2000);
+  const doesTimeframExceed14Days = Math.floor(args.timeframe / 86400) > 13;
   const { timeframe: debouncedTimeframe, query: debouncedRules } =
     debouncedArgs;
 
   return useSWR<AlertDto[]>(
-    () => debouncedArgs,
+    () => (doesTimeframExceed14Days ? false : debouncedArgs),
     async () =>
       fetcher(`${apiUrl}/alerts/search`, session?.accessToken, {
         headers: {

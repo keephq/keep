@@ -28,7 +28,9 @@ export const CorrelationSubmission = ({
   return (
     <div className="col-span-2 flex justify-between items-end">
       <div>
-        <AlertsFoundBadge alertsFound={alertsFound} />
+        {alertsFound.length > 0 && (
+          <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} />
+        )}
       </div>
 
       <div className="flex items-center gap-x-4">

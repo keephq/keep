@@ -14,9 +14,13 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
+  isLoading: boolean;
 };
 
-export const CorrelationForm = ({ alertsFound = [] }: CorrelationFormProps) => {
+export const CorrelationForm = ({
+  alertsFound = [],
+  isLoading,
+}: CorrelationFormProps) => {
   const { control, register, formState } =
     useFormContext<CorrelationFormType>();
   const { errors } = formState;
@@ -103,7 +107,7 @@ export const CorrelationForm = ({ alertsFound = [] }: CorrelationFormProps) => {
               className="mt-2"
               value={value}
               onValueChange={onChange}
-              disabled={!keys.length}
+              disabled={isLoading || !keys.length}
             >
               {keys.map((alertKey) => (
                 <MultiSelectItem key={alertKey} value={alertKey}>

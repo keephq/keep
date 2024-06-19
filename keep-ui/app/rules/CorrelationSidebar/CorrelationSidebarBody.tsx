@@ -46,7 +46,7 @@ export const CorrelationSidebarBody = ({
   const searchParams = useSearchParams();
   const selectedId = searchParams ? searchParams.get("id") : null;
 
-  const { data: alertsFound = [] } = useSearchAlerts({
+  const { data: alertsFound = [], isLoading } = useSearchAlerts({
     query: methods.watch("query"),
     timeframe: timeframeInSeconds,
   });
@@ -116,7 +116,7 @@ export const CorrelationSidebarBody = ({
           className="grid grid-cols-2 gap-x-10 flex-1"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm alertsFound={alertsFound} />
+          <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           <CorrelationGroups />
 
           <CorrelationSubmission

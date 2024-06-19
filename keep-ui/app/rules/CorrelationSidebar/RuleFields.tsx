@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Badge,
   Button,
   SearchSelect,
   SearchSelectItem,
@@ -21,6 +22,7 @@ import { useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
 import { TIMEFRAME_UNITS } from "./CorrelationSidebarBody";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
+import Image from "next/image";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
@@ -240,7 +242,7 @@ export const RuleFields = ({
     +watch("timeAmount")
   );
 
-  const { data: alertsFound = [] } = useSearchAlerts({
+  const { data: alertsFound = [], isLoading } = useSearchAlerts({
     query: { combinator: "and", rules: ruleFields },
     timeframe: timeframeInSeconds,
   });
@@ -300,7 +302,7 @@ export const RuleFields = ({
           </Button>
         </div>
 
-        <AlertsFoundBadge alertsFound={alertsFound} />
+        <AlertsFoundBadge alertsFound={alertsFound} isLoading={isLoading} />
       </div>
     </div>
   );
