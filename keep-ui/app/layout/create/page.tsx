@@ -1,178 +1,109 @@
+// NewWidgetLayout.tsx
 'use client';
-import React, { useState } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import { Button } from '@tremor/react';
-import Modal from "@/components/ui/Modal";
+import React, { useState } from "react";
+import GridLayout from "./GridLayout";
+import WidgetModal from "./WidgetModal";
+import EditGridItemModal from "./EditGridItemModal";
 import { usePresets } from "utils/hooks/usePresets";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import { ChartData, ChartOptions } from 'chart.js';
+import { Button, Card } from '@tremor/react';
+import { LayoutItem, WidgetData, Threshold } from "./types";
+import "./styles.css"
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
-interface Threshold {
-  value: number;
-  color: string;
-}
-
-interface Widget {
-  id: string;
-  name: string;
-  thresholds: Threshold[];
-}
-
-interface LayoutItem {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  static: boolean;
-}
-
-const NewGridLayout = () => {
+const NewWidgetLayout = () => {
   const { useAllPresets } = usePresets();
-  const { data: presets } = useAllPresets(); // Assuming this returns the actual presets
+  const { data: presets } = useAllPresets();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newWidget, setNewWidget] = useState<Widget>({ id: '', name: '', thresholds: [] });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
-  const [thresholds, setThresholds] = useState<Threshold[]>([]);
-
-  const onLayoutChange = (newLayout) => {
-    setLayout(newLayout);
-  };
+  const [data, setData] = useState<WidgetData[]>([]);
+  const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setNewWidget({ id: '', name: '', thresholds: [] });
-    setThresholds([]);
+  const closeModal = () => setIsModalOpen(false);
+
+  const openEditModal = (id: string) => {
+    const itemToEdit = data.find(d => d.i === id) || null;
+    setEditingItem(itemToEdit);
+    setIsEditModalOpen(true);
   };
 
-  const handleAddThreshold = () => {
-    setThresholds([...thresholds, { value: 0, color: '#ff0000' }]);
-  };
+  const closeEditModal = () => setIsEditModalOpen(false);
 
-  const handleThresholdChange = (index, field, value) => {
-    const updatedThresholds = thresholds.map((threshold, i) => (
-      i === index ? { ...threshold, [field]: value } : threshold
-    ));
-    setThresholds(updatedThresholds);
-  };
-
-  const handleAddWidget = () => {
+  const handleAddWidget = (presetId: string, thresholds: Threshold[], name: string) => {
     const id = `w-${Date.now()}`;
-    setLayout([...layout, {
+    const newItem: LayoutItem = {
       i: id,
-      x: (layout.length * 4) % (12 - 4),
-      y: Infinity,
-      w: 4,
-      h: 2,
+      x: (layout.length % 12) * 2,
+      y: Math.floor(layout.length / 12) * 2,
+      w: 3, // Increased width
+      h: 3, // Increased height
+      minW: 2,
+      minH: 2,
       static: false
-    }]);
-    closeModal();
+    };
+    const newWidget: WidgetData = {
+      ...newItem,
+      thresholds,
+      presetId,
+      name  // Add widget name here
+    };
+    setLayout([...layout, newItem]);
+    setData([...data, newWidget]);
   };
 
-  // Sample data for the chart
-  const data: ChartData<'line'> = {
-    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-    datasets: [
-      {
-        label: 'Sample Data',
-        fill: false,
-        lineTension: 0.1,
-        backgroundColor: 'rgba(75,192,192,0.4)',
-        borderColor: 'rgba(75,192,192,1)',
-        borderCapStyle: 'butt' as 'butt',
-        borderDash: [] as number[],
-        borderDashOffset: 0.0,
-        borderJoinStyle: 'miter' as 'miter',
-        pointBorderColor: 'rgba(75,192,192,1)',
-        pointBackgroundColor: '#fff',
-        pointBorderWidth: 1,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: 'rgba(75,192,192,1)',
-        pointHoverBorderColor: 'rgba(220,220,220,1)',
-        pointHoverBorderWidth: 2,
-        pointRadius: 1,
-        pointHitRadius: 10,
-        data: [65, 59, 80, 81, 56, 55, 40] as number[]
-      }
-    ]
+  const handleLayoutChange = (newLayout: LayoutItem[]) => {
+    setLayout(newLayout);
+    setData((prevData) =>
+      prevData.map((item) => {
+        const newItem = newLayout.find((l) => l.i === item.i);
+        return newItem ? { ...item, ...newItem } : item;
+      })
+    );
+  };
+
+  const handleSaveEdit = (updatedItem: WidgetData) => {
+    setData((prevData) =>
+      prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
+    );
+    closeEditModal();
   };
 
   return (
-    <div style={{ marginTop: '20px' }}>
-      <h1>Create New Grid Layout</h1>
-      <Button onClick={openModal}>Add Widget</Button>
-      <ResponsiveGridLayout className="layout" layouts={{ lg: layout }}
-                            onLayoutChange={onLayoutChange}
-                            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-                            rowHeight={30}>
-        {layout.map(item => (
-          <div key={item.i} className="grid-item" data-grid={item}>
-            <Line data={data} />
+    <div className="flex flex-col overflow-hidden h-full">
+      {layout.length === 0 ? (
+        <Card
+          className="w-full h-full flex items-center justify-center cursor-pointer"
+          onClick={openModal}
+        >
+          <div className="text-center">
+            <p className="text-lg font-medium">No widgets available</p>
+            <p className="text-gray-500">Click to add your first widget</p>
           </div>
-        ))}
-      </ResponsiveGridLayout>
-      <Modal
+        </Card>
+      ) : (
+        <>
+          <div className="flex justify-end mb-2">
+            <Button onClick={openModal}>Add Widget</Button>
+          </div>
+          <Card className="w-full h-full">
+            <GridLayout layout={layout} onLayoutChange={handleLayoutChange} data={data} onEdit={openEditModal} />
+          </Card>
+        </>
+      )}
+      <WidgetModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title="Add a New Widget">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          setNewWidget({ ...newWidget, thresholds });
-          handleAddWidget();
-        }}>
-          <label>
-            Preset:
-            <select onChange={(e) => setNewWidget({ ...newWidget, id: e.target.value, name: presets?.find(p => p.id === e.target.value)?.name || '' })}>
-              {presets?.map(preset => (
-                <option key={preset.id} value={preset.id}>{preset.name}</option>
-              ))}
-            </select>
-          </label>
-          <div>
-            <Button type="button" onClick={handleAddThreshold}>Add Another Threshold</Button>
-            {thresholds.map((threshold, index) => (
-              <div key={index}>
-                <label>
-                  Threshold {index + 1} Value:
-                  <input type="number" value={threshold.value} onChange={(e) => handleThresholdChange(index, 'value', parseInt(e.target.value, 10))} />
-                </label>
-                <label>
-                  Color:
-                  <input type="color" value={threshold.color} onChange={(e) => handleThresholdChange(index, 'color', e.target.value)} />
-                </label>
-              </div>
-            ))}
-          </div>
-          <Button type="submit">Add Widget</Button>
-        </form>
-      </Modal>
+        onAddWidget={handleAddWidget}
+        presets={presets}
+      />
+      <EditGridItemModal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        item={editingItem}
+        onSave={handleSaveEdit}
+      />
     </div>
   );
 };
 
-export default NewGridLayout;
+export default NewWidgetLayout;

@@ -73,17 +73,16 @@ export const GridLayoutLinks = ({ session }) => {
         {({ open }) => (
           <>
             <div className="flex justify-between items-center w-full">
-  <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-    Layouts
-  </Subtitle>
-  <div className="flex items-center">
-    <Badge size="xs" className="mr-1" color="orange">
-      <p className="ml-1">Beta</p>
-    </Badge>
-    <IoChevronUp className={classNames({ "rotate-180": open }, "mr-2 text-slate-400")} />
-  </div>
-</div>
-
+              <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
+                Layouts
+              </Subtitle>
+              <div className="flex items-center">
+                <Badge size="xs" className="mr-1" color="orange">
+                  <p className="ml-1">Beta</p>
+                </Badge>
+                <IoChevronUp className={classNames({ "rotate-180": open }, "mr-2 text-slate-400")} />
+              </div>
+            </div>
           </>
         )}
       </Disclosure.Button>
@@ -93,11 +92,11 @@ export const GridLayoutLinks = ({ session }) => {
             {layouts.map((layout) => (
               <GridLink key={layout.id} layout={layout} pathname={pathname} deleteLayout={deleteLayout} />
             ))}
-            <li>
+            <li className="flex justify-center">
               {/* Using Next.js Link for client-side routing */}
               <Link href="/layout/create" passHref>
-                <Button size="sm" color="orange" variant="secondary" className="justify-center">
-                  Create New Layout
+                <Button size="xs" color="orange" variant="secondary">
+                  +
                 </Button>
               </Link>
             </li>
