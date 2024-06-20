@@ -27,8 +27,8 @@ from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
-from keep.api.models.db.layout import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
@@ -1623,17 +1623,34 @@ def get_all_presets(tenant_id: str) -> List[Preset]:
     return presets
 
 
-def get_layouts(tenant_id: str, email=None) -> List[Dict[str, Any]]:
+def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
     with Session(engine) as session:
         statement = (
-            select(GridLayout)
-            .where(GridLayout.tenant_id == tenant_id)
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
             .where(
                 or_(
-                    GridLayout.is_private == False,
-                    GridLayout.created_by == email,
+                    Dashboard.is_private == False,
+                    Dashboard.created_by == email,
                 )
             )
         )
-        layouts = session.exec(statement).all()
-    return layouts
+        dashboards = session.exec(statement).all()
+    return dashboards
+
+
+def create_dashboard(
+    tenant_id, dashboard_name, created_by, dashboard_config, is_private=False
+):
+    with Session(engine) as session:
+        dashboard = Dashboard(
+            tenant_id=tenant_id,
+            dashboard_name=dashboard_name,
+            dashboard_config=dashboard_config,
+            created_by=created_by,
+            is_private=is_private,
+        )
+        session.add(dashboard)
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard

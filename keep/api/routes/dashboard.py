@@ -4,25 +4,25 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from keep.api.core.db import get_layouts as get_db_layouts
+from keep.api.core.db import create_dashboard as create_dashboard_db
+from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 
 
-class GridLayoutCreateDTO(BaseModel):
+class DashboardCreateDTO(BaseModel):
     tenant_id: str
-    layout_config: (
-        Dict  # This should match the structure of your grid layout configuration
-    )
+    dashboard_name: str
+    dashboard_config: Dict
 
 
-class GridLayoutUpdateDTO(BaseModel):
-    layout_config: Optional[Dict] = None  # Allow partial updates
+class DashboardUpdateDTO(BaseModel):
+    dashboard_config: Optional[Dict] = None  # Allow partial updates
 
 
-class GridLayoutResponseDTO(BaseModel):
+class DashboardResponseDTO(BaseModel):
     id: str
     tenant_id: str
-    layout_config: Dict
+    dashboard_config: Dict
     created_at: datetime
     updated_at: datetime
 
@@ -30,10 +30,27 @@ class GridLayoutResponseDTO(BaseModel):
 router = APIRouter()
 
 
-@router.get("", response_model=List[GridLayoutResponseDTO])
-def read_layouts(authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier())):
-    layouts = get_db_layouts(authenticated_entity.tenant_id)
-    return layouts
+@router.get("", response_model=List[DashboardResponseDTO])
+def read_dashboards(
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+):
+    dashboards = get_dashboards_db(authenticated_entity.tenant_id)
+    return dashboards
+
+
+@router.post("", response_model=DashboardResponseDTO)
+def create_dashboard(
+    dashboard_dto: DashboardCreateDTO,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+):
+    email = authenticated_entity.email
+    dashboard = create_dashboard_db(
+        tenant_id=dashboard_dto.tenant_id,
+        dashboard_name=dashboard_dto.dashboard_name,
+        dashboard_config=dashboard_dto.dashboard_config,
+        created_by=email,
+    )
+    return dashboard
 
 
 """

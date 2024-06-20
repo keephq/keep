@@ -23,8 +23,8 @@ interface WidgetModalProps {
 
 const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget, onEditWidget, presets, editingItem }) => {
   const [thresholds, setThresholds] = useState<Threshold[]>([
-    { value: 0, color: '#00FF00' }, // Green
-    { value: 20, color: '#FF0000' } // Red
+    { value: 0, color: '#22c55e' }, // Green
+    { value: 20, color: '#ef4444' } // Red
   ]);
 
   const { control, handleSubmit, setValue, formState: { errors }, reset } = useForm<WidgetForm>({
@@ -95,8 +95,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
         onAddWidget(preset, formattedThresholds, data.widgetName);
         // cleanup form
         setThresholds([
-          { value: 0, color: '#00FF00' },
-          { value: 20, color: '#FF0000' }
+          { value: 0, color: '#22c55e' }, // Green
+          { value: 20, color: '#ef4444' } // Red
         ]);
         reset({
           widgetName: '',

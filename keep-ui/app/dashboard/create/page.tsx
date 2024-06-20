@@ -1,11 +1,13 @@
 'use client';
-import React, { useState } from "react";
+import React, { useState, ChangeEvent } from "react";
 import GridLayout from "./GridLayout";
 import WidgetModal from "./WidgetModal";
 import { usePresets } from "utils/hooks/usePresets";
-import { Button, Card } from '@tremor/react';
+import { Button, Card, TextInput, Subtitle, Icon } from '@tremor/react';
 import { LayoutItem, WidgetData, Threshold } from "./types";
 import { Preset } from "app/alerts/models";
+import { FiSave, FiEdit2 } from "react-icons/fi";
+import { getApiURL } from "utils/apiUrl";
 import "./styles.css";
 
 const NewWidgetLayout: React.FC = () => {
@@ -16,8 +18,11 @@ const NewWidgetLayout: React.FC = () => {
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [data, setData] = useState<WidgetData[]>([]);
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
+  const [dashboardName, setDashboardName] = useState("My Dashboard");
+  const [isEditingName, setIsEditingName] = useState(false);
 
   const allPresets = [...presets, ...staticPresets];
+
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
     setIsModalOpen(true);
@@ -30,8 +35,8 @@ const NewWidgetLayout: React.FC = () => {
       i: id,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
-      w: 3, // Increased width
-      h: 3, // Increased height
+      w: 3,
+      h: 3,
       minW: 2,
       minH: 2,
       static: false
@@ -74,8 +79,74 @@ const NewWidgetLayout: React.FC = () => {
     );
   };
 
+  const handleSaveDashboard = async () => {
+    try {
+      const apiUrl = getApiURL();
+      const response = await fetch(`${apiUrl}/dashboard`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: dashboardName,
+          layout,
+          data,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save dashboard: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("Dashboard saved successfully", result);
+    } catch (error) {
+      console.error("Error saving dashboard", error);
+    }
+  };
+
+  const toggleEditingName = () => {
+    setIsEditingName(!isEditingName);
+  };
+
+  const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setDashboardName(e.target.value);
+  };
+
   return (
-    <div className="flex flex-col overflow-hidden h-full">
+    <div className="flex flex-col overflow-hidden h-full p-4">
+      <div className="flex items-center justify-between mb-4">
+      <div className="relative">
+          {isEditingName ? (
+            <TextInput
+              value={dashboardName}
+              onChange={handleNameChange}
+              onBlur={toggleEditingName}
+              placeholder="Dashboard Name"
+              className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
+            />
+          ) : (
+            <Subtitle color="orange" className="mr-2">{dashboardName}</Subtitle>
+          )}
+          <Icon
+            size="xs"
+            icon={FiEdit2}
+            onClick={toggleEditingName}
+            className="cursor-pointer absolute right-0 top-0 transform -translate-y-1/2 translate-x-1/2 text-sm"
+            color="orange"
+          />
+        </div>
+        <div className="flex">
+          <Button
+            icon={FiSave}
+            color="orange"
+            size="sm"
+            onClick={handleSaveDashboard}
+            tooltip="Save current dashboard"
+          />
+          <Button color="orange" onClick={openModal} className="ml-2">Add Widget</Button>
+        </div>
+      </div>
       {layout.length === 0 ? (
         <Card
           className="w-full h-full flex items-center justify-center cursor-pointer"
@@ -87,20 +158,15 @@ const NewWidgetLayout: React.FC = () => {
           </div>
         </Card>
       ) : (
-        <>
-          <div className="flex justify-end mb-2">
-            <Button color="orange" onClick={openModal}>Add Widget</Button>
-          </div>
-          <Card className="w-full h-full">
-            <GridLayout
-              layout={layout}
-              onLayoutChange={handleLayoutChange}
-              data={data}
-              onEdit={handleEditWidget}
-              onDelete={handleDeleteWidget}
-            />
-          </Card>
-        </>
+        <Card className="w-full h-full">
+          <GridLayout
+            layout={layout}
+            onLayoutChange={handleLayoutChange}
+            data={data}
+            onEdit={handleEditWidget}
+            onDelete={handleDeleteWidget}
+          />
+        </Card>
       )}
       <WidgetModal
         isOpen={isModalOpen}

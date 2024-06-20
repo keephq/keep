@@ -12,39 +12,38 @@ import { IoChevronUp } from "react-icons/io5";
 import classNames from 'classnames';
 import Link from "next/link";  // Import Next.js Link if you want to use client-side navigation without full page reloads.
 
-// Define the interface for layout
-interface Layout {
+// Define the interface for dashboard
+interface Dashboard {
   id: string;
   name: string;
   widgets_count?: number;
 }
 
-export const GridLayoutLinks = ({ session }) => {
-  const [layouts, setLayouts] = useState<Layout[]>([]);
+export const DashboardLinks = ({ session }) => {
+  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const apiUrl = getApiURL();
 
   useEffect(() => {
-    const fetchLayouts = async () => {
+    const fetchDashboards = async () => {
       try {
-        const response = await fetch(`${apiUrl}/layout`, {
+        const response = await fetch(`${apiUrl}/dashboard`, {
           headers: {
             'Authorization': `Bearer ${session.accessToken}`
           }
         });
         if (!response.ok) {
-          throw new Error('Failed to fetch layouts');
+          throw new Error('Failed to fetch dashboards');
         }
         const data = await response.json();
-        setLayouts(data.layouts || []);
+        setDashboards(data.dashboards || []);
       } catch (error) {
-        console.error('Error fetching layouts:', error);
-        toast.error('Error fetching layouts');
+        console.error('Error fetching dashboards:', error);
       }
     };
 
-    fetchLayouts();
+    fetchDashboards();
   }, [session]);
 
 
@@ -60,10 +59,10 @@ export const GridLayoutLinks = ({ session }) => {
   const onDragEnd = (event) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = layouts.findIndex(layout => layout.id === active.id);
-      const newIndex = layouts.findIndex(layout => layout.id === over.id);
-      const newLayouts = arrayMove(layouts, oldIndex, newIndex);
-      setLayouts(newLayouts);
+      const oldIndex = dashboards.findIndex(dashboard => dashboard.id === active.id);
+      const newIndex = dashboards.findIndex(dashboard => dashboard.id === over.id);
+      const newDashboards = arrayMove(dashboards, oldIndex, newIndex);
+      setDashboards(newDashboards);
     }
   };
 
@@ -74,7 +73,7 @@ export const GridLayoutLinks = ({ session }) => {
           <>
             <div className="flex justify-between items-center w-full">
               <Subtitle className="text-xs ml-2 text-gray-900 font-medium uppercase">
-                Layouts
+                Dashboards
               </Subtitle>
               <div className="flex items-center">
                 <Badge size="xs" className="mr-1" color="orange">
@@ -88,13 +87,13 @@ export const GridLayoutLinks = ({ session }) => {
       </Disclosure.Button>
       <Disclosure.Panel as="ul" className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4">
         <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={onDragEnd}>
-          <SortableContext items={layouts.map(layout => layout.id)}>
-            {layouts.map((layout) => (
-              <GridLink key={layout.id} layout={layout} pathname={pathname} deleteLayout={deleteLayout} />
+          <SortableContext items={dashboards.map(dashboard => dashboard.id)}>
+            {dashboards.map((dashboard) => (
+              <GridLink key={dashboard.id} dashboard={dashboard} pathname={pathname} deleteDashboard={deleteDashboard} />
             ))}
             <li className="flex justify-center">
               {/* Using Next.js Link for client-side routing */}
-              <Link href="/layout/create" passHref>
+              <Link href="/dashboard/create" passHref>
                 <Button size="xs" color="orange" variant="secondary">
                   +
                 </Button>

@@ -22,10 +22,10 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     alerts,
+    dashboard,
     extraction,
     groups,
     healthcheck,
-    layout,
     mapping,
     preset,
     providers,
@@ -171,7 +171,7 @@ def get_app(
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
-    app.include_router(layout.router, prefix="/layout", tags=["layout"])
+    app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
