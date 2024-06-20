@@ -60,9 +60,14 @@ def main():
             provider_name_logo_dev = "googlecloudpresscorner"
         if provider_name_logo_dev == "elastic":
             provider_name_logo_dev = "elastic.co"
+        if provider_name_logo_dev == "sentry":
+            provider_name_logo_dev = "sentry.io"
 
         # logo.dev requires .com
-        if provider_name_logo_dev.endswith(".co") is False:
+        if (
+            provider_name_logo_dev.endswith(".co") is False
+            and provider_name_logo_dev.endswith(".io") is False
+        ):
             provider_name_logo_dev += ".com"
         svg_icon = f'<img src="https://img.logo.dev/{provider_name_logo_dev}?token={LOGO_DEV_PUBLISHABLE_KEY}" />'
         if svg_icon:
