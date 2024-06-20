@@ -9,14 +9,15 @@ description: "Squadcast provider is a provider used for creating issues in Squad
 The `notify` function take following parameters as inputs:
 
 - `notify_type` (required): Takes either of `incident` or `notes` depending on weather you want to create an incident or a note.
-1. ##### parametres for `incident`
+1. ##### parameters for `incident`
    - `message` (required): This will be the incident message.
    - `description` (required): This will be the incident description.
+   - `tags` (optional): Tags for the incident. It should be a dict format.
    - `priority` (optional): Priority of the incident.
    - `status` (optional): Status of the event.
    - `event_id` (optional): event_id is used to resolve an incident
    - `additional_json` (optional): Additional JSON data to be sent with the incident.
-2. ##### parametres for `notes`
+2. ##### parameters for `notes`
    - `message` (required): The message of the note.
    - `incident_id` (required): Id of the incident where the Note has to be created.
    - `attachments` (optional): List of attachments for the notes.
