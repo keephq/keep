@@ -171,7 +171,11 @@ class AlertDto(BaseModel):
         # Check and set default severity
         severity = values.get("severity")
         try:
-            values["severity"] = AlertSeverity(severity)
+            # if severity is int, convert it to AlertSeverity
+            if isinstance(severity, int):
+                values["severity"] = AlertSeverity.from_number(severity)
+            else:
+                values["severity"] = AlertSeverity(severity)
         except ValueError:
             logging.warning(
                 f"Invalid severity value: {severity}, setting default.",
@@ -190,7 +194,14 @@ class AlertDto(BaseModel):
             )
             values["status"] = AlertStatus.FIRING
 
-        values.pop("assignees", None)
+        # this is code duplication of enrichment_helpers.py and should be refactored
+        lastReceived = values["lastReceived"]
+        assignees = values.pop("assignees", None)
+        if assignees:
+            dt = datetime.datetime.fromisoformat(lastReceived)
+            dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            assignee = assignees.get(lastReceived) or assignees.get(dt)
+            values["assignee"] = assignee
         values.pop("deletedAt", None)
         return values
 
