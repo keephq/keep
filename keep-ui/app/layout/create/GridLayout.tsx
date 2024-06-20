@@ -37,7 +37,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, o
       isDraggable={true}
       isResizable={true}
       compactType={null}
-      draggableHandle=".grid-item__title"
+      draggableHandle=".grid-item__widget"
     >
       {data.map((item) => (
         <div key={item.i} data-grid={item}>

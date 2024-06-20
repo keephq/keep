@@ -9,7 +9,7 @@ interface MenuButtonProps {
 
 const MenuButton: React.FC<MenuButtonProps> = ({ onEdit }) => {
   return (
-    <Menu as="div" className="relative inline-block text-left grid-item__title">
+    <Menu as="div" className="relative inline-block text-left">
       <Menu.Button
         className="flex items-center p-2 text-gray-600 hover:text-gray-800 z-20" // Ensure high z-index
         onClick={(e) => e.stopPropagation()} // Prevent click propagation

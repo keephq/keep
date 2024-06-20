@@ -1,27 +1,11 @@
-.grid-item__title {
-    font-size: 14px;
-    color: #fff;
-    padding: 4px 0;
-    text-align: center;
-  }
-  .grid-item__title:hover {
-    cursor: move;
-  }
-  .grid-item__title .panel {
-    box-shadow: none;
-    border: none;
-  }
-  .grid-item__title .panel:focus {
-    outline: none;
-  }
-  .grid-item__title .panel-heading {
-    padding: 3px 0;
-    background: #171819;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-  }
-  .grid-item__title .panel-body {
-    padding: 0 0 0 15px;
-    background: #171819;
-    color: rgba(255, 255, 255, 0.7);
-  }
+
+.grid-item__widget:hover {
+  cursor: move;
+}
+.grid-item__widget .panel {
+  box-shadow: none;
+  border: none;
+}
+.grid-item__widget .panel:focus {
+  outline: none;
+}
