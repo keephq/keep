@@ -1,3 +1,4 @@
+import { Preset } from "app/alerts/models";
 export interface LayoutItem {
     i: string;
     x: number;
@@ -11,7 +12,7 @@ export interface LayoutItem {
 
   export interface WidgetData extends LayoutItem {
     thresholds: Threshold[];
-    presetId: string;
+    preset: Preset;
     name: string;
   }
 

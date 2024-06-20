@@ -1,6 +1,6 @@
 import React, { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
-import { Icon } from "@tremor/react";
+import { Icon, Subtitle } from "@tremor/react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
 
 interface TitleProps {
@@ -29,14 +29,16 @@ const Title: React.FC<TitleProps> = ({ title, onEdit }) => {
             <div className="px-1 py-1">
               <Menu.Item>
                 {({ active }) => (
-                  <button
+                  <Menu.Button
                     onClick={onEdit}
                     className={`${
                       active ? "bg-slate-200" : "text-gray-900"
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
-                    Edit
-                  </button>
+                    <Subtitle>
+                      Edit
+                    </Subtitle>
+                  </Menu.Button>
                 )}
               </Menu.Item>
             </div>

@@ -1,4 +1,3 @@
-// GridLayout.tsx
 import React from "react";
 import { Responsive, WidthProvider, Layout } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
@@ -12,9 +11,10 @@ interface GridLayoutProps {
   onLayoutChange: (layout: LayoutItem[]) => void;
   data: WidgetData[];
   onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, onEdit }) => {
+const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, onEdit, onDelete }) => {
   const layouts = { lg: layout };
 
   return (
@@ -41,7 +41,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, o
     >
       {data.map((item) => (
         <div key={item.i} data-grid={item}>
-          <GridItemContainer item={item} onEdit={onEdit} />
+          <GridItemContainer item={item} onEdit={onEdit} onDelete={onDelete} />
         </div>
       ))}
     </ResponsiveGridLayout>

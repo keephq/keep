@@ -1,35 +1,30 @@
-// NewWidgetLayout.tsx
 'use client';
 import React, { useState } from "react";
 import GridLayout from "./GridLayout";
 import WidgetModal from "./WidgetModal";
-import EditGridItemModal from "./EditGridItemModal";
 import { usePresets } from "utils/hooks/usePresets";
 import { Button, Card } from '@tremor/react';
 import { LayoutItem, WidgetData, Threshold } from "./types";
-import "./styles.css"
+import { Preset } from "app/alerts/models";
+import "./styles.css";
 
-const NewWidgetLayout = () => {
-  const { useAllPresets } = usePresets();
-  const { data: presets } = useAllPresets();
+const NewWidgetLayout: React.FC = () => {
+  const { useAllPresets, useStaticPresets } = usePresets();
+  const { data: presets = [] } = useAllPresets();
+  const { data: staticPresets = [] } = useStaticPresets();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [data, setData] = useState<WidgetData[]>([]);
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
 
-  const openModal = () => setIsModalOpen(true);
+  const allPresets = [...presets, ...staticPresets];
+  const openModal = () => {
+    setEditingItem(null); // Ensure new modal opens without editing item context
+    setIsModalOpen(true);
+  };
   const closeModal = () => setIsModalOpen(false);
 
-  const openEditModal = (id: string) => {
-    const itemToEdit = data.find(d => d.i === id) || null;
-    setEditingItem(itemToEdit);
-    setIsEditModalOpen(true);
-  };
-
-  const closeEditModal = () => setIsEditModalOpen(false);
-
-  const handleAddWidget = (presetId: string, thresholds: Threshold[], name: string) => {
+  const handleAddWidget = (preset: Preset, thresholds: Threshold[], name: string) => {
     const id = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: id,
@@ -44,11 +39,29 @@ const NewWidgetLayout = () => {
     const newWidget: WidgetData = {
       ...newItem,
       thresholds,
-      presetId,
-      name  // Add widget name here
+      preset,
+      name,
     };
-    setLayout([...layout, newItem]);
-    setData([...data, newWidget]);
+    setLayout((prevLayout) => [...prevLayout, newItem]);
+    setData((prevData) => [...prevData, newWidget]);
+  };
+
+  const handleEditWidget = (id: string) => {
+    const itemToEdit = data.find(d => d.i === id) || null;
+    setEditingItem(itemToEdit);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveEdit = (updatedItem: WidgetData) => {
+    setData((prevData) =>
+      prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
+    );
+    closeModal();
+  };
+
+  const handleDeleteWidget = (id: string) => {
+    setLayout(layout.filter(item => item.i !== id));
+    setData(data.filter(item => item.i !== id));
   };
 
   const handleLayoutChange = (newLayout: LayoutItem[]) => {
@@ -59,13 +72,6 @@ const NewWidgetLayout = () => {
         return newItem ? { ...item, ...newItem } : item;
       })
     );
-  };
-
-  const handleSaveEdit = (updatedItem: WidgetData) => {
-    setData((prevData) =>
-      prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
-    );
-    closeEditModal();
   };
 
   return (
@@ -83,10 +89,16 @@ const NewWidgetLayout = () => {
       ) : (
         <>
           <div className="flex justify-end mb-2">
-            <Button onClick={openModal}>Add Widget</Button>
+            <Button color="orange" onClick={openModal}>Add Widget</Button>
           </div>
           <Card className="w-full h-full">
-            <GridLayout layout={layout} onLayoutChange={handleLayoutChange} data={data} onEdit={openEditModal} />
+            <GridLayout
+              layout={layout}
+              onLayoutChange={handleLayoutChange}
+              data={data}
+              onEdit={handleEditWidget}
+              onDelete={handleDeleteWidget}
+            />
           </Card>
         </>
       )}
@@ -94,13 +106,9 @@ const NewWidgetLayout = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         onAddWidget={handleAddWidget}
-        presets={presets}
-      />
-      <EditGridItemModal
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        item={editingItem}
-        onSave={handleSaveEdit}
+        onEditWidget={handleSaveEdit}
+        presets={allPresets}
+        editingItem={editingItem}
       />
     </div>
   );
