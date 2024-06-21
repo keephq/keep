@@ -1,7 +1,7 @@
 export const PlaceholderSankey = (props: any) => (
   <svg
-    width="962"
-    height="419"
+    width="100%"
+    height="auto"
     viewBox="0 0 962 419"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
