@@ -647,7 +647,7 @@ const ProviderForm = ({
           variant="secondary"
           color="orange"
           onClick={closeModal}
-          className="mr-2.5"
+          className="mr-2.5 mb-2.5" //Added margin under the buttons adjust as needed
           disabled={isLoading}
         >
           Cancel
@@ -671,6 +671,7 @@ const ProviderForm = ({
             loading={isLoading}
             onClick={handleConnectClick}
             color="orange"
+            className="mb-2.5" //Added margin under the buttons adjust as needed
           >
             Connect
           </Button>
