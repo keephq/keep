@@ -603,7 +603,7 @@ export const AlertsRulesBuilder = ({
             <Textarea
               ref={textAreaRef}
               rows={1}
-              className="resize-none overflow-hidden w-full pr-0" // Provide enough padding to the right
+              className="resize-none overflow-hidden w-full pr-0" // Provide enough padding to the right, temporarily set it to zero cause it was the issue of vertical text
               style={{ minHeight: '96px', minWidth: '100px' }} // Set minimum width & height to prevent module shrinking in different browsers
               value={celRules}
               onValueChange={onValueChange}
@@ -637,17 +637,22 @@ export const AlertsRulesBuilder = ({
                 <XMarkIcon className="h-4 w-4" />
               </button>
             )}
+            <div className="mt-2 absolute right-2 top-full transform translate-y-2 " //Position under text-area container
+            >
             <Badge
               size="md"
               color="orange"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 " // Position to the far right inside the padding area
+//               className="absolute right-2 top-1/2 transform -translate-y-1/2 " // Position to the far right inside the padding area
             >
               Enter to apply
             </Badge>
+            </div>
           </div>
         </div>
 
         {/* Buttons next to the Textarea */}
+        <div className="flex flex-wrap items-center gap-x-2 mt-5" //Added padding and flex scaling for the items under the badge
+        >
         {showSave && (
           <Button
             icon={FiSave}
@@ -681,6 +686,7 @@ export const AlertsRulesBuilder = ({
             tooltip="Import from SQL"
           />
         )}
+        </div>
       </div>
     </div>
   );
