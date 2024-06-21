@@ -21,6 +21,7 @@ import Select, { components, MenuListProps } from "react-select";
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useWindowSize } from 'react-use';
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -597,11 +598,13 @@ export const AlertsRulesBuilder = ({
           </div>
 
           {/* Textarea and error message container */}
-          <div className="flex-grow relative" ref={wrapperRef}>
+          <div className="flex-grow relative "
+           ref={wrapperRef}>
             <Textarea
               ref={textAreaRef}
               rows={1}
-              className="resize-none overflow-hidden w-full pr-40" // Provide enough padding to the right
+              className="resize-none overflow-hidden w-full pr-0" // Provide enough padding to the right
+              style={{ minHeight: '96px', minWidth: '100px' }} // Set minimum width & height to prevent module shrinking in different browsers
               value={celRules}
               onValueChange={onValueChange}
               onKeyDown={handleKeyDown}
@@ -637,7 +640,7 @@ export const AlertsRulesBuilder = ({
             <Badge
               size="md"
               color="orange"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2" // Position to the far right inside the padding area
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 " // Position to the far right inside the padding area
             >
               Enter to apply
             </Badge>
