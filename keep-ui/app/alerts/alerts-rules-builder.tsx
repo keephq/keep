@@ -597,12 +597,11 @@ export const AlertsRulesBuilder = ({
           </div>
 
           {/* Textarea and error message container */}
-          <div className="flex-grow relative min-w-40" // Added minimum width for container to prevent shrinking
-          ref={wrapperRef}>
+          <div className="flex-grow relative" ref={wrapperRef}>
             <Textarea
               ref={textAreaRef}
               rows={1}
-              className="resize-none overflow-hidden w-full pr-20 sm:10 md:pr-15 lg:pr-20 xl:pr-30" // Provide enough padding to the right (Adjust as needed)
+              className="resize-none overflow-hidden w-full pr-40" // Provide enough padding to the right
               value={celRules}
               onValueChange={onValueChange}
               onKeyDown={handleKeyDown}
