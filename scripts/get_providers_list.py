@@ -62,6 +62,8 @@ def main():
             provider_name_logo_dev = "elastic.co"
         if provider_name_logo_dev == "sentry":
             provider_name_logo_dev = "sentry.io"
+        if provider_name_logo_dev == "kubernetes":
+            provider_name_logo_dev = "kubernetes.io"
 
         # logo.dev requires .com
         if (
