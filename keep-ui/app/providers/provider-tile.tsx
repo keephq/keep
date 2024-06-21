@@ -94,6 +94,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
       onClick={onClick}
     >
       <div className="w-48">
+        {/* Display WebhookIcon if applicable */}
         {(provider.can_setup_webhook || provider.supports_webhook) &&
           !provider.installed &&
           !provider.linked && (
@@ -105,6 +106,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               tooltip="Webhook available"
             />
           )}
+        {/* Display OAuthIcon if applicable */}
         {provider.oauth2_url && !provider.installed && !provider.linked && (
           <Icon
             icon={OAuthIcon}
@@ -118,17 +120,20 @@ export default function ProviderTile({ provider, onClick }: Props) {
             tooltip="OAuth2 available"
           />
         )}
+        {/* Display "Connected" text if installed */}
         {provider.installed ? (
           <Text color={"green"} className="flex text-xs group-hover:hidden">
             Connected
           </Text>
         ) : null}
+        {/* Display "Linked" text if linked */}
         {provider.linked ? (
           <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
         ) : null}
-        <div className="flex flex-col">
+        <div className="flex flex-col ml-4">
+          {/* Display Provider Title and Subtitle */}
           <div>
             <Title
               className={`${
@@ -144,6 +149,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 id: {provider.details.name}
               </Subtitle>
             )}
+            {/* Display Last Alert received */}
             {provider.last_alert_received ? (
               <Text
                 className={`${!provider.linked ? "group-hover:hidden" : ""}`}
@@ -153,11 +159,13 @@ export default function ProviderTile({ provider, onClick }: Props) {
             ) : (
               <p></p>
             )}
+            {/* Display Provider ID if linked */}
             {provider.linked && provider.id ? (
               <Text>Id: {provider.id}</Text>
             ) : (
               <br></br>
             )}
+            {/* Display SparkAreaChart if installed or linked */}
             {(provider.installed || provider.linked) &&
             provider.alertsDistribution &&
             provider.alertsDistribution.length > 0 ? (
@@ -186,6 +194,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               />
             ) : null}
           </div>
+          {/* Display badges for tags */}
           <div className="labels flex group-hover:hidden">
             {!provider.installed &&
               !provider.linked &&
@@ -213,6 +222,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 );
               })}
           </div>
+          {/* Display Connect/Modify Button */}
           {!provider.linked && (
             <Button
               variant="secondary"
@@ -225,6 +235,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           )}
         </div>
       </div>
+      {/* Display Provider Icon */}
       <ImageWithFallback
         src={`/icons/${provider.type}-icon.png`}
         fallbackSrc={`/icons/keep-icon.png`}
@@ -235,7 +246,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           provider.installed || provider.linked
             ? ""
             : "grayscale group-hover:grayscale-0"
-        }`}
+        } provider-image`} // Added class to add margin to provider image
       />
     </div>
   );

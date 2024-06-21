@@ -602,7 +602,7 @@ export const AlertsRulesBuilder = ({
             <Textarea
               ref={textAreaRef}
               rows={1}
-              className="resize-none overflow-hidden w-full pr-20 sm:20 md:pr-20 lg:pr-30 xl:pr-40" // Provide enough padding to the right (Adjust as needed)
+              className="resize-none overflow-hidden w-full pr-20 sm:10 md:pr-15 lg:pr-20 xl:pr-30" // Provide enough padding to the right (Adjust as needed)
               value={celRules}
               onValueChange={onValueChange}
               onKeyDown={handleKeyDown}

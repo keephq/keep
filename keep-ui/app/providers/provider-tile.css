@@ -20,3 +20,9 @@
     flex-basis: calc(25% - 1.25rem);
   }
 }
+.provider-image {
+  margin-left: 40px;
+  margin-right: 40px;
+  width: auto;
+  height: auto;
+}
