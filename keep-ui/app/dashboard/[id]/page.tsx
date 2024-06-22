@@ -1,4 +1,4 @@
-import DashboardPage from "./dashboard.tsx";
+import DashboardPage from "./dashboard";
 
 type PageProps = {
   params: { id: string };

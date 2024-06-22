@@ -18,7 +18,7 @@ const DashboardPage = () => {
   const { useAllPresets, useStaticPresets } = usePresets();
   const { data: presets = [] } = useAllPresets();
   const { data: staticPresets = [] } = useStaticPresets();
-  const { id } = useParams();
+  const { id } : any = useParams();
   const { data: session } = useSession();
   const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,7 +102,7 @@ const DashboardPage = () => {
       const apiUrl = getApiURL();
       let dashboard = dashboards?.find(d => d.dashboard_name === decodeURIComponent(id));
       const method = dashboard ? 'PUT' : 'POST';
-      const endpoint = `${apiUrl}/dashboard${method === 'PUT' ? `/${encodeURIComponent(dashboard?.id)}` : ''}`;
+      const endpoint = `${apiUrl}/dashboard${dashboard ? `/${encodeURIComponent(dashboard.id)}` : ''}`;
 
       const response = await fetch(endpoint, {
         method,

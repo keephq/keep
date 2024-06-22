@@ -10,7 +10,13 @@ import classNames from 'classnames';
 import { useDashboards } from "utils/hooks/useDashboards";
 import { getApiURL } from "utils/apiUrl";
 
-export const DashboardLinks = ({ session }) => {
+import { Session } from "next-auth";
+
+type DashboardProps = {
+  session: Session | null;
+};
+
+export const DashboardLinks = ({ session }: DashboardProps) => {
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
   const pathname = usePathname();
   const router = useRouter();
@@ -21,7 +27,7 @@ export const DashboardLinks = ({ session }) => {
   );
 
 
-  const onDragEnd = (event) => {
+  const onDragEnd = (event: any) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = dashboards.findIndex(dashboard => dashboard.id === active.id);
@@ -39,7 +45,7 @@ export const DashboardLinks = ({ session }) => {
         await fetch(`${apiUrl}/dashboard/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${session.accessToken}`
+            'Authorization': `Bearer ${session!.accessToken}`
           }
         });
         mutate(dashboards.filter(dashboard => dashboard.id !== id), false);
