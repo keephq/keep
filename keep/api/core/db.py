@@ -1654,3 +1654,29 @@ def create_dashboard(
         session.commit()
         session.refresh(dashboard)
         return dashboard
+
+
+def update_dashboard(
+    tenant_id, dashboard_id, dashboard_name, dashboard_config, updated_by
+):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if not dashboard:
+            return None
+
+        if dashboard_name:
+            dashboard.dashboard_name = dashboard_name
+
+        if dashboard_config:
+            dashboard.dashboard_config = dashboard_config
+
+        dashboard.updated_by = updated_by
+        dashboard.updated_at = datetime.utcnow()
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard

@@ -8,7 +8,6 @@ import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
 import { Badge, Icon, Subtitle } from "@tremor/react";
 import classNames from "classnames";
-import Link from "next/link";
 import { LinkWithIcon } from "../LinkWithIcon";
 import {
   DndContext,

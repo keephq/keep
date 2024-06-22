@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from keep.api.core.db import create_dashboard as create_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
+from keep.api.core.db import update_dashboard as update_dashboard_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 
 
@@ -16,6 +17,7 @@ class DashboardCreateDTO(BaseModel):
 
 class DashboardUpdateDTO(BaseModel):
     dashboard_config: Optional[Dict] = None  # Allow partial updates
+    dashboard_name: Optional[str] = None
 
 
 class DashboardResponseDTO(BaseModel):
@@ -48,6 +50,23 @@ def create_dashboard(
         dashboard_name=dashboard_dto.dashboard_name,
         dashboard_config=dashboard_dto.dashboard_config,
         created_by=email,
+    )
+    return dashboard
+
+
+@router.put("/{dashboard_id}", response_model=DashboardResponseDTO)
+def update_dashboard(
+    dashboard_id: str,
+    dashboard_dto: DashboardUpdateDTO,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+):
+    # update the dashboard in the database
+    dashboard = update_dashboard_db(
+        tenant_id=authenticated_entity.tenant_id,
+        dashboard_id=dashboard_id,
+        dashboard_name=dashboard_dto.dashboard_name,
+        dashboard_config=dashboard_dto.dashboard_config,
+        updated_by=authenticated_entity.email,
     )
     return dashboard
 

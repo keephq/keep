@@ -21,8 +21,8 @@ type DashboardLinkProps = {
 
 export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: DashboardLinkProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const href = `/dashboard/${dashboard.dashboard_name.toLowerCase()}`;
-  const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
+  const href = `/dashboard/${dashboard.dashboard_name}`;
+  const isActive = decodeURIComponent(pathname|| "") === href;
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -37,16 +37,11 @@ export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: Dashboar
   };
 
   return (
-    <li key={dashboard.id} ref={setNodeRef} style={dragStyle} {...listeners}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}>
-      <span className={classNames("flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg", {
-            "bg-stone-200/50": isActive,
-            "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50": !isDragging,
-          })}>
-        <LinkWithIcon
+    <LinkWithIcon
           href={href}
-          icon={FiLayout} // Replace with the appropriate icon if different
+          icon={FiLayout}
+          isDeletable={true}
+          onDelete={() => deleteDashboard(dashboard.id, dashboard.dashboard_name)}
         >
           <Subtitle className={classNames({
               "text-orange-400": isActive,
@@ -55,13 +50,5 @@ export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: Dashboar
             {dashboard.dashboard_name}
           </Subtitle>
         </LinkWithIcon>
-        <div className="flex items-center justify-end flex-1">
-          <button onClick={() => deleteDashboard(dashboard.id, dashboard.dashboard_name)} // Use correct property for name
-                  className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${isHovered ? 'ml-2' : ''}`}>
-            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
-          </button>
-        </div>
-      </span>
-    </li>
   );
 };

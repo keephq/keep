@@ -13,6 +13,7 @@ class Dashboard(SQLModel, table=True):
     dashboard_config: dict = Field(sa_column=Column(JSON))
     created_by: str = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_by: str = Field(default=None)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = Field(default=True)
     is_private: bool = Field(default=False)

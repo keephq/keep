@@ -1,58 +1,24 @@
 'use client';
-import { useEffect, useState } from "react";
 import { DndContext, useSensor, useSensors, PointerSensor, TouchSensor, rectIntersection } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import { usePathname, useRouter } from "next/navigation";
 import { DashboardLink } from "./DashboardLink";
-import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
 import { Subtitle, Button, Badge } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from 'classnames';
-
-// Define the interface for dashboard
-interface Dashboard {
-  id: string;
-  dashboard_name: string;
-  dashboard_config: any;
-}
+import { useDashboards } from "utils/hooks/useDashboards";
 
 export const DashboardLinks = ({ session }) => {
-  const [dashboards, setDashboards] = useState<Dashboard[]>([]);
+  const { dashboards = [], isLoading, error, mutate } = useDashboards();
   const pathname = usePathname();
   const router = useRouter();
-  const apiUrl = getApiURL();
-
-  useEffect(() => {
-    const fetchDashboards = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/dashboard`, {
-          headers: {
-            'Authorization': `Bearer ${session.accessToken}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboards');
-        }
-        const data = await response.json();
-        setDashboards(data || []);
-      } catch (error) {
-        console.error('Error fetching dashboards:', error);
-      }
-    };
-
-    fetchDashboards();
-  }, [session]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor)
   );
 
-  if (!session) {
-    return null;
-  }
 
   const onDragEnd = (event) => {
     const { active, over } = event;
@@ -60,7 +26,7 @@ export const DashboardLinks = ({ session }) => {
       const oldIndex = dashboards.findIndex(dashboard => dashboard.id === active.id);
       const newIndex = dashboards.findIndex(dashboard => dashboard.id === over.id);
       const newDashboards = arrayMove(dashboards, oldIndex, newIndex);
-      setDashboards(newDashboards);
+      mutate(newDashboards, false);
     }
   };
 
@@ -68,21 +34,14 @@ export const DashboardLinks = ({ session }) => {
     const isDeleteConfirmed = confirm('You are about to delete this dashboard. Are you sure?');
     if (isDeleteConfirmed) {
       try {
-        const response = await fetch(`${apiUrl}/dashboard/${id}`, {
+        const apiUrl = getApiURL();
+        await fetch(`${apiUrl}/dashboard/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${session.accessToken}`
           }
         });
-        if (!response.ok) {
-          throw new Error('Failed to delete dashboard');
-        }
-        const newDashboards = dashboards.filter(dashboard => dashboard.id !== id);
-        setDashboards(newDashboards);
-        toast('Dashboard deleted!', {
-          position: 'top-left',
-          type: 'success'
-        });
+        mutate(dashboards.filter(dashboard => dashboard.id !== id), false);
       } catch (error) {
         console.error('Error deleting dashboard:', error);
       }

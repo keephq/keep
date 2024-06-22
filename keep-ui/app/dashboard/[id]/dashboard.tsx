@@ -1,27 +1,43 @@
 'use client';
-import React, { useState, ChangeEvent } from "react";
-import GridLayout from "../GridLayout";
-import WidgetModal from "../WidgetModal";
+import { useParams } from 'next/navigation';
+import { useState, useEffect, ChangeEvent } from 'react';
+import GridLayout from '../GridLayout';
 import { usePresets } from "utils/hooks/usePresets";
+import WidgetModal from '../WidgetModal';
 import { Button, Card, TextInput, Subtitle, Icon } from '@tremor/react';
-import { LayoutItem, WidgetData, Threshold } from "../types";
-import { Preset } from "app/alerts/models";
-import { FiSave, FiEdit2 } from "react-icons/fi";
-import { getApiURL } from "utils/apiUrl";
-import { useSession } from "next-auth/react";
-import "./../styles.css";
+import { LayoutItem, WidgetData, Threshold } from '../types';
+import { Preset } from 'app/alerts/models';
+import { FiSave, FiEdit2 } from 'react-icons/fi';
+import { useSession } from 'next-auth/react';
+import { useDashboards } from 'utils/hooks/useDashboards';
+import { getApiURL } from 'utils/apiUrl';
+import './../styles.css';
+import { toast } from 'react-toastify';
 
-const NewWidgetLayout: React.FC = () => {
+const DashboardPage = () => {
   const { useAllPresets, useStaticPresets } = usePresets();
   const { data: presets = [] } = useAllPresets();
   const { data: staticPresets = [] } = useStaticPresets();
+  const { id } = useParams();
+  const { data: session } = useSession();
+  const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
-  const [dashboardName, setDashboardName] = useState("My Dashboard");
+  const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);
-  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (!isLoading) {
+      const dashboard = dashboards?.find(d => d.dashboard_name === decodeURIComponent(id));
+      if (dashboard) {
+        setLayout(dashboard.dashboard_config.layout);
+        setWidgetData(dashboard.dashboard_config.widget_data);
+        setDashboardName(dashboard.dashboard_name);
+      }
+    }
+  }, [id, dashboards, isLoading]);
 
   const allPresets = [...presets, ...staticPresets];
 
@@ -32,9 +48,9 @@ const NewWidgetLayout: React.FC = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (preset: Preset, thresholds: Threshold[], name: string) => {
-    const id = `w-${Date.now()}`;
+    const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
-      i: id,
+      i: uniqueId,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
       w: 3,
@@ -84,19 +100,23 @@ const NewWidgetLayout: React.FC = () => {
   const handleSaveDashboard = async () => {
     try {
       const apiUrl = getApiURL();
-      const response = await fetch(`${apiUrl}/dashboard`, {
-        method: "POST",
+      let dashboard = dashboards?.find(d => d.dashboard_name === decodeURIComponent(id));
+      const method = dashboard ? 'PUT' : 'POST';
+      const endpoint = `${apiUrl}/dashboard${method === 'PUT' ? `/${encodeURIComponent(dashboard?.id)}` : ''}`;
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session!.accessToken}`
         },
         body: JSON.stringify({
           dashboard_name: dashboardName,
-          dashboard_config:{
-            layout: layout,
+          dashboard_config: {
+            layout,
             widget_data: widgetData,
           }
-        }),
+        })
       });
 
       if (!response.ok) {
@@ -105,6 +125,8 @@ const NewWidgetLayout: React.FC = () => {
 
       const result = await response.json();
       console.log("Dashboard saved successfully", result);
+      mutateDashboard();
+      toast.success("Dashboard saved successfully");
     } catch (error) {
       console.error("Error saving dashboard", error);
     }
@@ -121,7 +143,7 @@ const NewWidgetLayout: React.FC = () => {
   return (
     <div className="flex flex-col overflow-hidden h-full p-4">
       <div className="flex items-center justify-between mb-4">
-      <div className="relative">
+        <div className="relative">
           {isEditingName ? (
             <TextInput
               value={dashboardName}
@@ -185,4 +207,4 @@ const NewWidgetLayout: React.FC = () => {
   );
 };
 
-export default NewWidgetLayout;
+export default DashboardPage;
