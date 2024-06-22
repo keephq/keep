@@ -3,20 +3,19 @@ import { useEffect, useState } from "react";
 import { DndContext, useSensor, useSensors, PointerSensor, TouchSensor, rectIntersection } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import { usePathname, useRouter } from "next/navigation";
-import { GridLink } from "./GridLink";
+import { DashboardLink } from "./DashboardLink";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { Subtitle, Button, Badge } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from 'classnames';
-import Link from "next/link";  // Import Next.js Link if you want to use client-side navigation without full page reloads.
 
 // Define the interface for dashboard
 interface Dashboard {
   id: string;
-  name: string;
-  widgets_count?: number;
+  dashboard_name: string;
+  dashboard_config: any;
 }
 
 export const DashboardLinks = ({ session }) => {
@@ -37,7 +36,7 @@ export const DashboardLinks = ({ session }) => {
           throw new Error('Failed to fetch dashboards');
         }
         const data = await response.json();
-        setDashboards(data.dashboards || []);
+        setDashboards(data || []);
       } catch (error) {
         console.error('Error fetching dashboards:', error);
       }
@@ -45,7 +44,6 @@ export const DashboardLinks = ({ session }) => {
 
     fetchDashboards();
   }, [session]);
-
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -64,6 +62,46 @@ export const DashboardLinks = ({ session }) => {
       const newDashboards = arrayMove(dashboards, oldIndex, newIndex);
       setDashboards(newDashboards);
     }
+  };
+
+  const deleteDashboard = async (id: string) => {
+    const isDeleteConfirmed = confirm('You are about to delete this dashboard. Are you sure?');
+    if (isDeleteConfirmed) {
+      try {
+        const response = await fetch(`${apiUrl}/dashboard/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.accessToken}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete dashboard');
+        }
+        const newDashboards = dashboards.filter(dashboard => dashboard.id !== id);
+        setDashboards(newDashboards);
+        toast('Dashboard deleted!', {
+          position: 'top-left',
+          type: 'success'
+        });
+      } catch (error) {
+        console.error('Error deleting dashboard:', error);
+      }
+    }
+  };
+
+  const generateUniqueName = (baseName: string): string => {
+    let uniqueName = baseName;
+    let counter = 1;
+    while (dashboards.some(d => d.dashboard_name.toLowerCase() === uniqueName.toLowerCase())) {
+      uniqueName = `${baseName}(${counter})`;
+      counter++;
+    }
+    return uniqueName;
+  };
+
+  const handleCreateDashboard = () => {
+    const uniqueName = generateUniqueName('My Dashboard');
+    router.push(`/dashboard/${encodeURIComponent(uniqueName)}`);
   };
 
   return (
@@ -89,15 +127,12 @@ export const DashboardLinks = ({ session }) => {
         <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={onDragEnd}>
           <SortableContext items={dashboards.map(dashboard => dashboard.id)}>
             {dashboards.map((dashboard) => (
-              <GridLink key={dashboard.id} dashboard={dashboard} pathname={pathname} deleteDashboard={deleteDashboard} />
+              <DashboardLink key={dashboard.id} dashboard={dashboard} pathname={pathname} deleteDashboard={deleteDashboard} />
             ))}
             <li className="flex justify-center">
-              {/* Using Next.js Link for client-side routing */}
-              <Link href="/dashboard/create" passHref>
-                <Button size="xs" color="orange" variant="secondary">
-                  +
-                </Button>
-              </Link>
+              <Button size="xs" color="orange" variant="secondary" onClick={handleCreateDashboard}>
+                +
+              </Button>
             </li>
           </SortableContext>
         </DndContext>

@@ -10,7 +10,6 @@ from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 
 
 class DashboardCreateDTO(BaseModel):
-    tenant_id: str
     dashboard_name: str
     dashboard_config: Dict
 
@@ -21,7 +20,7 @@ class DashboardUpdateDTO(BaseModel):
 
 class DashboardResponseDTO(BaseModel):
     id: str
-    tenant_id: str
+    dashboard_name: str
     dashboard_config: Dict
     created_at: datetime
     updated_at: datetime
@@ -45,7 +44,7 @@ def create_dashboard(
 ):
     email = authenticated_entity.email
     dashboard = create_dashboard_db(
-        tenant_id=dashboard_dto.tenant_id,
+        tenant_id=authenticated_entity.tenant_id,
         dashboard_name=dashboard_dto.dashboard_name,
         dashboard_config=dashboard_dto.dashboard_config,
         created_by=email,

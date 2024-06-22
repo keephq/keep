@@ -1,20 +1,27 @@
 import { CSSProperties, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import Link from 'next/link';
-import { Icon, Badge } from "@tremor/react";
+import { Icon, Subtitle } from "@tremor/react";
 import { Trashcan } from "components/icons"; // Assuming you have a similar icon component
+import { FiLayout } from "react-icons/fi";
+import { LinkWithIcon } from "components/LinkWithIcon"; // Ensure you import this correctly
 import classNames from 'classnames';
 
-type GridLinkProps = {
-  dashboard: any;  // Define a proper type based on your layout model
+interface Dashboard {
+  id: string;
+  dashboard_name: string;
+  dashboard_config: any;
+}
+
+type DashboardLinkProps = {
+  dashboard: Dashboard;
   pathname: string | null;
   deleteDashboard: (id: string, name: string) => void;
 };
 
-export const GridLink = ({ dashboard, pathname, deleteDashboard }: GridLinkProps) => {
+export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: DashboardLinkProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const href = `/dashboards/${dashboard.name.toLowerCase()}`;
+  const href = `/dashboard/${dashboard.dashboard_name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
 
   const { listeners, setNodeRef, transform, transition, isDragging } =
@@ -37,20 +44,19 @@ export const GridLink = ({ dashboard, pathname, deleteDashboard }: GridLinkProps
             "bg-stone-200/50": isActive,
             "hover:text-orange-400 focus:ring focus:ring-orange-300 group hover:bg-stone-200/50": !isDragging,
           })}>
-        <Link className={classNames("flex items-center flex-1", {
-              "pointer-events-none cursor-auto": isDragging,
-            })} href={href}>
-          <span className={classNames("truncate max-w-[7.5rem]", {
+        <LinkWithIcon
+          href={href}
+          icon={FiLayout} // Replace with the appropriate icon if different
+        >
+          <Subtitle className={classNames({
               "text-orange-400": isActive,
-            })} title={dashboard.name}>
-            {dashboard.name}
-          </span>
-        </Link>
+              "pointer-events-none cursor-auto": isDragging,
+            })}>
+            {dashboard.dashboard_name}
+          </Subtitle>
+        </LinkWithIcon>
         <div className="flex items-center justify-end flex-1">
-          <Badge className="right-0 z-10" size="xs" color="orange">
-            {dashboard.widgets_count || 0}
-          </Badge>
-          <button onClick={() => deleteDashboard(dashboard.id, dashboard.name)}
+          <button onClick={() => deleteDashboard(dashboard.id, dashboard.dashboard_name)} // Use correct property for name
                   className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${isHovered ? 'ml-2' : ''}`}>
             <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
           </button>
