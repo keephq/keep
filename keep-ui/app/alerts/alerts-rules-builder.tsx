@@ -598,8 +598,7 @@ export const AlertsRulesBuilder = ({
           </div>
 
           {/* Textarea and error message container */}
-          <div className="flex-grow relative "
-           ref={wrapperRef}>
+          <div className="flex-grow relative "ref={wrapperRef}>
             <Textarea
               ref={textAreaRef}
               rows={1}
