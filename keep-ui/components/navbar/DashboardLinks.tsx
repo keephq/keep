@@ -8,6 +8,7 @@ import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from 'classnames';
 import { useDashboards } from "utils/hooks/useDashboards";
+import { getApiURL } from "utils/apiUrl";
 
 export const DashboardLinks = ({ session }) => {
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
@@ -42,6 +43,8 @@ export const DashboardLinks = ({ session }) => {
           }
         });
         mutate(dashboards.filter(dashboard => dashboard.id !== id), false);
+        // now redirect to the first dashboard
+        router.push(`/dashboard/${encodeURIComponent(dashboards[0].dashboard_name)}`);
       } catch (error) {
         console.error('Error deleting dashboard:', error);
       }

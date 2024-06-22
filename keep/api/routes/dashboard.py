@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from keep.api.core.db import create_dashboard as create_dashboard_db
+from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
@@ -71,47 +72,13 @@ def update_dashboard(
     return dashboard
 
 
-"""
-@router.post("/", response_model=GridLayoutResponseDTO)
-def create_layout(
-    layout_dto: GridLayoutCreateDTO,
+@router.delete("/{dashboard_id}")
+def delete_dashboard(
+    dashboard_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ):
-    layout = GridLayout(
-        tenant_id=layout_dto.tenant_id, layout_config=layout_dto.layout_config
-    )
-    layout = add_layout_db(tenant_id, layout)
-    return layout
-
-
-@router.get("/{layout_id}", response_model=GridLayoutResponseDTO)
-def read_layout(
-    layout_id: str, authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier())
-):
-    layout = get_db_layout(tenant_id, layout_id)
-    if not layout:
-        raise HTTPException(status_code=404, detail="Layout not found")
-    return layout
-
-
-@router.put("/{layout_id}", response_model=GridLayoutResponseDTO)
-def update_layout(
-    layout_id: str,
-    layout_dto: GridLayoutUpdateDTO,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-):
-    # update the layout in the database
-    layout = update_db_layout(tenant_id, layout_id, layout_dto.layout_config)
-    return layout
-
-
-@router.delete("/{layout_id}")
-def delete_layout(
-    layout_id: str, authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier())
-):
-    # delete the layout from the database
-    layout = delete_db_layout(tenant_id, layout_id)
-    if not layout:
-        raise HTTPException(status_code=404, detail="Layout not found")
+    # delete the dashboard from the database
+    dashboard = delete_dashboard_db(authenticated_entity.tenant_id, dashboard_id)
+    if not dashboard:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
     return {"ok": True}
-"""

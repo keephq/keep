@@ -16,7 +16,7 @@ interface Dashboard {
 type DashboardLinkProps = {
   dashboard: Dashboard;
   pathname: string | null;
-  deleteDashboard: (id: string, name: string) => void;
+  deleteDashboard: (id: string) => void;
 };
 
 export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: DashboardLinkProps) => {
@@ -41,7 +41,7 @@ export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: Dashboar
           href={href}
           icon={FiLayout}
           isDeletable={true}
-          onDelete={() => deleteDashboard(dashboard.id, dashboard.dashboard_name)}
+          onDelete={() => deleteDashboard(dashboard.id)}
         >
           <Subtitle className={classNames({
               "text-orange-400": isActive,

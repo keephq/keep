@@ -1,12 +1,11 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
-import { Trashcan } from "components/icons";
 import { getApiURL } from "utils/apiUrl";
 import { usePresets } from "utils/hooks/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
-import { Badge, Icon, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import classNames from "classnames";
 import { LinkWithIcon } from "../LinkWithIcon";
 import {

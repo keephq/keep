@@ -1680,3 +1680,18 @@ def update_dashboard(
         session.commit()
         session.refresh(dashboard)
         return dashboard
+
+
+def delete_dashboard(tenant_id, dashboard_id):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if dashboard:
+            session.delete(dashboard)
+            session.commit()
+            return True
+        return False
