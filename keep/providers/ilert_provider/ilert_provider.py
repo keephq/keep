@@ -8,6 +8,7 @@ import json
 import os
 from typing import Literal
 
+from keep.api.models.alert import AlertDto
 import pydantic
 import requests
 
@@ -166,6 +167,38 @@ class IlertProvider(BaseProvider):
             extra={"status_code": response.status_code},
         )
         return response.json()
+
+    def _get_alerts(self) -> list[AlertDto]:
+        """
+        Get incidents from Ilert.
+        """
+        headers = {"Authorization": self.authentication_config.ilert_token}
+        response = requests.get(f"{self.authentication_config.ilert_host}/incidents",
+            headers=headers,
+        )
+        if not response.ok:
+            self.logger.error(
+                "Failed to get alerts",
+                extra={
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get alerts: {response.status_code} {response.text}"
+            )
+    
+        return [AlertDto(
+            id=alert["id"],
+            title=alert["summary"],
+            description=alert["message"],
+            status=alert["status"],
+            sendNotification=alert["sendNotification"],
+            created_at=alert["createdAt"],
+            updated_at=alert["updatedAt"],
+            resolved_on=alert["resolvedAt"],
+            subscribed=alert["subscribed"],
+        ) for alert in response.json()]
 
     def __create_or_update_incident(
         self, summary, status, message, affectedServices, id
@@ -349,3 +382,6 @@ if __name__ == "__main__":
         id="242530",
     )
     print(result)
+
+    alerts = provider._get_alerts()
+    print(alerts)
