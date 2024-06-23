@@ -23,13 +23,13 @@ export default function Extraction() {
         Beta
       </Badge>
       <div className="flex divide-x p-2">
-        <div className="w-2/3 pr-2.5">
+        <div className="w-1/3 pr-2.5">
           <CreateOrUpdateExtractionRule
             extractionToEdit={extractionToEdit}
             editCallback={setExtractionToEdit}
           />
         </div>
-        <div className="w-1/3 pl-2.5">
+        <div className="w-2/3 pl-2.5">
           {isLoading ? (
             <Loading />
           ) : extractions && extractions.length > 0 ? (

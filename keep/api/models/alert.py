@@ -30,6 +30,26 @@ class AlertSeverity(Enum):
     def __str__(self):
         return self._value_
 
+    def __lt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order < other.order
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order <= other.order
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order > other.order
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order >= other.order
+        return NotImplemented
+
 
 class AlertStatus(Enum):
     # Active alert
