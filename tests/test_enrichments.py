@@ -247,3 +247,73 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
 
     # Check if the alert's service is now updated to "new_service"
     assert mock_alert_dto.service == "new_service"
+
+
+def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name"],
+        rows=[
+            {"name": "^(keep-)?backend-service$", "service": "backend_service"},
+            {"name": "frontend-service", "service": "frontend_service"},
+        ],
+        disabled=False,
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case where the alert name matches the regex pattern with 'keep-' prefix
+    mock_alert_dto.name = "keep-backend-service"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert (
+        mock_alert_dto.service == "backend_service"
+    ), "Service should match 'backend_service' for 'keep-backend-service'"
+
+    # Test case where the alert name matches the regex pattern without 'keep-' prefix
+    mock_alert_dto.name = "backend-service"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert (
+        mock_alert_dto.service == "backend_service"
+    ), "Service should match 'backend_service' for 'backend-service'"
+
+    # Test case where the alert name does not match any regex pattern
+    mock_alert_dto.name = "unmatched-service"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert (
+        hasattr(mock_alert_dto, "service") is False
+    ), "Service should not match any entry"
+
+
+def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name"],
+        rows=[
+            {"name": "^(keep-)?backend-service$", "service": "backend_service"},
+            {"name": "frontend-service", "service": "frontend_service"},
+        ],
+        disabled=False,
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+    del mock_alert_dto.service
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case where no entry matches the regex pattern
+    mock_alert_dto.name = "unmatched-service"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert (
+        hasattr(mock_alert_dto, "service") is False
+    ), "Service should not match any entry"
