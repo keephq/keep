@@ -81,6 +81,12 @@ class PagerdutyProvider(BaseProvider):
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "resolved": AlertStatus.RESOLVED,
     }
+    DEFAULT_LOOKBACK_DAYS = 30  # Fetch incidents from the last 30 days by default
+    MAX_INCIDENTS = 1000  # Maximum number of incidents to fetch
+    INCLUDE_DETAILS = [
+        "acknowledgers", "assignees", "conference_bridge", "escalation_policies",
+        "first_trigger_log_entries", "priorities", "services", "teams", "users"
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -290,20 +296,38 @@ class PagerdutyProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     def _get_alerts(self) -> list[AlertDto]:
-        request = requests.get(
-            "https://api.pagerduty.com/incidents",
-            headers={
-                "Authorization": f"Token token={self.authentication_config.api_key}",
-            },
-        )
-        if not request.ok:
-            self.logger.error("Failed to get alerts", extra=request.json())
-            raise Exception("Could not get alerts")
-        incidents = request.json().get("incidents", [])
-        incidents = [
-            self._format_alert({"event": {"data": incident}}) for incident in incidents
-        ]
-        return incidents
+            params = {
+                "limit": 100,  # Number of incidents per page
+                "sort_by": "created_at:desc",
+                "since": (datetime.datetime.now() - datetime.timedelta(days=self.DEFAULT_LOOKBACK_DAYS)).isoformat(),
+                "until": datetime.datetime.now().isoformat(),
+                "include[]": self.INCLUDE_DETAILS
+            }
+
+            incidents = []
+            while len(incidents) < self.MAX_INCIDENTS:
+                request = requests.get(
+                    "https://api.pagerduty.com/incidents",
+                    headers={
+                        "Authorization": f"Token token={self.authentication_config.api_key}",
+                    },
+                    params=params
+                )
+                if not request.ok:
+                    self.logger.error("Failed to get alerts", extra=request.json())
+                    raise Exception("Could not get alerts")
+                
+                response = request.json()
+                new_incidents = response.get("incidents", [])
+                incidents.extend(new_incidents)
+                
+                if not response.get("more") or len(new_incidents) == 0:
+                    break
+                
+                params["offset"] = response.get("offset") + len(new_incidents)
+
+            self.logger.info(f"Fetched {len(incidents)} incidents from PagerDuty")
+            return [self._format_alert({"event": {"data": incident}}) for incident in incidents]
 
     @staticmethod
     def _format_alert(
@@ -312,27 +336,40 @@ class PagerdutyProvider(BaseProvider):
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url"))
-        # format status and severity to Keep format
-        status = PagerdutyProvider.STATUS_MAP.get(
-            data.pop("status"), AlertStatus.FIRING
-        )
-        priority_summary = (data.get("priority", {}) or {}).get("summary")
+        status = PagerdutyProvider.STATUS_MAP.get(data.pop("status"), AlertStatus.FIRING)
         priority = PagerdutyProvider.SEVERITIES_MAP.get(
-            priority_summary, AlertSeverity.INFO
+            data.get("priority", {}).get("summary"), AlertSeverity.INFO
         )
         last_received = data.pop("created_at")
         name = data.pop("title")
-        service = data.pop("service", {}).get("summary", "unknown")
+        service = data.pop("service", {})
+        service_name = service.get("summary", "unknown")
         environment = next(
             iter(
-                [
-                    x
-                    for x in data.pop("custom_fields", [])
-                    if x.get("name") == "environment"
-                ]
+                [x for x in data.pop("custom_fields", []) if x.get("name") == "environment"]
             ),
             {},
         ).get("value", "unknown")
+
+        # Extract additional metadata
+        incident_number = data.get("incident_number")
+        urgency = data.get("urgency")
+        escalation_policy = data.get("escalation_policy", {}).get("summary")
+        teams = [team.get("summary") for team in data.get("teams", [])]
+        assignments = [
+            {
+                "assignee": assignment.get("assignee", {}).get("summary"),
+                "at": assignment.get("at")
+            }
+            for assignment in data.get("assignments", [])
+        ]
+        description = data.get("description")
+        
+        # New fields from additional details
+        acknowledgers = [ack.get("summary") for ack in data.get("acknowledgers", [])]
+        first_trigger_log_entry = data.get("first_trigger_log_entry", {}).get("summary")
+        conference_bridge = data.get("conference_bridge", {}).get("summary")
+
         return AlertDto(
             **data,
             url=url,
@@ -342,9 +379,18 @@ class PagerdutyProvider(BaseProvider):
             severity=priority,
             environment=environment,
             source=["pagerduty"],
-            service=service,
+            service=service_name,
+            incident_number=incident_number,
+            urgency=urgency,
+            escalation_policy=escalation_policy,
+            teams=teams,
+            assignments=assignments,
+            description=description,
+            impacted_services=[service_name],
+            acknowledgers=acknowledgers,
+            first_trigger_log_entry=first_trigger_log_entry,
+            conference_bridge=conference_bridge
         )
-
     def _notify(
         self,
         title: str = "",
