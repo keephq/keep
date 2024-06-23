@@ -1,8 +1,13 @@
-export const fetcher = async (url: string, accessToken: string | undefined) => {
+export const fetcher = async (
+  url: string,
+  accessToken: string | undefined,
+  requestInit: RequestInit = {}
+) => {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    ...requestInit,
   });
 
   // Ensure that the fetch was successful
