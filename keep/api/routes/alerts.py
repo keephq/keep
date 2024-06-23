@@ -1095,7 +1095,8 @@ async def search_alerts(
                 "column": e.column,
             },
         )
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to search alerts", extra={"error": str(e)})
         raise HTTPException(status_code=500, detail="Failed to search alerts")

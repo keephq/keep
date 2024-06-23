@@ -90,7 +90,7 @@ const getEmptyDistribution = () => {
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer p-2"
+      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
       onClick={onClick}
     >
       <div className="w-48">
@@ -110,9 +110,9 @@ export default function ProviderTile({ provider, onClick }: Props) {
             icon={OAuthIcon}
             className={`absolute top-[-15px] ${
               provider.can_setup_webhook || provider.supports_webhook
-              ? "right-[-0px]"
-              : "right-[-15px]"
-              } grayscale hover:grayscale-0 group-hover:grayscale-0`}
+                ? "right-[-0px]"
+                : "right-[-15px]"
+            } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
             tooltip="OAuth2 available"
@@ -124,7 +124,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           </Text>
         ) : null}
         {provider.linked ? (
-          <Text color={"green"} className="flex text-xs md:top-3 md:left-2">
+          <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
         ) : null}
@@ -133,7 +133,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             <Title
               className={`${
                 !provider.linked ? "group-hover:hidden" : ""
-                } capitalize`}
+              } capitalize`}
               title={provider.details?.name}
             >
               {provider.display_name}{" "}
@@ -154,13 +154,13 @@ export default function ProviderTile({ provider, onClick }: Props) {
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text>Id: {provider.id}</Text>
+              <Text className="truncate">Id: {provider.id}</Text>
             ) : (
               <br></br>
             )}
             {(provider.installed || provider.linked) &&
-              provider.alertsDistribution &&
-              provider.alertsDistribution.length > 0 ? (
+            provider.alertsDistribution &&
+            provider.alertsDistribution.length > 0 ? (
               <SparkAreaChart
                 data={addOneToDistribution(provider.alertsDistribution)}
                 categories={["number"]}
@@ -170,7 +170,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 autoMinValue={true}
                 className={`${
                   !provider.linked ? "group-hover:hidden" : ""
-                  } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
               />
             ) : provider.installed || provider.linked ? (
               <SparkAreaChart
@@ -180,13 +180,13 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 colors={["orange"]}
                 className={`${
                   !provider.linked ? "group-hover:hidden" : ""
-                  } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
                 autoMinValue={true}
                 maxValue={1}
               />
             ) : null}
           </div>
-          <div className="labels flex flex-col group-hover:hidden">
+          <div className="labels flex group-hover:hidden">
             {!provider.installed &&
               !provider.linked &&
               provider.tags.map((tag) => {
@@ -194,12 +194,12 @@ export default function ProviderTile({ provider, onClick }: Props) {
                   tag === "alert"
                     ? BellAlertIcon
                     : tag === "data"
-                      ? CircleStackIcon
-                      : tag === "ticketing"
-                        ? TicketIcon
-                        : tag === "queue"
-                          ? QueueListIcon
-                          : ChatBubbleBottomCenterIcon;
+                    ? CircleStackIcon
+                    : tag === "ticketing"
+                    ? TicketIcon
+                    : tag === "queue"
+                    ? QueueListIcon
+                    : ChatBubbleBottomCenterIcon;
                 return (
                   <Badge
                     key={tag}
@@ -217,29 +217,26 @@ export default function ProviderTile({ provider, onClick }: Props) {
             <Button
               variant="secondary"
               size="xs"
-              className= "pd-2"
               color={provider.installed ? "orange" : "green"}
-              className="hidden group-hover:block"
+              className="hidden group-hover:block pd-2"
             >
               {provider.installed ? "Modify" : "Connect"}
             </Button>
           )}
         </div>
       </div>
-      <div className="flex justify-center items-center">
-        <ImageWithFallback
-          src={`/icons/${provider.type}-icon.png`}
-          fallbackSrc={`/icons/keep-icon.png`}
-          width={48}
-          height={48}
-          alt={provider.type}
+      <ImageWithFallback
+        src={`/icons/${provider.type}-icon.png`}
+        fallbackSrc={`/icons/keep-icon.png`}
+        width={48}
+        height={48}
+        alt={provider.type}
         className={`${
           provider.installed || provider.linked
-              ? ""
-              : "grayscale group-hover:grayscale-0"
-            } max-w-full max-h-full object-contain`}
-        />
-      </div>
+            ? ""
+            : "grayscale group-hover:grayscale-0"
+        }`}
+      />
     </div>
   );
 }
