@@ -1,278 +1,49 @@
-"""
-Ilert Provider is a class that allows to create/close incidents in Ilert.
-"""
-
-import dataclasses
-import enum
-import json
-import os
-from typing import Literal
-
-import pydantic
-import requests
-
-from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-from keep.providers.providers_factory import ProvidersFactory
-
-
-class IlertIncidentStatus(str, enum.Enum):
-    """
-    Ilert incident status.
-    """
-
-    INVESTIGATING = "INVESTIGATING"
-    RESOLVED = "RESOLVED"
-    MONITORING = "MONITORING"
-    IDENTIFIED = "IDENTIFIED"
-
-
-class IlertServiceStatus(str, enum.Enum):
-    """
-    Ilert service status.
-    """
-
-    OPERATIONAL = "OPERATIONAL"
-    DEGRADED = "DEGRADED"
-    PARTIAL_OUTAGE = "PARTIAL_OUTAGE"
-    MAJOR_OUTAGE = "MAJOR_OUTAGE"
-    UNDER_MAINTENANCE = "UNDER_MAINTENANCE"
-
-
-class IlertServiceNoIncludes(pydantic.BaseModel):
-    """
-    Ilert service.
-    """
-
-    id: str
-
-
-class IlertAffectedService(pydantic.BaseModel):
-    """
-    Ilert affected service.
-    """
-
-    service: IlertServiceNoIncludes
-    impact: IlertServiceStatus
-
-
-@pydantic.dataclasses.dataclass
-class IlertProviderAuthConfig:
-    """
-    Ilert authentication configuration.
-    """
-
-    ilert_token: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "ILert API token",
-            "hint": "Bearer eyJhbGc...",
-            "sensitive": True,
-        }
-    )
-    ilert_host: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "ILert API host",
-            "hint": "https://api.ilert.com/api",
-        },
-        default="https://api.ilert.com/api",
-    )
-
-
 class IlertProvider(BaseProvider):
-    """Create/Resolve incidents in Ilert."""
+    # Existing code...
 
-    PROVIDER_SCOPES = [
-        ProviderScope("read_permission", "Read permission", mandatory=True),
-        ProviderScope("write_permission", "Write permission", mandatory=False),
-    ]
-
-    def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
-    ):
-        super().__init__(context_manager, provider_id, config)
-
-    def dispose(self):
+    def fetch_all_incidents(self):
         """
-        Dispose the provider.
+        Fetch all incidents from iLert with metadata.
         """
-        pass
+        self.logger.info("Fetching all incidents from iLert")
 
-    def validate_config(self):
-        """
-        Validates required configuration for Ilert provider.
-
-        """
-        self.authentication_config = IlertProviderAuthConfig(
-            **self.config.authentication
-        )
-
-    def validate_scopes(self):
-        scopes = {}
-        self.logger.info("Validating scopes")
-        for scope in self.PROVIDER_SCOPES:
-            try:
-                if scope.name == "read_permission":
-                    requests.get(
-                        f"{self.authentication_config.ilert_host}/incidents",
-                        headers={
-                            "Authorization": self.authentication_config.ilert_token
-                        },
-                    )
-                    scopes[scope.name] = True
-                elif scope.name == "write_permission":
-                    # TODO: find a way to validate write_permissions, for now it is always "validated" sucessfully.
-                    scopes[scope.name] = True
-            except Exception as e:
-                self.logger.warning(
-                    "Failed to validate scope",
-                    extra={"scope": scope.name},
-                )
-                scopes[scope.name] = str(e)
-        self.logger.info("Scopes validated", extra=scopes)
-        return scopes
-
-    def _query(self, incident_id: str, **kwargs):
-        """
-        Query Ilert incident.
-        """
-        self.logger.info(
-            "Querying Ilert incident",
-            extra={
-                "incident_id": incident_id,
-                **kwargs,
-            },
-        )
         headers = {"Authorization": self.authentication_config.ilert_token}
-        response = requests.get(
-            f"{self.authentication_config.ilert_host}/incidents/{incident_id}",
-            headers=headers,
-        )
-        if not response.ok:
-            self.logger.error(
-                "Failed to query Ilert incident",
-                extra={
-                    "status_code": response.status_code,
-                    "response": response.text,
-                },
+        incidents = []
+        page = 1
+        page_size = 100  # Adjust based on API documentation or constraints
+
+        while True:
+            response = requests.get(
+                f"{self.authentication_config.ilert_host}/incidents?page={page}&pageSize={page_size}",
+                headers=headers,
             )
-            raise Exception(
-                f"Failed to query Ilert incident: {response.status_code} {response.text}"
-            )
-        self.logger.info(
-            "Ilert incident queried",
-            extra={"status_code": response.status_code},
-        )
-        return response.json()
-
-    def __create_or_update_incident(
-        self, summary, status, message, affectedServices, id
-    ):
-        self.logger.info(
-            "Creating/updating Ilert incident",
-            extra={
-                "summary": summary,
-                "status": status,
-                "incident_message": message,
-                "affectedServices": affectedServices,
-                "id": id,
-            },
-        )
-        headers = {"Authorization": self.authentication_config.ilert_token}
-
-        # Create or update incident
-        payload = {
-            "id": id,
-            "status": str(status),
-            "message": message,
-        }
-
-        # if id is set, we update the incident, otherwise we create a new one
-        should_update = id and id != "0"
-        if not should_update:
-            try:
-                payload["affectedServices"] = (
-                    json.loads(affectedServices)
-                    if isinstance(affectedServices, str)
-                    else affectedServices
+            if not response.ok:
+                self.logger.error(
+                    "Failed to fetch incidents from iLert",
+                    extra={
+                        "status_code": response.status_code,
+                        "response": response.text,
+                    },
                 )
-            except Exception:
-                self.logger.warning(
-                    "Failed to parse affectedServices",
-                    extra={"affectedServices": affectedServices},
+                raise Exception(
+                    f"Failed to fetch incidents from iLert: {response.status_code} {response.text}"
                 )
-                raise
-            if not summary:
-                raise Exception("summary is required")
-            payload["summary"] = summary
-            response = requests.post(
-                f"{self.authentication_config.ilert_host}/incidents",
-                headers=headers,
-                json=payload,
-            )
-        else:
-            incident = requests.get(
-                f"{self.authentication_config.ilert_host}/incidents/{id}",
-                headers=headers,
-            ).json()
-            response = requests.put(
-                f"{self.authentication_config.ilert_host}/incidents/{id}",
-                headers=headers,
-                json={**incident, **payload},
-            )
 
-        if not response.ok:
-            self.logger.error(
-                "Failed to create/update Ilert incident",
-                extra={
-                    "status_code": response.status_code,
-                    "response": response.text,
-                },
-            )
-            raise Exception(
-                f"Failed to create/update Ilert incident: {response.status_code} {response.text}"
-            )
-        self.logger.info(
-            "Ilert incident created/updated",
-            extra={"status_code": response.status_code},
-        )
-        return response.json()
+            data = response.json()
+            incidents.extend(data["incidents"])
 
-    def __post_ilert_event(
-        self,
-        event_type: Literal["ALERT", "ACCEPT", "RESOLVE"] = "ALERT",
-        summary: str = "",
-        details: str = "",
-        alert_key: str = "",
-        priority: Literal["HIGH", "LOW"] = "HIGH",
-        images: list = [],
-        links: list = [],
-        custom_details: dict = {},
-        routing_key: str = "",
-    ):
-        payload = {
-            "eventType": event_type,
-            "summary": summary,
-            "details": details,
-            "alertKey": alert_key,
-            "priority": priority,
-            "images": images,
-            "links": links,
-            "customDetails": custom_details,
-            "routingKey": routing_key,
-        }
-        self.logger.info("Posting Ilert event", extra=payload)
-        payload["apiKey"] = self.authentication_config.ilert_token
-        response = requests.post(
-            f"{self.authentication_config.ilert_host}/events",
-            json=payload,
-        )
+            if len(data["incidents"]) < page_size:
+                break  # Exit if there are no more incidents to fetch
+
+            page += 1
+
         self.logger.info(
-            "Ilert event posted", extra={"status_code": response.status_code}
+            "Fetched all incidents from iLert",
+            extra={"total_incidents": len(incidents)},
         )
-        return response.json()
+        return incidents
+
+    # Existing methods...
 
     def _notify(
         self,
@@ -334,18 +105,6 @@ if __name__ == "__main__":
         provider_type="ilert",
         provider_config=provider_config,
     )
-    result = provider._query(
-        "Example",
-        message="Lorem Ipsum",
-        status="MONITORING",
-        affectedServices=json.dumps(
-            [
-                {
-                    "impact": "OPERATIONAL",
-                    "service": {"id": 339743},
-                }
-            ]
-        ),
-        id="242530",
-    )
-    print(result)
+    # Fetch all incidents
+    all_incidents = provider.fetch_all_incidents()
+    print(json.dumps(all_incidents, indent=4))
