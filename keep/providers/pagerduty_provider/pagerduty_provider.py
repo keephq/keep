@@ -81,8 +81,7 @@ class PagerdutyProvider(BaseProvider):
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "resolved": AlertStatus.RESOLVED,
     }
-    DEFAULT_LOOKBACK_DAYS = 30  # Fetch incidents from the last 30 days by default
-    MAX_INCIDENTS = 1000  # Maximum number of incidents to fetch
+    DEFAULT_LOOKBACK_DAYS = 365  # Fetch incidents from the last year by default    MAX_INCIDENTS = 1000  # Maximum number of incidents to fetch
     INCLUDE_DETAILS = [
         "acknowledgers", "assignees", "conference_bridge", "escalation_policies",
         "first_trigger_log_entries", "priorities", "services", "teams", "users"
