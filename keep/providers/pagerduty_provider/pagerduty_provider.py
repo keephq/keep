@@ -335,6 +335,39 @@ class PagerdutyProvider(BaseProvider):
             ),
             {},
         ).get("value", "unknown")
+
+        assignments = [
+            {
+                "id": x.get("assignee", {}).get("id"),
+                "assignee": x.get("assignee", {}).get("summary"),
+                "at": x.get("at"),
+            }
+            for x in data.get("assignments", [])
+        ]
+        last_updated_by = {
+            "id": data.get("last_status_change_by", {}).get("id"),
+            "service": data.get("last_status_change_by", {}).get("summary"),
+        }
+        first_trigger_log_entry = {
+            "id": data.get("first_trigger_log_entry", {}).get("id"),
+            "summary": data.get("first_trigger_log_entry", {}).get("summary"),
+            "type": data.get("first_trigger_log_entry", {}).get("type"),
+        }
+        acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
+
+        # Additional metadata
+        metadata = {
+            "description": data.get("description"),
+            "urgency": data.get("urgency"),
+            "last_status_change": data.get("last_status_change_at"),
+            "priority": data.get("priority", {}).get("summary"),
+            "acknowledgers": acknowledgers,
+            "assignments": assignments,
+            "last_updated_by": last_updated_by,
+            "first_trigger_log_entry": first_trigger_log_entry,
+        }
+
+
         return AlertDto(
             **data,
             url=url,
@@ -345,6 +378,7 @@ class PagerdutyProvider(BaseProvider):
             environment=environment,
             source=["pagerduty"],
             service=service,
+            labels=metadata,
         )
 
     def _notify(
