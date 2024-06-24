@@ -452,7 +452,7 @@ def enrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "",
+                    "{}",
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
