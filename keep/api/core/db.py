@@ -179,6 +179,16 @@ def get_session() -> Session:
             yield session
 
 
+def get_session_sync() -> Session:
+    """
+    Creates a database session.
+
+    Returns:
+        Session: A database session
+    """
+    return Session(engine)
+
+
 def try_create_single_tenant(tenant_id: str) -> None:
     try:
         # if Keep is not multitenant, let's import the User table too:
@@ -937,7 +947,9 @@ def get_alerts_with_filters(
     return alerts
 
 
-def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
+def get_last_alerts(
+    tenant_id, provider_id=None, limit=1000, timeframe=None
+) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
 
@@ -962,7 +974,16 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .group_by(Alert.fingerprint)
             .subquery()
         )
-
+        # if timeframe is provided, filter the alerts by the timeframe
+        if timeframe:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp
+                    >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+                )
+                .subquery()
+            )
         # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
             session.query(
@@ -984,6 +1005,12 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
+
+        if timeframe:
+            query = query.filter(
+                subquery.c.max_timestamp
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
 
         # Order by timestamp in descending order and limit the results
         query = query.limit(limit)
@@ -1613,6 +1640,16 @@ def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
         )
         presets = session.exec(statement).all()
     return presets
+
+
+def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.name == preset_name)
+        ).first()
+    return preset
 
 
 def get_all_presets(tenant_id: str) -> List[Preset]:

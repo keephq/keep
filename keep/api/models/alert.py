@@ -5,7 +5,7 @@ import logging
 from enum import Enum
 from typing import Any, Dict
 
-from pydantic import AnyHttpUrl, BaseModel, Extra, Field, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,33 @@ class AlertSeverity(Enum):
 
     def __str__(self):
         return self._value_
+
+    @classmethod
+    def from_number(cls, n):
+        for severity in cls:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No AlertSeverity with order {n}")
+
+    def __lt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order < other.order
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order <= other.order
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order > other.order
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order >= other.order
+        return NotImplemented
 
 
 class AlertStatus(Enum):
@@ -84,6 +111,27 @@ class AlertDto(BaseModel):
         # Convert the model instance to a dictionary
         model_dict = self.dict()
         return json.dumps(model_dict, indent=4, default=str)
+
+    def __eq__(self, other):
+        if isinstance(other, AlertDto):
+            # Convert both instances to dictionaries
+            dict_self = self.dict()
+            dict_other = other.dict()
+
+            # Fields to exclude from comparison since they are bit different in different db's
+            exclude_fields = {"lastReceived", "startedAt", "event_id"}
+
+            # Remove excluded fields from both dictionaries
+            for field in exclude_fields:
+                dict_self.pop(field, None)
+                dict_other.pop(field, None)
+
+            # Compare the dictionaries
+            return dict_self == dict_other
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
@@ -143,7 +191,11 @@ class AlertDto(BaseModel):
         # Check and set default severity
         severity = values.get("severity")
         try:
-            values["severity"] = AlertSeverity(severity)
+            # if severity is int, convert it to AlertSeverity
+            if isinstance(severity, int):
+                values["severity"] = AlertSeverity.from_number(severity)
+            else:
+                values["severity"] = AlertSeverity(severity)
         except ValueError:
             logging.warning(
                 f"Invalid severity value: {severity}, setting default.",
@@ -162,7 +214,14 @@ class AlertDto(BaseModel):
             )
             values["status"] = AlertStatus.FIRING
 
-        values.pop("assignees", None)
+        # this is code duplication of enrichment_helpers.py and should be refactored
+        lastReceived = values["lastReceived"]
+        assignees = values.pop("assignees", None)
+        if assignees:
+            dt = datetime.datetime.fromisoformat(lastReceived)
+            dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            assignee = assignees.get(lastReceived) or assignees.get(dt)
+            values["assignee"] = assignee
         values.pop("deletedAt", None)
         return values
 
@@ -225,8 +284,3 @@ class DismissRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
-
-
-class SearchAlertsRequest(BaseModel):
-    query: str = Field(..., alias="query")
-    timeframe: int = Field(..., alias="timeframe")

@@ -145,12 +145,12 @@ class KibanaProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     @staticmethod
-    def parse_event_raw_body(raw_body: bytes) -> bytes:
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
         # tb: this is a f**king stupid hack because Kibana doesn't escape {{#toJson}} :(
         if b'"payload": "{' in raw_body:
             raw_body = raw_body.replace(b'"payload": "{', b'"payload": {')
             raw_body = raw_body.replace(b'}",', b"},")
-        return raw_body
+        return json.loads(raw_body)
 
     def validate_scopes(self) -> dict[str, bool | str]:
         """
