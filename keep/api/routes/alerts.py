@@ -1,5 +1,3 @@
-# TODO: this whole file needs to get refactored
-# mainly: pusher stuff, enrichment stuff and async stuff
 import base64
 import hashlib
 import hmac
