@@ -4,7 +4,6 @@ Parseable Provider is a class that allows to ingest/digest data from Parseable.
 
 import dataclasses
 import datetime
-import json
 import logging
 import os
 from typing import Optional
@@ -154,7 +153,7 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def parse_event_raw_body(raw_body: bytes) -> bytes:
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
         """
         Parse the raw body of the event.
         > b'Alert: Server side error triggered on teststream1\nMessage: server reporting status as 500\nFailing Condition: status column equal to abcd, 2 times'
@@ -178,7 +177,7 @@ class ParseableProvider(BaseProvider):
                     event[key.lower().replace(" ", "_")] = value
                 except Exception as e:
                     logger.error(f"Failed to parse line {line} with error {e}")
-        return json.dumps(event).encode()
+        return event
 
 
 if __name__ == "__main__":

@@ -18,11 +18,13 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { toast } from "react-toastify";
 
 interface Props {
+  preset: string;
   alert: AlertDto[] | null | undefined;
   handleClose: () => void;
 }
 
 export default function AlertDismissModal({
+  preset: presetName,
   alert: alerts,
   handleClose,
 }: Props) {
@@ -43,8 +45,8 @@ export default function AlertDismissModal({
 
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
-  const { useAllAlerts } = useAlerts();
-  const { mutate: alertsMutator } = useAllAlerts({ revalidateOnMount: false });
+  const { usePresetAlerts } = useAlerts();
+  const { mutate: alertsMutator } = usePresetAlerts(presetName, { revalidateOnMount: false });
 
   const { data: session } = useSession();
   // if this modal should not be open, do nothing

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from importlib import metadata
@@ -16,6 +17,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
+from keep.api.arq_worker import get_worker
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -49,6 +51,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
+REDIS = os.environ.get("REDIS", "false") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -235,6 +238,10 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
+        if REDIS:
+            event_loop = asyncio.get_event_loop()
+            worker = get_worker()
+            event_loop.create_task(worker.async_run())
         logger.info("Services started successfully")
 
     @app.exception_handler(Exception)

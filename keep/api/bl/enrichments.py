@@ -6,7 +6,9 @@ import celpy
 import chevron
 from sqlmodel import Session
 
-from keep.api.core.db import enrich_alert, get_mapping_rule_by_id
+from keep.api.core.db import enrich_alert as enrich_alert_db
+from keep.api.core.db import get_mapping_rule_by_id
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
@@ -37,6 +39,7 @@ class EnrichmentsBl:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.db_session = db
+        self.elastic_client = ElasticClient()
 
     def run_extraction_rules(self, event: AlertDto | dict) -> AlertDto | dict:
         """
@@ -234,9 +237,7 @@ class EnrichmentsBl:
                         setattr(alert, key, value)
 
                     # Save the enrichments to the database
-                    enrich_alert(
-                        self.tenant_id, alert.fingerprint, enrichments, self.db_session
-                    )
+                    self.enrich_alert(alert.fingerprint, enrichments)
                     self.logger.info(
                         "Alert enriched",
                         extra={
@@ -245,3 +246,24 @@ class EnrichmentsBl:
                         },
                     )
                     break
+
+    def enrich_alert(self, fingerprint: str, enrichments: dict):
+        """
+        Enrich the alert with extraction and mapping rules
+        """
+        # enrich db
+        self.logger.debug("enriching alert db", extra={"fingerprint": fingerprint})
+        enrich_alert_db(self.tenant_id, fingerprint, enrichments, self.db_session)
+        self.logger.debug(
+            "alert enriched in db, enriching elastic",
+            extra={"fingerprint": fingerprint},
+        )
+        # enrich elastic
+        self.elastic_client.enrich_alert(
+            tenant_id=self.tenant_id,
+            alert_fingerprint=fingerprint,
+            alert_enrichments=enrichments,
+        )
+        self.logger.debug(
+            "alert enriched in elastic", extra={"fingerprint": fingerprint}
+        )

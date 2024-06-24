@@ -12,13 +12,14 @@ import { Table } from "@tanstack/react-table";
 import { useAlerts } from "utils/hooks/useAlerts";
 
 interface Props {
+  presetName: string;
   table: Table<AlertDto>;
   isRefreshAllowed: boolean;
 }
 
-export default function AlertPagination({ table, isRefreshAllowed }: Props) {
-  const { useAllAlerts } = useAlerts();
-  const { mutate, isValidating } = useAllAlerts();
+export default function AlertPagination({ presetName, table, isRefreshAllowed }: Props) {
+  const { usePresetAlerts } = useAlerts();
+  const { mutate, isValidating } = usePresetAlerts(presetName);
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
