@@ -50,8 +50,8 @@ export default function AlertMenu({
     },
   } = useProviders({ revalidateOnFocus: false, revalidateOnMount: false });
 
-  const { useAllAlerts } = useAlerts();
-  const { mutate } = useAllAlerts({ revalidateOnMount: false });
+  const { usePresetAlerts } = useAlerts();
+  const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
 
   const { data: session } = useSession();
 
@@ -84,7 +84,6 @@ export default function AlertMenu({
 
   const onDismiss = async () => {
     setDismissModalAlert?.([alert]);
-    await mutate();
   };
 
   const callAssignEndpoint = async (unassign: boolean = false) => {

@@ -45,15 +45,15 @@ def main():
             )
         except Exception as e:
             logger.error("Failed to send alert: {}".format(e))
-            time.sleep(1)
+            time.sleep(0.2)
             continue
 
-        if response.status_code != 200:
+        if response.status_code != 202:
             logger.error("Failed to send alert: {}".format(response.text))
         else:
             logger.info("Alert sent successfully")
 
-        time.sleep(1)  # Wait for 10 seconds before sending the next alert
+        time.sleep(0.2)  # Wait for 10 seconds before sending the next alert
 
 
 if __name__ == "__main__":
