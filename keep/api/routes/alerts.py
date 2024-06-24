@@ -23,24 +23,14 @@ from pusher import Pusher
 from keep.api.arq_worker import get_pool
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
-from keep.api.core.db import (
-    get_alerts_by_fingerprint,
-    get_all_presets,
-    get_enrichment,
-    get_last_alerts,
-)
+from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
     AuthVerifier,
     get_pusher_client,
 )
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import (
-    AlertDto,
-    AlertStatus,
-    DeleteRequestBody,
-    EnrichAlertRequestBody,
-)
+from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
 from keep.api.models.db.preset import PresetDto
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
@@ -48,7 +38,6 @@ from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
-from keep.rulesengine.rulesengine import RulesEngine
 from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
@@ -60,7 +49,10 @@ REDIS = os.environ.get("REDIS", "false") == "true"
 
 
 def pull_alerts_from_providers(
-    tenant_id: str, pusher_client: Pusher | None, sync: bool = False
+    tenant_id: str,
+    preset_dto: PresetDto,
+    pusher_client: Pusher | None,
+    sync: bool = False,
 ) -> list[AlertDto]:
     """
     Pulls alerts from the installed providers.
@@ -88,7 +80,7 @@ def pull_alerts_from_providers(
     logger.info(
         f"{'Asynchronously' if sync is False else 'Synchronously'} pulling alerts from installed providers"
     )
-
+    search_engine = SearchEngine(tenant_id)
     sync_alerts = []  # if we're running in sync mode
     for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
         provider_class = ProvidersFactory.get_provider(
@@ -126,6 +118,10 @@ def pull_alerts_from_providers(
                     alerts[0]
                     for alerts in sorted_provider_alerts_by_fingerprint.values()
                 ]
+                # filter by the current preset
+                last_alerts = search_engine.search_alerts_by_cel(
+                    preset_dto.query.cel_query, last_alerts
+                )
                 if sync:
                     sync_alerts.extend(last_alerts)
                     logger.info(
@@ -174,63 +170,6 @@ def pull_alerts_from_providers(
                         new_compressed_batch,
                     )
                 logger.info("Sent batch of pulled alerts via pusher")
-                # Also update the presets
-                try:
-                    presets = get_all_presets(tenant_id)
-                    presets_do_update = []
-                    for preset in presets:
-                        # filter the alerts based on the search query
-                        preset_dto = PresetDto(**preset.dict())
-                        filtered_alerts = RulesEngine.filter_alerts(
-                            last_alerts, preset_dto.cel_query
-                        )
-                        # if not related alerts, no need to update
-                        if not filtered_alerts:
-                            continue
-                        presets_do_update.append(preset_dto)
-                        preset_dto.alerts_count = len(filtered_alerts)
-                        # update noisy
-                        if preset.is_noisy:
-                            firing_filtered_alerts = list(
-                                filter(
-                                    lambda alert: alert.status
-                                    == AlertStatus.FIRING.value,
-                                    filtered_alerts,
-                                )
-                            )
-                            # if there are firing alerts, then do noise
-                            if firing_filtered_alerts:
-                                logger.info("Noisy preset is noisy")
-                                preset_dto.should_do_noise_now = True
-                        # else if at least one of the alerts has .isNoisy
-                        elif any(
-                            alert.isNoisy and alert.status == AlertStatus.FIRING.value
-                            for alert in filtered_alerts
-                            if hasattr(alert, "isNoisy")
-                        ):
-                            logger.info("Noisy preset is noisy")
-                            preset_dto.should_do_noise_now = True
-                    # send with pusher
-                    if pusher_client:
-                        try:
-                            pusher_client.trigger(
-                                f"private-{tenant_id}",
-                                "async-presets",
-                                json.dumps(
-                                    [p.dict() for p in presets_do_update], default=str
-                                ),
-                            )
-                        except Exception:
-                            logger.exception("Failed to send presets via pusher")
-                except Exception:
-                    logger.exception(
-                        "Failed to send presets via pusher",
-                        extra={
-                            "provider_type": provider.type,
-                            "provider_id": provider.id,
-                            "tenant_id": tenant_id,
-                        },
-                    )
             logger.info(
                 f"Pulled alerts from provider {provider.type} ({provider.id}) (alerts: {len(sorted_provider_alerts_by_fingerprint)})",
                 extra={

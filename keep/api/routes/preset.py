@@ -1,15 +1,21 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pusher import Pusher
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
+    get_pusher_client,
+)
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
+from keep.api.routes.alerts import pull_alerts_from_providers
 from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
@@ -190,8 +196,10 @@ def update_preset(
 )
 def get_preset_alerts(
     preset_name: str,
+    background_tasks: BackgroundTasks,
+    sync: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting preset alerts", extra={"preset_name": preset_name})
@@ -207,4 +215,16 @@ def get_preset_alerts(
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
+
+    if sync:
+        preset_alerts.extend(
+            pull_alerts_from_providers(tenant_id, preset_dto, pusher_client, sync=True)
+        )
+    else:
+        logger.info("Adding task to async fetch alerts from providers")
+        background_tasks.add_task(
+            pull_alerts_from_providers, tenant_id, preset_dto, pusher_client
+        )
+        logger.info("Added task to async fetch alerts from providers")
+
     return preset_alerts

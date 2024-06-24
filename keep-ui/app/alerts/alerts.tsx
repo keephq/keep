@@ -84,8 +84,9 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
-  const { data: alerts = [], isLoading: isAsyncLoading } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
-  // const { data: alerts = [], isLoading: isAsyncLoading } = useAllAlertsWithSubscription();
+  const { data: alerts = [], isLoading: isAsyncLoading } = usePresetAlerts(
+    selectedPreset ? selectedPreset.name : ""
+  );
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
@@ -138,6 +139,7 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
       <AlertChangeStatusModal
         alert={changeStatusAlert}
+        presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal

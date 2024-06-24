@@ -27,7 +27,6 @@ const convertAlertsToMap = (alerts: AlertDto[]): Map<string, AlertDto> => {
   return alertsMap;
 };
 
-
 const getFormatAndMergePusherWithEndpointAlerts = (
   alertsMap: Map<string, AlertDto>,
   newPusherAlerts: AlertDto[]
@@ -80,13 +79,14 @@ export const useAlerts = () => {
   };
 
   const useAllAlerts = (
+    presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
       () => (configData && session ? "alerts" : null),
       () =>
         fetcher(
-          `${apiUrl}/alerts?sync=${
+          `${apiUrl}/preset/${presetName}/alerts?sync=${
             configData?.PUSHER_DISABLED ? "true" : "false"
           }`,
           session?.accessToken
@@ -95,15 +95,18 @@ export const useAlerts = () => {
     );
   };
 
-  const useAllAlertsWithSubscription = (
+  const usePresetAlerts = (
+    presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
       new Map()
     );
 
-    const { data: alertsFromEndpoint = [], ...restOfAllAlerts } =
-      useAllAlerts(options);
+    const { data: alertsFromEndpoint = [], ...restOfAllAlerts } = useAllAlerts(
+      presetName,
+      options
+    );
 
     const { data: alertSubscription = getDefaultSubscriptionObj() } =
       useAlertsFromPusher();
@@ -254,48 +257,10 @@ export const useAlerts = () => {
     );
   };
 
-  const usePresetAlerts = (
-    presetName: string,
-    options: SWRConfiguration = { revalidateOnFocus: false }
-  ) => {
-    const apiUrl = getApiURL();
-    const { data: session } = useSession();
-
-    return useSWR<AlertDto[]>(
-      () => (session ? `${apiUrl}/preset/${presetName}/alerts` : null),
-      async (url) => {
-        try {
-          const response = await fetcher(url, session?.accessToken);
-          if (!Array.isArray(response)) {
-            throw new Error("Response is not an array");
-          }
-
-          const alerts = response.map((alert) => {
-            if (typeof alert !== "object" || !alert.fingerprint) {
-              throw new Error("Response contains invalid alert data");
-            }
-            return {
-              ...alert,
-              lastReceived: toDateObjectWithFallback(alert.lastReceived),
-            } as AlertDto;
-          });
-
-          return Array.from(convertAlertsToMap(alerts).values());
-        } catch (error) {
-          console.error("Error fetching or processing alerts:", error);
-          throw error;
-        }
-      },
-      options
-    );
-  };
-
-
   return {
     useAlertHistory,
     useAllAlerts,
     useAlertsFromPusher,
-    useAllAlertsWithSubscription,
     usePresetAlerts,
   };
 };
