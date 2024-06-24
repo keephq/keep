@@ -363,15 +363,9 @@ class PagerdutyProvider(BaseProvider):
             }
             for x in data.get("assignments", [])
         ]
-        last_updated_by = {
-            "id": data.get("last_status_change_by", {}).get("id"),
-            "service": data.get("last_status_change_by", {}).get("summary"),
-        }
-        first_trigger_log_entry = {
-            "id": data.get("first_trigger_log_entry", {}).get("id"),
-            "summary": data.get("first_trigger_log_entry", {}).get("summary"),
-            "type": data.get("first_trigger_log_entry", {}).get("type"),
-        }
+        last_status_change_by = data.get("last_status_change_by", {})
+        first_trigger_log_entry = data.get("first_trigger_log_entry", {})
+        escalation_policy = data.get("escalation_policy", {})
         acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
         conference_bridge = data.get("conference_bridge", {}).get("summary")
         teams = [team.get("summary") for team in data.get("teams", [])]
@@ -388,11 +382,12 @@ class PagerdutyProvider(BaseProvider):
             "priority": priority,
             "acknowledgers": acknowledgers,
             "assignments": assignments,
-            "last_updated_by": last_updated_by,
+            "last_updated_by": last_status_change_by,
             "first_trigger_log_entry": first_trigger_log_entry,
             "conference_bridge": conference_bridge,
             "teams": teams,
             "impacted_services": service,
+            "escalation_policy": escalation_policy,
         }
 
 
