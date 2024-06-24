@@ -153,6 +153,9 @@ class EnrichmentsBl:
         matcher: str,
         key: str,
     ) -> list:
+        """
+        Read keep/functions/__init__.py.run_mapping function docstring for more information.
+        """
         self.logger.info("Running mapping rule by ID", extra={"rule_id": rule_id})
         mapping_rule = get_mapping_rule_by_id(self.tenant_id, rule_id)
         if not mapping_rule:
@@ -208,7 +211,8 @@ class EnrichmentsBl:
             # Check if the alert matches any of the rows
             for row in rule.rows:
                 if all(
-                    get_nested_attribute(alert, attribute) == row.get(attribute)
+                    re.match(row.get(attribute), get_nested_attribute(alert, attribute))
+                    or get_nested_attribute(alert, attribute) == row.get(attribute)
                     or row.get(attribute) == "*"  # Wildcard
                     for attribute in rule.matchers
                 ):

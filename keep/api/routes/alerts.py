@@ -7,12 +7,14 @@ import json
 import logging
 import os
 
+import celpy
 from arq import ArqRedis
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
+    JSONResponse,
     Request,
     Response,
 )
@@ -712,6 +714,19 @@ async def search_alerts(
             extra={"tenant_id": tenant_id},
         )
         return filtered_alerts
+    except celpy.celparser.CELParseError as e:
+        logger.warning("Failed to parse the search query", extra={"error": str(e)})
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Failed to parse the search query",
+                "query": search_request.query,
+                "line": e.line,
+                "column": e.column,
+            },
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to search alerts", extra={"error": str(e)})
         raise HTTPException(status_code=500, detail="Failed to search alerts")

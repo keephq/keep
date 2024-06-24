@@ -37,6 +37,26 @@ class AlertSeverity(Enum):
                 return severity
         raise ValueError(f"No AlertSeverity with order {n}")
 
+    def __lt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order < other.order
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order <= other.order
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order > other.order
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order >= other.order
+        return NotImplemented
+
 
 class AlertStatus(Enum):
     # Active alert

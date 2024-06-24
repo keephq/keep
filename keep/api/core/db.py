@@ -27,6 +27,7 @@ from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
@@ -1657,3 +1658,77 @@ def get_all_presets(tenant_id: str) -> List[Preset]:
             select(Preset).where(Preset.tenant_id == tenant_id)
         ).all()
     return presets
+
+
+def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Dashboard.is_private == False,
+                    Dashboard.created_by == email,
+                )
+            )
+        )
+        dashboards = session.exec(statement).all()
+    return dashboards
+
+
+def create_dashboard(
+    tenant_id, dashboard_name, created_by, dashboard_config, is_private=False
+):
+    with Session(engine) as session:
+        dashboard = Dashboard(
+            tenant_id=tenant_id,
+            dashboard_name=dashboard_name,
+            dashboard_config=dashboard_config,
+            created_by=created_by,
+            is_private=is_private,
+        )
+        session.add(dashboard)
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def update_dashboard(
+    tenant_id, dashboard_id, dashboard_name, dashboard_config, updated_by
+):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if not dashboard:
+            return None
+
+        if dashboard_name:
+            dashboard.dashboard_name = dashboard_name
+
+        if dashboard_config:
+            dashboard.dashboard_config = dashboard_config
+
+        dashboard.updated_by = updated_by
+        dashboard.updated_at = datetime.utcnow()
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def delete_dashboard(tenant_id, dashboard_id):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if dashboard:
+            session.delete(dashboard)
+            session.commit()
+            return True
+        return False

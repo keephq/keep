@@ -11,13 +11,14 @@ import { useSession } from "next-auth/react";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 
-const TIMEFRAME_UNITS: Record<string, (amount: number) => number> = {
-  seconds: (amount) => amount,
-  minutes: (amount) => 60 * amount,
-  hours: (amount) => 3600 * amount,
-  days: (amount) => 86400 * amount,
-};
+export const TIMEFRAME_UNITS = {
+  seconds: (amount: number) => amount,
+  minutes: (amount: number) => 60 * amount,
+  hours: (amount: number) => 3600 * amount,
+  days: (amount: number) => 86400 * amount,
+} as const;
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
@@ -30,6 +31,14 @@ export const CorrelationSidebarBody = ({
 }: CorrelationSidebarBodyProps) => {
   const apiUrl = getApiURL();
 
+  const methods = useForm<CorrelationFormType>({
+    defaultValues: defaultValue,
+    mode: "onChange",
+  });
+  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
+    +methods.watch("timeAmount")
+  );
+
   const { mutate } = useRules();
   const { data: session } = useSession();
 
@@ -37,20 +46,20 @@ export const CorrelationSidebarBody = ({
   const searchParams = useSearchParams();
   const selectedId = searchParams ? searchParams.get("id") : null;
 
+  const { data: alertsFound = [], isLoading } = useSearchAlerts({
+    query: methods.watch("query"),
+    timeframe: timeframeInSeconds,
+  });
+
   const [isCalloutShown, setIsCalloutShown] = useLocalStorage(
     "correlation-callout",
     true
   );
 
-  const methods = useForm<CorrelationFormType>({ defaultValues: defaultValue });
-
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const { name, query, description, timeUnit, timeAmount } =
-      correlationFormData;
-
-    const timeframeInSeconds = TIMEFRAME_UNITS[timeUnit](+timeAmount);
+    const { name, query, description, groupedAttributes } = correlationFormData;
 
     if (session) {
       const response = await fetch(
@@ -67,6 +76,7 @@ export const CorrelationSidebarBody = ({
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
+            grouping_criteria: alertsFound.length ? groupedAttributes : [],
           }),
         }
       );
@@ -106,9 +116,14 @@ export const CorrelationSidebarBody = ({
           className="grid grid-cols-2 gap-x-10 flex-1"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm />
+          <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           <CorrelationGroups />
-          <CorrelationSubmission toggle={toggle} />
+
+          <CorrelationSubmission
+            toggle={toggle}
+            alertsFound={alertsFound}
+            timeframeInSeconds={timeframeInSeconds}
+          />
         </form>
       </FormProvider>
     </div>
