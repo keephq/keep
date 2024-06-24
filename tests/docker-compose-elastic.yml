@@ -1,0 +1,12 @@
+# MySQL server for testing
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - ELASTIC_PASSWORD=keeptests
+      - xpack.security.enabled=true
+    ports:
+      - 9200:9200

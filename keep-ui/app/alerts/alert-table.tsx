@@ -129,6 +129,8 @@ export function AlertTable({
 
   // show skeleton if no alerts are loaded
   let showSkeleton = table.getFilteredRowModel().rows.length === 0;
+  // if showSkeleton and not loading, show empty state
+  let showEmptyState = !isAsyncLoading && showSkeleton;
 
   return (
     <>
@@ -174,10 +176,11 @@ export function AlertTable({
           <AlertsTableBody
             table={table}
             showSkeleton={showSkeleton}
+            showEmptyState={showEmptyState}
             theme={theme}
           />
         </Table>
-        <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
+        <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
       </Card>
     </>
   );

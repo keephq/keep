@@ -154,7 +154,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text>Id: {provider.id}</Text>
+              <Text className="truncate">Id: {provider.id}</Text>
             ) : (
               <br></br>
             )}
@@ -218,7 +218,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               variant="secondary"
               size="xs"
               color={provider.installed ? "orange" : "green"}
-              className="hidden group-hover:block"
+              className="hidden group-hover:block pd-2"
             >
               {provider.installed ? "Modify" : "Connect"}
             </Button>

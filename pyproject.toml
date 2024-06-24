@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.15.0"
+version = "0.16.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -82,6 +82,7 @@ splunk-sdk = "^1.7.4"
 openshift-client = "^2.0.4"
 uptime-kuma-api = "^1.2.1"
 packaging = "^24.0"
+arq = "^0.26.0"
 
 
 [tool.poetry.group.dev.dependencies]

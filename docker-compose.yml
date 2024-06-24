@@ -21,6 +21,7 @@ services:
       - AUTH_TYPE=NO_AUTH
     volumes:
       - ./state:/state
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml

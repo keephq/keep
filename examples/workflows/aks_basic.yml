@@ -1,4 +1,4 @@
-alert:
+workflow:
   id: aks-example
   description: aks-example
   triggers:

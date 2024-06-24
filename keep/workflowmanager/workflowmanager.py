@@ -10,7 +10,7 @@ from keep.api.core.db import (
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
@@ -147,11 +147,14 @@ class WorkflowManager:
                     self.logger.info("Alert enriched")
                     # apply only_on_change (https://github.com/keephq/keep/issues/801)
                     fields_that_needs_to_be_change = trigger.get("only_on_change", [])
+                    severity_changed = trigger.get("severity_changed", False)
                     # if there are fields that needs to be changed, get the previous alert
-                    if fields_that_needs_to_be_change:
+                    if fields_that_needs_to_be_change or severity_changed:
                         previous_alert = get_previous_alert_by_fingerprint(
                             tenant_id, event.fingerprint
                         )
+                        if severity_changed:
+                            fields_that_needs_to_be_change.append("severity")
                         # now compare:
                         #   (no previous alert means that the workflow should run)
                         if previous_alert:
@@ -170,6 +173,21 @@ class WorkflowManager:
                                     )
                                     should_run = False
                                     break
+                            if should_run and severity_changed:
+                                setattr(event, "severity_changed", True)
+                                setattr(
+                                    event,
+                                    "previous_severity",
+                                    previous_alert.event.get("severity"),
+                                )
+                                previous_severity = AlertSeverity(
+                                    previous_alert.event.get("severity")
+                                )
+                                current_severity = AlertSeverity(event.severity)
+                                if previous_severity < current_severity:
+                                    setattr(event, "severity_change", "increased")
+                                else:
+                                    setattr(event, "severity_change", "decreased")
 
                     if not should_run:
                         continue
