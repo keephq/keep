@@ -194,22 +194,29 @@ class SearchEngine:
         elif self.search_mode == SearchMode.ELASTIC:
             # get the alerts from elastic
             for preset in presets:
-                query = self._create_raw_sql(
-                    preset.sql_query.get("sql"), preset.sql_query.get("params")
-                )
-                # get number of alerts and number of noisy alerts
-                elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "keep-alerts-{self.tenant_id}" where {query}"""
-                results = self.elastic_client.run_query(elastic_sql_query)
-                if results:
-                    preset.alerts_count = results["rows"][0][0]
-                    preset.should_do_noise_now = results["rows"][0][1] == 1
-                else:
-                    self.logger.warning(
-                        "No results found for preset",
+                try:
+                    query = self._create_raw_sql(
+                        preset.sql_query.get("sql"), preset.sql_query.get("params")
+                    )
+                    # get number of alerts and number of noisy alerts
+                    elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "keep-alerts-{self.tenant_id}" where {query}"""
+                    results = self.elastic_client.run_query(elastic_sql_query)
+                    if results:
+                        preset.alerts_count = results["rows"][0][0]
+                        preset.should_do_noise_now = results["rows"][0][1] == 1
+                    else:
+                        self.logger.warning(
+                            "No results found for preset",
+                            extra={"preset_id": preset.id, "preset_name": preset.name},
+                        )
+                        preset.alerts_count = 0
+                        preset.should_do_noise_now = False
+                except Exception:
+                    self.logger.exception(
+                        "Failed to search alerts for preset",
                         extra={"preset_id": preset.id, "preset_name": preset.name},
                     )
-                    preset.alerts_count = 0
-                    preset.should_do_noise_now = False
+                    pass
         self.logger.info("Finished searching alerts for presets")
         return presets
 
@@ -217,9 +224,13 @@ class SearchEngine:
         """
         Replace placeholders in the SQL template with actual values from the params dictionary.
         """
-        for key, value in params.items():
-            placeholder = f":{key}"
-            if isinstance(value, str):
-                value = f"'{value}'"  # Add quotes around string values
-            sql_template = sql_template.replace(placeholder, str(value))
+        params = list(params.items())
+        # param_{double_digit} bug
+        params.reverse()
+        if params:
+            for key, value in params.items():
+                placeholder = f":{key}"
+                if isinstance(value, str):
+                    value = f"'{value}'"  # Add quotes around string values
+                sql_template = sql_template.replace(placeholder, str(value))
         return sql_template

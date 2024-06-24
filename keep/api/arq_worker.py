@@ -41,6 +41,8 @@ async def get_pool():
             port=config("REDIS_PORT", cast=int, default=6379),
             username=config("REDIS_USERNAME", default=None),
             password=config("REDIS_PASSWORD", default=None),
+            conn_timeout=60,
+            conn_retries=10,
         )
     )
 
@@ -69,6 +71,7 @@ class WorkerSettings:
         port=config("REDIS_PORT", cast=int, default=6379),
         username=config("REDIS_USERNAME", default=None),
         password=config("REDIS_PASSWORD", default=None),
+        conn_timeout=60,
         conn_retries=10,
         conn_retry_delay=10,
     )
