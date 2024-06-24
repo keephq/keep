@@ -1,5 +1,3 @@
-# TODO: Improve _get_alerts method
-
 import dataclasses
 import datetime
 import json
