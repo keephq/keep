@@ -584,8 +584,8 @@ async def receive_event(
         bg_tasks.add_task(
             process_event,
             {},
-            provider_type,
             authenticated_entity.tenant_id,
+            provider_type,
             provider_id,
             fingerprint,
             authenticated_entity.api_key_name,
