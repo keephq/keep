@@ -391,17 +391,6 @@ class PagerdutyProvider(BaseProvider):
             environment=environment,
             source=["pagerduty"],
             labels=labels
-            # service=service_name,
-            # incident_number=incident_number,
-            # urgency=urgency,
-            # escalation_policy=escalation_policy,
-            # teams=teams,
-            # assignments=assignments,
-            # description=description,
-            # impacted_services=[service_name],
-            # acknowledgers=acknowledgers,
-            # first_trigger_log_entry=first_trigger_log_entry,
-            # conference_bridge=conference_bridge
         )
     def _notify(
         self,
