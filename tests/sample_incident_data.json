@@ -1,0 +1,380 @@
+{
+    "incident_number":1,
+    "title":"Past incident",
+    "description":"Past incident",
+    "created_at":"2024-06-23T08:59:05Z",
+    "updated_at":"2024-06-23T08:59:05Z",
+    "incident_key":"13d8145049a34df5971269153aa244a8",
+    "service":{
+       "id":"PWU37PG",
+       "name":"Default Service",
+       "description":"Your first service - describe what this service is monitoring and any information that will help responders.\\n\\nFor example: What is the SLA of this service? Where are the runbooks for this service stored? What tier level is this service?",
+       "created_at":"2024-06-09T12:00:33Z",
+       "updated_at":"2024-06-09T12:00:33Z",
+       "status":"critical",
+       "teams":[
+          
+       ],
+       "alert_creation":"create_alerts_and_incidents",
+       "addons":[
+          
+       ],
+       "scheduled_actions":[
+          
+       ],
+       "support_hours":null,
+       "last_incident_timestamp":"2024-06-23T08:59:05Z",
+       "escalation_policy":{
+          "id":"PL1PZ5C",
+          "type":"escalation_policy",
+          "summary":"Default",
+          "self":"https://api.pagerduty.com/escalation_policies/PL1PZ5C",
+          "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/escalation_policies/PL1PZ5C",
+          "name":"Default",
+          "escalation_rules":[
+             {
+                "id":"P22QBTR",
+                "escalation_delay_in_minutes":30,
+                "targets":[
+                   {
+                      "id":"PITDTYG",
+                      "type":"user_reference",
+                      "summary":"M K",
+                      "self":"https://api.pagerduty.com/users/PITDTYG",
+                      "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/users/PITDTYG"
+                   }
+                ]
+             }
+          ],
+          "services":[
+             {
+                "id":"PWU37PG",
+                "type":"service_reference",
+                "summary":"Default Service",
+                "self":"https://api.pagerduty.com/services/PWU37PG",
+                "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+             }
+          ],
+          "num_loops":0,
+          "teams":[
+             
+          ],
+          "description":null,
+          "on_call_handoff_notifications":"if_has_services",
+          "privilege":null
+       },
+       "incident_urgency_rule":{
+          "type":"constant",
+          "urgency":"high"
+       },
+       "acknowledgement_timeout":null,
+       "auto_resolve_timeout":null,
+       "alert_grouping":null,
+       "alert_grouping_timeout":null,
+       "alert_grouping_parameters":{
+          "type":null,
+          "config":null,
+          "is_global_configuration":false
+       },
+       "integrations":[
+          
+       ],
+       "response_play":null,
+       "type":"service",
+       "summary":"Default Service",
+       "self":"https://api.pagerduty.com/services/PWU37PG",
+       "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+    },
+    "assignments":[
+       {
+          "at":"2024-06-23T08:59:05Z",
+          "assignee":{
+             "name":"M K",
+             "email":"matvey+1@keephq.dev",
+             "time_zone":"Asia/Jerusalem",
+             "color":"purple",
+             "avatar_url":"https://secure.gravatar.com/avatar/519165a8c653c7278b230657643e1785.png?d=mm&r=PG",
+             "billed":true,
+             "role":"owner",
+             "description":null,
+             "invitation_sent":false,
+             "job_title":null,
+             "teams":[
+                
+             ],
+             "contact_methods":[
+                {
+                   "id":"PZKSA5L",
+                   "type":"email_contact_method_reference",
+                   "summary":"Default",
+                   "self":"https://api.pagerduty.com/users/PITDTYG/contact_methods/PZKSA5L",
+                   "html_url":null
+                }
+             ],
+             "notification_rules":[
+                {
+                   "id":"PPAEUDI",
+                   "type":"assignment_notification_rule_reference",
+                   "summary":"0 minutes: channel PZKSA5L",
+                   "self":"https://api.pagerduty.com/users/PITDTYG/notification_rules/PPAEUDI",
+                   "html_url":null
+                },
+                {
+                   "id":"PTN2VT8",
+                   "type":"assignment_notification_rule_reference",
+                   "summary":"0 minutes: channel PZKSA5L",
+                   "self":"https://api.pagerduty.com/users/PITDTYG/notification_rules/PTN2VT8",
+                   "html_url":null
+                }
+             ],
+             "coordinated_incidents":[
+                
+             ],
+             "id":"PITDTYG",
+             "type":"user",
+             "summary":"M K",
+             "self":"https://api.pagerduty.com/users/PITDTYG",
+             "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/users/PITDTYG"
+          }
+       }
+    ],
+    "assigned_via":"escalation_policy",
+    "last_status_change_at":"2024-06-23T08:59:05Z",
+    "resolved_at":null,
+    "first_trigger_log_entry":{
+       "id":"R5C253VLBRCMLMO8G01LWY0YMK",
+       "type":"trigger_log_entry",
+       "summary":"Triggered through the website.",
+       "self":"https://api.pagerduty.com/log_entries/R5C253VLBRCMLMO8G01LWY0YMK",
+       "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/incidents/Q03JN8CB34CWDG/log_entries/R5C253VLBRCMLMO8G01LWY0YMK",
+       "created_at":"2024-06-23T08:59:05Z",
+       "agent":{
+          "id":"PITDTYG",
+          "type":"user_reference",
+          "summary":"M K",
+          "self":"https://api.pagerduty.com/users/PITDTYG",
+          "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/users/PITDTYG"
+       },
+       "channel":{
+          "type":"web_trigger",
+          "summary":"Past incident",
+          "subject":"Past incident",
+          "details":""
+       },
+       "service":{
+          "id":"PWU37PG",
+          "name":"Default Service",
+          "description":"Your first service - describe what this service is monitoring and any information that will help responders.\\n\\nFor example: What is the SLA of this service? Where are the runbooks for this service stored? What tier level is this service?",
+          "created_at":"2024-06-09T12:00:33Z",
+          "updated_at":"2024-06-09T12:00:33Z",
+          "status":"critical",
+          "teams":[
+             
+          ],
+          "alert_creation":"create_alerts_and_incidents",
+          "addons":[
+             
+          ],
+          "scheduled_actions":[
+             
+          ],
+          "support_hours":null,
+          "last_incident_timestamp":"2024-06-23T08:59:05Z",
+          "escalation_policy":{
+             "id":"PL1PZ5C",
+             "type":"escalation_policy",
+             "summary":"Default",
+             "self":"https://api.pagerduty.com/escalation_policies/PL1PZ5C",
+             "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/escalation_policies/PL1PZ5C",
+             "name":"Default",
+             "escalation_rules":[
+                {
+                   "id":"P22QBTR",
+                   "escalation_delay_in_minutes":30,
+                   "targets":[
+                      {
+                         "id":"PITDTYG",
+                         "type":"user_reference",
+                         "summary":"M K",
+                         "self":"https://api.pagerduty.com/users/PITDTYG",
+                         "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/users/PITDTYG"
+                      }
+                   ]
+                }
+             ],
+             "services":[
+                {
+                   "id":"PWU37PG",
+                   "type":"service_reference",
+                   "summary":"Default Service",
+                   "self":"https://api.pagerduty.com/services/PWU37PG",
+                   "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+                }
+             ],
+             "num_loops":0,
+             "teams":[
+                
+             ],
+             "description":null,
+             "on_call_handoff_notifications":"if_has_services",
+             "privilege":null
+          },
+          "incident_urgency_rule":{
+             "type":"constant",
+             "urgency":"high"
+          },
+          "acknowledgement_timeout":null,
+          "auto_resolve_timeout":null,
+          "alert_grouping":null,
+          "alert_grouping_timeout":null,
+          "alert_grouping_parameters":{
+             "type":null,
+             "config":null,
+             "is_global_configuration":false
+          },
+          "integrations":[
+             
+          ],
+          "response_play":null,
+          "type":"service",
+          "summary":"Default Service",
+          "self":"https://api.pagerduty.com/services/PWU37PG",
+          "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+       },
+       "incident":{
+          "id":"Q03JN8CB34CWDG",
+          "type":"incident_reference",
+          "summary":"[#1] Past incident",
+          "self":"https://api.pagerduty.com/incidents/Q03JN8CB34CWDG",
+          "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/incidents/Q03JN8CB34CWDG"
+       },
+       "teams":[
+          
+       ],
+       "contexts":[
+          
+       ],
+       "event_details":{
+          "description":"Past incident"
+       }
+    },
+    "alert_counts":{
+       "all":0,
+       "triggered":0,
+       "resolved":0
+    },
+    "is_mergeable":true,
+    "escalation_policy":{
+       "id":"PL1PZ5C",
+       "type":"escalation_policy",
+       "summary":"Default",
+       "self":"https://api.pagerduty.com/escalation_policies/PL1PZ5C",
+       "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/escalation_policies/PL1PZ5C",
+       "name":"Default",
+       "escalation_rules":[
+          {
+             "id":"P22QBTR",
+             "escalation_delay_in_minutes":30,
+             "targets":[
+                {
+                   "id":"PITDTYG",
+                   "type":"user_reference",
+                   "summary":"M K",
+                   "self":"https://api.pagerduty.com/users/PITDTYG",
+                   "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/users/PITDTYG"
+                }
+             ]
+          }
+       ],
+       "services":[
+          {
+             "id":"PWU37PG",
+             "name":"Default Service",
+             "description":"Your first service - describe what this service is monitoring and any information that will help responders.\\n\\nFor example: What is the SLA of this service? Where are the runbooks for this service stored? What tier level is this service?",
+             "created_at":"2024-06-09T12:00:33Z",
+             "updated_at":"2024-06-09T12:00:33Z",
+             "status":"critical",
+             "teams":[
+                
+             ],
+             "alert_creation":"create_alerts_and_incidents",
+             "addons":[
+                
+             ],
+             "scheduled_actions":[
+                
+             ],
+             "support_hours":null,
+             "last_incident_timestamp":"2024-06-23T08:59:05Z",
+             "escalation_policy":{
+                "id":"PL1PZ5C",
+                "type":"escalation_policy_reference",
+                "summary":"Default",
+                "self":"https://api.pagerduty.com/escalation_policies/PL1PZ5C",
+                "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/escalation_policies/PL1PZ5C"
+             },
+             "incident_urgency_rule":{
+                "type":"constant",
+                "urgency":"high"
+             },
+             "acknowledgement_timeout":null,
+             "auto_resolve_timeout":null,
+             "alert_grouping":null,
+             "alert_grouping_timeout":null,
+             "alert_grouping_parameters":{
+                "type":null,
+                "config":null,
+                "is_global_configuration":false
+             },
+             "integrations":[
+                
+             ],
+             "response_play":null,
+             "type":"service",
+             "summary":"Default Service",
+             "self":"https://api.pagerduty.com/services/PWU37PG",
+             "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+          }
+       ],
+       "num_loops":0,
+       "teams":[
+          
+       ],
+       "description":null,
+       "on_call_handoff_notifications":"if_has_services",
+       "privilege":null
+    },
+    "teams":[
+       
+    ],
+    "pending_actions":[
+       
+    ],
+    "acknowledgements":[
+       
+    ],
+    "basic_alert_grouping":null,
+    "alert_grouping":null,
+    "last_status_change_by":{
+       "id":"PWU37PG",
+       "type":"service_reference",
+       "summary":"Default Service",
+       "self":"https://api.pagerduty.com/services/PWU37PG",
+       "html_url":"https://keephqasdkjbkvhjsadvglk.pagerduty.com/service-directory/PWU37PG"
+    },
+    "priority":null,
+    "conference_bridge":null,
+    "incidents_responders":[
+       
+    ],
+    "responder_requests":[
+       
+    ],
+    "subscriber_requests":[
+       
+    ],
+    "urgency":"high",
+    "id":"Q03JN8CB34CWDG",
+    "type":"incident",
+    "summary":"[#1] Past incident"
+ }

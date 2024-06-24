@@ -370,6 +370,18 @@ class PagerdutyProvider(BaseProvider):
         first_trigger_log_entry = data.get("first_trigger_log_entry", {}).get("summary")
         conference_bridge = data.get("conference_bridge", {}).get("summary")
 
+        labels = {
+        "incident_number": incident_number,
+        "urgency": urgency,
+        "escalation_policy": escalation_policy,
+        "teams": teams,
+        "assignments": assignments,
+        "impacted_services": [service_name],
+        "acknowledgers": acknowledgers,
+        "first_trigger_log_entry": first_trigger_log_entry,
+        "conference_bridge": conference_bridge
+    }
+
         return AlertDto(
             **data,
             url=url,
@@ -379,17 +391,18 @@ class PagerdutyProvider(BaseProvider):
             severity=priority,
             environment=environment,
             source=["pagerduty"],
-            service=service_name,
-            incident_number=incident_number,
-            urgency=urgency,
-            escalation_policy=escalation_policy,
-            teams=teams,
-            assignments=assignments,
-            description=description,
-            impacted_services=[service_name],
-            acknowledgers=acknowledgers,
-            first_trigger_log_entry=first_trigger_log_entry,
-            conference_bridge=conference_bridge
+            labels=labels
+            # service=service_name,
+            # incident_number=incident_number,
+            # urgency=urgency,
+            # escalation_policy=escalation_policy,
+            # teams=teams,
+            # assignments=assignments,
+            # description=description,
+            # impacted_services=[service_name],
+            # acknowledgers=acknowledgers,
+            # first_trigger_log_entry=first_trigger_log_entry,
+            # conference_bridge=conference_bridge
         )
     def _notify(
         self,
