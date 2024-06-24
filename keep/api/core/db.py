@@ -1833,7 +1833,7 @@ def get_provider_distribution(tenant_id: str) -> dict:
             )
         )
 
-        results = query.all()
+        results = session.execute(query).all()
 
         provider_distribution = {}
 
