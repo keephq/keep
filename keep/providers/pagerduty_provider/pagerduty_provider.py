@@ -81,6 +81,10 @@ class PagerdutyProvider(BaseProvider):
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "resolved": AlertStatus.RESOLVED,
     }
+    FIELDS = [
+        "acknowledgers", "assignees", "escalation_policies",
+        "first_trigger_log_entries", "priorities", "services", "teams", "users"
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -290,20 +294,37 @@ class PagerdutyProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     def _get_alerts(self) -> list[AlertDto]:
-        request = requests.get(
-            "https://api.pagerduty.com/incidents",
-            headers={
-                "Authorization": f"Token token={self.authentication_config.api_key}",
-            },
-        )
-        if not request.ok:
-            self.logger.error("Failed to get alerts", extra=request.json())
-            raise Exception("Could not get alerts")
-        incidents = request.json().get("incidents", [])
-        incidents = [
-            self._format_alert({"event": {"data": incident}}) for incident in incidents
-        ]
-        return incidents
+        params = {
+            "sort_by": "created_at:desc",
+            "limit": 100,
+            "since": (datetime.datetime.now() - datetime.timedelta(days=100)).isoformat(),
+            "until": datetime.datetime.now().isoformat(),
+            "include[]": self.FIELDS,
+        }
+        incidents = []
+        
+        while len(incidents) < 1000:
+            request = requests.get(
+                "https://api.pagerduty.com/incidents",
+                headers={
+                    "Authorization": f"Token token={self.authentication_config.api_key}",
+                },
+                params=params,
+            )
+            if not request.ok:
+                self.logger.error("Failed to get alerts", extra=request.json())
+                raise Exception("Could not get alerts")
+
+            response = request.json()
+            new_incidents = response.get("incidents", [])
+            incidents.append(new_incidents)
+
+            if not response.get("more"):
+                break
+
+            params["offset"] = response.get("offset") + len(new_incidents)
+
+        return [self._format_alert({"event": {"data": incident}}) for incident in incidents]
 
     @staticmethod
     def _format_alert(
@@ -352,17 +373,26 @@ class PagerdutyProvider(BaseProvider):
             "type": data.get("first_trigger_log_entry", {}).get("type"),
         }
         acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
+        conference_bridge = data.get("conference_bridge", {}).get("summary")
+        teams = [team.get("summary") for team in data.get("teams", [])]
+        description = data.get("description")
+        urgency = data.get("urgency")
+        priority = data.get("priority", {}).get("summary")
+        last_status_change = data.get("last_status_change_at")
 
         # Additional metadata
         metadata = {
-            "description": data.get("description"),
-            "urgency": data.get("urgency"),
-            "last_status_change": data.get("last_status_change_at"),
-            "priority": data.get("priority", {}).get("summary"),
+            "description": description,
+            "urgency": urgency,
+            "last_status_change": last_status_change,
+            "priority": priority,
             "acknowledgers": acknowledgers,
             "assignments": assignments,
             "last_updated_by": last_updated_by,
             "first_trigger_log_entry": first_trigger_log_entry,
+            "conference_bridge": conference_bridge,
+            "teams": teams,
+            "impacted_services": service,
         }
 
 
