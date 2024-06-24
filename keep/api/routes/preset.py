@@ -78,7 +78,6 @@ async def pull_alerts_from_providers(
         workflow_id=None,
     )
 
-    alerts = []
     for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
