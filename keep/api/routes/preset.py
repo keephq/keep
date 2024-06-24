@@ -1,21 +1,64 @@
 import logging
-import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.core.db import get_last_alerts
+from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.alert import AlertStatus
+from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
-from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
-from keep.rulesengine.rulesengine import RulesEngine
+from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+static_presets = {
+    "feed": PresetDto(
+        id=StaticPresetsId.FEED_PRESET_ID.value,
+        name="feed",
+        options=[
+            {"label": "CEL", "value": "(!deleted && !dismissed)"},
+            {
+                "label": "SQL",
+                "value": {"sql": "(deleted=false AND dismissed=false)", "params": {}},
+            },
+        ],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        static=True,
+    ),
+    "groups": PresetDto(
+        id=StaticPresetsId.GROUPS_PRESET_ID.value,
+        name="groups",
+        options=[
+            {"label": "CEL", "value": "group"},
+            {"label": "SQL", "value": {"sql": '"group"=true', "params": {}}},
+        ],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        static=True,
+    ),
+    "dismissed": PresetDto(
+        id=StaticPresetsId.DISMISSED_PRESET_ID.value,
+        name="dismissed",
+        options=[
+            {"label": "CEL", "value": "dismissed"},
+            {"label": "SQL", "value": {"sql": "dismissed=true", "params": {}}},
+        ],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        static=True,
+    ),
+}
 
 
 @router.get(
@@ -29,108 +72,18 @@ def get_presets(
     logger.info("Getting all presets")
     # both global and private presets
     presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
+    presets_dto = [PresetDto(**preset.dict()) for preset in presets]
+    # add static presets
+    presets_dto.append(static_presets["feed"])
+    presets_dto.append(static_presets["groups"])
+    presets_dto.append(static_presets["dismissed"])
     logger.info("Got all presets")
-    # for noisy presets, check if it needs to do noise now
-    # TODO: improve performance e.g. using status as a filter
-    # TODO: move this duplicate code to a module
-    presets_dto = []
 
-    # get the alerts, TODO: is this required?
-    alerts_dto = convert_db_alerts_to_dto_alerts(get_last_alerts(tenant_id=tenant_id))
+    # get the number of alerts + noisy alerts for each preset
+    search_engine = SearchEngine(tenant_id=tenant_id)
+    # get the preset metatada
+    presets_dto = search_engine.search_preset_alerts(presets=presets_dto)
 
-    for preset in presets:
-        logger.info("Checking if preset is noisy")
-        preset_dto = PresetDto(**preset.dict())
-        if not preset_dto.cel_query:
-            logger.warning("No CEL query found in preset options")
-            presets_dto.append(preset_dto)
-            continue
-
-        # preset_query = preset_dto.cel_query
-        # filter the alerts based on the search query
-        start = time.time()
-        logger.info("Filtering alerts", extra={"preset_id": preset.id})
-        filtered_alerts = RulesEngine.filter_alerts_cel_sql(
-            tenant_id, preset_dto.sql_query
-        )
-        filtered_alerts = convert_db_alerts_to_dto_alerts(filtered_alerts)
-        logger.info(
-            "Filtered alerts",
-            extra={"preset_id": preset.id, "time": time.time() - start},
-        )
-        preset_dto.alerts_count = len(filtered_alerts)
-        # update noisy
-        if preset.is_noisy:
-            firing_filtered_alerts = list(
-                filter(
-                    lambda alert: alert.status == AlertStatus.FIRING.value
-                    and not alert.deleted
-                    and not alert.dismissed,
-                    filtered_alerts,
-                )
-            )
-            # if there are firing alerts, then do noise
-            if firing_filtered_alerts:
-                logger.info("Noisy preset is noisy")
-                preset_dto.should_do_noise_now = True
-            else:
-                logger.info("Noisy preset is not noisy")
-                preset_dto.should_do_noise_now = False
-        # else if one of the alerts are isNoisy
-        elif any(
-            alert.isNoisy
-            and alert.status == AlertStatus.FIRING.value
-            and not alert.deleted
-            and not alert.dismissed
-            for alert in filtered_alerts
-        ):
-            logger.info("Preset is noisy")
-            preset_dto.should_do_noise_now = True
-        presets_dto.append(preset_dto)
-
-    # add static presets - feed, correlation, deleted and dismissed
-    isNoisy = any(
-        alert.isNoisy
-        and AlertStatus.FIRING.value == alert.status
-        and not alert.deleted
-        and not alert.dismissed
-        for alert in alerts_dto
-    )
-    feed_preset = PresetDto(
-        id=StaticPresetsId.FEED_PRESET_ID.value,
-        name="feed",
-        options=[],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=isNoisy,
-        alerts_count=len(
-            [alert for alert in alerts_dto if not alert.deleted and not alert.dismissed]
-        ),
-    )
-    dismissed_preset = PresetDto(
-        id=StaticPresetsId.DISMISSED_PRESET_ID.value,
-        name="dismissed",
-        options=[],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        alerts_count=len([alert for alert in alerts_dto if alert.dismissed]),
-    )
-    groups_preset = PresetDto(
-        id=StaticPresetsId.GROUPS_PRESET_ID.value,
-        name="groups",
-        options=[],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        alerts_count=len([alert for alert in alerts_dto if alert.group]),
-    )
-    presets_dto.append(feed_preset)
-    presets_dto.append(dismissed_preset)
-    presets_dto.append(groups_preset)
     return presets_dto
 
 
@@ -229,3 +182,29 @@ def update_preset(
     session.refresh(preset)
     logger.info("Updated preset", extra={"uuid": uuid})
     return PresetDto(**preset.dict())
+
+
+@router.get(
+    "/{preset_name}/alerts",
+    description="Get a preset for tenant",
+)
+def get_preset_alerts(
+    preset_name: str,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    session: Session = Depends(get_session),
+) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting preset alerts", extra={"preset_name": preset_name})
+    # handle static presets
+    if preset_name in static_presets:
+        preset = static_presets[preset_name]
+    else:
+        preset = get_preset_by_name_db(tenant_id, preset_name)
+    # if preset does not exist
+    if not preset:
+        raise HTTPException(404, "Preset not found")
+    preset_dto = PresetDto(**preset.dict())
+    search_engine = SearchEngine(tenant_id=tenant_id)
+    preset_alerts = search_engine.search_alerts(preset_dto.query)
+    logger.info("Got preset alerts", extra={"preset_name": preset_name})
+    return preset_alerts

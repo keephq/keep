@@ -28,6 +28,7 @@ from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import *
+from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
@@ -178,6 +179,16 @@ def get_session() -> Session:
     with tracer.start_as_current_span("get_session"):
         with Session(engine) as session:
             yield session
+
+
+def get_session_sync() -> Session:
+    """
+    Creates a database session.
+
+    Returns:
+        Session: A database session
+    """
+    return Session(engine)
 
 
 def try_create_single_tenant(tenant_id: str) -> None:
@@ -1081,7 +1092,9 @@ def get_alerts_with_filters(
     return alerts
 
 
-def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
+def get_last_alerts(
+    tenant_id, provider_id=None, limit=1000, timeframe=None
+) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
 
@@ -1125,7 +1138,16 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
                 .group_by(Alert.fingerprint)
                 .subquery()
             )
-
+        # if timeframe is provided, filter the alerts by the timeframe
+        if timeframe:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp
+                    >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+                )
+                .subquery()
+            )
         # Main query joins the subquery to select alerts with their first and last occurrence.
         if session.bind.dialect.name == "mssql":
             query = (
@@ -1167,6 +1189,12 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
+
+        if timeframe:
+            query = query.filter(
+                subquery.c.max_timestamp
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
 
         # Order by timestamp in descending order and limit the results
         query = query.limit(limit)
@@ -1855,9 +1883,93 @@ def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
     return presets
 
 
+def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.name == preset_name)
+        ).first()
+    return preset
+
+
 def get_all_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
         presets = session.exec(
             select(Preset).where(Preset.tenant_id == tenant_id)
         ).all()
     return presets
+
+
+def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Dashboard.is_private == False,
+                    Dashboard.created_by == email,
+                )
+            )
+        )
+        dashboards = session.exec(statement).all()
+    return dashboards
+
+
+def create_dashboard(
+    tenant_id, dashboard_name, created_by, dashboard_config, is_private=False
+):
+    with Session(engine) as session:
+        dashboard = Dashboard(
+            tenant_id=tenant_id,
+            dashboard_name=dashboard_name,
+            dashboard_config=dashboard_config,
+            created_by=created_by,
+            is_private=is_private,
+        )
+        session.add(dashboard)
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def update_dashboard(
+    tenant_id, dashboard_id, dashboard_name, dashboard_config, updated_by
+):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if not dashboard:
+            return None
+
+        if dashboard_name:
+            dashboard.dashboard_name = dashboard_name
+
+        if dashboard_config:
+            dashboard.dashboard_config = dashboard_config
+
+        dashboard.updated_by = updated_by
+        dashboard.updated_at = datetime.utcnow()
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def delete_dashboard(tenant_id, dashboard_id):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if dashboard:
+            session.delete(dashboard)
+            session.commit()
+            return True
+        return False

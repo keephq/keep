@@ -16,6 +16,18 @@ type AlertSubscription = {
   pusherChannel: Channel | null;
 };
 
+const convertAlertsToMap = (alerts: AlertDto[]): Map<string, AlertDto> => {
+  const alertsMap = new Map<string, AlertDto>();
+  alerts.forEach((alert) => {
+    alertsMap.set(alert.fingerprint, {
+      ...alert,
+      lastReceived: toDateObjectWithFallback(alert.lastReceived),
+    });
+  });
+  return alertsMap;
+};
+
+
 const getFormatAndMergePusherWithEndpointAlerts = (
   alertsMap: Map<string, AlertDto>,
   newPusherAlerts: AlertDto[]
@@ -24,13 +36,10 @@ const getFormatAndMergePusherWithEndpointAlerts = (
     const existingAlert = newAlertsMap.get(alertFromPusher.fingerprint);
 
     if (existingAlert) {
-      // If we already got the alert before, check if the new alert is more recent
       if (alertFromPusher.lastReceived >= existingAlert.lastReceived) {
-        // New alert is newer, replace the old one
         newAlertsMap.set(alertFromPusher.fingerprint, alertFromPusher);
       }
     } else {
-      // We haven't seen the alert before, add it to the map
       newAlertsMap.set(alertFromPusher.fingerprint, alertFromPusher);
     }
 
@@ -49,7 +58,6 @@ export const getDefaultSubscriptionObj = (
 
 export const useAlerts = () => {
   const apiUrl = getApiURL();
-
   const { data: session } = useSession();
   const { data: configData } = useConfig();
 
@@ -147,21 +155,10 @@ export const useAlerts = () => {
     };
   };
 
-  /**
-   * A hook that creates a Pusher websocket connection and listens to incoming alerts.
-   *
-   * Only the latest alerts are returned
-   * @returns { data, error }
-   */
   const useAlertsFromPusher = () => {
     return useSWRSubscription(
-      // this check allows conditional fetching. If it is false, the hook doesn't run
       () =>
         configData?.PUSHER_DISABLED === false && session ? "alerts" : null,
-      // next is responsible for pushing/overwriting data to the subscription cache
-      // the first arg is for any errors, which is returned by the {error} property
-      // and the second arg accepts either a new AlertSubscription object that overwrites any existing data
-      // or a function with a {data} arg that allows access to the existing cache
       (_, { next }: SWRSubscriptionOptions<AlertSubscription, Error>) => {
         if (configData === undefined || session === null) {
           console.log("Pusher disabled");
@@ -228,7 +225,6 @@ export const useAlerts = () => {
           });
         });
 
-        // If we don't receive any alert in 3.5 seconds, we assume that the async process is done (#641)
         setTimeout(() => {
           next(null, (data) => {
             if (data) {
@@ -258,10 +254,48 @@ export const useAlerts = () => {
     );
   };
 
+  const usePresetAlerts = (
+    presetName: string,
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    const apiUrl = getApiURL();
+    const { data: session } = useSession();
+
+    return useSWR<AlertDto[]>(
+      () => (session ? `${apiUrl}/preset/${presetName}/alerts` : null),
+      async (url) => {
+        try {
+          const response = await fetcher(url, session?.accessToken);
+          if (!Array.isArray(response)) {
+            throw new Error("Response is not an array");
+          }
+
+          const alerts = response.map((alert) => {
+            if (typeof alert !== "object" || !alert.fingerprint) {
+              throw new Error("Response contains invalid alert data");
+            }
+            return {
+              ...alert,
+              lastReceived: toDateObjectWithFallback(alert.lastReceived),
+            } as AlertDto;
+          });
+
+          return Array.from(convertAlertsToMap(alerts).values());
+        } catch (error) {
+          console.error("Error fetching or processing alerts:", error);
+          throw error;
+        }
+      },
+      options
+    );
+  };
+
+
   return {
     useAlertHistory,
     useAllAlerts,
     useAlertsFromPusher,
     useAllAlertsWithSubscription,
+    usePresetAlerts,
   };
 };
