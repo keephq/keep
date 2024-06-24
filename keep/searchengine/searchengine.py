@@ -228,7 +228,7 @@ class SearchEngine:
         # param_{double_digit} bug
         params.reverse()
         if params:
-            for key, value in params.items():
+            for key, value in params:
                 placeholder = f":{key}"
                 if isinstance(value, str):
                     value = f"'{value}'"  # Add quotes around string values
