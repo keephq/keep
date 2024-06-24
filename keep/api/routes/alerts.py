@@ -14,10 +14,10 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
-    JSONResponse,
     Request,
     Response,
 )
+from fastapi.responses import JSONResponse
 from pusher import Pusher
 
 from keep.api.arq_worker import get_pool
