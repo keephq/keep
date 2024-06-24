@@ -50,7 +50,7 @@ def __internal_prepartion(
             alert.apiKeyRef = api_key_name
 
 
-def __handle_formatted_events(
+def __save_to_db(
     tenant_id,
     provider_type,
     session: Session,
@@ -58,42 +58,6 @@ def __handle_formatted_events(
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
 ):
-    """
-    this is super important function and does five things:
-    0. checks for deduplications using alertdeduplicator
-    1. adds the alerts to the DB
-    2. adds the alerts to elasticsearch
-    3. runs workflows based on the alerts
-    4. runs the rules engine
-    5. update the presets
-
-    TODO: add appropriate logs, trace and all of that so we can track errors
-
-    """
-    logger.info(
-        "Asyncronusly adding new alerts to the DB",
-        extra={
-            "provider_type": provider_type,
-            "num_of_alerts": len(formatted_events),
-            "provider_id": provider_id,
-            "tenant_id": tenant_id,
-        },
-    )
-    pusher_client = get_pusher_client()
-
-    # first, filter out any deduplicated events
-    alert_deduplicator = AlertDeduplicator(tenant_id)
-
-    for event in formatted_events:
-        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
-        event.alert_hash = event_hash
-        event.isDuplicate = event_deduplicated
-
-    # filter out the deduplicated events
-    formatted_events = list(
-        filter(lambda event: not event.isDuplicate, formatted_events)
-    )
-
     try:
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
@@ -161,16 +125,6 @@ def __handle_formatted_events(
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
                     setattr(alert_dto, enrichment, value)
-
-            if pusher_client:
-                try:
-                    pusher_client.trigger(
-                        f"private-{tenant_id}",
-                        "async-alerts",
-                        json.dumps([alert_dto.dict()]),
-                    )
-                except Exception:
-                    logger.exception("Failed to push alert to the client")
             enriched_formatted_events.append(alert_dto)
         session.commit()
         logger.info(
@@ -182,6 +136,7 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+        return enriched_formatted_events
     except Exception:
         logger.exception(
             "Failed to push alerts to the DB",
@@ -194,9 +149,59 @@ def __handle_formatted_events(
         )
         raise
 
+
+def __handle_formatted_events(
+    tenant_id,
+    provider_type,
+    session: Session,
+    raw_events: list[dict],
+    formatted_events: list[AlertDto],
+    provider_id: str | None = None,
+):
+    """
+    this is super important function and does five things:
+    0. checks for deduplications using alertdeduplicator
+    1. adds the alerts to the DB
+    2. adds the alerts to elasticsearch
+    3. runs workflows based on the alerts
+    4. runs the rules engine
+    5. update the presets
+
+    TODO: add appropriate logs, trace and all of that so we can track errors
+
+    """
+    logger.info(
+        "Asyncronusly adding new alerts to the DB",
+        extra={
+            "provider_type": provider_type,
+            "num_of_alerts": len(formatted_events),
+            "provider_id": provider_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    pusher_client = get_pusher_client()
+
+    # first, filter out any deduplicated events
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+
+    for event in formatted_events:
+        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
+        event.alert_hash = event_hash
+        event.isDuplicate = event_deduplicated
+
+    # filter out the deduplicated events
+    formatted_events = list(
+        filter(lambda event: not event.isDuplicate, formatted_events)
+    )
+
+    # save to db
+    enriched_formatted_events = __save_to_db(
+        tenant_id, provider_type, session, raw_events, formatted_events, provider_id
+    )
+
     # after the alert enriched and mapped, lets send it to the elasticsearch
+    elastic_client = ElasticClient()
     for alert in enriched_formatted_events:
-        elastic_client = ElasticClient()
         try:
             logger.debug(
                 "Pushing alert to elasticsearch",
@@ -249,19 +254,6 @@ def __handle_formatted_events(
             logger.info("Adding group alerts to the workflow manager queue")
             workflow_manager.insert_events(tenant_id, grouped_alerts)
             logger.info("Added group alerts to the workflow manager queue")
-            # Now send the grouped alerts to the client
-            logger.info("Sending grouped alerts to the client")
-            for grouped_alert in grouped_alerts:
-                if pusher_client:
-                    try:
-                        pusher_client.trigger(
-                            f"private-{tenant_id}",
-                            "async-alerts",
-                            json.dumps([grouped_alert.dict()]),
-                        )
-                    except Exception:
-                        logger.exception("Failed to push alert to the client")
-            logger.info("Sent grouped alerts to the client")
     except Exception:
         logger.exception(
             "Failed to run rules engine",
@@ -272,6 +264,18 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+
+    # Tell the client to poll alerts
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-alerts",
+                "{}",
+            )
+        except Exception:
+            logger.exception("Failed to push alert to the client")
+
     # Now we need to update the presets
     try:
         presets = get_all_presets(tenant_id)
