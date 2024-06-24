@@ -154,7 +154,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               <p></p>
             )}
             {provider.linked && provider.id ? (
-              <Text>Id: {provider.id}</Text>
+              <Text className="truncate">Id: {provider.id}</Text>
             ) : (
               <br></br>
             )}

@@ -82,9 +82,9 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                 Dashboards
               </Subtitle>
               <div className="flex items-center">
-                <Badge size="xs" className="mr-1" color="orange">
-                  <p className="ml-1">Beta</p>
-                </Badge>
+              <Badge color="orange" size="xs" className="ml-2 mr-2">
+                Beta
+              </Badge>
                 <IoChevronUp className={classNames({ "rotate-180": open }, "mr-2 text-slate-400")} />
               </div>
             </div>

@@ -44,8 +44,8 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
     (p) => p.id === providerId
   );
   const method = provider?.methods?.find((m) => m.name === methodName);
-  const { useAllAlertsWithSubscription } = useAlerts();
-  const { data: alerts, mutate } = useAllAlertsWithSubscription();
+  const { usePresetAlerts } = useAlerts();
+  const { data: alerts, mutate } = usePresetAlerts(presetName);
   const alert = alerts?.find((a) => a.fingerprint === alertFingerprint);
   const [isLoading, setIsLoading] = useState(false);
   const [inputParameters, setInputParameters] = useState<{
