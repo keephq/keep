@@ -50,10 +50,8 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName }: AlertsProps) {
-  const { useAllAlertsWithSubscription } = useAlerts();
-
+  const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
-
   const router = useRouter();
 
   const ticketingProviders = useMemo(
@@ -63,6 +61,7 @@ export default function Alerts({ presetName }: AlertsProps) {
       ),
     [providersData.installed_providers]
   );
+
   const searchParams = useSearchParams();
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
@@ -76,15 +75,6 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
-  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription({
-    revalidateOnFocus: false,
-    revalidateOnMount: false,
-    revalidateOnReconnect: false,
-    refreshWhenOffline: false,
-    refreshWhenHidden: false,
-    refreshInterval: 0,
-  });
-
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
@@ -94,6 +84,8 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
+  const { data: alerts = [], isLoading: isAsyncLoading } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+  // const { data: alerts = [], isLoading: isAsyncLoading } = useAllAlertsWithSubscription();
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
@@ -141,6 +133,7 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
       <AlertDismissModal
         alert={dismissModalAlert}
+        preset={selectedPreset.name}
         handleClose={() => setDismissModalAlert(null)}
       />
       <AlertChangeStatusModal

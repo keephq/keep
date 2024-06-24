@@ -29,7 +29,7 @@ export const LinkWithIcon = ({
 }: LinkWithIconProps) => {
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
-  const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === restOfLinkProps.href?.toString().toLowerCase();
+  const isActive = decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString();
 
   const iconClasses = classNames("group-hover:text-orange-400", {
     "text-orange-400": isActive,
@@ -44,6 +44,12 @@ export const LinkWithIcon = ({
 
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => setIsHovered(false);
+
+  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (restOfLinkProps.onClick) {
+      restOfLinkProps.onClick(e);
+    }
+  }
 
   return (
     <div
@@ -62,6 +68,7 @@ export const LinkWithIcon = ({
         tabIndex={tabIndex}
         {...restOfLinkProps}
         className="flex items-center space-x-2 flex-1"
+        onClick={onClick}
       >
         <Icon className={iconClasses} icon={icon} />
         <span className={textClasses}>{children}</span>
