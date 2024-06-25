@@ -97,7 +97,7 @@ services:
       - /app/.next
     depends_on:
       - keep-backend-dev
-  
+
   keep-backend-dev:
     extends:
       file: docker-compose.common.yml
@@ -111,7 +111,7 @@ services:
     volumes:
       - .:/app
       - ./state:/state
-  
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml

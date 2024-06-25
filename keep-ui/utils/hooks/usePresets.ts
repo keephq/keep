@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Preset } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import Pusher, {Channel} from "pusher-js";
+import Pusher from "pusher-js";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -55,7 +55,7 @@ export const usePresets = () => {
     setStaticPresetsOrderFromLS(current => updatePresets(staticPresetsOrderRef.current, newPresets.filter(p => ['feed', 'deleted', 'dismissed', 'groups'].includes(p.name))));
   };
 
-  const subscription = useSWRSubscription(
+  useSWRSubscription(
     () => (configData?.PUSHER_DISABLED === false && session && isLocalStorageReady) ? "presets" : null,
     (_, { next }) => {
       console.log("Subscribing to presets channel")

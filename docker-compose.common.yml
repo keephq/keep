@@ -1,8 +1,7 @@
 services:
-
   keep-frontend-common:
     ports:
-      - '3000:3000'
+      - "3000:3000"
     environment:
       - NEXTAUTH_SECRET=secret
       - NEXTAUTH_URL=http://localhost:3000
@@ -16,7 +15,7 @@ services:
 
   keep-backend-common:
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       - PORT=8080
       - SECRET_MANAGER_TYPE=FILE
