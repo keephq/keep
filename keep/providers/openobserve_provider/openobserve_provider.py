@@ -330,6 +330,7 @@ class OpenobserveProvider(BaseProvider):
             severity=AlertSeverity.WARNING,
             environment=event["stream_name"],  # Mapping 'stream_name' to 'environment'
             startedAt=event["alert_start_time"],  # Mapping 'alert_start_time' to 'startedAt'
+            lastReceived=event["alert_start_time"],  # Mapping 'alert_start_time' to 'startedAt'
             description=event["alert_type"],  # Mapping 'alert_type' to 'description'
             labels={
                 "url": event["alert_url"],
