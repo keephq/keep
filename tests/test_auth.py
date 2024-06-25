@@ -184,7 +184,7 @@ def test_webhook_api_key(client, db_session, test_app):
     response = client.post(
         "/alerts/event/grafana", json={}, headers={"x-api-key": valid_api_key}
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana", json={}, headers={"x-api-key": "invalid_api_key"}
@@ -196,25 +196,25 @@ def test_webhook_api_key(client, db_session, test_app):
         json={},
         headers={"Authorization": f"Digest {valid_api_key}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"authorization": f"digest {valid_api_key}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"authorization": "digest invalid_api_key"},
     )
-    assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
+    assert response.status_code == 401 if auth_type != "NO_AUTH" else 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"Authorization": "digest invalid_api_key"},
     )
-    assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
+    assert response.status_code == 401 if auth_type != "NO_AUTH" else 202

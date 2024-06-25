@@ -1,0 +1,13 @@
+workflow:
+  id: on-severity-change
+  description: demonstrates how to trigger a workflow when severity changes, and show available options
+  triggers:
+    - type: alert
+      severity_changed: true
+  actions:
+    - name: echo-test
+      provider:
+        type: console
+        with:
+          # "The severity has changed from warning to info (it has decreased from last alert)"
+          alert_message: "The severity has changed from {{ alert.previous_severity }} to {{ alert.severity }} (it has {{ alert.severity_change }} since last alert)"

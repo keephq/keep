@@ -1,8 +1,8 @@
 import enum
-from typing import Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, conint, constr
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -10,7 +10,6 @@ from sqlmodel import JSON, Column, Field, SQLModel
 class StaticPresetsId(enum.Enum):
     # ID of the default preset
     FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
-    # DELETED_PRESET_ID = "11111111-1111-1111-1111-111111111112"
     DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
     GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
 
@@ -30,6 +29,17 @@ class Preset(SQLModel, table=True):
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
 
 
+# datatype represents a query with CEL (str) and SQL (dict)
+class PresetSearchQuery(BaseModel):
+    cel_query: constr(min_length=1)
+    sql_query: Dict[str, Any]
+    limit: conint(ge=0) = 1000
+    timeframe: conint(ge=0) = 0
+
+    class Config:
+        allow_mutation = False
+
+
 class PresetDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
@@ -43,6 +53,8 @@ class PresetDto(BaseModel, extra="ignore"):
     should_do_noise_now: Optional[bool] = Field(default=False)
     # number of alerts
     alerts_count: Optional[int] = Field(default=0)
+    # static presets
+    static: Optional[bool] = Field(default=False)
 
     @property
     def cel_query(self) -> str:
@@ -58,6 +70,28 @@ class PresetDto(BaseModel, extra="ignore"):
             # should not happen
             return ""
         return query[0].get("value", "")
+
+    @property
+    def sql_query(self) -> str:
+        query = [
+            option
+            for option in self.options
+            if option.get("label", "").lower() == "sql"
+        ]
+        if not query:
+            # should not happen, maybe on old presets
+            return ""
+        elif len(query) > 1:
+            # should not happen
+            return ""
+        return query[0].get("value", "")
+
+    @property
+    def query(self) -> PresetSearchQuery:
+        return PresetSearchQuery(
+            cel_query=self.cel_query,
+            sql_query=self.sql_query,
+        )
 
 
 class PresetOption(BaseModel, extra="ignore"):
