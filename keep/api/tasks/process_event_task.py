@@ -157,6 +157,7 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
+    save_if_duplicate: bool = True,
 ):
     """
     this is super important function and does five things:
@@ -188,6 +189,18 @@ def __handle_formatted_events(
         event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
         event.alert_hash = event_hash
         event.isDuplicate = event_deduplicated
+
+    if event.isDuplicate and not save_if_duplicate:
+        logger.info(
+            "Alert is not saved as a duplicate",
+            extra={
+                "provider_type": provider_type,
+                "num_of_alerts": len(formatted_events),
+                "provider_id": provider_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        return None
 
     # filter out the deduplicated events
     formatted_events = list(
@@ -344,6 +357,7 @@ async def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
+    save_if_duplicate: bool = True, 
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -376,7 +390,7 @@ async def process_event(
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
-            tenant_id, provider_type, session, event, event, provider_id
+            tenant_id, provider_type, session, event, event, provider_id, save_if_duplicate
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)

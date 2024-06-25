@@ -1,16 +1,19 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
+from keep.api.tasks.process_event_task import process_event
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
 from keep.searchengine.searchengine import SearchEngine
+from keep.contextmanager.contextmanager import ContextManager
+from keep.providers.providers_factory import ProvidersFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -59,6 +62,51 @@ static_presets = {
         static=True,
     ),
 }
+
+async def pull_alerts_from_providers(
+    tenant_id: str,
+) -> list[AlertDto]:
+    """
+    Pulls alerts from providers and record the to the DB.
+
+    "Get or create logics".
+    """
+
+    context_manager = ContextManager(
+        tenant_id=tenant_id,
+        workflow_id=None,
+    )
+
+    for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
+        provider_class = ProvidersFactory.get_provider(
+            context_manager=context_manager,
+            provider_id=provider.id,
+            provider_type=provider.type,
+            provider_config=provider.details,
+        )
+        logger.info(
+            f"Pulling alerts from provider {provider.type} ({provider.id})",
+            extra={
+                "provider_type": provider.type,
+                "provider_id": provider.id,
+                "tenant_id": tenant_id,
+            },
+        )
+        sorted_provider_alerts_by_fingerprint = (
+            provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+        )
+        for fingerprint, alert  in sorted_provider_alerts_by_fingerprint.items():
+            await process_event(
+                {},
+                tenant_id,
+                None,
+                None,
+                fingerprint,
+                None,
+                None,
+                alert,
+                save_if_duplicate=False,
+            )
 
 
 @router.get(
@@ -188,10 +236,19 @@ def update_preset(
     "/{preset_name}/alerts",
     description="Get a preset for tenant",
 )
-def get_preset_alerts(
+async def get_preset_alerts(
+    bg_tasks: BackgroundTasks,
     preset_name: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[AlertDto]:
+    
+    # Gathering alerts may take a while and we don't care if it will finish before we return the response.
+    # In the worst case, gathered alerts will be pulled in the next request.
+    bg_tasks.add_task(
+        pull_alerts_from_providers,
+        authenticated_entity.tenant_id
+    )
+
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting preset alerts", extra={"preset_name": preset_name})
     # handle static presets
