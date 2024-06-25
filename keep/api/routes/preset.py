@@ -1,6 +1,5 @@
 import logging
 
-from pusher import Pusher
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -65,7 +64,7 @@ static_presets = {
 }
 
 async def pull_alerts_from_providers(
-    tenant_id: str, pusher_client: Pusher | None, sync: bool = False
+    tenant_id: str,
 ) -> list[AlertDto]:
     """
     Pulls alerts from providers and record the to the DB.
@@ -247,7 +246,7 @@ async def get_preset_alerts(
     # In the worst case, gathered alerts will be pulled in the next request.
     bg_tasks.add_task(
         pull_alerts_from_providers,
-        authenticated_entity.tenant_id, None, sync=True
+        authenticated_entity.tenant_id
     )
 
     tenant_id = authenticated_entity.tenant_id
