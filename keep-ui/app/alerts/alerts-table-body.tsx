@@ -13,28 +13,35 @@ interface Props {
   theme: { [key: string]: string };
 }
 
-export function AlertsTableBody({ table, showSkeleton, showEmptyState, theme }: Props) {
+export function AlertsTableBody({
+  table,
+  showSkeleton,
+  showEmptyState,
+  theme,
+}: Props) {
   if (showEmptyState) {
     return (
       <TableBody>
         <TableRow>
-          <TableCell colSpan={table.getAllColumns().length} className="text-center">
+          <TableCell
+            colSpan={table.getAllColumns().length}
+            className="text-center"
+          >
             <Card className="sm:mx-auto w-full max-w-5xl">
-              <div className="mt-4 flex h-44 items-center justify-center rounded-tremor-small border border-dashed border-tremor-border dark:border-dark-tremor-border">
-                <div className="text-center">
-                  <CircleStackIcon
-                    className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
-                    aria-hidden={true}
-                  />
-                  <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                    No alerts to display
-                  </p>
-                  <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-                    It is because you have not connected any data source yet or there are no alerts matching the filter.
-                  </p>
-                </div>
+              <div className="text-center">
+                <CircleStackIcon
+                  className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+                  aria-hidden={true}
+                />
+                <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  No alerts to display
+                </p>
+                <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                  It is because you have not connected any data source yet or
+                  there are no alerts matching the filter.
+                </p>
               </div>
-        </Card>
+            </Card>
           </TableCell>
         </TableRow>
       </TableBody>
@@ -46,7 +53,7 @@ export function AlertsTableBody({ table, showSkeleton, showEmptyState, theme }: 
       {table.getRowModel().rows.map((row) => {
         // Assuming the severity can be accessed like this, adjust if needed
         const severity = row.original.severity || "info";
-        const rowBgColor = theme[severity] || 'bg-white'; // Fallback to 'bg-white' if no theme color
+        const rowBgColor = theme[severity] || "bg-white"; // Fallback to 'bg-white' if no theme color
 
         return (
           <TableRow key={row.id} className={rowBgColor}>
@@ -59,10 +66,11 @@ export function AlertsTableBody({ table, showSkeleton, showEmptyState, theme }: 
                     : ""
                 }
               >
-                {showSkeleton
-                  ? <Skeleton />
-                  : flexRender(cell.column.columnDef.cell, cell.getContext())
-                }
+                {showSkeleton ? (
+                  <Skeleton />
+                ) : (
+                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                )}
               </TableCell>
             ))}
           </TableRow>
