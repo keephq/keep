@@ -341,8 +341,8 @@ def is_keep_responsive():
 @pytest.fixture(scope="session")
 def keep_enviroment(docker_services):
     try:
-        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
-            print("Running in Github Actions or SKIP_DOCKER is set, skipping keep")
+        if os.getenv("SKIP_DOCKER"):
+            print("SKIP_DOCKER is set, skipping keep")
             yield
             return
         docker_services.wait_until_responsive(
