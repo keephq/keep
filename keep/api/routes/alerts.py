@@ -390,7 +390,6 @@ def get_alert(
             "tenant_id": tenant_id,
         },
     )
-    # TODO: once pulled alerts will be in the db too, this should be changed
     all_alerts = get_all_alerts(authenticated_entity=authenticated_entity)
     alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
     if alert:
