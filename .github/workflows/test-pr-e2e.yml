@@ -21,31 +21,6 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-        ports:
-          - 5432:5432
-        volumes:
-          - postgres_data:/var/lib/postgresql/data
-
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -75,19 +50,6 @@ jobs:
 
       - name: Run unit tests and report coverage
         run: |
-          # Add a step to wait for MySQL to be fully up and running
-          until nc -z 127.0.0.1 3306; do
-            echo "waiting for MySQL..."
-            sleep 1
-          done
-          echo "MySQL is up and running!"
-
-          # Add a step to wait for Postgres to be fully up and running
-          until nc -z 127.0.0.1 5432; do
-            echo "waiting for Postgres..."
-            sleep 1
-          done
-          echo "Postgres is up and running!"
           # Run the tests
           poetry run coverage run --branch -m pytest tests/e2e_tests/
 

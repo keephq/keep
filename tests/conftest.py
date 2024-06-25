@@ -58,7 +58,10 @@ def docker_services(
 
     # If we are running in Github Actions, we don't need to start the docker services
     # as they are already handled by the Github Actions
-    if os.getenv("GITHUB_ACTIONS") == "true":
+    if (
+        os.getenv("GITHUB_ACTIONS") == "true"
+        and not os.getenv("GITHUB_WORKFLOW") == "Tests (E2E)"
+    ):
         print("Running in Github Actions, skipping docker services")
         yield
         return
