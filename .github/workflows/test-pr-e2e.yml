@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - 'keep/**'
-# MySQL server and Elasticsearch for testing
+# MySQL server and Postgres for testing
 env:
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
