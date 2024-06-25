@@ -98,6 +98,7 @@ def docker_services(
                 docker_compose_command += " --project-directory . "
                 break
 
+        print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
             docker_compose_command,
             docker_compose_file,
@@ -105,6 +106,7 @@ def docker_services(
             docker_setup,
             docker_cleanup,
         ) as docker_service:
+            print("Docker services started")
             yield docker_service
 
     except Exception as e:
@@ -327,6 +329,7 @@ def is_keep_responsive():
     try:
         response = requests.get("http://localhost:8080/healthcheck", timeout=1)
         if response.status_code == 200:
+            print("Keep backend is up")
             return True
     except Exception:
         print("Keep still not up")
