@@ -350,7 +350,26 @@ def keep_enviroment(docker_services):
             pause=0.1,
             check=is_keep_responsive,
         )
-        yield True
+        # docker compose is up, now lets run env on the frontend container
+        import subprocess
+
+        command = [
+            "docker-compose",
+            "-f",
+            "/home/runner/work/keep/keep/tests/e2e_tests/docker-compose-e2e-postgres.yml",
+            "exec",
+            "keep-frontend",
+            "env",
+        ]
+        try:
+            # Run the command and capture the output
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+
+            # Print the output of the env command
+            print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred: {e}")
+            yield True
     except Exception:
         print("Exception occurred while waiting for Keep to be responsive")
         raise
