@@ -80,7 +80,7 @@ jobs:
           echo "MySQL is up and running!"
 
           # Add a step to wait for Postgres to be fully up and running
-          until nc -z 127.0.0.1:5432; do
+          until nc -z 127.0.0.1 5432; do
             echo "waiting for Postgres..."
             sleep 1
           done
