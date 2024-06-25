@@ -695,14 +695,14 @@ def test_null_handling(db_session, setup_alerts):
         search_query
     )
     assert len(elastic_filtered_alerts) == 1
-    assert elastic_filtered_alerts[0].assigned == None
+    assert elastic_filtered_alerts[0].assignee == None
     # then, use db
     os.environ["ELASTIC_ENABLED"] = "false"
     db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
         search_query
     )
     assert len(db_filtered_alerts) == 1
-    assert db_filtered_alerts[0].assigned == None
+    assert db_filtered_alerts[0].assignee == None
     # compare
     assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
 
