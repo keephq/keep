@@ -64,14 +64,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile', '**/docker-compose.yml', '**/docker-compose.*.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Set up Keep environment
         run: |
           DOCKER_BUILDKIT=1 docker-compose \
@@ -99,7 +91,7 @@ jobs:
             sleep 2
           done
           # create the state directory
-          mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
+          # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
