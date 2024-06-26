@@ -4,13 +4,21 @@ import pytest
 @pytest.mark.parametrize(
     "setup_e2e_env",
     [
-        "e2e_tests/docker-compose-e2e-postgres.yml",
-        "e2e_tests/docker-compose-e2e-mysql.yml",
+        {
+            "compose_file": "e2e_tests/docker-compose-e2e-postgres.yml",
+            "backend_port": 8082,
+            "frontend_port": 30002,
+        },
+        {
+            "compose_file": "e2e_tests/docker-compose-e2e-mysql.yml",
+            "backend_port": 8081,
+            "frontend_port": 30001,
+        },
     ],
     indirect=True,
 )
 def test_another_page(setup_e2e_env, browser):
-    browser.goto("http://localhost:3000/")
+    browser.goto(f"http://localhost:{setup_e2e_env}/providers")
     assert "Keep" in browser.title()
 
 

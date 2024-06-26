@@ -28,6 +28,8 @@ services:
       - ./state:/state
     depends_on:
       - keep-backend
+    ports: !override
+      - "30001:3000"
 
   keep-backend:
     extends:
@@ -45,6 +47,8 @@ services:
     depends_on:
       keep-database:
         condition: service_healthy
+    ports: !override
+      - "8081:8080"
 
   keep-websocket-server:
     extends:

@@ -25,6 +25,9 @@ services:
     depends_on:
       - keep-backend
 
+    ports: !override
+      - "30002:3000"
+
   keep-backend:
     extends:
       file: docker-compose.common.yml
@@ -40,11 +43,16 @@ services:
       - ./state:/state
     depends_on:
       - keep-database
+    ports: !override
+      - "8082:8080"
 
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+    ports: !override
+      - "6002:6001"
+      - "9602:9601"
 
 volumes:
   postgres-data:
