@@ -1,13 +1,8 @@
-"""
-ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
-"""
 import dataclasses
 import json
-
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
-
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -67,7 +62,6 @@ class ServicenowProvider(BaseProvider):
 
     @property
     def service_now_base_url(self):
-        # if not starts with http:
         if not self.authentication_config.service_now_base_url.startswith("http"):
             return f"https://{self.authentication_config.service_now_base_url}"
         return self.authentication_config.service_now_base_url
@@ -90,20 +84,14 @@ class ServicenowProvider(BaseProvider):
                 roles = response.json()
                 roles_names = [role.get("name") for role in roles.get("result")]
                 if "itil" in roles_names:
-                    scopes = {
-                        "itil": True,
-                    }
+                    scopes = {"itil": True}
                 else:
-                    scopes = {
-                        "itil": "This user does not have the ITIL role",
-                    }
+                    scopes = {"itil": "This user does not have the ITIL role"}
             else:
                 scopes["itil"] = "Failed to get roles from ServiceNow"
         except Exception as e:
             self.logger.exception("Error validating scopes")
-            scopes = {
-                "itil": str(e),
-            }
+            scopes = {"itil": str(e)}
         return scopes
 
     def validate_config(self):
@@ -125,17 +113,14 @@ class ServicenowProvider(BaseProvider):
         if not table_name:
             raise ProviderException("Table name is required")
 
-        # TODO - this could be separated into a ServicenowUpdateProvider once we support
         if "ticket_id" in kwargs:
             ticket_id = kwargs.pop("ticket_id")
             fingerprint = kwargs.pop("fingerprint")
             return self._notify_update(table_name, ticket_id, fingerprint)
 
-        # In ServiceNow tables are lower case
         table_name = table_name.lower()
 
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
-        # HTTP request
         response = requests.post(
             url,
             auth=(
@@ -151,17 +136,14 @@ class ServicenowProvider(BaseProvider):
             resp = response.json()
             self.logger.info(f"Created ticket: {resp}")
             result = resp.get("result")
-            # Add link to ticket
             result[
                 "link"
             ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
             return result
-        # if the instance is down due to hibranate you'll get 200 instead of 201
         elif response.status_code == 200:
             raise ProviderException(
                 "ServiceNow instance is down, you need to restart the instance."
             )
-
         else:
             self.logger.info(f"Failed to create ticket: {response.text}")
             response.raise_for_status()
@@ -180,12 +162,10 @@ class ServicenowProvider(BaseProvider):
         )
         if response.status_code == 200:
             resp = response.text
-            # if the instance is down due to hibranate you'll get 200 instead of 201
             if "Want to find out why instances hibernate?" in resp:
                 raise ProviderException(
                     "ServiceNow instance is down, you need to restart the instance."
                 )
-            # else, we are ok
             else:
                 resp = json.loads(resp)
             self.logger.info("Updated ticket", extra={"resp": resp})
@@ -195,6 +175,59 @@ class ServicenowProvider(BaseProvider):
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
+
+    def fetch_incidents(self):
+        """
+        Fetches all incidents from ServiceNow.
+        """
+        url = f"{self.authentication_config.service_now_base_url}/api/now/table/incident"
+        response = requests.get(
+            url,
+            auth=HTTPBasicAuth(
+                self.authentication_config.username,
+                self.authentication_config.password,
+            ),
+            verify=False,
+        )
+        if response.status_code == 200:
+            incidents = response.json().get('result', [])
+            return self.process_incidents(incidents)
+        else:
+            self.logger.info(f"Failed to fetch incidents: {response.text}")
+            response.raise_for_status()
+
+    def process_incidents(self, incidents):
+        """
+        Processes the fetched incidents, extracting necessary metadata.
+        """
+        events = []
+        for incident in incidents:
+            event = {
+                'id': incident.get('sys_id'),
+                'title': incident.get('short_description'),
+                'description': incident.get('description'),
+                'created_at': incident.get('sys_created_on'),
+                'updated_at': incident.get('sys_updated_on'),
+                'participants': self.get_participants(incident),
+                'timeline': self.get_timeline(incident),
+                # Add other metadata as needed
+            }
+            events.append(event)
+        return events
+
+    def get_participants(self, incident):
+        """
+        Extracts participants from an incident.
+        """
+        # Logic to get participants from incident
+        return []
+
+    def get_timeline(self, incident):
+        """
+        Extracts timeline from an incident.
+        """
+        # Logic to get timeline from incident
+        return []
 
 
 if __name__ == "__main__":
@@ -213,7 +246,7 @@ if __name__ == "__main__":
     service_now_username = os.environ.get("SERVICENOW_USERNAME")
     service_now_password = os.environ.get("SERVICENOW_PASSWORD")
 
-    # Initalize the provider and provider config
+    # Initialize the provider and provider config
     config = ProviderConfig(
         description="Service Now Provider",
         authentication={
@@ -226,21 +259,6 @@ if __name__ == "__main__":
         context_manager, provider_id="servicenow", config=config
     )
 
-    # mock alert
-    context_manager = provider.context_manager
-
-    alert = AlertDto.parse_obj(
-        json.loads(
-            '{"id": "4c54ce9a0d458b574d0aaa5fad23f44ce006e45bdf16fa65207cc6131979c000", "name": "Error in lambda", "status": "ALARM", "lastReceived": "2023-09-18 12:26:21.408000+00:00", "environment": "undefined", "isDuplicate": null, "duplicateReason": null, "service": null, "source": ["cloudwatch"], "message": null, "description": "Hey Shahar\\n\\nThis is a test alarm!", "severity": null, "pushed": true, "event_id": "3cbf2024-a1f0-42ac-9754-b9157c00b95e", "url": null, "AWSAccountId": "1234", "AlarmActions": ["arn:aws:sns:us-west-2:1234:Default_CloudWatch_Alarms_Topic"], "AlarmArn": "arn:aws:cloudwatch:us-west-2:1234:alarm:Error in lambda", "Trigger": {"MetricName": "Errors", "Namespace": "AWS/Lambda", "StatisticType": "Statistic", "Statistic": "AVERAGE", "Unit": null, "Dimensions": [{"value": "helloWorld", "name": "FunctionName"}], "Period": 300, "EvaluationPeriods": 1, "DatapointsToAlarm": 1, "ComparisonOperator": "GreaterThanThreshold", "Threshold": 0.0, "TreatMissingData": "missing", "EvaluateLowSampleCountPercentile": ""}, "Region": "US West (Oregon)", "InsufficientDataActions": [], "AlarmConfigurationUpdatedTimestamp": "2023-08-17T14:29:12.272+0000", "NewStateReason": "Setting state to ALARM for testing", "AlarmName": "Error in lambda", "NewStateValue": "ALARM", "OldStateValue": "INSUFFICIENT_DATA", "AlarmDescription": "Hey Shahar\\n\\nThis is a test alarm!", "OKActions": [], "StateChangeTime": "2023-09-18T12:26:21.408+0000", "trigger": "alert"}'
-        )
-    )
-    context_manager.set_event_context(alert)
-    r = provider.notify(
-        table_name="incident",
-        payload={
-            "short_description": "My new incident",
-            "category": "software",
-            "created_by": "keep",
-        },
-    )
-    print(r)
+    # Fetch and process incidents
+    incidents = provider.fetch_incidents()
+    print(json.dumps(incidents, indent=2))
