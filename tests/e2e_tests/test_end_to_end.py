@@ -59,6 +59,7 @@ def test_insert_new_alert(browser):
         # Save the page source on failure
         with open("page_source_test1.html", "w") as f:
             f.write(browser.content())
+        raise
 
 
 def test_providers_page_is_accessible(browser):
@@ -99,3 +100,4 @@ def test_providers_page_is_accessible(browser):
         # Save the page source on failure
         with open("page_source_test2.html", "w") as f:
             f.write(browser.content())
+        raise
