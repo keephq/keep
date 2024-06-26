@@ -87,7 +87,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return query[0].get("value", "")
 
     @property
-    def query(self) -> str:
+    def query(self) -> PresetSearchQuery:
         return PresetSearchQuery(
             cel_query=self.cel_query,
             sql_query=self.sql_query,

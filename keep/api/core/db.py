@@ -1569,8 +1569,10 @@ def get_provider_distribution(tenant_id: str) -> dict:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
