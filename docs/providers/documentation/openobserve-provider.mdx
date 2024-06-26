@@ -1,0 +1,33 @@
+---
+title: "OpenObserve"
+sidebarTitle: "OpenObserve Provider"
+description: "OpenObserve provider allows you to get OpenObserve `alerts/actions` via webhook installation"
+---
+
+## Authentication Parameters
+The OpenObserve provider requires the following authentication parameters:
+
+- `OpenObserve Username`: Required. This is your OpenObserve account username.
+- `OpenObserve Password`: This is the password associated with your OpenObserve Username.
+- `OpenObserve Host`: This is the hostname of the OpenObserve instance you wish to connect to. It identifies the OpenObserve server that the API will interact with.
+- `OpenObserve Port`: This is the port number for the OpenObserve host, default is 5080.
+- `Organisation ID`: The ID of the organisation in which you would like to install the webhook.
+
+## Connecting with the Provider
+
+Obtain OpenObserve Username and Password:
+1. To see how to install and set Credentials: [here](https://openobserve.ai/docs/quickstart/#self-hosted-installation)
+2. Get the Organisation ID of the OpenObserve instance in which you wish to install the webhook.
+
+## Webhook Integration Modifications
+
+The webhook integration adds Keep as an alert monitor within the OpenObserve instance. It can be found under the "Alerts & Respond" section.
+The integration automatically gains access to the following scopes within OpenObserve:
+- `authenticated`
+
+## Useful Links
+
+- [OpenObserve Alert Templates](https://openobserve.ai/docs/user-guide/alerts/templates)
+- [OpenObserve API Spec](https://openobserve.ai/docs/api_specs/#?route=overview)
+- [OpenObserve Destinations](https://openobserve.ai/docs/user-guide/alerts/destinations/)
+- [OpenObserve Installation and Credentials](https://openobserve.ai/docs/quickstart/#self-hosted-installation)

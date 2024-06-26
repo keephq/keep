@@ -19,7 +19,7 @@ interface Props {
 
 export default function AlertPagination({ presetName, table, isRefreshAllowed }: Props) {
   const { usePresetAlerts } = useAlerts();
-  const { mutate, isValidating } = usePresetAlerts(presetName);
+  const { mutate, isLoading: isValidating } = usePresetAlerts(presetName);
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
