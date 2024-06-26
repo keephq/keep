@@ -108,6 +108,7 @@
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
+            "providers/documentation/openobserve-provider",
             "providers/documentation/openshift-provider",
             "providers/documentation/opsgenie-provider",
             "providers/documentation/pagerduty-provider",
@@ -194,7 +195,10 @@
         },
         {
           "group": "Examples",
-          "pages": ["workflows/examples/multi-step-alert"]
+          "pages": [
+            "workflows/examples/multi-step-alert",
+            "workflows/examples/reusable-action-alert"
+          ]
         },
         "workflows/state"
       ]
@@ -345,6 +349,15 @@
             "api-ref/workflows/get-workflow-executions",
             "api-ref/workflows/get-workflow-executions-by-alert-fingerprint",
             "api-ref/workflows/update-workflow-by-id"
+          ]
+        },
+        {
+          "group": "Actions",
+          "pages": [
+            "api-ref/actions/get-actions",
+            "api-ref/actions/add-actions",
+            "api-ref/actions/update-action",
+            "api-ref/actions/delete-action"
           ]
         }
       ]
