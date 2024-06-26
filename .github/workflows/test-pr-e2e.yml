@@ -95,6 +95,6 @@ jobs:
           files: coverage.json
           verbose: true
 
-      - name: Tear down database
+      - name: Tear down environment
         run: |
-          docker-compose --project-directory . -f e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
+          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
