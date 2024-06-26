@@ -102,6 +102,12 @@ jobs:
             done
           fi
 
+          # wait to keep backend on port 8080
+          until $(curl --output /dev/null --silent --head --fail http://localhost:8080/healthcheck); do
+            echo "Waiting for Keep backend to be ready..."
+            sleep 2
+          done
+
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
