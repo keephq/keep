@@ -107,7 +107,8 @@ jobs:
             echo "Waiting for Keep backend to be ready..."
             sleep 2
           done
-
+          # create the state directory
+          mkdir -p /state && chown -R root:root /state && chmod -R 777 /state
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
