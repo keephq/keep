@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
-import requests
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -25,14 +24,6 @@ from keep.api.models.db.workflow import *
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
-
-
-def get_variable_from_stack(function_name, variable_name):
-    stack = inspect.stack()
-    for frame in stack:
-        if frame.function == function_name:
-            return frame.frame.f_locals.get(variable_name)
-    return None
 
 
 @pytest.fixture
@@ -67,10 +58,7 @@ def docker_services(
 
     # If we are running in Github Actions, we don't need to start the docker services
     # as they are already handled by the Github Actions
-    if (
-        os.getenv("GITHUB_ACTIONS") == "true"
-        and not os.getenv("GITHUB_WORKFLOW") == "Tests (E2E)"
-    ):
+    if os.getenv("GITHUB_ACTIONS") == "true":
         print("Running in Github Actions, skipping docker services")
         yield
         return
@@ -96,13 +84,6 @@ def docker_services(
                 docker_compose_file = docker_compose_file.replace(
                     "docker-compose.yml", "docker-compose-elastic.yml"
                 )
-                break
-            elif frame.function == "setup_e2e_env":
-                compose_file = frame.frame.f_locals.get("compose_file")
-                docker_compose_file_new = docker_compose_file.replace(
-                    "docker-compose.yml", f"{compose_file}"
-                )
-                docker_compose_command += " --project-directory . "
                 break
 
         print(f"Using docker-compose file: {docker_compose_file_new}")
@@ -323,58 +304,12 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
         page = context.new_page()
+        page.set_default_timeout(5000)
         yield page
         context.close()
         browser.close()
-
-
-def is_keep_responsive():
-    try:
-        backend_port = get_variable_from_stack("setup_e2e_env", "backend_port")
-        print(f"Checking if Keep is up on port {backend_port}")
-        response = requests.get(
-            f"http://localhost:{backend_port}/healthcheck", timeout=1
-        )
-        if response.status_code == 200:
-            print("Keep backend is up")
-            return True
-    except Exception:
-        print("Keep still not up")
-        pass
-
-    return False
-
-
-@pytest.fixture(scope="session")
-def keep_enviroment(docker_services):
-    try:
-        if os.getenv("SKIP_DOCKER"):
-            print("SKIP_DOCKER is set, skipping keep")
-            yield
-            return
-
-        docker_services.wait_until_responsive(
-            timeout=20.0,
-            pause=0.1,
-            check=is_keep_responsive,
-        )
-        yield True
-    except Exception:
-        print("Exception occurred while waiting for Keep to be responsive")
-        raise
-    finally:
-        print("Tearing down Keep")
-
-
-@pytest.fixture(scope="session")
-def setup_e2e_env(request):
-    compose_file = request.param.get("compose_file")  # noqa: F841
-    backend_port = request.param.get("backend_port")
-    frontend_port = request.param.get("frontend_port")
-    request.param = {"backend_port": backend_port}
-    request.getfixturevalue("keep_enviroment")
-    return frontend_port
