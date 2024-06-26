@@ -58,9 +58,6 @@ jobs:
       - name: Install Playwright dependencies
         run: npx playwright install --with-deps
 
-      - name: Install Xvfb
-        run: sudo apt-get install xvfb
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -104,7 +101,7 @@ jobs:
 
       - name: Run e2e tests and report coverage
         run: |
-          xvfb-run -a poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
