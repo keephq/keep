@@ -19,7 +19,9 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-frontend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ui
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
@@ -35,7 +37,7 @@ services:
       service: keep-backend-common
     build:
       context: .
-      dockerfile: docker/Dockerfile.dev.api
+      dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
@@ -51,13 +53,6 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
-
-  python-test-runner:
-    image: python:3.9
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: ["slee", "infinity"]
 
 volumes:
   mysql-data:
