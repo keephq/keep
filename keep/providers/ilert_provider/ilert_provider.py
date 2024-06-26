@@ -190,14 +190,19 @@ class IlertProvider(BaseProvider):
     
         return [AlertDto(
             id=alert["id"],
+            name=alert["summary"],
             title=alert["summary"],
             description=alert["message"],
             status=alert["status"],
             sendNotification=alert["sendNotification"],
-            created_at=alert["createdAt"],
-            updated_at=alert["updatedAt"],
-            resolved_on=alert["resolvedAt"],
-            subscribed=alert["subscribed"],
+            createdAt=alert["createdAt"],
+            updatedAt=alert["updatedAt"],
+            affectedServices=alert["affectedServices"],
+            createdBy=alert["createdBy"],
+            lastHistory=alert["lastHistory"],
+            lastHistoryCreatedAt=alert["lastHistoryCreatedAt"],
+            lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
+            lastReceived=alert["updatedAt"],
         ) for alert in response.json()]
 
     def __create_or_update_incident(
