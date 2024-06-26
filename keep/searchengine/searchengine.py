@@ -58,7 +58,7 @@ class SearchEngine:
         self.logger.info("Finished getting last alerts")
         return alerts_dto
 
-    def _search_alerts_by_cel(
+    def search_alerts_by_cel(
         self,
         cel_query: str,
         alerts: list[AlertDto] = None,
@@ -126,7 +126,7 @@ class SearchEngine:
         self.logger.info("Searching alerts")
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
-            filtered_alerts = self._search_alerts_by_cel(
+            filtered_alerts = self.search_alerts_by_cel(
                 query.cel_query, limit=query.limit, timeframe=query.timeframe
             )
         # if elastic

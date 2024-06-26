@@ -124,7 +124,7 @@ class WorkflowStore:
         return workflow_yamls
 
     def get_workflows_from_path(
-        self, tenant_id, workflow_path: str | tuple[str], providers_file: str = None
+        self, tenant_id, workflow_path: str | tuple[str], providers_file: str = None, actions_file: str = None
     ) -> list[Workflow]:
         """Backward compatibility method to get workflows from a path.
 
@@ -142,22 +142,22 @@ class WorkflowStore:
             for workflow_url in workflow_path:
                 workflow_yaml = self._parse_workflow_to_dict(workflow_url)
                 workflows.extend(
-                    self.parser.parse(tenant_id, workflow_yaml, providers_file)
+                    self.parser.parse(tenant_id, workflow_yaml, providers_file, actions_file)
                 )
         elif os.path.isdir(workflow_path):
             workflows.extend(
                 self._get_workflows_from_directory(
-                    tenant_id, workflow_path, providers_file
+                    tenant_id, workflow_path, providers_file, actions_file
                 )
             )
         else:
             workflow_yaml = self._parse_workflow_to_dict(workflow_path)
-            workflows = self.parser.parse(tenant_id, workflow_yaml, providers_file)
+            workflows = self.parser.parse(tenant_id, workflow_yaml, providers_file, actions_file)
 
         return workflows
 
     def _get_workflows_from_directory(
-        self, tenant_id, workflows_dir: str, providers_file: str = None
+        self, tenant_id, workflows_dir: str, providers_file: str = None, actions_file: str = None
     ) -> list[Workflow]:
         """
         Run workflows from a directory.
@@ -176,11 +176,12 @@ class WorkflowStore:
                 try:
                     workflows.extend(
                         self.parser.parse(
-                            tenant_id, parsed_workflow_yaml, providers_file
+                            tenant_id, parsed_workflow_yaml, providers_file, actions_file
                         )
                     )
                     self.logger.info(f"Workflow from {file} fetched successfully")
                 except Exception as e:
+                    print(e)
                     self.logger.error(
                         f"Error parsing workflow from {file}", extra={"exception": e}
                     )
