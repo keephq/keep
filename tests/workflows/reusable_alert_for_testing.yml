@@ -1,0 +1,32 @@
+# Database disk space is low (<10%)
+alert:
+  id: db-disk-space
+  tags: ['team_1','databases']
+  description: Check that the DB has enough disk space
+  owners:
+    - github-shahargl
+    - slack-talboren
+  services:
+    - db
+    - api
+  steps:
+    - name: db-no-space
+      provider:
+        type: mock
+        config: "{{ providers.db-server-mock }}"
+        with:
+          command: df -h | grep /dev/disk3s1s1 | awk '{ print $5}' # Check the disk space
+          command_output: 91% # Mock
+      condition:
+        - type: threshold
+          value:  "{{ steps.this.results }}"
+          compare_to: 90% # Trigger if more than 90% full
+  actions:
+    - name: trigger-slack
+      use: '@trigger-slack2'
+
+
+providers:
+  db-server-mock:
+    description: Paper DB Server
+    authentication:
