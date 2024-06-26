@@ -47,7 +47,7 @@ class AppdynamicsProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Password",
-            "hint": "Password associated with yur account",
+            "hint": "Password associated with your account",
             "sensitive": True,
         },
     )
