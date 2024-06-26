@@ -28,8 +28,6 @@ services:
       - ./state:/state
     depends_on:
       - keep-backend
-    ports: !override
-      - "30001:3000"
 
   keep-backend:
     extends:
@@ -47,13 +45,18 @@ services:
     depends_on:
       keep-database:
         condition: service_healthy
-    ports: !override
-      - "8081:8080"
 
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+
+  python-test-runner:
+    image: python:3.9
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["sleep", "infinity"]
 
 volumes:
   mysql-data:

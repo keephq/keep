@@ -1,5 +1,10 @@
-import pytest
+def test_another_page(browser):
+    browser.goto("http://localhost:3000/providers")
+    browser.wait_for_url("http://localhost:3000/providers")
+    assert "Keep" in browser.title()
 
+
+"""
 
 @pytest.mark.parametrize(
     "setup_e2e_env",
@@ -17,12 +22,7 @@ import pytest
     ],
     indirect=True,
 )
-def test_another_page(setup_e2e_env, browser):
-    browser.goto(f"http://localhost:{setup_e2e_env}/providers")
-    assert "Keep" in browser.title()
 
-
-"""
 def sanity(page):
     page.goto("http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders")
     page.goto("http://localhost:3000/providers")
