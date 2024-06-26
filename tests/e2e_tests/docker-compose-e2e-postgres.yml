@@ -34,6 +34,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=./state
     volumes:
       - .:/app
       - ./state:/state
