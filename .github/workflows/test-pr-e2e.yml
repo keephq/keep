@@ -72,15 +72,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build and cache Docker images
-        run: |
-          DOCKER_BUILDKIT=1 docker-compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache
-
       - name: Set up Keep environment
         run: |
           DOCKER_BUILDKIT=1 docker-compose \
@@ -108,7 +99,7 @@ jobs:
             sleep 2
           done
           # create the state directory
-          mkdir -p /state && chown -R root:root /state && chmod -R 777 /state
+          mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
