@@ -304,9 +304,9 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
-    headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(5000)
