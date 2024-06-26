@@ -94,7 +94,16 @@ jobs:
           fail_ci_if_error: false # don't fail if we didn't manage to upload the coverage report
           files: coverage.json
           verbose: true
-
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-artifacts
+          path: |
+            screenshot-test1.png
+            screenshot-test2.png
+            page_source_test1.html
+            page_source_test2.html
       - name: Tear down environment
         run: |
           docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down

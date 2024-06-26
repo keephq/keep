@@ -11,13 +11,7 @@
 # 2. Run the tests using pytest.
 # NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
 # NOTE 2: to run the tests with a browser, uncommant this:
-# import os
-
-# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
-
-# Running the tests in GitHub Actions:
-# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
-
+import os
 import random
 
 # Adding a new test:
@@ -31,6 +25,12 @@ import random
 import re
 import string
 
+# Running the tests in GitHub Actions:
+# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
+
+
+os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+
 
 def test_sanity(browser):
     browser.goto("http://localhost:3000/providers")
@@ -43,15 +43,23 @@ def test_insert_new_alert(browser):
     Test to insert a new alert
 
     """
-    browser.goto(
-        "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
-    )
-    browser.goto("http://localhost:3000/providers")
-    browser.get_by_role("button", name="KE Keep").click()
-    browser.get_by_role("menuitem", name="Settings").click()
-    browser.get_by_role("tab", name="Webhook").click()
-    browser.get_by_role("button", name="Click to create an example").click()
-    browser.get_by_text("1", exact=True).click()
+    try:
+        browser.goto(
+            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        )
+        browser.goto("http://localhost:3000/providers")
+        browser.get_by_role("button", name="KE Keep").click()
+        browser.get_by_role("menuitem", name="Settings").click()
+        browser.get_by_role("tab", name="Webhook").click()
+        browser.get_by_role("button", name="Click to create an example").click()
+        browser.get_by_text("1", exact=True).click()
+    except Exception:
+        # Capture a screenshot on failure
+        browser.screenshot(path="screenshot-test1.png")
+
+        # Save the page source on failure
+        with open("page_source_test1.html", "w") as f:
+            f.write(browser.content())
 
 
 def test_providers_page_is_accessible(browser):
@@ -59,28 +67,36 @@ def test_providers_page_is_accessible(browser):
     Test to check if the providers page is accessible
 
     """
-    browser.goto(
-        "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
-    )
-    browser.goto("http://localhost:3000/providers")
-    # get the GCP Monitoring provider
-    browser.locator("div").filter(
-        has_text=re.compile(r"^GCP Monitoring alertConnect$")
-    ).first.click()
-    browser.get_by_role("button", name="Cancel").click()
-    # connect resend provider
-    browser.locator("div").filter(
-        has_text=re.compile(r"^resend messagingConnect$")
-    ).first.click()
-    browser.get_by_placeholder("Enter provider name").click()
-    random_provider_name = "".join(
-        [random.choice(string.ascii_letters) for i in range(10)]
-    )
-    browser.get_by_placeholder("Enter provider name").fill(random_provider_name)
-    browser.get_by_placeholder("Enter provider name").press("Tab")
-    browser.get_by_placeholder("Enter api_key").fill("bla")
-    browser.get_by_role("button", name="Connect").click()
-    # wait a bit
-    browser.wait_for_selector("text=Connected")
-    # make sure the provider is connected
-    browser.get_by_text(f"resend id: {random_provider_name}").click()
+    try:
+        browser.goto(
+            "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+        )
+        browser.goto("http://localhost:3000/providers")
+        # get the GCP Monitoring provider
+        browser.locator("div").filter(
+            has_text=re.compile(r"^GCP Monitoring alertConnect$")
+        ).first.click()
+        browser.get_by_role("button", name="Cancel").click()
+        # connect resend provider
+        browser.locator("div").filter(
+            has_text=re.compile(r"^resend messagingConnect$")
+        ).first.click()
+        browser.get_by_placeholder("Enter provider name").click()
+        random_provider_name = "".join(
+            [random.choice(string.ascii_letters) for i in range(10)]
+        )
+        browser.get_by_placeholder("Enter provider name").fill(random_provider_name)
+        browser.get_by_placeholder("Enter provider name").press("Tab")
+        browser.get_by_placeholder("Enter api_key").fill("bla")
+        browser.get_by_role("button", name="Connect").click()
+        # wait a bit
+        browser.wait_for_selector("text=Connected")
+        # make sure the provider is connected
+        browser.get_by_text(f"resend id: {random_provider_name}").click()
+    except Exception:
+        # Capture a screenshot on failure
+        browser.screenshot(path="screenshot-test2.png")
+
+        # Save the page source on failure
+        with open("page_source_test2.html", "w") as f:
+            f.write(browser.content())
