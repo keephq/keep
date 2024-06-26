@@ -56,7 +56,7 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-    command: ["sleep", "infinity"]
+    command: ["slee", "infinity"]
 
 volumes:
   mysql-data:
