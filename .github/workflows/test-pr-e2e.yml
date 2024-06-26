@@ -80,7 +80,7 @@ jobs:
             done
           fi
 
-      - name: Run unit tests and report coverage
+      - name: Run e2e tests and report coverage
         run: |
           # Run the tests
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
@@ -100,8 +100,6 @@ jobs:
         with:
           name: test-artifacts
           path: |
-            screenshot-test1.png
-            screenshot-test2.png
             page_source_test1.html
             page_source_test2.html
       - name: Tear down environment

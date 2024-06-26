@@ -11,7 +11,6 @@
 # 2. Run the tests using pytest.
 # NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
 # NOTE 2: to run the tests with a browser, uncommant this:
-import os
 import random
 
 # Adding a new test:
@@ -29,7 +28,7 @@ import string
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
 
 
-os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
 
 def test_sanity(browser):
@@ -55,7 +54,7 @@ def test_insert_new_alert(browser):
         browser.get_by_text("1", exact=True).click()
     except Exception:
         # Capture a screenshot on failure
-        browser.screenshot(path="screenshot-test1.png")
+        # browser.screenshot(path="screenshot-test1.png")
 
         # Save the page source on failure
         with open("page_source_test1.html", "w") as f:
@@ -95,7 +94,7 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_text(f"resend id: {random_provider_name}").click()
     except Exception:
         # Capture a screenshot on failure
-        browser.screenshot(path="screenshot-test2.png")
+        # browser.screenshot(path="screenshot-test2.png")
 
         # Save the page source on failure
         with open("page_source_test2.html", "w") as f:
