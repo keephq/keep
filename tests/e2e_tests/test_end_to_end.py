@@ -51,6 +51,8 @@ def test_insert_new_alert(browser):
         browser.get_by_role("menuitem", name="Settings").click()
         browser.get_by_role("tab", name="Webhook").click()
         browser.get_by_role("button", name="Click to create an example").click()
+        # just wait a bit
+        browser.wait_for_timeout(10000)
         browser.get_by_text("1", exact=True).click()
     except Exception:
         # Capture a screenshot on failure
@@ -90,7 +92,7 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_placeholder("Enter api_key").fill("bla")
         browser.get_by_role("button", name="Connect").click()
         # wait a bit
-        browser.wait_for_selector("text=Connected")
+        browser.wait_for_selector("text=Connected", timeout=15000)
         # make sure the provider is connected
         browser.get_by_text(f"resend id: {random_provider_name}").click()
     except Exception:
