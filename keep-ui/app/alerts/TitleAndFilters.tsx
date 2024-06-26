@@ -2,8 +2,7 @@ import { Table } from "@tanstack/react-table";
 import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
 import { AlertDto } from "./models";
 import ColumnSelection from "./ColumnSelection";
-import { LastRecieved } from "./LastReceived";
-import { ThemeSelection } from './ThemeSelection';
+import { ThemeSelection } from "./ThemeSelection";
 
 type Theme = {
   [key: string]: string;
@@ -52,10 +51,9 @@ export const TitleAndFilters = ({
           enableYearNavigation
         />
         <div className="flex items-center">
-        <ColumnSelection table={table} presetName={presetName} />
-        <ThemeSelection onThemeChange={onThemeChange} />
-      </div>
-        {/* <<LastRecieved /> */}
+          <ColumnSelection table={table} presetName={presetName} />
+          <ThemeSelection onThemeChange={onThemeChange} />
+        </div>
       </div>
     </div>
   );

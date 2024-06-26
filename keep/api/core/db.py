@@ -5,7 +5,7 @@ import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
 import pymysql
@@ -35,6 +35,7 @@ from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
+from keep.api.models.db.action import *
 
 logger = logging.getLogger(__name__)
 
@@ -1568,8 +1569,10 @@ def get_provider_distribution(tenant_id: str) -> dict:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
@@ -1732,3 +1735,57 @@ def delete_dashboard(tenant_id, dashboard_id):
             session.commit()
             return True
         return False
+def get_all_actions(tenant_id: str) -> List[Action]:
+    with Session(engine) as session:
+        actions = session.exec(
+            select(Action).where(Action.tenant_id == tenant_id)
+        ).all()
+    return actions
+
+
+def get_action(tenant_id: str, action_id: str) -> Action:
+    with Session(engine) as session:
+        action = session.exec(
+            select(Action).where(Action.tenant_id == tenant_id).where(Action.id == action_id)
+        ).first()
+    return action
+
+
+def create_action(action: Action):
+    with Session(engine) as session:
+        session.add(action)
+        session.commit()
+        session.refresh(action)
+
+
+def create_actions(actions: List[Action]):
+    with Session(engine) as session:
+        for action in actions:
+            session.add(action)
+        session.commit()
+
+
+def delete_action(tenant_id: str, action_id: str) -> bool:
+    with Session(engine) as session:
+        found_action = session.exec(
+            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+        ).first()
+        if found_action:
+            session.delete(found_action)
+            session.commit()
+            return bool(found_action)
+        return False
+
+
+def update_action(tenant_id: str, action_id: str, update_payload: Action) -> Union[Action, None]:
+    with Session(engine) as session:
+        found_action = session.exec(
+            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+        ).first()
+        if found_action:
+            for key, value in update_payload.dict(exclude_unset=True).items():
+                if hasattr(found_action, key):
+                    setattr(found_action, key, value)
+            session.commit()
+            session.refresh(found_action)
+    return found_action
