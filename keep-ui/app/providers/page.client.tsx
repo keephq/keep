@@ -140,6 +140,9 @@ export default function ProvidersPage({
     isSlowLoading,
     isLocalhost,
   } = useFetchProviders();
+  if (error) {
+    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
+  }
   const { searchProviderString, selectedTags } = useContext(LayoutContext);
   const router = useRouter();
   useEffect(() => {
@@ -159,9 +162,6 @@ export default function ProvidersPage({
   if (status === "unauthenticated") router.push("/signin");
   if (!providers || !installedProviders || providers.length <= 0)
     return <Loading slowLoading={isSlowLoading} />;
-  if (error) {
-    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
-  }
 
   const addProvider = (provider: Provider) => {
     setInstalledProviders((prevProviders) => {
