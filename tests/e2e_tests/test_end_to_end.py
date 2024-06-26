@@ -18,6 +18,8 @@
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
 
+import random
+
 # Adding a new test:
 # 1. Manually:
 #    - Create a new test function.
@@ -27,6 +29,7 @@
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
 import re
+import string
 
 
 def test_sanity(browser):
@@ -44,7 +47,6 @@ def test_insert_new_alert(browser):
         "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
     )
     browser.goto("http://localhost:3000/providers")
-    browser.get_by_label("close").click()
     browser.get_by_role("button", name="KE Keep").click()
     browser.get_by_role("menuitem", name="Settings").click()
     browser.get_by_role("tab", name="Webhook").click()
@@ -71,9 +73,14 @@ def test_providers_page_is_accessible(browser):
         has_text=re.compile(r"^resend messagingConnect$")
     ).first.click()
     browser.get_by_placeholder("Enter provider name").click()
-    browser.get_by_placeholder("Enter provider name").fill("resnedprovider")
+    random_provider_name = "".join(
+        [random.choice(string.ascii_letters) for i in range(10)]
+    )
+    browser.get_by_placeholder("Enter provider name").fill(random_provider_name)
     browser.get_by_placeholder("Enter provider name").press("Tab")
     browser.get_by_placeholder("Enter api_key").fill("bla")
     browser.get_by_role("button", name="Connect").click()
+    # wait a bit
+    browser.wait_for_selector("text=Connected")
     # make sure the provider is connected
-    browser.get_by_text("resend id: resnedprovider").click()
+    browser.get_by_text(f"resend id: {random_provider_name}").click()
