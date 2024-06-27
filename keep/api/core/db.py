@@ -26,6 +26,7 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
+from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
@@ -1739,6 +1740,7 @@ def delete_dashboard(tenant_id, dashboard_id):
             session.commit()
             return True
         return False
+
 def get_all_actions(tenant_id: str) -> List[Action]:
     with Session(engine) as session:
         actions = session.exec(
