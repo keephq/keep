@@ -20,6 +20,8 @@ export interface WorkflowExecution {
   execution_time?: number;
 }
 
-export interface WorkflowExecutionFailure extends WorkflowExecution {
-  error: string;
+export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;
+
+export function isWorkflowExecution(data: any): data is WorkflowExecution {
+  return "id" in data;
 }

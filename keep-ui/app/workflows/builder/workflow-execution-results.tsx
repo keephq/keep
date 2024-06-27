@@ -21,7 +21,11 @@ import {
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "../../../utils/fetcher";
-import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
+import {
+  WorkflowExecution,
+  WorkflowExecutionFailure,
+  isWorkflowExecution,
+} from "./types";
 
 interface WorkflowResultsProps {
   workflow_id: string;
@@ -110,14 +114,21 @@ export function ExecutionResults({
   executionData: WorkflowExecution | WorkflowExecutionFailure;
   checks?: number;
 }) {
-  const status = executionData?.status;
-  const logs = executionData?.logs ?? [];
-  const results = executionData?.results ?? {};
-  const error = executionData?.error;
+  let status: WorkflowExecution["status"] | undefined;
+  let logs: WorkflowExecution["logs"] | undefined;
+  let results: WorkflowExecution["results"] | undefined;
+
+  const error = executionData.error;
+
+  if (isWorkflowExecution(executionData)) {
+    status = executionData.status;
+    logs = executionData.logs;
+    results = executionData.results;
+  }
 
   return (
     <div>
-      {Object.keys(results).length > 0 && (
+      {results && Object.keys(results).length > 0 && (
         <Card>
           <Title>Workflow Results</Title>
           <Table className="w-full">
@@ -153,7 +164,7 @@ export function ExecutionResults({
           </Table>
         </Card>
       )}
-      <div className={Object.keys(results).length > 0 ? "mt-8" : ""}>
+      <div className={results && Object.keys(results).length > 0 ? "mt-8" : ""}>
         {status === "in_progress" ? (
           <div>
             <div className="flex items-center justify-center">
@@ -196,7 +207,7 @@ export function ExecutionResults({
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {logs.map((log, index) => (
+                  {(logs ?? []).map((log, index) => (
                     <TableRow
                       className={`${
                         log.message?.includes("NOT to run")
