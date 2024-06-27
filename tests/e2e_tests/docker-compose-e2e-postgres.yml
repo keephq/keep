@@ -33,6 +33,7 @@ services:
       - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - SCHEDULER=false
     depends_on:
       - keep-database
 

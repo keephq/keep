@@ -37,6 +37,7 @@ services:
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - SCHEDULER=false
     depends_on:
       keep-database:
         condition: service_healthy
