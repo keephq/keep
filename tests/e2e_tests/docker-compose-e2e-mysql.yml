@@ -36,7 +36,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=./state
+      - SECRET_MANAGER_DIRECTORY=/app
     volumes:
       - .:/app
     depends_on:
