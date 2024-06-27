@@ -20,6 +20,6 @@ export interface WorkflowExecution {
   execution_time?: number;
 }
 
-export interface WorkflowExecutionFailure {
+export interface WorkflowExecutionFailure extends WorkflowExecution {
   error: string;
 }

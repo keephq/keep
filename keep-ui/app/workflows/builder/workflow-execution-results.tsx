@@ -21,7 +21,7 @@ import {
 } from "@tremor/react";
 import useSWR from "swr";
 import { fetcher } from "../../../utils/fetcher";
-import { WorkflowExecution } from "./types";
+import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 
 interface WorkflowResultsProps {
   workflow_id: string;
@@ -107,7 +107,7 @@ export function ExecutionResults({
   executionData,
   checks,
 }: {
-  executionData: WorkflowExecution;
+  executionData: WorkflowExecution | WorkflowExecutionFailure;
   checks?: number;
 }) {
   const status = executionData?.status;
