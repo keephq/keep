@@ -153,7 +153,7 @@ class OpenobserveProvider(BaseProvider):
                 },
                 timeout=10,
             )
-        except Exceptions as e:
+        except Exception as e:
             self.logger.error(
                 "Error while validating scopes for OpenObserve",
                 extra=e,
