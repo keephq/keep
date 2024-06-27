@@ -34,6 +34,7 @@ services:
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SCHEDULER=false
+      - CONSUMER=false
     depends_on:
       - keep-database
 

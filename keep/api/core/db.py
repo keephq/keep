@@ -162,7 +162,9 @@ def create_db_and_tables():
         logger.warning("Failed to create the database or detect if it exists.")
         pass
 
+    logger.info("Creating the tables")
     SQLModel.metadata.create_all(engine)
+    logger.info("Tables created")
 
 
 def get_session() -> Session:
@@ -1741,6 +1743,7 @@ def delete_dashboard(tenant_id, dashboard_id):
             return True
         return False
 
+
 def get_all_actions(tenant_id: str) -> List[Action]:
     with Session(engine) as session:
         actions = session.exec(
@@ -1752,7 +1755,9 @@ def get_all_actions(tenant_id: str) -> List[Action]:
 def get_action(tenant_id: str, action_id: str) -> Action:
     with Session(engine) as session:
         action = session.exec(
-            select(Action).where(Action.tenant_id == tenant_id).where(Action.id == action_id)
+            select(Action)
+            .where(Action.tenant_id == tenant_id)
+            .where(Action.id == action_id)
         ).first()
     return action
 
@@ -1774,7 +1779,9 @@ def create_actions(actions: List[Action]):
 def delete_action(tenant_id: str, action_id: str) -> bool:
     with Session(engine) as session:
         found_action = session.exec(
-            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
         ).first()
         if found_action:
             session.delete(found_action)
@@ -1783,10 +1790,14 @@ def delete_action(tenant_id: str, action_id: str) -> bool:
         return False
 
 
-def update_action(tenant_id: str, action_id: str, update_payload: Action) -> Union[Action, None]:
+def update_action(
+    tenant_id: str, action_id: str, update_payload: Action
+) -> Union[Action, None]:
     with Session(engine) as session:
         found_action = session.exec(
-            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
         ).first()
         if found_action:
             for key, value in update_payload.dict(exclude_unset=True).items():
