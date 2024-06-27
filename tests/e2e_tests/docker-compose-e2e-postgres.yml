@@ -20,8 +20,6 @@ services:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
-    volumes:
-      - ./state:/state
     depends_on:
       - keep-backend
 
@@ -34,10 +32,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
-      - SECRET_MANAGER_DIRECTORY=./state
-    volumes:
-      - .:/app
-      - ./state:/state
+      - SECRET_MANAGER_DIRECTORY=/app
     depends_on:
       - keep-database
 
