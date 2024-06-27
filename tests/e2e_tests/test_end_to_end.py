@@ -10,7 +10,14 @@
 #   for postgres: docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
 # NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
-# NOTE 2: to run the tests with a browser, uncommant this:
+# NOTE 2: to run the tests with a browser, uncomment this:
+# import os
+
+# os.environ["PLAYWRIGHT_HEADLESS"] = "false"
+
+# Running the tests in GitHub Actions:
+# - Look at the test-pr-e2e.yml file in the .github/workflows directory.
+
 import random
 
 # Adding a new test:
