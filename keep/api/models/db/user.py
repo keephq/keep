@@ -4,6 +4,7 @@ from sqlmodel import Field, SQLModel
 
 # THIS IS ONLY FOR SINGLE TENANT (self-hosted) USAGES
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models import utcnow
 
 
 class User(SQLModel, table=True):
@@ -25,4 +26,4 @@ class User(SQLModel, table=True):
     last_sign_in: datetime = Field(default=None)
 
     # Account creation timestamp
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)

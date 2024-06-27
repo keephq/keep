@@ -5,6 +5,8 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSON
 from sqlmodel import Column, Field, SQLModel
 
+from keep.api.models import utcnow
+
 
 class Dashboard(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
@@ -12,9 +14,9 @@ class Dashboard(SQLModel, table=True):
     dashboard_name: str = Field(index=True)  # Index for faster uniqueness checks
     dashboard_config: dict = Field(sa_column=Column(JSON))
     created_by: str = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     updated_by: str = Field(default=None)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
     is_active: bool = Field(default=True)
     is_private: bool = Field(default=False)
 

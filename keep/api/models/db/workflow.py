@@ -4,6 +4,8 @@ from typing import List, Optional
 from sqlalchemy import TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
+from keep.api.models import utcnow
+
 
 class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
@@ -12,12 +14,12 @@ class Workflow(SQLModel, table=True):
     description: Optional[str]
     created_by: str = Field(sa_column=Column(TEXT))
     updated_by: Optional[str] = None
-    creation_time: datetime = Field(default_factory=datetime.utcnow)
+    creation_time: datetime = Field(default_factory=utcnow)
     interval: Optional[int]
     workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=utcnow)
 
     class Config:
         orm_mode = True
@@ -31,7 +33,7 @@ class WorkflowExecution(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     workflow_id: str = Field(foreign_key="workflow.id")
     tenant_id: str = Field(foreign_key="tenant.id")
-    started: datetime = Field(default_factory=datetime.utcnow)
+    started: datetime = Field(default_factory=utcnow)
     triggered_by: str = Field(sa_column=Column(TEXT))
     status: str = Field(sa_column=Column(TEXT))
     is_running: int = Field(default=1)

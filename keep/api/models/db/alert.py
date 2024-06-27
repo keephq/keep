@@ -13,6 +13,7 @@ from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
+from keep.api.models import utcnow
 from keep.api.models.db.tenant import Tenant
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
@@ -45,7 +46,7 @@ else:
 # many to many map between alerts and groups
 class AlertToGroup(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utcnow)
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     group_id: UUID = Field(
         sa_column=Column(
@@ -64,7 +65,7 @@ class Group(SQLModel, table=True):
             UUIDType(binary=False), ForeignKey("rule.id", ondelete="CASCADE")
         ),
     )
-    creation_time: datetime = Field(default_factory=datetime.utcnow)
+    creation_time: datetime = Field(default_factory=utcnow)
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
 
@@ -121,7 +122,7 @@ class Alert(SQLModel, table=True):
 class AlertEnrichment(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utcnow)
     alert_fingerprint: str = Field(unique=True)
     enrichments: dict = Field(sa_column=Column(JSON))
 

@@ -4,6 +4,8 @@ from typing import Optional
 from pydantic import BaseModel
 from sqlmodel import JSON, Column, Field, SQLModel
 
+from keep.api.models import utcnow
+
 
 class MappingRule(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -26,7 +28,7 @@ class MappingRule(SQLModel, table=True):
         nullable=False,
     )  # max_length=204800)
     updated_by: Optional[str] = Field(max_length=255, default=None)
-    last_updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_updated_at: datetime = Field(default_factory=utcnow)
 
 
 class MappRuleDtoBase(BaseModel):

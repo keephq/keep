@@ -1,8 +1,10 @@
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
-from datetime import datetime
 
 from sqlmodel import Field, Relationship, SQLModel
+
+from keep.api.models import utcnow
 
 
 class Tenant(SQLModel, table=True):
@@ -22,7 +24,7 @@ class TenantApiKey(SQLModel, table=True):
     system_description: Optional[str] = None
     created_by: str
     role: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     last_used: str = Field(default=None)
 
     class Config:
