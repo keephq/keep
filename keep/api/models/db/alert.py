@@ -1,6 +1,6 @@
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID, uuid4
 
