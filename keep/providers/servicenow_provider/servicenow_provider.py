@@ -196,6 +196,37 @@ class ServicenowProvider(BaseProvider):
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
             resp.raise_for_status()
 
+def fetch_incidents(self):
+    url = f"{self.authentication_config.service_now_base_url}/api/now/table/incident"
+    headers = {"Accept": "application/json"}
+    response = requests.get(
+        url,
+        auth=HTTPBasicAuth(
+            self.authentication_config.username,
+            self.authentication_config.password,
+        ),
+        headers=headers,
+        verify=False,
+    )
+    if response.status_code == 200:
+        return response.json().get('result', [])
+    else:
+        response.raise_for_status()
+
+def transform_incidents(self, incidents):
+    transformed = []
+    for incident in incidents:
+        event = {
+            "id": incident["sys_id"],
+            "title": incident["short_description"],
+            "state": incident["state"],
+            "priority": incident["priority"],
+            "assigned_to": incident["assigned_to"],
+            "opened_at": incident["opened_at"],
+            "resolved_at": incident["resolved_at"]
+        }
+        transformed.append(event)
+    return transformed
 
 if __name__ == "__main__":
     # Output debug messages
@@ -244,3 +275,13 @@ if __name__ == "__main__":
         },
     )
     print(r)
+
+    def ingest_into_keep(self, events):
+        for event in events:
+            # Example ingestion logic (replace with actual implementation)
+            print(f"Ingesting event into Keep: {event}")
+            
+    def fetch_and_ingest_incidents(self):
+        incidents = self.fetch_incidents()
+        transformed_events = self.transform_incidents(incidents)
+        self.ingest_into_keep(transformed_events)
