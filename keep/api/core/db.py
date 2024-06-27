@@ -35,7 +35,6 @@ from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
-from keep.api.models.db.action import *
 
 logger = logging.getLogger(__name__)
 
@@ -1431,9 +1430,12 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            time_format = "YYYY-MM-DD HH:MI" if minute else "YYYY-MM-DD HH"
+            timestamp_format = func.to_char(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
             timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
@@ -1572,7 +1574,9 @@ def get_provider_distribution(tenant_id: str) -> dict:
         if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "postgresql":
-            timestamp_format = func.to_char(Alert.timestamp, time_format)
+            # PostgreSQL requires a different syntax for the timestamp format
+            # cf: https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING
+            timestamp_format = func.to_char(Alert.timestamp, "YYYY-MM-DD HH")
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
