@@ -60,6 +60,8 @@ def test_insert_new_alert(browser):
         browser.get_by_role("button", name="Click to create an example").click()
         # just wait a bit
         browser.wait_for_timeout(10000)
+        # refresh the page
+        browser.reload()
         browser.get_by_text("1", exact=True).click()
     except Exception:
         # Capture a screenshot on failure
