@@ -36,7 +36,7 @@ class WorkflowExecution(SQLModel, table=True):
     status: str = Field(sa_column=Column(TEXT))
     is_running: int = Field(default=1)
     timeslot: int = Field(
-        default_factory=lambda: int(datetime.utcnow().timestamp() / 120)
+        default_factory=lambda: int(datetime.now(tz=timezone.utc).timestamp() / 120)
     )
     execution_number: int
     logs: Optional[str]

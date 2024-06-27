@@ -23,6 +23,6 @@ def datetime_compare(t1: datetime, t2: datetime) -> int:
     return int((t1 - t2).total_seconds())
 
 # Example usage:
-# t1 = datetime.utcnow()
-# t2 = datetime.utcnow() - timedelta(hours=2)
+# t1 = datetime.now(tz=timezone.utc)
+# t2 = datetime.now(tz=timezone.utc) - timedelta(hours=2)
 # print(datetime_compare(t1, t2))  # Should return 7200 (2 hours * 3600 seconds)

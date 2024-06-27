@@ -349,7 +349,7 @@ def test_render_uppercase(context_manager):
 
 
 def test_render_datetime_compare(context_manager):
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(tz=timezone.utc)
     one_hour_ago = now - datetime.timedelta(hours=1)
     context_manager.steps_context = {
         "now": now.isoformat(),

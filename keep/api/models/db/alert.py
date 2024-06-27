@@ -90,8 +90,8 @@ class Alert(SQLModel, table=True):
     #            todo: on MSSQL, the index is "nonclustered" index which cannot be controlled by SQLModel
     timestamp: datetime = Field(
         sa_column=Column(datetime_column_type, index=True, nullable=False),
-        default_factory=lambda: datetime.utcnow().replace(
-            microsecond=int(datetime.utcnow().microsecond / 1000) * 1000
+        default_factory=lambda: datetime.now(tz=timezone.utc).replace(
+            microsecond=int(datetime.now(tz=timezone.utc).microsecond / 1000) * 1000
         ),
     )
     provider_type: str

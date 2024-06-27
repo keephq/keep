@@ -91,7 +91,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         if event_time:
             event_time = datetime.datetime.fromtimestamp(event_time)
         else:
-            event_time = datetime.datetime.utcnow()
+            event_time = datetime.datetime.now(tz=timezone.utc)
             # replace timezone to utc
             event_time = event_time.replace(tzinfo=datetime.timezone.utc)
 

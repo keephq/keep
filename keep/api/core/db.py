@@ -26,6 +26,7 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
+from keep.api.models.db.action import *
 from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
@@ -35,7 +36,6 @@ from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
-from keep.api.models.db.action import *
 
 logger = logging.getLogger(__name__)
 
@@ -323,7 +323,7 @@ def get_workflows_that_should_run():
         workflows_to_run = []
         # for each workflow:
         for workflow in workflows_with_interval:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=timezone.utc)
             last_execution = get_last_completed_execution(session, workflow.id)
             # if there no last execution, that's the first time we run the workflow
             if not last_execution:
@@ -689,7 +689,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         #   and then we can remove the [:255] from here
         workflow_execution.error = error[:255] if error else None
         workflow_execution.execution_time = (
-            datetime.utcnow() - workflow_execution.started
+            datetime.now(tz=timezone.utc) - workflow_execution.started
         ).total_seconds()
         # TODO: logs
         session.commit()
@@ -1119,7 +1119,7 @@ def get_user(username, password, update_sign_in=True):
             .where(User.password_hash == password_hash)
         ).first()
         if user and update_sign_in:
-            user.last_sign_in = datetime.utcnow()
+            user.last_sign_in = datetime.now(tz=timezone.utc)
             session.add(user)
             session.commit()
     return user
@@ -1227,7 +1227,7 @@ def create_rule(
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
-            creation_time=datetime.utcnow(),
+            creation_time=datetime.now(tz=timezone.utc),
             grouping_criteria=grouping_criteria,
             group_description=group_description,
         )
@@ -1251,7 +1251,7 @@ def update_rule(
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.updated_by = updated_by
-            rule.update_time = datetime.utcnow()
+            rule.update_time = datetime.now(tz=timezone.utc)
             session.commit()
             session.refresh(rule)
             return rule
@@ -1322,7 +1322,7 @@ def assign_alert_to_group(
             # group has at least one alert (o/w it wouldn't created in the first place)
             is_group_expired = max(
                 alert.timestamp for alert in group.alerts
-            ) < datetime.utcnow() - timedelta(seconds=timeframe)
+            ) < datetime.now(tz=timezone.utc) - timedelta(seconds=timeframe)
 
         if is_group_expired and group:
             logger.info(
@@ -1428,7 +1428,7 @@ def get_rule_distribution(tenant_id, minute=False):
     """Returns hits per hour for each rule, optionally breaking down by groups if the rule has 'group by', limited to the last 7 days."""
     with Session(engine) as session:
         # Get the timestamp for 7 days ago
-        seven_days_ago = datetime.utcnow() - timedelta(days=1)
+        seven_days_ago = datetime.now(tz=timezone.utc) - timedelta(days=1)
 
         # Check the dialect
         if session.bind.dialect.name in ["mysql", "postgresql"]:
@@ -1536,7 +1536,7 @@ def update_key_last_used(
                 extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
             )
             return
-        tenant_api_key_entry.last_used = datetime.utcnow()
+        tenant_api_key_entry.last_used = datetime.now(tz=timezone.utc)
         session.add(tenant_api_key_entry)
         session.commit()
 
@@ -1566,7 +1566,7 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 def get_provider_distribution(tenant_id: str) -> dict:
     """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
     with Session(engine) as session:
-        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        twenty_four_hours_ago = datetime.now(tz=timezone.utc) - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
         if session.bind.dialect.name == "mysql":
@@ -1716,7 +1716,7 @@ def update_dashboard(
             dashboard.dashboard_config = dashboard_config
 
         dashboard.updated_by = updated_by
-        dashboard.updated_at = datetime.utcnow()
+        dashboard.updated_at = datetime.now(tz=timezone.utc)
         session.commit()
         session.refresh(dashboard)
         return dashboard
