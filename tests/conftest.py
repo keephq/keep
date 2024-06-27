@@ -1,10 +1,10 @@
+import inspect
 import os
 import random
 from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
-import requests
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -70,8 +70,6 @@ def docker_services(
 
     # Else, start the docker services
     try:
-        import inspect
-
         stack = inspect.stack()
         # this is a hack to support more than one docker-compose file
         for frame in stack:
@@ -87,27 +85,22 @@ def docker_services(
                     "docker-compose.yml", "docker-compose-elastic.yml"
                 )
                 break
-            elif frame.function == "setup_e2e_env":
-                compose_file = frame.frame.f_locals.get("compose_file")
-                docker_compose_file = docker_compose_file.replace(
-                    "docker-compose.yml", f"{compose_file}"
-                )
-                docker_compose_command += " --project-directory . "
-                break
 
+        print(f"Using docker-compose file: {docker_compose_file_new}")
         with get_docker_services(
             docker_compose_command,
-            docker_compose_file,
+            docker_compose_file_new,
             docker_compose_project_name,
             docker_setup,
             docker_cleanup,
         ) as docker_service:
+            print("Docker services started")
             yield docker_service
 
     except Exception as e:
         print(f"Docker services could not be started: {e}")
         # Optionally, provide a fallback or mock service here
-        yield None
+        raise
 
 
 def is_mysql_responsive(host, port, user, password, database):
@@ -134,7 +127,7 @@ def mysql_container(docker_ip, docker_services):
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
             yield
-            return
+        return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
@@ -311,48 +304,12 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
         page = context.new_page()
+        page.set_default_timeout(5000)
         yield page
         context.close()
         browser.close()
-
-
-def is_keep_responsive():
-    try:
-        response = requests.get("http://localhost:8080/healthcheck", timeout=1)
-        if response.status_code == 200:
-            return True
-    except Exception:
-        print("Keep still not up")
-        pass
-
-    return False
-
-
-@pytest.fixture(scope="session")
-def keep_enviroment(docker_services):
-    try:
-        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
-            print("Running in Github Actions or SKIP_DOCKER is set, skipping keep")
-            yield
-            return
-        docker_services.wait_until_responsive(
-            timeout=20.0,
-            pause=0.1,
-            check=is_keep_responsive,
-        )
-        yield True
-    except Exception:
-        print("Exception occurred while waiting for Keep to be responsive")
-        raise
-    finally:
-        print("Tearing down Keep")
-
-
-@pytest.fixture
-def setup_e2e_env(request):
-    compose_file = request.param  # noqa: F841
-    request.getfixturevalue("keep_enviroment")

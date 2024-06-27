@@ -1,4 +1,5 @@
 name: Tests (E2E)
+
 on:
   workflow_dispatch:
   push:
@@ -7,92 +8,93 @@ on:
   pull_request:
     paths:
       - 'keep/**'
-# MySQL server and Postgres for testing
+
 env:
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
-  # this is from docker-compose-mysql.yml
+  # MySQL server environment variables
   MYSQL_ROOT_PASSWORD: keep
   MYSQL_DATABASE: keep
-  # this is from docker-compose-postgres.yml
+  # Postgres environment variables
   POSTGRES_USER: keepuser
   POSTGRES_PASSWORD: keeppassword
   POSTGRES_DB: keepdb
+
 jobs:
   tests:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ env.MYSQL_DATABASE }}
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-        ports:
-          - 5432:5432
-        volumes:
-          - postgres_data:/var/lib/postgresql/data
-
-
+    strategy:
+      matrix:
+        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
+
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
-      - name: cache deps
+
+      - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v2
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
       - name: Install dependencies using poetry
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction --no-root --with dev
+
+      - name: Install playwright with npx
+        run: npx playwright install --with-deps
+
+      - name: Install playwright dependencies
+        run: poetry run playwright install
+
+      - name: Set up Keep environment
+        run: |
+          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+
+      - name: Wait for database to be ready
+        run: |
+          # Add commands to wait for the database to be ready
+          if [ "${{ matrix.db_type }}" == "mysql" ]; then
+            until docker exec $(docker ps -qf "name=keep-database") mysqladmin ping -h "localhost" --silent; do
+              echo "Waiting for MySQL to be ready..."
+              sleep 2
+            done
+          elif [ "${{ matrix.db_type }}" == "postgres" ]; then
+            until docker exec $(docker ps -qf "name=keep-database") pg_isready -h localhost -U keepuser; do
+              echo "Waiting for Postgres to be ready..."
+              sleep 2
+            done
+          fi
 
       - name: Run unit tests and report coverage
         run: |
-          # Add a step to wait for MySQL to be fully up and running
-          until nc -z 127.0.0.1 3306; do
-            echo "waiting for MySQL..."
-            sleep 1
-          done
-          echo "MySQL is up and running!"
-
-          # Add a step to wait for Postgres to be fully up and running
-          until nc -z 127.0.0.1:5432; do
-            echo "waiting for Postgres..."
-            sleep 1
-          done
-          echo "Postgres is up and running!"
           # Run the tests
-          poetry run coverage run --branch -m pytest tests/e2e_tests/
+          poetry run coverage run --branch -m pytest -s tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: false # don't fail if we didn't manage to upload the coverage report
           files: coverage.json
           verbose: true
+
+      - name: Tear down environment
+        run: |
+          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
