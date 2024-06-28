@@ -1492,8 +1492,8 @@ def get_rule_distribution(tenant_id, minute=False):
 
 
 def get_all_filters(tenant_id):
-    with Session(engine) as session:
-        filters = session.exec(
+    with SessionMaker() as session:
+        filters = session.execute(
             select(AlertDeduplicationFilter).where(
                 AlertDeduplicationFilter.tenant_id == tenant_id
             )
