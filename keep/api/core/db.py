@@ -675,9 +675,7 @@ def get_installed_providers(tenant_id: str) -> List[Provider]:
 def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
     with SessionMaker() as session:
-        providers = session.execute(
-            select(Provider).where(Provider.consumer == True)
-        ).all()
+        providers = session.query(Provider).where(Provider.consumer == True).all()
     return providers
 
 
@@ -1493,11 +1491,11 @@ def get_rule_distribution(tenant_id, minute=False):
 
 def get_all_filters(tenant_id):
     with SessionMaker() as session:
-        filters = session.execute(
-            select(AlertDeduplicationFilter).where(
-                AlertDeduplicationFilter.tenant_id == tenant_id
-            )
-        ).all()
+        filters = (
+            session.query(AlertDeduplicationFilter)
+            .where(AlertDeduplicationFilter.tenant_id == tenant_id)
+            .all()
+        )
     return filters
 
 
