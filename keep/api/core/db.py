@@ -145,7 +145,7 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
-NewSession = sessionmaker(bind=engine)
+SessionMaker = sessionmaker(bind=engine)
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -318,7 +318,7 @@ def get_last_completed_execution(
 
 
 def get_workflows_that_should_run():
-    with NewSession() as session:
+    with SessionMaker() as session:
         logger.debug("Checking for workflows that should run")
         workflows_with_interval = (
             session.query(Workflow)
@@ -674,7 +674,7 @@ def get_installed_providers(tenant_id: str) -> List[Provider]:
 
 def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
-    with NewSession() as session:
+    with SessionMaker() as session:
         providers = session.execute(
             select(Provider).where(Provider.consumer == True)
         ).all()
@@ -1576,7 +1576,7 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def get_provider_distribution(tenant_id: str) -> dict:
     """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
-    with NewSession() as session:
+    with SessionMaker() as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
