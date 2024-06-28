@@ -86,10 +86,10 @@ def docker_services(
                 )
                 break
 
-        print(f"Using docker-compose file: {docker_compose_file_new}")
+        print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
             docker_compose_command,
-            docker_compose_file_new,
+            docker_compose_file,
             docker_compose_project_name,
             docker_setup,
             docker_cleanup,
