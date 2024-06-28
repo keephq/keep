@@ -967,7 +967,7 @@ def get_last_alerts(
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
-    with Session(engine) as session:
+    with SessionMaker() as session:
         # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
