@@ -15,7 +15,7 @@ from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, sessionmaker, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy_utils import create_database, database_exists
@@ -145,6 +145,7 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
+NewSession = sessionmaker(bind=engine)
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -236,10 +237,13 @@ def try_create_single_tenant(tenant_id: str) -> None:
                 user.password_hash = default_password
             # commit the changes
             session.commit()
+            logger.info("Single tenant created")
         except IntegrityError:
             # Tenant already exists
+            logger.info("Single tenant already exists")
             pass
         except Exception:
+            logger.exception("Failed to create single tenant")
             pass
 
 
@@ -314,14 +318,16 @@ def get_last_completed_execution(
 
 
 def get_workflows_that_should_run():
-    with Session(engine) as session:
-        workflows_with_interval = session.exec(
-            select(Workflow)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.interval != None)
-            .where(Workflow.interval > 0)
-        ).all()
-
+    with NewSession() as session:
+        logger.debug("Checking for workflows that should run")
+        workflows_with_interval = (
+            session.query(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+            .all()
+        )
+        logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
         workflows_to_run = []
         # for each workflow:
         for workflow in workflows_with_interval:
@@ -668,8 +674,8 @@ def get_installed_providers(tenant_id: str) -> List[Provider]:
 
 def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
-    with Session(engine) as session:
-        providers = session.exec(
+    with NewSession() as session:
+        providers = session.execute(
             select(Provider).where(Provider.consumer == True)
         ).all()
     return providers
@@ -1570,7 +1576,7 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def get_provider_distribution(tenant_id: str) -> dict:
     """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
-    with Session(engine) as session:
+    with NewSession() as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 

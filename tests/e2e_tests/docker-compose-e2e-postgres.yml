@@ -27,14 +27,14 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
-      - SCHEDULER=false
-      - CONSUMER=false
     depends_on:
       - keep-database
 
