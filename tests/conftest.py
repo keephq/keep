@@ -214,7 +214,9 @@ def db_session(request):
     session.commit()
 
     with patch("keep.api.core.db.engine", mock_engine):
-        yield session
+        # patch also the sessionfactory:
+        with patch("keep.api.core.db.SessionMaker", sessionmaker(bind=mock_engine)):
+            yield session
 
     # delete the database
     SQLModel.metadata.drop_all(mock_engine)
