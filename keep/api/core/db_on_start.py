@@ -6,6 +6,11 @@ when the application starts, while the functions in db.py are invoked from the w
 
 This is important because if the master process init the engine, it will be forked to the worker processes,
 and the engine will be shared among all the processes, causing issues with the connections.
+
+** This happens because the engine is not fork-safe, and the connections are not thread-safe. **
+
+The mitigation is to create different engines for each process, and the master process should only be responsible
+for creating the database and tables, while the worker processes should only be responsible for creating the sessions.
 """
 
 import hashlib
@@ -107,7 +112,6 @@ def create_db_and_tables():
     except Exception:
         logger.warning("Failed to create the database or detect if it exists.")
         pass
-
     logger.info("Creating the tables")
     SQLModel.metadata.create_all(engine)
     logger.info("Tables created")

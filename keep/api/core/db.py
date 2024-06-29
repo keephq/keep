@@ -1,5 +1,7 @@
 """
 Keep main database module.
+
+This module contains the CRUD database functions for Keep.
 """
 
 import hashlib

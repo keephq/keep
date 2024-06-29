@@ -1,5 +1,7 @@
 """
 This module contains the database utilities.
+
+Mainly, it creates the database engine based on the environment variables.
 """
 
 import json
