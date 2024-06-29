@@ -1,189 +1,51 @@
+"""
+Keep main database module.
+"""
+
 import hashlib
 import json
 import logging
-import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
-import pymysql
 import validators
 from dotenv import find_dotenv, load_dotenv
-from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, event, func, null, select, update
+from sqlalchemy import and_, desc, func, null, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, selectinload, sessionmaker, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.pool import _ConnectionRecord
-from sqlmodel import Session, create_engine, or_, select
+from sqlmodel import Session, or_, select
+
+from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.config import config
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.action import Action
-from keep.api.models.db.alert import *
-from keep.api.models.db.dashboard import *
-from keep.api.models.db.extraction import *
-from keep.api.models.db.mapping import *
-from keep.api.models.db.preset import *
-from keep.api.models.db.provider import *
-from keep.api.models.db.rule import *
-from keep.api.models.db.tenant import *
-from keep.api.models.db.workflow import *
+from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
-
-
-def on_connect(dbapi_connection, connection_record):
-    logger.info("Establishing")
-    cursor = dbapi_connection.cursor()
-    logger.info("Established")
-    cursor.execute("SELECT pg_backend_pid()")
-    logger.info("Executed")
-    connection_id = cursor.fetchone()[0]
-    logger.info(f"Fetched - connection id {connection_id}")
-    # setattr(dbapi_connection, 'keep_connection_id', connection_id)
-    logger.info(f"New database connection established: {connection_id}")
-    cursor.close()
-
-
-def __get_conn() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the database when running in Cloud Run.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            db="keepdb",
-            enable_iam_auth=True,
-        )
-    return conn
-
-
-def __get_conn_impersonate() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the remote database when running locally.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    from google.auth import default, impersonated_credentials
-    from google.auth.transport.requests import Request
-
-    # Get application default credentials
-    creds, project = default()
-    # Create impersonated credentials
-    target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    creds = impersonated_credentials.Credentials(
-        source_credentials=creds,
-        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
-        target_scopes=target_scopes,
-    )
-    # Refresh the credentials to obtain an impersonated access token
-    creds.refresh(Request())
-    # Get the access token
-    access_token = creds.token
-    # Create a new MySQL connection with the obtained access token
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            password=access_token,
-            host="127.0.0.1",
-            port=3306,
-            database="keepdb",
-        )
-    return conn
 
 
 # this is a workaround for gunicorn to load the env vars
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
-db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
-pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
-max_overflow = config("DATABASE_MAX_OVERFLOW", default=10, cast=int)
 
 
-def dumps(_json) -> str:
-    """
-    Overcome the issue of serializing datetime objects to JSON with the default json.dumps.
-       Usually seen with PostgreSQL JSONB fields.
-    https://stackoverflow.com/questions/36438052/using-a-custom-json-encoder-for-sqlalchemys-postgresql-jsonb-implementation
-
-    Args:
-        _json (object): The json object to serialize.
-
-    Returns:
-        str: The serialized JSON object.
-    """
-    return json.dumps(_json, default=str)
-
-
-if RUNNING_IN_CLOUD_RUN:
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn,
-    )
-elif db_connection_string == "impersonate":
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn_impersonate,
-    )
-elif db_connection_string:
-    try:
-        logger.info(f"Creating a connection pool with size {pool_size}")
-        engine = create_engine(
-            db_connection_string,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            json_serializer=dumps,
-            echo=True,
-        )
-    # SQLite does not support pool_size
-    except TypeError:
-        engine = create_engine(db_connection_string)
-else:
-    engine = create_engine(
-        "sqlite:///./keep.db", connect_args={"check_same_thread": False}
-    )
-
-# event.listen(engine, "connect", on_connect)
-
-
-def on_checkin(dbapi_connection, connection_record):
-    # connection_id = getattr(dbapi_connection, 'keep_connection_id', 'Unknown')
-    logger.info(f"Connection returned to pool: {dbapi_connection}")
-
-
-event.listen(engine, "checkin", on_checkin)
-
-
-def on_checkout(dbapi_connection, connection_record, connection_proxy):
-    # connection_id = getattr(dbapi_connection, 'keep_connection_id', 'Unknown')
-    logger.info(f"Connection checked out from pool: {dbapi_connection}")
-
-
-event.listen(engine, "checkout", on_checkout)
-SessionMaker = sessionmaker(bind=engine)
+engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
-
-
-def on_pool_connect(dbapi_connection, connection_record: _ConnectionRecord):
-    logger.info("New connection added to pool")
-
-
-event.listen(engine, "connect", on_pool_connect)
 
 
 def get_session() -> Session:
@@ -193,7 +55,7 @@ def get_session() -> Session:
     Yields:
         Session: A database session
     """
-    from opentelemetry import trace
+    from opentelemetry import trace  # pylint: disable=import-outside-toplevel
 
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("get_session"):
@@ -282,7 +144,7 @@ def get_last_completed_execution(
 
 
 def get_workflows_that_should_run():
-    with SessionMaker() as session:
+    with Session(engine) as session:
         logger.debug("Checking for workflows that should run")
         workflows_with_interval = (
             session.query(Workflow)
@@ -629,14 +491,14 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
 
 
 def get_installed_providers(tenant_id: str) -> List[Provider]:
-    with SessionMaker() as session:
+    with Session(engine) as session:
         providers = session.query(Provider).where(Provider.tenant_id == tenant_id).all()
     return providers
 
 
 def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
-    with SessionMaker() as session:
+    with Session(engine) as session:
         providers = session.query(Provider).where(Provider.consumer == True).all()
     return providers
 
@@ -929,7 +791,7 @@ def get_last_alerts(
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
-    with SessionMaker() as session:
+    with Session(engine) as session:
         # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
@@ -1097,7 +959,7 @@ def get_users():
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
     from keep.api.models.db.user import User
 
-    with SessionMaker() as session:
+    with Session(engine) as session:
         users = session.query(User).where(User.tenant_id == SINGLE_TENANT_UUID).all()
     return users
 
@@ -1450,7 +1312,7 @@ def get_rule_distribution(tenant_id, minute=False):
 
 
 def get_all_filters(tenant_id):
-    with SessionMaker() as session:
+    with Session(engine) as session:
         filters = (
             session.query(AlertDeduplicationFilter)
             .where(AlertDeduplicationFilter.tenant_id == tenant_id)
@@ -1534,7 +1396,7 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
 
 def get_provider_distribution(tenant_id: str) -> dict:
     """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
-    with SessionMaker() as session:
+    with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
