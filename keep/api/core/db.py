@@ -158,7 +158,7 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
-event.listen(engine, "connect", on_connect)
+# event.listen(engine, "connect", on_connect)
 
 
 def on_checkin(dbapi_connection, connection_record):
