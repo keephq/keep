@@ -54,7 +54,7 @@ class ServicenowProvider(BaseProvider):
             description="The user can read/write tickets from the table",
             documentation_url="https://docs.servicenow.com/bundle/sandiego-platform-administration/page/administer/roles/reference/r_BaseSystemRoles.html",
             mandatory=True,
-            alias="Read from database",
+            alias="Read from datahase",
         )
     ]
     PROVIDER_TAGS = ["ticketing"]
