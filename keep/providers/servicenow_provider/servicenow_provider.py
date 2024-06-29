@@ -234,12 +234,44 @@ class ServicenowProvider(BaseProvider):
             transformed.append(event)
         return transformed
 
-    def ingest_into_keep(self, events):
-        """
-        Example ingestion logic (replace with actual implementation).
-        """
+def ingest_into_keep(self, events):
+    """
+    Actual ingestion logic for ingesting events into the Keep system.
+    """
+    try:
+        # Define the Keep API endpoint for ingestion
+        keep_api_endpoint = f"{self.context_manager.keep_base_url}/api/ingest"
+
+        # Set the headers
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.context_manager.api_token}"
+        }
+
         for event in events:
-            print(f"Ingesting event into Keep: {event}")
+            # Prepare the payload for each event
+            payload = {
+                "event": event,
+                "source": "ServiceNow"
+            }
+
+            # Send the ingestion request
+            response = requests.post(
+                keep_api_endpoint,
+                headers=headers,
+                data=json.dumps(payload)
+            )
+
+            # Check for successful ingestion
+            if response.status_code == 200:
+                self.logger.info(f"Successfully ingested event into Keep: {event}")
+            else:
+                self.logger.error(f"Failed to ingest event into Keep: {event}, Response: {response.text}")
+                response.raise_for_status()
+
+    except Exception as e:
+        self.logger.exception(f"Exception occurred while ingesting events into Keep: {str(e)}")
+
             
     def fetch_and_ingest_incidents(self):
         """
