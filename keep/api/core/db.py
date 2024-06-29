@@ -13,18 +13,17 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
+from sqlalchemy import and_, desc, event, func, null, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, sessionmaker, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, create_engine, or_, select
+from sqlalchemy.pool import _ConnectionRecord
+from sqlmodel import Session, create_engine, or_, select
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *
@@ -38,6 +37,19 @@ from keep.api.models.db.tenant import *
 from keep.api.models.db.workflow import *
 
 logger = logging.getLogger(__name__)
+
+
+def on_connect(dbapi_connection, connection_record):
+    logger.info("Establishing")
+    cursor = dbapi_connection.cursor()
+    logger.info("Established")
+    cursor.execute("SELECT pg_backend_pid()")
+    logger.info("Executed")
+    connection_id = cursor.fetchone()[0]
+    logger.info(f"Fetched - connection id {connection_id}")
+    # setattr(dbapi_connection, 'keep_connection_id', connection_id)
+    logger.info(f"New database connection established: {connection_id}")
+    cursor.close()
 
 
 def __get_conn() -> pymysql.connections.Connection:
@@ -136,6 +148,7 @@ elif db_connection_string:
             pool_size=pool_size,
             max_overflow=max_overflow,
             json_serializer=dumps,
+            echo=True,
         )
     # SQLite does not support pool_size
     except TypeError:
@@ -145,27 +158,32 @@ else:
         "sqlite:///./keep.db", connect_args={"check_same_thread": False}
     )
 
+event.listen(engine, "connect", on_connect)
+
+
+def on_checkin(dbapi_connection, connection_record):
+    # connection_id = getattr(dbapi_connection, 'keep_connection_id', 'Unknown')
+    logger.info(f"Connection returned to pool: {dbapi_connection}")
+
+
+event.listen(engine, "checkin", on_checkin)
+
+
+def on_checkout(dbapi_connection, connection_record, connection_proxy):
+    # connection_id = getattr(dbapi_connection, 'keep_connection_id', 'Unknown')
+    logger.info(f"Connection checked out from pool: {dbapi_connection}")
+
+
+event.listen(engine, "checkout", on_checkout)
 SessionMaker = sessionmaker(bind=engine)
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
-def create_db_and_tables():
-    """
-    Creates the database and tables.
-    """
-    try:
-        if not database_exists(engine.url):
-            logger.info("Creating the database")
-            create_database(engine.url)
-            logger.info("Database created")
-    # On Cloud Run, it fails to check if the database exists
-    except Exception:
-        logger.warning("Failed to create the database or detect if it exists.")
-        pass
+def on_pool_connect(dbapi_connection, connection_record: _ConnectionRecord):
+    logger.info("New connection added to pool")
 
-    logger.info("Creating the tables")
-    SQLModel.metadata.create_all(engine)
-    logger.info("Tables created")
+
+event.listen(engine, "connect", on_pool_connect)
 
 
 def get_session() -> Session:
@@ -191,60 +209,6 @@ def get_session_sync() -> Session:
         Session: A database session
     """
     return Session(engine)
-
-
-def try_create_single_tenant(tenant_id: str) -> None:
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import User
-
-        create_db_and_tables()
-    except Exception:
-        pass
-    with Session(engine) as session:
-        try:
-            # check if the tenant exist:
-            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
-            if not tenant:
-                # Do everything related with single tenant creation in here
-                logger.info("Creating single tenant")
-                session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            else:
-                logger.info("Single tenant already exists")
-
-            # now let's create the default user
-
-            # check if at least one user exists:
-            user = session.exec(select(User)).first()
-            # if no users exist, let's create the default user
-            if not user:
-                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                default_user = User(
-                    username=default_username,
-                    password_hash=default_password,
-                    role=AdminRole.get_name(),
-                )
-                session.add(default_user)
-            # else, if the user want to force the refresh of the default user password
-            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
-                # update the password of the default user
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                user.password_hash = default_password
-            # commit the changes
-            session.commit()
-            logger.info("Single tenant created")
-        except IntegrityError:
-            # Tenant already exists
-            logger.info("Single tenant already exists")
-            pass
-        except Exception:
-            logger.exception("Failed to create single tenant")
-            pass
 
 
 def create_workflow_execution(
@@ -665,10 +629,8 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
 
 
 def get_installed_providers(tenant_id: str) -> List[Provider]:
-    with Session(engine) as session:
-        providers = session.exec(
-            select(Provider).where(Provider.tenant_id == tenant_id)
-        ).all()
+    with SessionMaker() as session:
+        providers = session.query(Provider).where(Provider.tenant_id == tenant_id).all()
     return providers
 
 
@@ -1135,10 +1097,8 @@ def get_users():
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
     from keep.api.models.db.user import User
 
-    with Session(engine) as session:
-        users = session.exec(
-            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
-        ).all()
+    with SessionMaker() as session:
+        users = session.query(User).where(User.tenant_id == SINGLE_TENANT_UUID).all()
     return users
 
 
