@@ -40,7 +40,9 @@ from keep.api.routes import (
     whoami,
     workflows,
 )
+from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
+from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup()
@@ -226,17 +228,17 @@ def get_app(
         # Start the scheduler
         if SCHEDULER:
             logger.info("Starting the scheduler")
-            # wf_manager = WorkflowManager.get_instance()
-            # await wf_manager.start()
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.start()
             logger.info("Scheduler started successfully")
         # Start the consumer
         if CONSUMER:
             logger.info("Starting the consumer")
-            # event_subscriber = EventSubscriber.get_instance()
+            event_subscriber = EventSubscriber.get_instance()
             # TODO: there is some "race condition" since if the consumer starts before the server,
             #       and start getting events, it will fail since the server is not ready yet
             #       we should add a "wait" here to make sure the server is ready
-            # await event_subscriber.start()
+            await event_subscriber.start()
             logger.info("Consumer started successfully")
         if REDIS:
             event_loop = asyncio.get_event_loop()
