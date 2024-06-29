@@ -492,14 +492,18 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
 
 def get_installed_providers(tenant_id: str) -> List[Provider]:
     with Session(engine) as session:
-        providers = session.query(Provider).where(Provider.tenant_id == tenant_id).all()
+        providers = session.exec(
+            select(Provider).where(Provider.tenant_id == tenant_id)
+        ).all()
     return providers
 
 
 def get_consumer_providers() -> List[Provider]:
     # get all the providers that installed as consumers
     with Session(engine) as session:
-        providers = session.query(Provider).where(Provider.consumer == True).all()
+        providers = session.exec(
+            select(Provider).where(Provider.consumer == True)
+        ).all()
     return providers
 
 
@@ -960,7 +964,9 @@ def get_users():
     from keep.api.models.db.user import User
 
     with Session(engine) as session:
-        users = session.query(User).where(User.tenant_id == SINGLE_TENANT_UUID).all()
+        users = session.exec(
+            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
+        ).all()
     return users
 
 
@@ -1313,11 +1319,11 @@ def get_rule_distribution(tenant_id, minute=False):
 
 def get_all_filters(tenant_id):
     with Session(engine) as session:
-        filters = (
-            session.query(AlertDeduplicationFilter)
-            .where(AlertDeduplicationFilter.tenant_id == tenant_id)
-            .all()
-        )
+        filters = session.exec(
+            select(AlertDeduplicationFilter).where(
+                AlertDeduplicationFilter.tenant_id == tenant_id
+            )
+        ).all()
     return filters
 
 
