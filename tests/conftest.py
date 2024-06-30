@@ -1,3 +1,4 @@
+import inspect
 import os
 import random
 from unittest.mock import Mock, patch
@@ -69,8 +70,6 @@ def docker_services(
 
     # Else, start the docker services
     try:
-        import inspect
-
         stack = inspect.stack()
         # this is a hack to support more than one docker-compose file
         for frame in stack:
@@ -87,6 +86,7 @@ def docker_services(
                 )
                 break
 
+        print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
             docker_compose_command,
             docker_compose_file,
@@ -94,12 +94,13 @@ def docker_services(
             docker_setup,
             docker_cleanup,
         ) as docker_service:
+            print("Docker services started")
             yield docker_service
 
     except Exception as e:
         print(f"Docker services could not be started: {e}")
         # Optionally, provide a fallback or mock service here
-        yield None
+        raise
 
 
 def is_mysql_responsive(host, port, user, password, database):
@@ -126,7 +127,7 @@ def mysql_container(docker_ip, docker_services):
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
             yield
-            return
+        return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
@@ -297,3 +298,18 @@ def elastic_client(request):
 
     # delete the _client from the elastic_client
     ElasticClient._instance = None
+
+
+@pytest.fixture(scope="session")
+def browser():
+    from playwright.sync_api import sync_playwright
+
+    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_default_timeout(5000)
+        yield page
+        context.close()
+        browser.close()

@@ -20,6 +20,7 @@ interface Props {
   enableGenerate: (state: boolean) => void;
   triggerGenerate: number;
   triggerSave: number;
+  triggerRun: number;
   workflow?: string;
   workflowId?: string;
 }
@@ -31,6 +32,7 @@ export function BuilderCard({
   enableButtons,
   enableGenerate,
   triggerGenerate,
+  triggerRun,
   triggerSave,
   workflow,
   workflowId,
@@ -87,6 +89,7 @@ export function BuilderCard({
           enableGenerate={enableGenerate}
           triggerGenerate={triggerGenerate}
           triggerSave={triggerSave}
+          triggerRun={triggerRun}
           workflow={workflow}
           accessToken={accessToken}
           workflowId={workflowId}

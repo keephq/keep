@@ -14,6 +14,7 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
+import { usePusher } from "utils/hooks/usePusher";
 
 const defaultPresets: Preset[] = [
   {
@@ -83,9 +84,12 @@ export default function Alerts({ presetName }: AlertsProps) {
   const selectedPreset = presets.find(
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
-
-  const { data: alerts = [], isLoading: isAsyncLoading } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
-  // const { data: alerts = [], isLoading: isAsyncLoading } = useAllAlertsWithSubscription();
+  const { data: pusher } = usePusher();
+  const {
+    data: alerts = [],
+    isLoading: isAsyncLoading,
+    mutate: mutateAlerts,
+  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
@@ -95,6 +99,12 @@ export default function Alerts({ presetName }: AlertsProps) {
       setViewAlertModal(null);
     }
   }, [searchParams, alerts]);
+
+  useEffect(() => {
+    if (pusher?.pollAlerts !== 0) {
+      mutateAlerts();
+    }
+  }, [mutateAlerts, pusher?.pollAlerts]);
 
   if (selectedPreset === undefined) {
     return null;
@@ -138,6 +148,7 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
       <AlertChangeStatusModal
         alert={changeStatusAlert}
+        presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal
