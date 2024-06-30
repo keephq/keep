@@ -100,6 +100,7 @@
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
+            "providers/documentation/incidentio-provider",
             "providers/documentation/jira-provider",
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
