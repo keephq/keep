@@ -10,20 +10,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./postgres-custom.conf:/etc/postgresql/conf.d/custom.conf
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   keep-frontend:
     extends:
       file: docker-compose.common.yml
       service: keep-frontend-common
-    build:
-      context: ./keep-ui
-      dockerfile: ../docker/Dockerfile.ui
+    image:
+      us-central1-docker.pkg.dev/keephq/keep/keep-ui
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
-    volumes:
-      - ./state:/state
     depends_on:
       - keep-backend
 
@@ -33,14 +32,12 @@ services:
       service: keep-backend-common
     build:
       context: .
-      dockerfile: docker/Dockerfile.dev.api
+      dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
-    volumes:
-      - .:/app
-      - ./state:/state
+      - SECRET_MANAGER_DIRECTORY=/app
     depends_on:
       - keep-database
 

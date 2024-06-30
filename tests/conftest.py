@@ -86,10 +86,10 @@ def docker_services(
                 )
                 break
 
-        print(f"Using docker-compose file: {docker_compose_file_new}")
+        print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
             docker_compose_command,
-            docker_compose_file_new,
+            docker_compose_file,
             docker_compose_project_name,
             docker_setup,
             docker_cleanup,
@@ -304,9 +304,9 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
-    headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(5000)
