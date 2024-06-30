@@ -227,6 +227,55 @@ def run_workflow(
     }
 
 
+@router.post(
+    "/test",
+    description="Test run a workflow from a definition",
+)
+async def run_workflow_from_definition(
+    request: Request,
+    file: UploadFile = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:workflows"])
+    ),
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
+    workflow = await __get_workflow_raw_data(request, file)
+    workflowstore = WorkflowStore()
+    workflowmanager = WorkflowManager.get_instance()
+    try:
+        workflow = workflowstore.get_workflow_from_dict(
+            tenant_id=tenant_id, workflow=workflow
+        )
+    except Exception as e:
+        logger.exception(
+            "Failed to parse workflow",
+            extra={"tenant_id": tenant_id, "workflow": workflow},
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to parse test workflow: {e}",
+        )
+
+    try:
+        workflow_execution = workflowmanager.scheduler.handle_workflow_test(
+            workflow, tenant_id, created_by
+        )
+    except Exception as e:
+        logger.exception(
+            "Failed to run test workflow",
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to run test workflow: {e}",
+        )
+    logger.info(
+        "Workflow ran successfully",
+        extra={"workflow_execution": workflow_execution},
+    )
+    return workflow_execution
+
+
 async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
