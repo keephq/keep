@@ -108,6 +108,17 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
 
+    def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
+        logging.info("Parsing workflow from dict", extra={"workflow": workflow})
+        workflow = self.parser.parse(tenant_id, workflow)
+        if workflow:
+            return workflow[0]
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to parse workflow from dict",
+            )
+
     def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
         # list all tenant's workflows
         workflows = get_all_workflows(tenant_id)

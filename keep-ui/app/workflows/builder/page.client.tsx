@@ -7,6 +7,7 @@ import {
   ArrowDownOnSquareIcon,
   BoltIcon,
   ArrowUpOnSquareIcon,
+  PlayIcon,
 } from "@heroicons/react/20/solid";
 import { useSession } from "next-auth/react";
 import { BuilderCard } from "./builder-card";
@@ -23,6 +24,7 @@ export default function PageClient({
   const [generateEnabled, setGenerateEnabled] = useState(false);
   const [triggerGenerate, setTriggerGenerate] = useState(0);
   const [triggerSave, setTriggerSave] = useState(0);
+  const [triggerRun, setTriggerRun] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
   const { data: session, status, update } = useSession();
@@ -62,78 +64,90 @@ export default function PageClient({
       </div>
     );
 
+  const incrementState = (s: number) => s + 1;
+
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full h-full">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>
-            Builder <Badge color="orange" size="xs" tooltip="Slack us if something isn't working properly :)">Beta</Badge>
+            Builder
+            <Badge
+              color="orange"
+              size="xs"
+              tooltip="Slack us if something isn't working properly :)"
+            >
+              Beta
+            </Badge>
           </Title>
           <Subtitle>Workflow building kit</Subtitle>
         </div>
-        {workflow ? (
-          <div>
+        <div className="flex gap-2">
+          {!workflow && (
+            <>
+              <Button
+                color="orange"
+                size="md"
+                onClick={newAlert}
+                icon={PlusIcon}
+                className="min-w-28"
+                variant="secondary"
+                disabled={!buttonsEnabled}
+              >
+                New
+              </Button>
+              <Button
+                color="orange"
+                size="md"
+                onClick={loadAlert}
+                className="min-w-28"
+                variant="secondary"
+                icon={ArrowDownOnSquareIcon}
+                disabled={!buttonsEnabled}
+              >
+                Load
+              </Button>
+              <input
+                type="file"
+                id="alertFile"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </>
+          )}
+          <Button
+            color="orange"
+            size="md"
+            className="min-w-28"
+            icon={PlayIcon}
+            disabled={!generateEnabled}
+            onClick={() => setTriggerRun(incrementState)}
+          >
+            Run
+          </Button>
+          <Button
+            color="orange"
+            size="md"
+            className="min-w-28"
+            icon={ArrowUpOnSquareIcon}
+            disabled={!generateEnabled}
+            onClick={() => setTriggerSave(incrementState)}
+          >
+            Deploy
+          </Button>
+          {!workflow && (
             <Button
-              color="orange"
-              size="md"
-              icon={ArrowUpOnSquareIcon}
               disabled={!generateEnabled}
-              onClick={() => setTriggerSave(triggerSave + 1)}
-            >
-              Deploy
-            </Button>
-          </div>
-        ) : (
-          <div>
-            <Button
               color="orange"
               size="md"
-              className="mr-2"
-              onClick={newAlert}
-              icon={PlusIcon}
-              variant="secondary"
-              disabled={!buttonsEnabled}
-            >
-              New
-            </Button>
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              onClick={loadAlert}
-              variant="secondary"
-              icon={ArrowDownOnSquareIcon}
-              disabled={!buttonsEnabled}
-            >
-              Load
-            </Button>
-            <input
-              type="file"
-              id="alertFile"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <Button
-              color="orange"
-              size="md"
-              className="mr-2"
-              icon={ArrowUpOnSquareIcon}
-              disabled={!generateEnabled}
-              onClick={() => setTriggerSave(triggerSave + 1)}
-            >
-              Deploy
-            </Button>
-            <Button
-              disabled={!generateEnabled}
-              color="orange"
-              size="md"
+              className="min-w-28"
               icon={BoltIcon}
-              onClick={() => setTriggerGenerate(triggerGenerate + 1)}
+              onClick={() => setTriggerGenerate(incrementState)}
             >
               Generate
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <BuilderCard
         accessToken={session?.accessToken!}
@@ -142,6 +156,7 @@ export default function PageClient({
         enableButtons={enableButtons}
         enableGenerate={enableGenerate}
         triggerGenerate={triggerGenerate}
+        triggerRun={triggerRun}
         triggerSave={triggerSave}
         workflow={workflow}
         workflowId={workflowId}
