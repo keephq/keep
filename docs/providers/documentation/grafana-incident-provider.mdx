@@ -1,0 +1,32 @@
+---
+title: 'Grafana Incident Provider'
+sidebarTitle: 'Grafana Incident Provider'
+description: 'Grafana Incident Provider alows you to query all incidents from Grafana Incident.'
+---
+
+## Authentication Parameters
+
+The Grafana Incident provider requires the following authentication parameters:
+
+- `host_url` - The URL of the Grafana Incident instance.
+  Example: `https://your-stack.grafana.net`
+- `service_account_token` - The service account token is used to authenticate the Grafana Incident API requests.
+
+## Getting started
+
+1. In your Grafana Cloud stack, click Alerts & IRM in the left-side menu.
+2. Click the Incident tile to enable the app for your Grafana Cloud instance.
+3. Once Grafana Incident is enabled it is accessible to users in your organization.
+
+## Connecting with the Provider
+
+1. After enabling the Grafana Incident app, navigate Adminstration > Users and access > Service Accounts.
+2. Create a new service account by clicking the Add Service Account button.
+3. Give the service account a name and assign role as Viewer.
+4. Click on Add service account token and click on Generate token.
+5. Copy the generated token.
+6. This will be used as the `service_account_token` parameter in the provider configuration.
+
+## Usefull Links
+
+- [Grafana Incident](https://grafana.com/docs/grafana-cloud/alerting-and-irm/incident/)

@@ -94,6 +94,7 @@
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gitlab-provider",
+            "providers/documentation/grafana-incident-provider",
             "providers/documentation/grafana-oncall-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
@@ -140,7 +141,7 @@
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider"
           ]
-        } 
+        }
       ]
     },
     {
@@ -195,7 +196,10 @@
         },
         {
           "group": "Examples",
-          "pages": ["workflows/examples/multi-step-alert"]
+          "pages": [
+            "workflows/examples/multi-step-alert",
+            "workflows/examples/reusable-action-alert"
+          ]
         },
         "workflows/state"
       ]
@@ -215,7 +219,13 @@
             "api-ref/providers/delete-provider",
             "api-ref/providers/install-provider",
             "api-ref/providers/install-provider-webhook",
-            "api-ref/providers/get-webhook-settings"
+            "api-ref/providers/get-webhook-settings",
+            "api-ref/providers/get-installed-providers",
+            "api-ref/providers/install-provider-oauth2",
+            "api-ref/providers/invoke-provider-method",
+
+            "api-ref/providers/update-provider",
+            "api-ref/providers/validate-provider-scopes"
           ]
         },
         {
@@ -224,12 +234,109 @@
         },
         {
           "group": "Alerts",
-          "pages": ["api-ref/alerts/get-alerts", "api-ref/alerts/receive-event"]
+          "pages": [
+            "api-ref/alerts/get-alerts",
+            "api-ref/alerts/receive-event",
+            "api-ref/alerts/get-alert",
+            "api-ref/alerts/assign-alert",
+            "api-ref/alerts/delete-alert",
+            "api-ref/alerts/enrich-alert",
+            "api-ref/alerts/get-alert-history",
+            "api-ref/alerts/get-all-alerts",
+            "api-ref/alerts/receive-event",
+            "api-ref/alerts/receive-generic-event",
+            "api-ref/alerts/search-alerts"
+          ]
+        },
+        {
+          "group": "Enrichment",
+          "pages": [
+            "api-ref/enrichment/create-extraction-rule",
+            "api-ref/enrichment/create-rule",
+            "api-ref/enrichment/delete-extraction-rule",
+            "api-ref/enrichment/delete-rule",
+            "api-ref/enrichment/get-extraction-rules",
+            "api-ref/enrichment/get-rules",
+            "api-ref/enrichment/update-extraction-rule",
+            "api-ref/enrichment/update-rule"
+          ]
+        },
+        {
+          "group": "Groups",
+          "pages": [
+            "api-ref/groups/get-groups"
+          ]
+        },
+        {
+          "group": "Whoami",
+          "pages": [
+            "api-ref/whoami/get-tenant-id"
+          ]
+        },
+        {
+          "group": "Mapping",
+          "pages": [
+            "api-ref/mapping/create-mapping",
+            "api-ref/mapping/get-mappings"
+          ]
+        },
+        {
+          "group": "Preset",
+          "pages": [
+            "api-ref/preset/create-preset",
+            "api-ref/preset/delete-preset",
+            "api-ref/preset/get-presets",
+            "api-ref/preset/update-preset"
+          ]
+        },
+        {
+          "group": "Pusher",
+          "pages": [
+            "api-ref/pusher/pusher-authentication"
+          ]
+        },
+        {
+          "group": "Rules",
+          "pages": [
+            "api-ref/rules/create-rule",
+            "api-ref/rules/delete-rule",
+            "api-ref/rules/get-rules",
+            "api-ref/rules/update-rule"
+          ]
         },
         {
           "group": "Webhook settings",
-          "pages": ["api-ref/settings/webhook-settings"]
+          "pages": [
+            "api-ref/settings/webhook-settings",
+            "api-ref/settings/create-key",
+            "api-ref/settings/create-user",
+            "api-ref/settings/delete-api-key",
+            "api-ref/settings/delete-smtp-settings",
+            "api-ref/settings/delete-user",
+            "api-ref/settings/get-keys",
+            "api-ref/settings/get-smtp-settings",
+            "api-ref/settings/get-users",
+            "api-ref/settings/test-smtp-settings",
+            "api-ref/settings/update-api-key",
+            "api-ref/settings/update-smtp-settings"
+          ]
         },
+        {
+          "group": "Users",
+          "pages": [
+            "api-ref/users/get-users",
+            "api-ref/users/create-user",
+            "api-ref/users/delete-user",
+            "api-ref/users/delete-user-by-email"
+          ]
+        },
+        {
+          "group": "Status",
+          "pages": [
+            "api-ref/status/status"
+          ]
+        },
+
         {
           "group": "Workflows",
           "pages": [
@@ -238,7 +345,20 @@
             "api-ref/workflows/run-workflow",
             "api-ref/workflows/get-workflow-by-id",
             "api-ref/workflows/delete-workflow-by-id",
-            "api-ref/workflows/get-workflow-execution-status"
+            "api-ref/workflows/get-raw-workflow-by-id",
+            "api-ref/workflows/get-workflow-execution-status",
+            "api-ref/workflows/get-workflow-executions",
+            "api-ref/workflows/get-workflow-executions-by-alert-fingerprint",
+            "api-ref/workflows/update-workflow-by-id"
+          ]
+        },
+        {
+          "group": "Actions",
+          "pages": [
+            "api-ref/actions/get-actions",
+            "api-ref/actions/add-actions",
+            "api-ref/actions/update-action",
+            "api-ref/actions/delete-action"
           ]
         }
       ]

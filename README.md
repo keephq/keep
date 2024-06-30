@@ -2,17 +2,17 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alerts management and automation platform</h1>
-<br />
+<h1 align="center">The open-source alerts management and AIOps platform</h1> 
 
+<div align="center">Single pane of glass, filtering, bi-directional integrations, alert correlation, workflows, enrichment, dashboards.
+</br>AI correlation and AI summarization are under the limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</div>
+</br>
 
 <div align="center">
     <a href="https://github.com/keephq/keep/blob/main/LICENSE">
-        <img src="https://img.shields.io/github/license/keephq/keep" />
-    </a>
+        <img src="https://img.shields.io/github/license/keephq/keep" /></a>
     <a href="https://slack.keephq.dev">
-      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
-    </a>
+      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
     <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
@@ -34,10 +34,6 @@
     ·
     <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
-<h3 align="center">
-Keep makes it easy to consolidate all your alerts into a single pane of glass and to orchestrate workflows to automate your end-to-end processes. <br /><br /> Enrich any tool with <a href="https://docs.datadoghq.com/service_management/workflows/">Datadog Workflow Automation</a> like capabilities.
-</h3 >
-
 
 
 ## How does it work?
@@ -199,6 +195,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/centreon-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/netdata-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana_incident-icon.png?raw=true"/>
 </p>
 <h3 align="center">Ticketing tools</h2>
 <p align="center">

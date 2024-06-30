@@ -88,7 +88,7 @@ class OpenobserveProvider(BaseProvider):
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -107,7 +107,7 @@ class OpenobserveProvider(BaseProvider):
             **self.config.authentication
         )
         if not self.authentication_config.openObserveHost.startswith(
-                "https://"
+            "https://"
         ) and not self.authentication_config.openObserveHost.startswith("http://"):
             self.authentication_config.openObserveHost = (
                 f"https://{self.authentication_config.openObserveHost}"
@@ -140,26 +140,39 @@ class OpenobserveProvider(BaseProvider):
     def validate_scopes(self) -> dict[str, bool | str]:
         authenticated = False
         self.logger.info("Validating OpenObserve Scopes")
-        response = requests.post(
-            url=self.__get_url(
+        try:
+            response = requests.post(
+                url=self.__get_url(
+                    paths=[
+                        "auth/login",
+                    ]
+                ),
+                json={
+                    "name": self.authentication_config.openObserveUsername,
+                    "password": self.authentication_config.openObservePassword,
+                },
+                timeout=10,
+            )
+        except Exception as e:
+            self.logger.error(
+                "Error while validating scopes for OpenObserve",
+                extra=e,
+            )
+            return {"authenticated": str(e)}
+        print(
+            self.__get_url(
                 paths=[
                     "auth/login",
                 ]
-            ),
-            json={
-                "name": self.authentication_config.openObserveUsername,
-                "password": self.authentication_config.openObservePassword,
-            }
+            )
         )
-        print(self.__get_url(paths=["auth/login", ]
-                             ))
         if response.ok:
             response = response.json()
             authenticated = response["status"]
         else:
             self.logger.error(
                 "Error while validating scopes for OpenObserve",
-                extra={"status_code": response.status_code, "error": response.text}
+                extra={"status_code": response.status_code, "error": response.text},
             )
 
         return {"authenticated": authenticated}
@@ -167,13 +180,15 @@ class OpenobserveProvider(BaseProvider):
     def __get_auth(self) -> tuple[str, str]:
         return (
             self.authentication_config.openObserveUsername,
-            self.authentication_config.openObservePassword
+            self.authentication_config.openObservePassword,
         )
 
     def __update_alert_template(self, data):
         res = requests.put(
             url=self.__get_url(
-                paths=[f"api/{self.authentication_config.organisationID}/alerts/templates/KeepAlertTemplate"]
+                paths=[
+                    f"api/{self.authentication_config.organisationID}/alerts/templates/KeepAlertTemplate"
+                ]
             ),
             json=data,
             auth=self.__get_auth(),
@@ -184,25 +199,29 @@ class OpenobserveProvider(BaseProvider):
                 self.logger.info("Alert template Updated Successfully")
             else:
 
-                self.logger.error("Failed to update Alert Template",
-                                  extra={"code": res["code"], "error": res["message"]})
+                self.logger.error(
+                    "Failed to update Alert Template",
+                    extra={"code": res["code"], "error": res["message"]},
+                )
         else:
-            self.logger.error("Error while updating Alert Template",
-                              extra={"status_code": res.status_code, "error": res.text})
+            self.logger.error(
+                "Error while updating Alert Template",
+                extra={"status_code": res.status_code, "error": res.text},
+            )
 
     def __create_alert_template(self):
 
         # This is the template used for creating the alert template in openobserve
-        template = open(rf"{Path(__file__).parent}/alerttemplate.json", 'rt')
+        template = open(rf"{Path(__file__).parent}/alerttemplate.json", "rt")
         data = template.read()
         try:
             res = requests.post(
-                self.__get_url(paths=[f"api/{self.authentication_config.organisationID}/alerts/templates"]),
-                json={
-                    "body": data,
-                    "isDefault": False,
-                    "name": "KeepAlertTemplate"
-                },
+                self.__get_url(
+                    paths=[
+                        f"api/{self.authentication_config.organisationID}/alerts/templates"
+                    ]
+                ),
+                json={"body": data, "isDefault": False, "name": "KeepAlertTemplate"},
                 auth=self.__get_auth(),
             )
             res = res.json()
@@ -214,15 +233,17 @@ class OpenobserveProvider(BaseProvider):
                     "Alert template creation failed as it already exists",
                     extra={"code": res["code"], "error": res["message"]},
                 )
-                self.logger.info("Attempting to Update Alert Template with latest data...")
-                self.__update_alert_template(data={
-                    "body": data,
-                    "isDefault": False,
-                    "name": "KeepAlertTemplate"
-                })
+                self.logger.info(
+                    "Attempting to Update Alert Template with latest data..."
+                )
+                self.__update_alert_template(
+                    data={"body": data, "isDefault": False, "name": "KeepAlertTemplate"}
+                )
             else:
-                self.logger.error("Alert template creation failed",
-                                  extra={"code": res["code"], "error": res["message"]})
+                self.logger.error(
+                    "Alert template creation failed",
+                    extra={"code": res["code"], "error": res["message"]},
+                )
 
         except Exception as e:
             self.logger.error(
@@ -234,27 +255,37 @@ class OpenobserveProvider(BaseProvider):
         res = requests.put(
             json=data,
             url=self.__get_url(
-                paths=[f"api/{self.authentication_config.organisationID}/alerts/destinations/KeepDestination"]),
+                paths=[
+                    f"api/{self.authentication_config.organisationID}/alerts/destinations/KeepDestination"
+                ]
+            ),
             auth=self.__get_auth(),
         )
         if res.ok:
             self.logger.info("Destination Successfully Updated")
         else:
-            self.logger.error("Error while updating destination", extra={"code": res.status_code, "error": res.text})
+            self.logger.error(
+                "Error while updating destination",
+                extra={"code": res.status_code, "error": res.text},
+            )
 
     def __create_destination(self, keep_api_url: str, api_key: str):
         data = {
             "headers": {
-                'X-API-KEY': api_key,
+                "X-API-KEY": api_key,
             },
             "method": "post",
             "name": "KeepDestination",
             "template": "KeepAlertTemplate",
-            "url": keep_api_url
+            "url": keep_api_url,
         }
 
         response = requests.post(
-            url=self.__get_url(paths=[f"api/{self.authentication_config.organisationID}/alerts/destinations"]),
+            url=self.__get_url(
+                paths=[
+                    f"api/{self.authentication_config.organisationID}/alerts/destinations"
+                ]
+            ),
             auth=self.__get_auth(),
             json=data,
         )
@@ -265,14 +296,21 @@ class OpenobserveProvider(BaseProvider):
         elif "already exists" in res["message"]:
             self.logger.info("Destination creation failed as it already exists")
             self.logger.info("Attempting to Update Destination...")
-            self.__update_destination(keep_api_url=keep_api_url, api_key=api_key, data=data)
+            self.__update_destination(
+                keep_api_url=keep_api_url, api_key=api_key, data=data
+            )
         else:
-            self.logger.error("Destination creation failed", extra={"code": res["code"], "error": res["message"]})
+            self.logger.error(
+                "Destination creation failed",
+                extra={"code": res["code"], "error": res["message"]},
+            )
 
     def __get_all_stream_names(self) -> list[str]:
         names = []
         response = requests.get(
-            url=self.__get_url(paths=[f"api/{self.authentication_config.organisationID}/streams"]),
+            url=self.__get_url(
+                paths=[f"api/{self.authentication_config.organisationID}/streams"]
+            ),
             auth=self.__get_auth(),
         )
         res = response.json()
@@ -282,7 +320,9 @@ class OpenobserveProvider(BaseProvider):
 
     def __get_and_update_actions(self):
         response = requests.get(
-            url=self.__get_url(paths=[f"api/{self.authentication_config.organisationID}/alerts"]),
+            url=self.__get_url(
+                paths=[f"api/{self.authentication_config.organisationID}/alerts"]
+            ),
             auth=self.__get_auth(),
         )
         res = response.json()
@@ -293,20 +333,26 @@ class OpenobserveProvider(BaseProvider):
                 alert["destinations"].append("KeepDestination")
             self.logger.info(f"Updating Alert: {alert_name} in Stream: {alert_stream}")
             update_response = requests.put(
-                url=self.__get_url(paths=[f"api/default/{alert_stream}/alerts/{alert_name}"]),
+                url=self.__get_url(
+                    paths=[f"api/default/{alert_stream}/alerts/{alert_name}"]
+                ),
                 auth=self.__get_auth(),
-                json=alert
+                json=alert,
             )
             update_res = update_response.json()
             if update_res["code"] == 200:
-                self.logger.info(f"Updated Alert: {alert_name} in Stream: {alert_stream}",
-                                 extra={"code": update_res["code"], "error": update_res["message"]})
+                self.logger.info(
+                    f"Updated Alert: {alert_name} in Stream: {alert_stream}",
+                    extra={"code": update_res["code"], "error": update_res["message"]},
+                )
             else:
-                self.logger.error(f"Error while updating Alert: {alert_name} in Stream: {alert_stream}",
-                                  extra={"code": update_res["code"], "error": update_res["message"]})
+                self.logger.error(
+                    f"Error while updating Alert: {alert_name} in Stream: {alert_stream}",
+                    extra={"code": update_res["code"], "error": update_res["message"]},
+                )
 
     def setup_webhook(
-            self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         try:
             self.__create_alert_template()
@@ -321,16 +367,20 @@ class OpenobserveProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-            event: dict,
-            provider_instance: Optional["OpenobserveProvider"] = None,
+        event: dict,
+        provider_instance: Optional["OpenobserveProvider"] = None,
     ) -> AlertDto:
         return AlertDto(
             id=event["org_name"],  # Mapping 'org_name' to 'id'
             name=event["alert_name"],  # Mapping 'alert_name' to 'name'
             severity=AlertSeverity.WARNING,
             environment=event["stream_name"],  # Mapping 'stream_name' to 'environment'
-            startedAt=event["alert_start_time"],  # Mapping 'alert_start_time' to 'startedAt'
-            lastReceived=event["alert_start_time"],  # Mapping 'alert_start_time' to 'startedAt'
+            startedAt=event[
+                "alert_start_time"
+            ],  # Mapping 'alert_start_time' to 'startedAt'
+            lastReceived=event[
+                "alert_start_time"
+            ],  # Mapping 'alert_start_time' to 'startedAt'
             description=event["alert_type"],  # Mapping 'alert_type' to 'description'
             labels={
                 "url": event["alert_url"],
@@ -339,7 +389,7 @@ class OpenobserveProvider(BaseProvider):
                 "alert_threshold": event["alert_threshold"],
                 "alert_count": event["alert_count"],
                 "alert_agg_value": event["alert_agg_value"],
-                "alert_end_time": event["alert_end_time"]
+                "alert_end_time": event["alert_end_time"],
             },
-            source=["openobserve"]
+            source=["openobserve"],
         )
