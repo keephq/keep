@@ -94,6 +94,7 @@
             "providers/documentation/elastic-provider",
             "providers/documentation/gcpmonitoring-provider",
             "providers/documentation/gitlab-provider",
+            "providers/documentation/grafana-incident-provider",
             "providers/documentation/grafana-oncall-provider",
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
