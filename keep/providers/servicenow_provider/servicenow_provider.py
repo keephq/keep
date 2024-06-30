@@ -234,7 +234,7 @@ class ServicenowProvider(BaseProvider):
             transformed.append(event)
         return transformed
 
-def ingest_into_keep(self, events):
+  def ingest_into_keep(self, events):
     """
     Actual ingestion logic for ingesting events into the Keep system.
     """
