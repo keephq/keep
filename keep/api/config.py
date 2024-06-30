@@ -4,7 +4,7 @@ import os
 import keep.api.logging
 from keep.api.api import AUTH_TYPE
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import create_db_and_tables, try_create_single_tenant
+from keep.api.core.db_on_start import create_db_and_tables, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 PORT = int(os.environ.get("PORT", 8080))
