@@ -23,6 +23,7 @@ from keep.api.core.db import get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
+    actions,
     alerts,
     dashboard,
     extraction,
@@ -38,7 +39,6 @@ from keep.api.routes import (
     users,
     whoami,
     workflows,
-    actions
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
