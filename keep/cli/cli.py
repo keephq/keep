@@ -14,7 +14,7 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
 
-from keep.api.core.db import try_create_single_tenant
+from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client
@@ -115,9 +115,9 @@ class Info:
             pass
         self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
         self.keep_api_url = (
-                self.config.get("keep_api_url")
-                or os.getenv("KEEP_API_URL")
-                or Info.KEEP_MANAGED_API_URL
+            self.config.get("keep_api_url")
+            or os.getenv("KEEP_API_URL")
+            or Info.KEEP_MANAGED_API_URL
         )
         self.random_user_id = self.config.get("random_user_id")
         # if we don't have a random user id, we create one and keep it on the config file
@@ -131,10 +131,10 @@ class Info:
 
         # if we auth, we don't need to check for api key
         if (
-                "auth" in arguments
-                or "api" in arguments
-                or "config" in arguments
-                or "version" in arguments
+            "auth" in arguments
+            or "api" in arguments
+            or "config" in arguments
+            or "version" in arguments
         ):
             return
 
@@ -236,9 +236,30 @@ def show(info: Info):
 
 
 @config.command(name="new")
-@click.option("--url", "-u", type=str, required=False, is_flag=False, flag_value="http://localhost:8080", help="The url of the keep api")
-@click.option("--api-key", "-a", type=str, required=False, is_flag=False, flag_value="", help="The api key for keep")
-@click.option("--interactive", "-i", help="Interactive mode creating keep config (default True)", is_flag=True)
+@click.option(
+    "--url",
+    "-u",
+    type=str,
+    required=False,
+    is_flag=False,
+    flag_value="http://localhost:8080",
+    help="The url of the keep api",
+)
+@click.option(
+    "--api-key",
+    "-a",
+    type=str,
+    required=False,
+    is_flag=False,
+    flag_value="",
+    help="The api key for keep",
+)
+@click.option(
+    "--interactive",
+    "-i",
+    help="Interactive mode creating keep config (default True)",
+    is_flag=True,
+)
 @pass_info
 def new_config(info: Info, url: str, api_key: str, interactive: bool):
     """create new config."""
@@ -250,7 +271,9 @@ def new_config(info: Info, url: str, api_key: str, interactive: bool):
     else:
         keep_url = click.prompt("Enter your keep url", default="http://localhost:8080")
         api_key = click.prompt(
-            "Enter your api key (leave blank for localhost)", hide_input=True, default=""
+            "Enter your api key (leave blank for localhost)",
+            hide_input=True,
+            default="",
         )
     if not api_key:
         api_key = "localhost"
@@ -362,14 +385,14 @@ def api(multi_tenant: bool, port: int, host: str):
 )
 @pass_info
 def run(
-        info: Info,
-        alerts_directory: str,
-        alert_url: list[str],
-        interval: int,
-        providers_file,
-        tenant_id,
-        api_key,
-        api_url,
+    info: Info,
+    alerts_directory: str,
+    alert_url: list[str],
+    interval: int,
+    providers_file,
+    tenant_id,
+    api_key,
+    api_url,
 ):
     """Run a workflow."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
@@ -785,7 +808,7 @@ def list_mappings(info: Info):
 )
 @pass_info
 def create(
-        info: Info, name: str, description: str, file: str, matchers: str, priority: int
+    info: Info, name: str, description: str, file: str, matchers: str, priority: int
 ):
     """Create a mapping rule."""
     if os.path.isfile(file) and file.endswith(".csv"):
@@ -986,7 +1009,14 @@ def list_extraction(info: Info):
 )
 @pass_info
 def create(
-        info: Info, name: str, description: str, priority: int, pre: bool, attribute: str, regex: str, condition: str
+    info: Info,
+    name: str,
+    description: str,
+    priority: int,
+    pre: bool,
+    attribute: str,
+    regex: str,
+    condition: str,
 ):
     """Create a extraction rule."""
     response = make_keep_request(
@@ -1000,7 +1030,7 @@ def create(
             "pre": pre,
             "attribute": attribute,
             "regex": regex,
-            "condition": condition
+            "condition": condition,
         },
     )
 
@@ -1039,12 +1069,15 @@ def delete_extraction(info: Info, extraction_id: int):
     # Check the response
     if response.ok:
         click.echo(
-            click.style(f"Extraction rule {extraction_id} deleted successfully", bold=True)
+            click.style(
+                f"Extraction rule {extraction_id} deleted successfully", bold=True
+            )
         )
     else:
         click.echo(
             click.style(
-                f"Error deleting extraction rule {extraction_id}: {response.text}", bold=True
+                f"Error deleting extraction rule {extraction_id}: {response.text}",
+                bold=True,
             )
         )
 
@@ -1196,7 +1229,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
     for config in provider["config"]:
         config_as_flag = f"--{config.replace('_', '-')}"
         if config_as_flag not in options_dict and provider["config"][config].get(
-                "required", True
+            "required", True
         ):
             raise click.BadOptionUsage(
                 config_as_flag,

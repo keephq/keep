@@ -1,168 +1,53 @@
+"""
+Keep main database module.
+
+This module contains the CRUD database functions for Keep.
+"""
+
 import hashlib
 import json
 import logging
-import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
-import pymysql
 import validators
 from dotenv import find_dotenv, load_dotenv
-from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
+from sqlalchemy import and_, desc, func, null, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, create_engine, or_, select
+from sqlmodel import Session, or_, select
+
+from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.config import config
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import *
-from keep.api.models.db.dashboard import *
-from keep.api.models.db.extraction import *
-from keep.api.models.db.mapping import *
-from keep.api.models.db.preset import *
-from keep.api.models.db.provider import *
-from keep.api.models.db.rule import *
-from keep.api.models.db.tenant import *
-from keep.api.models.db.workflow import *
-from keep.api.models.db.action import *
+from keep.api.models.db.action import Action
+from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
-
-
-def __get_conn() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the database when running in Cloud Run.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            db="keepdb",
-            enable_iam_auth=True,
-        )
-    return conn
-
-
-def __get_conn_impersonate() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the remote database when running locally.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    from google.auth import default, impersonated_credentials
-    from google.auth.transport.requests import Request
-
-    # Get application default credentials
-    creds, project = default()
-    # Create impersonated credentials
-    target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    creds = impersonated_credentials.Credentials(
-        source_credentials=creds,
-        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
-        target_scopes=target_scopes,
-    )
-    # Refresh the credentials to obtain an impersonated access token
-    creds.refresh(Request())
-    # Get the access token
-    access_token = creds.token
-    # Create a new MySQL connection with the obtained access token
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            password=access_token,
-            host="127.0.0.1",
-            port=3306,
-            database="keepdb",
-        )
-    return conn
 
 
 # this is a workaround for gunicorn to load the env vars
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
-db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
-pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
-max_overflow = config("DATABASE_MAX_OVERFLOW", default=10, cast=int)
 
 
-def dumps(_json) -> str:
-    """
-    Overcome the issue of serializing datetime objects to JSON with the default json.dumps.
-       Usually seen with PostgreSQL JSONB fields.
-    https://stackoverflow.com/questions/36438052/using-a-custom-json-encoder-for-sqlalchemys-postgresql-jsonb-implementation
-
-    Args:
-        _json (object): The json object to serialize.
-
-    Returns:
-        str: The serialized JSON object.
-    """
-    return json.dumps(_json, default=str)
-
-
-if RUNNING_IN_CLOUD_RUN:
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn,
-    )
-elif db_connection_string == "impersonate":
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn_impersonate,
-    )
-elif db_connection_string:
-    try:
-        logger.info(f"Creating a connection pool with size {pool_size}")
-        engine = create_engine(
-            db_connection_string,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            json_serializer=dumps,
-        )
-    # SQLite does not support pool_size
-    except TypeError:
-        engine = create_engine(db_connection_string)
-else:
-    engine = create_engine(
-        "sqlite:///./keep.db", connect_args={"check_same_thread": False}
-    )
-
+engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
-
-
-def create_db_and_tables():
-    """
-    Creates the database and tables.
-    """
-    try:
-        if not database_exists(engine.url):
-            logger.info("Creating the database")
-            create_database(engine.url)
-            logger.info("Database created")
-    # On Cloud Run, it fails to check if the database exists
-    except Exception:
-        logger.warning("Failed to create the database or detect if it exists.")
-        pass
-
-    SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Session:
@@ -172,7 +57,7 @@ def get_session() -> Session:
     Yields:
         Session: A database session
     """
-    from opentelemetry import trace
+    from opentelemetry import trace  # pylint: disable=import-outside-toplevel
 
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("get_session"):
@@ -188,57 +73,6 @@ def get_session_sync() -> Session:
         Session: A database session
     """
     return Session(engine)
-
-
-def try_create_single_tenant(tenant_id: str) -> None:
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import User
-
-        create_db_and_tables()
-    except Exception:
-        pass
-    with Session(engine) as session:
-        try:
-            # check if the tenant exist:
-            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
-            if not tenant:
-                # Do everything related with single tenant creation in here
-                logger.info("Creating single tenant")
-                session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            else:
-                logger.info("Single tenant already exists")
-
-            # now let's create the default user
-
-            # check if at least one user exists:
-            user = session.exec(select(User)).first()
-            # if no users exist, let's create the default user
-            if not user:
-                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                default_user = User(
-                    username=default_username,
-                    password_hash=default_password,
-                    role=AdminRole.get_name(),
-                )
-                session.add(default_user)
-            # else, if the user want to force the refresh of the default user password
-            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
-                # update the password of the default user
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                user.password_hash = default_password
-            # commit the changes
-            session.commit()
-        except IntegrityError:
-            # Tenant already exists
-            pass
-        except Exception:
-            pass
 
 
 def create_workflow_execution(
@@ -313,13 +147,15 @@ def get_last_completed_execution(
 
 def get_workflows_that_should_run():
     with Session(engine) as session:
-        workflows_with_interval = session.exec(
-            select(Workflow)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.interval != None)
-            .where(Workflow.interval > 0)
-        ).all()
-
+        logger.debug("Checking for workflows that should run")
+        workflows_with_interval = (
+            session.query(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+            .all()
+        )
+        logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
         workflows_to_run = []
         # for each workflow:
         for workflow in workflows_with_interval:
@@ -1431,9 +1267,12 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            time_format = "YYYY-MM-DD HH:MI" if minute else "YYYY-MM-DD HH"
+            timestamp_format = func.to_char(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
             timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
@@ -1572,7 +1411,9 @@ def get_provider_distribution(tenant_id: str) -> dict:
         if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "postgresql":
-            timestamp_format = func.to_char(Alert.timestamp, time_format)
+            # PostgreSQL requires a different syntax for the timestamp format
+            # cf: https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING
+            timestamp_format = func.to_char(Alert.timestamp, "YYYY-MM-DD HH")
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
@@ -1735,6 +1576,8 @@ def delete_dashboard(tenant_id, dashboard_id):
             session.commit()
             return True
         return False
+
+
 def get_all_actions(tenant_id: str) -> List[Action]:
     with Session(engine) as session:
         actions = session.exec(
@@ -1746,7 +1589,9 @@ def get_all_actions(tenant_id: str) -> List[Action]:
 def get_action(tenant_id: str, action_id: str) -> Action:
     with Session(engine) as session:
         action = session.exec(
-            select(Action).where(Action.tenant_id == tenant_id).where(Action.id == action_id)
+            select(Action)
+            .where(Action.tenant_id == tenant_id)
+            .where(Action.id == action_id)
         ).first()
     return action
 
@@ -1768,7 +1613,9 @@ def create_actions(actions: List[Action]):
 def delete_action(tenant_id: str, action_id: str) -> bool:
     with Session(engine) as session:
         found_action = session.exec(
-            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
         ).first()
         if found_action:
             session.delete(found_action)
@@ -1777,10 +1624,14 @@ def delete_action(tenant_id: str, action_id: str) -> bool:
         return False
 
 
-def update_action(tenant_id: str, action_id: str, update_payload: Action) -> Union[Action, None]:
+def update_action(
+    tenant_id: str, action_id: str, update_payload: Action
+) -> Union[Action, None]:
     with Session(engine) as session:
         found_action = session.exec(
-            select(Action).where(Action.id == action_id).where(Action.tenant_id == tenant_id)
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
         ).first()
         if found_action:
             for key, value in update_payload.dict(exclude_unset=True).items():
