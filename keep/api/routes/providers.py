@@ -33,8 +33,8 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-PROVIDER_DISTRIBUTATION_ENABLED = config(
-    "PROVIDER_DISTRIBUTATION_ENABLED", cast=bool, default=True
+PROVIDER_DISTRIBUTION_ENABLED = config(
+    "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
 
 
@@ -75,7 +75,7 @@ def get_providers(
 
     linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
 
-    if PROVIDER_DISTRIBUTATION_ENABLED:
+    if PROVIDER_DISTRIBUTION_ENABLED:
         providers_distribution = get_provider_distribution(tenant_id)
 
         for provider in linked_providers + installed_providers:
