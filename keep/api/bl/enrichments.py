@@ -21,6 +21,14 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
     # Special case for source, since it's a list
     if attr_path == "source" and obj.source is not None and len(obj.source) > 0:
         return obj.source[0]
+
+    if "&&" in attr_path:
+        attr_paths = [attr.strip() for attr in attr_path.split("&&")]
+        return (
+            all(get_nested_attribute(obj, attr) is not None for attr in attr_paths)
+            or None
+        )
+
     attributes = attr_path.split(".")
     for attr in attributes:
         # @@ is used as a placeholder for . in cases where the attribute name has a .
@@ -28,7 +36,7 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
         # We can access it by using "results.some@@attribute" so we won't think its a nested attribute
         if attr is not None and "@@" in attr:
             attr = attr.replace("@@", ".")
-        obj = getattr(obj, attr, obj.get(attr) if isinstance(obj, dict) else None)
+        obj = getattr(obj, attr, obj.get(attr, None) if isinstance(obj, dict) else None)
         if obj is None:
             return None
     return obj
@@ -179,12 +187,20 @@ class EnrichmentsBl:
 
     def run_mapping_rules(self, alert: AlertDto):
         """
-        Run the mapping rules for the alert
+        Run the mapping rules for the alert.
+
+        Args:
+        - alert (AlertDto): The incoming alert to be processed and enriched.
+
+        Returns:
+        - AlertDto: The enriched alert after applying mapping rules.
         """
         self.logger.info(
             "Running mapping rules for incoming alert",
             extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
         )
+
+        # Retrieve all active mapping rules for the current tenant, ordered by priority
         rules: list[MappingRule] = (
             self.db_session.query(MappingRule)
             .filter(MappingRule.tenant_id == self.tenant_id)
@@ -194,58 +210,111 @@ class EnrichmentsBl:
         )
 
         if not rules:
+            # If no mapping rules are found for the tenant, log and return the original alert
             self.logger.debug("No mapping rules found for tenant")
             return alert
 
         for rule in rules:
-            # Check if the alert has all the required attributes from matchers
-            if not all(
-                get_nested_attribute(alert, attribute) for attribute in rule.matchers
+            if self._check_alert_matches_rule(alert, rule):
+                break
+
+        return alert
+
+    def _check_alert_matches_rule(self, alert: AlertDto, rule: MappingRule) -> bool:
+        """
+        Check if the alert matches the conditions specified in the mapping rule.
+        If a match is found, enrich the alert and log the enrichment.
+
+        Args:
+        - alert (AlertDto): The incoming alert to be processed.
+        - rule (MappingRule): The mapping rule to be checked against.
+
+        Returns:
+        - bool: True if alert matches the rule, False otherwise.
+        """
+        self.logger.debug(
+            "Checking alert against mapping rule",
+            extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+        )
+
+        # Check if the alert has any of the attributes defined in matchers
+        if not any(
+            get_nested_attribute(alert, matcher) is not None
+            for matcher in rule.matchers
+        ):
+            self.logger.debug(
+                "Alert does not match any of the conditions for the rule",
+                extra={"fingerprint": alert.fingerprint},
+            )
+            return False
+
+        self.logger.info(
+            "Alert matched a mapping rule, enriching...",
+            extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+        )
+
+        # Apply enrichment to the alert
+        for row in rule.rows:
+            if any(
+                self._check_matcher(alert, row, matcher) for matcher in rule.matchers
             ):
-                self.logger.debug(
-                    "Alert does not have all the required attributes for the rule",
-                    extra={"fingerprint": alert.fingerprint},
+                # Extract enrichments from the matched row
+                enrichments = {
+                    key: value for key, value in row.items() if key not in rule.matchers
+                }
+
+                # Enrich the alert with the matched data from the row
+                for key, value in enrichments.items():
+                    setattr(alert, key, value)
+
+                # Save the enrichments to the database
+                self.enrich_alert(alert.fingerprint, enrichments)
+
+                self.logger.info(
+                    "Alert enriched",
+                    extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
                 )
-                continue
 
-            # Check if the alert matches any of the rows
-            for row in rule.rows:
-                if all(
+                return (
+                    True  # Exit on first successful enrichment (assuming single match)
+                )
+
+        return False
+
+    def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
+        """
+        Check if the alert matches the conditions specified by a matcher.
+
+        Args:
+        - alert (AlertDto): The incoming alert to be processed.
+        - row (dict): The row from the mapping rule data to compare against.
+        - matcher (str): The matcher string specifying conditions.
+
+        Returns:
+        - bool: True if alert matches the matcher, False otherwise.
+        """
+        try:
+            if " && " in matcher:
+                # Split by " && " for AND condition
+                conditions = matcher.split(" && ")
+                return all(
                     re.match(row.get(attribute), get_nested_attribute(alert, attribute))
+                    is not None
                     or get_nested_attribute(alert, attribute) == row.get(attribute)
-                    or row.get(attribute) == "*"  # Wildcard
-                    for attribute in rule.matchers
-                ):
-                    self.logger.info(
-                        "Alert matched a mapping rule, enriching...",
-                        extra={
-                            "fingerprint": alert.fingerprint,
-                            "tenant_id": self.tenant_id,
-                        },
-                    )
-                    # This is where you match the row, add your enrichment logic here
-                    # For example: alert.enrich(row)
-                    # Remember to break if you only need the first match or adjust logic as needed
-                    enrichments = {
-                        key: value
-                        for key, value in row.items()
-                        if key not in rule.matchers
-                    }
-
-                    # Enrich the alert with the matched row
-                    for key, value in enrichments.items():
-                        setattr(alert, key, value)
-
-                    # Save the enrichments to the database
-                    self.enrich_alert(alert.fingerprint, enrichments)
-                    self.logger.info(
-                        "Alert enriched",
-                        extra={
-                            "fingerprint": alert.fingerprint,
-                            "tenant_id": self.tenant_id,
-                        },
-                    )
-                    break
+                    or row.get(attribute) == "*"  # Wildcard match
+                    for attribute in conditions
+                )
+            else:
+                # Single condition check
+                return (
+                    re.match(row.get(matcher), get_nested_attribute(alert, matcher))
+                    is not None
+                    or get_nested_attribute(alert, matcher) == row.get(matcher)
+                    or row.get(matcher) == "*"  # Wildcard match
+                )
+        except TypeError:
+            self.logger.exception("Error while checking matcher")
+            return False
 
     def enrich_alert(self, fingerprint: str, enrichments: dict):
         """
