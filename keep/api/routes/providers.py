@@ -73,9 +73,10 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
-    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
+    linked_providers = []
 
     if PROVIDER_DISTRIBUTION_ENABLED:
+        linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
         providers_distribution = get_provider_distribution(tenant_id)
 
         for provider in linked_providers + installed_providers:
