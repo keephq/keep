@@ -333,6 +333,43 @@ class PagerdutyProvider(BaseProvider):
             ),
             {},
         ).get("value", "unknown")
+
+        assignments = [
+            {
+                "id": x.get("assignee", {}).get("id"),
+                "assignee": x.get("assignee", {}).get("summary"),
+                "at": x.get("at"),
+            }
+            for x in data.get("assignments", [])
+        ]
+        last_status_change_by = data.get("last_status_change_by", {})
+        first_trigger_log_entry = data.get("first_trigger_log_entry", {})
+        escalation_policy = data.get("escalation_policy", {})
+        acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
+        conference_bridge = data.get("conference_bridge", {}).get("summary")
+        teams = [team.get("summary") for team in data.get("teams", [])]
+        description = data.get("description")
+        urgency = data.get("urgency")
+        priority = data.get("priority", {}).get("summary")
+        last_status_change = data.get("last_status_change_at")
+
+        # Additional metadata
+        metadata = {
+            "description": description,
+            "urgency": urgency,
+            "last_status_change": last_status_change,
+            "priority": priority,
+            "acknowledgers": acknowledgers,
+            "assignments": assignments,
+            "last_updated_by": last_status_change_by,
+            "first_trigger_log_entry": first_trigger_log_entry,
+            "conference_bridge": conference_bridge,
+            "teams": teams,
+            "impacted_services": service,
+            "escalation_policy": escalation_policy,
+        }
+
+
         return AlertDto(
             **data,
             url=url,
@@ -343,6 +380,7 @@ class PagerdutyProvider(BaseProvider):
             environment=environment,
             source=["pagerduty"],
             service=service,
+            labels=metadata,
         )
 
     def _notify(
