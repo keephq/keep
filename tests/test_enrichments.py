@@ -317,3 +317,78 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
     assert (
         hasattr(mock_alert_dto, "service") is False
     ), "Service should not match any entry"
+
+
+def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
+    # Setup a mapping rule with && condition in matchers
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name && severity"],
+        rows=[{"name": "Test Alert", "severity": "high", "service": "new_service"}],
+        disabled=False,
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case where alert matches both name and severity conditions
+    mock_alert_dto.name = "Test Alert"
+    mock_alert_dto.severity = "high"
+    matcher_exist = enrichment_bl._check_matcher(
+        mock_alert_dto, rule.rows[0], "name && severity"
+    )
+    assert matcher_exist
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "new_service"
+    del mock_alert_dto.service
+    # Test case where alert does not match both conditions
+    mock_alert_dto.name = "Other Alert"
+    mock_alert_dto.severity = "low"
+    result = enrichment_bl._check_matcher(
+        mock_alert_dto, rule.rows[0], "name && severity"
+    )
+    assert not hasattr(mock_alert_dto, "service")
+    assert result is False
+
+
+def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
+    # Setup a mapping rule with || condition in matchers
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        disabled=False,
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case where alert matches name condition
+    mock_alert_dto.name = "Test Alert"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "new_service"
+
+    # Test case where alert matches severity condition
+    mock_alert_dto.name = "Other Alert"
+    mock_alert_dto.severity = "high"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "high_severity_service"
+    del mock_alert_dto.service
+    # Test case where alert matches neither condition
+    mock_alert_dto.name = "Other Alert"
+    mock_alert_dto.severity = "low"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert not hasattr(mock_alert_dto, "service")
