@@ -1,6 +1,6 @@
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
-from datetime import datetime
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -9,6 +9,7 @@ class Tenant(SQLModel, table=True):
     # uuid
     id: str = Field(primary_key=True)
     name: str
+    search_mode: Field(default="INTERNAL")
     installations: List["TenantInstallation"] = Relationship(back_populates="tenant")
 
 

@@ -1640,3 +1640,9 @@ def update_action(
             session.commit()
             session.refresh(found_action)
     return found_action
+
+
+def get_tenant_search_mode(tenant_id: str) -> str:
+    with Session(engine) as session:
+        tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
+    return tenant.search_mode

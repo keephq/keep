@@ -103,6 +103,7 @@ def create_db_and_tables():
     """
     Creates the database and tables.
     """
+    return
     try:
         if not database_exists(engine.url):
             logger.info("Creating the database")

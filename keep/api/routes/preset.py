@@ -1,19 +1,19 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
-from keep.api.tasks.process_event_task import process_event
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
-from keep.searchengine.searchengine import SearchEngine
+from keep.api.tasks.process_event_task import process_event
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
+from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ static_presets = {
     ),
 }
 
+
 async def pull_alerts_from_providers(
     tenant_id: str,
 ) -> list[AlertDto]:
@@ -95,7 +96,7 @@ async def pull_alerts_from_providers(
         sorted_provider_alerts_by_fingerprint = (
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
-        for fingerprint, alert  in sorted_provider_alerts_by_fingerprint.items():
+        for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
             await process_event(
                 {},
                 tenant_id,
@@ -117,6 +118,7 @@ def get_presets(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
+    tenant_search_mode = authenticated_entity.tenant_search_mode
     logger.info("Getting all presets")
     # both global and private presets
     presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
@@ -128,7 +130,9 @@ def get_presets(
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset
-    search_engine = SearchEngine(tenant_id=tenant_id)
+    search_engine = SearchEngine(
+        tenant_id=tenant_id, tenant_search_mode=tenant_search_mode
+    )
     # get the preset metatada
     presets_dto = search_engine.search_preset_alerts(presets=presets_dto)
 
@@ -241,13 +245,10 @@ async def get_preset_alerts(
     preset_name: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[AlertDto]:
-    
+
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
-    bg_tasks.add_task(
-        pull_alerts_from_providers,
-        authenticated_entity.tenant_id
-    )
+    bg_tasks.add_task(pull_alerts_from_providers, authenticated_entity.tenant_id)
 
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting preset alerts", extra={"preset_name": preset_name})
