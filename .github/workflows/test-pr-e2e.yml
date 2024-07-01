@@ -16,13 +16,15 @@ env:
   POSTGRES_USER: keepuser
   POSTGRES_PASSWORD: keeppassword
   POSTGRES_DB: keepdb
+  # mssql environment variables
+  SA_PASSWORD: VeryStrongPassword1#
 
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        db_type: [mysql, postgres]
+        db_type: [mysql, postgres, mssql]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -80,6 +82,11 @@ jobs:
               echo "Waiting for Postgres to be ready..."
               sleep 2
             done
+          elif [ "${{ matrix.db_type }}" == "mssql" ]; then
+            until docker exec $(docker ps -qf "name=keep-database") /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P '${{ env.SA_PASSWORD }}' -Q "SELECT 1" > /dev/null 2>&1; do
+              echo "Waiting for SQL Server to be ready..."
+              sleep 2
+            done
           fi
 
           # wait to keep backend on port 8080
@@ -89,6 +96,7 @@ jobs:
           done
           # create the state directory
           # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
+
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
