@@ -81,10 +81,6 @@ class PagerdutyProvider(BaseProvider):
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "resolved": AlertStatus.RESOLVED,
     }
-    FIELDS = [
-        "acknowledgers", "assignees", "escalation_policies",
-        "first_trigger_log_entries", "priorities", "services", "teams", "users"
-    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -294,37 +290,20 @@ class PagerdutyProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     def _get_alerts(self) -> list[AlertDto]:
-        params = {
-            "sort_by": "created_at:desc",
-            "limit": 100,
-            "since": (datetime.datetime.now() - datetime.timedelta(days=100)).isoformat(),
-            "until": datetime.datetime.now().isoformat(),
-            "include[]": self.FIELDS,
-        }
-        incidents = []
-        
-        while len(incidents) < 1000:
-            request = requests.get(
-                "https://api.pagerduty.com/incidents",
-                headers={
-                    "Authorization": f"Token token={self.authentication_config.api_key}",
-                },
-                params=params,
-            )
-            if not request.ok:
-                self.logger.error("Failed to get alerts", extra=request.json())
-                raise Exception("Could not get alerts")
-
-            response = request.json()
-            new_incidents = response.get("incidents", [])
-            incidents.append(new_incidents)
-
-            if not response.get("more"):
-                break
-
-            params["offset"] = response.get("offset") + len(new_incidents)
-
-        return [self._format_alert({"event": {"data": incident}}) for incident in incidents]
+        request = requests.get(
+            "https://api.pagerduty.com/incidents",
+            headers={
+                "Authorization": f"Token token={self.authentication_config.api_key}",
+            },
+        )
+        if not request.ok:
+            self.logger.error("Failed to get alerts", extra=request.json())
+            raise Exception("Could not get alerts")
+        incidents = request.json().get("incidents", [])
+        incidents = [
+            self._format_alert({"event": {"data": incident}}) for incident in incidents
+        ]
+        return incidents
 
     @staticmethod
     def _format_alert(
