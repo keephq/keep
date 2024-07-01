@@ -207,10 +207,11 @@ class GrafanaProvider(BaseProvider):
             severity = GrafanaProvider.SEVERITIES_MAP.get(
                 labels.get("severity"), AlertSeverity.INFO
             )
-
+            service = alert.get("service", "unknown")
+            fingerprint = alert.get("fingerprint", alert.get("alertname", "") + service)
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
-                fingerprint=alert.get("fingerprint"),
+                fingerprint=fingerprint,
                 name=event.get("title"),
                 status=status,
                 severity=severity,

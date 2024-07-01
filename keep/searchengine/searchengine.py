@@ -39,26 +39,12 @@ class SearchEngine:
         alerts = get_last_alerts(
             tenant_id=self.tenant_id, limit=limit, timeframe=timeframe
         )
-        # deduplicate fingerprints
-        # shahar: this is backward compatibility for before we had milliseconds in the timestamp
-        #          note that we want to keep the order of the alerts
-        #          so we will keep the first alert and remove the rest
-        dedup_alerts = []
-        seen_fingerprints = set()
-        for alert in alerts:
-            if alert.fingerprint not in seen_fingerprints:
-                dedup_alerts.append(alert)
-                seen_fingerprints.add(alert.fingerprint)
-            # this shouldn't appear with time (after migrating to milliseconds in timestamp)
-            else:
-                self.logger.info("Skipping fingerprint", extra={"alert_id": alert.id})
-        alerts = dedup_alerts
         # convert the alerts to DTO
         alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
         self.logger.info("Finished getting last alerts")
         return alerts_dto
 
-    def _search_alerts_by_cel(
+    def search_alerts_by_cel(
         self,
         cel_query: str,
         alerts: list[AlertDto] = None,
@@ -126,7 +112,7 @@ class SearchEngine:
         self.logger.info("Searching alerts")
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
-            filtered_alerts = self._search_alerts_by_cel(
+            filtered_alerts = self.search_alerts_by_cel(
                 query.cel_query, limit=query.limit, timeframe=query.timeframe
             )
         # if elastic

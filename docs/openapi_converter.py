@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import typing as t
 import json
+
 Json = dict[str | t.Literal["anyOf", "type"], "Json"] | list["Json"] | str | bool
 
 
@@ -49,7 +50,9 @@ def convert_3_dot_1_to_3_dot_0(json: dict[str, Json]):
 
 if __name__ == "__main__":
 
-    parser = ArgumentParser(description="Script for converting openapi version 3.1.0 to 3.0.2")
+    parser = ArgumentParser(
+        description="Script for converting openapi version 3.1.0 to 3.0.2"
+    )
     parser.add_argument("-s", "--source", help="The path to openapi.json")
     parser.add_argument("-d", "--dest", help="The path to output")
 

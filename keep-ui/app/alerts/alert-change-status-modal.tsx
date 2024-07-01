@@ -1,6 +1,11 @@
 import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
-import Select, { CSSObjectWithLabel, ControlProps, OptionProps, GroupBase } from "react-select";
+import Select, {
+  CSSObjectWithLabel,
+  ControlProps,
+  OptionProps,
+  GroupBase,
+} from "react-select";
 import { useState } from "react";
 import { AlertDto, Status } from "./models";
 import { getApiURL } from "utils/apiUrl";
@@ -25,36 +30,58 @@ const statusIcons = {
 };
 
 const customSelectStyles = {
-    control: (base: CSSObjectWithLabel, state: ControlProps<{ value: Status; label: JSX.Element; }, false, GroupBase<{ value: Status; label: JSX.Element; }>>) => ({
-      ...base,
-      borderColor: state.isFocused ? 'orange' : base.borderColor,
-      boxShadow: state.isFocused ? '0 0 0 1px orange' : base.boxShadow,
-      '&:hover': {
-        borderColor: 'orange',
-      },
-    }),
-    option: (base: CSSObjectWithLabel, { isFocused }: OptionProps<{ value: Status; label: JSX.Element; }, false, GroupBase<{ value: Status; label: JSX.Element; }>>) => ({
-      ...base,
-      backgroundColor: isFocused ? 'rgba(255,165,0,0.1)' : base.backgroundColor,
-      '&:hover': {
-        backgroundColor: 'rgba(255,165,0,0.2)',
-      },
-    }),
-  };
-
+  control: (
+    base: CSSObjectWithLabel,
+    state: ControlProps<
+      { value: Status; label: JSX.Element },
+      false,
+      GroupBase<{ value: Status; label: JSX.Element }>
+    >
+  ) => ({
+    ...base,
+    borderColor: state.isFocused ? "orange" : base.borderColor,
+    boxShadow: state.isFocused ? "0 0 0 1px orange" : base.boxShadow,
+    "&:hover": {
+      borderColor: "orange",
+    },
+  }),
+  option: (
+    base: CSSObjectWithLabel,
+    {
+      isFocused,
+    }: OptionProps<
+      { value: Status; label: JSX.Element },
+      false,
+      GroupBase<{ value: Status; label: JSX.Element }>
+    >
+  ) => ({
+    ...base,
+    backgroundColor: isFocused ? "rgba(255,165,0,0.1)" : base.backgroundColor,
+    "&:hover": {
+      backgroundColor: "rgba(255,165,0,0.2)",
+    },
+  }),
+};
 
 interface Props {
   alert: AlertDto | null | undefined;
   handleClose: () => void;
+  presetName: string;
 }
 
-export default function AlertChangeStatusModal({ alert, handleClose }: Props) {
+export default function AlertChangeStatusModal({
+  alert,
+  handleClose,
+  presetName,
+}: Props) {
   const { data: session } = useSession();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
   const { useAllAlerts } = useAlerts();
-  const { mutate: alertsMutator } = useAllAlerts({ revalidateOnMount: false });
+  const { mutate: alertsMutator } = useAllAlerts(presetName, {
+    revalidateOnMount: false,
+  });
 
   if (!alert) return null;
 
@@ -70,17 +97,16 @@ export default function AlertChangeStatusModal({ alert, handleClose }: Props) {
       ),
     }));
 
-    const clearAndClose = () => {
-        setSelectedStatus(null);
-        handleClose();
-    };
+  const clearAndClose = () => {
+    setSelectedStatus(null);
+    handleClose();
+  };
 
   const handleChangeStatus = async () => {
     if (!selectedStatus) {
       toast.error("Please select a new status.");
       return;
     }
-
 
     try {
       const response = await fetch(`${getApiURL()}/alerts/enrich`, {
@@ -119,7 +145,9 @@ export default function AlertChangeStatusModal({ alert, handleClose }: Props) {
         <div className="flex-1">
           <Select
             options={statusOptions}
-            value={statusOptions.find((option) => option.value === selectedStatus)}
+            value={statusOptions.find(
+              (option) => option.value === selectedStatus
+            )}
             onChange={(option) => setSelectedStatus(option?.value || null)}
             placeholder="Select new status"
             className="ml-2"

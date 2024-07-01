@@ -33,6 +33,10 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+PROVIDER_DISTRIBUTION_ENABLED = config(
+    "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
+)
+
 
 def _is_localhost():
     # TODO - there are more "advanced" cases that we don't catch here
@@ -69,21 +73,23 @@ def get_providers(
         tenant_id, providers, include_details=True
     )
 
-    linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
+    linked_providers = []
 
-    providers_distribution = get_provider_distribution(tenant_id)
+    if PROVIDER_DISTRIBUTION_ENABLED:
+        linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
+        providers_distribution = get_provider_distribution(tenant_id)
 
-    for provider in linked_providers + installed_providers:
-        provider.alertsDistribution = providers_distribution.get(
-            f"{provider.id}_{provider.type}", {}
-        ).get("alert_last_24_hours", [])
-        last_alert_received = providers_distribution.get(
-            f"{provider.id}_{provider.type}", {}
-        ).get("last_alert_received", None)
-        if last_alert_received and not provider.last_alert_received:
-            provider.last_alert_received = last_alert_received.replace(
-                tzinfo=datetime.timezone.utc
-            ).isoformat()
+        for provider in linked_providers + installed_providers:
+            provider.alertsDistribution = providers_distribution.get(
+                f"{provider.id}_{provider.type}", {}
+            ).get("alert_last_24_hours", [])
+            last_alert_received = providers_distribution.get(
+                f"{provider.id}_{provider.type}", {}
+            ).get("last_alert_received", None)
+            if last_alert_received and not provider.last_alert_received:
+                provider.last_alert_received = last_alert_received.replace(
+                    tzinfo=datetime.timezone.utc
+                ).isoformat()
 
     is_localhost = _is_localhost()
 

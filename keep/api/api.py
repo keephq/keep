@@ -23,6 +23,7 @@ from keep.api.core.db import get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
+    actions,
     alerts,
     dashboard,
     extraction,
@@ -155,6 +156,7 @@ def get_app(
     # app.add_middleware(GZipMiddleware)
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
+    app.include_router(actions.router, prefix="/actions", tags=["actions"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])

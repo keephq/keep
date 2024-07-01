@@ -15,7 +15,7 @@ from keep.providers.providers_factory import ProvidersFactory
 
 
 @pydantic.dataclasses.dataclass
-class OncallProviderAuthConfig:
+class GrafanaOncallProviderAuthConfig:
     """
     Grafana authentication configuration.
     """
@@ -36,7 +36,7 @@ class OncallProviderAuthConfig:
     )
 
 
-class OncallProvider(BaseProvider):
+class GrafanaOncallProvider(BaseProvider):
     """
     Create incidents with Grafana On-Call.
     """
@@ -62,7 +62,7 @@ class OncallProvider(BaseProvider):
         Validates required configuration for Grafana provider.
 
         """
-        self.authentication_config = OncallProviderAuthConfig(
+        self.authentication_config = GrafanaOncallProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     config = {
         "authentication": {"host": host, "token": token},
     }
-    provider: OncallProvider = ProvidersFactory.get_provider(
+    provider: GrafanaOncallProvider = ProvidersFactory.get_provider(
         context_manager,
         provider_id="grafana-oncall-keephq",
         provider_type="oncall",
