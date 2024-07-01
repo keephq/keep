@@ -274,9 +274,12 @@ class WorkflowManager:
                         f"Provider {provider} is a premium provider. You can self-host or contact us to get access to it."
                     )
 
-    def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
+    def _run_workflow(
+        self, workflow: Workflow, workflow_execution_id: str, test_run=False
+    ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         errors = []
+        results = {}
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
@@ -297,16 +300,41 @@ class WorkflowManager:
                 workflow.on_failure.run()
             raise
         finally:
-            # todo - state should be saved in db
-            workflow.context_manager.dump()
+            if not test_run:
+                workflow.context_manager.dump()
 
-        self._save_workflow_results(workflow, workflow_execution_id)
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
-        return errors
+        if test_run:
+            results = self._get_workflow_results(workflow)
+        else:
+            self._save_workflow_results(workflow, workflow_execution_id)
+
+        return [errors, results]
+
+    def _get_workflow_results(self, workflow: Workflow):
+        """
+        Get the results of the workflow from the DB.
+
+        Args:
+            workflow (Workflow): The workflow to get the results for.
+
+        Returns:
+            dict: The results of the workflow.
+        """
+        print("workflowssssss", workflow.workflow_actions)
+        print(workflow.workflow_steps)
+        workflow_results = {
+            action.name: action.provider.results for action in workflow.workflow_actions
+        }
+        if workflow.workflow_steps:
+            workflow_results.update(
+                {step.name: step.provider.results for step in workflow.workflow_steps}
+            )
+        return workflow_results
 
     def _save_workflow_results(self, workflow: Workflow, workflow_execution_id: str):
         """
@@ -343,7 +371,7 @@ class WorkflowManager:
         for workflow in workflows:
             try:
                 random_workflow_id = str(uuid.uuid4())
-                errors = self._run_workflow(
+                errors, _ = self._run_workflow(
                     workflow, workflow_execution_id=random_workflow_id
                 )
                 workflows_errors.append(errors)

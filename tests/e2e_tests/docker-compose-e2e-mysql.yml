@@ -19,13 +19,13 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-frontend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    build:
+      context: ./keep-ui
+      dockerfile: ../docker/Dockerfile.ui
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
-    volumes:
-      - ./state:/state
     depends_on:
       - keep-backend
 
@@ -34,14 +34,13 @@ services:
       file: docker-compose.common.yml
       service: keep-backend-common
     build:
-      dockerfile: docker/Dockerfile.dev.api
+      context: .
+      dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
-    volumes:
-      - .:/app
-      - ./state:/state
+      - SECRET_MANAGER_DIRECTORY=/app
     depends_on:
       keep-database:
         condition: service_healthy

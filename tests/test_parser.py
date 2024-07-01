@@ -1,6 +1,8 @@
 # here we are going to create all needed tests for the parser.py parse function
+import uuid
 import builtins
 import json
+import time
 from pathlib import Path
 
 import pytest
@@ -10,11 +12,12 @@ from fastapi import HTTPException
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.contextmanager.contextmanager import ContextManager
-from keep.parser.parser import Parser
+from keep.parser.parser import Parser, ParserUtils
 from keep.providers.mock_provider.mock_provider import MockProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.step.step import Step
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.models.db.action import Action
 
 
 def test_parse_with_nonexistent_file(db_session):
@@ -293,3 +296,125 @@ class TestParseAlert:
         # ASSERT
         assert provider.provider_id == expected_provider.provider_id
         assert provider.provider_type == expected_provider.provider_id
+
+
+## Test Case for reusable actions
+path_to_test_reusable_resources = Path(__file__).parent / "workflows"
+reusable_workflow_path = str(path_to_test_resources / "reusable_alert_for_testing.yml")
+reusable_workflow_with_action_path = str(path_to_test_resources / "reusable_alert_with_actions_for_testing.yml")
+reusable_providers_path = str(path_to_test_resources / "providers_for_testing.yaml")
+reusable_actions_path = str(path_to_test_resources / "reusable_actions_for_testing.yml")
+
+
+class TestReusableActionWithWorkflow:
+
+    def test_if_action_is_expanded(self, db_session):
+        workflow_store = WorkflowStore()
+        workflows = workflow_store.get_workflows_from_path(
+            tenant_id=SINGLE_TENANT_UUID,
+            workflow_path=reusable_workflow_path,
+            providers_file=reusable_providers_path,
+            actions_file=reusable_actions_path,
+        )
+
+        # parser should pass sanity check
+        assert workflows is not None
+
+        for workflow in workflows:
+            actions = workflow.context_manager.actions_context
+            assert len(actions) > 0
+            for action_key, action_data in actions.items():
+                assert "provider" in action_data
+
+            assert (
+                actions.get("@trigger-slack2", {}).get("provider", {}).get("type")
+                == "slack"
+            )
+
+    def test_load_actions_config(self, db_session):
+        parser = Parser()
+
+        # load master workflow configuration
+        workflow = {}
+        with open(reusable_workflow_path, "r") as wfd:
+            workflow_configuration = yaml.safe_load(wfd)
+
+        # Case 1: check if only one action is loaded from reusable_actions_path
+        context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+        workflow = workflow_configuration.get("workflow") or workflow_configuration.get(
+            "alert"
+        )
+        parser._load_actions_config(
+            SINGLE_TENANT_UUID,
+            context_manager,
+            workflow=workflow,
+            actions_file=reusable_actions_path,
+            workflow_actions=None,
+        )
+        assert len(context_manager.actions_context) == 1
+
+        # Case 2: check if actions are also loaded from master_file
+        workflow = {}
+        with open(reusable_workflow_with_action_path, "r") as wfd:
+            workflow_configuration = yaml.safe_load(wfd)
+        context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+        workflow = workflow_configuration.get("workflow") or workflow_configuration.get(
+            "alert"
+        )
+        workflow_actions = workflow_configuration.get("actions")
+        parser._load_actions_config(
+            SINGLE_TENANT_UUID,
+            context_manager,
+            workflow=workflow,
+            actions_file=reusable_actions_path,
+            workflow_actions=workflow_actions,
+        )
+        assert len(context_manager.actions_context) == 2
+
+        # Case 3: check if actions are also loaded from database
+        context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+        workflow_action = workflow_actions[0]
+        action = Action(
+            id=str(uuid.uuid4()),
+            tenant_id=SINGLE_TENANT_UUID,
+            use="@trigger-slack",
+            name="trigger-slack",
+            description="None",
+            action_raw=yaml.dump(workflow_action),
+            installed_by="pytest",
+            installation_time=time.time(),
+        )
+        db_session.add(action)
+        db_session.commit()
+        parser._load_actions_config(
+            SINGLE_TENANT_UUID,
+            context_manager,
+            workflow=workflow,
+            actions_file=None,
+            workflow_actions=None,
+        )
+        assert len(context_manager.actions_context) == 1
+
+
+class TestParserUtils:
+    
+    def test_deep_merge_dict(self):
+        """Dictionary: if the merge combines recursively and prioritize values of source"""
+        source = {"1": {"s11": "s11", "s12": "s12"}, "2": {"s21": "s21"}}
+        dest = {"1": {"s11": "d11", "d11": "d11", "d12": "d12"}, "3": {"d31": "d31"}}
+        expected_results = {
+            "1": {"s11": "s11", "s12": "s12", "d11": "d11", "d12": "d12"},
+            "2": {"s21": "s21"},
+            "3": {"d31": "d31"}
+        }
+        results = ParserUtils.deep_merge(source, dest)
+        assert expected_results == results
+
+    def test_deep_merge_list(self):
+        """List: if the merge combines recursively and prioritize values of source"""
+        source           = {"data": [{"s1": "s1"}, {"s2": "s2"}]}
+        dest             = {"data": [{"d1": "d1"}, {"d2": "d2"}, {"d3": "d3"}]}
+        expected_results = {"data": [{"s1": "s1", "d1": "d1"}, {"s2": "s2", "d2": "d2"}, {"d3": "d3"}]}
+
+        results = ParserUtils.deep_merge(source, dest)
+        assert expected_results == results
