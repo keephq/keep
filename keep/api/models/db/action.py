@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -13,12 +13,14 @@ class Action(SQLModel, table=True):
         default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
     )
     tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
-    use: str
-    name: str
-    description: Optional[str]
+    use: str = Field(max_length=255, nullable=False)
+    name: str = Field(max_length=255, nullable=False)
+    description: Optional[str] = Field(max_length=2048)
     action_raw: str = Field(sa_column=Column(TEXT))
-    installed_by: str
-    installation_time: datetime
+    installed_by: str = Field(max_length=255, nullable=False)
+    installation_time: datetime = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc)
+    )
 
     class Config:
         orm_mode = True
