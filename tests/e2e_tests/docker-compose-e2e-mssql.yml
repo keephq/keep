@@ -1,13 +1,25 @@
-
 services:
   keep-database:
-      image: mcr.microsoft.com/mssql/server:2017-latest
-      environment:
-        - ACCEPT_EULA=Y
-        - MSSQL_SA_PASSWORD=VeryStrongPassword1#
-      ports:
-        - "1433:1433"
-
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=VeryStrongPassword1#
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/mssql-tools/bin/sqlcmd",
+          "-U",
+          "sa",
+          "-P",
+          "VeryStrongPassword1#",
+          "-Q",
+          "SELECT 1",
+        ]
+      interval: 10s
+      retries: 10
   keep-frontend:
     extends:
       file: docker-compose.common.yml
