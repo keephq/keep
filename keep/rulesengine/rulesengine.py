@@ -8,7 +8,6 @@ import chevron
 
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
 from keep.api.core.db import create_alert as create_alert_db
-from keep.api.core.db import get_alerts_by_cel_sql
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.group import GroupDto
@@ -352,18 +351,6 @@ class RulesEngine:
         )
 
         return modified_expression
-
-    @staticmethod
-    def filter_alerts_cel_sql(tenant_id: str, cel_sql: str):
-        sql_where = cel_sql.get("sql")
-        if not sql_where:
-            return []
-        for param_key, param_value in cel_sql.get("params", {}).items():
-            sql_where = sql_where.replace(f":{param_key}", f"'{param_value}'")
-        filtered_alerts = get_alerts_by_cel_sql(
-            tenant_id=tenant_id, cel_sql_where_query=sql_where
-        )
-        return filtered_alerts
 
     @staticmethod
     def filter_alerts(alerts: list[AlertDto], cel: str):

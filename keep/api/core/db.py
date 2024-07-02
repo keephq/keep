@@ -8,7 +8,6 @@ import hashlib
 import json
 import logging
 import random
-import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
@@ -791,56 +790,6 @@ def __get_mysql_wrapped_subquery_for_filtering(
         .subquery()
     )
     return wrapped_subquery
-
-
-def get_alerts_by_cel_sql(tenant_id, cel_sql_where_query) -> list[Alert]:
-    # This doesn't work perfectly, refine it?
-    field_pattern = r"\b([\w\.]+)\s*(?=\s*(?:like|in|between|!=|=|>|<))"
-    fields = set(re.findall(field_pattern, cel_sql_where_query, re.IGNORECASE))
-
-    cel_sql_where_query_alerts = cel_sql_where_query
-    cel_sql_where_query_enrichments = cel_sql_where_query
-    for field in fields:
-        escaped_field = field.replace(".", "_")
-        cel_sql_where_query_alerts = cel_sql_where_query_alerts.replace(
-            field, f"alert_{escaped_field}"
-        )
-        cel_sql_where_query_enrichments = cel_sql_where_query_enrichments.replace(
-            field, f"enrichment_{escaped_field}"
-        )
-
-    with Session(engine) as session:
-        if session.bind.dialect.name == "mysql":
-            wrapped_subquery = __get_mysql_wrapped_subquery_for_filtering(
-                fields,
-                cel_sql_where_query_alerts,
-                cel_sql_where_query_enrichments,
-            )
-        elif session.bind.dialect.name == "sqlite":
-            wrapped_subquery = __get_sqlite_wrapped_subquery_for_filtering(
-                fields, cel_sql_where_query_alerts, cel_sql_where_query_enrichments
-            )
-        elif session.bind.dialect.name == "mssql":
-            wrapped_subquery = __get_mssql_wrapped_subquery_for_filtering(
-                fields, cel_sql_where_query_alerts, cel_sql_where_query_enrichments
-            )
-        else:
-            return []
-        query = (
-            session.query(Alert)
-            .join(
-                wrapped_subquery,
-                and_(
-                    Alert.fingerprint == wrapped_subquery.c.fp,
-                    Alert.timestamp == wrapped_subquery.c.max_t,
-                    Alert.tenant_id == tenant_id,
-                ),
-            )
-            .options(subqueryload(Alert.alert_enrichment))
-        )
-        alerts = query.all()
-
-    return alerts
 
 
 def get_alerts_with_filters(
