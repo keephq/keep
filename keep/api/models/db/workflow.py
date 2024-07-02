@@ -1,16 +1,16 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT, String
+from sqlalchemy import TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 class Workflow(SQLModel, table=True):
-    id: str = Field(default=None, primary_key=True, max_length=36)
-    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
-    name: str = Field(max_length=1024)
+    id: str = Field(default=None, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+    name: str = Field(sa_column=Column(TEXT))
     description: Optional[str]
-    created_by: str = Field(max_length=1024)
+    created_by: str = Field(sa_column=Column(TEXT))
     updated_by: Optional[str] = None
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     interval: Optional[int]
@@ -28,19 +28,19 @@ class WorkflowExecution(SQLModel, table=True):
         UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
     )
 
-    id: str = Field(default=None, primary_key=True, max_length=36)
-    workflow_id: str = Field(foreign_key="workflow.id", max_length=36)
-    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
+    id: str = Field(default=None, primary_key=True)
+    workflow_id: str = Field(foreign_key="workflow.id")
+    tenant_id: str = Field(foreign_key="tenant.id")
     started: datetime = Field(default_factory=datetime.utcnow)
-    triggered_by: str = Field(max_length=1024)
-    status: str = Field(max_length=1024)
+    triggered_by: str = Field(sa_column=Column(TEXT))
+    status: str = Field(sa_column=Column(TEXT))
     is_running: int = Field(default=1)
     timeslot: int = Field(
         default_factory=lambda: int(datetime.utcnow().timestamp() / 120)
     )
     execution_number: int
     logs: Optional[str]
-    error: Optional[str] = Field(max_length=8000)
+    error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
     results: dict = Field(sa_column=Column(JSON), default={})
 
@@ -60,11 +60,9 @@ class WorkflowToAlertExecution(SQLModel, table=True):
 
     # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
     id: Optional[int] = Field(primary_key=True, default=None)
-    workflow_execution_id: str = Field(
-        foreign_key="workflowexecution.id", max_length=36
-    )
-    alert_fingerprint: str = Field(max_length=256)
-    event_id: str | None = Field(max_length=256, nullable=True)
+    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
+    alert_fingerprint: str
+    event_id: str | None
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
     )
@@ -72,11 +70,9 @@ class WorkflowToAlertExecution(SQLModel, table=True):
 
 class WorkflowExecutionLog(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
-    workflow_execution_id: str = Field(
-        foreign_key="workflowexecution.id", max_length=36
-    )
+    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     timestamp: datetime
-    message: str = Field(sa_column=String(length=10240))
+    message: str = Field(sa_column=Column(TEXT))
     workflowexecution: Optional[WorkflowExecution] = Relationship(back_populates="logs")
     context: dict = Field(sa_column=Column(JSON))
 

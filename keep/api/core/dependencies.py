@@ -311,7 +311,6 @@ class AuthVerifierSingleTenant:
         if not tenant_api_key:
             raise HTTPException(status_code=401, detail="Invalid API Key")
         else:
-            """
             logger.debug("Updating API Key last used")
             try:
                 update_key_last_used(
@@ -321,8 +320,6 @@ class AuthVerifierSingleTenant:
                 logger.exception("Failed to update API Key last used")
                 pass
             logger.debug("Successfully updated API Key last used")
-            """
-            pass
 
         role = get_role_by_role_name(tenant_api_key.role)
         # validate scopes

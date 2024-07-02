@@ -17,16 +17,15 @@ class StaticPresetsId(enum.Enum):
 class Preset(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("tenant_id", "name"),)
     # Unique ID for each preset
-    id: str = Field(
-        default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
-    )
-    tenant_id: str = Field(foreign_key="tenant.id", index=True, max_length=36)
-    name: str = Field(unique=True, max_length=256)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
 
     # keeping index=True for better search
-    created_by: Optional[str] = Field(index=True, nullable=False, max_length=255)
+    created_by: Optional[str] = Field(index=True, nullable=False)
     is_private: Optional[bool] = Field(default=False)
     is_noisy: Optional[bool] = Field(default=False)
+    name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
 
 
