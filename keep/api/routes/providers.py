@@ -368,7 +368,14 @@ def validate_scopes(
     provider: BaseProvider, validate_mandatory=True
 ) -> dict[str, bool | str]:
     logger.info("Validating provider scopes")
-    validated_scopes = provider.validate_scopes()
+    try:
+        validated_scopes = provider.validate_scopes()
+    except Exception as e:
+        logger.exception("Failed to validate provider scopes")
+        raise HTTPException(
+            status_code=412,
+            detail=str(e),
+        )
     if validate_mandatory:
         mandatory_scopes_validated = True
         if provider.PROVIDER_SCOPES and validated_scopes:
