@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel
+from sqlalchemy import DateTime
 from sqlalchemy.sql import func
 from sqlmodel import Column, Field, SQLModel
 
@@ -15,7 +16,12 @@ class ExtractionRule(SQLModel, table=True):
     created_by: Optional[str] = Field(max_length=255)
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     updated_by: Optional[str] = Field(max_length=255)
-    updated_at: Optional[datetime] = Column(name="updated_at", onupdate=func.now())
+    updated_at: Optional[datetime] = Field(
+        sa_column=Column(
+            DateTime(timezone=True), name="updated_at",
+            onupdate=func.now(), server_default=func.now()
+        )
+    )
     disabled: bool = Field(default=False)
     pre: bool = Field(default=False)
     condition: Optional[str] = Field(max_length=2000)  # cel
