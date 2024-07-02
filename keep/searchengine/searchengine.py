@@ -2,9 +2,9 @@ import enum
 import logging
 
 from keep.api.core.db import get_last_alerts
-from keep.api.core.db import get_tenant_search_mode as get_tenant_search_mode_db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -26,6 +26,7 @@ class SearchEngine:
         self.logger = logging.getLogger(__name__)
         self.rule_engine = RulesEngine(tenant_id=self.tenant_id)
         self.elastic_client = ElasticClient()
+        self.tenant_configuration = TenantConfiguration()
         # this is backward compatibility for single/noauth tenants
         if tenant_id == SINGLE_TENANT_UUID:
             self.search_mode = (
@@ -36,7 +37,8 @@ class SearchEngine:
         # for multi-tenant deployment, get the per-tenant search configuration:
         else:
             self.search_mode = (
-                get_tenant_search_mode_db(tenant_id) or SearchMode.INTERNAL
+                self.tenant_configuration.get_configuration(tenant_id, "search_mode")
+                or SearchMode.INTERNAL
             )
 
     def _get_last_alerts(self, limit=1000, timeframe: int = 0) -> list[AlertDto]:

@@ -96,13 +96,6 @@ class ElasticClient:
                 else:
                     nested_alert[key] = value
 
-            """
-            # Shahar: this cause events to be with A LOT of fields. Needs a better solution.
-            # Shahar: since ES does not return None's, we will add them manually:
-            for field in fields:
-                if field not in nested_alert:
-                    nested_alert[field] = None
-            """
             # finally, build the dto
             alert_dtos.append(AlertDto(**nested_alert))
 
