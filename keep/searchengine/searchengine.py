@@ -40,6 +40,10 @@ class SearchEngine:
                 self.tenant_configuration.get_configuration(tenant_id, "search_mode")
                 or SearchMode.INTERNAL
             )
+        self.logger.info(
+            "Initialized search engine",
+            extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
+        )
 
     def _get_last_alerts(self, limit=1000, timeframe: int = 0) -> list[AlertDto]:
         """Get the last alerts

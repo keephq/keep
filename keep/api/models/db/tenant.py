@@ -2,14 +2,14 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
 class Tenant(SQLModel, table=True):
     # uuid
     id: str = Field(primary_key=True)
     name: str
-    search_mode: Field(default="INTERNAL")
+    configuration: dict = Field(sa_column=Column(JSON))
     installations: List["TenantInstallation"] = Relationship(back_populates="tenant")
 
 

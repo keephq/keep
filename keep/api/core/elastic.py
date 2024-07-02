@@ -133,7 +133,7 @@ class ElasticClient:
 
     def search_alerts(self, tenant_id: str, query: str, limit: int) -> list[AlertDto]:
         if not self.enabled:
-            return
+            return []
 
         try:
             # Shahar: due to limitation in Elasticsearch array fields, we translate the SQL to DSL

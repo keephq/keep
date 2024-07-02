@@ -1642,13 +1642,17 @@ def update_action(
     return found_action
 
 
-def get_tenant_search_mode(tenant_id: str) -> str:
-    with Session(engine) as session:
-        tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
-    return tenant.search_mode
-
-
 def get_tenants_configurations() -> List[Tenant]:
     with Session(engine) as session:
-        tenants = session.exec(select(Tenant)).all()
+        try:
+            tenants = session.exec(select(Tenant)).all()
+        # except column configuration does not exist (new column added)
+        except NoSuchColumnError:
+            logger.warning("Column configuration does not exist in the database")
+            # add the column
+            session.execute("ALTER TABLE tenant ADD COLUMN configuration JSON")
+            session.commit()
+            # re-run the query
+            tenants = session.exec(select(Tenant)).all()
+
     return tenants

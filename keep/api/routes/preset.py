@@ -118,7 +118,6 @@ def get_presets(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
-    tenant_search_mode = authenticated_entity.tenant_search_mode
     logger.info("Getting all presets")
     # both global and private presets
     presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
@@ -130,9 +129,7 @@ def get_presets(
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset
-    search_engine = SearchEngine(
-        tenant_id=tenant_id, tenant_search_mode=tenant_search_mode
-    )
+    search_engine = SearchEngine(tenant_id=tenant_id)
     # get the preset metatada
     presets_dto = search_engine.search_preset_alerts(presets=presets_dto)
 

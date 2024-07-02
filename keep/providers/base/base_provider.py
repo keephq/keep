@@ -20,7 +20,6 @@ import requests
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.db import get_enrichments
-from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
@@ -73,7 +72,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.results = []
         # tb: we can have this overriden by customer configuration, when initializing the provider
         self.fingerprint_fields = self.FINGERPRINT_FIELDS
-        self.elastic_client = ElasticClient()
 
     def _extract_type(self):
         """

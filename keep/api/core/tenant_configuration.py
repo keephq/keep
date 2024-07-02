@@ -9,8 +9,8 @@ class TenantConfiguration:
     class _TenantConfiguration:
         def __init__(self):
             # Load all tenant configurations into memory
-            self.configurations = self._load_tenant_configurations()
             self.logger = logging.getLogger(__name__)
+            self.configurations = self._load_tenant_configurations()
 
         def _load_tenant_configurations(self):
             self.logger.info("Loading tenants configurations")
@@ -31,6 +31,9 @@ class TenantConfiguration:
                 raise ValueError(f"Tenant {tenant_id} not found")
 
             return tenant_config.get(config_name, None)
+
+    def get_configuration(self, tenant_id, config_name):
+        return self._instance.get_configuration(tenant_id, config_name)
 
     def __new__(cls):
         if not cls._instance:
