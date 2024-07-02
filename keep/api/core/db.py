@@ -958,7 +958,7 @@ def get_last_alerts(
                 .group_by(Alert.fingerprint)
                 .order_by(func.max(Alert.timestamp).desc())
                 .limit(limit)
-                .with_hint("WITH (NOLOCK)", "mssql")
+                .with_hint(text("WITH (NOLOCK)"), "mssql")
                 .subquery()
             )
         else:
@@ -1002,7 +1002,7 @@ def get_last_alerts(
                     ),
                 )
                 .options(subqueryload(Alert.alert_enrichment))
-                .with_hint("WITH (NOLOCK)", "mssql")
+                .with_hint(text("WITH (NOLOCK)"), "mssql")
             )
         else:
             query = (
