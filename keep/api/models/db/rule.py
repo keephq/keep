@@ -1,5 +1,5 @@
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -15,8 +15,10 @@ from sqlmodel import JSON, Column, Field, SQLModel
 # 3. action - currently support create alert, down the road should support workflows
 # 4. timeframe - should be per definition group
 class Rule(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
+    )
+    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
     name: str
     definition: dict = Field(sa_column=Column(JSON))  # sql / params
     definition_cel: str  # cel

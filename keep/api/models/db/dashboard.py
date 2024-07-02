@@ -7,13 +7,17 @@ from sqlmodel import Column, Field, SQLModel
 
 
 class Dashboard(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    dashboard_name: str = Field(index=True)  # Index for faster uniqueness checks
+    id: str = Field(
+        default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
+    )
+    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
+    dashboard_name: str = Field(
+        index=True, max_length=255
+    )  # Index for faster uniqueness checks
     dashboard_config: dict = Field(sa_column=Column(JSON))
-    created_by: str = Field(default=None)
+    created_by: str = Field(default=None, max_length=255)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_by: str = Field(default=None)
+    updated_by: str = Field(default=None, max_length=255)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = Field(default=True)
     is_private: bool = Field(default=False)

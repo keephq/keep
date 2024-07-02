@@ -16,7 +16,7 @@ from uuid import uuid4
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, update
+from sqlalchemy import and_, column, desc, func, null, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
@@ -703,6 +703,95 @@ def get_enrichment_with_session(session, tenant_id, fingerprint):
     return alert_enrichment
 
 
+def __get_sqlite_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    pass
+
+
+def __get_mssql_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    alert_fields = ", ".join(
+        f"alert_{field.replace('.', '_')} NVARCHAR(MAX) '$.{field}'" for field in fields
+    )
+    enrichment_fields = ", ".join(
+        f"enrichment_{field.replace('.', '_')} NVARCHAR(MAX) '$.{field}'"
+        for field in fields
+    )
+    subquery = text(
+        f"""
+    (SELECT subq1.fingerprint as fp, MAX(subq1.timestamp) as max_t FROM (
+        SELECT a.tenant_id, a.fingerprint, a.timestamp, ca.*, ae.enrichments
+        FROM alert as a
+        LEFT JOIN alertenrichment ae
+        ON a.fingerprint = ae.alert_fingerprint
+        CROSS APPLY OPENJSON(a.event)
+        WITH ({alert_fields}) ca
+    ) as subq1
+    OUTER APPLY OPENJSON(subq1.enrichments)
+    WITH ({enrichment_fields})
+    WHERE (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
+    GROUP BY subq1.fingerprint) as subq
+"""
+    )
+    wrapped_subquery = (
+        select(
+            [
+                column("fp").label("fp"),  # Ensure columns are labeled
+                column("max_t").label("max_t"),
+            ]
+        )
+        .select_from(subquery)
+        .subquery()
+    )
+    return wrapped_subquery
+
+
+def __get_mysql_wrapped_subquery_for_filtering(
+    fields,
+    cel_sql_where_query_alerts,
+    cel_sql_where_query_enrichments,
+):
+    alert_fields = ", ".join(
+        f"alert_{field} VARCHAR(1024) PATH '$.{field}'" for field in fields
+    )
+    enrichment_fields = ", ".join(
+        f"enrichment_{field} VARCHAR(1024) PATH '$.{field}'" for field in fields
+    )
+    subquery = text(
+        f"""
+    (SELECT a.fingerprint as fp, MAX(a.timestamp) as max_t
+    FROM alert as a
+    LEFT JOIN alertenrichment ae
+    ON a.fingerprint = ae.alert_fingerprint,
+    JSON_TABLE(a.event, '$' COLUMNS(
+        {alert_fields}
+    )) AS alerts,
+    JSON_TABLE(ae.enrichments, '$' COLUMNS(
+        {enrichment_fields}
+    )) AS enrichments
+    WHERE (({cel_sql_where_query_alerts}) OR ({cel_sql_where_query_enrichments}))
+    GROUP BY a.fingerprint) as subq
+"""
+    )
+    wrapped_subquery = (
+        select(
+            [
+                column("fp").label("fp"),  # Ensure columns are labeled
+                column("max_t").label("max_t"),
+            ]
+        )
+        .select_from(subquery)
+        .subquery()
+    )
+    return wrapped_subquery
+
+
 def get_alerts_with_filters(
     tenant_id, provider_id=None, filters=None, time_delta=1
 ) -> list[Alert]:
@@ -729,10 +818,11 @@ def get_alerts_with_filters(
         if filters:
             for f in filters:
                 filter_key, filter_value = f.get("key"), f.get("value")
+                filter_path = f"$.{filter_key}"
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
-                    if session.bind.dialect.name in ["mysql", "postgresql"]:
+                    if session.bind.dialect.name in ["mysql", "postgresql", "mssql"]:
                         query = query.filter(
                             func.json_extract(
                                 AlertEnrichment.enrichments, f"$.{filter_key}"
@@ -751,16 +841,19 @@ def get_alerts_with_filters(
                         query = query.filter(
                             func.json_unquote(
                                 func.json_extract(
-                                    AlertEnrichment.enrichments, f"$.{filter_key}"
+                                    AlertEnrichment.enrichments, filter_path
                                 )
                             )
                             == filter_value
                         )
+                    elif session.bind.dialect.name == "mssql":
+                        query = query.filter(
+                            func.JSON_VALUE(AlertEnrichment.enrichments, filter_path)
+                            == str(filter_value)
+                        )
                     elif session.bind.dialect.name == "sqlite":
                         query = query.filter(
-                            func.json_extract(
-                                AlertEnrichment.enrichments, f"$.{filter_key}"
-                            )
+                            func.json_extract(AlertEnrichment.enrichments, filter_path)
                             == filter_value
                         )
                     else:
@@ -799,18 +892,37 @@ def get_last_alerts(
     """
     with Session(engine) as session:
         # Subquery that selects the max and min timestamp for each fingerprint.
-        subquery = (
-            session.query(
-                Alert.fingerprint,
-                func.max(Alert.timestamp).label("max_timestamp"),
-                func.min(Alert.timestamp).label(
-                    "min_timestamp"
-                ),  # Include minimum timestamp
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+            subquery = (
+                session.query(
+                    Alert.fingerprint,
+                    func.max(Alert.timestamp).label("max_timestamp"),
+                    func.min(Alert.timestamp).label(
+                        "min_timestamp"
+                    ),  # Include minimum timestamp
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .group_by(Alert.fingerprint)
+                .order_by(func.max(Alert.timestamp).desc())
+                .limit(limit)
+                .with_hint(text("WITH (NOLOCK)"), "mssql")
+                .subquery()
             )
-            .filter(Alert.tenant_id == tenant_id)
-            .group_by(Alert.fingerprint)
-            .subquery()
-        )
+        else:
+            subquery = (
+                session.query(
+                    Alert.fingerprint,
+                    func.max(Alert.timestamp).label("max_timestamp"),
+                    func.min(Alert.timestamp).label(
+                        "min_timestamp"
+                    ),  # Include minimum timestamp
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .group_by(Alert.fingerprint)
+                .subquery()
+            )
         # if timeframe is provided, filter the alerts by the timeframe
         if timeframe:
             subquery = (
@@ -822,23 +934,43 @@ def get_last_alerts(
                 .subquery()
             )
         # Main query joins the subquery to select alerts with their first and last occurrence.
-        query = (
-            session.query(
-                Alert,
-                subquery.c.min_timestamp.label(
-                    "startedAt"
-                ),  # Include "startedAt" in the selected columns
+        if session.bind.dialect.name == "mssql":
+            query = (
+                session.query(
+                    Alert,
+                    subquery.c.min_timestamp.label(
+                        "startedAt"
+                    ),  # Include "startedAt" in the selected columns
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .join(
+                    subquery,
+                    and_(
+                        Alert.fingerprint == subquery.c.fingerprint,
+                        Alert.timestamp == subquery.c.max_timestamp,
+                    ),
+                )
+                .options(subqueryload(Alert.alert_enrichment))
+                .with_hint(text("WITH (NOLOCK)"), "mssql")
             )
-            .filter(Alert.tenant_id == tenant_id)
-            .join(
-                subquery,
-                and_(
-                    Alert.fingerprint == subquery.c.fingerprint,
-                    Alert.timestamp == subquery.c.max_timestamp,
-                ),
+        else:
+            query = (
+                session.query(
+                    Alert,
+                    subquery.c.min_timestamp.label(
+                        "startedAt"
+                    ),  # Include "startedAt" in the selected columns
+                )
+                .filter(Alert.tenant_id == tenant_id)
+                .join(
+                    subquery,
+                    and_(
+                        Alert.fingerprint == subquery.c.fingerprint,
+                        Alert.timestamp == subquery.c.max_timestamp,
+                    ),
+                )
+                .options(subqueryload(Alert.alert_enrichment))
             )
-            .options(subqueryload(Alert.alert_enrichment))
-        )
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
@@ -930,6 +1062,9 @@ def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert
 
 def get_api_key(api_key: str) -> TenantApiKey:
     with Session(engine) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         api_key_hashed = hashlib.sha256(api_key.encode()).hexdigest()
         statement = select(TenantApiKey).where(TenantApiKey.key_hash == api_key_hashed)
         tenant_api_key = session.exec(statement).first()
@@ -948,6 +1083,9 @@ def get_user(username, password, update_sign_in=True):
 
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     with Session(engine, expire_on_commit=False) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         user = session.exec(
             select(User)
             .where(User.tenant_id == SINGLE_TENANT_UUID)
@@ -1276,26 +1414,54 @@ def get_rule_distribution(tenant_id, minute=False):
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
             timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
+        elif session.bind.dialect.name == "mssql":
+            # For MSSQL, using CONVERT to format date
+            if minute:
+                timestamp_format = func.format(
+                    AlertToGroup.timestamp, "yyyy-MM-dd HH:mm"
+                )
+            else:
+                timestamp_format = (
+                    func.format(AlertToGroup.timestamp, "yyyy-MM-dd HH") + ":00"
+                )
         else:
             raise ValueError("Unsupported database dialect")
         # Construct the query
-        query = (
-            session.query(
+        # Create a subquery
+        subquery = (
+            select(
                 Rule.id.label("rule_id"),
                 Rule.name.label("rule_name"),
                 Group.id.label("group_id"),
                 Group.group_fingerprint.label("group_fingerprint"),
-                timestamp_format.label("time"),
-                func.count(AlertToGroup.alert_id).label("hits"),
+                timestamp_format.label("formatted_timestamp"),
+                AlertToGroup.alert_id,
             )
             .join(Group, Rule.id == Group.rule_id)
             .join(AlertToGroup, Group.id == AlertToGroup.group_id)
-            .filter(AlertToGroup.timestamp >= seven_days_ago)
-            .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
+            .filter(
+                AlertToGroup.timestamp >= seven_days_ago, Rule.tenant_id == tenant_id
+            )
+            .subquery()
+        )
+
+        query = (
+            session.query(
+                subquery.c.rule_id,
+                subquery.c.rule_name,
+                subquery.c.group_id,
+                subquery.c.group_fingerprint,
+                subquery.c.formatted_timestamp.label("time"),
+                func.count(subquery.c.alert_id).label("hits"),
+            )
             .group_by(
-                "rule_id", "rule_name", "group_id", "group_fingerprint", "time"
-            )  # Adjusted here
-            .order_by("time")
+                subquery.c.rule_id,
+                subquery.c.rule_name,
+                subquery.c.group_id,
+                subquery.c.group_fingerprint,
+                subquery.c.formatted_timestamp,
+            )
+            .order_by(subquery.c.formatted_timestamp)
         )
 
         results = query.all()
@@ -1305,7 +1471,7 @@ def get_rule_distribution(tenant_id, minute=False):
         for result in results:
             rule_id = result.rule_id
             group_fingerprint = result.group_fingerprint
-            timestamp = result.time
+            timestamp = result.formatted_timestamp
             hits = result.hits
 
             if rule_id not in rule_distribution:
@@ -1333,6 +1499,9 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         alert_hash = session.exec(
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
@@ -1364,7 +1533,9 @@ def update_key_last_used(
             .where(TenantApiKey.reference_id == reference_id)
             .where(TenantApiKey.tenant_id == tenant_id)
         )
-
+        # if mssql, set isolation level to read uncommitted to avoid deadlocks
+        if session.bind.dialect.name == "mssql":
+            session.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
         tenant_api_key_entry = session.exec(statement).first()
 
         # Update last used
@@ -1416,27 +1587,45 @@ def get_provider_distribution(tenant_id: str) -> dict:
             timestamp_format = func.to_char(Alert.timestamp, "YYYY-MM-DD HH")
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
+        elif session.bind.dialect.name == "mssql":
+            timestamp_format = func.format(Alert.timestamp, "yyyy-MM-dd HH")
 
         # Adjusted query to include max timestamp
-        query = (
-            session.query(
-                Alert.provider_id,
-                Alert.provider_type,
-                timestamp_format.label("time"),
-                func.count().label("hits"),
-                func.max(Alert.timestamp).label(
-                    "last_alert_timestamp"
-                ),  # Include max timestamp
+        subquery = (
+            select(
+                Alert.provider_id.label("alert_provider_id"),
+                Alert.provider_type.label("alert_provider_type"),
+                timestamp_format.label("t"),
             )
-            .filter(
+            .where(
                 Alert.tenant_id == tenant_id,
                 Alert.timestamp >= twenty_four_hours_ago,
             )
-            .group_by(Alert.provider_id, Alert.provider_type, "time")
-            .order_by(Alert.provider_id, Alert.provider_type, "time")
+            .alias("sub")
+        )
+        query = (
+            select(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+                func.count().label("hits"),
+                func.max(subquery.c.t).label(
+                    "last_alert_timestamp"
+                ),  # Include max timestamp
+            )
+            .group_by(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+            )
+            .order_by(
+                subquery.c.alert_provider_id,
+                subquery.c.alert_provider_type,
+                subquery.c.t,
+            )
         )
 
-        results = query.all()
+        results = session.execute(query).all()
 
         provider_distribution = {}
 

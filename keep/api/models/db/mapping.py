@@ -7,7 +7,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 class MappingRule(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
-    tenant_id: str = Field(foreign_key="tenant.id")
+    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
     priority: int = Field(default=0, nullable=False)
     name: str = Field(max_length=255, nullable=False)
     description: Optional[str] = Field(max_length=2048)
