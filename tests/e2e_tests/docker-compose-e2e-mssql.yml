@@ -1,0 +1,59 @@
+services:
+  keep-database:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=VeryStrongPassword1#
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/mssql-tools/bin/sqlcmd",
+          "-U",
+          "sa",
+          "-P",
+          "VeryStrongPassword1#",
+          "-Q",
+          "SELECT 1",
+        ]
+      interval: 10s
+      retries: 10
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    build:
+      context: ./keep-ui
+      dockerfile: ../docker/Dockerfile.ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - POSTHOG_DISABLED=true
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_CONNECTION_STRING=mssql+pyodbc://sa:VeryStrongPassword1#@keep-database:1433/keepdb?driver=FreeTDS
+      - POSTHOG_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+    depends_on:
+      keep-database:
+        condition: service_healthy
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+volumes:
+  mysql-data:
