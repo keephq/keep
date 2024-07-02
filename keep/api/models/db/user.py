@@ -10,10 +10,10 @@ class User(SQLModel, table=True):
     # Unique ID for each user
     id: int = Field(primary_key=True)
 
-    tenant_id: str = Field(default=SINGLE_TENANT_UUID, max_length=36)
+    tenant_id: str = Field(default=SINGLE_TENANT_UUID)
 
     # Username for the user (should be unique)
-    username: str = Field(index=True, unique=True, max_length=256)
+    username: str = Field(index=True, unique=True)
 
     # Hashed password (never store plain-text passwords)
     password_hash: str

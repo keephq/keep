@@ -1,27 +1,22 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from sqlalchemy import UniqueConstraint
-from sqlmodel import TEXT, Column, Field, SQLModel
+from sqlmodel import Column, Field, SQLModel, TEXT
 
 
 class Action(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("tenant_id", "name", "use"),)
 
-    id: str = Field(
-        default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
-    )
-    tenant_id: str = Field(foreign_key="tenant.id", max_length=36)
-    use: str = Field(max_length=255, nullable=False)
-    name: str = Field(max_length=255, nullable=False)
-    description: Optional[str] = Field(max_length=2048)
+    id: str = Field(default=None, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+    use: str
+    name: str
+    description: Optional[str]
     action_raw: str = Field(sa_column=Column(TEXT))
-    installed_by: str = Field(max_length=255, nullable=False)
-    installation_time: datetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc)
-    )
-
+    installed_by: str
+    installation_time: datetime
+   
     class Config:
         orm_mode = True
         unique_together = ["tenant_id", "name", "use"]
