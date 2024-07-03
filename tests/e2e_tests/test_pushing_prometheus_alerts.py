@@ -31,6 +31,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Check if alerts were pulled
         browser.get_by_role("link", name="Feed").click()
+        browser.wait_for_timeout(10000)
 
         # Open history
         browser.get_by_text("AlwaysFiringAlert").hover()
