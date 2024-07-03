@@ -11,12 +11,6 @@ from keep.rulesengine.rulesengine import RulesEngine
 
 
 class ElasticClient:
-    _clients = {}
-
-    def __new__(cls, tenant_id, *args, **kwargs):
-        if tenant_id not in cls._clients:
-            cls._clients[tenant_id] = super(ElasticClient, cls).__new__(cls)
-        return cls._clients[tenant_id]
 
     def __init__(
         self,

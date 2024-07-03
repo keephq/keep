@@ -39,10 +39,13 @@ class SearchEngine:
             self.search_mode = SearchMode.INTERNAL
         # for multi-tenant deployment with elastic enabled, get the per-tenant search configuration:
         else:
-            self.search_mode = (
-                self.tenant_configuration.get_configuration(tenant_id, "search_mode")
-                or SearchMode.INTERNAL
+            search_mode_config = self.tenant_configuration.get_configuration(
+                tenant_id, "search_mode"
             )
+            if search_mode_config:
+                self.search_mode = SearchMode(search_mode_config)
+            else:
+                self.search_mode = SearchMode.INTERNAL
         self.logger.info(
             "Initialized search engine",
             extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
