@@ -1442,6 +1442,11 @@ def get_provider_distribution(tenant_id: str) -> dict:
 
         for provider_id, provider_type, time, hits, last_alert_timestamp in results:
             provider_key = f"{provider_id}_{provider_type}"
+            last_alert_timestamp = (
+                datetime.fromisoformat(last_alert_timestamp)
+                if isinstance(last_alert_timestamp, str)
+                else last_alert_timestamp
+            )
 
             if provider_key not in provider_distribution:
                 provider_distribution[provider_key] = {

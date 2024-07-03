@@ -178,6 +178,7 @@
           "pages": [
             "workflows/functions/what-is-a-function",
             "workflows/functions/all",
+            "workflows/functions/add-time-to-date",
             "workflows/functions/diff",
             "workflows/functions/len",
             "workflows/functions/split",
