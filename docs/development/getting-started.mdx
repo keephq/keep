@@ -16,6 +16,19 @@ Next, run
 docker-compose -f docker-compose.dev.yml up
 ```
 
+### Testing
+
+Run unittests:
+```bash
+poetry run coverage run --branch -m pytest --ignore=tests/e2e_tests/
+```
+
+Run E2E tests (run Keep locally before):
+```bash
+poetry run playwright install;
+poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+```
+
 ## VSCode
 You can run Keep from your VSCode (after cloning the repo) by adding this configurations to your `.vscode/launch.json`:
 
