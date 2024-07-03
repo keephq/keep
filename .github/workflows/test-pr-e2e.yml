@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'keep/**'
+      - './**'
 
 env:
   PYTHON_VERSION: 3.11
@@ -29,7 +29,7 @@ jobs:
 
       - uses: chartboost/ruff-action@v1
         with:
-          src: "./"
+          src: "./keep"
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
