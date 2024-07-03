@@ -4,7 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - './**'
+      - 'keep/**'
+      - 'keep-ui/**'
+      - 'tests/**'
 
 env:
   PYTHON_VERSION: 3.11
