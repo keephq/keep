@@ -732,3 +732,33 @@ def test_escaped_quotes_with_with_newlines(context_manager):
     assert (
         len(extracted_functions) == 1
     ), "Expected one function to be extracted with escaped quotes inside arguments."
+
+
+def test_add_time_to_date_function(context_manager):
+    context_manager.alert = AlertDto(
+        **{
+            "id": "test",
+            "name": "test",
+            "lastReceived": "2024-03-20T00:00:00.000Z",
+            "source": ["sentry"],
+            "date": "2024-08-16T14:21:00.000-0500",
+        }
+    )
+    context_manager.event_context = context_manager.alert
+    iohandler = IOHandler(context_manager)
+    s = iohandler.render(
+        'keep.add_time_to_date("{{ alert.date }}", "%Y-%m-%dT%H:%M:%S.%f%z", "1w 2d 3h 30m")'
+    )
+    expected_date = datetime.datetime(
+        2024, 8, 25, 17, 51, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert s == str(expected_date), f"Expected {expected_date}, but got {s}"
+
+    # one day
+    s = iohandler.render(
+        'keep.add_time_to_date("{{ alert.date }}", "%Y-%m-%dT%H:%M:%S.%f%z", "1d")'
+    )
+    expected_date = datetime.datetime(
+        2024, 8, 17, 14, 21, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert s == str(expected_date), f"Expected {expected_date}, but got {s}"

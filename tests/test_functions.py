@@ -260,3 +260,79 @@ def test_index_2():
     assert functions.index(functions.split(s, "-"), 4) == "b"
     assert functions.index(functions.split(s, "-"), 5) == "high"
     assert functions.index(functions.split(s, "-"), 6) == "cpu"
+
+
+def test_add_time_to_date():
+    """
+    Test the add_time_to_date function
+    """
+    date_str = "2024-07-01"
+    date_format = "%Y-%m-%d"
+
+    # Test adding 1 week
+    time_str = "1w"
+    expected_date = datetime.datetime(2024, 7, 8)
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 2 days
+    time_str = "2d"
+    expected_date = datetime.datetime(2024, 7, 3)
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 3 hours
+    time_str = "3h"
+    expected_date = datetime.datetime(2024, 7, 1, 3, 0)
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 30 minutes
+    time_str = "30m"
+    expected_date = datetime.datetime(2024, 7, 1, 0, 30)
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 1 week, 2 days, 3 hours, and 30 minutes
+    time_str = "1w 2d 3h 30m"
+    expected_date = datetime.datetime(2024, 7, 10, 3, 30)
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+
+def test_add_time_to_date_with_datetime_string():
+    """
+    Test the add_time_to_date function with a specific datetime string input
+    """
+    date_str = "2024-08-16T14:21:00.000-0500"
+    date_format = "%Y-%m-%dT%H:%M:%S.%f%z"
+
+    # Test adding 1 day
+    time_str = "1d"
+    expected_date = datetime.datetime(
+        2024, 8, 17, 14, 21, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 2 weeks
+    time_str = "2w"
+    expected_date = datetime.datetime(
+        2024, 8, 30, 14, 21, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 3 hours
+    time_str = "3h"
+    expected_date = datetime.datetime(
+        2024, 8, 16, 17, 21, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 45 minutes
+    time_str = "45m"
+    expected_date = datetime.datetime(
+        2024, 8, 16, 15, 6, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+    # Test adding 1 week, 1 day, 1 hour, and 1 minute
+    time_str = "1w 1d 1h 1m"
+    expected_date = datetime.datetime(
+        2024, 8, 24, 15, 22, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
+    )
+    assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
