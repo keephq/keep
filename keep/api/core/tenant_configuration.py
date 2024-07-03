@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta
 
 from keep.api.core.config import config
-from keep.api.core.db import get_tenants_configurations
 
 
 class TenantConfiguration:
@@ -20,7 +19,10 @@ class TenantConfiguration:
 
         def _load_tenant_configurations(self):
             self.logger.info("Loading tenants configurations")
-            tenants_configuration = get_tenants_configurations()
+            # tenants_configuration = get_tenants_configurations()
+            tenants_configuration = {
+                "1f1365c0-247d-448f-9554-ef6c50853239": {"search_mode": "elastic"}
+            }
             self.logger.info("Tenants configurations loaded")
             self.last_loaded = datetime.now()
             return tenants_configuration
@@ -33,7 +35,8 @@ class TenantConfiguration:
 
         def get_configuration(self, tenant_id, config_name):
             self._reload_if_needed()
-            tenant_config = self.configurations.get(tenant_id, {})
+            # tenant_config = self.configurations.get(tenant_id, {})
+            tenant_config = self.configurations.get(tenant_id)
             if not tenant_config:
                 self.logger.info(f"Tenant {tenant_id} not found in memory, loading it")
                 self.configurations = self._load_tenant_configurations()

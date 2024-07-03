@@ -51,7 +51,7 @@ if __name__ == "__main__":
     alerts_dto = _alerts_dto
 
     # Sort by timestamp desc:
-    alerts_dto = sorted(alerts_dto, key=lambda x: x.lastReceived, reverse=True)
+    alerts_dto = sorted(alerts_dto, key=lambda x: x.lastReceived, reverse=False)
     # Take only the first one for each fingerprint:
     alerts_dto = {alert.fingerprint: alert for alert in alerts_dto}.values()
 

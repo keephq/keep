@@ -323,6 +323,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             # enrich alerts with provider id
             for alert in alerts:
                 alert.providerId = self.provider_id
+                alert.providerType = self.provider_type
             return alerts
 
     def get_alerts_by_fingerprint(self, tenant_id: str) -> dict[str, list[AlertDto]]:
