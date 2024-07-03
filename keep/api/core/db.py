@@ -17,7 +17,7 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
@@ -1652,12 +1652,13 @@ def get_tenants_configurations() -> List[Tenant]:
         try:
             tenants = session.exec(select(Tenant)).all()
         # except column configuration does not exist (new column added)
-        except NoSuchColumnError:
-            logger.warning("Column configuration does not exist in the database")
-            # add the column
-            session.execute("ALTER TABLE tenant ADD COLUMN configuration JSON")
-            session.commit()
-            # re-run the query
-            tenants = session.exec(select(Tenant)).all()
+        except OperationalError as e:
+            if "no such column: configuration" in str(e):
+                logger.warning("Column configuration does not exist in the database")
+                return []
 
-    return tenants
+    tenants_configurations = {}
+    for tenant in tenants:
+        tenants_configurations[tenant.id] = tenant.configuration or {}
+
+    return tenants_configurations

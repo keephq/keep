@@ -34,7 +34,10 @@ class SearchEngine:
                 if self.elastic_client.enabled
                 else SearchMode.INTERNAL
             )
-        # for multi-tenant deployment, get the per-tenant search configuration:
+        # elif elastic is disabled:
+        elif not self.elastic_client.enabled:
+            self.search_mode = SearchMode.INTERNAL
+        # for multi-tenant deployment with elastic enabled, get the per-tenant search configuration:
         else:
             self.search_mode = (
                 self.tenant_configuration.get_configuration(tenant_id, "search_mode")
