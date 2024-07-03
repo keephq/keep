@@ -21,11 +21,11 @@ class SearchMode(enum.Enum):
 
 
 class SearchEngine:
-    def __init__(self, tenant_id=None):
+    def __init__(self, tenant_id):
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
         self.rule_engine = RulesEngine(tenant_id=self.tenant_id)
-        self.elastic_client = ElasticClient()
+        self.elastic_client = ElasticClient(tenant_id)
         self.tenant_configuration = TenantConfiguration()
         # this is backward compatibility for single/noauth tenants
         if tenant_id == SINGLE_TENANT_UUID:
@@ -113,7 +113,7 @@ class SearchEngine:
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("elastic_run_query"):
             filtered_alerts = self.elastic_client.search_alerts(
-                self.tenant_id, elastic_sql_query, limit
+                elastic_sql_query, limit
             )
 
         self.logger.info("Finished searching alerts by SQL")

@@ -4,29 +4,47 @@ import os
 from elasticsearch import BadRequestError, Elasticsearch
 from elasticsearch.helpers import bulk
 
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.rulesengine.rulesengine import RulesEngine
 
 
 class ElasticClient:
-    _instance = None
-    _client = None
+    _clients = {}
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(ElasticClient, cls).__new__(cls)
-        return cls._instance
+    def __new__(cls, tenant_id, *args, **kwargs):
+        if tenant_id not in cls._clients:
+            cls._clients[tenant_id] = super(ElasticClient, cls).__new__(cls)
+        return cls._clients[tenant_id]
 
     def __init__(
-        self, api_key=None, hosts: list[str] = None, basic_auth=None, **kwargs
+        self,
+        tenant_id,
+        api_key=None,
+        hosts: list[str] = None,
+        basic_auth=None,
+        **kwargs,
     ):
-        if self._client is not None:
-            return
+        self.tenant_id = tenant_id
+        self.tenant_configuration = TenantConfiguration()
+        self.logger = logging.getLogger(__name__)
 
-        # elastic is disabled by default
+        # if its a multi tenant deployment, check the tenant configuration
+        if tenant_id != SINGLE_TENANT_UUID:
+            # if elastic is disabled for the tenant, return
+            if not self.tenant_configuration.get_configuration(
+                tenant_id, "search_mode"
+            ):
+                self.enabled = False
+                self.logger.debug(f"Elastic is disabled for tenant {tenant_id}")
+                return
+
         self.enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
+        # if elastic is disabled, return
         if not self.enabled:
             return
+
         self.api_key = api_key or os.environ.get("ELASTIC_API_KEY")
         self.hosts = hosts or os.environ.get("ELASTIC_HOSTS").split(",")
 
@@ -38,8 +56,7 @@ class ElasticClient:
             raise ValueError(
                 "No Elastic configuration found although Elastic is enabled"
             )
-        self.logger = logging.getLogger(__name__)
-        # if basic auth is provided, use it, otherwise use api key
+
         if any(basic_auth):
             self.logger.debug("Using basic auth for Elastic")
             self._client = Elasticsearch(
@@ -131,7 +148,7 @@ class ElasticClient:
             self.logger.error(f"Failed to run query in Elastic: {e}")
             raise Exception(f"Failed to run query in Elastic: {e}")
 
-    def search_alerts(self, tenant_id: str, query: str, limit: int) -> list[AlertDto]:
+    def search_alerts(self, query: str, limit: int) -> list[AlertDto]:
         if not self.enabled:
             return []
 
@@ -150,7 +167,7 @@ class ElasticClient:
             )
             fields = [f.get("field") for f in dict(dsl_query)["fields"]]
             raw_alerts = self._client.search(
-                index=f"keep-alerts-{tenant_id}", body=dict(dsl_query)
+                index=f"keep-alerts-{self.tenant_id}", body=dict(dsl_query)
             )
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts, fields)
             return alerts_dtos
@@ -166,7 +183,7 @@ class ElasticClient:
             self.logger.error(f"Failed to search alerts in Elastic: {e}")
             raise Exception(f"Failed to search alerts in Elastic: {e}")
 
-    def index_alert(self, tenant_id, alert: AlertDto):
+    def index_alert(self, alert: AlertDto):
         if not self.enabled:
             return
 
@@ -175,7 +192,7 @@ class ElasticClient:
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
             self._client.index(
-                index=f"keep-alerts-{tenant_id}",
+                index=f"keep-alerts-{self.tenant_id}",
                 body=alert.dict(),
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
                 refresh="true",
@@ -185,14 +202,14 @@ class ElasticClient:
             self.logger.error(f"Failed to index alert to Elastic: {e}")
             raise Exception(f"Failed to index alert to Elastic: {e}")
 
-    def index_alerts(self, tenant_id, alerts: list[AlertDto]):
+    def index_alerts(self, alerts: list[AlertDto]):
         if not self.enabled:
             return
 
         actions = []
         for alert in alerts:
             action = {
-                "_index": f"keep-alerts-{tenant_id}",
+                "_index": f"keep-alerts-{self.tenant_id}",
                 "_id": alert.fingerprint,  # use fingerprint as the document ID
                 "_source": alert.dict(),
             }
@@ -211,13 +228,15 @@ class ElasticClient:
             self.logger.error(f"Failed to index alerts to Elastic: {e}")
             raise Exception(f"Failed to index alerts to Elastic: {e}")
 
-    def enrich_alert(self, tenant_id, alert_fingerprint: str, alert_enrichments: dict):
+    def enrich_alert(self, alert_fingerprint: str, alert_enrichments: dict):
         if not self.enabled:
             return
 
         self.logger.debug(f"Enriching alert {alert_fingerprint}")
         # get the alert, enrich it and index it
-        alert = self._client.get(index=f"keep-alerts-{tenant_id}", id=alert_fingerprint)
+        alert = self._client.get(
+            index=f"keep-alerts-{self.tenant_id}", id=alert_fingerprint
+        )
         if not alert:
             self.logger.error(f"Alert with fingerprint {alert_fingerprint} not found")
             return
@@ -226,11 +245,11 @@ class ElasticClient:
         alert["_source"].update(alert_enrichments)
         enriched_alert = AlertDto(**alert["_source"])
         # index the enriched alert
-        self.index_alert(tenant_id, enriched_alert)
+        self.index_alert(enriched_alert)
         self.logger.debug(f"Alert {alert_fingerprint} enriched and indexed")
 
-    def drop_index(self, tenant_id):
+    def drop_index(self):
         if not self.enabled:
             return
 
-        self._client.indices.delete(index=f"keep-alerts-{tenant_id}")
+        self._client.indices.delete(index=f"keep-alerts-{self.tenant_id}")

@@ -39,8 +39,6 @@ from keep.searchengine.searchengine import SearchEngine
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-elastic_client = ElasticClient()
-
 REDIS = os.environ.get("REDIS", "false") == "true"
 
 
@@ -434,8 +432,8 @@ def enrich_alert(
         # push the enriched alert to the elasticsearch
         try:
             logger.info("Pushing enriched alert to elasticsearch")
+            elastic_client = ElasticClient(tenant_id)
             elastic_client.index_alert(
-                tenant_id=tenant_id,
                 alert=enriched_alerts_dto[0],
             )
             logger.info("Pushed enriched alert to elasticsearch")

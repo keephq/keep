@@ -332,7 +332,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Returns:
             dict[str, list[AlertDto]]: A dict of alerts grouped by fingerprint, sorted by lastReceived.
         """
-        alerts = self.get_alerts()
+        try:
+            alerts = self.get_alerts()
+        except NotImplementedError:
+            return {}
 
         if not alerts:
             return {}

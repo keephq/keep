@@ -36,7 +36,7 @@ def setup_alerts(elastic_client, db_session, request):
     db_session.commit()
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts_dto)
+    elastic_client.index_alerts(alerts_dto)
 
 
 @pytest.fixture
@@ -74,7 +74,7 @@ def setup_stress_alerts(elastic_client, db_session, request):
 
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts_dto)
+    elastic_client.index_alerts(alerts_dto)
 
 
 def _create_valid_event(d):

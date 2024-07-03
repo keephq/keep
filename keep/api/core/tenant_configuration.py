@@ -1,5 +1,7 @@
 import logging
+from datetime import datetime, timedelta
 
+from keep.api.core.config import config
 from keep.api.core.db import get_tenants_configurations
 
 
@@ -7,21 +9,32 @@ class TenantConfiguration:
     _instance = None
 
     class _TenantConfiguration:
+
         def __init__(self):
-            # Load all tenant configurations into memory
             self.logger = logging.getLogger(__name__)
             self.configurations = self._load_tenant_configurations()
+            self.last_loaded = datetime.now()
+            self.reload_time = config(
+                "TENANT_CONFIGURATION_RELOAD_TIME", default=5, cast=int
+            )
 
         def _load_tenant_configurations(self):
             self.logger.info("Loading tenants configurations")
             tenants_configuration = get_tenants_configurations()
             self.logger.info("Tenants configurations loaded")
+            self.last_loaded = datetime.now()
             return tenants_configuration
 
+        def _reload_if_needed(self):
+            if datetime.now() - self.last_loaded > timedelta(minutes=self.reload_time):
+                self.logger.info("Reloading tenants configurations")
+                self.configurations = self._load_tenant_configurations()
+                self.logger.info("Tenants configurations reloaded")
+
         def get_configuration(self, tenant_id, config_name):
+            self._reload_if_needed()
             tenant_config = self.configurations.get(tenant_id, {})
             if not tenant_config:
-                # try to load the tenant configuration
                 self.logger.info(f"Tenant {tenant_id} not found in memory, loading it")
                 self.configurations = self._load_tenant_configurations()
                 tenant_config = self.configurations.get(tenant_id, {})

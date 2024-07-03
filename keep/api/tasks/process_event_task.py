@@ -213,7 +213,7 @@ def __handle_formatted_events(
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
-    elastic_client = ElasticClient()
+    elastic_client = ElasticClient(tenant_id=tenant_id)
     for alert in enriched_formatted_events:
         try:
             logger.debug(
@@ -224,7 +224,6 @@ def __handle_formatted_events(
                 },
             )
             elastic_client.index_alert(
-                tenant_id=tenant_id,
                 alert=alert,
             )
         except Exception:
@@ -357,7 +356,7 @@ async def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
-    save_if_duplicate: bool = True, 
+    save_if_duplicate: bool = True,
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -390,7 +389,13 @@ async def process_event(
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
-            tenant_id, provider_type, session, event, event, provider_id, save_if_duplicate
+            tenant_id,
+            provider_type,
+            session,
+            event,
+            event,
+            provider_id,
+            save_if_duplicate,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
