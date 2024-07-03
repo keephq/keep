@@ -1,7 +1,7 @@
 # my global config
 global:
-  scrape_interval: 1s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 1s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  scrape_interval: 1s
+  evaluation_interval: 1s
 
 rule_files:
   - "test_pushing_prometheus_rules.yaml"
