@@ -89,6 +89,8 @@ class SearchEngine:
         )
         if timeframe:
             elastic_sql_query += f" and lastReceived > now() - {timeframe}s"
+
+        elastic_sql_query += f" order by lastReceived desc limit {limit}"
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
