@@ -25,10 +25,14 @@ class ElasticClient:
         self.logger = logging.getLogger(__name__)
 
         enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
+
         # if its a single tenant deployment or elastic is disabled, return
         if tenant_id == SINGLE_TENANT_UUID:
             self.enabled = enabled
         # if its a multi tenant deployment and elastic is on, check if its enabled for the tenant
+        elif not enabled:
+            self.enabled = False
+        # else, pre tenant configuration
         else:
             # if elastic is disabled for the tenant, return
             if not self.tenant_configuration.get_configuration(

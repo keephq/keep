@@ -21,7 +21,12 @@ class TenantConfiguration:
         def _load_tenant_configurations(self):
             self.logger.info("Loading tenants configurations")
             tenants_configuration = get_tenants_configurations()
-            self.logger.info("Tenants configurations loaded")
+            self.logger.info(
+                "Tenants configurations loaded",
+                extra={
+                    "number_of_tenants": len(tenants_configuration),
+                },
+            )
             self.last_loaded = datetime.now()
             return tenants_configuration
 
@@ -40,9 +45,14 @@ class TenantConfiguration:
                 self.configurations = self._load_tenant_configurations()
                 tenant_config = self.configurations.get(tenant_id, {})
 
-            if not tenant_config:
-                self.logger.warning(f"Tenant {tenant_id} not found")
-                raise ValueError(f"Tenant {tenant_id} not found")
+            if tenant_config not in self.configurations:
+                self.logger.warning(
+                    f"Tenant not found [id: {tenant_id}]",
+                    extra={
+                        "tenant_id": tenant_id,
+                    },
+                )
+                raise ValueError(f"Tenant not found [id: {tenant_id}]")
 
             return tenant_config.get(config_name, None)
 
