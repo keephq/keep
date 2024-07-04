@@ -83,6 +83,7 @@ jobs:
           fi
 
           # wait to keep backend on port 8080
+          echo "Waiting for Keep backend to be ready..."
           attempt=0
           max_attempts=10
 
@@ -95,6 +96,23 @@ jobs:
             attempt=$((attempt+1))
             sleep 2
           done
+
+          echo "Keep backend is ready!"
+          # wait to the backend
+          echo "Waiting for Keep frontend to be ready..."
+          attempt=0
+          max_attempts=10
+
+          until $(curl --output /dev/null --silent --fail http://localhost:3000/); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting..."
+              exit 1
+            fi
+            echo "Waiting for Keep frontend to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+
           # create the state directory
           # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
       - name: Run e2e tests and report coverage

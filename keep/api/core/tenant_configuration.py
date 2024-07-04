@@ -45,7 +45,7 @@ class TenantConfiguration:
                 self.configurations = self._load_tenant_configurations()
                 tenant_config = self.configurations.get(tenant_id, {})
 
-            if tenant_config not in self.configurations:
+            if tenant_id not in self.configurations:
                 self.logger.warning(
                     f"Tenant not found [id: {tenant_id}]",
                     extra={
