@@ -120,6 +120,7 @@ class AlertDto(BaseModel):
             dict_other = other.dict()
 
             # Fields to exclude from comparison since they are bit different in different db's
+            # todo: solve it in a better way
             exclude_fields = {"lastReceived", "startedAt", "event_id"}
 
             # Remove excluded fields from both dictionaries
