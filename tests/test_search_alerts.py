@@ -58,14 +58,18 @@ def setup_stress_alerts(elastic_client, db_session, request):
     ]
     alerts = []
     for i, detail in enumerate(alert_details):
+        random_timestamp = datetime.datetime.utcnow() - datetime.timedelta(
+            days=random.uniform(0, 7)
+        )
         alerts.append(
             Alert(
+                timestamp=random_timestamp,
                 tenant_id=SINGLE_TENANT_UUID,
                 provider_type="test",
                 provider_id="test_{}".format(
                     i % 5
                 ),  # Cycle through 5 different provider_ids
-                event=_create_valid_event(detail),
+                event=_create_valid_event(detail, lastReceived=random_timestamp),
                 fingerprint="fingerprint_{}".format(i),
             )
         )
@@ -77,11 +81,12 @@ def setup_stress_alerts(elastic_client, db_session, request):
     elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts_dto)
 
 
-def _create_valid_event(d):
+def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
-        "lastReceived": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        "lastReceived": str(lastReceived)
+        or datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
     }
     event.update(d)
     return event
@@ -849,6 +854,35 @@ def test_complex_logical_operations_large_dataset(db_session, setup_stress_alert
         },
         cel_query='((source == "source_1" || source == "source_2") && severity == "critical") || (severity == "warning")',
         limit=10000,
+    )
+    # first, use elastic
+    os.environ["ELASTIC_ENABLED"] = "true"
+    elastic_start_time = time.time()
+    elastic_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    elastic_end_time = time.time()
+    # then, use db
+    os.environ["ELASTIC_ENABLED"] = "false"
+    db_start_time = time.time()
+    db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query
+    )
+    db_end_time = time.time()
+    # compare
+    assert len(elastic_filtered_alerts) == len(db_filtered_alerts)
+    print(
+        "time taken for 10k alerts with elastic: ",
+        elastic_end_time - elastic_start_time,
+    )
+    print("time taken for 10k alerts with db: ", db_end_time - db_start_time)
+
+
+@pytest.mark.parametrize("setup_stress_alerts", [{"num_alerts": 10000}], indirect=True)
+def test_last_1000(db_session, setup_stress_alerts):
+    search_query = SearchQuery(
+        sql_query={"sql": "(deleted=false AND dismissed=false)", "params": {}},
+        cel_query="(!deleted && !dismissed)",
     )
     # first, use elastic
     os.environ["ELASTIC_ENABLED"] = "true"
