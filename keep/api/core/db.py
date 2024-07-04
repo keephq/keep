@@ -1653,9 +1653,12 @@ def get_tenants_configurations() -> List[Tenant]:
             tenants = session.exec(select(Tenant)).all()
         # except column configuration does not exist (new column added)
         except OperationalError as e:
-            if "no such column: configuration" in str(e):
+            if "Unknown column" in str(e):
                 logger.warning("Column configuration does not exist in the database")
-                return []
+                return {}
+            else:
+                logger.exception("Failed to get tenants configurations")
+                return {}
 
     tenants_configurations = {}
     for tenant in tenants:

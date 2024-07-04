@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from keep.api.core.config import config
+from keep.api.core.db import get_tenants_configurations
 
 
 class TenantConfiguration:
@@ -19,10 +20,7 @@ class TenantConfiguration:
 
         def _load_tenant_configurations(self):
             self.logger.info("Loading tenants configurations")
-            # tenants_configuration = get_tenants_configurations()
-            tenants_configuration = {
-                "1f1365c0-247d-448f-9554-ef6c50853239": {"search_mode": "elastic"}
-            }
+            tenants_configuration = get_tenants_configurations()
             self.logger.info("Tenants configurations loaded")
             self.last_loaded = datetime.now()
             return tenants_configuration
@@ -47,9 +45,6 @@ class TenantConfiguration:
                 raise ValueError(f"Tenant {tenant_id} not found")
 
             return tenant_config.get(config_name, None)
-
-    def get_configuration(self, tenant_id, config_name):
-        return self._instance.get_configuration(tenant_id, config_name)
 
     def __new__(cls):
         if not cls._instance:

@@ -24,8 +24,12 @@ class ElasticClient:
         self.tenant_configuration = TenantConfiguration()
         self.logger = logging.getLogger(__name__)
 
-        # if its a multi tenant deployment, check the tenant configuration
-        if tenant_id != SINGLE_TENANT_UUID:
+        enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
+        # if its a single tenant deployment or elastic is disabled, return
+        if tenant_id == SINGLE_TENANT_UUID:
+            self.enabled = enabled
+        # if its a multi tenant deployment and elastic is on, check if its enabled for the tenant
+        else:
             # if elastic is disabled for the tenant, return
             if not self.tenant_configuration.get_configuration(
                 tenant_id, "search_mode"
@@ -33,8 +37,9 @@ class ElasticClient:
                 self.enabled = False
                 self.logger.debug(f"Elastic is disabled for tenant {tenant_id}")
                 return
+            else:
+                self.enabled = True
 
-        self.enabled = os.environ.get("ELASTIC_ENABLED", "false").lower() == "true"
         # if elastic is disabled, return
         if not self.enabled:
             return
