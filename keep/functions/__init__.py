@@ -1,6 +1,7 @@
 import copy
 import datetime
 import json
+import re
 import urllib.parse
 from itertools import groupby
 
@@ -184,3 +185,36 @@ def run_mapping(
     enrichments_bl = EnrichmentsBl(tenant_id)
     result = enrichments_bl.run_mapping_rule_by_id(id, lst, search_key, matcher, key)
     return result
+
+
+def add_time_to_date(date, date_format, time_str):
+    """
+    Add time to a date based on a given time string (e.g., '1w', '2d').
+
+    Args:
+        date (str or datetime.datetime): The date to which the time will be added.
+        date_format (str): The format of the date string if the date is provided as a string.
+        time_str (str): The time to add (e.g., '1w', '2d').
+
+    Returns:
+        datetime.datetime: The new datetime object with the added time.
+    """
+    if isinstance(date, str):
+        date = datetime.datetime.strptime(date, date_format)
+
+    time_units = {
+        "w": "weeks",
+        "d": "days",
+        "h": "hours",
+        "m": "minutes",
+        "s": "seconds",
+    }
+
+    time_dict = {unit: 0 for unit in time_units.values()}
+
+    matches = re.findall(r"(\d+)([wdhms])", time_str)
+    for value, unit in matches:
+        time_dict[time_units[unit]] += int(value)
+
+    new_date = date + datetime.timedelta(**time_dict)
+    return new_date
