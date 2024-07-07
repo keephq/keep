@@ -901,8 +901,16 @@ def test_last_1000(db_session, setup_stress_alerts):
         search_query
     )
     db_end_time = time.time()
+    # check that these are the last 1000 alerts
+    assert len(elastic_filtered_alerts) == 1000
+    # check that these ordered by lastReceived
+    assert (
+        sorted(elastic_filtered_alerts, key=lambda x: x.lastReceived, reverse=True)
+        == elastic_filtered_alerts
+    )
     # compare
     assert len(elastic_filtered_alerts) == len(db_filtered_alerts)
+
     print(
         "time taken for 10k alerts with elastic: ",
         elastic_end_time - elastic_start_time,
