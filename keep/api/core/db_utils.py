@@ -84,14 +84,17 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 
-db_connection_string = config(
+DB_CONNECTION_STRING = config(
     "DATABASE_CONNECTION_STRING", default=None
 )  # pylint: disable=invalid-name
-pool_size = config(
+DB_POOL_SIZE = config(
     "DATABASE_POOL_SIZE", default=5, cast=int
 )  # pylint: disable=invalid-name
-max_overflow = config(
+DB_MAX_OVERFLOW = config(
     "DATABASE_MAX_OVERFLOW", default=10, cast=int
+)  # pylint: disable=invalid-name
+DB_ECHO = config(
+    "DATABASE_ECHO", default=False, cast=bool
 )  # pylint: disable=invalid-name
 
 
@@ -118,27 +121,31 @@ def create_db_engine():
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn,
+            echo=DB_ECHO,
         )
-    elif db_connection_string == "impersonate":
+    elif DB_CONNECTION_STRING == "impersonate":
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn_impersonate,
+            echo=DB_ECHO,
         )
-    elif db_connection_string:
+    elif DB_CONNECTION_STRING:
         try:
-            logger.info(f"Creating a connection pool with size {pool_size}")
+            logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
             engine = create_engine(
-                db_connection_string,
-                pool_size=pool_size,
-                max_overflow=max_overflow,
+                DB_CONNECTION_STRING,
+                pool_size=DB_POOL_SIZE,
+                max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
-                echo=True,
+                echo=DB_ECHO,
             )
         # SQLite does not support pool_size
         except TypeError:
-            engine = create_engine(db_connection_string)
+            engine = create_engine(DB_CONNECTION_STRING)
     else:
         engine = create_engine(
-            "sqlite:///./keep.db", connect_args={"check_same_thread": False}
+            "sqlite:///./keep.db",
+            connect_args={"check_same_thread": False},
+            echo=DB_ECHO,
         )
     return engine
