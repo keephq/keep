@@ -161,7 +161,10 @@ class SearchEngine:
         Returns:
             dict[str, list[AlertDto]]: The list of alerts that match each query
         """
-        self.logger.info("Searching alerts for presets")
+        self.logger.info(
+            "Searching alerts for presets",
+            extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
+        )
 
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
@@ -227,7 +230,10 @@ class SearchEngine:
                         extra={"preset_id": preset.id, "preset_name": preset.name},
                     )
                     pass
-        self.logger.info("Finished searching alerts for presets")
+        self.logger.info(
+            "Finished searching alerts for presets",
+            extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
+        )
         return presets
 
     def _create_raw_sql(self, sql_template, params):
