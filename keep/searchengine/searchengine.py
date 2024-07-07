@@ -2,7 +2,9 @@ import enum
 import logging
 
 from keep.api.core.db import get_last_alerts
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -19,14 +21,34 @@ class SearchMode(enum.Enum):
 
 
 class SearchEngine:
-    def __init__(self, tenant_id=None):
+    def __init__(self, tenant_id):
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
         self.rule_engine = RulesEngine(tenant_id=self.tenant_id)
-        self.elastic_client = ElasticClient()
-        self.rule_engine = RulesEngine(tenant_id=self.tenant_id)
-        self.search_mode = (
-            SearchMode.ELASTIC if self.elastic_client.enabled else SearchMode.INTERNAL
+        self.elastic_client = ElasticClient(tenant_id)
+        self.tenant_configuration = TenantConfiguration()
+        # this is backward compatibility for single/noauth tenants
+        if tenant_id == SINGLE_TENANT_UUID:
+            self.search_mode = (
+                SearchMode.ELASTIC
+                if self.elastic_client.enabled
+                else SearchMode.INTERNAL
+            )
+        # elif elastic is disabled:
+        elif not self.elastic_client.enabled:
+            self.search_mode = SearchMode.INTERNAL
+        # for multi-tenant deployment with elastic enabled, get the per-tenant search configuration:
+        else:
+            search_mode_config = self.tenant_configuration.get_configuration(
+                tenant_id, "search_mode"
+            )
+            if search_mode_config:
+                self.search_mode = SearchMode(search_mode_config)
+            else:
+                self.search_mode = SearchMode.INTERNAL
+        self.logger.info(
+            "Initialized search engine",
+            extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
         )
 
     def _get_last_alerts(self, limit=1000, timeframe: int = 0) -> list[AlertDto]:
@@ -96,7 +118,7 @@ class SearchEngine:
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("elastic_run_query"):
             filtered_alerts = self.elastic_client.search_alerts(
-                self.tenant_id, elastic_sql_query, limit
+                elastic_sql_query, limit
             )
 
         self.logger.info("Finished searching alerts by SQL")

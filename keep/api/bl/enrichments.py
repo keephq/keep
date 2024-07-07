@@ -47,7 +47,7 @@ class EnrichmentsBl:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.db_session = db
-        self.elastic_client = ElasticClient()
+        self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
     def run_extraction_rules(self, event: AlertDto | dict) -> AlertDto | dict:
         """
@@ -329,7 +329,6 @@ class EnrichmentsBl:
         )
         # enrich elastic
         self.elastic_client.enrich_alert(
-            tenant_id=self.tenant_id,
             alert_fingerprint=fingerprint,
             alert_enrichments=enrichments,
         )
