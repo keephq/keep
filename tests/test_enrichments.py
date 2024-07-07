@@ -9,6 +9,16 @@ from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
 
+@pytest.fixture(autouse=True)
+def patch_get_tenants_configurations():
+    """Automatically patch get_tenants_configurations for all tests."""
+    with patch(
+        "keep.api.core.tenant_configuration.TenantConfiguration._TenantConfiguration.get_configuration",
+        return_value=None,
+    ):
+        yield
+
+
 @pytest.fixture
 def mock_session():
     """Create a mock session to simulate database operations."""
@@ -18,6 +28,7 @@ def mock_session():
     query_mock.filter.return_value = query_mock
     query_mock.order_by.return_value = query_mock
     query_mock.all.return_value = []  # Default to no rules, override in specific tests
+    # Patch the get_tenants_configurations function
     return session
 
 

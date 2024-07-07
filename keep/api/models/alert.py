@@ -100,6 +100,7 @@ class AlertDto(BaseModel):
     dismissed: bool = False  # Whether the alert has been dismissed
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
+    providerType: str | None = None  # The provider type
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
     startedAt: str | None = (
@@ -119,6 +120,7 @@ class AlertDto(BaseModel):
             dict_other = other.dict()
 
             # Fields to exclude from comparison since they are bit different in different db's
+            # todo: solve it in a better way
             exclude_fields = {"lastReceived", "startedAt", "event_id"}
 
             # Remove excluded fields from both dictionaries

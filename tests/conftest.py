@@ -246,6 +246,7 @@ def mocked_context_manager():
 def is_elastic_responsive(host, port, user, password):
     try:
         elastic_client = ElasticClient(
+            tenant_id=SINGLE_TENANT_UUID,
             hosts=[f"http://{host}:{port}"],
             basic_auth=(user, password),
         )
@@ -289,12 +290,14 @@ def elastic_client(request):
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
     request.getfixturevalue("elastic_container")
-    elastic_client = ElasticClient()
+    elastic_client = ElasticClient(
+        tenant_id=SINGLE_TENANT_UUID,
+    )
 
     yield elastic_client
 
     # remove all from elasticsearch
-    elastic_client.drop_index(SINGLE_TENANT_UUID)
+    elastic_client.drop_index()
 
     # delete the _client from the elastic_client
     ElasticClient._instance = None
