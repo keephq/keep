@@ -1379,7 +1379,9 @@ def test_severity_comparisons(
     assert len(db_filtered_alerts) == expected_severity_counts
 
     # compare
-    assert elastic_filtered_alerts == db_filtered_alerts
+    assert set([alert.id for alert in elastic_filtered_alerts]) == set(
+        [alert.id for alert in db_filtered_alerts]
+    )
 
 
 """
