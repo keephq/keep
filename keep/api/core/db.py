@@ -850,7 +850,7 @@ def get_last_alerts(
             )
 
         # Order by timestamp in descending order and limit the results
-        query = query.limit(limit)
+        query = query.order_by(desc(Alert.timestamp)).limit(limit)
         # Execute the query
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed

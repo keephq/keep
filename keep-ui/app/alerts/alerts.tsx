@@ -101,7 +101,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   }, [searchParams, alerts]);
 
   useEffect(() => {
-    if (pusher?.pollAlerts !== 0) {
+    if (pusher?.pollAlerts) {
       mutateAlerts();
     }
   }, [mutateAlerts, pusher?.pollAlerts]);

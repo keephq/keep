@@ -4,12 +4,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.preset import Preset, PresetDto, PresetOption, StaticPresetsId
+from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 from keep.api.tasks.process_event_task import process_event
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
@@ -17,51 +18,6 @@ from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-static_presets = {
-    "feed": PresetDto(
-        id=StaticPresetsId.FEED_PRESET_ID.value,
-        name="feed",
-        options=[
-            {"label": "CEL", "value": "(!deleted && !dismissed)"},
-            {
-                "label": "SQL",
-                "value": {"sql": "(deleted=false AND dismissed=false)", "params": {}},
-            },
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-    ),
-    "groups": PresetDto(
-        id=StaticPresetsId.GROUPS_PRESET_ID.value,
-        name="groups",
-        options=[
-            {"label": "CEL", "value": "group"},
-            {"label": "SQL", "value": {"sql": '"group"=true', "params": {}}},
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-    ),
-    "dismissed": PresetDto(
-        id=StaticPresetsId.DISMISSED_PRESET_ID.value,
-        name="dismissed",
-        options=[
-            {"label": "CEL", "value": "dismissed"},
-            {"label": "SQL", "value": {"sql": "dismissed=true", "params": {}}},
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-    ),
-}
 
 
 async def pull_alerts_from_providers(
@@ -123,9 +79,9 @@ def get_presets(
     presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
     presets_dto = [PresetDto(**preset.dict()) for preset in presets]
     # add static presets
-    presets_dto.append(static_presets["feed"])
-    presets_dto.append(static_presets["groups"])
-    presets_dto.append(static_presets["dismissed"])
+    presets_dto.append(STATIC_PRESETS["feed"])
+    presets_dto.append(STATIC_PRESETS["groups"])
+    presets_dto.append(STATIC_PRESETS["dismissed"])
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset
@@ -250,8 +206,8 @@ async def get_preset_alerts(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting preset alerts", extra={"preset_name": preset_name})
     # handle static presets
-    if preset_name in static_presets:
-        preset = static_presets[preset_name]
+    if preset_name in STATIC_PRESETS:
+        preset = STATIC_PRESETS[preset_name]
     else:
         preset = get_preset_by_name_db(tenant_id, preset_name)
     # if preset does not exist
