@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -77,7 +76,6 @@ def update_extraction_rule(
     for key, value in rule_dto.dict(exclude_unset=True).items():
         setattr(rule, key, value)
     rule.updated_by = authenticated_entity.email
-    rule.updated_at = datetime.datetime.now(datetime.timezone.utc)
     session.commit()
     session.refresh(rule)
     return ExtractionRuleDtoOut(**rule.dict())
