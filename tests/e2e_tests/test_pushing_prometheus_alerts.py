@@ -1,4 +1,5 @@
-import re, os, sys
+import re, os, sys, time
+import requests
 
 from datetime import datetime
 from playwright.sync_api import expect
@@ -29,14 +30,22 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         browser.reload()
 
+        # Wait for prometheus to wake up and evaluate alert rule as "firing"
+        alerts = None
+        while alerts is None or \
+                len(alerts["data"]["alerts"]) == 0 or \
+                alerts["data"]["alerts"][0]['state'] != "firing":        
+            print("Waiting for prometheus to fire an alert...")
+            time.sleep(1)
+            alerts = requests.get("http://localhost:9090/api/v1/alerts").json()
+        
         # Check if alerts were pulled
-        browser.wait_for_timeout(60000)
         browser.get_by_role("link", name="Feed").click()
-        browser.wait_for_timeout(60000)
-        browser.get_by_role("link", name="Feed").click()
+        browser.wait_for_timeout(5000) # Wait for alerts to be loaded
 
         # Open history
         browser.get_by_text("AlwaysFiringAlert").hover()
+
         browser.mouse.wheel(1000, 0)  # Scroll right to find the button.
         browser.get_by_title("Alert actions").first.click()
         browser.get_by_role("menuitem", name="History").click()
