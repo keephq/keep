@@ -168,8 +168,11 @@ def test_search_sanity2(db_session, setup_alerts):
     assert len(db_filtered_alerts) == 2
 
     # compare the results
-    assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
-    assert elastic_filtered_alerts[1] == db_filtered_alerts[1]
+    sorted_elastic_alerts = sorted(
+        elastic_filtered_alerts, key=lambda x: x.lastReceived
+    )
+    sorted_db_alerts = sorted(db_filtered_alerts, key=lambda x: x.lastReceived)
+    assert sorted_elastic_alerts == sorted_db_alerts
 
 
 @pytest.mark.parametrize(

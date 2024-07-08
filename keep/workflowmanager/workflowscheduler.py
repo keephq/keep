@@ -1,8 +1,8 @@
 import enum
 import hashlib
 import logging
-import threading
 import queue
+import threading
 import time
 import typing
 import uuid
@@ -62,8 +62,15 @@ class WorkflowScheduler:
                 tenant_id = workflow.get("tenant_id")
                 workflow_id = workflow.get("workflow_id")
                 workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
-            except ProviderConfigurationException as e:
-                self.logger.error(f"Provider configuration is invalid: {e}")
+            except ProviderConfigurationException:
+                self.logger.exception(
+                    "Provider configuration is invalid",
+                    extra={
+                        "workflow_id": workflow_id,
+                        "workflow_execution_id": workflow_execution_id,
+                        "tenant_id": tenant_id,
+                    },
+                )
                 self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,

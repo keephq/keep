@@ -19,9 +19,9 @@ class TenantConfiguration:
             )
 
         def _load_tenant_configurations(self):
-            self.logger.info("Loading tenants configurations")
+            self.logger.debug("Loading tenants configurations")
             tenants_configuration = get_tenants_configurations()
-            self.logger.info(
+            self.logger.debug(
                 "Tenants configurations loaded",
                 extra={
                     "number_of_tenants": len(tenants_configuration),
@@ -41,7 +41,7 @@ class TenantConfiguration:
             # tenant_config = self.configurations.get(tenant_id, {})
             tenant_config = self.configurations.get(tenant_id)
             if not tenant_config:
-                self.logger.info(f"Tenant {tenant_id} not found in memory, loading it")
+                self.logger.debug(f"Tenant {tenant_id} not found in memory, loading it")
                 self.configurations = self._load_tenant_configurations()
                 tenant_config = self.configurations.get(tenant_id, {})
 
