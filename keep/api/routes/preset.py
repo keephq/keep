@@ -20,7 +20,9 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def pull_alerts_from_providers(
+# SHAHAR: this function runs as background tasks as a seperate thread
+#         DO NOT ADD async HERE as it will run in the main thread and block the whole server
+def pull_alerts_from_providers(
     tenant_id: str,
     trace_id: str,
 ) -> list[AlertDto]:
@@ -29,7 +31,6 @@ async def pull_alerts_from_providers(
 
     "Get or create logics".
     """
-
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
@@ -54,7 +55,7 @@ async def pull_alerts_from_providers(
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            await process_event(
+            process_event(
                 {},
                 tenant_id,
                 provider.type,
@@ -202,6 +203,7 @@ async def get_preset_alerts(
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
+
     bg_tasks.add_task(
         pull_alerts_from_providers,
         authenticated_entity.tenant_id,
