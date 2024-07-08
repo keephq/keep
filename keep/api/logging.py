@@ -98,20 +98,20 @@ CONFIG = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
+            "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s %(thread)s %(module)s",
             "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
         }
     },
     "handlers": {
         "default": {
             "level": "DEBUG",
-            "formatter":  "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
         "context": {
             "level": "DEBUG",
-            "formatter":  "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "keep.api.logging.WorkflowDBHandler",
         },
     },
