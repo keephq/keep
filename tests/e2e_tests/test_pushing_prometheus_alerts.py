@@ -25,7 +25,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Enter provider name").click()
         browser.get_by_placeholder("Enter provider name").fill(provider_name)
         browser.get_by_placeholder("Enter url").click()
-        browser.get_by_placeholder("Enter url").fill("http://prometheus-server-for-test-target:9090/")
+        browser.get_by_placeholder("Enter url").fill("http://localhost:9090/")
         browser.get_by_role("button", name="Connect").click()
 
         browser.reload()
@@ -37,7 +37,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
                 alerts["data"]["alerts"][0]['state'] != "firing":        
             print("Waiting for prometheus to fire an alert...")
             time.sleep(1)
-            alerts = requests.get("http://prometheus-server-for-test-target:9090/api/v1/alerts").json()
+            alerts = requests.get("http://localhost:9090/api/v1/alerts").json()
             print(alerts)
         
         # Check if alerts were pulled
