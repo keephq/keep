@@ -1,15 +1,16 @@
+import copy
 import json
 import logging
 import os
 import typing
-import copy
+
 import yaml
 
+from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
-from keep.actions.actions_factory import ActionsCRUD
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
@@ -48,7 +49,11 @@ class Parser:
         return workflow_id
 
     def parse(
-        self, tenant_id, parsed_workflow_yaml: dict, providers_file: str = None, actions_file: str = None
+        self,
+        tenant_id,
+        parsed_workflow_yaml: dict,
+        providers_file: str = None,
+        actions_file: str = None,
     ) -> typing.List[Workflow]:
         """_summary_
 
@@ -68,7 +73,12 @@ class Parser:
             ) or parsed_workflow_yaml.get("alerts")
             workflows = [
                 self._parse_workflow(
-                    tenant_id, workflow, providers_file, workflow_providers, actions_file, workflow_actions
+                    tenant_id,
+                    workflow,
+                    providers_file,
+                    workflow_providers,
+                    actions_file,
+                    workflow_actions,
                 )
                 for workflow in raw_workflows
             ]
@@ -78,13 +88,23 @@ class Parser:
                 "workflow"
             ) or parsed_workflow_yaml.get("alert")
             workflow = self._parse_workflow(
-                tenant_id, raw_workflow, providers_file, workflow_providers, actions_file, workflow_actions
+                tenant_id,
+                raw_workflow,
+                providers_file,
+                workflow_providers,
+                actions_file,
+                workflow_actions,
             )
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
         else:
             workflow = self._parse_workflow(
-                tenant_id, parsed_workflow_yaml, providers_file, workflow_providers, actions_file, workflow_actions
+                tenant_id,
+                parsed_workflow_yaml,
+                providers_file,
+                workflow_providers,
+                actions_file,
+                workflow_actions,
             )
             workflows = [workflow]
         return workflows
@@ -113,7 +133,7 @@ class Parser:
         providers_file: str,
         workflow_providers: dict = None,
         actions_file: str = None,
-        workflow_actions: dict = None
+        workflow_actions: dict = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
@@ -381,9 +401,9 @@ class Parser:
         # if the workflow file itself contain actions (mainly backward compatibility)
         if workflow_actions:
             for action in workflow_actions:
-                context_manager.actions_context.update({
-                    action.get('use') or action.get('name'): action
-                })
+                context_manager.actions_context.update(
+                    {action.get("use") or action.get("name"): action}
+                )
         self._load_actions_from_db(context_manager, tenant_id)
         self.logger.debug("Actions parsed and loaded successfully")
 
@@ -399,16 +419,16 @@ class Parser:
                     self.logger.exception(f"Error parsing actions file {actions_file}")
                     raise
                 # create a hashmap -> action
-                for action in actions_content.get('actions', []) :
-                    context_manager.actions_context.update({
-                        action.get('use') or action.get('name'): action
-                    })
+                for action in actions_content.get("actions", []):
+                    context_manager.actions_context.update(
+                        {action.get("use") or action.get("name"): action}
+                    )
 
     def _load_actions_from_db(
         self, context_manager: ContextManager, tenant_id: str = None
     ):
         # If there is no tenant id, e.g. running from CLI, no db here
-        if not tenant_id: 
+        if not tenant_id:
             return
         # Load actions from db
         actions = ActionsCRUD.get_all_actions(tenant_id)
@@ -460,7 +480,7 @@ class Parser:
         self, context_manager: ContextManager, workflow: dict
     ) -> typing.List[Step]:
         self.logger.debug("Parsing actions")
-        workflow_actions_raw = workflow.get("actions", []) 
+        workflow_actions_raw = workflow.get("actions", [])
         workflow_actions = self._merge_action_by_use(
             workflow_actions=workflow_actions_raw,
             actions_context=context_manager.actions_context,
@@ -496,7 +516,9 @@ class Parser:
                         f"action defined in {actions_file} should have id as unique field"
                     )
         else:
-            self.logger.warning(f"No action located at {actions_file}, skip loading reusable actions") 
+            self.logger.warning(
+                f"No action located at {actions_file}, skip loading reusable actions"
+            )
         return actions_set
 
     def _merge_action_by_use(
@@ -584,7 +606,13 @@ class Parser:
             provider_config = context_manager.providers_context.get(config_id)
             if not provider_config:
                 self.logger.warning(
-                    f"Provider {config_id} not found in configuration, did you configure it?"
+                    "Provider not found in configuration, did you configure it?",
+                    extra={
+                        "provider_id": config_id,
+                        "provider_type": provider_type,
+                        "provider_config": provider_config,
+                        "tenant_id": context_manager.tenant_id,
+                    },
                 )
                 provider_config = {"authentication": {}}
             return config_id, provider_config
@@ -643,7 +671,7 @@ class ParserUtils:
         Example:
             source = {"deep1": {"deep2": 1}}
             dest = {"deep1", {"deep2": 2, "deep3": 3}}
-            returns -> {"deep1": {"deep2": 1, "deep3": 3}}    
+            returns -> {"deep1": {"deep2": 1, "deep3": 3}}
 
         Returns:
             dict: The new object contains merged results

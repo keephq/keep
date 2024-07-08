@@ -194,6 +194,10 @@ class IlertProvider(BaseProvider):
                 f"Failed to get alerts: {response.status_code} {response.text}"
             )
 
+        alerts = response.json()
+        self.logger.info(
+            "Got alerts from ilert", extra={"number_of_alerts": len(alerts)}
+        )
         return [
             AlertDto(
                 id=alert["id"],
@@ -211,7 +215,7 @@ class IlertProvider(BaseProvider):
                 lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
                 lastReceived=alert["updatedAt"],
             )
-            for alert in response.json()
+            for alert in alerts
         ]
 
     def __create_or_update_incident(

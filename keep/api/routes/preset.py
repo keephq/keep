@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -20,15 +20,17 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def pull_alerts_from_providers(
+# SHAHAR: this function runs as background tasks as a seperate thread
+#         DO NOT ADD async HERE as it will run in the main thread and block the whole server
+def pull_alerts_from_providers(
     tenant_id: str,
+    trace_id: str,
 ) -> list[AlertDto]:
     """
     Pulls alerts from providers and record the to the DB.
 
     "Get or create logics".
     """
-
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
@@ -53,16 +55,15 @@ async def pull_alerts_from_providers(
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            await process_event(
+            process_event(
                 {},
                 tenant_id,
-                None,
-                None,
+                provider.type,
+                provider.id,
                 fingerprint,
                 None,
-                None,
+                trace_id,
                 alert,
-                save_if_duplicate=False,
             )
 
 
@@ -194,6 +195,7 @@ def update_preset(
     description="Get a preset for tenant",
 )
 async def get_preset_alerts(
+    request: Request,
     bg_tasks: BackgroundTasks,
     preset_name: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
@@ -201,7 +203,12 @@ async def get_preset_alerts(
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
-    bg_tasks.add_task(pull_alerts_from_providers, authenticated_entity.tenant_id)
+
+    bg_tasks.add_task(
+        pull_alerts_from_providers,
+        authenticated_entity.tenant_id,
+        request.state.trace_id,
+    )
 
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting preset alerts", extra={"preset_name": preset_name})
