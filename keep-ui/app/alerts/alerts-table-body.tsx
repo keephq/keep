@@ -60,11 +60,7 @@ export function AlertsTableBody({
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
-                className={
-                  cell.column.columnDef.meta?.tdClassName
-                    ? cell.column.columnDef.meta?.tdClassName
-                    : ""
-                }
+                className={`${cell.column.columnDef.meta?.tdClassName || ""}`}
               >
                 {showSkeleton ? (
                   <Skeleton />

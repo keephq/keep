@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import re
@@ -7,7 +8,7 @@ import chevron
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
-from keep.api.core.db import get_mapping_rule_by_id
+from keep.api.core.db import get_enrichment, get_mapping_rule_by_id
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.extraction import ExtractionRule
@@ -316,12 +317,32 @@ class EnrichmentsBl:
             self.logger.exception("Error while checking matcher")
             return False
 
-    def enrich_alert(self, fingerprint: str, enrichments: dict):
+    def enrich_alert(
+        self, fingerprint: str, enrichments: dict, dispose_on_new_alert=False
+    ):
         """
         Enrich the alert with extraction and mapping rules
         """
         # enrich db
-        self.logger.debug("enriching alert db", extra={"fingerprint": fingerprint})
+        self.logger.debug(
+            "enriching alert db",
+            extra={"fingerprint": fingerprint, "tenant_id": self.tenant_id},
+        )
+        # if these enrichments are disposable, manipulate them with a timestamp
+        #   so they can be disposed of later
+        if dispose_on_new_alert:
+            self.logger.info(
+                "Enriching disposable enrichments", extra={"fingerprint": fingerprint}
+            )
+            # for every key, add a disposable key with the value and a timestamp
+            disposable_enrichments = {}
+            for key, value in enrichments.items():
+                disposable_enrichments[f"disposable_{key}"] = {
+                    "value": value,
+                    "timestamp": datetime.datetime.utcnow().timestamp(),  # timestamp for disposal [for future use]
+                }
+            enrichments.update(disposable_enrichments)
+
         enrich_alert_db(self.tenant_id, fingerprint, enrichments, self.db_session)
         self.logger.debug(
             "alert enriched in db, enriching elastic",
@@ -335,3 +356,37 @@ class EnrichmentsBl:
         self.logger.debug(
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
+
+    def dispose_enrichments(self, fingerprint: str):
+        """
+        Dispose of enrichments from the alert
+        """
+        self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
+        enrichments = get_enrichment(self.tenant_id, fingerprint)
+        if not enrichments.enrichments:
+            self.logger.debug(
+                "no enrichments to dispose", extra={"fingerprint": fingerprint}
+            )
+            return
+        # Remove all disposable enrichments
+        new_enrichments = {}
+        disposed = False
+        for key, val in enrichments.enrichments.items():
+            if key.startswith("disposable_"):
+                disposed = True
+                continue
+            elif f"disposable_{key}" not in enrichments.enrichments:
+                new_enrichments[key] = val
+        # Only update the alert if there are disposable enrichments to dispose
+        if disposed:
+            enrich_alert_db(
+                self.tenant_id,
+                fingerprint,
+                new_enrichments,
+                self.db_session,
+                force=True,
+            )
+            self.elastic_client.enrich_alert(fingerprint, new_enrichments)
+            self.logger.debug(
+                "enrichments disposed", extra={"fingerprint": fingerprint}
+            )
