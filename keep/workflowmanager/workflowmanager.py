@@ -74,14 +74,24 @@ class WorkflowManager:
                 # the provider is not configured, hence the workflow cannot be triggered
                 # todo - handle it better
                 # todo2 - handle if more than one provider is not configured
-                except ProviderConfigurationException as e:
-                    self.logger.warning(
-                        f"Workflow have a provider that is not configured: {e}"
+                except ProviderConfigurationException:
+                    self.logger.exception(
+                        "Workflow have a provider that is not configured",
+                        extra={
+                            "workflow_id": workflow_model.workflow_id,
+                            "tenant_id": tenant_id,
+                        },
                     )
                     continue
-                except Exception as e:
+                except Exception:
                     # TODO: how to handle workflows that aren't properly parsed/configured?
-                    self.logger.error(f"Error getting workflow: {e}")
+                    self.logger.exception(
+                        "Error getting workflow",
+                        extra={
+                            "workflow_id": workflow_model.workflow_id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
                     continue
                 for trigger in workflow.workflow_triggers:
                     # TODO: handle it better
