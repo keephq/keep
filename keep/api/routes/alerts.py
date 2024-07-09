@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+from typing import Optional
 
 import celpy
 from arq import ArqRedis
@@ -12,6 +13,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
+    Query,
     Request,
     Response,
 )
@@ -402,6 +404,9 @@ def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    dispose_on_new_alert: Optional[bool] = Query(
+        False, description="Dispose on new alert"
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -417,6 +422,7 @@ def enrich_alert(
         enrichement_bl.enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
+            dispose_on_new_alert=dispose_on_new_alert,
         )
         # get the alert with the new enrichment
         alert = get_alerts_by_fingerprint(

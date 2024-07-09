@@ -300,10 +300,10 @@ def elastic_client(request):
     yield elastic_client
 
     # remove all from elasticsearch
-    elastic_client.drop_index()
-
-    # delete the _client from the elastic_client
-    ElasticClient._instance = None
+    try:
+        elastic_client.drop_index()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
@@ -325,7 +325,11 @@ def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
-        "lastReceived": str(lastReceived) or datetime.now(tz=timezone.utc).isoformat(),
+        "lastReceived": (
+            str(lastReceived)
+            if lastReceived
+            else datetime.now(tz=timezone.utc).isoformat()
+        ),
     }
     event.update(d)
     return event
