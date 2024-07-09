@@ -73,6 +73,12 @@ def __save_to_db(
             formatted_event.pushed = True
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Dispose enrichments that needs to be disposed
+            try:
+                enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
+            except Exception:
+                logger.exception("Failed to dispose enrichments")
+
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
