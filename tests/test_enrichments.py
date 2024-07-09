@@ -8,6 +8,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
 @pytest.fixture(autouse=True)
