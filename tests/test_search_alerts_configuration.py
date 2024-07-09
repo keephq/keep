@@ -7,7 +7,7 @@
 import pytest
 
 from keep.api.models.db.tenant import Tenant
-from tests.fixtures.client import setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
 @pytest.mark.parametrize("test_app", ["SINGLE_TENANT"], indirect=True)
