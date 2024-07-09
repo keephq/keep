@@ -350,7 +350,11 @@ class PagerdutyProvider(BaseProvider):
         teams = [team.get("summary") for team in data.get("teams", [])]
         description = data.get("description")
         urgency = data.get("urgency")
-        priority = data.get("priority", {}).get("summary")
+        priority_obj = data.get("priority")
+        if not priority_obj == None:
+            priority = priority_obj.get("summary")
+        else:
+            priority = None
         last_status_change = data.get("last_status_change_at")
 
         # Additional metadata
