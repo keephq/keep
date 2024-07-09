@@ -1,95 +1,14 @@
-import datetime
 import os
-import random
 import time
-import uuid
 
 import pytest
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.db.alert import Alert
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
-from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
-from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.searchengine.searchengine import SearchEngine
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
-
-
-@pytest.fixture
-def setup_alerts(elastic_client, db_session, request):
-    alert_details = request.param.get("alert_details")
-    alerts = []
-    for i, detail in enumerate(alert_details):
-        detail["fingerprint"] = f"test-{i}"
-        alerts.append(
-            Alert(
-                tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
-                provider_id="test",
-                event=_create_valid_event(detail),
-                fingerprint=detail["fingerprint"],
-            )
-        )
-    db_session.add_all(alerts)
-    db_session.commit()
-    # add all to elasticsearch
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(alerts_dto)
-
-
-@pytest.fixture
-def setup_stress_alerts(elastic_client, db_session, request):
-    num_alerts = request.param.get(
-        "num_alerts", 1000
-    )  # Default to 1000 alerts if not specified
-    alert_details = [
-        {
-            "source": [
-                "source_{}".format(i % 10)
-            ],  # Cycle through 10 different sources
-            "severity": random.choice(
-                ["info", "warning", "critical"]
-            ),  # Alternate between 'critical' and 'warning'
-            "fingerprint": f"test-{i}",
-        }
-        for i in range(num_alerts)
-    ]
-    alerts = []
-    for i, detail in enumerate(alert_details):
-        random_timestamp = datetime.datetime.utcnow() - datetime.timedelta(
-            days=random.uniform(0, 7)
-        )
-        alerts.append(
-            Alert(
-                timestamp=random_timestamp,
-                tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
-                provider_id="test_{}".format(
-                    i % 5
-                ),  # Cycle through 5 different provider_ids
-                event=_create_valid_event(detail, lastReceived=random_timestamp),
-                fingerprint="fingerprint_{}".format(i),
-            )
-        )
-    db_session.add_all(alerts)
-    db_session.commit()
-
-    # add all to elasticsearch
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(alerts_dto)
-
-
-def _create_valid_event(d, lastReceived=None):
-    event = {
-        "id": str(uuid.uuid4()),
-        "name": "some-test-event",
-        "lastReceived": str(lastReceived)
-        or datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
-    }
-    event.update(d)
-    return event
 
 
 @pytest.mark.parametrize(
