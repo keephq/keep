@@ -1,7 +1,7 @@
 import logging
 import os
 
-from elasticsearch import BadRequestError, Elasticsearch
+from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import bulk
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -201,6 +201,9 @@ class ElasticClient:
                 refresh="true",
             )
         # TODO: retry/pubsub
+        except ApiError as e:
+            self.logger.error(f"Failed to index alert to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alert to Elastic: {e} {e.errors}")
         except Exception as e:
             self.logger.error(f"Failed to index alert to Elastic: {e}")
             raise Exception(f"Failed to index alert to Elastic: {e}")
