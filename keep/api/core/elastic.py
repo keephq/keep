@@ -230,6 +230,9 @@ class ElasticClient:
             self.logger.info(
                 f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
             )
+        except ApiError as e:
+            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
         except Exception as e:
             self.logger.error(f"Failed to index alerts to Elastic: {e}")
             raise Exception(f"Failed to index alerts to Elastic: {e}")
