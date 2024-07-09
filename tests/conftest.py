@@ -300,10 +300,10 @@ def elastic_client(request):
     yield elastic_client
 
     # remove all from elasticsearch
-    elastic_client.drop_index()
-
-    # delete the _client from the elastic_client
-    ElasticClient._instance = None
+    try:
+        elastic_client.drop_index()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
