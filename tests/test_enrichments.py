@@ -483,3 +483,68 @@ def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client
     assert response.headers.get("x-search-type") == "elastic"
     alert = alerts[0]
     assert alert["service"] == "new_service"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
+    # SHAHAR: there is a voodoo so that you must do something with the db_session to kick it off
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="new_rule",
+        disabled=False,
+    )
+    db_session.add(rule)
+    db_session.commit()
+    # 1. send alert
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+
+    # 2. enrich with disposable alert
+    response = client.post(
+        "/alerts/enrich?dispose_on_new_alert=true",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": mock_alert_dto.fingerprint,
+            "enrichments": {
+                "status": "acknowledged",
+            },
+        },
+    )
+
+    # 3. get the alert with the new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "acknowledged"
+
+    # 4. send the alert again with firing and check that the status is reset
+    mock_alert_dto.status = "firing"
+    setattr(mock_alert_dto, "avoid_dedup", "bla")
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+    # 5. get the alert with the new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "firing"

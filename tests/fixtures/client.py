@@ -3,7 +3,6 @@ import importlib
 import sys
 
 import pytest
-
 from fastapi.testclient import TestClient
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -13,8 +12,15 @@ from keep.api.models.db.tenant import TenantApiKey
 @pytest.fixture
 def test_app(monkeypatch, request):
     auth_type = request.param
+    elastic_enabled = None
+    if isinstance(auth_type, tuple):
+        auth_type = auth_type[0]
+        elastic_enabled = auth_type[1]
+
     monkeypatch.setenv("AUTH_TYPE", auth_type)
     monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
+    if elastic_enabled is not None:
+        monkeypatch.setenv("ELASTIC_ENABLED", str(elastic_enabled))
     # Ok this is bit complex so stay with me:
     #   We need to reload the app to make sure the AuthVerifier is instantiated with the correct environment variable
     #   However, we can't just reload the module because the app is instantiated in the get_app() function
@@ -42,7 +48,6 @@ def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
     return TestClient(test_app)
-
 
 
 # Common setup for tests
