@@ -487,6 +487,7 @@ def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
+    # SHAHAR: there is a voodoo so that you must do something with the db_session to kick it off
     rule = MappingRule(
         id=1,
         tenant_id=SINGLE_TENANT_UUID,
