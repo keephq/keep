@@ -2,7 +2,7 @@ import logging
 import os
 
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
-from elasticsearch.helpers import bulk
+from elasticsearch.helpers import BulkIndexError, bulk
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
@@ -230,11 +230,14 @@ class ElasticClient:
             self.logger.info(
                 f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
             )
+        except BulkIndexError as e:
+            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
         except ApiError as e:
             self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
             raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
         except Exception as e:
-            self.logger.error(f"Failed to index alerts to Elastic: {e}")
+            self.logger.exception(f"Failed to index alerts to Elastic: {e}")
             raise Exception(f"Failed to index alerts to Elastic: {e}")
 
     def enrich_alert(self, alert_fingerprint: str, alert_enrichments: dict):

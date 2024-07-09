@@ -325,7 +325,11 @@ def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
-        "lastReceived": str(lastReceived) or datetime.now(tz=timezone.utc).isoformat(),
+        "lastReceived": (
+            str(lastReceived)
+            if lastReceived
+            else datetime.now(tz=timezone.utc).isoformat()
+        ),
     }
     event.update(d)
     return event
