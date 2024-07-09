@@ -1,8 +1,8 @@
-import datetime
 import inspect
 import os
 import random
 import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import mysql.connector
@@ -325,8 +325,7 @@ def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
-        "lastReceived": str(lastReceived)
-        or datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        "lastReceived": str(lastReceived) or datetime.now(tz=timezone.utc).isoformat(),
     }
     event.update(d)
     return event
@@ -373,9 +372,7 @@ def setup_stress_alerts(elastic_client, db_session, request):
     ]
     alerts = []
     for i, detail in enumerate(alert_details):
-        random_timestamp = datetime.datetime.utcnow() - datetime.timedelta(
-            days=random.uniform(0, 7)
-        )
+        random_timestamp = datetime.utcnow() - timedelta(days=random.uniform(0, 7))
         alerts.append(
             Alert(
                 timestamp=random_timestamp,
