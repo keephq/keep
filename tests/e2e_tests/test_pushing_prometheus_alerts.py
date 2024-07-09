@@ -13,6 +13,16 @@ def test_pulling_prometheus_alerts_to_provider(browser):
     try: 
         provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
 
+        # Wait for prometheus to wake up and evaluate alert rule as "firing"
+        alerts = None
+        while alerts is None or \
+                len(alerts["data"]["alerts"]) == 0 or \
+                alerts["data"]["alerts"][0]['state'] != "firing":        
+            print("Waiting for prometheus to fire an alert...")
+            time.sleep(1)
+            alerts = requests.get("http://localhost:9090/api/v1/alerts").json()
+            print(alerts)
+        
         # Create prometheus provider 
         browser.goto("http://localhost:3000/providers")
         browser.get_by_placeholder("Filter providers...").click()
@@ -27,23 +37,21 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Enter url").click()
         browser.get_by_placeholder("Enter url").fill("http://localhost:9090/")
         browser.get_by_role("button", name="Connect").click()
+        browser.mouse.wheel(1000, 10000)  # Scroll right to find the button.
+        # raise Exception("Please add authentication to the provider")
+
+        # Validate provider is created
+        browser.locator("div").filter(has_text=re.compile(r"^Connectedprometheus id: " + re.escape(provider_name) + r"Modify$")).first.click()
+
 
         browser.reload()
-
-        # Wait for prometheus to wake up and evaluate alert rule as "firing"
-        alerts = None
-        while alerts is None or \
-                len(alerts["data"]["alerts"]) == 0 or \
-                alerts["data"]["alerts"][0]['state'] != "firing":        
-            print("Waiting for prometheus to fire an alert...")
-            time.sleep(1)
-            alerts = requests.get("http://localhost:9090/api/v1/alerts").json()
-            print(alerts)
         
         # Check if alerts were pulled
         for i in range(0, 5):
             browser.get_by_role("link", name="Feed").click()
             browser.wait_for_timeout(5000) # Wait for alerts to be loaded
+
+        browser.reload()
 
         # Open history
         browser.get_by_text("AlwaysFiringAlert").hover()
