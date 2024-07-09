@@ -88,7 +88,7 @@ class WorkflowManager:
                     self.logger.exception(
                         "Error getting workflow",
                         extra={
-                            "workflow_id": workflow_model.workflow_id,
+                            "workflow_id": workflow_model.id,
                             "tenant_id": tenant_id,
                         },
                     )
