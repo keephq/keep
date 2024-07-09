@@ -35,7 +35,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Enter provider name").click()
         browser.get_by_placeholder("Enter provider name").fill(provider_name)
         browser.get_by_placeholder("Enter url").click()
-        browser.get_by_placeholder("Enter url").fill("http://localhost:9090/")
+        browser.get_by_placeholder("Enter url").fill("http://prometheus-server-for-test-target:9090/")
         browser.get_by_role("button", name="Connect").click()
         browser.mouse.wheel(1000, 10000)  # Scroll right to find the button.
         # raise Exception("Please add authentication to the provider")
