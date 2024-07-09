@@ -269,7 +269,10 @@ class EnrichmentsBl:
                     setattr(alert, key, value)
 
                 # Save the enrichments to the database
-                self.enrich_alert(alert.fingerprint, enrichments)
+                # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
+                #         enrich alert will fail to update the alert in elastic.
+                #         hence should_exist = False
+                self.enrich_alert(alert.fingerprint, enrichments, should_exist=False)
 
                 self.logger.info(
                     "Alert enriched",
@@ -318,9 +321,15 @@ class EnrichmentsBl:
             return False
 
     def enrich_alert(
-        self, fingerprint: str, enrichments: dict, dispose_on_new_alert=False
+        self,
+        fingerprint: str,
+        enrichments: dict,
+        should_exist=True,
+        dispose_on_new_alert=False,
     ):
         """
+        should_exist = False only in mapping where the alert is not yet in elastic
+
         Enrich the alert with extraction and mapping rules
         """
         # enrich db
@@ -348,11 +357,15 @@ class EnrichmentsBl:
             "alert enriched in db, enriching elastic",
             extra={"fingerprint": fingerprint},
         )
-        # enrich elastic
-        self.elastic_client.enrich_alert(
-            alert_fingerprint=fingerprint,
-            alert_enrichments=enrichments,
-        )
+        # enrich elastic only if should exist, since
+        #   in elastic the alertdto is being kept which is alert + enrichments
+        # so for example, in mapping, the enrichment happens before the alert is indexed in elastic
+        #
+        if should_exist:
+            self.elastic_client.enrich_alert(
+                alert_fingerprint=fingerprint,
+                alert_enrichments=enrichments,
+            )
         self.logger.debug(
             "alert enriched in elastic", extra={"fingerprint": fingerprint}
         )
