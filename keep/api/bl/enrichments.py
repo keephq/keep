@@ -376,7 +376,7 @@ class EnrichmentsBl:
         """
         self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
         enrichments = get_enrichment(self.tenant_id, fingerprint)
-        if not enrichments.enrichments:
+        if not enrichments or not enrichments.enrichments:
             self.logger.debug(
                 "no enrichments to dispose", extra={"fingerprint": fingerprint}
             )
