@@ -260,7 +260,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           defaultValue={selectedLookupAttributes.join("||")}
           className="mt-1"
         />
-        <Text className="text-xs">
+        <Text className="text-xs mt-1">
           (Use `&&` to match multiple attributes at once and `||` to
           condtionally match others)
         </Text>
