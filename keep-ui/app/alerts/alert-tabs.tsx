@@ -4,6 +4,8 @@ import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { getApiURL } from "utils/apiUrl";
+import { useSession } from "next-auth/react";
 interface Tab {
   id?: string;
   name: string;
@@ -20,6 +22,7 @@ interface Props {
 
 const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: session } = useSession();
 
   const addNewTab = (name: string, filter: string) => {
     const newTab = { name: name, filter: (alert: AlertDto) => evalWithContext(alert, filter) };
@@ -37,8 +40,13 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
 
     // if the tab has id, means it already in the database
     try {
-      const response = await fetch(`/api/presets/${presetId}/tabs/${tabToDelete.id}`, {
+      const apiUrl = getApiURL();
+      const response = await fetch(`${apiUrl}/preset/${presetId}/tab/${tabToDelete.id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
       });
 
       if (!response.ok) {
