@@ -368,16 +368,18 @@ def process_event(
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
-        if provider_type is not None:
+        if provider_type is not None and type(event) is dict:
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
+
+        # In case when provider_type is not set
+        if isinstance(event, dict):
+            event = [AlertDto(**event)]
 
         # Prepare the event for the digest
         if isinstance(event, AlertDto):
             event = [event]
 
-        if isinstance(event, dict):
-            event = [AlertDto(**event)]
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
