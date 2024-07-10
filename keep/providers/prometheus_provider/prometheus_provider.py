@@ -164,7 +164,7 @@ receivers:
     ) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
-        if type(event) is list:
+        if isinstance(event, list):
             return event
         else:
             alerts = event.get("alerts", [event])
