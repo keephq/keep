@@ -114,7 +114,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             description=description,
             severity=severity,
             url=url,
-            **incident
+            gcp=incident,  # rest of the fields
         )
 
         # Set fingerprint if applicable
