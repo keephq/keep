@@ -80,6 +80,35 @@ class Group(SQLModel, table=True):
             "|".join([str(self.id), self.group_fingerprint]).encode()
         ).hexdigest()
 
+    
+class AlertToIncident(SQLModel, table=True):
+    tenant_id: str = Field(foreign_key="tenant.id")
+    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
+    incident_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+
+class Incident(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+
+    start_time: datetime
+    end_time: datetime
+
+    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
+    incident_fingerprint: str
+    # map of attributes to values
+    alerts: List["Alert"] = Relationship(
+        back_populates="incidents", link_model=AlertToIncident
+    )
+    def calculate_fingerprint(self):
+        return hashlib.sha256(
+            "|".join([str(self.id), self.incident_fingerprint]).encode()
+        ).hexdigest()
 
 class Alert(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -100,6 +129,9 @@ class Alert(SQLModel, table=True):
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
     groups: List["Group"] = Relationship(
         back_populates="alerts", link_model=AlertToGroup
+    )
+    incidents: List["Incident"] = Relationship(
+        back_populates="alerts", link_model=AlertToIncident
     )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
