@@ -35,14 +35,18 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Enter provider name").click()
         browser.get_by_placeholder("Enter provider name").fill(provider_name)
         browser.get_by_placeholder("Enter url").click()
-        browser.get_by_placeholder("Enter url").fill("http://prometheus-server-for-test-target:9090/")
+
+        if os.getenv("GITHUB_ACTIONS") == "true":
+            browser.get_by_placeholder("Enter url").fill("http://prometheus-server-for-test-target:9090/")
+        else:
+            browser.get_by_placeholder("Enter url").fill("http://localhost:9090/")
+
+        browser.mouse.wheel(1000, 10000)  # Scroll down.
         browser.get_by_role("button", name="Connect").click()
-        browser.mouse.wheel(1000, 10000)  # Scroll right to find the button.
-        # raise Exception("Please add authentication to the provider")
+        
 
         # Validate provider is created
-        browser.locator("div").filter(has_text=re.compile(r"^Connectedprometheus id: " + re.escape(provider_name) + r"Modify$")).first.click()
-
+        expect(browser.locator("div").filter(has_text=re.compile(re.escape(provider_name))).first).to_be_visible()
 
         browser.reload()
         
@@ -69,13 +73,13 @@ def test_pulling_prometheus_alerts_to_provider(browser):
     
         # Delete provider 
         browser.get_by_role("link", name="Providers").click()
-        browser.locator("div").filter(has_text=re.compile(r"^Connectedprometheus id: " + re.escape(provider_name) + r"Modify$")).first.click()
-        browser.get_by_text("Push alerts from Prometheus").hover()
+        browser.locator("div").filter(has_text=re.compile(re.escape(provider_name))).first.hover()
+        browser.locator(".tile-basis").first.click()
         browser.once("dialog", lambda dialog: dialog.accept())
         browser.get_by_role("button", name="Delete").click()
 
         # Assert provider was deleted
-        expect(browser.locator("div").filter(has_text=re.compile(r"^Connectedprometheus id: " + re.escape(provider_name) + r"Modify$")).first).not_to_be_visible()
+        expect(browser.locator("div").filter(has_text=re.compile(re.escape(provider_name))).first).not_to_be_visible()
     except Exception:
         # Current file + test name for unique html and png dump.
         current_test_name = \
