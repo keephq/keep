@@ -105,13 +105,13 @@ CONFIG = {
     "handlers": {
         "default": {
             "level": "DEBUG",
-            "formatter":  "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
         "context": {
             "level": "DEBUG",
-            "formatter":  "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "keep.api.logging.WorkflowDBHandler",
         },
     },

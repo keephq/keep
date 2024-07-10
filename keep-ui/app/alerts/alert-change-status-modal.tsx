@@ -109,7 +109,7 @@ export default function AlertChangeStatusModal({
     }
 
     try {
-      const response = await fetch(`${getApiURL()}/alerts/enrich`, {
+      const response = await fetch(`${getApiURL()}/alerts/enrich?dispose_on_new_alert=true`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,7 +117,6 @@ export default function AlertChangeStatusModal({
         },
         body: JSON.stringify({
           enrichments: {
-            fingerprint: alert.fingerprint,
             status: selectedStatus,
           },
           fingerprint: alert.fingerprint,

@@ -6,6 +6,7 @@ import re
 import celpy
 import chevron
 
+from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
 from keep.api.core.db import create_alert as create_alert_db
 from keep.api.core.db import get_rules as get_rules_db
@@ -365,6 +366,13 @@ class RulesEngine:
         """
         logger = logging.getLogger(__name__)
         env = celpy.Environment()
+        # tb: temp hack because this function is super slow
+        if cel == STATIC_PRESETS.get("feed", {}).options[0].get("value"):
+            return [
+                alert
+                for alert in alerts
+                if (alert.deleted == False and alert.dismissed == False)
+            ]
         # if the cel is empty, return all the alerts
         if not cel:
             logger.debug("No CEL expression provided")
@@ -379,7 +387,9 @@ class RulesEngine:
             # TODO: workaround since source is a list
             #       should be fixed in the future
             payload["source"] = ",".join(payload["source"])
-            payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+            # payload severity could be the severity itself or the order of the severity, cast it to the order
+            if isinstance(payload["severity"], str):
+                payload["severity"] = AlertSeverity(payload["severity"].lower()).order
 
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             try:

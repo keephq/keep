@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+from typing import Optional
 
 import celpy
 from arq import ArqRedis
@@ -12,6 +13,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
+    Query,
     Request,
     Response,
 )
@@ -38,8 +40,6 @@ from keep.searchengine.searchengine import SearchEngine
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-elastic_client = ElasticClient()
 
 REDIS = os.environ.get("REDIS", "false") == "true"
 
@@ -404,6 +404,9 @@ def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    dispose_on_new_alert: Optional[bool] = Query(
+        False, description="Dispose on new alert"
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -419,6 +422,7 @@ def enrich_alert(
         enrichement_bl.enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
+            dispose_on_new_alert=dispose_on_new_alert,
         )
         # get the alert with the new enrichment
         alert = get_alerts_by_fingerprint(
@@ -434,8 +438,8 @@ def enrich_alert(
         # push the enriched alert to the elasticsearch
         try:
             logger.info("Pushing enriched alert to elasticsearch")
+            elastic_client = ElasticClient(tenant_id)
             elastic_client.index_alert(
-                tenant_id=tenant_id,
                 alert=enriched_alerts_dto[0],
             )
             logger.info("Pushed enriched alert to elasticsearch")
@@ -481,7 +485,7 @@ async def search_alerts(
             extra={"tenant_id": tenant_id},
         )
         search_engine = SearchEngine(tenant_id)
-        filtered_alerts = search_engine.search_alerts(tenant_id, search_request.query)
+        filtered_alerts = search_engine.search_alerts(search_request.query)
         logger.info(
             "Searched alerts",
             extra={"tenant_id": tenant_id},

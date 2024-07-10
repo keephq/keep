@@ -17,7 +17,7 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
@@ -630,12 +630,16 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def _enrich_alert(session, tenant_id, fingerprint, enrichments):
+def _enrich_alert(session, tenant_id, fingerprint, enrichments, force=False):
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
+        # if force - override exisitng enrichments. being used to dispose enrichments if necessary
+        if force:
+            new_enrichment_data = enrichments
+        else:
+            new_enrichment_data = {**enrichment.enrichments, **enrichments}
         # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
         # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-        new_enrichment_data = {**enrichment.enrichments, **enrichments}
         stmt = (
             update(AlertEnrichment)
             .where(AlertEnrichment.id == enrichment.id)
@@ -657,12 +661,14 @@ def _enrich_alert(session, tenant_id, fingerprint, enrichments):
         return alert_enrichment
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments, session=None):
+def enrich_alert(tenant_id, fingerprint, enrichments, session=None, force=False):
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
-            return _enrich_alert(session, tenant_id, fingerprint, enrichments)
-    return _enrich_alert(session, tenant_id, fingerprint, enrichments)
+            return _enrich_alert(
+                session, tenant_id, fingerprint, enrichments, force=force
+            )
+    return _enrich_alert(session, tenant_id, fingerprint, enrichments, force=force)
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -850,7 +856,7 @@ def get_last_alerts(
             )
 
         # Order by timestamp in descending order and limit the results
-        query = query.limit(limit)
+        query = query.order_by(desc(Alert.timestamp)).limit(limit)
         # Execute the query
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
@@ -1645,3 +1651,23 @@ def update_action(
             session.commit()
             session.refresh(found_action)
     return found_action
+
+
+def get_tenants_configurations() -> List[Tenant]:
+    with Session(engine) as session:
+        try:
+            tenants = session.exec(select(Tenant)).all()
+        # except column configuration does not exist (new column added)
+        except OperationalError as e:
+            if "Unknown column" in str(e):
+                logger.warning("Column configuration does not exist in the database")
+                return {}
+            else:
+                logger.exception("Failed to get tenants configurations")
+                return {}
+
+    tenants_configurations = {}
+    for tenant in tenants:
+        tenants_configurations[tenant.id] = tenant.configuration or {}
+
+    return tenants_configurations

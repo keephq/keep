@@ -73,6 +73,12 @@ def __save_to_db(
             formatted_event.pushed = True
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Dispose enrichments that needs to be disposed
+            try:
+                enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
+            except Exception:
+                logger.exception("Failed to dispose enrichments")
+
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
@@ -157,7 +163,6 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
-    save_if_duplicate: bool = True,
 ):
     """
     this is super important function and does five things:
@@ -190,18 +195,6 @@ def __handle_formatted_events(
         event.alert_hash = event_hash
         event.isDuplicate = event_deduplicated
 
-    if event.isDuplicate and not save_if_duplicate:
-        logger.info(
-            "Alert is not saved as a duplicate",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-        return None
-
     # filter out the deduplicated events
     formatted_events = list(
         filter(lambda event: not event.isDuplicate, formatted_events)
@@ -213,7 +206,7 @@ def __handle_formatted_events(
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
-    elastic_client = ElasticClient()
+    elastic_client = ElasticClient(tenant_id=tenant_id)
     for alert in enriched_formatted_events:
         try:
             logger.debug(
@@ -224,7 +217,6 @@ def __handle_formatted_events(
                 },
             )
             elastic_client.index_alert(
-                tenant_id=tenant_id,
                 alert=alert,
             )
         except Exception:
@@ -346,7 +338,7 @@ def __handle_formatted_events(
         )
 
 
-async def process_event(
+def process_event(
     ctx: dict,  # arq context
     tenant_id: str,
     provider_type: str | None,
@@ -357,7 +349,6 @@ async def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
-    save_if_duplicate: bool = True, 
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -390,7 +381,12 @@ async def process_event(
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
-            tenant_id, provider_type, session, event, event, provider_id, save_if_duplicate
+            tenant_id,
+            provider_type,
+            session,
+            event,
+            event,
+            provider_id,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
