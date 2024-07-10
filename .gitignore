@@ -197,4 +197,6 @@ docs/node_modules/
 
 
 scripts/automatic_extraction_rules.py
-page_source_test*.html
+
+playwright_dump_*.html
+playwright_dump_*.png

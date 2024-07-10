@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'keep/**'
+      - 'keep-ui/**'
+      - 'tests/**'
 
 env:
   PYTHON_VERSION: 3.11
@@ -142,8 +144,8 @@ jobs:
         with:
           name: test-artifacts
           path: |
-            page_source_test1.html
-            page_source_test2.html
+            playwright_dump_*.html
+            playwright_dump_*.png
             backend_logs-${{ matrix.db_type }}.txt
             frontend_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
