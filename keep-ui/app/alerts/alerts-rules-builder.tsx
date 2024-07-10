@@ -605,7 +605,7 @@ export const AlertsRulesBuilder = ({
               value={celRules}
               onValueChange={onValueChange}
               onKeyDown={handleKeyDown}
-              placeholder='Meow! Use CEL to filter your alerts e.g. source.contains("kibana").'
+              placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
               error={!isValidCEL}
               onFocus={() => setShowSuggestions(true)}
             />
