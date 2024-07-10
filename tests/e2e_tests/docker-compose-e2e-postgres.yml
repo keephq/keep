@@ -19,7 +19,7 @@ services:
       service: keep-frontend-common
     build:
       context: ./keep-ui/
-      dockerfile: docker/Dockerfile.ui
+      dockerfile: ../docker/Dockerfile.ui
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
