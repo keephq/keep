@@ -467,6 +467,7 @@ class NewrelicProvider(BaseProvider):
 
         logger.info("Formatted event from New Relic")
         return AlertDto(
+            source=["newrelic"],
             name=name,
             lastReceived=lastReceived,
             status=status,
