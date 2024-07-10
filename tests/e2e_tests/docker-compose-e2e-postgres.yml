@@ -18,7 +18,7 @@ services:
       file: docker-compose.common.yml
       service: keep-frontend-common
     build:
-      context: .
+      context: ./keep-ui/
       dockerfile: docker/Dockerfile.ui
     environment:
       - AUTH_TYPE=NO_AUTH
