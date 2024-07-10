@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { FormEventHandler, useState } from "react";
 import { Button, TextInput, Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
@@ -23,6 +23,12 @@ interface Props {
 const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: session } = useSession();
+
+  const handleTabChange: FormEventHandler<HTMLDivElement> = (event) => {
+    // Extract the index from the event target
+    const index = parseInt((event.target as HTMLButtonElement).value, 10);
+    setSelectedTab(index);
+  };
 
   const addNewTab = (name: string, filter: string) => {
     const newTab = { name: name, filter: (alert: AlertDto) => evalWithContext(alert, filter) };
@@ -66,29 +72,30 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
 
   return (
     <div className="tabs-container">
-      <TabGroup index={selectedTab} onChange={setSelectedTab}>
+      <TabGroup index={selectedTab} onChange={handleTabChange}>
         <TabList color="orange">
-          {tabs.slice(0, -1).map((tab, index) => ( // Exclude the last tab
-          <div key={index} className="relative group">
-          <Tab className="pr-8">{tab.name}</Tab>
-          <button
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
-            onClick={() => deleteTab(index)}
-          >
-            <XMarkIcon className="h-4 w-4 text-red-500" />
-          </button>
-        </div>
-
-          ))}
-          <Tab onClick={() => setIsModalOpen(true)}>{tabs[tabs.length - 1].name}</Tab>
+            <>
+            {tabs.slice(0, -1).map((tab, index) => (
+                <div key={index} className="relative group">
+                <Tab className="pr-8">{tab.name}</Tab>
+                <button
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
+                    onClick={() => deleteTab(index)}
+                >
+                    <XMarkIcon className="h-4 w-4 text-red-500" />
+                </button>
+                </div>
+            ))}
+            <Tab onClick={() => setIsModalOpen(true)}>{tabs[tabs.length - 1].name}</Tab>
+            </>
         </TabList>
         <TabPanels>
-          {tabs.slice(0, -1).map((tab, index) => (
+            {tabs.slice(0, -1).map((tab, index) => (
             <TabPanel key={index}></TabPanel>
-          ))}
-          <TabPanel></TabPanel> {/* Render an empty panel for the "+" tab */}
+            ))}
+            <TabPanel></TabPanel>
         </TabPanels>
-      </TabGroup>
+        </TabGroup>
 
         <AlertTabModal
           isOpen={isModalOpen}
