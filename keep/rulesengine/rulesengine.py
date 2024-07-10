@@ -387,7 +387,9 @@ class RulesEngine:
             # TODO: workaround since source is a list
             #       should be fixed in the future
             payload["source"] = ",".join(payload["source"])
-            payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+            # payload severity could be the severity itself or the order of the severity, cast it to the order
+            if isinstance(payload["severity"], str):
+                payload["severity"] = AlertSeverity(payload["severity"].lower()).order
 
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             try:

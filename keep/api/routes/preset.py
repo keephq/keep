@@ -1,7 +1,14 @@
 import logging
 import asyncio
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+)
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -199,6 +206,7 @@ async def get_preset_alerts(
     request: Request,
     bg_tasks: BackgroundTasks,
     preset_name: str,
+    response: Response,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[AlertDto]:
 
@@ -226,4 +234,5 @@ async def get_preset_alerts(
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
 
+    response.headers["X-search-type"] = str(search_engine.search_mode.value)
     return preset_alerts
