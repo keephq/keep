@@ -28,7 +28,7 @@ import random
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
-import re, os, sys
+import re
 import string
 
 # Running the tests in GitHub Actions:
@@ -64,14 +64,11 @@ def test_insert_new_alert(browser):
         browser.reload()
         browser.get_by_text("1", exact=True).click()
     except Exception:
-        # Current file + test name for unique html and png dump.
-        current_test_name = \
-            "playwright_dump_" + \
-            os.path.basename(__file__)[:-3] + \
-            "_" + sys._getframe().f_code.co_name
+        # Capture a screenshot on failure
+        # browser.screenshot(path="screenshot-test1.png")
 
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
+        # Save the page source on failure
+        with open("page_source_test1.html", "w") as f:
             f.write(browser.content())
         raise
 
@@ -108,13 +105,10 @@ def test_providers_page_is_accessible(browser):
         # make sure the provider is connected
         browser.get_by_text(f"resend id: {random_provider_name}").click()
     except Exception:
-        # Current file + test name for unique html and png dump.
-        current_test_name = \
-            "playwright_dump_" + \
-            os.path.basename(__file__)[:-3] + \
-            "_" + sys._getframe().f_code.co_name
+        # Capture a screenshot on failure
+        # browser.screenshot(path="screenshot-test2.png")
 
-        browser.screenshot(path=current_test_name + ".png")
-        with open(current_test_name + ".html", "w") as f:
+        # Save the page source on failure
+        with open("page_source_test2.html", "w") as f:
             f.write(browser.content())
         raise

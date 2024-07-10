@@ -20,7 +20,7 @@ services:
       file: docker-compose.common.yml
       service: keep-frontend-common
     build:
-      context: ./keep-ui/
+      context: ./keep-ui
       dockerfile: ../docker/Dockerfile.ui
     environment:
       - AUTH_TYPE=NO_AUTH
@@ -49,14 +49,6 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
-
-  prometheus-server-for-test-target:
-    image: prom/prometheus
-    volumes:
-      - ./tests/e2e_tests/test_pushing_prometheus_config.yaml:/etc/prometheus/prometheus.yml
-      - ./tests/e2e_tests/test_pushing_prometheus_rules.yaml:/etc/prometheus/test_pushing_prometheus_rules.yaml
-    ports:
-      - "9090:9090"
 
 volumes:
   mysql-data:
