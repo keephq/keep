@@ -1,8 +1,5 @@
-import { CSSProperties, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Icon, Subtitle } from "@tremor/react";
-import { Trashcan } from "components/icons"; // Assuming you have a similar icon component
+import { Subtitle } from "@tremor/react";
 import { FiLayout } from "react-icons/fi";
 import { LinkWithIcon } from "components/LinkWithIcon"; // Ensure you import this correctly
 import classNames from 'classnames';
@@ -20,21 +17,14 @@ type DashboardLinkProps = {
 };
 
 export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: DashboardLinkProps) => {
-  const [isHovered, setIsHovered] = useState(false);
   const href = `/dashboard/${dashboard.dashboard_name}`;
   const isActive = decodeURIComponent(pathname|| "") === href;
 
-  const { listeners, setNodeRef, transform, transition, isDragging } =
+  const { isDragging } =
     useSortable({
       id: dashboard.id,
     });
 
-  const dragStyle: CSSProperties = {
-    opacity: isDragging ? 0.5 : 1,
-    transform: CSS.Translate.toString(transform),
-    transition,
-    cursor: isDragging ? "grabbing" : "grab",
-  };
 
   return (
     <LinkWithIcon
