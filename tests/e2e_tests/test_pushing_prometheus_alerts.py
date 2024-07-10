@@ -58,7 +58,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.reload()
 
         # Make sure we pulled multiple instances of the alert
-        browser.get_by_text("AlwaysFiringAlert").hover()
+        browser.get_by_text("AlwaysFiringAlert").click()
     
         # Delete provider 
         browser.get_by_role("link", name="Providers").click()
