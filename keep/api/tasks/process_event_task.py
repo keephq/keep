@@ -332,7 +332,7 @@ def __handle_formatted_events(
         )
 
 
-async def process_event(
+def process_event_sync(
     ctx: dict,  # arq context
     tenant_id: str,
     provider_type: str | None,
@@ -388,3 +388,7 @@ async def process_event(
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+async def process_event(*args, **kwargs):
+    process_event_sync(*args, **kwargs)
