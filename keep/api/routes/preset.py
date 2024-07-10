@@ -1,5 +1,4 @@
 import logging
-import asyncio
 
 from fastapi import (
     APIRouter,
