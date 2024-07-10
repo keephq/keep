@@ -158,6 +158,7 @@ export default function AlertMenu({
             icon={EllipsisHorizontalIcon}
             className="hover:bg-gray-100"
             color="gray"
+            title="Alert actions"
           />
         </Menu.Button>
         {isMenuOpen && (
