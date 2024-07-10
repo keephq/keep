@@ -285,6 +285,12 @@ class EnrichmentsBl:
 
         return False
 
+    @staticmethod
+    def _is_match(value, pattern):
+        if value is None or pattern is None:
+            return False
+        return re.match(pattern, value) is not None
+
     def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
         """
         Check if the alert matches the conditions specified by a matcher.
@@ -302,8 +308,9 @@ class EnrichmentsBl:
                 # Split by " && " for AND condition
                 conditions = matcher.split(" && ")
                 return all(
-                    re.match(row.get(attribute), get_nested_attribute(alert, attribute))
-                    is not None
+                    self._is_match(
+                        get_nested_attribute(alert, attribute), row.get(attribute)
+                    )
                     or get_nested_attribute(alert, attribute) == row.get(attribute)
                     or row.get(attribute) == "*"  # Wildcard match
                     for attribute in conditions
@@ -311,8 +318,9 @@ class EnrichmentsBl:
             else:
                 # Single condition check
                 return (
-                    re.match(row.get(matcher), get_nested_attribute(alert, matcher))
-                    is not None
+                    self._is_match(
+                        get_nested_attribute(alert, matcher), row.get(matcher)
+                    )
                     or get_nested_attribute(alert, matcher) == row.get(matcher)
                     or row.get(matcher) == "*"  # Wildcard match
                 )

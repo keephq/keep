@@ -209,12 +209,16 @@ class GrafanaProvider(BaseProvider):
             )
             service = alert.get("service", "unknown")
             fingerprint = alert.get("fingerprint", alert.get("alertname", "") + service)
+            environment = labels.get(
+                "deployment_environment", labels.get("environment", "unknown")
+            )
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
                 fingerprint=fingerprint,
                 name=event.get("title"),
                 status=status,
                 severity=severity,
+                environment=environment,
                 lastReceived=datetime.datetime.now(
                     tz=datetime.timezone.utc
                 ).isoformat(),
