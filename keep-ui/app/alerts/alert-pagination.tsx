@@ -7,7 +7,8 @@ import {
   TableCellsIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Text } from "@tremor/react";
-import Select, { components } from "react-select";
+import { StylesConfig, SingleValueProps, components, GroupBase } from 'react-select';
+import Select from 'react-select';
 import { AlertDto } from "./models";
 import { Table } from "@tanstack/react-table";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -18,36 +19,41 @@ interface Props {
   isRefreshAllowed: boolean;
 }
 
-const customStyles = {
-     control: (provided, state) => ({
-       ...provided,
-       borderColor: state.isFocused ? 'orange' : provided.borderColor,
-       '&:hover': { borderColor: 'orange' },
-       boxShadow: state.isFocused ? '0 0 0 1px orange' : provided.boxShadow,
-     }),
-     singleValue: (provided) => ({
-       ...provided,
-       display: 'flex',
-       alignItems: 'center',
-     }),
-     menu: (provided) => ({
-       ...provided,
-       color: 'orange',
-     }),
-     option: (provided, state) => ({
-       ...provided,
-       backgroundColor: state.isSelected ? 'orange' : provided.backgroundColor,
-       '&:hover': { backgroundColor: state.isSelected ? 'orange' : '#f5f5f5' },
-       color: state.isSelected ? 'white' : provided.color,
-     }),
-   };
+interface OptionType {
+  value: string;
+  label: string;
+}
 
-   const SingleValue = ({ children, ...props }) => (
-     <components.SingleValue {...props}>
-       {children}
-       <TableCellsIcon className="w-4 h-4 ml-2" />
-     </components.SingleValue>
-   );
+  const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
+    control: (provided, state) => ({
+      ...provided,
+      borderColor: state.isFocused ? 'orange' : provided.borderColor,
+      '&:hover': { borderColor: 'orange' },
+      boxShadow: state.isFocused ? '0 0 0 1px orange' : provided.boxShadow,
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      display: 'flex',
+      alignItems: 'center',
+    }),
+    menu: (provided) => ({
+      ...provided,
+      color: 'orange',
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected ? 'orange' : provided.backgroundColor,
+      '&:hover': { backgroundColor: state.isSelected ? 'orange' : '#f5f5f5' },
+      color: state.isSelected ? 'white' : provided.color,
+    }),
+  };
+
+  const SingleValue = ({ children, ...props }: SingleValueProps<OptionType, false, GroupBase<OptionType>>) => (
+    <components.SingleValue {...props}>
+      {children}
+      <TableCellsIcon className="w-4 h-4 ml-2" />
+    </components.SingleValue>
+  );
 
 
 export default function AlertPagination({ presetName, table, isRefreshAllowed }: Props) {
@@ -67,7 +73,7 @@ export default function AlertPagination({ presetName, table, isRefreshAllowed }:
         styles={customStyles}
         components={{ SingleValue }}
          value={{ value: table.getState().pagination.pageSize.toString(), label: table.getState().pagination.pageSize.toString() }}
-         onChange={(selectedOption) => table.setPageSize(Number(selectedOption.value))}
+         onChange={(selectedOption) => table.setPageSize(Number(selectedOption!.value))}
          options={[
            { value: "10", label: "10" },
            { value: "20", label: "20" },

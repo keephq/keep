@@ -48,6 +48,7 @@ interface Props {
   presetId?: string;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
+  isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
 }
 

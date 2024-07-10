@@ -51,7 +51,12 @@ const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalPro
       setBackendError(null); // Clear any previous backend errors
       onClose();
     } catch (error) {
-      setBackendError(error.message);
+      if(error instanceof Error) {
+        setBackendError(error.message);
+      }
+      else{
+        setBackendError("An error occurred while adding the tab");
+      }
     }
   };
 
