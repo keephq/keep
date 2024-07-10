@@ -18,7 +18,7 @@ from keep.api.core.db import get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
-from keep.api.tasks.process_event_task import process_event_sync
+from keep.api.tasks.process_event_task import process_event
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
@@ -62,7 +62,7 @@ def pull_alerts_from_providers(
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            process_event_sync(
+            process_event(
                 {},
                 tenant_id,
                 provider.type,
