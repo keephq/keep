@@ -338,7 +338,7 @@ def __handle_formatted_events(
         )
 
 
-async def process_event(
+def process_event(
     ctx: dict,  # arq context
     tenant_id: str,
     provider_type: str | None,
