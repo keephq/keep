@@ -265,6 +265,7 @@ type AlertsRulesBuilderProps = {
   showSqlImport?: boolean;
   customFields?: Field[];
   showSave?: boolean;
+  minimal?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -282,6 +283,7 @@ export const AlertsRulesBuilder = ({
   customFields,
   showSqlImport = true,
   showSave = true,
+  minimal = false,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -615,7 +617,7 @@ export const AlertsRulesBuilder = ({
                   options={staticOptions}
                   onChange={handleSelectChange}
                   menuIsOpen={true}
-                  components={customComponents}
+                  components={minimal? undefined: customComponents}
                   onBlur={() => setShowSuggestions(false)}
                   styles={customStyles}
                 />
