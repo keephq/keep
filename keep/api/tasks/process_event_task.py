@@ -368,7 +368,7 @@ def process_event(
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
-        if provider_type is not None and type(event) is dict:
+        if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
 
