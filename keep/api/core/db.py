@@ -1671,3 +1671,23 @@ def get_tenants_configurations() -> List[Tenant]:
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
     return tenants_configurations
+
+
+def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.id == preset_id)
+        ).first()
+
+        stmt = (
+            update(Preset)
+            .where(Preset.id == preset_id)
+            .where(Preset.tenant_id == tenant_id)
+            .values(options=options)
+        )
+        session.execute(stmt)
+        session.commit()
+        session.refresh(preset)
+    return preset

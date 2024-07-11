@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from fastapi import (
     APIRouter,
@@ -14,7 +15,7 @@ from sqlmodel import Session, select
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
-from keep.api.core.db import get_session
+from keep.api.core.db import get_session, update_preset_options
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
@@ -235,3 +236,107 @@ async def get_preset_alerts(
 
     response.headers["X-search-type"] = str(search_engine.search_mode.value)
     return preset_alerts
+
+
+class CreatePresetTab(BaseModel):
+    name: str
+    filter: str
+
+
+@router.post(
+    "/{preset_id}/tab",
+    description="Create a tab for a preset",
+)
+def create_preset_tab(
+    preset_id: str,
+    body: CreatePresetTab,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Creating preset tab", extra={"preset_id": preset_id})
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
+    )
+    preset = session.exec(statement).first()
+    if not preset:
+        raise HTTPException(404, "Preset not found")
+
+    # get tabs
+    tabs = []
+    found = False
+    for option in preset.options:
+        if option.get("label", "").lower() == "tabs":
+            tabs = option.get("value", [])
+            found = True
+            break
+
+    # if its the first tab, create the tabs option
+    if not found:
+        preset.options.append({"label": "tabs", "value": []})
+
+    tabs.append({"name": body.name, "id": str(uuid.uuid4()), "filter": body.filter})
+
+    # update the tabs
+    for option in preset.options:
+        if option.get("label", "").lower() == "tabs":
+            option["value"] = tabs
+            break
+
+    preset = update_preset_options(
+        authenticated_entity.tenant_id, preset_id, preset.options
+    )
+    logger.info("Created preset tab", extra={"preset_id": preset_id})
+    return PresetDto(**preset.dict())
+
+
+@router.delete(
+    "/{preset_id}/tab/{tab_id}",
+    description="Delete a tab from a preset",
+)
+def delete_tab(
+    preset_id: str,
+    tab_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    session: Session = Depends(get_session),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Deleting tab", extra={"tab_id": tab_id})
+    statement = (
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
+    )
+    preset = session.exec(statement).first()
+    if not preset:
+        raise HTTPException(404, "Preset not found")
+
+    # get tabs
+    tabs = []
+    found = False
+    for option in preset.options:
+        if option.get("label", "").lower() == "tabs":
+            tabs = option.get("value", [])
+            found = True
+            break
+
+    # if tabs not found, return 404
+    if not found:
+        raise HTTPException(404, "Tabs not found")
+
+    # remove the tab
+    tabs = [tab for tab in tabs if tab.get("id") != tab_id]
+
+    # update the tabs
+    for option in preset.options:
+        if option.get("label", "").lower() == "tabs":
+            option["value"] = tabs
+            break
+
+    preset = update_preset_options(
+        authenticated_entity.tenant_id, preset_id, preset.options
+    )
+    logger.info("Deleted tab", extra={"tab_id": tab_id})
+    return PresetDto(**preset.dict())

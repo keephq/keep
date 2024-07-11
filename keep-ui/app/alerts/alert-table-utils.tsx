@@ -31,7 +31,6 @@ export const DEFAULT_COLS = [
   "lastReceived",
   "source",
   "assignee",
-  "extraPayload",
   "alertMenu",
 ];
 export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(

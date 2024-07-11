@@ -68,6 +68,11 @@ export interface Preset {
   alerts_count: number;
 }
 
+export function getTabsFromPreset(preset: Preset): any[] {
+  const tabsOption = preset.options.find(option => option.label.toLowerCase() === "tabs");
+  return tabsOption && Array.isArray(tabsOption.value) ? tabsOption.value : [];
+}
+
 export interface AlertToWorkflowExecution {
   workflow_id: string;
   workflow_execution_id: string;
