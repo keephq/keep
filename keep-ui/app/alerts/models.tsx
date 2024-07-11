@@ -13,7 +13,15 @@ export const severityMapping: { [id: number]: string } = {
   3: Severity.Warning,
   4: Severity.High,
   5: Severity.Critical,
-};
+}
+
+export const reverseSeverityMapping: { [id: string]: number } = {
+  [Severity.Low]: 1,
+  [Severity.Info]: 2,
+  [Severity.Warning]: 3,
+  [Severity.High]: 4,
+  [Severity.Critical]: 5,
+}
 
 export enum Status {
   Firing = "firing",
