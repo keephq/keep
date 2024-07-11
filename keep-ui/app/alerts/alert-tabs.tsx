@@ -24,9 +24,7 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: session } = useSession();
 
-  const handleTabChange: FormEventHandler<HTMLDivElement> = (event) => {
-    // Extract the index from the event target
-    const index = parseInt((event.target as HTMLButtonElement).value, 10);
+  const handleTabChange = (index: any) => {
     setSelectedTab(index);
   };
 
