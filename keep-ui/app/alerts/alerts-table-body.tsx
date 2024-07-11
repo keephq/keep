@@ -23,30 +23,33 @@ export function AlertsTableBody({
     return (
       <TableBody>
         <TableRow>
-          <TableCell
-            colSpan={table.getAllColumns().length}
-            className="text-center"
-          >
-            <Card className="sm:mx-auto w-full max-w-5xl">
-              <div className="text-center">
-                <CircleStackIcon
-                  className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
-                  aria-hidden={true}
-                />
-                <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                  No alerts to display
-                </p>
-                <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-                  It is because you have not connected any data source yet or
-                  there are no alerts matching the filter.
-                </p>
-              </div>
-            </Card>
+          <TableCell colSpan={table.getAllColumns().length} className="p-0">
+            <div className="flex flex-col justify-center items-center h-96 w-full">
+              <Card className="sm:mx-auto w-full max-w-5xl">
+                <div className="text-center">
+                  <CircleStackIcon
+                    className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+                    aria-hidden={true}
+                  />
+                  <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                    No alerts to display
+                  </p>
+                  <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                    It is because you have not connected any data source yet or
+                    there are no alerts matching the filter.
+                  </p>
+                </div>
+              </Card>
+            </div>
           </TableCell>
         </TableRow>
       </TableBody>
     );
   }
+
+
+
+
 
   return (
     <TableBody>

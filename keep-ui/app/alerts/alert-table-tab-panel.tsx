@@ -1,6 +1,6 @@
   import { AlertTable } from "./alert-table";
   import { useAlertTableCols } from "./alert-table-utils";
-  import { AlertDto, AlertKnownKeys, Preset } from "./models";
+  import { AlertDto, AlertKnownKeys, Preset, getTabsFromPreset } from "./models";
 
   const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
     if (presetName === "deleted") {
@@ -81,6 +81,8 @@
       presetNoisy: preset.is_noisy,
     });
 
+    const presetTabs = getTabsFromPreset(preset);
+
     return (
       <AlertTable
           alerts={sortedPresetAlerts}
@@ -90,6 +92,9 @@
           presetName={preset.name}
           presetPrivate={preset.is_private}
           presetNoisy={preset.is_noisy}
+          presetStatic={preset.name === "feed" || preset.name === "groups" || preset.name === "dismissed"}
+          presetId={preset.id}
+          presetTabs={presetTabs}
       />
     );
   }

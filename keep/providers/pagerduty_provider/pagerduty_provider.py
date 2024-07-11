@@ -333,6 +333,22 @@ class PagerdutyProvider(BaseProvider):
             ),
             {},
         ).get("value", "unknown")
+
+        last_status_change_by = data.get("last_status_change_by", {}).get("summary")
+        acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
+        conference_bridge = data.get("conference_bridge", {}).get("summary")
+        urgency = data.get("urgency")
+
+        # Additional metadata
+        metadata = {
+            "urgency": urgency,
+            "acknowledgers": acknowledgers,
+            "last_updated_by": last_status_change_by,
+            "conference_bridge": conference_bridge,
+            "impacted_services": service,
+        }
+
+
         return AlertDto(
             **data,
             url=url,
@@ -343,6 +359,7 @@ class PagerdutyProvider(BaseProvider):
             environment=environment,
             source=["pagerduty"],
             service=service,
+            labels=metadata,
         )
 
     def _notify(

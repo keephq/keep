@@ -13,7 +13,15 @@ export const severityMapping: { [id: number]: string } = {
   3: Severity.Warning,
   4: Severity.High,
   5: Severity.Critical,
-};
+}
+
+export const reverseSeverityMapping: { [id: string]: number } = {
+  [Severity.Low]: 1,
+  [Severity.Info]: 2,
+  [Severity.Warning]: 3,
+  [Severity.High]: 4,
+  [Severity.Critical]: 5,
+}
 
 export enum Status {
   Firing = "firing",
@@ -66,6 +74,11 @@ export interface Preset {
   is_noisy: boolean;
   should_do_noise_now: boolean;
   alerts_count: number;
+}
+
+export function getTabsFromPreset(preset: Preset): any[] {
+  const tabsOption = preset.options.find(option => option.label.toLowerCase() === "tabs");
+  return tabsOption && Array.isArray(tabsOption.value) ? tabsOption.value : [];
 }
 
 export interface AlertToWorkflowExecution {
