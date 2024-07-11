@@ -17,6 +17,8 @@ import hashlib
 import logging
 import os
 
+import alembic.config
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, SQLModel, select
@@ -50,7 +52,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             User,
         )
 
-        create_db_and_tables()
+        migrate_db()
     except Exception:
         pass
     with Session(engine) as session:
@@ -99,19 +101,14 @@ def try_create_single_tenant(tenant_id: str) -> None:
             pass
 
 
-def create_db_and_tables():
+
+def migrate_db():
     """
-    Creates the database and tables.
+    Run migrations to make sure the DB is up-to-date.
     """
-    try:
-        if not database_exists(engine.url):
-            logger.info("Creating the database")
-            create_database(engine.url)
-            logger.info("Database created")
-    # On Cloud Run, it fails to check if the database exists
-    except Exception:
-        logger.warning("Failed to create the database or detect if it exists.")
-        pass
-    logger.info("Creating the tables")
-    SQLModel.metadata.create_all(engine)
-    logger.info("Tables created")
+    logger.info("Running migrations...")
+    alembicArgs = [
+        'upgrade', 'head',
+    ]
+    alembic.config.main(argv=alembicArgs)
+    logger.info("Finished migrations")
