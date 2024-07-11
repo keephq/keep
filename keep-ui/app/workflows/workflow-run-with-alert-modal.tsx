@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TextInput, Button, Text, Card } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import Modal from "@/components/ui/Modal";
@@ -38,6 +38,29 @@ export default function AlertTriggerModal({
   const [dependencyValues, setDependencyValues] = useState<
     Record<string, string>
   >({});
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [fetchError, setFetchError] = useState(false);
+
+  useEffect(() => {
+    // Fetch workflows from the GitHub URL
+    const fetchWorkflows = async () => {
+      try {
+        const response = await fetch(
+          "https://raw.githubusercontent.com/keephq/keep/main/examples/workflows"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch workflows");
+        }
+        const data = await response.json();
+        setWorkflows(data);
+        setFetchError(false);
+      } catch (error) {
+        setFetchError(true);
+      }
+    };
+
+    fetchWorkflows();
+  }, []);
 
   const handleFieldChange = (
     index: number,
@@ -164,7 +187,7 @@ export default function AlertTriggerModal({
         <Card className="mb-4">
           <Text className="mb-2">Fields Defined As Workflow Filters</Text>
           {Array.isArray(staticFields) &&
-            staticFields.map((field, index) => (
+            staticFields.map((field) => (
               <div key={field.key} className="flex gap-2 mb-2">
                 <TextInput placeholder="Key" value={field.key} disabled />
                 <TextInput placeholder="Value" value={field.value} disabled />
@@ -246,6 +269,20 @@ export default function AlertTriggerModal({
           </Button>
         </div>
       </form>
+      {fetchError ? (
+        <Text className="text-red-500 mt-4">
+          Could not fetch workflows from the specified URL.
+        </Text>
+      ) : (
+        <Card className="mt-4">
+          <Text className="mb-2">Fetched Workflows</Text>
+          {workflows.map((workflow, index) => (
+            <div key={index} className="mb-2">
+              <Text>{JSON.stringify(workflow)}</Text>
+            </div>
+          ))}
+        </Card>
+      )}
     </Modal>
   );
 }
