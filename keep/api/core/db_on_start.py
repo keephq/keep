@@ -20,8 +20,7 @@ import os
 import alembic.config
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
 from keep.api.core.db_utils import create_db_engine
 
