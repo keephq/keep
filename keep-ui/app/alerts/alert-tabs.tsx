@@ -75,13 +75,15 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
             <>
             {tabs.slice(0, -1).map((tab, index) => (
                 <div key={index} className="relative group">
-                <Tab className="pr-8">{tab.name}</Tab>
-                <button
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
-                    onClick={() => deleteTab(index)}
-                >
-                    <XMarkIcon className="h-4 w-4 text-red-500" />
-                </button>
+                    <Tab className="pr-8">{tab.name.toLowerCase()}</Tab>
+                    {index !== 0 && (
+                    <button
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
+                        onClick={() => deleteTab(index)}
+                    >
+                        <XMarkIcon className="h-4 w-4 text-red-500" />
+                    </button>
+                    )}
                 </div>
             ))}
             <Tab onClick={() => setIsModalOpen(true)}>{tabs[tabs.length - 1].name}</Tab>

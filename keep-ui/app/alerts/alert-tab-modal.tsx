@@ -101,12 +101,13 @@ const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalPro
           <p className="text-red-500 text-sm">{backendError}</p>
         )}
         <Button
-          disabled={!newTabName || !newTabFilter}
-          color="orange"
-          onClick={handleAddTab}
-          className="mt-16"
-        >
-          Add Tab
+            disabled={!newTabName || !newTabFilter}
+            color="orange"
+            onClick={handleAddTab}
+            className="mt-16"
+            tooltip={!newTabName ? "Tab name is required" : !newTabFilter ? "Tab filter is required (notice you need to click 'enter' to apply the filter)" : ""}
+            >
+            Add Tab
         </Button>
       </div>
     </Modal>
