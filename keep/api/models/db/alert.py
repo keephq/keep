@@ -96,8 +96,17 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
 
-    start_time: datetime
-    end_time: datetime
+    @property
+    def start_time(self):
+        if self.alerts:
+            return min(alert.timestamp for alert in self.alerts)
+        return None          
+
+    @property
+    def end_time(self):
+        if self.alerts:
+            return max(alert.timestamp for alert in self.alerts)
+        return None
 
     # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
     incident_fingerprint: str
@@ -109,6 +118,9 @@ class Incident(SQLModel, table=True):
         return hashlib.sha256(
             "|".join([str(self.id), self.incident_fingerprint]).encode()
         ).hexdigest()
+        
+    class Config:
+        arbitrary_types_allowed = True
 
 class Alert(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)

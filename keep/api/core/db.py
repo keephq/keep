@@ -1665,3 +1665,47 @@ def get_tenants_configurations() -> List[Tenant]:
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
     return tenants_configurations
+
+
+def create_incident(tenant_id: str, incident_fingerprint: str) -> Incident:
+    with Session(engine) as session:
+        incident = Incident(tenant_id=tenant_id, incident_fingerprint=incident_fingerprint)
+        session.add(incident)
+        session.commit()
+        
+        session.refresh(incident)
+    return incident
+
+
+def get_incident_by_id(incident_id: UUID) -> Incident:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .options(selectinload(Incident.alerts))
+            .where(Incident.id == incident_id)
+        ).first()
+    return incident
+
+
+def assign_alert_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> AlertToIncident:
+    with Session(engine) as session:
+        assignment = AlertToIncident(
+            alert_id=alert_id,
+            incident_id=incident_id,
+            tenant_id=tenant_id
+        )
+        session.add(assignment)
+        session.commit()
+        session.refresh(assignment)
+        
+    return assignment
+    
+    
+def get_incidents(tenant_id) -> List[Incident]:
+    with Session(engine) as session:
+        incidents = session.exec(
+            select(Incident)
+            .options(selectinload(Incident.alerts))
+            .where(Incident.tenant_id == tenant_id)
+        ).all()
+    return incidents
