@@ -217,7 +217,15 @@ class EnrichmentsBl:
 
         for rule in rules:
             if self._check_alert_matches_rule(alert, rule):
-                break
+                self.logger.info(
+                    "Alert enriched by mapping rule",
+                    extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
+                )
+            else:
+                self.logger.debug(
+                    "Alert not enriched by mapping rule",
+                    extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
+                )
 
         return alert
 
@@ -245,7 +253,7 @@ class EnrichmentsBl:
         ):
             self.logger.debug(
                 "Alert does not match any of the conditions for the rule",
-                extra={"fingerprint": alert.fingerprint},
+                extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
             )
             return False
 

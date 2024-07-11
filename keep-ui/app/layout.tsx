@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           <Navbar />
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
           <main className="flex flex-col col-start-3 p-4 overflow-auto">
-            <div className="flex-1 h-0">
+            <div className="flex-1">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
             <ToastContainer />
