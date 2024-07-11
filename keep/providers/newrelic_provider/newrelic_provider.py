@@ -4,6 +4,7 @@ NewrelicProvider is a provider that provides a way to interact with New Relic.
 
 import dataclasses
 import json
+import logging
 from datetime import datetime
 from typing import Optional
 
@@ -131,7 +132,9 @@ class NewrelicProvider(BaseProvider):
             self.newrelic_config.new_relic_api_url
             and not self.newrelic_config.new_relic_api_url.startswith("https")
         ):
-            raise ProviderConfigException("New Relic API URL must start with https", self.provider_id)
+            raise ProviderConfigException(
+                "New Relic API URL must start with https", self.provider_id
+            )
 
     def __make_add_webhook_destination_query(self, url: str, name: str) -> dict:
         query = f"""mutation {{
@@ -431,20 +434,46 @@ class NewrelicProvider(BaseProvider):
         event: dict, provider_instance: Optional["NewrelicProvider"] = None
     ) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
-        lastReceived = event["lastReceived"] if "lastReceived" in event else None
+        logger = logging.getLogger(__name__)
+        logger.info("Got event from New Relic")
+        lastReceived = event.get("lastReceived", None)
+        # from Keep policy
         if lastReceived:
-            lastReceived = datetime.utcfromtimestamp(lastReceived / 1000).strftime(
-                "%Y-%m-%d %H:%M:%SZ",
-            )
-            event["lastReceived"] = lastReceived
+            if isinstance(lastReceived, int):
+                lastReceived = datetime.utcfromtimestamp(
+                    lastReceived / 1000
+                ).isoformat()
+            else:
+                # WTF?
+                logger.error("lastReceived is not int")
+                pass
+        else:
+            lastReceived = datetime.utcfromtimestamp(
+                event.get("updatedAt", 0) / 1000
+            ).isoformat()
+
         # format status and severity to Keep format
-        status = NewrelicProvider.STATUS_MAP.get(event["status"], AlertStatus.FIRING)
+        status = event.get("status", "") or event.get("state", "")
+        status = NewrelicProvider.STATUS_MAP.get(status.lower(), AlertStatus.FIRING)
+
+        severity = event.get("severity", "") or event.get("priority", "")
         severity = NewrelicProvider.SEVERITIES_MAP.get(
-            event["severity"], AlertSeverity.INFO
+            severity.lower(), AlertSeverity.INFO
         )
-        event["status"] = status
-        event["severity"] = severity
-        return AlertDto(**event)
+
+        name = event.get("name", "")
+        if not name:
+            name = event.get("title", "")
+
+        logger.info("Formatted event from New Relic")
+        return AlertDto(
+            source=["newrelic"],
+            name=name,
+            lastReceived=lastReceived,
+            status=status,
+            severity=severity,
+            **event,
+        )
 
     def __get_all_policy_ids(
         self,
