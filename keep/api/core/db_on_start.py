@@ -17,6 +17,7 @@ import hashlib
 import logging
 import os
 
+import alembic.command
 import alembic.config
 
 from sqlalchemy.exc import IntegrityError
@@ -106,8 +107,6 @@ def migrate_db():
     Run migrations to make sure the DB is up-to-date.
     """
     logger.info("Running migrations...")
-    alembicArgs = [
-        'upgrade', 'head',
-    ]
-    alembic.config.main(argv=alembicArgs)
+    config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../../" + "alembic.ini"
+    alembic.command.upgrade(alembic.config.Config(file_=config_path), "head")
     logger.info("Finished migrations")
