@@ -108,5 +108,9 @@ def migrate_db():
     """
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
-    alembic.command.upgrade(alembic.config.Config(file_=config_path), "head")
+    config = alembic.config.Config(file_=config_path)
+    # Re-defined because alembic.ini uses relative paths which doesn't work 
+    # when running the app as a pyhton pakage (could happen form any path)
+    config.set_main_option("script_location", os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations")
+    alembic.command.upgrade(config, "head")
     logger.info("Finished migrations")
