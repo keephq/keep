@@ -104,10 +104,9 @@ class IncidentioProvider(BaseProvider):
         # url = https://incidentio.com/api/2/issue/createmeta?projectKeys=key1
         """
 
-        url = urljoin(
-            f"https://api.incident.io/v2",
-            "/".join(str(path) for path in paths),
-        )
+        base_url = "https://api.incident.io/v2/"
+        path_str = "/".join(str(path) for path in paths)
+        url = urljoin(base_url, path_str)
 
         # add query params
         if query_params:
@@ -124,8 +123,6 @@ class IncidentioProvider(BaseProvider):
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        authenticated = False
-        read_access = False
         self.logger.info("Validating IncidentIO scopes...")
         try:
             response = requests.get(
@@ -133,21 +130,17 @@ class IncidentioProvider(BaseProvider):
                 timeout=10,
                 headers=self.__get_headers(),
             )
+
+            if response.ok:
+                return {"authenticated": True, "read_access": True}
+            else:
+                self.logger.error(f"Failed to validate scopes: {response.status_code}")
+                scopes = {"authenticated": "Unable to query incidents: {response.status_code}", "read_access": False}
         except Exception as e:
             self.logger.error("Error getting IncidentIO scopes:", extra={"exception": str(e)})
-        else:
-            if response.ok:
-                res = response.json()
-                self.logger.info("Successfully retrieved IncidentIO scopes...", extra={"response": res})
-                authenticated = True
-                read_access = True
-            else:
-                self.logger.info("Error getting IncidentIO scopes:", extra={"response": response.text})
-        finally:
-            return {
-                "authenticated": authenticated,
-                "read_access": read_access,
-            }
+            scopes = {"authenticated": "Unable to query incidents: {e}", "read_access": False}
+
+        return scopes
 
     def _query(self, incident_id, **kwargs) -> AlertDto:
         """query IncidentIO Incident"""
@@ -223,3 +216,31 @@ class IncidentioProvider(BaseProvider):
                 incident["incident_role_assignments"]),
             url=incident.get("permalink", "https://app.incident.io/")
         )
+
+if __name__ == "__main__":
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+
+    import os
+
+    api_key = os.getenv("INCIDENTIO_API_KEY")
+
+    config = ProviderConfig(
+        description="Incidentio Provider",
+        authentication={
+            "incidentIoApiKey": api_key
+        },
+    )
+
+    provider = IncidentioProvider(
+        context_manager,
+        provider_id="incidentio_provider",
+        config=config,
+    )
+
+    provider._get_alerts()
