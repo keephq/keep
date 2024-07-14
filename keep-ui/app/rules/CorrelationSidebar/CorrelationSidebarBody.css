@@ -1,0 +1,5 @@
+@media (max-width: 1600px) {
+    .sidebar-form {
+        grid-template-columns: 1fr;
+    }
+}

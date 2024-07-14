@@ -12,6 +12,7 @@ import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
+import "./CorrelationSidebarBody.css";
 
 export const TIMEFRAME_UNITS = {
   seconds: (amount: number) => amount,
@@ -113,11 +114,13 @@ export const CorrelationSidebarBody = ({
       )}
       <FormProvider {...methods}>
         <form
-          className="grid grid-cols-2 gap-x-10 flex-1"
+          className="flex flex-col justify-between h-full"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
-          <CorrelationGroups />
+          <div className="grid grid-cols-2 gap-10 sidebar-form w-full">
+            <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
+            <CorrelationGroups />
+          </div>
 
           <CorrelationSubmission
             toggle={toggle}
