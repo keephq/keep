@@ -11,7 +11,7 @@ export const MinimizeMenuButton = () => {
   );
 
   return (
-    <div className="flex items-center h-full jusity-center">
+    <div className="flex items-center h-full jusity-center hidden-on-small">
       <button
         className="flex items-center justify-center"
         onClick={() => setisMenuMinimized(!isMenuMinimized)}
