@@ -56,10 +56,10 @@ export const Menu = ({ children }: MenuButtonProps) => {
 
           <CloseMenuOnRouteChange closeMenu={closeMenu} />
           <Popover.Panel
-            className="bg-gray-50 col-span-1 border-r border-gray-300 z-50 h-screen fixed inset-0"
+            className="bg-gray-50 col-span-1 border-r border-gray-300 z-50 h-screen absolute inset-0"
             as="nav"
           >
-            <div className="p-3 fixed top-0 right-0 ">
+            <div className="p-3 fixed top-0 right-0 z-20">
               <Popover.Button className="p-1 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300">
                 <Icon icon={AiOutlineClose} color="orange" />
               </Popover.Button>

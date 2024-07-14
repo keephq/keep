@@ -107,7 +107,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                 <IoChevronUp
                   className={classNames(
                     { "rotate-180": open },
-                    "mr-2 text-slate-400"
+                    "mr-2 text-slate-400 transition-transform duration-300 ease-in-out"
                   )}
                 />
               </div>

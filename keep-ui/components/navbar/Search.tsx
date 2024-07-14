@@ -22,6 +22,7 @@ import { LuWorkflow } from "react-icons/lu";
 import { AiOutlineAlert } from "react-icons/ai";
 import { MdOutlineEngineering, MdOutlineSearchOff } from "react-icons/md";
 import KeepPng from "../../keep.png";
+import "./Search.css";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -260,7 +261,7 @@ export const Search = () => {
     : "Search";
 
   return (
-    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
+    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300 search-bar z-10">
       <Link href="/">
         <Image className="w-8" src={KeepPng} alt="Keep Logo" />
       </Link>
