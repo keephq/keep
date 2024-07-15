@@ -28,7 +28,11 @@ interface ServiceNode extends Node {
   };
 }
 
-const generateMockData = (): { nodes: ServiceNode[]; edges: Edge[] } => {
+interface ServiceEdge extends Edge {
+    animated?: boolean;
+  }
+
+const generateMockData = ():  { nodes: ServiceNode[]; edges: ServiceEdge[] } => {
   const nodes: ServiceNode[] = [];
   const edges: Edge[] = [];
   const services = [
@@ -90,22 +94,28 @@ interface GraphVisualizationProps {
 }
 
 const GraphVisualization: React.FC<GraphVisualizationProps> = ({ demoMode }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<ServiceNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [nodes, setNodes, onNodesChange] = useNodesState<ServiceNode>([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState<ServiceEdge>([]);
 
-  useEffect(() => {
-    const { nodes: mockNodes, edges: mockEdges } = generateMockData();
-    setNodes(mockNodes);
-    setEdges(mockEdges);
-  }, []);
+    useEffect(() => {
+      const { nodes: mockNodes, edges: mockEdges } = generateMockData();
+      setNodes(mockNodes);
+      setEdges(mockEdges);
+    }, []);
 
-  const onConnect = useCallback(
-    (params: Edge | Connection) =>
-      setEdges((eds) =>
-        addEdge({ ...params, animated: true, style: { stroke: '#ccc', strokeWidth: 3 } }, eds),
-      ),
-    [],
-  );
+    const onConnect = useCallback(
+        (params: Connection) =>
+          setEdges((eds) =>
+            addEdge({
+              ...params,
+              animated: true,
+            }, eds).map(edge => ({
+              ...edge,
+              style: { stroke: '#ccc', strokeWidth: 3 }
+            }))
+          ),
+        []
+      );
 
   const onNodeClick = (event: React.MouseEvent, node: Node) => {
     window.open('https://github.com/keephq/keep/discussions/1377', '_blank');
