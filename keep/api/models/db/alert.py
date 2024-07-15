@@ -192,6 +192,7 @@ class AlertActionType(enum.Enum):
     MANUAL_STATUS_CHANGE = "alert status manually changed"
     # the alert was escalated
     WORKFLOW_ENRICH = "alert enriched by workflow"
+    MAPPING_RULE_ENRICH = "alert enriched by mapping rule"
     # the alert was deduplicated
     DEDUPLICATED = "alert was deduplicated"
     # a ticket was created

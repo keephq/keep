@@ -1,33 +1,44 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   ReactFlow,
+  Node,
+  Edge,
   useNodesState,
   useEdgesState,
   addEdge,
+  NodeProps,
+  EdgeProps,
+  Connection,
   MiniMap,
   Controls,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-const connectionLineStyle = { stroke: '#ccc', strokeWidth: 3 };  // Increased stroke width
-const snapGrid = [20, 20];
-const defaultViewport = { x: 0, y: 0, zoom: 0.5 };  // Adjusted zoom level
+const connectionLineStyle = { stroke: '#ccc', strokeWidth: 3 };
+const snapGrid: [number, number] = [20, 20];
+const defaultViewport = { x: 0, y: 0, zoom: 0.5 };
 
-const getHealthColor = () => {
+const getHealthColor = (): string => {
   return 'gray';
 };
 
-const generateMockData = () => {
-  const nodes = [];
-  const edges = [];
+interface ServiceNode extends Node {
+  data: {
+    label: string;
+  };
+}
+
+const generateMockData = (): { nodes: ServiceNode[]; edges: Edge[] } => {
+  const nodes: ServiceNode[] = [];
+  const edges: Edge[] = [];
   const services = [
     'Web App', 'DB', 'MongoDB', 'Snowflake', 'Cache', 'Auth Service', 'Payment Gateway',
     'Notification Service', 'Analytics Engine', 'Search Service', 'Third Party API 1', 'Third Party API 2'
   ];
 
   const layout = [1, 2, 3, 2, 4, 2];
-  const rowHeight = 200;  // Increased row height
-  const columnWidth = 250;  // Increased column width
+  const rowHeight = 200;
+  const columnWidth = 250;
 
   let currentIndex = 0;
   let yOffset = 0;
@@ -46,13 +57,13 @@ const generateMockData = () => {
             color: '#fff',
             borderRadius: '50%',
             padding: 10,
-            width: 120,  // Increased node size
-            height: 120,  // Increased node size
+            width: 120,
+            height: 120,
             textAlign: 'center',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '14px'  // Increased font size
+            fontSize: '14px'
           },
         });
         currentIndex++;
@@ -67,15 +78,19 @@ const generateMockData = () => {
       source: `${i + 1}`,
       target: `${i + 2}`,
       animated: true,
-      style: { stroke: '#ccc', strokeWidth: 3 },  // Increased stroke width
+      style: { stroke: '#ccc', strokeWidth: 3 },
     });
   }
 
   return { nodes, edges };
 };
 
-const GraphVisualization = ({ demoMode }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+interface GraphVisualizationProps {
+  demoMode: boolean;
+}
+
+const GraphVisualization: React.FC<GraphVisualizationProps> = ({ demoMode }) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState<ServiceNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   useEffect(() => {
@@ -85,14 +100,14 @@ const GraphVisualization = ({ demoMode }) => {
   }, []);
 
   const onConnect = useCallback(
-    (params) =>
+    (params: Edge | Connection) =>
       setEdges((eds) =>
         addEdge({ ...params, animated: true, style: { stroke: '#ccc', strokeWidth: 3 } }, eds),
       ),
     [],
   );
 
-  const onNodeClick = (event, node) => {
+  const onNodeClick = (event: React.MouseEvent, node: Node) => {
     window.open('https://github.com/keephq/keep/discussions/1377', '_blank');
   };
 
@@ -117,8 +132,8 @@ const GraphVisualization = ({ demoMode }) => {
         elementsSelectable={false}
       >
         <MiniMap
-          nodeStrokeColor={(n) => n.style.background}
-          nodeColor={(n) => n.style.background}
+          nodeStrokeColor={(n: Node) => n.style?.background as string}
+          nodeColor={(n: Node) => n.style?.background as string}
         />
         <Controls />
       </ReactFlow>

@@ -273,7 +273,14 @@ class EnrichmentsBl:
                 # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
                 #         enrich alert will fail to update the alert in elastic.
                 #         hence should_exist = False
-                self.enrich_alert(alert.fingerprint, enrichments, should_exist=False)
+                self.enrich_alert(
+                    alert.fingerprint,
+                    enrichments,
+                    action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                    action_callee="system",
+                    action_description="Alert enriched with mapping rule",
+                    should_exist=False,
+                )
 
                 self.logger.info(
                     "Alert enriched",
