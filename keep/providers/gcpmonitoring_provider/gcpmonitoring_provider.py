@@ -104,7 +104,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         event_time = event_time.isoformat(timespec="milliseconds").replace(
             "+00:00", "Z"
         )
-        incident_id = incident.get("incident_id")
+
         # Construct the alert object
         alert = AlertDto(
             id=incident_id,

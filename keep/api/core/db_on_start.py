@@ -17,9 +17,11 @@ import hashlib
 import logging
 import os
 
+import alembic.command
+import alembic.config
+
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
 from keep.api.core.db_utils import create_db_engine
 
@@ -50,7 +52,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             User,
         )
 
-        create_db_and_tables()
+        migrate_db()
     except Exception:
         pass
     with Session(engine) as session:
@@ -99,19 +101,16 @@ def try_create_single_tenant(tenant_id: str) -> None:
             pass
 
 
-def create_db_and_tables():
+
+def migrate_db():
     """
-    Creates the database and tables.
+    Run migrations to make sure the DB is up-to-date.
     """
-    try:
-        if not database_exists(engine.url):
-            logger.info("Creating the database")
-            create_database(engine.url)
-            logger.info("Database created")
-    # On Cloud Run, it fails to check if the database exists
-    except Exception:
-        logger.warning("Failed to create the database or detect if it exists.")
-        pass
-    logger.info("Creating the tables")
-    SQLModel.metadata.create_all(engine)
-    logger.info("Tables created")
+    logger.info("Running migrations...")
+    config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
+    config = alembic.config.Config(file_=config_path)
+    # Re-defined because alembic.ini uses relative paths which doesn't work 
+    # when running the app as a pyhton pakage (could happen form any path)
+    config.set_main_option("script_location", os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations")
+    alembic.command.upgrade(config, "head")
+    logger.info("Finished migrations")

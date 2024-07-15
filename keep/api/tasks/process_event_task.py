@@ -1,4 +1,5 @@
 # builtins
+import copy
 import datetime
 import json
 import logging
@@ -24,6 +25,7 @@ from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
+KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ def __save_to_db(
     try:
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
-        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
+        if KEEP_STORE_RAW_ALERTS:
             for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
@@ -390,8 +392,12 @@ def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
+        "raw_event": (
+            event if KEEP_STORE_RAW_ALERTS else None
+        ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+    raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
         # Pre alert formatting extraction rules
@@ -418,7 +424,7 @@ def process_event(
             tenant_id,
             provider_type,
             session,
-            event,
+            raw_event,
             event,
             provider_id,
         )
