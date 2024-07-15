@@ -80,12 +80,58 @@ class Group(SQLModel, table=True):
             "|".join([str(self.id), self.group_fingerprint]).encode()
         ).hexdigest()
 
+    
+class AlertToIncident(SQLModel, table=True):
+    tenant_id: str = Field(foreign_key="tenant.id")
+    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
+    incident_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+
+
+class Incident(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+    tenant: Tenant = Relationship()
+
+    name: str
+    description: str
+
+    assignee: str | None
+
+    creation_time: datetime = Field(default_factory=datetime.utcnow)
+
+    # Start/end should be calculated from first/last alerts
+    # But I suppose to have this fields as cache, to prevent extra requests
+    start_time: datetime | None
+    end_time: datetime | None
+
+    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
+    incident_fingerprint: str = Field(index=True)
+    # map of attributes to values
+    alerts: List["Alert"] = Relationship(
+        back_populates="incidents", link_model=AlertToIncident
+    )
+
+    def calculate_fingerprint(self):
+        return hashlib.sha256(
+            "|".join([str(self.id), self.incident_fingerprint]).encode()
+        ).hexdigest()
+
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class Alert(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-    # index=True added because we query top 1000 alerts order by timestamp. On a large dataset, this will be slow without an index.
+    # index=True added because we query top 1000 alerts order by timestamp.
+    # On a large dataset, this will be slow without an index.
     #            with 1M alerts, we see queries goes from >30s to 0s with the index
     #            todo: on MSSQL, the index is "nonclustered" index which cannot be controlled by SQLModel
     timestamp: datetime = Field(
@@ -100,6 +146,9 @@ class Alert(SQLModel, table=True):
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
     groups: List["Group"] = Relationship(
         back_populates="alerts", link_model=AlertToGroup
+    )
+    incidents: List["Incident"] = Relationship(
+        back_populates="alerts", link_model=AlertToIncident
     )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.

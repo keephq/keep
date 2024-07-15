@@ -4,10 +4,26 @@ import json
 import logging
 from enum import Enum
 from typing import Any, Dict
+from uuid import UUID
 
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
+
+
+def get_fingerprint(fingerprint, values):
+    # if its none, use the name
+    if fingerprint is None:
+        fingerprint_payload = values.get("name")
+        # if the alert name is None, than use the entire payload
+        if not fingerprint_payload:
+            logger.warning("No name to alert, using the entire payload")
+            fingerprint_payload = json.dumps(values)
+        fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
+    # take only the first 255 characters
+    else:
+        fingerprint = fingerprint[:255]
+    return fingerprint
 
 
 class AlertSeverity(Enum):
@@ -137,18 +153,7 @@ class AlertDto(BaseModel):
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
-        # if its none, use the name
-        if fingerprint is None:
-            fingerprint_payload = values.get("name")
-            # if the alert name is None, than use the entire payload
-            if not fingerprint_payload:
-                logger.warning("No name to alert, using the entire payload")
-                fingerprint_payload = json.dumps(values)
-            fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
-        # take only the first 255 characters
-        else:
-            fingerprint = fingerprint[:255]
-        return fingerprint
+        return get_fingerprint(fingerprint, values)
 
     @validator("deleted", pre=True, always=True)
     def validate_deleted(cls, deleted, values):
@@ -286,3 +291,54 @@ class DismissRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
+
+
+class IncidentDtoIn(BaseModel):
+    name: str
+    description: str
+
+    assignee: str | None
+
+    incident_fingerprint: str | None
+
+    class Config:
+        extra = Extra.allow
+        schema_extra = {
+            "examples": [
+                {
+                    "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
+                    "name": "Incident name",
+                    "description": "Keep: Incident description",
+                    "incident_fingerprint": "a7b0503d-2e04-40ee-ac5d-3d2cdfc80e3b",
+                }
+            ]
+        }
+
+    @validator("incident_fingerprint", pre=True, always=True)
+    def assign_fingerprint_if_none(cls, incident_fingerprint, values):
+        return get_fingerprint(incident_fingerprint, values)
+
+
+class IncidentDto(IncidentDtoIn):
+    id: UUID
+
+    start_time: datetime.datetime | None
+    end_time: datetime.datetime | None
+
+    def __str__(self) -> str:
+        # Convert the model instance to a dictionary
+        model_dict = self.dict()
+        return json.dumps(model_dict, indent=4, default=str)
+
+    @validator("incident_fingerprint", pre=True, always=True)
+    def assign_fingerprint_if_none(cls, incident_fingerprint, values):
+        return get_fingerprint(incident_fingerprint, values)
+
+    class Config:
+        extra = Extra.allow
+        schema_extra = IncidentDtoIn.Config.schema_extra
+
+        json_encoders = {
+            # Converts UUID to their values for JSON serialization
+            UUID: lambda v: str(v),
+        }
