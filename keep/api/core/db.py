@@ -1237,7 +1237,10 @@ def assign_alert_to_group(
             enrich_alert(
                 tenant_id,
                 fingerprint,
-                {"group_expired": True},
+                enrichments={"group_expired": True},
+                action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
+                action_callee="system",
+                action_description="Enriched group with group_expired flag",
             )
             logger.info(f"Enriched group {group.id} with group_expired flag")
             # change the group status to resolve so it won't spam the UI
