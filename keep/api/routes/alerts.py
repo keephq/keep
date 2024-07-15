@@ -23,6 +23,7 @@ from pusher import Pusher
 from keep.api.arq_worker import get_pool
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.config import config
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -31,6 +32,7 @@ from keep.api.core.dependencies import (
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
+from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
@@ -172,6 +174,9 @@ def delete_alert(
             "deletedAt": deleted_last_received,
             "assignees": assignees_last_receievd,
         },
+        action_type=AlertActionType.DELETE_ALERT,
+        action_description=f"Alert deleted by {user_email}",
+        action_callee=user_email,
     )
 
     logger.info(
@@ -218,6 +223,9 @@ def assign_alert(
     enrichment_bl.enrich_alert(
         fingerprint=fingerprint,
         enrichments={"assignees": assignees_last_receievd},
+        action_type=AlertActionType.ACKNOWLEDGE,
+        action_description=f"Alert assigned to {user_email}",
+        action_callee=user_email,
     )
 
     try:
@@ -419,9 +427,29 @@ def enrich_alert(
 
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
+        # Shahar: TODO, change to the specific action type, good enough for now
+        if "status" in enrich_data.enrichments:
+            action_type = (
+                AlertActionType.MANUAL_RESOLVE
+                if enrich_data.enrichments["status"] == "resolved"
+                else AlertActionType.MANUAL_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+        elif "note" in enrich_data.enrichments:
+            action_type = AlertActionType.COMMENT
+            action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
+        elif "ticket_url" in enrich_data.enrichments:
+            action_type = AlertActionType.TICKET_ASSIGNED
+            action_description = f"Ticket assigned by {authenticated_entity.email} - {enrich_data.enrichments['ticket_url']}"
+        else:
+            action_type = AlertActionType.GENERIC_ENRICH
+            action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
         enrichement_bl.enrich_alert(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
+            action_type=action_type,
+            action_callee=authenticated_entity.email,
+            action_description=action_description,
             dispose_on_new_alert=dispose_on_new_alert,
         )
         # get the alert with the new enrichment
@@ -507,3 +535,51 @@ async def search_alerts(
     except Exception as e:
         logger.exception("Failed to search alerts", extra={"error": str(e)})
         raise HTTPException(status_code=500, detail="Failed to search alerts")
+
+
+@router.get(
+    "/{fingerprint}/audit",
+    description="Get alert enrichment",
+)
+def get_alert_audit(
+    fingerprint: str,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alert audit",
+        extra={
+            "fingerprint": fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+    alert_audit = get_alert_audit_db(tenant_id, fingerprint)
+    if not alert_audit:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    grouped_events = []
+    previous_event = None
+    count = 1
+
+    for event in alert_audit:
+        if previous_event and (
+            event.user_id == previous_event.user_id
+            and event.action == previous_event.action
+            and event.description == previous_event.description
+        ):
+            count += 1
+        else:
+            if previous_event:
+                if count > 1:
+                    previous_event.description += f" x{count}"
+                grouped_events.append(previous_event.dict())
+            previous_event = event
+            count = 1
+
+    # Add the last event
+    if previous_event:
+        if count > 1:
+            previous_event.description += f" x{count}"
+        grouped_events.append(previous_event.dict())
+
+    return grouped_events
