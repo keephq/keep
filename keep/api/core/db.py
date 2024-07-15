@@ -1009,6 +1009,14 @@ def create_user(tenant_id, username, password, role):
         session.refresh(user)
     return user
 
+def serialize_workflow_results(results):
+    # Converting datetime objects to strings
+    for key, value in results.items():
+        if isinstance(value, datetime.datetime):
+            results[key] = value.isoformat()
+        elif isinstance(value, dict):
+            results[key] = serialize_workflow_results(value)
+    return results
 
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
@@ -1018,7 +1026,8 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
             .where(WorkflowExecution.id == workflow_execution_id)
         ).one()
 
-        workflow_execution.results = workflow_results
+        serialized_results = serialize_workflow_results(workflow_results)
+        workflow_execution.results = serialized_results
         session.commit()
 
 
