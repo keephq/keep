@@ -147,9 +147,9 @@ def test_search_sanity_4(db_session, setup_alerts):
     enrichment_bl.enrich_alert(
         fingerprint="test-1",
         enrichments={"dismissed": True},
-        action_callee=AlertActionType.GENERIC_ENRICH,
+        action_callee="test",
         action_description="test",
-        action_type="test",
+        action_type=AlertActionType.GENERIC_ENRICH,
     )
     search_query = SearchQuery(
         sql_query={

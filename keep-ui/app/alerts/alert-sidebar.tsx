@@ -4,8 +4,8 @@ import { AlertDto } from "./models";
 import { Button, Title, Card, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import AlertMenu from "./alert-menu";
-import GraphVisualization from "./alert-graph-viz"; // Import the new graph component
-import AlertTimeline from "./alert-timeline"; // Import the new AuditTimeline component
+import GraphVisualization from "./alert-graph-viz";
+import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 
 type AlertSidebarProps = {
