@@ -1,8 +1,8 @@
 "use client";
 
-import { Badge, Subtitle } from "@tremor/react";
+import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { AIIcon, ExportIcon } from "components/icons";
+import { Ai } from "components/icons";
 import { useEffect, useState, useRef } from "react";
 
 export const AILink = () => {
@@ -30,11 +30,7 @@ export const AILink = () => {
   }, [newText]);
 
   return (
-    <LinkWithIcon
-      href="/ai"
-      icon={AIIcon}
-      className="w-full"
-    >
+    <LinkWithIcon href="/ai" icon={Ai} className="w-full">
       <div className="flex justify-between items-center w-full">
         <Subtitle className="text-xs text-gray-900 font-medium">
           {text}

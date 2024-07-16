@@ -18,3 +18,19 @@ export const useIncidents = (
     options
   );
 };
+
+export const useIncident = (
+  id: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+
+  return useSWR<IncidentDto>(
+    () => (session ? `${apiUrl}/incidents/${id}` : null),
+    (url) => fetcher(url, session?.accessToken),
+    options
+  );
+};
