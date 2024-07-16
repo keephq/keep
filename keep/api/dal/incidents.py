@@ -110,10 +110,24 @@ def delete_incident_by_fingerprint(
 ) -> bool:
 
     with Session(engine) as session:
-        session.query(Incident).filter(
+
+        incident = session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.incident_fingerprint == fingerprint
-        ).delete()
+        ).first()
+
+        # Delete all associations with alerts:
+
+        (
+            session.query(AlertToIncident)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+            )
+            .delete()
+        )
+
+        session.delete(incident)
         session.commit()
         return True
 
