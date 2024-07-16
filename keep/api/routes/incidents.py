@@ -14,6 +14,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_alerts,
     get_last_incidents,
+    assign_alert_to_incident,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
 )
@@ -290,6 +291,9 @@ def mine(
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts)
+
+    if len(alerts) == 0:
+        return {"incidents": []}
 
     incidents = mine_incidents(alerts, incident_sliding_window_size,
                                statistic_sliding_window_size, jaccard_threshold, fingerprint_threshold)
