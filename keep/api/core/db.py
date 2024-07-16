@@ -1757,20 +1757,6 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
         session.refresh(preset)
     return preset
 
-def create_incident(tenant_id: str, incident_fingerprint: str, incident_name:str, incident_description:str) -> Incident:
-    with Session(engine) as session:
-        incident = Incident(
-            tenant_id=tenant_id, 
-            incident_fingerprint=incident_fingerprint, 
-            name=incident_name, 
-            description=incident_description,
-        )
-        session.add(incident)
-        session.commit()
-        
-        session.refresh(incident)
-    return incident
-
 
 def get_incident_by_id(incident_id: UUID) -> Incident:
     with Session(engine) as session:

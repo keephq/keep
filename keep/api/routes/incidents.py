@@ -12,6 +12,7 @@ from keep.api.core.db import (
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
+    get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
@@ -296,8 +297,9 @@ def mine(
         return {"incidents": []}
     
     for incident in incidents:
-        incident_id = create_incident(
-            tenant_id, incident['incident_fingerprint'], incident_name="Mined using algorithm", incident_description="Candidate").id
+        incident_id = create_incident_from_dto(tenant_id=tenant_id, incident_dto=IncidentDtoIn(
+            name="Mined using algorithm", description="Candidate"
+        )).id
 
         for alert in incident['alerts']:
             assign_alert_to_incident(alert.id, incident_id, tenant_id)
