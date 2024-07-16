@@ -78,9 +78,21 @@ export const useAlerts = () => {
     };
   };
 
+  const useAlertAudit = (
+    fingerprint: string,
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    return useSWR(
+      () => (session ? `${apiUrl}/alerts/${fingerprint}/audit` : null),
+      (url) => fetcher(url, session?.accessToken),
+      options
+    );
+  };
+
   return {
     useAlertHistory,
     useAllAlerts,
     usePresetAlerts,
+    useAlertAudit
   };
 };

@@ -5,6 +5,7 @@ import pytest
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.searchengine.searchengine import SearchEngine
 
@@ -146,6 +147,9 @@ def test_search_sanity_4(db_session, setup_alerts):
     enrichment_bl.enrich_alert(
         fingerprint="test-1",
         enrichments={"dismissed": True},
+        action_callee="test",
+        action_description="test",
+        action_type=AlertActionType.GENERIC_ENRICH,
     )
     search_query = SearchQuery(
         sql_query={

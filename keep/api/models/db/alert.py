@@ -1,3 +1,4 @@
+import enum
 import hashlib
 import logging
 from datetime import datetime
@@ -9,7 +10,7 @@ from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
 from sqlalchemy_utils import UUIDType
-from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, DateTime, Field, Index, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
@@ -157,3 +158,52 @@ class AlertRaw(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class AlertAudit(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    fingerprint: str
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
+    # when
+    timestamp: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    # who
+    user_id: str = Field(nullable=False)
+    # what
+    action: str = Field(nullable=False)
+    description: str
+
+    __table_args__ = (
+        Index("ix_alert_audit_tenant_id", "tenant_id"),
+        Index("ix_alert_audit_fingerprint", "fingerprint"),
+        Index("ix_alert_audit_tenant_id_fingerprint", "tenant_id", "fingerprint"),
+        Index("ix_alert_audit_timestamp", "timestamp"),
+    )
+
+
+class AlertActionType(enum.Enum):
+    # the alert was triggered
+    TIGGERED = "alert was triggered"
+    # someone acknowledged the alert
+    ACKNOWLEDGE = "alert acknowledged"
+    # the alert was resolved
+    AUTOMATIC_RESOLVE = "alert automatically resolved"
+    # the alert was resolved manually
+    MANUAL_RESOLVE = "alert manually resolved"
+    MANUAL_STATUS_CHANGE = "alert status manually changed"
+    # the alert was escalated
+    WORKFLOW_ENRICH = "alert enriched by workflow"
+    MAPPING_RULE_ENRICH = "alert enriched by mapping rule"
+    # the alert was deduplicated
+    DEDUPLICATED = "alert was deduplicated"
+    # a ticket was created
+    TICKET_ASSIGNED = "alert was assigned with ticket"
+    # a ticket was updated
+    TICKET_UPDATED = "alert ticket was updated"
+    # disposing enriched alert
+    DISPOSE_ENRICHED_ALERT = "alert enrichments disposed"
+    # delete alert
+    DELETE_ALERT = "alert deleted"
+    # generic enrichment
+    GENERIC_ENRICH = "alert enriched"
+    # commented
+    COMMENT = "a comment was added to the alert"
