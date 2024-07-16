@@ -115,6 +115,11 @@ class Incident(SQLModel, table=True):
         back_populates="incidents", link_model=AlertToIncident
     )
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if "alerts" not in kwargs:
+            self.alerts = []
+
     class Config:
         arbitrary_types_allowed = True
 

@@ -127,7 +127,7 @@ export default function IncidentsTable({
             icon={MdRemoveCircle}
             onClick={(e: any) => {
               e.preventDefault();
-              deleteIncident(context.row.original.incident_fingerprint!);
+              deleteIncident(context.row.original.id!);
             }}
           />
         </div>

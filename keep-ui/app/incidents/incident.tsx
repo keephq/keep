@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Card, Title, Subtitle } from "@tremor/react";
+import { Badge, Card, Title, Subtitle, Button } from "@tremor/react";
 import Loading from "app/loading";
 import { useState } from "react";
 import { IncidentDto } from "./model";
@@ -8,6 +8,7 @@ import IncidentsTable from "./incidents-table";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
+import { PlusCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Incident() {
   const { data: incidents, isLoading } = useIncidents();
@@ -17,17 +18,18 @@ export default function Incident() {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
   const handleCloseForm = () => {
-      setIsFormOpen(false);
-  }
+    setIsFormOpen(false);
+  };
 
   const handleStartEdit = (incident: IncidentDto) => {
-      setIncidentToEdit(incident);
-      setIsFormOpen(true);
-  }
+    setIncidentToEdit(incident);
+    setIsFormOpen(true);
+  };
+
   const handleFinishEdit = () => {
-      setIncidentToEdit(null);
-      setIsFormOpen(false);
-  }
+    setIncidentToEdit(null);
+    setIsFormOpen(false);
+  };
 
   return (
     <div className="flex h-full w-full">
@@ -36,8 +38,22 @@ export default function Incident() {
           <Loading />
         ) : incidents && incidents.length > 0 ? (
           <div className="h-full flex flex-col">
-            <Title>Incidents</Title>
-            <Subtitle>Manage your incidents</Subtitle>
+            <div className="flex justify-between items-center">
+              <div>
+                <Title>Incidents</Title>
+                <Subtitle>Manage your incidents</Subtitle>
+              </div>
+              <div>
+                <Button
+                  color="orange"
+                  size="md"
+                  icon={PlusCircleIcon}
+                  onClick={() => setIsFormOpen(true)}
+                >
+                  Create Incident
+                </Button>
+              </div>
+            </div>
             <Card className="mt-10 flex-grow">
               <IncidentsTable
                 incidents={incidents}
@@ -48,7 +64,7 @@ export default function Incident() {
         ) : (
           <div className="h-full flex">
             <Card className="flex-grow flex items-center justify-center">
-              <IncidentPlaceholder setIsFormOpen={setIsFormOpen}/>
+              <IncidentPlaceholder setIsFormOpen={setIsFormOpen} />
             </Card>
           </div>
         )}
@@ -59,7 +75,10 @@ export default function Incident() {
         className="w-[600px]"
         title="Add Incident"
       >
-        <CreateOrUpdateIncident incidentToEdit={incidentToEdit} editCallback={handleFinishEdit}/>
+        <CreateOrUpdateIncident
+          incidentToEdit={incidentToEdit}
+          editCallback={handleFinishEdit}
+        />
       </Modal>
     </div>
   );

@@ -314,7 +314,6 @@ class IncidentDtoIn(BaseModel):
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
                     "description": "Keep: Incident description",
-                    "incident_fingerprint": "a7b0503d-2e04-40ee-ac5d-3d2cdfc80e3b",
                 }
             ]
         }

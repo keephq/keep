@@ -1,5 +1,5 @@
 export interface IncidentDto {
-  id: number;
+  id: string;
   name: string;
   description: string;
   assignee: string;
@@ -7,7 +7,6 @@ export interface IncidentDto {
   number_of_alerts: number;
   alert_sources: string[];
   services: string[];
-  incident_fingerprint: string;
   start_time?: Date;
   end_time?: Date;
   creation_time: Date;

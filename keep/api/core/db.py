@@ -1809,13 +1809,13 @@ def get_last_incidents(
     return incidents
 
 
-def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Incident]:
+def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
     with Session(engine) as session:
         query = session.query(
             Incident,
         ).filter(
             Incident.tenant_id == tenant_id,
-            Incident.incident_fingerprint == fingerprint,
+            Incident.incident_id == incident_id,
         )
 
     return query.first()
@@ -1829,19 +1829,20 @@ def create_incident_from_dto(
         session.add(new_incident)
         session.commit()
         session.refresh(new_incident)
+        new_incident.alerts = []
     return new_incident
 
 
-def update_incident_from_dto_by_fingerprint(
+def update_incident_from_dto_by_id(
     tenant_id: str,
-    fingerprint: str,
+    incident_id: str,
     updated_incident_dto: IncidentDtoIn,
 ) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint,
+                Incident.incident_id == incident_id,
             )
         ).first()
 
@@ -1850,7 +1851,7 @@ def update_incident_from_dto_by_fingerprint(
 
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
-            Incident.incident_fingerprint == fingerprint,
+            Incident.incident_id == incident_id,
         ).update(
             {
                 "name": updated_incident_dto.name,
@@ -1865,16 +1866,16 @@ def update_incident_from_dto_by_fingerprint(
         return incident
 
 
-def delete_incident_by_fingerprint(
+def delete_incident_by_id(
     tenant_id: str,
-    fingerprint: str,
+    incident_id: str,
 ) -> bool:
     with Session(engine) as session:
         incident = (
             session.query(Incident)
             .filter(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint,
+                Incident.id == incident_id,
             )
             .first()
         )
@@ -1908,9 +1909,7 @@ def get_incidents_count(
         )
 
 
-def get_incident_alerts_by_incident_fingerprint(
-    tenant_id: str, fingerprint: str
-) -> List[Alert]:
+def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List[Alert]:
     with Session(engine) as session:
         query = (
             session.query(
@@ -1920,21 +1919,21 @@ def get_incident_alerts_by_incident_fingerprint(
             .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(
                 AlertToIncident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint,
+                Incident.incident_id == incident_id,
             )
         )
 
     return query.all()
 
 
-def add_alerts_to_incident_by_incident_fingerprint(
-    tenant_id: str, fingerprint: str, alert_ids: List[UUID]
+def add_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
 ):
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint,
+                Incident.incident_id == incident_id,
             )
         ).first()
 
@@ -1962,14 +1961,14 @@ def add_alerts_to_incident_by_incident_fingerprint(
         return True
 
 
-def remove_alerts_to_incident_by_incident_fingerprint(
-    tenant_id: str, fingerprint: str, alert_ids: List[UUID]
+def remove_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint,
+                Incident.incident_id == incident_id,
             )
         ).first()
 
