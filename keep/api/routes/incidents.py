@@ -80,19 +80,7 @@ def get_all_incidents(
     incidents_dto = []
     for incident in incidents:
         incidents_dto.append(
-            IncidentDto(
-                id=incident.id,
-                name=incident.name,
-                description=incident.description,
-                creation_time=incident.creation_time,
-                start_time=incident.start_time,
-                end_time=incident.end_time,
-                number_of_alerts=len(incident.alerts),
-                alert_sources=set([alert.source for alert in incident.alerts]),
-                severity=IncidentSeverity.CRITICAL,
-                assignee=incident.assignee,
-                services=["service1", "service2"],
-            )
+            IncidentDto.from_db_incident(incident)
         )
 
     logger.info(
