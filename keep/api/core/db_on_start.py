@@ -19,8 +19,8 @@ import os
 
 import alembic.command
 import alembic.config
-
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, select
 
 from keep.api.core.db_utils import create_db_engine
@@ -101,16 +101,21 @@ def try_create_single_tenant(tenant_id: str) -> None:
             pass
 
 
-
 def migrate_db():
     """
     Run migrations to make sure the DB is up-to-date.
     """
     logger.info("Running migrations...")
+    # create database if not exists
+    if not database_exists(engine.url):
+        create_database(engine.url)
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
-    # Re-defined because alembic.ini uses relative paths which doesn't work 
+    # Re-defined because alembic.ini uses relative paths which doesn't work
     # when running the app as a pyhton pakage (could happen form any path)
-    config.set_main_option("script_location", os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations")
+    config.set_main_option(
+        "script_location",
+        os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
+    )
     alembic.command.upgrade(config, "head")
     logger.info("Finished migrations")
