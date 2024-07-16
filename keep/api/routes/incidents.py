@@ -160,7 +160,6 @@ def delete_incident(
 
     return Response(status_code=202)
 
-
 @router.get(
     "/{fingerprint}/alerts",
     description="Get incident alerts by incident fingerprint",
