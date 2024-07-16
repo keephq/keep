@@ -59,12 +59,12 @@ export function CorrelatedAlerts() {
         data={chartdata}
         index="name"
         categories={[
-          "Window 1",
-          "Window 2",
-          "Window 3",
-          "Window 4",
-          "Window 5",
-          "Window 6",
+          "Group A",
+          "Group B",
+          "Group C",
+          "Group D",
+          "Group E",
+          "Group F",
         ]}
         colors={["blue", "teal", "amber", "rose", "indigo", "emerald"]}
         valueFormatter={dataFormatter}
@@ -84,8 +84,12 @@ export default function IncidentInformation({ incident }: Props) {
         <Text className="mb-5">
           Started at: {incident.start_time?.toISOString() ?? "N/A"}
         </Text>
-        <CorrelatedAlerts />
-        <Callout title="AI Summary" color="gray" icon={Ai} className="mt-5">
+        <Callout
+          title="AI Summary"
+          color="gray"
+          icon={Ai}
+          className="mt-10 mb-10"
+        >
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
           eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
           minim veniam, quis nostrud exercitation ullamco laboris nisi ut
@@ -94,6 +98,7 @@ export default function IncidentInformation({ incident }: Props) {
           pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
           culpa qui officia deserunt mollit anim id est laborum.
         </Callout>
+        <CorrelatedAlerts />
       </div>
     </div>
   );
