@@ -54,8 +54,31 @@ export const usePusher = () => {
       const channelName = `private-${session.tenantId}`;
       const pusherChannel = pusher.subscribe(channelName);
 
+      let lastPollTime = 0;
+
+
       pusherChannel.bind("poll-alerts", (incoming: any) => {
+        const currentTime = Date.now();
+        const timeSinceLastPoll = currentTime - lastPollTime;
+
         next(null, (data) => {
+          if (timeSinceLastPoll < 3000) {
+            // If less than 3 seconds since last poll, return pollAlerts: 0
+            if(data){
+              return {
+                ...(data),
+                pollAlerts: 0,
+              };
+             return {
+                pollAlerts: 0,
+                isAsyncLoading: false,
+                pusherChannel,
+              }
+            }
+
+          }
+          lastPollTime = currentTime;
+
           if (data) {
             return {
               ...data,

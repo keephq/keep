@@ -1758,11 +1758,15 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def get_alert_audit(tenant_id: str, fingerprint: str) -> List[AlertAudit]:
+def get_alert_audit(
+    tenant_id: str, fingerprint: str, limit: int = 50
+) -> List[AlertAudit]:
     with Session(engine) as session:
         audit = session.exec(
             select(AlertAudit)
             .where(AlertAudit.tenant_id == tenant_id)
             .where(AlertAudit.fingerprint == fingerprint)
+            .order_by(desc(AlertAudit.timestamp))
+            .limit(limit)
         ).all()
     return audit
