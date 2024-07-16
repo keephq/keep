@@ -29,7 +29,7 @@
     "@tanstack/react-table": "^8.11.0",
     "@tremor/react": "^3.15.1",
     "@types/react-select": "^5.0.1",
-    "@xyflow/react": "^12.0.1",
+    "@xyflow/react": "^12.0.2",
     "add": "^2.0.6",
     "ajv": "^6.12.6",
     "ansi-regex": "^5.0.1",

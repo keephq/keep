@@ -8,6 +8,7 @@ import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 import { AILink } from "./AILink";
+import { TbTopologyRing } from "react-icons/tb";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -48,6 +49,13 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           <LinkWithIcon href="/workflows" icon={Workflows}>
             <Subtitle>
             Workflows
+            </Subtitle>
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/topology" icon={TbTopologyRing}>
+            <Subtitle>
+            Service Topology
             </Subtitle>
           </LinkWithIcon>
         </li>
