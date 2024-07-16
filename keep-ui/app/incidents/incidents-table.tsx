@@ -23,6 +23,7 @@ import { toast } from "react-toastify";
 import { IncidentDto } from "./model";
 import { useState } from "react";
 import { useIncidents } from "utils/hooks/useIncidents";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const columnHelper = createColumnHelper<IncidentDto>();
@@ -36,14 +37,13 @@ export default function IncidentsTable({
   incidents: incidents,
   editCallback,
 }: Props) {
+  const router = useRouter();
   const { data: session } = useSession();
-  // const { mutate } = useMappings();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const { mutate } = useIncidents();
 
   const columns = [
-
     columnHelper.display({
       id: "name",
       header: "Name",
@@ -100,9 +100,8 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "created_at",
       header: "Created At",
-      cell: ({row}) => new Date(
-        row.original.creation_time + "Z"
-      ).toLocaleString()
+      cell: ({ row }) =>
+        new Date(row.original.creation_time + "Z").toLocaleString(),
     }),
     columnHelper.display({
       id: "delete",
@@ -156,9 +155,7 @@ export default function IncidentsTable({
           mutate();
           toast.success("Incident deleted successfully");
         } else {
-          toast.error(
-            "Failed to delete incident, contact us if this persists"
-          );
+          toast.error("Failed to delete incident, contact us if this persists");
         }
       });
     }
@@ -192,9 +189,12 @@ export default function IncidentsTable({
         {table.getRowModel().rows.map((row) => (
           <>
             <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
+              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
               key={row.id}
-              onClick={() => row.toggleExpanded()}
+              onClick={() => {
+                //row.toggleExpanded();
+                router.push(`/incidents/${row.original.id}`);
+              }}
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>

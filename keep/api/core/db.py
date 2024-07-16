@@ -1815,7 +1815,7 @@ def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
             Incident,
         ).filter(
             Incident.tenant_id == tenant_id,
-            Incident.incident_id == incident_id,
+            Incident.id == incident_id,
         )
 
     return query.first()
@@ -1842,7 +1842,7 @@ def update_incident_from_dto_by_id(
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_id == incident_id,
+                Incident.id == incident_id,
             )
         ).first()
 
@@ -1851,7 +1851,7 @@ def update_incident_from_dto_by_id(
 
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
-            Incident.incident_id == incident_id,
+            Incident.id == incident_id,
         ).update(
             {
                 "name": updated_incident_dto.name,
@@ -1886,7 +1886,7 @@ def delete_incident_by_id(
             session.query(AlertToIncident)
             .where(
                 AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.incident_id == incident.id,
+                AlertToIncident.id == incident.id,
             )
             .delete()
         )
@@ -1919,7 +1919,7 @@ def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List
             .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(
                 AlertToIncident.tenant_id == tenant_id,
-                Incident.incident_id == incident_id,
+                Incident.id == incident_id,
             )
         )
 
@@ -1933,7 +1933,7 @@ def add_alerts_to_incident_by_incident_id(
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_id == incident_id,
+                Incident.id == incident_id,
             )
         ).first()
 
