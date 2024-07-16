@@ -165,7 +165,7 @@ class AlertAudit(SQLModel, table=True):
         default_factory=lambda: str(uuid4()), primary_key=True, max_length=36
     )
     fingerprint: str
-    tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False, max_length=36)
     # when
     timestamp: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     # who

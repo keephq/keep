@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import mssql
 
 # revision identifiers, used by Alembic.
-revision = "174e14a72483"
+revision = "54c1252b2c8a"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -90,36 +90,6 @@ def upgrade() -> None:
         op.f("ix_alert_fingerprint"), "alert", ["fingerprint"], unique=False
     )
     op.create_index(op.f("ix_alert_timestamp"), "alert", ["timestamp"], unique=False)
-    op.create_table(
-        "alertaudit",
-        sa.Column("id", sqlmodel.sql.sqltypes.AutoString(length=36), nullable=False),
-        sa.Column("fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("timestamp", sa.DateTime(), nullable=False),
-        sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("action", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["tenant_id"],
-            ["tenant.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_alert_audit_fingerprint", "alertaudit", ["fingerprint"], unique=False
-    )
-    op.create_index(
-        "ix_alert_audit_tenant_id", "alertaudit", ["tenant_id"], unique=False
-    )
-    op.create_index(
-        "ix_alert_audit_tenant_id_fingerprint",
-        "alertaudit",
-        ["tenant_id", "fingerprint"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_alert_audit_timestamp", "alertaudit", ["timestamp"], unique=False
-    )
     op.create_table(
         "alertdeduplicationfilter",
         sa.Column("fields", sa.JSON(), nullable=True),
@@ -565,11 +535,6 @@ def downgrade() -> None:
     op.drop_table("alertraw")
     op.drop_table("alertenrichment")
     op.drop_table("alertdeduplicationfilter")
-    op.drop_index("ix_alert_audit_timestamp", table_name="alertaudit")
-    op.drop_index("ix_alert_audit_tenant_id_fingerprint", table_name="alertaudit")
-    op.drop_index("ix_alert_audit_tenant_id", table_name="alertaudit")
-    op.drop_index("ix_alert_audit_fingerprint", table_name="alertaudit")
-    op.drop_table("alertaudit")
     op.drop_index(op.f("ix_alert_timestamp"), table_name="alert")
     op.drop_index(op.f("ix_alert_fingerprint"), table_name="alert")
     op.drop_table("alert")
