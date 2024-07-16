@@ -76,7 +76,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
                 # Wait for an element that indicates alerts have loaded
                 browser.wait_for_selector("text=AlwaysFiringAlert", timeout=5000)
                 print("Alerts loaded successfully.")
-            except TimeoutError:
+            except Exception:
                 if attempt < max_attemps - 1:
                     print("Alerts not loaded yet. Retrying...")
                     browser.reload()
