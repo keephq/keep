@@ -630,7 +630,26 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def _enrich_alert(session, tenant_id, fingerprint, enrichments, force=False):
+def _enrich_alert(
+    session,
+    tenant_id,
+    fingerprint,
+    enrichments,
+    action_type: AlertActionType,
+    action_callee: str,
+    action_description: str,
+    force=False,
+):
+    """
+    Enrich an alert with the provided enrichments.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant ID to filter the alert enrichments by.
+        fingerprint (str): The alert fingerprint to filter the alert enrichments by.
+        enrichments (dict): The enrichments to add to the alert.
+        force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
+    """
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
@@ -646,6 +665,15 @@ def _enrich_alert(session, tenant_id, fingerprint, enrichments, force=False):
             .values(enrichments=new_enrichment_data)
         )
         session.execute(stmt)
+        # add audit event
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=action_callee,
+            action=action_type.value,
+            description=action_description,
+        )
+        session.add(audit)
         session.commit()
         # Refresh the instance to get updated data from the database
         session.refresh(enrichment)
@@ -657,18 +685,52 @@ def _enrich_alert(session, tenant_id, fingerprint, enrichments, force=False):
             enrichments=enrichments,
         )
         session.add(alert_enrichment)
+        # add audit event
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=action_callee,
+            action=action_type.value,
+            description=action_description,
+        )
+        session.add(audit)
         session.commit()
         return alert_enrichment
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments, session=None, force=False):
+def enrich_alert(
+    tenant_id,
+    fingerprint,
+    enrichments,
+    action_type: AlertActionType,
+    action_callee: str,
+    action_description: str,
+    session=None,
+    force=False,
+):
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
             return _enrich_alert(
-                session, tenant_id, fingerprint, enrichments, force=force
+                session,
+                tenant_id,
+                fingerprint,
+                enrichments,
+                action_type,
+                action_callee,
+                action_description,
+                force=force,
             )
-    return _enrich_alert(session, tenant_id, fingerprint, enrichments, force=force)
+    return _enrich_alert(
+        session,
+        tenant_id,
+        fingerprint,
+        enrichments,
+        action_type,
+        action_callee,
+        action_description,
+        force=force,
+    )
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -1175,7 +1237,10 @@ def assign_alert_to_group(
             enrich_alert(
                 tenant_id,
                 fingerprint,
-                {"group_expired": True},
+                enrichments={"group_expired": True},
+                action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
+                action_callee="system",
+                action_description="Enriched group with group_expired flag",
             )
             logger.info(f"Enriched group {group.id} with group_expired flag")
             # change the group status to resolve so it won't spam the UI
@@ -1692,7 +1757,6 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
         session.refresh(preset)
     return preset
 
-
 def create_incident(tenant_id: str, incident_fingerprint: str) -> Incident:
     with Session(engine) as session:
         incident = Incident(tenant_id=tenant_id, incident_fingerprint=incident_fingerprint)
@@ -1735,3 +1799,16 @@ def get_incidents(tenant_id) -> List[Incident]:
             .where(Incident.tenant_id == tenant_id)
         ).all()
     return incidents
+
+def get_alert_audit(
+    tenant_id: str, fingerprint: str, limit: int = 50
+) -> List[AlertAudit]:
+    with Session(engine) as session:
+        audit = session.exec(
+            select(AlertAudit)
+            .where(AlertAudit.tenant_id == tenant_id)
+            .where(AlertAudit.fingerprint == fingerprint)
+            .order_by(desc(AlertAudit.timestamp))
+            .limit(limit)
+        ).all()
+    return audit

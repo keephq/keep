@@ -1,5 +1,6 @@
 import logging
 from datetime import timezone, timedelta, datetime
+
 from typing import Optional, List
 
 from pydantic.types import UUID
@@ -9,6 +10,7 @@ from sqlmodel import Session, select, col
 from keep.api.core.db import engine
 from keep.api.models.alert import IncidentDtoIn
 from keep.api.models.db.alert import Incident, Alert, AlertToIncident
+
 
 logger = logging.getLogger(__name__)
 
@@ -110,13 +112,34 @@ def delete_incident_by_fingerprint(
 ) -> bool:
 
     with Session(engine) as session:
-        session.query(Incident).filter(
+
+        incident = session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.incident_fingerprint == fingerprint
-        ).delete()
+        ).first()
+
+        # Delete all associations with alerts:
+
+        (
+            session.query(AlertToIncident)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+            )
+            .delete()
+        )
+
+        session.delete(incident)
         session.commit()
         return True
 
+def get_incidents_count(
+        tenant_id: str,
+) -> int:
+    with Session(engine) as session:
+        return session.query(Incident).filter(
+            Incident.tenant_id == tenant_id,
+        ).count()
 
 def get_incident_alerts_by_incident_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
     with Session(engine) as session:
@@ -125,6 +148,7 @@ def get_incident_alerts_by_incident_fingerprint(tenant_id: str, fingerprint: str
                 Alert,
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(AlertToIncident.tenant_id == tenant_id, Incident.incident_fingerprint == fingerprint)
         )
 

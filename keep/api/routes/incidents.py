@@ -160,7 +160,6 @@ def delete_incident(
 
     return Response(status_code=202)
 
-
 @router.get(
     "/{fingerprint}/alerts",
     description="Get incident alerts by incident fingerprint",
@@ -259,6 +258,7 @@ def delete_alerts_from_incident(
     )
 
     return Response(status_code=202)
+
 import logging
 
 from fastapi import APIRouter, Depends

@@ -5,10 +5,12 @@ from dateutil import parser
 from dateutil.parser import ParserError
 from dotenv import load_dotenv
 
+from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.searchengine.searchengine import SearchEngine
 
 load_dotenv()
 TENANT_ID = os.environ.get("MIGRATION_TENANT_ID")
@@ -82,7 +84,14 @@ def change_keys_recursively(data):
 
 if __name__ == "__main__":
     # dismissedUntil + group last_updated_time + split to 500
+
     elastic_client = ElasticClient(TENANT_ID)
+
+    preset = STATIC_PRESETS["feed"]
+    search_engine = SearchEngine(tenant_id=TENANT_ID)
+    search_engine.search_alerts(preset.query)
+    # get the number of alerts + noisy alerts for each preset
+
     alerts = get_alerts_with_filters(TENANT_ID, time_delta=365)  # year ago
     print(f"Found {len(alerts)} alerts")
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)

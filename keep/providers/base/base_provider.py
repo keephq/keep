@@ -21,6 +21,7 @@ import requests
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.db import get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.db.alert import AlertActionType
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -186,7 +187,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
-            enrichments_bl.enrich_alert(fingerprint, _enrichments)
+            enrichment_string = ""
+            for key, value in _enrichments.items():
+                enrichment_string += f"{key}={value}, "
+            # remove the last comma
+            enrichment_string = enrichment_string[:-2]
+            enrichments_bl.enrich_alert(
+                fingerprint,
+                _enrichments,
+                action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
+                action_callee="system",
+                action_description=f"Workflow enriched the alert with {enrichment_string}",
+            )
 
         except Exception as e:
             self.logger.error(

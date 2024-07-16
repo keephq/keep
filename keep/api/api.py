@@ -41,13 +41,14 @@ from keep.api.routes import (
     whoami,
     workflows,
     incidents,
+    ai
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
-keep.api.logging.setup()
+keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
@@ -162,6 +163,7 @@ def get_app(
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
+    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]

@@ -11,6 +11,7 @@ from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import get_enrichment, get_mapping_rule_by_id
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 
@@ -280,7 +281,14 @@ class EnrichmentsBl:
                 # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
                 #         enrich alert will fail to update the alert in elastic.
                 #         hence should_exist = False
-                self.enrich_alert(alert.fingerprint, enrichments, should_exist=False)
+                self.enrich_alert(
+                    alert.fingerprint,
+                    enrichments,
+                    action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                    action_callee="system",
+                    action_description="Alert enriched with mapping rule",
+                    should_exist=False,
+                )
 
                 self.logger.info(
                     "Alert enriched",
@@ -340,11 +348,16 @@ class EnrichmentsBl:
         self,
         fingerprint: str,
         enrichments: dict,
+        action_type: AlertActionType,
+        action_callee: str,
+        action_description: str,
         should_exist=True,
         dispose_on_new_alert=False,
     ):
         """
         should_exist = False only in mapping where the alert is not yet in elastic
+        action_type = AlertActionType - the action type of the enrichment
+        action_callee = the action callee of the enrichment
 
         Enrich the alert with extraction and mapping rules
         """
@@ -368,7 +381,16 @@ class EnrichmentsBl:
                 }
             enrichments.update(disposable_enrichments)
 
-        enrich_alert_db(self.tenant_id, fingerprint, enrichments, self.db_session)
+        enrich_alert_db(
+            self.tenant_id,
+            fingerprint,
+            enrichments,
+            action_callee=action_callee,
+            action_type=action_type,
+            action_description=action_description,
+            session=self.db_session,
+        )
+
         self.logger.debug(
             "alert enriched in db, enriching elastic",
             extra={"fingerprint": fingerprint},
@@ -407,12 +429,18 @@ class EnrichmentsBl:
             elif f"disposable_{key}" not in enrichments.enrichments:
                 new_enrichments[key] = val
         # Only update the alert if there are disposable enrichments to dispose
+        disposed_keys = set(enrichments.enrichments.keys()) - set(
+            new_enrichments.keys()
+        )
         if disposed:
             enrich_alert_db(
                 self.tenant_id,
                 fingerprint,
                 new_enrichments,
-                self.db_session,
+                session=self.db_session,
+                action_callee="system",
+                action_type=AlertActionType.DISPOSE_ENRICHED_ALERT,
+                action_description=f"Disposing enrichments from alert - {disposed_keys}",
                 force=True,
             )
             self.elastic_client.enrich_alert(fingerprint, new_enrichments)

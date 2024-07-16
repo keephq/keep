@@ -31,6 +31,7 @@ import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
+import AlertSidebar from "./alert-sidebar";
 
 interface PresetTab {
   name: string;
@@ -76,6 +77,7 @@ export function AlertTable({
     )
   );
 
+
   const columnsIds = getColumnsIds(columns);
 
   const [columnOrder] = useLocalStorage<ColumnOrderState>(
@@ -112,6 +114,8 @@ export function AlertTable({
   ]);
 
   const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const filteredAlerts = alerts.filter(tabs[selectedTab].filter);
 
@@ -157,6 +161,11 @@ export function AlertTable({
   let showSkeleton = table.getFilteredRowModel().rows.length === 0;
   // if showSkeleton and not loading, show empty state
   let showEmptyState = !isAsyncLoading && showSkeleton;
+
+  const handleRowClick = (alert: AlertDto) => {
+    setSelectedAlert(alert);
+    setIsSidebarOpen(true);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -208,12 +217,18 @@ export function AlertTable({
             showSkeleton={showSkeleton}
             showEmptyState={showEmptyState}
             theme={theme}
+            onRowClick={handleRowClick}
           />
         </Table>
       </Card>
       <div className="mt-2 mb-8">
         <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
       </div>
+      <AlertSidebar
+        isOpen={isSidebarOpen}
+        toggle={() => setIsSidebarOpen(false)}
+        alert={selectedAlert}
+      />
     </div>
   );
 }
