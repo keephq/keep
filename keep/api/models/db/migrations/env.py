@@ -5,20 +5,19 @@ from alembic import context
 from sqlalchemy.future import Connection
 from sqlmodel import SQLModel
 
+import keep.api.logging
 from keep.api.core.db_utils import create_db_engine
-
-from keep.api.models.db.alert import *
 from keep.api.models.db.action import *
+from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
-from keep.api.models.db.tenant import *
 from keep.api.models.db.rule import *
+from keep.api.models.db.tenant import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
-from keep.api.models.db.dashboard import *
 
 target_metadata = SQLModel.metadata
 
@@ -30,6 +29,8 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
+    # backup the current config
+    logging_config = config.get_section("loggers")
     fileConfig(config.config_file_name)
 
 
@@ -87,3 +88,5 @@ else:
     task = run_migrations_online()
 
 loop.run_until_complete(task)
+# SHAHAR: set back the logs to the default after alembic is done
+keep.api.logging.setup_logging()

@@ -4,9 +4,6 @@ workflow:
   description: demonstrates how to automatically suppress alerts
   triggers:
     - type: alert
-      filters:
-        - key: name
-          value: r"(somename)"
   actions:
     - name: dismiss-alert
       provider:

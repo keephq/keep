@@ -11,6 +11,7 @@ interface Props {
   showSkeleton: boolean;
   showEmptyState: boolean;
   theme: { [key: string]: string };
+  onRowClick: (alert: AlertDto) => void;
 }
 
 export function AlertsTableBody({
@@ -18,6 +19,7 @@ export function AlertsTableBody({
   showSkeleton,
   showEmptyState,
   theme,
+  onRowClick,
 }: Props) {
   if (showEmptyState) {
     return (
@@ -49,7 +51,19 @@ export function AlertsTableBody({
 
 
 
+  const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
+    // Prevent row click when clicking on specified elements
+    if ((e.target as HTMLElement).closest("button, .menu, input, a, span, .prevent-row-click")) {
+      return;
+    }
 
+    const rowElement = (e.currentTarget as HTMLElement);
+    if (rowElement.classList.contains("menu-open")) {
+      return;
+    }
+
+    onRowClick(alert);
+  };
 
   return (
     <TableBody>
@@ -59,7 +73,9 @@ export function AlertsTableBody({
         const rowBgColor = theme[severity] || "bg-white"; // Fallback to 'bg-white' if no theme color
 
         return (
-          <TableRow key={row.id} className={rowBgColor}>
+          <TableRow id={`alert-row-${row.original.fingerprint}`} key={row.id}
+           className={`${rowBgColor} hover:bg-orange-100 cursor-pointer`}
+           onClick={(e) => handleRowClick(e, row.original)}>
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
