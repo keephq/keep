@@ -8,10 +8,10 @@ import json
 import os
 from typing import Literal
 
-from keep.api.models.alert import AlertDto
 import pydantic
 import requests
 
+from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -172,8 +172,14 @@ class IlertProvider(BaseProvider):
         """
         Get incidents from Ilert.
         """
-        headers = {"Authorization": self.authentication_config.ilert_token}
-        response = requests.get(f"{self.authentication_config.ilert_host}/incidents",
+        if not self.authentication_config.ilert_host.endswith("/api"):
+            self.authentication_config.ilert_host = (
+                f"{self.authentication_config.ilert_host}/api"
+            )
+
+        headers = {"Authorization": f"{self.authentication_config.ilert_token}"}
+        response = requests.get(
+            f"{self.authentication_config.ilert_host}/incidents",
             headers=headers,
         )
         if not response.ok:
@@ -187,23 +193,30 @@ class IlertProvider(BaseProvider):
             raise Exception(
                 f"Failed to get alerts: {response.status_code} {response.text}"
             )
-    
-        return [AlertDto(
-            id=alert["id"],
-            name=alert["summary"],
-            title=alert["summary"],
-            description=alert["message"],
-            status=alert["status"],
-            sendNotification=alert["sendNotification"],
-            createdAt=alert["createdAt"],
-            updatedAt=alert["updatedAt"],
-            affectedServices=alert["affectedServices"],
-            createdBy=alert["createdBy"],
-            lastHistory=alert["lastHistory"],
-            lastHistoryCreatedAt=alert["lastHistoryCreatedAt"],
-            lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
-            lastReceived=alert["updatedAt"],
-        ) for alert in response.json()]
+
+        alerts = response.json()
+        self.logger.info(
+            "Got alerts from ilert", extra={"number_of_alerts": len(alerts)}
+        )
+        return [
+            AlertDto(
+                id=alert["id"],
+                name=alert["summary"],
+                title=alert["summary"],
+                description=alert["message"],
+                status=alert["status"],
+                sendNotification=alert["sendNotification"],
+                createdAt=alert["createdAt"],
+                updatedAt=alert["updatedAt"],
+                affectedServices=alert["affectedServices"],
+                createdBy=alert["createdBy"],
+                lastHistory=alert["lastHistory"],
+                lastHistoryCreatedAt=alert["lastHistoryCreatedAt"],
+                lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
+                lastReceived=alert["updatedAt"],
+            )
+            for alert in alerts
+        ]
 
     def __create_or_update_incident(
         self, summary, status, message, affectedServices, id
@@ -362,9 +375,10 @@ if __name__ == "__main__":
     import os
 
     api_key = os.environ.get("ILERT_API_TOKEN")
+    host = os.environ.get("ILERT_API_HOST")
 
     provider_config = {
-        "authentication": {"ilert_token": api_key},
+        "authentication": {"ilert_token": api_key, "ilert_host": host},
     }
     provider: IlertProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
@@ -372,6 +386,7 @@ if __name__ == "__main__":
         provider_type="ilert",
         provider_config=provider_config,
     )
+    """
     result = provider._query(
         "Example",
         message="Lorem Ipsum",
@@ -387,6 +402,6 @@ if __name__ == "__main__":
         id="242530",
     )
     print(result)
-
+    """
     alerts = provider._get_alerts()
     print(alerts)

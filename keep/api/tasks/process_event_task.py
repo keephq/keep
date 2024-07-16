@@ -1,4 +1,5 @@
 # builtins
+import copy
 import datetime
 import json
 import logging
@@ -17,13 +18,14 @@ from keep.api.core.db import get_all_presets, get_enrichment, get_session_sync
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import Alert, AlertRaw
+from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.models.db.preset import PresetDto
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
+KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -56,23 +58,41 @@ def __save_to_db(
     session: Session,
     raw_events: list[dict],
     formatted_events: list[AlertDto],
+    deduplicated_events: list[AlertDto],
     provider_id: str | None = None,
 ):
     try:
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
-        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
+        if KEEP_STORE_RAW_ALERTS:
             for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
                 )
                 session.add(alert)
+        # add audit to the deduplicated events
+        for event in deduplicated_events:
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=event.fingerprint,
+                status=event.status,
+                action=AlertActionType.DEDUPLICATED.value,
+                user_id="system",
+                description="Alert was deduplicated",
+            )
+            session.add(audit)
         enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Dispose enrichments that needs to be disposed
+            try:
+                enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
+            except Exception:
+                logger.exception("Failed to dispose enrichments")
+
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
@@ -106,6 +126,18 @@ def __save_to_db(
                 alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=formatted_event.fingerprint,
+                action=(
+                    AlertActionType.AUTOMATIC_RESOLVE.value
+                    if formatted_event.status == AlertStatus.RESOLVED.value
+                    else AlertActionType.TIGGERED.value
+                ),
+                user_id="system",
+                description=f"Alert recieved from provider with status {formatted_event.status}",
+            )
+            session.add(audit)
             session.flush()
             session.refresh(alert)
             formatted_event.event_id = str(alert.id)
@@ -157,7 +189,6 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
-    save_if_duplicate: bool = True,
 ):
     """
     this is super important function and does five things:
@@ -190,30 +221,27 @@ def __handle_formatted_events(
         event.alert_hash = event_hash
         event.isDuplicate = event_deduplicated
 
-    if event.isDuplicate and not save_if_duplicate:
-        logger.info(
-            "Alert is not saved as a duplicate",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
-        return None
-
     # filter out the deduplicated events
+    deduplicated_events = list(
+        filter(lambda event: event.isDuplicate, formatted_events)
+    )
     formatted_events = list(
         filter(lambda event: not event.isDuplicate, formatted_events)
     )
 
     # save to db
     enriched_formatted_events = __save_to_db(
-        tenant_id, provider_type, session, raw_events, formatted_events, provider_id
+        tenant_id,
+        provider_type,
+        session,
+        raw_events,
+        formatted_events,
+        deduplicated_events,
+        provider_id,
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
-    elastic_client = ElasticClient()
+    elastic_client = ElasticClient(tenant_id=tenant_id)
     for alert in enriched_formatted_events:
         try:
             logger.debug(
@@ -224,7 +252,6 @@ def __handle_formatted_events(
                 },
             )
             elastic_client.index_alert(
-                tenant_id=tenant_id,
                 alert=alert,
             )
         except Exception:
@@ -346,7 +373,7 @@ def __handle_formatted_events(
         )
 
 
-async def process_event(
+def process_event(
     ctx: dict,  # arq context
     tenant_id: str,
     provider_type: str | None,
@@ -357,7 +384,6 @@ async def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
-    save_if_duplicate: bool = True, 
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -366,8 +392,12 @@ async def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
+        "raw_event": (
+            event if KEEP_STORE_RAW_ALERTS else None
+        ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+    raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
         # Pre alert formatting extraction rules
@@ -377,20 +407,26 @@ async def process_event(
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
-        if provider_type is not None:
+        if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
+
+        # In case when provider_type is not set
+        if isinstance(event, dict):
+            event = [AlertDto(**event)]
 
         # Prepare the event for the digest
         if isinstance(event, AlertDto):
             event = [event]
 
-        if isinstance(event, dict):
-            event = [AlertDto(**event)]
-
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
-            tenant_id, provider_type, session, event, event, provider_id, save_if_duplicate
+            tenant_id,
+            provider_type,
+            session,
+            raw_event,
+            event,
+            provider_id,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)

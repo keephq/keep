@@ -11,6 +11,7 @@ interface Props {
   showSkeleton: boolean;
   showEmptyState: boolean;
   theme: { [key: string]: string };
+  onRowClick: (alert: AlertDto) => void;
 }
 
 export function AlertsTableBody({
@@ -18,35 +19,51 @@ export function AlertsTableBody({
   showSkeleton,
   showEmptyState,
   theme,
+  onRowClick,
 }: Props) {
   if (showEmptyState) {
     return (
       <TableBody>
         <TableRow>
-          <TableCell
-            colSpan={table.getAllColumns().length}
-            className="text-center"
-          >
-            <Card className="sm:mx-auto w-full max-w-5xl">
-              <div className="text-center">
-                <CircleStackIcon
-                  className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
-                  aria-hidden={true}
-                />
-                <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                  No alerts to display
-                </p>
-                <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-                  It is because you have not connected any data source yet or
-                  there are no alerts matching the filter.
-                </p>
-              </div>
-            </Card>
+          <TableCell colSpan={table.getAllColumns().length} className="p-0">
+            <div className="flex flex-col justify-center items-center h-96 w-full">
+              <Card className="sm:mx-auto w-full max-w-5xl">
+                <div className="text-center">
+                  <CircleStackIcon
+                    className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+                    aria-hidden={true}
+                  />
+                  <p className="mt-4 text-tremor-default font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                    No alerts to display
+                  </p>
+                  <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
+                    It is because you have not connected any data source yet or
+                    there are no alerts matching the filter.
+                  </p>
+                </div>
+              </Card>
+            </div>
           </TableCell>
         </TableRow>
       </TableBody>
     );
   }
+
+
+
+  const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
+    // Prevent row click when clicking on specified elements
+    if ((e.target as HTMLElement).closest("button, .menu, input, a, span, .prevent-row-click")) {
+      return;
+    }
+
+    const rowElement = (e.currentTarget as HTMLElement);
+    if (rowElement.classList.contains("menu-open")) {
+      return;
+    }
+
+    onRowClick(alert);
+  };
 
   return (
     <TableBody>
@@ -56,7 +73,9 @@ export function AlertsTableBody({
         const rowBgColor = theme[severity] || "bg-white"; // Fallback to 'bg-white' if no theme color
 
         return (
-          <TableRow key={row.id} className={rowBgColor}>
+          <TableRow id={`alert-row-${row.original.fingerprint}`} key={row.id}
+           className={`${rowBgColor} hover:bg-orange-100 cursor-pointer`}
+           onClick={(e) => handleRowClick(e, row.original)}>
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}

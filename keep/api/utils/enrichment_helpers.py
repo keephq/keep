@@ -74,5 +74,6 @@ def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
             # enrich provider id when it's possible
             if alert_dto.providerId is None:
                 alert_dto.providerId = alert.provider_id
+                alert_dto.providerType = alert.provider_type
             alerts_dto.append(alert_dto)
     return alerts_dto

@@ -73,8 +73,12 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             incident.pop("state", "").upper(), AlertStatus.FIRING
         )
         url = incident.pop("url", "")
-        name = incident.pop("documentation", {}).get("subject")
-        incident_id = incident.pop("incident_id", "")
+        documentation = incident.pop("documentation", {})
+        if isinstance(documentation, dict):
+            name = documentation.get("subject")
+        else:
+            name = "Test notification"
+        incident_id = incident.get("incident_id", "")
         # Get the severity
         if "severity" in incident:
             severity = GcpmonitoringProvider.SEVERITIES_MAP.get(
@@ -89,23 +93,30 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         # Parse and format the timestamp
         event_time = incident.get("started_at")
         if event_time:
-            event_time = datetime.datetime.fromtimestamp(event_time)
-        else:
-            event_time = datetime.datetime.utcnow()
+            event_time = datetime.datetime.fromtimestamp(
+                event_time, tz=datetime.timezone.utc
+            )
             # replace timezone to utc
-            event_time = event_time.replace(tzinfo=datetime.timezone.utc)
+
+        else:
+            event_time = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        event_time = event_time.isoformat(timespec="milliseconds").replace(
+            "+00:00", "Z"
+        )
 
         # Construct the alert object
         alert = AlertDto(
             id=incident_id,
             name=name,
             status=status,
-            lastReceived=str(event_time),
+            lastReceived=event_time,
             source=["gcpmonitoring"],
             description=description,
             severity=severity,
             url=url,
-            **incident
+            incident_id=incident_id,
+            gcp=incident,  # rest of the fields
         )
 
         # Set fingerprint if applicable

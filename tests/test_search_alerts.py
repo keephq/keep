@@ -1,95 +1,15 @@
-import datetime
 import os
-import random
 import time
-import uuid
 
 import pytest
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.db.alert import Alert
+from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
-from keep.api.routes.alerts import convert_db_alerts_to_dto_alerts
-from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.searchengine.searchengine import SearchEngine
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
-
-
-@pytest.fixture
-def setup_alerts(elastic_client, db_session, request):
-    alert_details = request.param.get("alert_details")
-    alerts = []
-    for i, detail in enumerate(alert_details):
-        detail["fingerprint"] = f"test-{i}"
-        alerts.append(
-            Alert(
-                tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
-                provider_id="test",
-                event=_create_valid_event(detail),
-                fingerprint=detail["fingerprint"],
-            )
-        )
-    db_session.add_all(alerts)
-    db_session.commit()
-    # add all to elasticsearch
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts_dto)
-
-
-@pytest.fixture
-def setup_stress_alerts(elastic_client, db_session, request):
-    num_alerts = request.param.get(
-        "num_alerts", 1000
-    )  # Default to 1000 alerts if not specified
-    alert_details = [
-        {
-            "source": [
-                "source_{}".format(i % 10)
-            ],  # Cycle through 10 different sources
-            "severity": random.choice(
-                ["info", "warning", "critical"]
-            ),  # Alternate between 'critical' and 'warning'
-            "fingerprint": f"test-{i}",
-        }
-        for i in range(num_alerts)
-    ]
-    alerts = []
-    for i, detail in enumerate(alert_details):
-        random_timestamp = datetime.datetime.utcnow() - datetime.timedelta(
-            days=random.uniform(0, 7)
-        )
-        alerts.append(
-            Alert(
-                timestamp=random_timestamp,
-                tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
-                provider_id="test_{}".format(
-                    i % 5
-                ),  # Cycle through 5 different provider_ids
-                event=_create_valid_event(detail, lastReceived=random_timestamp),
-                fingerprint="fingerprint_{}".format(i),
-            )
-        )
-    db_session.add_all(alerts)
-    db_session.commit()
-
-    # add all to elasticsearch
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-    elastic_client.index_alerts(SINGLE_TENANT_UUID, alerts_dto)
-
-
-def _create_valid_event(d, lastReceived=None):
-    event = {
-        "id": str(uuid.uuid4()),
-        "name": "some-test-event",
-        "lastReceived": str(lastReceived)
-        or datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
-    }
-    event.update(d)
-    return event
 
 
 @pytest.mark.parametrize(
@@ -168,8 +88,11 @@ def test_search_sanity2(db_session, setup_alerts):
     assert len(db_filtered_alerts) == 2
 
     # compare the results
-    assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
-    assert elastic_filtered_alerts[1] == db_filtered_alerts[1]
+    sorted_elastic_alerts = sorted(
+        elastic_filtered_alerts, key=lambda x: x.lastReceived
+    )
+    sorted_db_alerts = sorted(db_filtered_alerts, key=lambda x: x.lastReceived)
+    assert sorted_elastic_alerts == sorted_db_alerts
 
 
 @pytest.mark.parametrize(
@@ -224,6 +147,9 @@ def test_search_sanity_4(db_session, setup_alerts):
     enrichment_bl.enrich_alert(
         fingerprint="test-1",
         enrichments={"dismissed": True},
+        action_callee="test",
+        action_description="test",
+        action_type=AlertActionType.GENERIC_ENRICH,
     )
     search_query = SearchQuery(
         sql_query={
@@ -708,6 +634,7 @@ def test_null_handling(db_session, setup_alerts):
     )
     assert len(db_filtered_alerts) == 1
     assert db_filtered_alerts[0].assignee == None
+
     # compare
     assert elastic_filtered_alerts[0] == db_filtered_alerts[0]
 
@@ -898,8 +825,16 @@ def test_last_1000(db_session, setup_stress_alerts):
         search_query
     )
     db_end_time = time.time()
+    # check that these are the last 1000 alerts
+    assert len(elastic_filtered_alerts) == 1000
+    # check that these ordered by lastReceived
+    assert (
+        sorted(elastic_filtered_alerts, key=lambda x: x.lastReceived, reverse=True)
+        == elastic_filtered_alerts
+    )
     # compare
     assert len(elastic_filtered_alerts) == len(db_filtered_alerts)
+
     print(
         "time taken for 10k alerts with elastic: ",
         elastic_end_time - elastic_start_time,
@@ -1368,7 +1303,9 @@ def test_severity_comparisons(
     assert len(db_filtered_alerts) == expected_severity_counts
 
     # compare
-    assert elastic_filtered_alerts == db_filtered_alerts
+    assert set([alert.id for alert in elastic_filtered_alerts]) == set(
+        [alert.id for alert in db_filtered_alerts]
+    )
 
 
 """

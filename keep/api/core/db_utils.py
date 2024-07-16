@@ -57,9 +57,10 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
     creds, _ = default()
     # Create impersonated credentials
     target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+    service_account = os.environ.get("DB_SERVICE_ACCOUNT")
     creds = impersonated_credentials.Credentials(
         source_credentials=creds,
-        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
+        target_principal=service_account,
         target_scopes=target_scopes,
     )
     # Refresh the credentials to obtain an impersonated access token

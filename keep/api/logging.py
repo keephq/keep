@@ -234,7 +234,7 @@ class CustomizedUvicornLogger(logging.Logger):
         )
 
 
-def setup():
+def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger

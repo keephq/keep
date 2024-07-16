@@ -4,9 +4,21 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
+
+
+@pytest.fixture(autouse=True)
+def patch_get_tenants_configurations():
+    """Automatically patch get_tenants_configurations for all tests."""
+    with patch(
+        "keep.api.core.tenant_configuration.TenantConfiguration._TenantConfiguration.get_configuration",
+        return_value=None,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -18,6 +30,7 @@ def mock_session():
     query_mock.filter.return_value = query_mock
     query_mock.order_by.return_value = query_mock
     query_mock.all.return_value = []  # Default to no rules, override in specific tests
+    # Patch the get_tenants_configurations function
     return session
 
 
@@ -392,3 +405,146 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     mock_alert_dto.severity = "low"
     enrichment_bl.run_mapping_rules(mock_alert_dto)
     assert not hasattr(mock_alert_dto, "service")
+
+
+@pytest.mark.parametrize(
+    "setup_alerts",
+    [
+        {
+            "alert_details": [
+                {"source": ["sentry"], "severity": "critical"},
+                {"source": ["grafana"], "severity": "critical"},
+            ]
+        }
+    ],
+    indirect=True,
+)
+def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
+    import os
+
+    # first, use elastic
+    os.environ["ELASTIC_ENABLED"] = "true"
+    # Setup a mapping rule with || condition in matchers
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        disabled=False,
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=mock_session)
+
+    # Test case where alert matches name condition
+    mock_alert_dto.name = "Test Alert"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "new_service"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client):
+    # add some rule
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="new_rule",
+        disabled=False,
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    # now post an alert
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key-everything-works-because-no-auth"},
+        json=mock_alert_dto.dict(),
+    )
+
+    # now query the feed preset to get the alerts
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key-everything-works-because-no-auth"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    assert response.headers.get("x-search-type") == "elastic"
+    alert = alerts[0]
+    assert alert["service"] == "new_service"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
+    # SHAHAR: there is a voodoo so that you must do something with the db_session to kick it off
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"name": "Test Alert", "service": "new_service"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="new_rule",
+        disabled=False,
+    )
+    db_session.add(rule)
+    db_session.commit()
+    # 1. send alert
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+
+    # 2. enrich with disposable alert
+    response = client.post(
+        "/alerts/enrich?dispose_on_new_alert=true",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": mock_alert_dto.fingerprint,
+            "enrichments": {
+                "status": "acknowledged",
+            },
+        },
+    )
+
+    # 3. get the alert with the new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "acknowledged"
+
+    # 4. send the alert again with firing and check that the status is reset
+    mock_alert_dto.status = "firing"
+    setattr(mock_alert_dto, "avoid_dedup", "bla")
+    response = client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=mock_alert_dto.dict(),
+    )
+    # 5. get the alert with the new status
+    response = client.get(
+        "/preset/feed/alerts",
+        headers={"x-api-key": "some-key"},
+    )
+    alerts = response.json()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert["status"] == "firing"

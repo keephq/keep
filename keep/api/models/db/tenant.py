@@ -1,13 +1,14 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
 class Tenant(SQLModel, table=True):
     # uuid
     id: str = Field(max_length=36, primary_key=True)
     name: str
+    configuration: dict = Field(sa_column=Column(JSON))
 
 
 class TenantApiKey(SQLModel, table=True):
