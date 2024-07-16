@@ -1,6 +1,6 @@
 "use client";
 
-import { Subtitle } from "@tremor/react";
+import { Badge, Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { AIIcon, ExportIcon } from "components/icons";
 import { useEffect, useState, useRef } from "react";
@@ -25,17 +25,6 @@ export const AILink = () => {
       }
     }, 100);
 
-    if (onlyOnce.current === false) {
-      onlyOnce.current = true;
-      const AICycle = setInterval(() => {
-        setNewText("🤗 AI needs more data...");
-        setAnimate(true);
-        const intervalA = setInterval(() => {
-          setAnimate(false);
-        }, 2000);
-      }, 60000);
-    }
-
     return () => {
       clearInterval(interval);
     };
@@ -47,7 +36,16 @@ export const AILink = () => {
       icon={AIIcon}
       className={(animate && "animate-pulse") + ""}
     >
-      <Subtitle>{text}</Subtitle>
+      <div className="flex justify-between items-center w-full">
+        <Subtitle className="text-xs text-gray-900 font-medium">
+          {text}
+        </Subtitle>
+        <div className="flex items-center">
+          <Badge color="orange" size="xs" className="ml-2 mr-2">
+            Soon
+          </Badge>
+        </div>
+      </div>
     </LinkWithIcon>
   );
 };

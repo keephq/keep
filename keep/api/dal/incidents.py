@@ -116,4 +116,10 @@ def delete_incident_by_fingerprint(
         session.commit()
         return True
 
-
+def get_incidents_count(
+        tenant_id: str,
+) -> int:
+    with Session(engine) as session:
+        return session.query(Incident).filter(
+            Incident.tenant_id == tenant_id,
+        ).count()
