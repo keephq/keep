@@ -6,6 +6,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
+  Badge
 } from "@tremor/react";
 import {
   DisplayColumnDef,
@@ -22,6 +23,7 @@ import { toast } from "react-toastify";
 import { IncidentDto } from "./model";
 import { useState } from "react";
 import { useIncidents } from "utils/hooks/useIncidents";
+import Image from "next/image";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -51,6 +53,44 @@ export default function IncidentsTable({
       id: "description",
       header: "Description",
       cell: (context) => context.row.original.description,
+    }),
+    columnHelper.display({
+      id: "severity",
+      header: "Severity",
+      cell: (context) => {
+        const severity = context.row.original.severity;
+        let color;
+        if (severity === "critical") color = "red";
+        else if (severity === "info") color = "blue";
+        else if (severity === "warning") color = "yellow";
+        return <Badge color={color}>{severity}</Badge>;
+      },
+    }),
+    columnHelper.display({
+      id: "alert_count",
+      header: "Number of Alerts",
+      cell: (context) => context.row.original.number_of_alerts,
+    }),
+    columnHelper.display({
+      id: "alert_sources",
+      header: "Alert Sources",
+      cell: (context) =>
+        (context.row.original.alert_sources.map((alert_sources, index) => (
+          <Image
+            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+            key={alert_sources}
+            alt={alert_sources}
+            height={24}
+            width={24}
+            title={alert_sources}
+            src={`/icons/${alert_sources}-icon.png`}
+          />
+        )),
+    )}),
+    columnHelper.display({
+      id: "services",
+      header: "Involved Services",
+      cell: (context) => context.row.original.services,
     }),
     columnHelper.display({
       id: "assignee",

@@ -1,24 +1,21 @@
 import logging
 from typing import List
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Response,
-)
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic.types import UUID
 
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.core.db import (
-    get_last_incidents,
-    get_incident_by_fingerprint,
+    add_alerts_to_incident_by_incident_fingerprint,
     create_incident_from_dto,
-    update_incident_from_dto_by_fingerprint, delete_incident_by_fingerprint,
-    get_incident_alerts_by_incident_fingerprint, add_alerts_to_incident_by_incident_fingerprint,
-    remove_alerts_to_incident_by_incident_fingerprint
+    delete_incident_by_fingerprint,
+    get_incident_alerts_by_incident_fingerprint,
+    get_incident_by_fingerprint,
+    get_last_incidents,
+    remove_alerts_to_incident_by_incident_fingerprint,
+    update_incident_from_dto_by_fingerprint,
 )
-from keep.api.models.alert import IncidentDto, IncidentDtoIn, AlertDto
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentSeverity
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
 router = APIRouter()
@@ -43,7 +40,7 @@ def create_incident(
         },
     )
     incident = create_incident_from_dto(tenant_id, incident_dto)
-    new_incident_dto = IncidentDto(**incident.dict())
+    new_incident_dto = IncidentDto.from_db_incident(incident)
     logger.info(
         "New incident created in DB",
         extra={
@@ -72,9 +69,21 @@ def get_all_incidents(
 
     incidents_dto = []
     for incident in incidents:
-        incidents_dto.append(IncidentDto(
-            **incident.dict()
-        ))
+        incidents_dto.append(
+            IncidentDto(
+                id=incident.id,
+                name=incident.name,
+                description=incident.description,
+                creation_time=incident.creation_time,
+                start_time=incident.start_time,
+                end_time=incident.end_time,
+                number_of_alerts=len(incident.alerts),
+                alert_sources=set([alert.source for alert in incident.alerts]),
+                severity=IncidentSeverity.CRITICAL,
+                assignee=incident.assignee,
+                services=["service1", "service2"],
+            )
+        )
 
     logger.info(
         "Fetched incidents from DB",
@@ -106,7 +115,7 @@ def get_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    incident_dto = IncidentDto(**incident.dict())
+    incident_dto = IncidentDto.from_db_incident(incident)
 
     return incident_dto
 
@@ -129,11 +138,13 @@ def update_incident(
         },
     )
 
-    incident = update_incident_from_dto_by_fingerprint(tenant_id, fingerprint, updated_incident_dto)
+    incident = update_incident_from_dto_by_fingerprint(
+        tenant_id, fingerprint, updated_incident_dto
+    )
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    new_incident_dto = IncidentDto(**incident.dict())
+    new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
 
@@ -144,7 +155,7 @@ def update_incident(
 )
 def delete_incident(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"]))
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -154,11 +165,14 @@ def delete_incident(
             "tenant_id": tenant_id,
         },
     )
-    deleted = delete_incident_by_fingerprint(tenant_id=tenant_id, fingerprint=fingerprint)
+    deleted = delete_incident_by_fingerprint(
+        tenant_id=tenant_id, fingerprint=fingerprint
+    )
     if not deleted:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     return Response(status_code=202)
+
 
 @router.get(
     "/{fingerprint}/alerts",
@@ -251,10 +265,6 @@ def delete_alerts_from_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    remove_alerts_to_incident_by_incident_fingerprint(
-        tenant_id,
-        fingerprint,
-        alert_ids
-    )
+    remove_alerts_to_incident_by_incident_fingerprint(tenant_id, fingerprint, alert_ids)
 
     return Response(status_code=202)

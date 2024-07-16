@@ -29,6 +29,23 @@ const staticOptions = [
   { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
 ];
 
+// Function to wrap 'namespace' when it's on the left side of an operator
+const wrapNamespace = (query: string): string => {
+  const operatorRegex = /([<>=!]+|in\s|matches\s)/i;
+  return query.replace(/(\w+(?:\.\w+)*)\s*([<>=!]+|in\s|matches\s)/gi, (match, left, operator) => {
+    const parts = left.split('.');
+    const wrappedParts = parts.map(part =>
+      part.toLowerCase() === 'namespace' ? 'wrapped_namespace' : part
+    );
+    return wrappedParts.join('.') + ' ' + operator;
+  });
+};
+
+// Function to unwrap 'wrapped_namespace' back to 'namespace'
+const unwrapNamespace = (query: string): string => {
+  return query.replace(/wrapped_namespace/g, 'namespace');
+};
+
 const CustomOption = (props: any) => {
   return (
     <components.Option {...props}>
@@ -304,9 +321,16 @@ export const AlertsRulesBuilder = ({
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(
+  const [celRules, setCELRulesState] = useState(
     searchParams?.get("cel") || defaultQuery
   );
+
+  // This is a setter function that wraps the namespace in the CEL query
+  const setCELRules = (query: string) => {
+    let wrappedQuery = wrapNamespace(query);
+    setCELRulesState(wrappedQuery);
+  };
+
   const parsedCELRulesToQuery = parseCEL(celRules);
 
   const setQueryParam = (key: string, value: string) => {
@@ -436,8 +460,10 @@ export const AlertsRulesBuilder = ({
       // check if the CEL is valid by comparing the parsed query with the original CEL
       // remove spaces so that "a && b" is the same as "a&&b"
       const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
+
+      let unwrappedCelQuery = unwrapNamespace(celQuery);
       const isValidCEL =
-        celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
+        unwrappedCelQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
         celRules === "";
       setIsValidCEL(isValidCEL);
       // close the menu

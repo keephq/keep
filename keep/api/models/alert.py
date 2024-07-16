@@ -87,6 +87,14 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
+class IncidentSeverity(Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    INFO = "info"
+
+
 class AlertDto(BaseModel):
     id: str
     name: str
@@ -296,10 +304,7 @@ class EnrichAlertRequestBody(BaseModel):
 class IncidentDtoIn(BaseModel):
     name: str
     description: str
-
     assignee: str | None
-
-    incident_fingerprint: str | None
 
     class Config:
         extra = Extra.allow
@@ -314,10 +319,6 @@ class IncidentDtoIn(BaseModel):
             ]
         }
 
-    @validator("incident_fingerprint", pre=True, always=True)
-    def assign_fingerprint_if_none(cls, incident_fingerprint, values):
-        return get_fingerprint(incident_fingerprint, values)
-
 
 class IncidentDto(IncidentDtoIn):
     id: UUID
@@ -325,14 +326,16 @@ class IncidentDto(IncidentDtoIn):
     start_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
+    number_of_alerts: int
+    alert_sources: list[str]
+    severity: IncidentSeverity
+    assignee: str
+    services: list[str]
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
         return json.dumps(model_dict, indent=4, default=str)
-
-    @validator("incident_fingerprint", pre=True, always=True)
-    def assign_fingerprint_if_none(cls, incident_fingerprint, values):
-        return get_fingerprint(incident_fingerprint, values)
 
     class Config:
         extra = Extra.allow
@@ -342,3 +345,18 @@ class IncidentDto(IncidentDtoIn):
             # Converts UUID to their values for JSON serialization
             UUID: lambda v: str(v),
         }
+
+    @classmethod
+    def from_db_incident(cls, db_incident):
+        return cls(
+            id=db_incident.id,
+            name=db_incident.name,
+            description=db_incident.description,
+            start_time=db_incident.start_time,
+            end_time=db_incident.end_time,
+            number_of_alerts=len(db_incident.alerts),
+            alert_sources=list(set([alert.source for alert in db_incident.alerts])),
+            severity=IncidentSeverity.CRITICAL,
+            assignee=db_incident.assignee,
+            services=["service1", "service2"],
+        )

@@ -81,7 +81,7 @@ class Group(SQLModel, table=True):
             "|".join([str(self.id), self.group_fingerprint]).encode()
         ).hexdigest()
 
-    
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
@@ -98,7 +98,6 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-
     name: str
     description: str
 
@@ -111,17 +110,10 @@ class Incident(SQLModel, table=True):
     start_time: datetime | None
     end_time: datetime | None
 
-    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
-    incident_fingerprint: str = Field(index=True)
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
         back_populates="incidents", link_model=AlertToIncident
     )
-
-    def calculate_fingerprint(self):
-        return hashlib.sha256(
-            "|".join([str(self.id), self.incident_fingerprint]).encode()
-        ).hexdigest()
 
     class Config:
         arbitrary_types_allowed = True
