@@ -7,7 +7,6 @@ import { useEffect, useState, useRef } from "react";
 
 export const AILink = () => {
   const [text, setText] = useState("");
-  const [animate, setAnimate] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [newText, setNewText] = useState("AI correlation");
 
@@ -34,17 +33,12 @@ export const AILink = () => {
     <LinkWithIcon
       href="/ai"
       icon={AIIcon}
-      className={(animate && "animate-pulse") + ""}
+      className="w-full"
     >
       <div className="flex justify-between items-center w-full">
         <Subtitle className="text-xs text-gray-900 font-medium">
           {text}
         </Subtitle>
-        <div className="flex items-center">
-          <Badge color="orange" size="xs" className="ml-2 mr-2">
-            Soon
-          </Badge>
-        </div>
       </div>
     </LinkWithIcon>
   );
