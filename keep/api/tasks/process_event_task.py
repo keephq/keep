@@ -18,7 +18,7 @@ from keep.api.core.db import get_all_presets, get_enrichment, get_session_sync
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import Alert, AlertRaw
+from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.models.db.preset import PresetDto
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -58,6 +58,7 @@ def __save_to_db(
     session: Session,
     raw_events: list[dict],
     formatted_events: list[AlertDto],
+    deduplicated_events: list[AlertDto],
     provider_id: str | None = None,
 ):
     try:
@@ -70,6 +71,17 @@ def __save_to_db(
                     raw_alert=raw_event,
                 )
                 session.add(alert)
+        # add audit to the deduplicated events
+        for event in deduplicated_events:
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=event.fingerprint,
+                status=event.status,
+                action=AlertActionType.DEDUPLICATED.value,
+                user_id="system",
+                description="Alert was deduplicated",
+            )
+            session.add(audit)
         enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
@@ -114,6 +126,18 @@ def __save_to_db(
                 alert_hash=formatted_event.alert_hash,
             )
             session.add(alert)
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=formatted_event.fingerprint,
+                action=(
+                    AlertActionType.AUTOMATIC_RESOLVE.value
+                    if formatted_event.status == AlertStatus.RESOLVED.value
+                    else AlertActionType.TIGGERED.value
+                ),
+                user_id="system",
+                description=f"Alert recieved from provider with status {formatted_event.status}",
+            )
+            session.add(audit)
             session.flush()
             session.refresh(alert)
             formatted_event.event_id = str(alert.id)
@@ -198,13 +222,22 @@ def __handle_formatted_events(
         event.isDuplicate = event_deduplicated
 
     # filter out the deduplicated events
+    deduplicated_events = list(
+        filter(lambda event: event.isDuplicate, formatted_events)
+    )
     formatted_events = list(
         filter(lambda event: not event.isDuplicate, formatted_events)
     )
 
     # save to db
     enriched_formatted_events = __save_to_db(
-        tenant_id, provider_type, session, raw_events, formatted_events, provider_id
+        tenant_id,
+        provider_type,
+        session,
+        raw_events,
+        formatted_events,
+        deduplicated_events,
+        provider_id,
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch

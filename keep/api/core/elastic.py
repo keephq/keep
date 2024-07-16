@@ -107,10 +107,20 @@ class ElasticClient:
                 self.logger.warning("Index does not exist yet.")
                 return []
             else:
-                self.logger.error(f"Failed to run query in Elastic: {e}")
+                self.logger.exception(
+                    f"Failed to run query in Elastic: {e}",
+                    extra={
+                        "tenant_id": self.tenant_id,
+                    },
+                )
                 raise Exception(f"Failed to run query in Elastic: {e}")
         except Exception as e:
-            self.logger.error(f"Failed to run query in Elastic: {e}")
+            self.logger.exception(
+                f"Failed to run query in Elastic: {e}",
+                extra={
+                    "tenant_id": self.tenant_id,
+                },
+            )
             raise Exception(f"Failed to run query in Elastic: {e}")
 
     def search_alerts(self, query: str, limit: int) -> list[AlertDto]:
