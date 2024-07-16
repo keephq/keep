@@ -7,8 +7,8 @@ from fastapi import (
 )
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.dal.incidents import get_incidents_count
-from keep.api.dal.alerts import get_alerts_count, get_first_alert_datetime
+from keep.api.core.db import get_incidents_count, get_alerts_count, get_first_alert_datetime
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

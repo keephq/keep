@@ -77,7 +77,7 @@ export default function CreateOrUpdateIncident({
     e.preventDefault();
     const apiUrl = getApiURL();
     const response = await fetch(
-      `${apiUrl}/incidents/${incidentToEdit?.incident_fingerprint}`,
+      `${apiUrl}/incidents/${incidentToEdit?.id}`,
       {
         method: "PUT",
         headers: {

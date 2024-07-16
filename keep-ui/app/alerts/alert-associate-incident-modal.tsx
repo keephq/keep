@@ -77,8 +77,8 @@ const AlertAssociateIncidentModal = ({
 
                     return (
                       <SelectItem
-                        key={incident.incident_fingerprint}
-                        value={incident.incident_fingerprint}
+                        key={incident.id}
+                        value={incident.id}
                       >
                         {incident.name}
                       </SelectItem>

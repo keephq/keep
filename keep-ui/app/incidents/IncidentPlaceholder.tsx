@@ -21,7 +21,7 @@ export const IncidentPlaceholder = ({
         <div className="text-center space-y-3">
           <Title className="text-2xl">No Incidents Yet</Title>
           <Subtitle className="text-gray-400">
-            Start registering incidents manually to enable AI detection
+            Create incidents manually to enable AI detection
           </Subtitle>
         </div>
         <Button
@@ -29,7 +29,7 @@ export const IncidentPlaceholder = ({
           color="orange"
           onClick={() => onCreateButtonClick()}
         >
-          Register Incident
+          Create Incident
         </Button>
       </div>
 

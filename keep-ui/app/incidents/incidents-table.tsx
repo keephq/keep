@@ -6,6 +6,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
+  Badge
 } from "@tremor/react";
 import {
   DisplayColumnDef,
@@ -22,6 +23,8 @@ import { toast } from "react-toastify";
 import { IncidentDto } from "./model";
 import { useState } from "react";
 import { useIncidents } from "utils/hooks/useIncidents";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -34,14 +37,13 @@ export default function IncidentsTable({
   incidents: incidents,
   editCallback,
 }: Props) {
+  const router = useRouter();
   const { data: session } = useSession();
-  // const { mutate } = useMappings();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const { mutate } = useIncidents();
 
   const columns = [
-
     columnHelper.display({
       id: "name",
       header: "Name",
@@ -53,6 +55,44 @@ export default function IncidentsTable({
       cell: (context) => context.row.original.description,
     }),
     columnHelper.display({
+      id: "severity",
+      header: "Severity",
+      cell: (context) => {
+        const severity = context.row.original.severity;
+        let color;
+        if (severity === "critical") color = "red";
+        else if (severity === "info") color = "blue";
+        else if (severity === "warning") color = "yellow";
+        return <Badge color={color}>{severity}</Badge>;
+      },
+    }),
+    columnHelper.display({
+      id: "alert_count",
+      header: "Number of Alerts",
+      cell: (context) => context.row.original.number_of_alerts,
+    }),
+    columnHelper.display({
+      id: "alert_sources",
+      header: "Alert Sources",
+      cell: (context) =>
+        (context.row.original.alert_sources.map((alert_sources, index) => (
+          <Image
+            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+            key={alert_sources}
+            alt={alert_sources}
+            height={24}
+            width={24}
+            title={alert_sources}
+            src={`/icons/${alert_sources}-icon.png`}
+          />
+        )),
+    )}),
+    columnHelper.display({
+      id: "services",
+      header: "Involved Services",
+      cell: (context) => context.row.original.services,
+    }),
+    columnHelper.display({
       id: "assignee",
       header: "Assignee",
       cell: (context) => context.row.original.assignee,
@@ -60,9 +100,8 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "created_at",
       header: "Created At",
-      cell: ({row}) => new Date(
-        row.original.creation_time + "Z"
-      ).toLocaleString()
+      cell: ({ row }) =>
+        new Date(row.original.creation_time + "Z").toLocaleString(),
     }),
     columnHelper.display({
       id: "delete",
@@ -87,7 +126,7 @@ export default function IncidentsTable({
             icon={MdRemoveCircle}
             onClick={(e: any) => {
               e.preventDefault();
-              deleteIncident(context.row.original.incident_fingerprint!);
+              deleteIncident(context.row.original.id!);
             }}
           />
         </div>
@@ -116,9 +155,7 @@ export default function IncidentsTable({
           mutate();
           toast.success("Incident deleted successfully");
         } else {
-          toast.error(
-            "Failed to delete incident, contact us if this persists"
-          );
+          toast.error("Failed to delete incident, contact us if this persists");
         }
       });
     }
@@ -152,9 +189,12 @@ export default function IncidentsTable({
         {table.getRowModel().rows.map((row) => (
           <>
             <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
+              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
               key={row.id}
-              onClick={() => row.toggleExpanded()}
+              onClick={() => {
+                //row.toggleExpanded();
+                router.push(`/incidents/${row.original.id}`);
+              }}
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>
