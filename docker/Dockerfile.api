@@ -19,6 +19,7 @@ RUN python -m venv /venv
 COPY pyproject.toml poetry.lock ./
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes && /venv/bin/python -m pip install --upgrade -r requirements.txt
 COPY keep keep
+COPY ee keep/ee
 COPY README.md README.md
 RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 

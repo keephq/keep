@@ -1,3 +1,5 @@
+import sys, os
+import pathlib
 import logging
 from typing import List
 
@@ -8,6 +10,8 @@ from fastapi import (
     Response,
 )
 from pydantic.types import UUID
+
+from keep.api.core.db import get_last_alerts, create_incident, assign_alert_to_incident
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.dal.incidents import (
@@ -24,6 +28,12 @@ from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
+if ee_enabled:
+    path_with_ee = str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
+    sys.path.insert(0, path_with_ee)
+    from incident_utils import mine_incidents # noqa
+
 
 @router.post(
     "",
@@ -31,7 +41,7 @@ logger = logging.getLogger(__name__)
     status_code=202,
     response_model=IncidentDto,
 )
-def create_incident(
+def create_incident_endpoint(
     incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
 ) -> IncidentDto:
@@ -259,23 +269,12 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-import logging
-
-from fastapi import APIRouter, Depends
-
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.core.db import get_last_alerts, create_incident, assign_alert_to_incident
-from ee.experimental.incident_utils import mine_incidents
-
-router = APIRouter()
-logger = logging.getLogger(__name__)
-
 
 @router.post(
-    "",
+    "/mine",
     description="Create incidents using historical alerts",
 )
-def create_incidents(
+def mine(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
     use_n_historical_alerts: int = 10000,
     incident_sliding_window_size: int = 6 * 24 * 60 * 60,
@@ -288,10 +287,12 @@ def create_incidents(
 
     incidents = mine_incidents(alerts, incident_sliding_window_size,
                                statistic_sliding_window_size, jaccard_threshold, fingerprint_threshold)
-
+    if len(incidents) == 0:
+        return {"incidents": []}
+    
     for incident in incidents:
         incident_id = create_incident(
-            tenant_id, incident['incident_fingerprint']).id
+            tenant_id, incident['incident_fingerprint'], incident_name="Mined using algorithm", incident_description="Candidate").id
 
         for alert in incident['alerts']:
             assign_alert_to_incident(alert.id, incident_id, tenant_id)
