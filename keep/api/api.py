@@ -29,6 +29,7 @@ from keep.api.routes import (
     extraction,
     groups,
     healthcheck,
+    incidents,
     mapping,
     preset,
     providers,
