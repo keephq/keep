@@ -1,4 +1,5 @@
 # builtins
+import copy
 import datetime
 import json
 import logging
@@ -24,6 +25,7 @@ from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
+KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ def __save_to_db(
     try:
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
-        if os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true":
+        if KEEP_STORE_RAW_ALERTS:
             for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
@@ -73,6 +75,12 @@ def __save_to_db(
             formatted_event.pushed = True
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
+            # Dispose enrichments that needs to be disposed
+            try:
+                enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
+            except Exception:
+                logger.exception("Failed to dispose enrichments")
+
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
@@ -332,7 +340,7 @@ def __handle_formatted_events(
         )
 
 
-async def process_event(
+def process_event(
     ctx: dict,  # arq context
     tenant_id: str,
     provider_type: str | None,
@@ -351,8 +359,12 @@ async def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
+        "raw_event": (
+            event if KEEP_STORE_RAW_ALERTS else None
+        ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+    raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
         # Pre alert formatting extraction rules
@@ -362,23 +374,24 @@ async def process_event(
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
-        if provider_type is not None:
+        if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
+
+        # In case when provider_type is not set
+        if isinstance(event, dict):
+            event = [AlertDto(**event)]
 
         # Prepare the event for the digest
         if isinstance(event, AlertDto):
             event = [event]
-
-        if isinstance(event, dict):
-            event = [AlertDto(**event)]
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
             tenant_id,
             provider_type,
             session,
-            event,
+            raw_event,
             event,
             provider_id,
         )

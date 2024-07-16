@@ -630,12 +630,16 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def _enrich_alert(session, tenant_id, fingerprint, enrichments):
+def _enrich_alert(session, tenant_id, fingerprint, enrichments, force=False):
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
+        # if force - override exisitng enrichments. being used to dispose enrichments if necessary
+        if force:
+            new_enrichment_data = enrichments
+        else:
+            new_enrichment_data = {**enrichment.enrichments, **enrichments}
         # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
         # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-        new_enrichment_data = {**enrichment.enrichments, **enrichments}
         stmt = (
             update(AlertEnrichment)
             .where(AlertEnrichment.id == enrichment.id)
@@ -657,12 +661,14 @@ def _enrich_alert(session, tenant_id, fingerprint, enrichments):
         return alert_enrichment
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments, session=None):
+def enrich_alert(tenant_id, fingerprint, enrichments, session=None, force=False):
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
-            return _enrich_alert(session, tenant_id, fingerprint, enrichments)
-    return _enrich_alert(session, tenant_id, fingerprint, enrichments)
+            return _enrich_alert(
+                session, tenant_id, fingerprint, enrichments, force=force
+            )
+    return _enrich_alert(session, tenant_id, fingerprint, enrichments, force=force)
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -1665,6 +1671,26 @@ def get_tenants_configurations() -> List[Tenant]:
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
     return tenants_configurations
+
+
+def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.id == preset_id)
+        ).first()
+
+        stmt = (
+            update(Preset)
+            .where(Preset.id == preset_id)
+            .where(Preset.tenant_id == tenant_id)
+            .values(options=options)
+        )
+        session.execute(stmt)
+        session.commit()
+        session.refresh(preset)
+    return preset
 
 
 def create_incident(tenant_id: str, incident_fingerprint: str) -> Incident:

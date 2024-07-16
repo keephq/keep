@@ -1,8 +1,8 @@
 import logging
 import os
 
-from elasticsearch import BadRequestError, Elasticsearch
-from elasticsearch.helpers import bulk
+from elasticsearch import ApiError, BadRequestError, Elasticsearch
+from elasticsearch.helpers import BulkIndexError, bulk
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
@@ -78,46 +78,8 @@ class ElasticClient:
         alert_dtos = []
 
         for result in results["hits"]["hits"]:
-            alert = result["fields"]
-            for field in alert:
-                # Shahar: this is another constraint
-                # as elasticsearch returns a list for each field
-                # if the list contains only one element, we take the element
-                # we can overcome it by specific mapping in the index
-                # but this is a good workaround for now
-                try:
-                    if len(alert[field]) == 1:
-                        alert[field] = alert[field][0]
-                except TypeError:
-                    self.logger.warning(f"Failed to parse field {field}")
-            # translate severity
-            try:
-                alert["severity"] = AlertSeverity.from_number(
-                    int(alert["severity"])
-                ).value
-            # backward compatibility
-            except Exception:
-                alert["severity"] = AlertSeverity[alert["severity"].upper()].value
-            # source is a list
-            if not isinstance(alert["source"], list):
-                alert["source"] = [alert["source"]]
-
-            # now handle nested fields
-            nested_alert = {}
-            for key, value in alert.items():
-                if "." in key:
-                    parts = key.split(".")
-                    d = nested_alert
-                    for part in parts[:-1]:
-                        if part not in d:
-                            d[part] = {}
-                        d = d[part]
-                    d[parts[-1]] = value
-                else:
-                    nested_alert[key] = value
-
-            # finally, build the dto
-            alert_dtos.append(AlertDto(**nested_alert))
+            alert = result["_source"]
+            alert_dtos.append(AlertDto(**alert))
 
         return alert_dtos
 
@@ -169,8 +131,12 @@ class ElasticClient:
                 body={"query": query, "fetch_size": limit}
             )
             fields = [f.get("field") for f in dict(dsl_query)["fields"]]
+            # get all fields
+            dsl_query = dict(dsl_query)
+            dsl_query["_source"] = True
+            dsl_query["fields"] = ["*"]
             raw_alerts = self._client.search(
-                index=f"keep-alerts-{self.tenant_id}", body=dict(dsl_query)
+                index=f"keep-alerts-{self.tenant_id}", body=dsl_query
             )
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts, fields)
             return alerts_dtos
@@ -201,6 +167,9 @@ class ElasticClient:
                 refresh="true",
             )
         # TODO: retry/pubsub
+        except ApiError as e:
+            self.logger.error(f"Failed to index alert to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alert to Elastic: {e} {e.errors}")
         except Exception as e:
             self.logger.error(f"Failed to index alert to Elastic: {e}")
             raise Exception(f"Failed to index alert to Elastic: {e}")
@@ -227,8 +196,14 @@ class ElasticClient:
             self.logger.info(
                 f"Successfully indexed {success} alerts. Failed to index {failed} alerts."
             )
+        except BulkIndexError as e:
+            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
+        except ApiError as e:
+            self.logger.error(f"Failed to index alerts to Elastic: {e} {e.errors}")
+            raise Exception(f"Failed to index alerts to Elastic: {e} {e.errors}")
         except Exception as e:
-            self.logger.error(f"Failed to index alerts to Elastic: {e}")
+            self.logger.exception(f"Failed to index alerts to Elastic: {e}")
             raise Exception(f"Failed to index alerts to Elastic: {e}")
 
     def enrich_alert(self, alert_fingerprint: str, alert_enrichments: dict):

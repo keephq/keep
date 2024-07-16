@@ -40,6 +40,7 @@ from keep.api.routes import (
     users,
     whoami,
     workflows,
+    incidents,
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
