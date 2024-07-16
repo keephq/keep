@@ -19,6 +19,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { getAlertLastReceieved } from "utils/helpers";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
+import AlertName from "app/alerts/alert-name";
 
 interface Props {
   incidentFingerprint: string;
@@ -38,6 +39,8 @@ export default function IncidentAlerts({ incidentFingerprint }: Props) {
     columnHelper.display({
       id: "name",
       header: "Name",
+      minSize: 330,
+      cell: (context) => <AlertName alert={context.row.original} />,
     }),
     columnHelper.accessor("description", {
       id: "description",
@@ -59,9 +62,7 @@ export default function IncidentAlerts({ incidentFingerprint }: Props) {
       header: "Last Received",
       minSize: 100,
       cell: (context) => (
-        <span title={context.getValue().toISOString()}>
-          {getAlertLastReceieved(context.getValue())}
-        </span>
+        <span>{getAlertLastReceieved(context.getValue())}</span>
       ),
     }),
     columnHelper.accessor("source", {

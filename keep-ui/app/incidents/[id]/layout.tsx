@@ -1,9 +1,3 @@
-import { Card } from "@tremor/react";
-
 export default function Layout({ children }: { children: any }) {
-  return (
-    <Card className="flex flex-col items-center justify-center gap-y-8">
-      {children}
-    </Card>
-  );
+  return <main className="p-4 md:p-10 mx-auto max-w-full">{children}</main>;
 }

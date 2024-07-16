@@ -3,6 +3,9 @@ import Loading from "app/loading";
 import { useIncident } from "utils/hooks/useIncidents";
 import IncidentInformation from "./incident-info";
 import {
+  Card,
+  Icon,
+  Subtitle,
   Tab,
   TabGroup,
   TabList,
@@ -11,7 +14,8 @@ import {
   Title,
 } from "@tremor/react";
 import IncidentAlerts from "./incident-alerts";
-import IncidentTopology from "./incident-topology";
+import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
 
 interface Props {
   incidentId: string;
@@ -19,6 +23,7 @@ interface Props {
 
 export default function IncidentView({ incidentId }: Props) {
   const { data: incident, isLoading, error } = useIncident(incidentId);
+  const router = useRouter();
 
   if (isLoading) {
     <Loading />;
@@ -29,32 +34,49 @@ export default function IncidentView({ incidentId }: Props) {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex divide-x p-2">
-        <div id="incidentOverview" className="w-2/5 pr-2.5">
-          <IncidentInformation incident={incident} />
+    <>
+      <div className="flex justify-between items-center">
+        <div>
+          <Title>Incident Management</Title>
+          <Subtitle>
+            Understand, manage and triage your incidents faster with Keep.
+          </Subtitle>
         </div>
-        <div id="incidentTabs" className="w-full pl-2.5">
-          <TabGroup defaultIndex={0}>
-            <TabList variant="line" color="orange">
-              <Tab>Alerts</Tab>
-              <Tab>Timeline</Tab>
-              <Tab>Topology</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                <IncidentAlerts
-                  incidentFingerprint={incident.incident_fingerprint}
-                />
-              </TabPanel>
-              <TabPanel>Coming Soon...</TabPanel>
-              <TabPanel>
-                <IncidentTopology />
-              </TabPanel>
-            </TabPanels>
-          </TabGroup>
-        </div>
+        <Icon
+            icon={ArrowUturnLeftIcon}
+            tooltip="Go Back"
+            variant="shadow"
+            className="cursor-pointer"
+            onClick={() => router.back()}
+          />
       </div>
-    </div>
+      <Card className="flex flex-col items-center justify-center gap-y-8 mt-10 p-4 md:p-10 mx-auto">
+        <div className="w-full">
+          <div className="flex divide-x p-2">
+            <div id="incidentOverview" className="w-2/5 pr-2.5">
+              <IncidentInformation incident={incident} />
+            </div>
+            <div id="incidentTabs" className="w-full pl-2.5">
+              <TabGroup defaultIndex={0}>
+                <TabList variant="line" color="orange">
+                  <Tab>Alerts</Tab>
+                  <Tab>Timeline</Tab>
+                  <Tab>Topology</Tab>
+                </TabList>
+                <TabPanels>
+                  <TabPanel>
+                    <IncidentAlerts
+                      incidentFingerprint={incident.incident_fingerprint}
+                    />
+                  </TabPanel>
+                  <TabPanel>Coming Soon...</TabPanel>
+                  <TabPanel>Coming Soon...</TabPanel>
+                </TabPanels>
+              </TabGroup>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </>
   );
 }
