@@ -10,7 +10,7 @@ from fastapi import (
 from pydantic.types import UUID
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.dal.incidents import (
+from keep.api.core.db import (
     get_last_incidents,
     get_incident_by_fingerprint,
     create_incident_from_dto,
