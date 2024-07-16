@@ -43,20 +43,20 @@ export default function IncidentView({ incidentId }: Props) {
           </Subtitle>
         </div>
         <Icon
-            icon={ArrowUturnLeftIcon}
-            tooltip="Go Back"
-            variant="shadow"
-            className="cursor-pointer"
-            onClick={() => router.back()}
-          />
+          icon={ArrowUturnLeftIcon}
+          tooltip="Go Back"
+          variant="shadow"
+          className="cursor-pointer"
+          onClick={() => router.back()}
+        />
       </div>
       <Card className="flex flex-col items-center justify-center gap-y-8 mt-10 p-4 md:p-10 mx-auto">
         <div className="w-full">
           <div className="flex divide-x p-2">
-            <div id="incidentOverview" className="w-2/5 pr-2.5">
+            <div id="incidentOverview" className="w-2/5 min-w-[400px] pr-2.5">
               <IncidentInformation incident={incident} />
             </div>
-            <div id="incidentTabs" className="w-full pl-2.5">
+            <div id="incidentTabs" className="w-full pl-2.5 overflow-x-scroll">
               <TabGroup defaultIndex={0}>
                 <TabList variant="line" color="orange">
                   <Tab>Alerts</Tab>
