@@ -66,7 +66,7 @@ export default function IncidentView({ incidentId }: Props) {
                 <TabPanels>
                   <TabPanel>
                     <IncidentAlerts
-                      incidentFingerprint={incident.incident_fingerprint}
+                      incidentFingerprint={incident.id}
                     />
                   </TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>

@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlmodel import Session, or_, select, col
+from sqlmodel import Session, col, or_, select
 
 from keep.api.core.db_utils import create_db_engine
 
@@ -1773,7 +1773,7 @@ def get_alert_audit(
 
 
 def get_last_incidents(
-        tenant_id: str, limit: int = 1000, timeframe: int = None
+    tenant_id: str, limit: int = 1000, timeframe: int = None
 ) -> list[Incident]:
     """
     Get the last incidents for each fingerprint along with the first time the.
@@ -1792,6 +1792,7 @@ def get_last_incidents(
                 Incident,
             )
             .filter(Incident.tenant_id == tenant_id)
+            .options(joinedload(Incident.alerts))
         )
 
         if timeframe:
@@ -1808,40 +1809,40 @@ def get_last_incidents(
     return incidents
 
 
-def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Incident]:
+def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
     with Session(engine) as session:
-        query = (
-            session.query(
-                Incident,
-            )
-            .filter(Incident.tenant_id == tenant_id, Incident.incident_fingerprint == fingerprint)
+        query = session.query(
+            Incident,
+        ).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
         )
 
     return query.first()
 
 
-def create_incident_from_dto(tenant_id: str, incident_dto: IncidentDtoIn) -> Optional[Incident]:
+def create_incident_from_dto(
+    tenant_id: str, incident_dto: IncidentDtoIn
+) -> Optional[Incident]:
     with Session(engine) as session:
-        new_incident = Incident(
-            **incident_dto.dict(),
-            tenant_id=tenant_id
-        )
+        new_incident = Incident(**incident_dto.dict(), tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
         session.refresh(new_incident)
+        new_incident.alerts = []
     return new_incident
 
 
-def update_incident_from_dto_by_fingerprint(
-        tenant_id: str,
-        fingerprint: str,
-        updated_incident_dto: IncidentDtoIn,
+def update_incident_from_dto_by_id(
+    tenant_id: str,
+    incident_id: str,
+    updated_incident_dto: IncidentDtoIn,
 ) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint
+                Incident.id == incident_id,
             )
         ).first()
 
@@ -1850,12 +1851,14 @@ def update_incident_from_dto_by_fingerprint(
 
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
-            Incident.incident_fingerprint == fingerprint
-        ).update({
-            "name": updated_incident_dto.name,
-            "description": updated_incident_dto.description,
-            "assignee": updated_incident_dto.assignee,
-        })
+            Incident.id == incident_id,
+        ).update(
+            {
+                "name": updated_incident_dto.name,
+                "description": updated_incident_dto.description,
+                "assignee": updated_incident_dto.assignee,
+            }
+        )
 
         session.commit()
         session.refresh(incident)
@@ -1863,15 +1866,19 @@ def update_incident_from_dto_by_fingerprint(
         return incident
 
 
-def delete_incident_by_fingerprint(
-        tenant_id: str,
-        fingerprint: str,
+def delete_incident_by_id(
+    tenant_id: str,
+    incident_id: str,
 ) -> bool:
     with Session(engine) as session:
-        incident = session.query(Incident).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.incident_fingerprint == fingerprint
-        ).first()
+        incident = (
+            session.query(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+            .first()
+        )
 
         # Delete all associations with alerts:
 
@@ -1879,7 +1886,7 @@ def delete_incident_by_fingerprint(
             session.query(AlertToIncident)
             .where(
                 AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.incident_id == incident.id,
+                AlertToIncident.id == incident.id,
             )
             .delete()
         )
@@ -1890,15 +1897,19 @@ def delete_incident_by_fingerprint(
 
 
 def get_incidents_count(
-        tenant_id: str,
+    tenant_id: str,
 ) -> int:
     with Session(engine) as session:
-        return session.query(Incident).filter(
-            Incident.tenant_id == tenant_id,
-        ).count()
+        return (
+            session.query(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+            )
+            .count()
+        )
 
 
-def get_incident_alerts_by_incident_fingerprint(tenant_id: str, fingerprint: str) -> List[Alert]:
+def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List[Alert]:
     with Session(engine) as session:
         query = (
             session.query(
@@ -1906,22 +1917,23 @@ def get_incident_alerts_by_incident_fingerprint(tenant_id: str, fingerprint: str
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .join(Incident, AlertToIncident.incident_id == Incident.id)
-            .filter(AlertToIncident.tenant_id == tenant_id, Incident.incident_fingerprint == fingerprint)
+            .filter(
+                AlertToIncident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
         )
 
     return query.all()
 
 
-def add_alerts_to_incident_by_incident_fingerprint(
-        tenant_id: str,
-        fingerprint: str,
-        alert_ids: List[UUID]
+def add_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
 ):
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint
+                Incident.id == incident_id,
             )
         ).first()
 
@@ -1932,13 +1944,16 @@ def add_alerts_to_incident_by_incident_fingerprint(
             select(AlertToIncident.alert_id).where(
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
-                col(AlertToIncident.alert_id).in_(alert_ids)
+                col(AlertToIncident.alert_id).in_(alert_ids),
             )
         ).all()
 
         alert_to_incident_entries = [
-            AlertToIncident(alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id)
-            for alert_id in alert_ids if alert_id not in existed_alert_ids
+            AlertToIncident(
+                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
+            )
+            for alert_id in alert_ids
+            if alert_id not in existed_alert_ids
         ]
 
         session.bulk_save_objects(alert_to_incident_entries)
@@ -1946,16 +1961,14 @@ def add_alerts_to_incident_by_incident_fingerprint(
         return True
 
 
-def remove_alerts_to_incident_by_incident_fingerprint(
-        tenant_id: str,
-        fingerprint: str,
-        alert_ids: List[UUID]
+def remove_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_fingerprint == fingerprint
+                Incident.incident_id == incident_id,
             )
         ).first()
 
@@ -1967,7 +1980,7 @@ def remove_alerts_to_incident_by_incident_fingerprint(
             .where(
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
-                col(AlertToIncident.alert_id).in_(alert_ids)
+                col(AlertToIncident.alert_id).in_(alert_ids),
             )
             .delete()
         )
@@ -1977,20 +1990,28 @@ def remove_alerts_to_incident_by_incident_fingerprint(
 
 
 def get_alerts_count(
-        tenant_id: str,
+    tenant_id: str,
 ) -> int:
     with Session(engine) as session:
-        return session.query(Alert).filter(
-            Alert.tenant_id == tenant_id,
-        ).count()
+        return (
+            session.query(Alert)
+            .filter(
+                Alert.tenant_id == tenant_id,
+            )
+            .count()
+        )
 
 
 def get_first_alert_datetime(
-        tenant_id: str,
+    tenant_id: str,
 ) -> datetime | None:
     with Session(engine) as session:
-        first_alert = session.query(Alert).filter(
-            Alert.tenant_id == tenant_id,
-        ).first()
+        first_alert = (
+            session.query(Alert)
+            .filter(
+                Alert.tenant_id == tenant_id,
+            )
+            .first()
+        )
         if first_alert:
             return first_alert.timestamp
