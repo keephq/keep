@@ -265,7 +265,7 @@ from fastapi import APIRouter, Depends
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.core.db import get_last_alerts, create_incident, assign_alert_to_incident
-from keep.api.core.incident_utils import mine_incidents
+from ee.experimental.incident_utils import mine_incidents
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

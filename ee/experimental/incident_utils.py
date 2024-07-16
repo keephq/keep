@@ -110,20 +110,6 @@ def build_graph_from_occurrence(occurrence_row: pd.DataFrame, jaccard_matrix: np
 
     return G
 
-# def get_batched_alert_graphs(alerts, unique_alert_identifier, sliding_window_size, jaccard_threshold=0.2):
-#     resampled_alert_counts = alerts.set_index('starts_at').resample(f'{sliding_window_size//2}s')[unique_alert_identifier].value_counts().unstack(fill_value=0)
-#     jaccard_matrix = get_alert_jaccard_matrix(alerts, unique_alert_identifier, sliding_window_size)
-
-#     alert_graphs = []
-
-#     for idx in range(resampled_alert_counts.shape[0]):
-#         G = build_graph_from_occurrence(resampled_alert_counts.iloc[idx], jaccard_matrix, resampled_alert_counts.columns, jaccard_threshold=jaccard_threshold)
-
-#         alert_graphs.append(max(nx.connected_components(G), key=len))
-
-#     return alert_graphs
-
-
 def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident_sliding_window_size: int, statistic_sliding_window_size: int, 
                    jaccard_threshold: float = 0.2, fingerprint_threshold: int = 5) -> List[dict]:
     """
