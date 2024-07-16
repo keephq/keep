@@ -125,6 +125,7 @@ def get_incident_alerts_by_incident_fingerprint(tenant_id: str, fingerprint: str
                 Alert,
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(AlertToIncident.tenant_id == tenant_id, Incident.incident_fingerprint == fingerprint)
         )
 
