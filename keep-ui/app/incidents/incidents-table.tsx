@@ -90,7 +90,9 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: (context) => context.row.original.services,
+      cell: (context) => context.row.original.services.map((service) =>
+        <Badge className="mr-1">{service}</Badge>
+      ),
     }),
     columnHelper.display({
       id: "assignee",
