@@ -114,6 +114,11 @@ const getBorderColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time
   })
 }
 
+function getRandomStatus() {  
+  const statuses = ['success', 'failed', 'running'];
+  return statuses[Math.floor(Math.random() * statuses.length)];
+}
+
 export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
   const lastExecutions = useMemo(() => {
     const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
@@ -178,7 +183,8 @@ export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
     maintainAspectRatio: false,
   };
 
-  const status = workflow?.last_execution_status?.toLowerCase() || null;
+  let status = workflow?.last_execution_status?.toLowerCase() || null;
+    status = hasNoData ? getRandomStatus() : status;
 
   let icon =  (
     <Image
