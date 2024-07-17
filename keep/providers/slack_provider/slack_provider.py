@@ -113,6 +113,10 @@ class SlackProvider(BaseProvider):
             },
         )
         if not message:
+            if not blocks:
+                raise ProviderException(
+                    "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
+                )
             message = blocks[0].get("text")
         if self.authentication_config.webhook_url:
             response = requests.post(
