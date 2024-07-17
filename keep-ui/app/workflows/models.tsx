@@ -17,6 +17,14 @@ export type Trigger = {
 };
 
 
+export type WorkflowExecution = {
+  id: string;
+  status: string;
+  started: string;
+  execution_time: number;
+  workflow: Workflow;
+};
+
 export type Workflow = {
   id: string;
   name: string;
@@ -31,4 +39,50 @@ export type Workflow = {
   last_updated: string;
   workflow_raw: string;
   workflow_raw_id: string;
+  last_execution_started?: string;
+  last_executions?: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]
 }
+
+export type MockProvider = {
+  type: string;
+  config: string;
+  with?: {
+    command?: string;
+    timeout?: number;
+    _from?: string;
+    to?: string;
+    subject?: string;
+    html?: string;
+  };
+};
+
+export type MockCondition = {
+  assert: string;
+  name: string;
+  type: string;
+};
+
+export type WorkflowAction = {
+  condition: MockCondition[];
+  name: string;
+  provider: MockProvider;
+};
+
+export type MockStep = {
+  name: string;
+  provider: MockProvider;
+};
+
+export type MockTrigger = {
+  type: string;
+};
+
+export type MockWorkflow = {
+  id: string;
+  description: string;
+  triggers: MockTrigger[];
+  owners: any[]; // Adjust the type if you have more specific information about the owners
+  services: any[]; // Adjust the type if you have more specific information about the services
+  steps: MockStep[];
+  actions: WorkflowAction[];
+};

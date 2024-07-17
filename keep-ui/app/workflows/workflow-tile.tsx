@@ -1,10 +1,10 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { Workflow, Filter } from "./models";
+import { Workflow, Filter } from './models';
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import Loading from "../loading";
@@ -29,7 +29,17 @@ import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
-import { set } from "date-fns";
+import { parseISO, set, differenceInSeconds } from "date-fns";
+import { Chart, CategoryScale, LinearScale, BarElement, Title as ChartTitle, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import 'chart.js/auto';
+import TimeAgo from 'react-timeago';
+import { WorkflowExecution } from "./builder/types";
+
+
+
+Chart.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
+
 
 function WorkflowMenuSection({
   onDelete,
@@ -137,9 +147,8 @@ function ProviderTile({
         width={30}
         height={30}
         alt={provider.type}
-        className={`${
-          provider.installed ? "mt-6" : "mt-6 grayscale group-hover:grayscale-0"
-        }`}
+        className={`${provider.installed ? "mt-6" : "mt-6 grayscale group-hover:grayscale-0"
+          }`}
       />
 
       <div className="h-8 w-[70px] flex justify-center">
@@ -377,17 +386,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
   return (
-    <div className="workflow-tile-basis mt-2.5">
+    <div className="mt-2.5 flex flex-wrap gap-4 items-start">
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Loading />
         </div>
       )}
-      <Card>
-        <div className="flex w-full justify-between items-center h-14">
-          <Title className="truncate max-w-64 text-left text-lightBlack">
-            {workflow.name}
-          </Title>
+      <div className="relative flex flex-col bg-white rounded overflow-hidden shadow w-full lg:max-w-md">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -397,149 +403,28 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             workflow,
           })}
         </div>
-
-        <div className="flex items-center justify-between h-10">
-          <Text className="truncate max-w-sm text-left text-lightBlack">
-            {workflow.description}
-          </Text>
-        </div>
-
-        <List>
-          <ListItem>
-            <span>Created By</span>
-            <span className="text-right">{workflow.created_by}</span>
-          </ListItem>
-          <ListItem>
-            <span>Created At</span>
-            <span className="text-right">
-              {workflow.creation_time
-                ? new Date(workflow.creation_time + "Z").toLocaleString()
-                : "N/A"}
-            </span>
-          </ListItem>
-          <ListItem>
-            <span>Last Updated</span>
-            <span className="text-right">
-              {workflow.last_updated
-                ? new Date(workflow.last_updated + "Z").toLocaleString()
-                : "N/A"}
-            </span>
-          </ListItem>
-          <ListItem>
-            <span>Last Execution</span>
-            <span className="text-right">
-              {workflow.last_execution_time
-                ? new Date(workflow.last_execution_time + "Z").toLocaleString()
-                : "N/A"}
-            </span>
-          </ListItem>
-          <ListItem>
-            <span>Last Status</span>
-            <span className="text-right">
-              {workflow.last_execution_status
-                ? workflow.last_execution_status
-                : "N/A"}
-            </span>
-          </ListItem>
-        </List>
-
-        <Accordion className="mt-2.5">
-          <AccordionHeader>
-            <span className="mr-1">Triggers:</span>
-            {triggerTypes.map((t) => {
-              if (t === "alert") {
-                const handleImageError = (event: any) => {
-                  event.target.href.baseVal = "/icons/keep-icon.png";
-                };
-                const alertSource = workflow.triggers
-                  .find((w) => w.type === "alert")
-                  ?.filters?.find((f) => f.key === "source")?.value;
-                const DynamicIcon = (props: any) => (
-                  <svg
-                    width="24px"
-                    height="24px"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    {...props}
-                  >
-                    {" "}
-                    <image
-                      id="image0"
-                      width={"24"}
-                      height={"24"}
-                      href={`/icons/${alertSource}-icon.png`}
-                      onError={handleImageError}
-                    />
-                  </svg>
-                );
-                return (
-                  <Badge
-                    icon={DynamicIcon}
-                    key={t}
-                    size="xs"
-                    color="orange"
-                    title={`Source: ${alertSource}`}
-                  >
-                    {t}
-                  </Badge>
-                );
+        <div className="m-4">
+          <WorkflowGraph workflow={workflow} />
+          <div className="flex flex-col mt-2 gap-2">
+            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">{workflow?.name || 'Unknown'}</h2>
+            <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-2">
+              <div className="flex flex-wrap justify-start items-center gap-1.5">
+                <button className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
+                  Interval
+                </button>
+                <button className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
+                  Trigger
+                </button>
+              </div>
+              {workflow?.last_execution_started ? (
+                <TimeAgo date={parseISO(workflow?.last_execution_started?.toLocaleString())} className="text-sm text-gray-500" />
+              ) : null
               }
-              return (
-                <Badge key={t} size="xs" color="orange">
-                  {t}
-                </Badge>
-              );
-            })}
-          </AccordionHeader>
-          <AccordionBody>
-            {workflow.triggers.length > 0 ? (
-              <List>
-                {workflow.triggers.map((trigger, index) => (
-                  <TriggerTile key={index} trigger={trigger} />
-                ))}
-              </List>
-            ) : (
-              <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
-                This workflow does not have any triggers.
-              </p>
-            )}
-          </AccordionBody>
-        </Accordion>
-
-        <Card className="mt-2.5">
-          <Text>Providers:</Text>
-          <div className="flex flex-wrap justify-start">
-            {uniqueProviders.map((provider) => (
-              <ProviderTile
-                key={provider.id}
-                provider={provider}
-                onConnectClick={handleConnectProvider}
-              />
-            ))}
+            </div>
           </div>
-        </Card>
-        <SlidingPanel
-          type={"right"}
-          isOpen={openPanel}
-          size={30}
-          backdropClicked={handleCloseModal}
-          panelContainerClassName="bg-white z-[2000]"
-        >
-          {selectedProvider && (
-            <ProviderForm
-              provider={selectedProvider}
-              formData={formValues}
-              formErrorsData={formErrors}
-              onFormChange={handleFormChange}
-              onConnectChange={handleConnecting}
-              closeModal={handleCloseModal}
-              installedProvidersMode={selectedProvider.installed}
-              isProviderNameDisabled={true}
-            />
-          )}
-        </SlidingPanel>
-      </Card>
+        </div>
+      </div>
+
       <AlertTriggerModal
         isOpen={isAlertTriggerModalOpen}
         onClose={() => setIsAlertTriggerModalOpen(false)}
@@ -550,5 +435,208 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
+
+
+const show_real_data = true
+
+const demoLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const demoData = [1, 3, 2, 2, 8, 1, 3, 5, 2, 10, 1, 3, 5, 2, 10]
+
+const demoBgColors = [
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(255, 99, 132, 0.2)', // Red
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+]
+
+const demoColors = [
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(255, 99, 132, 1)', // Red
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+]
+const getLabels = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoLabels;
+  }
+  return lastExecutions?.map((workflowExecution) => {
+    return workflowExecution?.started
+  })
+}
+
+
+const getDataValues = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoData;
+  }
+  return lastExecutions?.map((workflowExecution) => {
+    return workflowExecution?.execution_time || differenceInSeconds(Date.now(),  new Date(workflowExecution?.started));
+  })
+}
+
+
+const getBackgroundColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoBgColors;
+  }
+  return lastExecutions?.map((workflowExecution) => {
+    const status = workflowExecution?.status?.toLowerCase()
+    if (status === "success") {
+      return "rgba(75, 192, 192, 0.2)"
+    }
+    if (['failed', 'faliure'].includes(status)) {
+      return 'rgba(255, 99, 132, 0.2)'
+    }
+
+    return "rgba(75, 192, 192, 0.2)"
+  })
+}
+
+const getBorderColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoColors;
+  }
+
+  return lastExecutions?.map((workflowExecution) => {
+    const status = workflowExecution?.status?.toLowerCase()
+    if (status === "success") {
+      return "rgba(75, 192, 192, 1)"
+    }
+    if (['failed', 'faliure', 'fail'].includes(status)) {
+      return 'rgba(255, 99, 132, 1)'
+    }
+
+    return "rgba(75, 192, 192, 1)"
+  })
+}
+
+const WorkflowGraph = ({ workflow }:{workflow: Workflow}) => {
+  const lastExecutions = useMemo(() => {
+    const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
+    return reversedExecutions.reverse();
+  }, [workflow?.last_executions]);
+
+  const hasNoData = !lastExecutions || lastExecutions.length === 0;
+
+  const chartData = {
+    labels: getLabels(lastExecutions),
+    datasets: [
+      {
+        label: "Execution Time (mins)",
+        data: getDataValues(lastExecutions),
+        backgroundColor: getBackgroundColors(lastExecutions),
+        borderColor: getBorderColors(lastExecutions),
+        borderWidth: {
+                    top: 2,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                  },
+        barPercentage: 1, // Adjust this value to control bar width
+        categoryPercentage: 0.5, // Adjust this value to control space between bars
+      },
+    ],
+  };
+
+  const chartOptions = {
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+  };
+
+  const status = workflow?.last_execution_status?.toLowerCase() || null;
+
+  let icon = (
+    <Image
+      className="animate-bounce"
+      src="/keep.svg"
+      alt="loading"
+      width={40}
+      height={40}
+    />
+  );
+  switch (status) {
+    case "success":
+      icon = <CheckCircleIcon className="w-6 h-6 text-green-500" />;
+      break;
+    case "failed":
+    case "fail":
+    case "failure":
+      icon = <XCircleIcon className="w-6 h-6 text-red-500" />;
+      break;
+    default:
+      break;
+  }
+
+  return (
+    <div className="flex flex-row items-center">
+      <div className="mr-2">{!hasNoData && icon}</div>
+      <div className="flex-grow h-24">
+        {hasNoData ? (
+          <div className="flex justify-center items-center h-full text-gray-400">
+            No data available
+          </div>
+        ) : (
+          <div className="h-full w-full overflow-hidden">
+            <Bar data={chartData} options={chartOptions} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 export default WorkflowTile;

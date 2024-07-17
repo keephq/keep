@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
 import { fetcher } from "../../utils/fetcher";
-import { Workflow } from "./models";
+import { Workflow, MockWorkflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import React from "react";
@@ -20,6 +20,7 @@ import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
+import MockWorkflowCardSection from "./mockworkflows";
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -31,9 +32,17 @@ export default function WorkflowsPage() {
 
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    status === "authenticated" ? `${apiUrl}/workflows` : null,
+    status === "authenticated" ? `${apiUrl}/workflows?is_v2=true` : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
+
+  const { data: mockWorkflows, error:mockError, isLoading: mockLoading } = useSWR<MockWorkflow[]>(
+    status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
+    (url: string) => fetcher(url, session?.accessToken!)
+  );
+
+
+  console.log("data===>", data);
 
   if (isLoading || !data) return <Loading />;
 
@@ -243,15 +252,20 @@ export default function WorkflowsPage() {
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
           <div>
-            {data.length === 0 ? (
+          {data.length === 0 ? (
               <WorkflowsEmptyState />
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {data.map((workflow) => (
                   <WorkflowTile key={workflow.id} workflow={workflow} />
                 ))}
               </div>
             )}
+            <MockWorkflowCardSection
+              mockWorkflows={mockWorkflows || []}
+              mockError={mockError}
+              mockLoading={mockLoading}
+            />
           </div>
         </div>
       </Card>

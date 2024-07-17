@@ -19,6 +19,7 @@ export default function PageClient({
 }: {
   workflow?: string;
   workflowId?: string;
+  isPreview?: boolean;
 }) {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [generateEnabled, setGenerateEnabled] = useState(false);
