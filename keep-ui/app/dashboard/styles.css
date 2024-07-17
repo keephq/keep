@@ -9,3 +9,13 @@
 .grid-item__widget .panel:focus {
   outline: none;
 }
+
+.hidden-on-small {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .hidden-on-small {
+    display: inherit;
+  }
+}

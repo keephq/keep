@@ -141,7 +141,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="flex flex-col overflow-hidden h-full p-4">
+    <div className="flex flex-col h-full p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="relative">
           {isEditingName ? (
