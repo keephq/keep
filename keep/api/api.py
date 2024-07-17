@@ -45,7 +45,7 @@ from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
-keep.api.logging.setup()
+keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")

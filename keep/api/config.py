@@ -9,7 +9,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 PORT = int(os.environ.get("PORT", 8080))
 
-keep.api.logging.setup()
+keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 

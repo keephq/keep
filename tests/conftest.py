@@ -310,9 +310,11 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    # SHAHAR: you can remove locally, but keep in github actions
     # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    headless = True
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(5000)
