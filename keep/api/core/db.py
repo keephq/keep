@@ -1768,20 +1768,20 @@ def get_incident_by_id(incident_id: UUID) -> Incident:
     return incident
 
 
-def assign_alert_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> AlertToIncident:
+def assign_alert_to_incident(
+    alert_id: UUID, incident_id: UUID, tenant_id: str
+) -> AlertToIncident:
     with Session(engine) as session:
         assignment = AlertToIncident(
-            alert_id=alert_id,
-            incident_id=incident_id,
-            tenant_id=tenant_id
+            alert_id=alert_id, incident_id=incident_id, tenant_id=tenant_id
         )
         session.add(assignment)
         session.commit()
         session.refresh(assignment)
-        
+
     return assignment
-    
-    
+
+
 def get_incidents(tenant_id) -> List[Incident]:
     with Session(engine) as session:
         incidents = session.exec(
@@ -1790,6 +1790,7 @@ def get_incidents(tenant_id) -> List[Incident]:
             .where(Incident.tenant_id == tenant_id)
         ).all()
     return incidents
+
 
 def get_alert_audit(
     tenant_id: str, fingerprint: str, limit: int = 50
@@ -2001,7 +2002,7 @@ def remove_alerts_to_incident_by_incident_id(
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
-                Incident.incident_id == incident_id,
+                Incident.id == incident_id,
             )
         ).first()
 

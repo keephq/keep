@@ -21,7 +21,7 @@ export const useIncidents = (
 };
 
 export const useIncidentAlerts = (
-  incidentFingerprint: string,
+  incidentId: string,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -30,14 +30,14 @@ export const useIncidentAlerts = (
   const { data: session } = useSession();
   return useSWR<AlertDto[]>(
     () =>
-      session ? `${apiUrl}/incidents/${incidentFingerprint}/alerts` : null,
+      session ? `${apiUrl}/incidents/${incidentId}/alerts` : null,
     (url) => fetcher(url, session?.accessToken),
     options
   );
 };
 
 export const useIncident = (
-  incidentFingerprint: string,
+  incidentId: string,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -46,7 +46,7 @@ export const useIncident = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
-    () => (session ? `${apiUrl}/incidents/${incidentFingerprint}` : null),
+    () => (session ? `${apiUrl}/incidents/${incidentId}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

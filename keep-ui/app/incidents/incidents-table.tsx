@@ -146,10 +146,10 @@ export default function IncidentsTable({
     onExpandedChange: setExpanded,
   });
 
-  const deleteIncident = (incidentFingerprint: string) => {
+  const deleteIncident = (incidentId: string) => {
     const apiUrl = getApiURL();
     if (confirm("Are you sure you want to delete this incident?")) {
-      fetch(`${apiUrl}/incidents/${incidentFingerprint}`, {
+      fetch(`${apiUrl}/incidents/${incidentId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,

@@ -5,6 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  Callout,
   Table,
   TableBody,
   TableCell,
@@ -20,15 +21,18 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { getAlertLastReceieved } from "utils/helpers";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import AlertName from "app/alerts/alert-name";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import IncidentAlertMenu from "./incident-alert-menu";
 
 interface Props {
-  incidentFingerprint: string;
+  incidentId: string;
 }
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-export default function IncidentAlerts({ incidentFingerprint }: Props) {
-  const { data: alerts } = useIncidentAlerts(incidentFingerprint);
+export default function IncidentAlerts({ incidentId }: Props) {
+  const { data: alerts } = useIncidentAlerts(incidentId);
+
   const columns = [
     columnHelper.accessor("severity", {
       id: "severity",
@@ -82,61 +86,85 @@ export default function IncidentAlerts({ incidentFingerprint }: Props) {
           />
         )),
     }),
+    columnHelper.display({
+      id: "remove",
+      header: "",
+      cell: (context) => (
+        <IncidentAlertMenu
+          alert={context.row.original}
+          incidentId={incidentId}
+        />
+      ),
+    }),
   ];
+
   const table = useReactTable({
     columns: columns,
     data: alerts ?? [],
     getCoreRowModel: getCoreRowModel(),
   });
   return (
-    <Table>
-      <TableHead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => {
-              return (
-                <TableHeaderCell key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeaderCell>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHead>
-      {alerts && alerts.length > 0 && (
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
+    <>
+      {(alerts ?? []).length === 0 && (
+        <Callout
+          className="mt-4 w-full"
+          title="Missing Alerts"
+          icon={ExclamationTriangleIcon}
+          color={"orange"}
+        >
+          Alerts will show up here as they are correlated into this incident.
+        </Callout>
+      )}
+
+      <Table>
+        <TableHead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHeaderCell key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHeaderCell>
+                );
+              })}
             </TableRow>
           ))}
-        </TableBody>
-      )}
-      {
-        // Skeleton
-        (alerts ?? []).length === 0 && (
+        </TableHead>
+        {alerts && alerts.length > 0 && (
           <TableBody>
-            {Array(5)
-              .fill("")
-              .map((index) => (
-                <TableRow id={index}>
-                  {columns.map((c) => (
-                    <TableCell id={c.id}>
-                      <Skeleton />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id} className="hover:bg-slate-100">
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
           </TableBody>
-        )
-      }
-    </Table>
+        )}
+        {
+          // Skeleton
+          (alerts ?? []).length === 0 && (
+            <TableBody>
+              {Array(5)
+                .fill("")
+                .map((index) => (
+                  <TableRow key={index}>
+                    {columns.map((c) => (
+                      <TableCell key={c.id}>
+                        <Skeleton />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+            </TableBody>
+          )
+        }
+      </Table>
+    </>
   );
 }

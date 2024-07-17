@@ -25,13 +25,8 @@ export default function IncidentView({ incidentId }: Props) {
   const { data: incident, isLoading, error } = useIncident(incidentId);
   const router = useRouter();
 
-  if (isLoading) {
-    <Loading />;
-  }
-
-  if (error || !incident) {
-    return <Title>Incident does not exist.</Title>;
-  }
+  if (isLoading || !incident) return <Loading />;
+  if (error) return <Title>Incident does not exist.</Title>;
 
   return (
     <>
@@ -65,9 +60,7 @@ export default function IncidentView({ incidentId }: Props) {
                 </TabList>
                 <TabPanels>
                   <TabPanel>
-                    <IncidentAlerts
-                      incidentFingerprint={incident.id}
-                    />
+                    <IncidentAlerts incidentId={incident.id} />
                   </TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>
