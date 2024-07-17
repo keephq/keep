@@ -4,6 +4,8 @@ from typing import List, Optional
 from sqlalchemy import TEXT
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
+import json
+from sqlalchemy.types import TypeDecorator
 
 class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
@@ -22,6 +24,18 @@ class Workflow(SQLModel, table=True):
     class Config:
         orm_mode = True
 
+class JSONEncodedDict(TypeDecorator):
+    impl = JSON
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value, default=str)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
 
 class WorkflowExecution(SQLModel, table=True):
     __table_args__ = (
@@ -42,7 +56,7 @@ class WorkflowExecution(SQLModel, table=True):
     logs: Optional[str]
     error: Optional[str] = Field(max_length=10240)
     execution_time: Optional[int]
-    results: dict = Field(sa_column=Column(JSON), default={})
+    results: dict = Field(sa_column=Column(JSONEncodedDict), default={})
 
     logs: List["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"
