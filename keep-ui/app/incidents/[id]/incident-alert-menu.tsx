@@ -21,8 +21,9 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify([alert.id]),
+        body: JSON.stringify([alert.event_id]),
       }).then((response) => {
         if (response.ok) {
           toast.success("Alert removed from incident successfully", {

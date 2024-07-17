@@ -71,6 +71,11 @@ def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     },
                 )
                 continue
+
+            # include the db event id if it's not present
+            if alert_dto.event_id is None:
+                alert_dto.event_id = str(alert.id)
+
             # enrich provider id when it's possible
             if alert_dto.providerId is None:
                 alert_dto.providerId = alert.provider_id
