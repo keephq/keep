@@ -18,7 +18,8 @@ const demoLabels = ['Jan', 'Feb',
     //  'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
     //  'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-const demoData = [1, 3, 2, 2, 8, 1, 3, 5, 2, 
+const demoData = [1, 3, 
+    // 2, 2, 8, 1, 3, 5, 2, 
     // 10, 1, 3, 5, 2, 10
 ]
 
