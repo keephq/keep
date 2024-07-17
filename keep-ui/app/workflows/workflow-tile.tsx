@@ -30,17 +30,9 @@ import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { parseISO, set, differenceInSeconds } from "date-fns";
-import { Chart, CategoryScale, LinearScale, BarElement, Title as ChartTitle, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-import 'chart.js/auto';
 import TimeAgo from 'react-timeago';
 import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
-
-
-
-Chart.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
-
 
 function WorkflowMenuSection({
   onDelete,
