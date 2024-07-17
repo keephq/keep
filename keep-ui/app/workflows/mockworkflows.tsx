@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { MockWorkflow, Workflow } from './models';
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
-import { Button, Tab, TabGroup, TabList } from "@tremor/react";
+import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import PageClient from "./builder/page.client";
 import { useRouter } from "next/navigation";
@@ -14,12 +14,12 @@ import { TiArrowRight } from "react-icons/ti";
 export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
   const isActionPresent = !!workflow?.actions?.length;
   return (
-    <div className="flex gap-2 items-center mb-4 flex-wrap">
+    <div className="flex gap-2 items-center mb-4">
       {workflow?.actions?.map((step: any, index: number) => {
         const provider = step?.provider;
         return (
-          <div key={`action-${index}`} className="flex items-center gap-2">
-            {index > 0 && <TiArrowRight style={{ width: 30, height: 30 }} className="text-gray-500 align-self: center" />}
+          <div key={`action-${index}`} className="flex items-end gap-2">
+            {index > 0 && <TiArrowRight className="text-gray-500 size-8 align-self: center" />}
             <Image
               src={`/icons/${provider?.type}-icon.png`}
               width={30}
@@ -33,9 +33,9 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
         return (
-          <div key={`step-${index}`} className="flex items-center gap-2">
+          <div key={`step-${index}`} className="flex items-end gap-2">
             {(index > 0 || isActionPresent) && (
-              <TiArrowRight style={{ width: 30, height: 30 }} className="text-gray-500 align-self: center" />
+              <TiArrowRight className="text-gray-500 size-8 align-self: center" />
             )}
             <Image
               src={`/icons/${provider?.type}-icon.png`}
@@ -88,7 +88,7 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
   return (
     <section className="pt-10 mt-10">
       <h2 className="text-xl sm:text-2xl font-semibold mb-6">Discover existing workflow templates</h2>
-      <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 flex-wrap gap-2">
         <div className="flex gap-2 mb-4 sm:mb-0">
           <input
             type="text"
@@ -115,13 +115,13 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
         {!mockLoading && mockWorkflows.length > 0 && mockWorkflows.map((template: any, index: number) => {
           const workflow = template.workflow;
           return (
-            <div key={index} className="card p-4 border rounded bg-white flex flex-col shadow">
-              <div className="flex-grow">
+            <Card key={index} className="p-4 flex flex-col justify-between">
+              <div>
                 <WorkflowSteps workflow={workflow} />
                 <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">{workflow.name || getNameFromId(workflow.id)}</h3>
                 <p className="mt-2 text-sm sm:text-base line-clamp-3">{workflow.description}</p>
               </div>
-              <div className="mt-auto">
+              <div>
                 <Button
                   className="inline-block mt-8 px-4 py-2 border-none bg-gray-200 hover:bg-gray-300 bold-medium transition text-black rounded"
                   onClick={(e) => {
@@ -133,7 +133,7 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
                   Preview
                 </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

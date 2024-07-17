@@ -8,6 +8,7 @@ import 'chart.js/auto';
 import { Workflow, WorkflowExecution } from "./models";
 import { differenceInSeconds } from "date-fns";
 import { Card } from "@tremor/react";
+import { wrap } from "module";
 
 Chart.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
 
@@ -134,9 +135,9 @@ export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
                     right: 0,
                     bottom: 0,
                     left: 0,
-                  },
-        barPercentage: 1, // Adjust this value to control bar width
-        categoryPercentage: 0.5, // Adjust this value to control space between bars
+                  },          
+        barPercentage: 0.5, // Adjust this value to control bar width
+        // categoryPercentage: 0.7, // Adjust this value to control space between bars
       },
     ],
   };
@@ -179,9 +180,9 @@ export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
 
   const status = workflow?.last_execution_status?.toLowerCase() || null;
 
-  let icon = (
+  let icon =  (
     <Image
-      className="animate-bounce"
+      className="animate-bounce size-6 cover"
       src="/keep.svg"
       alt="loading"
       width={40}
@@ -190,31 +191,31 @@ export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
   );
   switch (status) {
     case "success":
-      icon = <CheckCircleIcon className="w-6 h-6 text-green-500" />;
+      icon = <CheckCircleIcon className="size-6 cover text-green-500" />;
       break;
     case "failed":
     case "fail":
     case "failure":
-      icon = <XCircleIcon className="w-6 h-6 text-red-500" />;
+      icon = <XCircleIcon className="size-6 cover text-red-500" />;
       break;
     default:
       break;
   }
 
   return (
-    <Card className="p-2 shadow-none border-none">
+    <div className="container">
       <div className="flex items-center">{(!hasNoData || !show_real_data) && icon}</div>
-      <div className="flex-grow h-24">
+      <div>
         {hasNoData && show_real_data ? (
-          <div className="flex justify-center items-center h-full text-gray-400">
+          <div className="flex justify-center items-center text-gray-400">
             No data available
           </div>
         ) : (
-          <div className="h-full w-full overflow-hidden">
+          <div className="overflow-hidden h-24">
             <Bar data={chartData} options={chartOptions} />
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 };
