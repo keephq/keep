@@ -416,8 +416,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   Trigger
                 </button>
               </div>
-              {workflow?.last_execution_started ? (
-                <TimeAgo date={parseISO(workflow?.last_execution_started?.toLocaleString())} className="text-sm text-gray-500" />
+              {workflow && workflow.last_execution_started ? (
+                <TimeAgo date={workflow?.last_execution_started + 'Z'} className="text-sm text-gray-500" />
               ) : null
               }
             </div>

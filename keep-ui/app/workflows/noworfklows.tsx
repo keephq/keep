@@ -6,6 +6,7 @@ import { Workflow } from './models';
 import { useRouter } from "next/navigation";
 import { MdArrowForwardIos } from "react-icons/md";
 import { IoMdCard } from "react-icons/io";
+import Image from "next/image";
 
 
 const links = [
@@ -29,6 +30,12 @@ const DetailsSection = () => {
   const router = useRouter();
   return (
     <section className="flex flex-col items-center justify-center mb-10">
+       <Image
+        src="/icons/workflow-icon.png"
+        alt="loading"
+        width={200}
+        height={200}
+      />
       <h2 className="sm:text-2xl  text-xl font-bold">Create your first workflow</h2>
       <p className="mt-2 font-bold text-sm">You do not have any workflow added yet.</p>
       <div className="text-sm mt-4 text-gray-500 max-w-md text-center">you can start by creating your very first Workflow from scratch, or browse thorugh some available Workflow templates below</div>

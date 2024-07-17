@@ -304,8 +304,8 @@ class WorkflowStore:
             # Update the latest execution details if available
             if workflow_dict[workflow_id]["workflow_last_run_started"] is None :
                 workflow_dict[workflow_id]["workflow_last_run_status"] = status
-                workflow_dict[workflow_id]["workflow_last_run_time"] = execution_time
                 workflow_dict[workflow_id]["workflow_last_run_started"] = started
+                workflow_dict[workflow_id]["workflow_last_run_time"] = started    
 
             # Add the execution to the list of executions
             if started is not None:
