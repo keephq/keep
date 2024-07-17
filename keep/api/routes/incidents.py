@@ -290,7 +290,7 @@ def mine(
     
     for incident in incidents:
         incident_id = create_incident_from_dto(tenant_id=tenant_id, incident_dto=IncidentDtoIn(
-            name="Mined using algorithm", description="Candidate"
+            name="Mined using algorithm", description="Candidate", assignee="none"
         )).id
 
         for alert in incident['alerts']:
