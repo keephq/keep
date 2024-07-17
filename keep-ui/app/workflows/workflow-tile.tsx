@@ -35,6 +35,7 @@ import { Bar } from 'react-chartjs-2';
 import 'chart.js/auto';
 import TimeAgo from 'react-timeago';
 import { WorkflowExecution } from "./builder/types";
+import WorkflowGraph from "./workfflow-graph";
 
 
 
@@ -392,7 +393,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <div className="relative flex flex-col bg-white rounded overflow-hidden shadow w-full lg:max-w-md">
+      <Card className="relative flex flex-col bg-white rounded shadow w-full lg:max-w-md p-2">
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -403,9 +404,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             workflow,
           })}
         </div>
-        <div className="m-4">
+        <div className="m-2">
           <WorkflowGraph workflow={workflow} />
-          <div className="flex flex-col mt-2 gap-2">
+          <div className="flex flex-col gap-2">
             <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">{workflow?.name || 'Unknown'}</h2>
             <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-2">
               <div className="flex flex-wrap justify-start items-center gap-1.5">
@@ -423,7 +424,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       <AlertTriggerModal
         isOpen={isAlertTriggerModalOpen}
@@ -435,208 +436,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
-
-
-const show_real_data = true
-
-const demoLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const demoData = [1, 3, 2, 2, 8, 1, 3, 5, 2, 10, 1, 3, 5, 2, 10]
-
-const demoBgColors = [
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(255, 99, 132, 0.2)', // Red
-  'rgba(75, 192, 192, 0.2)', // Green
-  'rgba(255, 99, 132, 0.2)', // Red
-]
-
-const demoColors = [
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(255, 99, 132, 1)', // Red
-  'rgba(75, 192, 192, 1)', // Green
-  'rgba(255, 99, 132, 1)', // Red
-]
-const getLabels = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
-  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
-    return show_real_data ? [] : demoLabels;
-  }
-  return lastExecutions?.map((workflowExecution) => {
-    return workflowExecution?.started
-  })
-}
-
-
-const getDataValues = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
-  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
-    return show_real_data ? [] : demoData;
-  }
-  return lastExecutions?.map((workflowExecution) => {
-    return workflowExecution?.execution_time || differenceInSeconds(Date.now(),  new Date(workflowExecution?.started));
-  })
-}
-
-
-const getBackgroundColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
-  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
-    return show_real_data ? [] : demoBgColors;
-  }
-  return lastExecutions?.map((workflowExecution) => {
-    const status = workflowExecution?.status?.toLowerCase()
-    if (status === "success") {
-      return "rgba(75, 192, 192, 0.2)"
-    }
-    if (['failed', 'faliure'].includes(status)) {
-      return 'rgba(255, 99, 132, 0.2)'
-    }
-
-    return "rgba(75, 192, 192, 0.2)"
-  })
-}
-
-const getBorderColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
-  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
-    return show_real_data ? [] : demoColors;
-  }
-
-  return lastExecutions?.map((workflowExecution) => {
-    const status = workflowExecution?.status?.toLowerCase()
-    if (status === "success") {
-      return "rgba(75, 192, 192, 1)"
-    }
-    if (['failed', 'faliure', 'fail'].includes(status)) {
-      return 'rgba(255, 99, 132, 1)'
-    }
-
-    return "rgba(75, 192, 192, 1)"
-  })
-}
-
-const WorkflowGraph = ({ workflow }:{workflow: Workflow}) => {
-  const lastExecutions = useMemo(() => {
-    const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
-    return reversedExecutions.reverse();
-  }, [workflow?.last_executions]);
-
-  const hasNoData = !lastExecutions || lastExecutions.length === 0;
-
-  const chartData = {
-    labels: getLabels(lastExecutions),
-    datasets: [
-      {
-        label: "Execution Time (mins)",
-        data: getDataValues(lastExecutions),
-        backgroundColor: getBackgroundColors(lastExecutions),
-        borderColor: getBorderColors(lastExecutions),
-        borderWidth: {
-                    top: 2,
-                    right: 0,
-                    bottom: 0,
-                    left: 0,
-                  },
-        barPercentage: 1, // Adjust this value to control bar width
-        categoryPercentage: 0.5, // Adjust this value to control space between bars
-      },
-    ],
-  };
-
-  const chartOptions = {
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: {
-          display: false,
-        },
-        grid: {
-          display: false,
-        },
-        border: {
-          display: false,
-        },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          display: false,
-        },
-        grid: {
-          display: false,
-        },
-        border: {
-          display: false,
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
-    responsive: true,
-    maintainAspectRatio: false,
-  };
-
-  const status = workflow?.last_execution_status?.toLowerCase() || null;
-
-  let icon = (
-    <Image
-      className="animate-bounce"
-      src="/keep.svg"
-      alt="loading"
-      width={40}
-      height={40}
-    />
-  );
-  switch (status) {
-    case "success":
-      icon = <CheckCircleIcon className="w-6 h-6 text-green-500" />;
-      break;
-    case "failed":
-    case "fail":
-    case "failure":
-      icon = <XCircleIcon className="w-6 h-6 text-red-500" />;
-      break;
-    default:
-      break;
-  }
-
-  return (
-    <div className="flex flex-row items-center">
-      <div className="mr-2">{!hasNoData && icon}</div>
-      <div className="flex-grow h-24">
-        {hasNoData ? (
-          <div className="flex justify-center items-center h-full text-gray-400">
-            No data available
-          </div>
-        ) : (
-          <div className="h-full w-full overflow-hidden">
-            <Bar data={chartData} options={chartOptions} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 
 export default WorkflowTile;
