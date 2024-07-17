@@ -21,7 +21,7 @@ import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { IncidentDto } from "./model";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -85,7 +85,7 @@ export default function IncidentsTable({
             title={alert_sources}
             src={`/icons/${alert_sources}-icon.png`}
           />
-        )),
+        ))
     )}),
     columnHelper.display({
       id: "services",
@@ -114,8 +114,9 @@ export default function IncidentsTable({
             size="xs"
             variant="secondary"
             icon={MdModeEdit}
-            onClick={(e: any) => {
+            onClick={(e: React.MouseEvent) => {
               e.preventDefault();
+              e.stopPropagation();
               editCallback(context.row.original!);
             }}
           />
@@ -124,8 +125,9 @@ export default function IncidentsTable({
             size="xs"
             variant="secondary"
             icon={MdRemoveCircle}
-            onClick={(e: any) => {
+            onClick={(e: React.MouseEvent) => {
               e.preventDefault();
+              e.stopPropagation();
               deleteIncident(context.row.original.id!);
             }}
           />
@@ -192,7 +194,6 @@ export default function IncidentsTable({
               className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
               key={row.id}
               onClick={() => {
-                //row.toggleExpanded();
                 router.push(`/incidents/${row.original.id}`);
               }}
             >
@@ -202,22 +203,6 @@ export default function IncidentsTable({
                 </TableCell>
               ))}
             </TableRow>
-            {row.getIsExpanded() && (
-              <TableRow className="pl-2.5">
-                <TableCell colSpan={columns.length}>
-                  <div className="flex space-x-2 divide-x">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold">Created At:</span>
-                      <span>
-                        {new Date(
-                          row.original.creation_time + "Z"
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
           </>
         ))}
       </TableBody>
