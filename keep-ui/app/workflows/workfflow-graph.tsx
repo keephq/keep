@@ -1,103 +1,219 @@
-import { BarChart } from "@tremor/react";
-import { Workflow, WorkflowExecution } from "./models";
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { line } from "d3-shape";
 import { useMemo } from "react";
+import Image from "next/image";
+import { Chart, CategoryScale, LinearScale, BarElement, Title as ChartTitle, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import 'chart.js/auto';
+import { Workflow, WorkflowExecution } from "./models";
+import { differenceInSeconds } from "date-fns";
+import { Card } from "@tremor/react";
 
-function getColor(status: string) {
-  switch (status) {
-    case "success":
-      return "green";
-    case "failed":
-    case "failure":
-    case "fail":
-      return "red";
-    default:
-      return "grey";
-  }
-}
+Chart.register(CategoryScale, LinearScale, BarElement, ChartTitle, Tooltip, Legend);
 
-const demoData = [1, 3, 2, 2, 8, 1, 3, 5, 2, 10, 1, 3, 5, 2, 10];
 
-function getRandomStatus() {
-  const statuses = ["success", "failed", "failure", "fail"];
-  return statuses[Math.floor(Math.random() * statuses.length)];
-}
+const show_real_data = false
 
-export function getChartData(
-  lastExecutions: Pick<WorkflowExecution, "execution_time" | "status" | "started">[]
-) {
-  if (lastExecutions?.length === 0) {
-    return demoData.map((data, idx) => {
-      const status = getRandomStatus();
-      return {
-        date: (idx + 1).toString(),
-        Execution_time: data,
-        color: getColor(status),
-      };
-    });
+const demoLabels = ['Jan', 'Feb',
+    //  'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
+    //  'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+const demoData = [1, 3, 2, 2, 8, 1, 3, 5, 2, 
+    // 10, 1, 3, 5, 2, 10
+]
+
+const demoBgColors = [
+  'rgba(75, 192, 192, 0.2)', // Green
+  'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(255, 99, 132, 0.2)', // Red
+//   'rgba(75, 192, 192, 0.2)', // Green
+//   'rgba(255, 99, 132, 0.2)', // Red
+]
+
+const demoColors = [
+  'rgba(75, 192, 192, 1)', // Green
+  'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(255, 99, 132, 1)', // Red
+//   'rgba(75, 192, 192, 1)', // Green
+//   'rgba(255, 99, 132, 1)', // Red
+]
+const getLabels = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoLabels;
   }
   return lastExecutions?.map((workflowExecution) => {
-    const status = workflowExecution?.status?.toLowerCase();
-    return {
-      date: workflowExecution?.started?.split("T")[0],
-      Execution_time: workflowExecution?.execution_time,
-      color: getColor(status),
-    };
-  });
+    return workflowExecution?.started
+  })
 }
 
-export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
-  type CustomTooltipTypeBar = {
-    payload: any;
-    active: boolean | undefined;
-    label: any;
-  };
 
+const getDataValues = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoData;
+  }
+  return lastExecutions?.map((workflowExecution) => {
+    return workflowExecution?.execution_time || differenceInSeconds(Date.now(),  new Date(workflowExecution?.started));
+  })
+}
+
+
+const getBackgroundColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoBgColors;
+  }
+  return lastExecutions?.map((workflowExecution) => {
+    const status = workflowExecution?.status?.toLowerCase()
+    if (status === "success") {
+      return "rgba(75, 192, 192, 0.2)"
+    }
+    if (['failed', 'faliure'].includes(status)) {
+      return 'rgba(255, 99, 132, 0.2)'
+    }
+
+    return "rgba(75, 192, 192, 0.2)"
+  })
+}
+
+const getBorderColors = (lastExecutions: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]) => {
+  if (!lastExecutions || (lastExecutions && lastExecutions.length === 0)) {
+    return show_real_data ? [] : demoColors;
+  }
+
+  return lastExecutions?.map((workflowExecution) => {
+    const status = workflowExecution?.status?.toLowerCase()
+    if (status === "success") {
+      return "rgba(75, 192, 192, 1)"
+    }
+    if (['failed', 'faliure', 'fail'].includes(status)) {
+      return 'rgba(255, 99, 132, 1)'
+    }
+
+    return "rgba(75, 192, 192, 1)"
+  })
+}
+
+export default function WorkflowGraph({ workflow }:{workflow: Workflow}){
   const lastExecutions = useMemo(() => {
     const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
     return reversedExecutions.reverse();
   }, [workflow?.last_executions]);
 
-  const chartData = getChartData(lastExecutions);
+  const hasNoData = !lastExecutions || lastExecutions.length === 0;
 
-  const customTooltip = (props: CustomTooltipTypeBar) => {
-    const { payload, active } = props;
-    if (!active || !payload) return null;
-    return (
-      <div className="w-56 rounded-tremor-default border border-tremor-border bg-tremor-background p-2 text-tremor-default shadow-tremor-dropdown">
-        {payload.map((category: any, idx: number) => (
-          <div key={idx} className="flex flex-1 space-x-2.5">
-            <div
-              className="flex w-1 flex-col"
-              style={{ backgroundColor: category.color, opacity: 0.2, borderTop: `2px solid ${category.color}` }}
-            />
-            <div className="space-y-1">
-              <p className="text-tremor-content">{category.dataKey}</p>
-              <p className="font-medium text-tremor-content-emphasis">
-                {category.value} ms
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const chartData = {
+    labels: getLabels(lastExecutions),
+    datasets: [
+      {
+        label: "Execution Time (mins)",
+        data: getDataValues(lastExecutions),
+        backgroundColor: getBackgroundColors(lastExecutions),
+        borderColor: getBorderColors(lastExecutions),
+        borderWidth: {
+                    top: 2,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                  },
+        barPercentage: 1, // Adjust this value to control bar width
+        categoryPercentage: 0.5, // Adjust this value to control space between bars
+      },
+    ],
   };
 
-  return (
-    <>
-      <h3 className="text-lg font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-        Last 7 days executions
-      </h3>
-      <BarChart
-        className="mt-4 h-32"
-        data={chartData}
-        index="date"
-        categories={["Execution_time"]}
-        yAxisWidth={30}
-        customTooltip={customTooltip}
-        showGridLines={false} // Disable grid lines
-        showXAxis={false}     // Disable x-axis
-        showYAxis={false}     // Disable y-axis
-      />
-    </>
+  const chartOptions = {
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+  };
+
+  const status = workflow?.last_execution_status?.toLowerCase() || null;
+
+  let icon = (
+    <Image
+      className="animate-bounce"
+      src="/keep.svg"
+      alt="loading"
+      width={40}
+      height={40}
+    />
   );
-}
+  switch (status) {
+    case "success":
+      icon = <CheckCircleIcon className="w-6 h-6 text-green-500" />;
+      break;
+    case "failed":
+    case "fail":
+    case "failure":
+      icon = <XCircleIcon className="w-6 h-6 text-red-500" />;
+      break;
+    default:
+      break;
+  }
+
+  return (
+    <Card className="p-2 shadow-none border-none">
+      <div className="flex items-center">{(!hasNoData || !show_real_data) && icon}</div>
+      <div className="flex-grow h-24">
+        {hasNoData && show_real_data ? (
+          <div className="flex justify-center items-center h-full text-gray-400">
+            No data available
+          </div>
+        ) : (
+          <div className="h-full w-full overflow-hidden">
+            <Bar data={chartData} options={chartOptions} />
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};

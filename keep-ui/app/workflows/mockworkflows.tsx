@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { MockWorkflow, Workflow } from './models';
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
-import { Button } from "@tremor/react";
+import { Button, Tab, TabGroup, TabList } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import PageClient from "./builder/page.client";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,6 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
   return (
     <div className="flex gap-2 items-center mb-4 flex-wrap">
       {workflow?.actions?.map((step: any, index: number) => {
-        console.log("step in action", step, index);
         const provider = step?.provider;
         return (
           <div key={`action-${index}`} className="flex items-center gap-2">
@@ -32,7 +31,6 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
         );
       })}
       {workflow?.steps?.map((step: any, index: number) => {
-        console.log("step in steps", step);
         const provider = step?.provider;
         return (
           <div key={`step-${index}`} className="flex items-center gap-2">
@@ -53,6 +51,19 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
   );
 }
 
+
+export const MockFilterTabs = ({tabs}:{tabs: { name: string, onClick?: () => void }[]}) => (
+  <div className="max-w-lg space-y-12">
+    <TabGroup>
+      <TabList variant="solid">
+        {tabs?.map((tab:{name:string, onClick?: () => void}, index:number) => (
+             <Tab key={index} value={tab.name}>{tab.name}</Tab>
+        ))}
+      </TabList>
+    </TabGroup>
+  </div>
+);
+
 export default function MockWorkflowCardSection({ mockWorkflows, mockError, mockLoading }:{
   mockWorkflows: MockWorkflow[],
   mockError: any,
@@ -68,7 +79,6 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
     return id.split('-').join(' ');
   }
 
-  console.log("mockWorkflows====>", mockWorkflows);
 
   // if mockError is not null, handle the error case
   if (mockError) {
@@ -78,7 +88,7 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
   return (
     <section className="pt-10 mt-10">
       <h2 className="text-xl sm:text-2xl font-semibold mb-6">Discover existing workflow templates</h2>
-      <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap">
+      <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
         <div className="flex gap-2 mb-4 sm:mb-0">
           <input
             type="text"
@@ -87,13 +97,13 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
           />
           <button className="px-4 py-2 bg-gray-200 border rounded">Integrations used</button>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button className="px-4 py-2 bg-gray-200 border rounded">All workflows</button>
-          <button className="px-4 py-2 bg-gray-200 border rounded">Notifications</button>
-          <button className="px-4 py-2 bg-gray-200 border rounded">Databases</button>
-          <button className="px-4 py-2 bg-gray-200 border rounded">CI/CD</button>
-          <button className="px-4 py-2 bg-gray-200 border rounded">Other</button>
-        </div>
+        <MockFilterTabs tabs={[
+          {name: "All workflows"},
+          {name: "Notifications"},
+          {name: "Databases"},
+          {name: "CI/CD"},
+          {name: "Other"},
+          ]}/>
       </div>
 
       {mockError && <p className="text-center text-red-100 m-auto">Error: {mockError.message || "Something went wrong!"}</p>}
@@ -104,7 +114,6 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
         {mockLoading && <Loading />}
         {!mockLoading && mockWorkflows.length > 0 && mockWorkflows.map((template: any, index: number) => {
           const workflow = template.workflow;
-          console.log("insise th emao workflwo", workflow);
           return (
             <div key={index} className="card p-4 border rounded bg-white flex flex-col shadow">
               <div className="flex-grow">
