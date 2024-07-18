@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import logging
+import uuid
 from enum import Enum
 from typing import Any, Dict
 
@@ -73,7 +74,7 @@ class AlertStatus(Enum):
 
 
 class AlertDto(BaseModel):
-    id: str
+    id: str | None
     name: str
     status: AlertStatus
     severity: AlertSeverity
@@ -205,6 +206,10 @@ class AlertDto(BaseModel):
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set id:
+        if not values.get("id"):
+            values["id"] = str(uuid.uuid4())
+
         # Check and set default severity
         severity = values.get("severity")
         try:
@@ -232,7 +237,11 @@ class AlertDto(BaseModel):
             values["status"] = AlertStatus.FIRING
 
         # this is code duplication of enrichment_helpers.py and should be refactored
-        lastReceived = values["lastReceived"]
+        lastReceived = values.get("lastReceived", None)
+        if not lastReceived:
+            lastReceived = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            values["lastReceived"] = lastReceived
+
         assignees = values.pop("assignees", None)
         if assignees:
             dt = datetime.datetime.fromisoformat(lastReceived)
