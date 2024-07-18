@@ -5,6 +5,7 @@ import logging
 from enum import Enum
 from typing import Any, Dict
 
+import pytz
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
@@ -158,10 +159,24 @@ class AlertDto(BaseModel):
             return values.get("lastReceived") in deleted
 
     @validator("lastReceived", pre=True, always=True)
-    def validate_last_received(cls, last_received, values):
+    def validate_last_received(cls, last_received):
+        def convert_to_iso_format(date_string):
+            try:
+                dt = datetime.datetime.fromisoformat(date_string)
+                dt_utc = dt.astimezone(pytz.UTC)
+                return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            except ValueError:
+                return None
+
         if not last_received:
-            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        return last_received
+            return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Try to convert the date to iso format
+        # see: https://github.com/keephq/keep/issues/1397
+        if convert_to_iso_format(last_received):
+            return convert_to_iso_format(last_received)
+
+        raise ValueError(f"Invalid date format: {last_received}")
 
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):
