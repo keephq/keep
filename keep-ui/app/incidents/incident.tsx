@@ -5,15 +5,18 @@ import { useState } from "react";
 import { IncidentDto } from "./model";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
-import { useIncidents } from "utils/hooks/useIncidents";
+import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Incident() {
   const { data: incidents, isLoading } = useIncidents();
-  const [incidentToEdit, setIncidentToEdit] =
-    useState<IncidentDto | null>(null);
+  usePollIncidents();
+
+  const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
+    null
+  );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 

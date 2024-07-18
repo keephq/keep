@@ -1920,7 +1920,7 @@ def delete_incident_by_id(
             session.query(AlertToIncident)
             .where(
                 AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.id == incident.id,
+                AlertToIncident.incident_id == incident.id,
             )
             .delete()
         )
