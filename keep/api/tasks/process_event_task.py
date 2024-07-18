@@ -410,6 +410,13 @@ def process_event(
         if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
+            # SHAHAR: for aws cloudwatch, we get a subscription notification message that we should skip
+            #         todo: move it to be generic
+            if event is None and provider_type == "cloudwatch":
+                logger.info(
+                    "This is a subscription notification message from AWS - skipping processing"
+                )
+                return
 
         # In case when provider_type is not set
         if isinstance(event, dict):
