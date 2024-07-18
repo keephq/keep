@@ -94,7 +94,9 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
   return (
     <div className="container pt-10 mt-10">
       <h2 className="text-xl sm:text-2xl font-semibold mb-6">Discover existing workflow templates</h2>
-      <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
+      {/* TODO: Implement the commented out code block */}
+      {/* This is a placeholder comment until the commented out code block is implemented */}
+      {/* <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
         <div className="flex flex-col sm:flex-row flex-wrap gap-2" >
           <input
             type="text"
@@ -110,7 +112,7 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
           {name: "CI/CD"},
           {name: "Other"},
           ]}/>
-      </div>
+      </div> */}
       {mockError && <p className="text-center text-red-100 m-auto">Error: {mockError.message || "Something went wrong!"}</p>}
       {!mockLoading && !mockError && mockWorkflows.length === 0 && <p className="text-center m-auto">No workflows found</p>}
 

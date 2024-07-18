@@ -11,15 +11,15 @@ import Image from "next/image";
 
 const links = [
   {
-    href: '/learn-basics',
+    href: 'https://docs.keephq.dev/platform/workflows',
     label: 'Learn more about Workflows',
   },
   {
-    href: '/create-notification',
+    href: 'https://docs.keephq.dev/workflows/overview',
     label: 'How to create a basic notification flow',
   },
   {
-    href: '/get-support',
+    href: 'https://slack.keephq.dev',
     label: 'Get support on your Workflow',
   },
 ];
@@ -77,22 +77,6 @@ const WorkflowsEmptyState = () => {
 
   return (
     <div className="mt-4">
-      {/* <Callout
-        title="No Workflows"
-        icon={CircleStackIcon}
-        color="yellow"
-        className="mt-5"
-      >
-        You can start by uploading a workflow file using the{" "}
-        <Italic onClick={loadAlert} className="underline cursor-pointer">
-          Load a Workflow
-        </Italic>{" "}
-        button above or by using the{" "}
-        <Italic className="underline">
-          <Link href="/workflows/builder">Workflow Builder</Link>
-        </Italic>{" "}
-        to create a new workflow.
-      </Callout> */}
       <DetailsSection />
     </div>
   );
