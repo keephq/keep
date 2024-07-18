@@ -328,8 +328,10 @@ class IncidentDto(IncidentDtoIn):
     number_of_alerts: int
     alert_sources: list[str]
     severity: IncidentSeverity
-    assignee: str
+    assignee: str | None
     services: list[str]
+
+    is_predicted: bool
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -360,6 +362,7 @@ class IncidentDto(IncidentDtoIn):
             id=db_incident.id,
             name=db_incident.name,
             description=db_incident.description,
+            is_predicted=db_incident.is_predicted,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
             end_time=db_incident.end_time,

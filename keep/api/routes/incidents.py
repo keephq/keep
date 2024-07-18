@@ -18,7 +18,7 @@ from keep.api.core.db import (
     get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id,
+    update_incident_from_dto_by_id, confirm_predicted_incident_by_id, create_incident_from_dict,
 )
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -32,7 +32,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled:
+if ee_enabled or 1:
     path_with_ee = (
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
@@ -107,6 +107,7 @@ def create_incident_endpoint(
     description="Get last incidents",
 )
 def get_all_incidents(
+    confirmed: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
 ) -> list[IncidentDto]:
     tenant_id = authenticated_entity.tenant_id
@@ -116,7 +117,7 @@ def get_all_incidents(
             "tenant_id": tenant_id,
         },
     )
-    incidents = get_last_incidents(tenant_id=tenant_id)
+    incidents = get_last_incidents(tenant_id=tenant_id, is_confirmed=confirmed)
 
     incidents_dto = []
     for incident in incidents:
@@ -335,14 +336,42 @@ def mine(
         return {"incidents": []}
 
     for incident in incidents:
-        incident_id = create_incident_from_dto(
+        incident_id = create_incident_from_dict(
             tenant_id=tenant_id,
-            incident_dto=IncidentDtoIn(
-                name="Mined using algorithm", description="Candidate", assignee="none"
-            ),
+            incident_data={
+                "name": "Mined using algorithm",
+                "description": "Candidate",
+                "is_predicted": True
+            }
         ).id
 
         for alert in incident["alerts"]:
             assign_alert_to_incident(alert.id, incident_id, tenant_id)
 
     return {"incidents": incidents}
+
+
+@router.post(
+    "/{incident_id}/confirm",
+    description="Confirm predicted incident by id",
+)
+def update_incident(
+    incident_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+) -> IncidentDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    incident = confirm_predicted_incident_by_id(tenant_id, incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident candidate not found")
+
+    new_incident_dto = IncidentDto.from_db_incident(incident)
+
+    return new_incident_dto

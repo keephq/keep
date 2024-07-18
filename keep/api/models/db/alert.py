@@ -115,6 +115,9 @@ class Incident(SQLModel, table=True):
         back_populates="incidents", link_model=AlertToIncident
     )
 
+    is_predicted: bool = Field(default=False)
+    is_confirmed: bool = Field(default=False)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if "alerts" not in kwargs:

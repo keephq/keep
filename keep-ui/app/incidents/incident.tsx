@@ -9,14 +9,15 @@ import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import PredictedIncidentsTable from "./predicted-incidents-table";
 
 export default function Incident() {
   const { data: incidents, isLoading } = useIncidents();
+  const { data: predictedIncidents, isLoading: isPredictedLoading } = useIncidents(false);
   usePollIncidents();
 
-  const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
-    null
-  );
+  const [incidentToEdit, setIncidentToEdit] =
+    useState<IncidentDto | null>(null);
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -37,6 +38,18 @@ export default function Incident() {
   return (
     <div className="flex h-full w-full">
       <div className="flex-grow overflow-auto p-2.5">
+        {!isPredictedLoading && predictedIncidents && predictedIncidents.length > 0 ?
+          <Card className="mt-10 mb-10 flex-grow">
+            <Title>Incident Predictions</Title>
+            <Subtitle>Possible problems predicted by Keep AI <Badge color="orange">Beta</Badge></Subtitle>
+            <PredictedIncidentsTable
+              incidents={predictedIncidents}
+              editCallback={handleStartEdit}
+            />
+          </Card>
+        : null
+        }
+
         {isLoading ? (
           <Loading />
         ) : incidents && incidents.length > 0 ? (

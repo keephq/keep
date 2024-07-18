@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.sql import expression
 from sqlmodel import Session, col, or_, select
 
 from keep.api.core.db_utils import create_db_engine
@@ -1807,7 +1808,10 @@ def get_alert_audit(
 
 
 def get_last_incidents(
-    tenant_id: str, limit: int = 1000, timeframe: int = None
+    tenant_id: str,
+    limit: int = 1000,
+    timeframe: int = None,
+    is_confirmed: bool = False,
 ) -> list[Incident]:
     """
     Get the last incidents for each fingerprint along with the first time the.
@@ -1816,6 +1820,7 @@ def get_last_incidents(
         tenant_id (str): The tenant_id to filter the incidents by.
         limit (int): Amount of objects to return
         timeframe (int|null): Return incidents only for the last <N> days
+        is_predicted (bool): Return incidents or incident candidates
 
     Returns:
         List[Incident]: A list of Incident objects.
@@ -1826,6 +1831,7 @@ def get_last_incidents(
                 Incident,
             )
             .filter(Incident.tenant_id == tenant_id)
+            .filter(Incident.is_confirmed == is_confirmed)
             .options(joinedload(Incident.alerts))
         )
 
@@ -1858,8 +1864,19 @@ def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
 def create_incident_from_dto(
     tenant_id: str, incident_dto: IncidentDtoIn
 ) -> Optional[Incident]:
+    return create_incident_from_dict(tenant_id, incident_dto.dict())
+
+
+def create_incident_from_dict(
+    tenant_id: str, incident_data: dict
+) -> Optional[Incident]:
+    is_predicted = incident_data.get("is_predicted", False)
     with Session(engine) as session:
-        new_incident = Incident(**incident_dto.dict(), tenant_id=tenant_id)
+        new_incident = Incident(
+            **incident_data,
+            tenant_id=tenant_id,
+            is_confirmed=not is_predicted
+        )
         session.add(new_incident)
         session.commit()
         session.refresh(new_incident)
@@ -1886,13 +1903,11 @@ def update_incident_from_dto_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-        ).update(
-            {
-                "name": updated_incident_dto.name,
-                "description": updated_incident_dto.description,
-                "assignee": updated_incident_dto.assignee,
-            }
-        )
+        ).update({
+            "name": updated_incident_dto.name,
+            "description": updated_incident_dto.description,
+            "assignee": updated_incident_dto.assignee,
+        })
 
         session.commit()
         session.refresh(incident)
@@ -1968,6 +1983,7 @@ def add_alerts_to_incident_by_incident_id(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
+                Incident.is_confirmed == expression.false(),
             )
         ).first()
 
@@ -2049,3 +2065,35 @@ def get_first_alert_datetime(
         )
         if first_alert:
             return first_alert.timestamp
+
+
+def confirm_predicted_incident_by_id(
+    tenant_id: str,
+    incident_id: UUID | str,
+):
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+                Incident.is_confirmed == expression.false()
+            ).options(
+                joinedload(Incident.alerts)
+            )
+        ).first()
+
+        if not incident:
+            return None
+
+        session.query(Incident).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+            Incident.is_confirmed == expression.false()
+        ).update({
+            "is_confirmed": True,
+        })
+
+        session.commit()
+        session.refresh(incident)
+
+        return incident

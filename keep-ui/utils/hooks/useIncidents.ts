@@ -8,6 +8,7 @@ import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 
 export const useIncidents = (
+  confirmed: boolean = true,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -16,7 +17,7 @@ export const useIncidents = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto[]>(
-    () => (session ? `${apiUrl}/incidents` : null),
+    () => (session ? `${apiUrl}/incidents?confirmed=${confirmed}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );
