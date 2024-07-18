@@ -439,7 +439,6 @@ def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
         ).distinct()
 
         result = session.execute(workflows_with_last_execution_query).all()
-     
     return result
 
 

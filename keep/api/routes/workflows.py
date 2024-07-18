@@ -2,7 +2,6 @@ import datetime
 import os
 import logging
 from typing import Any, Dict, List, Optional
-from pathlib import Path
 
 import validators
 import yaml
@@ -73,7 +72,7 @@ def get_workflows(
         else:
             installed_providers_by_type[installed_provider.type][
                 installed_provider.name
-            ] = installed_provider    
+            ] = installed_provider
     # get all workflows
     workflows = workflowstore.get_all_workflows_with_last_execution(tenant_id=tenant_id, is_v2=is_v2)
 
