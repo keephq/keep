@@ -90,11 +90,14 @@ def test_get_workflow_results():
 
 def test_save_workflow_results():
 
-    mock_workflow = Mock(spec=Workflow)
-    mock_workflow.workflow_id = "workflow1"
+    workflowstore = WorkflowStore()
+
+    workflow = workflowstore.create_workflow(
+            tenant_id="tenant_id", created_by="created_by", workflow=workflow
+        )
 
     workflow_manager = WorkflowManager()
-    assert workflow_manager._run_workflow(mock_workflow, mock_workflow.workflow_id)
+    assert workflow_manager._run_workflow(workflow, workflow.id)
 
 def test_handle_workflow_test():
     mock_workflow = Mock(spec=Workflow)
