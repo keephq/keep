@@ -54,11 +54,11 @@ class IncidentioProvider(BaseProvider):
     ]
 
     SEVERITIES_MAP = {
-        "warning": AlertSeverity.WARNING,
-        "high": AlertSeverity.HIGH,
-        "info": AlertSeverity.INFO,
-        "critical": AlertSeverity.CRITICAL,
-        "low": AlertSeverity.LOW
+        "Warning": AlertSeverity.WARNING,
+        "Major": AlertSeverity.HIGH,
+        "Info": AlertSeverity.INFO,
+        "Critical": AlertSeverity.CRITICAL,
+        "Minor": AlertSeverity.LOW
     }
 
     STATUS_MAP = {
@@ -125,6 +125,7 @@ class IncidentioProvider(BaseProvider):
     def validate_scopes(self) -> dict[str, bool | str]:
         self.logger.info("Validating IncidentIO scopes...")
         try:
+            print(self.__get_url(paths=["incidents"]))
             response = requests.get(
                 url=self.__get_url(paths=["incidents"]),
                 timeout=10,
@@ -176,7 +177,7 @@ class IncidentioProvider(BaseProvider):
                 if next_page:
                     params['after'] = next_page
 
-                response = requests.get(self.__get_url(paths=[]), headers=self.__get_headers(), params=params,
+                response = requests.get(self.__get_url(paths=["incidents"]), headers=self.__get_headers(), params=params,
                                         timeout=15)
                 response.raise_for_status()
             except requests.RequestException as e:
@@ -206,13 +207,13 @@ class IncidentioProvider(BaseProvider):
             fingerprint=incident['id'],
             name=incident['name'],
             status=IncidentioProvider.STATUS_MAP[incident['incident_status']["category"]],
-            severity=IncidentioProvider.SEVERITIES_MAP[
-                incident.get("severity", {}).get("name", "minor")],
+            severity=IncidentioProvider.SEVERITIES_MAP.get(
+                incident.get("severity", {}).get("name", "minor"), AlertSeverity.WARNING),
             lastReceived=incident.get('created_at'),
             description=incident.get('summary', ""),
             apiKeyRef=incident["creator"]["api_key"]["id"],
             assignee=", ".join(
-                assignment["assignee"]["name"] for assignment in
+                assignment["role"]["name"] for assignment in
                 incident["incident_role_assignments"]),
             url=incident.get("permalink", "https://app.incident.io/")
         )
@@ -242,5 +243,5 @@ if __name__ == "__main__":
         provider_id="incidentio_provider",
         config=config,
     )
-
-    provider._get_alerts()
+    print(provider.validate_scopes())
+    print(provider._get_alerts())
