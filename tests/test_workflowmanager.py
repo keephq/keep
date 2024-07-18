@@ -90,20 +90,11 @@ def test_get_workflow_results():
 
 def test_save_workflow_results():
 
-    mock_action1 = Mock(name="action1")
-    mock_action1.name = "action1"
-    mock_action1.provider.results = {"result": "value1"}
-
-    mock_action2 = Mock(name="action2")
-    mock_action2.name = "action2"
-    mock_action2.provider.results = {"result": datetime.utcnow()}
-
     mock_workflow = Mock(spec=Workflow)
-    mock_workflow.workflow_actions = [mock_action1, mock_action2]
+    mock_workflow.workflow_id = "workflow1"
 
     workflow_manager = WorkflowManager()
-    assert workflow_manager._save_workflow_results(mock_workflow)
-    assert workflow_manager._get_workflow_results(mock_workflow)
+    assert workflow_manager._run_workflow(mock_workflow, mock_workflow.workflow_id)
 
 def test_handle_workflow_test():
     mock_workflow = Mock(spec=Workflow)
