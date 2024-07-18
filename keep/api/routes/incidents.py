@@ -1,25 +1,31 @@
-import sys, os
-import pathlib
 import logging
+import os
+import pathlib
+import sys
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from pusher import Pusher
 from pydantic.types import UUID
 
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    assign_alert_to_incident,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_last_alerts,
     get_last_incidents,
-    assign_alert_to_incident,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
 )
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentSeverity
+from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
+    get_pusher_client,
+)
+from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
 router = APIRouter()
@@ -27,9 +33,43 @@ logger = logging.getLogger(__name__)
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
 if ee_enabled:
-    path_with_ee = str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
+    path_with_ee = (
+        str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
+    )
     sys.path.insert(0, path_with_ee)
-    from incident_utils import mine_incidents # noqa
+    from incident_utils import mine_incidents  # noqa
+
+
+def __update_client_on_incident_change(
+    pusher_client: Pusher | None, tenant_id: str, incident_id: str | None = None
+):
+    """
+    Update the client on incident change, making the client poll changes.
+
+    Args:
+        pusher_client (Pusher | None): Pusher client if pusher is enabled.
+        tenant_id (str): Tenant id.
+        incident_id (str | None, optional): If this is relevant to a specific incident id. Defaults to None.
+            E.g., when someone correlates new alerts to an incident, we want to notify the client that the incident has changed.
+    """
+    if pusher_client is not None:
+        logger.info(
+            "Notifying client on incident change",
+            extra={"tenant_id": tenant_id, "incident_id": incident_id},
+        )
+        pusher_client.trigger(
+            f"private-{tenant_id}",
+            "incident-change",
+            {"incident_id": incident_id},
+        )
+        logger.info(
+            "Client notified on incident change",
+            extra={"tenant_id": tenant_id, "incident_id": incident_id},
+        )
+    else:
+        logger.debug(
+            "Pusher client not available, skipping incident change notification"
+        )
 
 
 @router.post(
@@ -41,6 +81,7 @@ if ee_enabled:
 def create_incident_endpoint(
     incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -57,7 +98,7 @@ def create_incident_endpoint(
             "tenant_id": tenant_id,
         },
     )
-
+    __update_client_on_incident_change(pusher_client, tenant_id)
     return new_incident_dto
 
 
@@ -79,9 +120,7 @@ def get_all_incidents(
 
     incidents_dto = []
     for incident in incidents:
-        incidents_dto.append(
-            IncidentDto.from_db_incident(incident)
-        )
+        incidents_dto.append(IncidentDto.from_db_incident(incident))
 
     logger.info(
         "Fetched incidents from DB",
@@ -154,6 +193,7 @@ def update_incident(
 def delete_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -166,7 +206,7 @@ def delete_incident(
     deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Incident not found")
-
+    __update_client_on_incident_change(pusher_client, tenant_id)
     return Response(status_code=202)
 
 
@@ -265,6 +305,7 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
+
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
@@ -275,7 +316,7 @@ def mine(
     incident_sliding_window_size: int = 6 * 24 * 60 * 60,
     statistic_sliding_window_size: int = 60 * 60,
     jaccard_threshold: float = 0.0,
-    fingerprint_threshold: int = 1
+    fingerprint_threshold: int = 1,
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts)
@@ -283,17 +324,25 @@ def mine(
     if len(alerts) == 0:
         return {"incidents": []}
 
-    incidents = mine_incidents(alerts, incident_sliding_window_size,
-                               statistic_sliding_window_size, jaccard_threshold, fingerprint_threshold)
+    incidents = mine_incidents(
+        alerts,
+        incident_sliding_window_size,
+        statistic_sliding_window_size,
+        jaccard_threshold,
+        fingerprint_threshold,
+    )
     if len(incidents) == 0:
         return {"incidents": []}
-    
-    for incident in incidents:
-        incident_id = create_incident_from_dto(tenant_id=tenant_id, incident_dto=IncidentDtoIn(
-            name="Mined using algorithm", description="Candidate", assignee="none"
-        )).id
 
-        for alert in incident['alerts']:
+    for incident in incidents:
+        incident_id = create_incident_from_dto(
+            tenant_id=tenant_id,
+            incident_dto=IncidentDtoIn(
+                name="Mined using algorithm", description="Candidate", assignee="none"
+            ),
+        ).id
+
+        for alert in incident["alerts"]:
             assign_alert_to_incident(alert.id, incident_id, tenant_id)
 
     return {"incidents": incidents}

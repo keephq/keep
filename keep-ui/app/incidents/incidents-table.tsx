@@ -6,7 +6,7 @@ import {
   TableHead,
   TableHeaderCell,
   TableRow,
-  Badge
+  Badge,
 } from "@tremor/react";
 import {
   DisplayColumnDef,
@@ -75,7 +75,7 @@ export default function IncidentsTable({
       id: "alert_sources",
       header: "Alert Sources",
       cell: (context) =>
-        (context.row.original.alert_sources.map((alert_sources, index) => (
+        context.row.original.alert_sources.map((alert_sources, index) => (
           <Image
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
             key={alert_sources}
@@ -85,14 +85,17 @@ export default function IncidentsTable({
             title={alert_sources}
             src={`/icons/${alert_sources}-icon.png`}
           />
-        ))
-    )}),
+        )),
+    }),
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: (context) => context.row.original.services.map((service) =>
-        <Badge className="mr-1">{service}</Badge>
-      ),
+      cell: (context) =>
+        context.row.original.services.map((service) => (
+          <Badge className="mr-1" key={service}>
+            {service}
+          </Badge>
+        )),
     }),
     columnHelper.display({
       id: "assignee",
