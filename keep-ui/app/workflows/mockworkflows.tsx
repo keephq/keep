@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MockWorkflow, Workflow } from './models';
+import { MockAction, MockStep, MockWorkflow, Workflow } from './models';
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
@@ -12,31 +12,35 @@ import { TiArrowRight } from "react-icons/ti";
 
 
 export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
-  const isActionPresent = !!workflow?.actions?.length;
+  const isStepPresent = !!workflow?.steps?.length && workflow?.steps?.find((step: MockStep) => step?.provider?.type);
   return (
     <div className="flex gap-2 items-center mb-4">
-      {workflow?.actions?.map((step: any, index: number) => {
-        const provider = step?.provider;
-        return (
-          <div key={`action-${index}`} className="flex items-end gap-2">
-            {index > 0 && <TiArrowRight className="text-gray-500 size-8 align-self: center" />}
-            <Image
-              src={`/icons/${provider?.type}-icon.png`}
-              width={30}
-              height={30}
-              alt={provider?.type}
-              className="mt-6"
-            />
-          </div>
-        );
-      })}
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
         return (
-          <div key={`step-${index}`} className="flex items-end gap-2">
-            {(index > 0 || isActionPresent) && (
+          <>
+          {provider && <div key={`step-${index}`} className="flex items-end gap-2">
+            {(index > 0) && (
               <TiArrowRight className="text-gray-500 size-8 align-self: center" />
             )}
+             <Image
+              src={`/icons/${provider?.type}-icon.png`}
+              width={30}
+              height={30}
+              alt={provider?.type}
+              className="mt-6"
+            />
+          </div>}
+          </>
+        );
+      })}
+       {workflow?.actions?.map((action: any, index: number) => {
+        const provider = action?.provider;
+        return (
+          <>
+          {provider && 
+           <div key={`action-${index}`} className="flex items-end gap-2">
+            {(index > 0  || isStepPresent)&& <TiArrowRight className="text-gray-500 size-8 align-self: center" />}
             <Image
               src={`/icons/${provider?.type}-icon.png`}
               width={30}
@@ -44,7 +48,9 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow}) {
               alt={provider?.type}
               className="mt-6"
             />
-          </div>
+          </div>}
+          </>
+         
         );
       })}
     </div>
@@ -78,7 +84,7 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
 
     return id.split('-').join(' ');
   }
-
+  console.log("mockWorkflows", mockWorkflows);
 
   // if mockError is not null, handle the error case
   if (mockError) {
@@ -86,14 +92,14 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
   }
 
   return (
-    <section className="pt-10 mt-10">
+    <div className="container pt-10 mt-10">
       <h2 className="text-xl sm:text-2xl font-semibold mb-6">Discover existing workflow templates</h2>
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 flex-wrap gap-2">
-        <div className="flex gap-2 mb-4 sm:mb-0">
+      <div className="flex flex-col sm:flex-row justify-between mb-6 flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2" >
           <input
             type="text"
             placeholder="Search through workflow examples..."
-            className="px-4 py-2 border rounded w-full sm:w-auto"
+            className="px-4 py-2 border rounded"
           />
           <button className="px-4 py-2 bg-gray-200 border rounded">Integrations used</button>
         </div>
@@ -105,7 +111,6 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
           {name: "Other"},
           ]}/>
       </div>
-
       {mockError && <p className="text-center text-red-100 m-auto">Error: {mockError.message || "Something went wrong!"}</p>}
       {!mockLoading && !mockError && mockWorkflows.length === 0 && <p className="text-center m-auto">No workflows found</p>}
 
@@ -137,6 +142,6 @@ export default function MockWorkflowCardSection({ mockWorkflows, mockError, mock
           );
         })}
       </div>
-    </section>
+    </div>
   );
 };

@@ -62,7 +62,7 @@ export type MockCondition = {
   type: string;
 };
 
-export type WorkflowAction = {
+export type MockAction = {
   condition: MockCondition[];
   name: string;
   provider: MockProvider;
@@ -84,5 +84,5 @@ export type MockWorkflow = {
   owners: any[]; // Adjust the type if you have more specific information about the owners
   services: any[]; // Adjust the type if you have more specific information about the services
   steps: MockStep[];
-  actions: WorkflowAction[];
+  actions: MockAction[];
 };
