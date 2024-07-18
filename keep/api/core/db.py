@@ -1773,7 +1773,7 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
     if fetch_last_executions is not None and fetch_last_executions > 20:
         fetch_last_executions = 20
 
-    # List all tenant's workflows
+    # List first 1000 worflows and thier last executions in the last 7 days which are active)
     with Session(engine) as session:
         latest_executions_subquery = (
             select(
@@ -1811,6 +1811,7 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
             .order_by(Workflow.id, desc(latest_executions_subquery.c.started))
+            .limit(15000)
         ).distinct()
 
         result = session.execute(workflows_with_last_executions_query).all()

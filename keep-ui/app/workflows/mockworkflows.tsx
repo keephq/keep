@@ -14,7 +14,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
     !!workflow?.steps?.length &&
     workflow?.steps?.find((step: MockStep) => step?.provider?.type);
   return (
-    <div className="flex gap-2 items-center mb-4">
+    <div className="flex gap-2 mb-4 mt-6 items-center felx-wrap">
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
         return (
@@ -22,14 +22,13 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
             {provider && (
               <div key={`step-${index}`} className="flex items-end gap-2">
                 {index > 0 && (
-                  <TiArrowRight className="text-gray-500 size-8 align-self: center" />
+                  <TiArrowRight className="text-gray-500 size-8" />
                 )}
                 <Image
                   src={`/icons/${provider?.type}-icon.png`}
                   width={30}
                   height={30}
                   alt={provider?.type}
-                  className="mt-6"
                 />
               </div>
             )}
@@ -43,14 +42,13 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
             {provider && (
               <div key={`action-${index}`} className="flex items-end gap-2">
                 {(index > 0 || isStepPresent) && (
-                  <TiArrowRight className="text-gray-500 size-8 align-self: center" />
+                  <TiArrowRight className="text-gray-500 size-8" />
                 )}
                 <Image
                   src={`/icons/${provider?.type}-icon.png`}
                   width={30}
                   height={30}
                   alt={provider?.type}
-                  className="mt-6"
                 />
               </div>
             )}

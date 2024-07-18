@@ -24,7 +24,7 @@ Chart.register(
   Legend
 );
 
-const show_real_data = false;
+const show_real_data = true;
 
 const demoLabels = [
   "Jan",
@@ -109,7 +109,7 @@ const _getColor = (status: string, opacity: number) => {
   if (status === "success") {
     return `rgba(75, 192, 192, ${opacity})`;
   }
-  if (["failed", "faliure", "fail"].includes(status)) {
+  if (["failed", "faliure", "fail", "error"].includes(status)) {
     return `rgba(255, 99, 132, ${opacity})`;
   }
 
@@ -137,7 +137,7 @@ const getColors = (
 };
 
 function getRandomStatus() {
-  const statuses = ["success", "failed", "running"];
+  const statuses = ["success", "error", "in_progress", "providers_not_configured"];
   return statuses[Math.floor(Math.random() * statuses.length)];
 }
 
@@ -178,12 +178,13 @@ const chartOptions = {
 };
 
 export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
+  console.log("realworkflow===>", workflow)
   const lastExecutions = useMemo(() => {
     const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
     return reversedExecutions.reverse();
   }, [workflow?.last_executions]);
 
-  const hasNoData = !lastExecutions || lastExecutions.length === 0;
+  const hasNoData = (!lastExecutions) || lastExecutions.length === 0;
   let status = workflow?.last_execution_status?.toLowerCase() || "";
   status = hasNoData ? getRandomStatus() : status;
 
@@ -207,7 +208,7 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
     ],
   };
   function getIcon() {
-    if (!hasNoData && show_real_data) {
+    if (show_real_data && hasNoData ) {
       return null;
     }
 
@@ -227,28 +228,34 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
       case "failed":
       case "fail":
       case "failure":
+      case "error":  
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
-      default:
+      case "in_progress":
+        icon = <Image
+        className="animate-bounce size-6 cover"
+        src="/keep.svg"
+        alt="loading"
+        width={40}
+        height={40}
+      />
         break;
     }
     return icon;
   }
 
   return (
-    <div className="container">
-      <div className="flex items-center">{getIcon()}</div>
-      <div>
+    <div className="container h-24">
+        <div>{getIcon()}</div>
         {hasNoData && show_real_data ? (
-          <div className="flex justify-center items-center text-gray-400">
-            No data available
+          <div className="flex justify-center h-full items-center text-gray-400">
+            No data available 1
           </div>
         ) : (
           <div className="overflow-hidden h-24">
             <Bar data={chartData} options={chartOptions} />
           </div>
         )}
-      </div>
     </div>
   );
 }

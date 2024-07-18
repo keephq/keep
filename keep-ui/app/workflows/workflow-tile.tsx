@@ -398,24 +398,27 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             workflow,
           })}
         </div>
-        <div className="m-2">
+        <div className="m-2 space-y-5">
           <WorkflowGraph workflow={workflow} />
           <div className="flex flex-col gap-2">
             <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
               {workflow?.name || "Unknown"}
             </h2>
-            <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-2">
+            <div className="flex flex-col sm:flex-row md:items-center justify-between w-full gap-2">
               <div className="flex flex-wrap justify-start items-center gap-1.5">
-                {!!workflow?.interval && (
-                  <button className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
-                    Interval
-                  </button>
-                )}
-                {workflow.triggers.length && (
-                  <button className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
-                    Trigger
-                  </button>
-                )}
+                <button
+                  className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
+                  disabled={!workflow?.interval}
+                >
+                  Interval
+                </button>
+
+                <button
+                  className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
+                  disabled={!workflow?.triggers || workflow?.triggers?.length === 0}
+                >
+                  Trigger
+                </button>
               </div>
               {workflow && workflow.last_execution_started ? (
                 <TimeAgo
