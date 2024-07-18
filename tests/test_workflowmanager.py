@@ -93,7 +93,7 @@ def test_save_workflow_results():
     workflowstore = WorkflowStore()
 
     workflow = workflowstore.create_workflow(
-            tenant_id="tenant_id", created_by="created_by", workflow=workflow
+            tenant_id="tenant_id", created_by="created_by", workflow={"id": "workflow1"}
         )
 
     workflow_manager = WorkflowManager()
