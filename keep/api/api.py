@@ -61,23 +61,24 @@ except Exception:
 POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 
 
+def _extract_identity(request: Request, attribute="email") -> str:
+    try:
+        token = request.headers.get("Authorization").split(" ")[1]
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        return decoded_token.get(attribute)
+    except Exception:
+        return "anonymous"
+
+
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.posthog_client = get_posthog_client()
         self.tracer = trace.get_tracer(__name__)
 
-    def _extract_identity(self, request: Request) -> str:
-        try:
-            token = request.headers.get("Authorization").split(" ")[1]
-            decoded_token = jwt.decode(token, options={"verify_signature": False})
-            return decoded_token.get("email")
-        except Exception:
-            return "anonymous"
-
     async def capture_request(self, request: Request) -> None:
         if POSTHOG_API_ENABLED:
-            identity = self._extract_identity(request)
+            identity = _extract_identity(request)
             with self.tracer.start_as_current_span("capture_request"):
                 self.posthog_client.capture(
                     identity,
@@ -91,7 +92,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
     async def capture_response(self, request: Request, response: Response) -> None:
         if POSTHOG_API_ENABLED:
-            identity = self._extract_identity(request)
+            identity = _extract_identity(request)
             with self.tracer.start_as_current_span("capture_response"):
                 self.posthog_client.capture(
                     identity,
@@ -249,7 +250,7 @@ def get_app(
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
-            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}"
+            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
         )
         return JSONResponse(
             status_code=500,
@@ -262,7 +263,11 @@ def get_app(
 
     @app.middleware("http")
     async def log_middeware(request: Request, call_next):
-        logger.info(f"Request started: {request.method} {request.url.path}")
+        identity = _extract_identity(request, attribute="keep_tenant_id")
+        logger.info(
+            f"Request started: {request.method} {request.url.path}",
+            extra={"tenant_id": identity},
+        )
         response = await call_next(request)
         logger.info(
             f"Request finished: {request.method} {request.url.path} {response.status_code}"
