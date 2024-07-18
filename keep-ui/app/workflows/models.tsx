@@ -3,7 +3,7 @@ export type Provider = {
   type: string; // This corresponds to the name of the icon, e.g., "slack", "github", etc.
   name: string;
   installed: boolean;
-}
+};
 
 export type Filter = {
   key: string;
@@ -15,7 +15,6 @@ export type Trigger = {
   filters?: Filter[];
   value?: string;
 };
-
 
 export type WorkflowExecution = {
   id: string;
@@ -40,8 +39,11 @@ export type Workflow = {
   workflow_raw: string;
   workflow_raw_id: string;
   last_execution_started?: string;
-  last_executions?: Pick<WorkflowExecution, 'execution_time' | 'status' | 'started'>[]
-}
+  last_executions?: Pick<
+    WorkflowExecution,
+    "execution_time" | "status" | "started"
+  >[];
+};
 
 export type MockProvider = {
   type: string;

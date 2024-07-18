@@ -16,6 +16,7 @@ import Loading from "../../loading";
 export default function PageClient({
   workflow,
   workflowId,
+  isPreview,
 }: {
   workflow?: string;
   workflowId?: string;
@@ -161,6 +162,7 @@ export default function PageClient({
         triggerSave={triggerSave}
         workflow={workflow}
         workflowId={workflowId}
+        isPreview={isPreview}
       />
     </main>
   );

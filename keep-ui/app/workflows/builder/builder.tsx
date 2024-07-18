@@ -51,6 +51,7 @@ interface Props {
   workflowId?: string;
   accessToken?: string;
   installedProviders?: Provider[] | undefined | null;
+  isPreview?:boolean;
 }
 
 function Builder({
@@ -65,6 +66,7 @@ function Builder({
   workflowId,
   accessToken,
   installedProviders,
+  isPreview,
 }: Props) {
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)

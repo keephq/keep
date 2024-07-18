@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { Workflow, Filter } from './models';
+import { Workflow, Filter } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
@@ -30,7 +30,7 @@ import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { parseISO, set, differenceInSeconds } from "date-fns";
-import TimeAgo from 'react-timeago';
+import TimeAgo from "react-timeago";
 import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
 
@@ -140,8 +140,9 @@ function ProviderTile({
         width={30}
         height={30}
         alt={provider.type}
-        className={`${provider.installed ? "mt-6" : "mt-6 grayscale group-hover:grayscale-0"
-          }`}
+        className={`${
+          provider.installed ? "mt-6" : "mt-6 grayscale group-hover:grayscale-0"
+        }`}
       />
 
       <div className="h-8 w-[70px] flex justify-center">
@@ -378,7 +379,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     })
     .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
-  
+
   return (
     <div className="mt-2.5 flex flex-wrap gap-4 items-start">
       {isRunning && (
@@ -400,20 +401,28 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         <div className="m-2">
           <WorkflowGraph workflow={workflow} />
           <div className="flex flex-col gap-2">
-            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">{workflow?.name || 'Unknown'}</h2>
+            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
+              {workflow?.name || "Unknown"}
+            </h2>
             <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-2">
               <div className="flex flex-wrap justify-start items-center gap-1.5">
-                {!!workflow?.interval && <button className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
-                  Interval
-                </button>}
-               {workflow.triggers.length &&<button className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
-                  Trigger
-                </button>}
+                {!!workflow?.interval && (
+                  <button className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
+                    Interval
+                  </button>
+                )}
+                {workflow.triggers.length && (
+                  <button className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold">
+                    Trigger
+                  </button>
+                )}
               </div>
               {workflow && workflow.last_execution_started ? (
-                <TimeAgo date={workflow?.last_execution_started + 'Z'} className="text-sm text-gray-500" />
-              ) : null
-              }
+                <TimeAgo
+                  date={workflow?.last_execution_started + "Z"}
+                  className="text-sm text-gray-500"
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -429,6 +438,5 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
-
 
 export default WorkflowTile;

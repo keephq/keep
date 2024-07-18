@@ -36,13 +36,15 @@ export default function WorkflowsPage() {
     (url: string) => fetcher(url, session?.accessToken!)
   );
 
-  const { data: mockWorkflows, error:mockError, isLoading: mockLoading } = useSWR<MockWorkflow[]>(
+  const {
+    data: mockWorkflows,
+    error: mockError,
+    isLoading: mockLoading,
+  } = useSWR<MockWorkflow[]>(
     status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
 
-
-  console.log("data===>", data);
 
   if (isLoading || !data) return <Loading />;
 
@@ -69,7 +71,7 @@ export default function WorkflowsPage() {
           },
           body: formData,
         });
-  
+
         if (response.ok) {
           setFileError(null);
           if (fileInputRef.current) {
@@ -103,8 +105,8 @@ export default function WorkflowsPage() {
         reload = true;
       }
       await fileUpload(formData, reload);
-    };
-  }
+    }
+  };
 
   function handleStaticExampleSelect(example: string) {
     // todo: something less static
@@ -252,7 +254,7 @@ export default function WorkflowsPage() {
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
           <div>
-          {data.length === 0 ? (
+            {data.length === 0 ? (
               <WorkflowsEmptyState />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
