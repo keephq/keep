@@ -414,7 +414,7 @@ class OpenobserveProvider(BaseProvider):
         fingerprint_fields = ["name", "environment", *event.keys()]
         logger.info(
             "Calculating fingerprint fields",
-            extra={fingerprint_fields: fingerprint_fields},
+            extra={"fingerprint_fields": fingerprint_fields},
         )
         alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
             alert_dto, fingerprint_fields=fingerprint_fields
