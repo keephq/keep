@@ -17,7 +17,9 @@ COPY ./keep-ui/ /app
 
 # Install dependencies in /app
 RUN npm install
-
+# Instlal next globally and create a symlink
+RUN npm install -g next
+RUN ln -s /usr/local/lib/node_modules/next/dist/bin/next /usr/local/bin/next
 # Ensure port 3000 is accessible to our system
 EXPOSE 3000
 
