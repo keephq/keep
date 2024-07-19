@@ -23,7 +23,7 @@ const AlertAssociateIncidentModal = ({
   alerts,
 }: AlertAssociateIncidentModalProps) => {
 
-  const { data: incidents, isLoading, mutate } = useIncidents();
+  const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   // get the token
   const { data: session } = useSession();
@@ -65,7 +65,7 @@ const AlertAssociateIncidentModal = ({
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
             <Loading />
-          ) : incidents && incidents.length > 0 ? (
+          ) : incidents && incidents.items.length > 0 ? (
             <div className="h-full justify-center">
               <Select
                 className="my-2.5"
@@ -73,7 +73,7 @@ const AlertAssociateIncidentModal = ({
                 onValueChange={(value) => setSelectedIncident(value)}
               >
                 {
-                  incidents?.map((incident) => {
+                  incidents.items?.map((incident) => {
 
                     return (
                       <SelectItem

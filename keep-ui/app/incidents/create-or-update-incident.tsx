@@ -25,7 +25,7 @@ export default function CreateOrUpdateIncident({
   editCallback,
 }: Props) {
   const { data: session } = useSession();
-  const { mutate } = useIncidents();
+  const { mutate } = useIncidents(true, 20);
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentDescription, setIncidentDescription] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");

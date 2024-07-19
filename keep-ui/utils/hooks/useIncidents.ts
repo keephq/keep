@@ -1,5 +1,5 @@
 import { AlertDto } from "app/alerts/models";
-import { IncidentDto } from "app/incidents/model";
+import {IncidentDto, PaginatedIncidentsDto} from "app/incidents/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
@@ -9,15 +9,16 @@ import { useCallback, useEffect } from "react";
 
 export const useIncidents = (
   confirmed: boolean = true,
+  limit: number = 25,
+  offset: number = 0,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
-
-  return useSWR<IncidentDto[]>(
-    () => (session ? `${apiUrl}/incidents?confirmed=${confirmed}` : null),
+  return useSWR<PaginatedIncidentsDto>(
+    () => (session ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );
@@ -54,15 +55,14 @@ export const useIncident = (
   );
 };
 
-export const usePollIncidents = () => {
+export const usePollIncidents = (mutateIncidents: any) => {
   const { bind, unbind } = useWebsocket();
-  const { mutate } = useIncidents();
   const handleIncoming = useCallback(
     (data: any) => {
       console.log(data);
-      mutate();
+      mutateIncidents();
     },
-    [mutate]
+    [mutateIncidents]
   );
 
   useEffect(() => {

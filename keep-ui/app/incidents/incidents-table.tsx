@@ -20,28 +20,50 @@ import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
-import { IncidentDto } from "./model";
-import React, { useState } from "react";
-import { useIncidents } from "utils/hooks/useIncidents";
+import {IncidentDto, PaginatedIncidentsDto} from "./model";
+import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import IncidentPagination from "./incident-pagination";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
-  incidents: IncidentDto[];
+  incidents: PaginatedIncidentsDto;
+  mutate: () => void;
+  setPagination: Dispatch<SetStateAction<any>>;
   editCallback: (rule: IncidentDto) => void;
 }
 
 export default function IncidentsTable({
   incidents: incidents,
+  mutate,
+  setPagination,
   editCallback,
 }: Props) {
   const router = useRouter();
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [pagination, setTablePagination] = useState({
+    pageIndex: Math.ceil(incidents.offset / incidents.limit),
+    pageSize: incidents.limit,
+  });
 
-  const { mutate } = useIncidents();
+  useEffect(() => {
+    if (incidents.limit != pagination.pageSize) {
+      setPagination({
+        limit: pagination.pageSize,
+        offset: 0,
+      })
+    }
+    const currentOffset = pagination.pageSize * pagination.pageIndex;
+    if (incidents.offset != currentOffset) {
+      setPagination({
+        limit: pagination.pageSize,
+        offset: currentOffset,
+      })
+    }
+  }, [pagination])
 
   const columns = [
     columnHelper.display({
@@ -143,9 +165,12 @@ export default function IncidentsTable({
 
   const table = useReactTable({
     columns,
-    data: incidents,
-    state: { expanded },
+    data: incidents.items,
+    state: { expanded, pagination},
     getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    rowCount: incidents.count,
+    onPaginationChange: setTablePagination,
     onExpandedChange: setExpanded,
   });
 
@@ -169,48 +194,53 @@ export default function IncidentsTable({
   };
 
   return (
-    <Table className="mt-4 [&>table]:table-fixed [&>table]:w-full h-full">
-      <TableHead>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow
-            className="border-b border-tremor-border dark:border-dark-tremor-border"
-            key={headerGroup.id}
-          >
-            {headerGroup.headers.map((header) => {
-              return (
-                <TableHeaderCell
-                  className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
-                  key={header.id}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeaderCell>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHead>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <>
+    <div>
+      <Table className="mt-4 [&>table]:table-fixed [&>table]:w-full h-full">
+        <TableHead>
+          {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
-              key={row.id}
-              onClick={() => {
-                router.push(`/incidents/${row.original.id}`);
-              }}
+              className="border-b border-tremor-border dark:border-dark-tremor-border"
+              key={headerGroup.id}
             >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHeaderCell
+                    className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+                    key={header.id}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHeaderCell>
+                );
+              })}
             </TableRow>
-          </>
-        ))}
-      </TableBody>
-    </Table>
+          ))}
+        </TableHead>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <>
+              <TableRow
+                className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
+                key={row.id}
+                onClick={() => {
+                  router.push(`/incidents/${row.original.id}`);
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </>
+          ))}
+        </TableBody>
+      </Table>
+      <div className="mt-4 mb-8">
+        <IncidentPagination table={table}  isRefreshAllowed={true}/>
+      </div>
+    </div>
   );
 }

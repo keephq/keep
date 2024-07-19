@@ -11,3 +11,10 @@ export interface IncidentDto {
   end_time?: Date;
   creation_time: Date;
 }
+
+export interface PaginatedIncidentsDto {
+  limit: number;
+  offset: number;
+  count: number;
+  items: IncidentDto[];
+}

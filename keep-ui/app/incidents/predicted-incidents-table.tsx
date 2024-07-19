@@ -20,7 +20,7 @@ import {MdRemoveCircle, MdModeEdit, MdDone, MdBlock} from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
-import { IncidentDto } from "./model";
+import {IncidentDto, PaginatedIncidentsDto} from "./model";
 import React, { useState } from "react";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
@@ -29,19 +29,18 @@ import Image from "next/image";
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
-  incidents: IncidentDto[];
+  incidents: PaginatedIncidentsDto;
+  mutate: () => void;
   editCallback: (rule: IncidentDto) => void;
 }
 
 export default function PredictedIncidentsTable({
   incidents: incidents,
+  mutate,
   editCallback,
 }: Props) {
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
-
-  const { mutate: mutatePredictions } = useIncidents(false);
-  const { mutate: mutateIncidents } = useIncidents();
 
   const handleConfirmPredictedIncident = async (incidentId: string) => {
     const apiUrl = getApiURL();
@@ -56,8 +55,7 @@ export default function PredictedIncidentsTable({
       }
     );
     if (response.ok) {
-      await mutatePredictions();
-      await mutateIncidents();
+      await mutate();
       toast.success("Predicted incident confirmed successfully");
     } else {
       toast.error(
@@ -154,7 +152,7 @@ export default function PredictedIncidentsTable({
 
   const table = useReactTable({
     columns,
-    data: incidents,
+    data: incidents.items,
     state: { expanded },
     getCoreRowModel: getCoreRowModel(),
     onExpandedChange: setExpanded,
@@ -170,8 +168,7 @@ export default function PredictedIncidentsTable({
         },
       }).then((response) => {
         if (response.ok) {
-          mutateIncidents();
-          mutatePredictions();
+          mutate();
           toast.success("Incident deleted successfully");
         } else {
           toast.error("Failed to delete incident, contact us if this persists");
