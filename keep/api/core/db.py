@@ -1983,7 +1983,6 @@ def add_alerts_to_incident_by_incident_id(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false(),
             )
         ).first()
 
