@@ -1809,18 +1809,20 @@ def get_alert_audit(
 
 def get_last_incidents(
     tenant_id: str,
-    limit: int = 1000,
+    limit: int = 25,
+    offset: int = 0,
     timeframe: int = None,
     is_confirmed: bool = False,
-) -> list[Incident]:
+) -> (list[Incident], int):
     """
-    Get the last incidents for each fingerprint along with the first time the.
+    Get the last incidents and total amount of incidents.
 
     Args:
         tenant_id (str): The tenant_id to filter the incidents by.
         limit (int): Amount of objects to return
+        offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
-        is_predicted (bool): Return incidents or incident candidates
+        is_confirmed (bool): Return confirmed incidents or predictions
 
     Returns:
         List[Incident]: A list of Incident objects.
@@ -1841,12 +1843,14 @@ def get_last_incidents(
                 >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
 
+        total_count = query.count()
+
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(desc(Incident.start_time)).limit(limit)
+        query = query.order_by(desc(Incident.start_time)).limit(limit).offset(offset)
         # Execute the query
         incidents = query.all()
 
-    return incidents
+    return incidents, total_count
 
 
 def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:

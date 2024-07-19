@@ -27,6 +27,7 @@ from keep.api.core.dependencies import (
 )
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.pagination import IncidentsPaginatedResultsDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -107,9 +108,11 @@ def create_incident_endpoint(
     description="Get last incidents",
 )
 def get_all_incidents(
-    confirmed: bool = False,
+    confirmed: bool = True,
+    limit: int = 25,
+    offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-) -> list[IncidentDto]:
+) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching incidents from DB",
@@ -117,7 +120,12 @@ def get_all_incidents(
             "tenant_id": tenant_id,
         },
     )
-    incidents = get_last_incidents(tenant_id=tenant_id, is_confirmed=confirmed)
+    incidents, total_count = get_last_incidents(
+        tenant_id=tenant_id,
+        is_confirmed=confirmed,
+        limit=limit,
+        offset=offset,
+    )
 
     incidents_dto = []
     for incident in incidents:
@@ -130,7 +138,12 @@ def get_all_incidents(
         },
     )
 
-    return incidents_dto
+    return IncidentsPaginatedResultsDto(
+        limit=limit,
+        offset=offset,
+        count=total_count,
+        items=incidents_dto
+    )
 
 
 @router.get(
