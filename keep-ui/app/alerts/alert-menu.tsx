@@ -13,7 +13,6 @@ import {
 import { IoNotificationsOffOutline } from "react-icons/io5";
 
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
 import { AlertDto } from "./models";
@@ -21,6 +20,7 @@ import { useFloating } from "@floating-ui/react";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
+import { callAssignEndpoint } from "./alert-assignment";
 
 interface Props {
   alert: AlertDto;
@@ -45,7 +45,6 @@ export default function AlertMenu({
 }: Props) {
   const router = useRouter();
 
-  const apiUrl = getApiURL();
   const {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
@@ -54,7 +53,6 @@ export default function AlertMenu({
 
   const { usePresetAlerts } = useAlerts();
   const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
-
   const { data: session } = useSession();
 
   const { refs, x, y } = useFloating();
@@ -86,28 +84,6 @@ export default function AlertMenu({
 
   const onDismiss = async () => {
     setDismissModalAlert?.([alert]);
-  };
-
-  const callAssignEndpoint = async (unassign: boolean = false) => {
-    if (
-      confirm(
-        "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
-      )
-    ) {
-      const res = await fetch(
-        `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (res.ok) {
-        await mutate();
-      }
-    }
   };
 
   const isMethodEnabled = (method: ProviderMethod) => {
@@ -221,8 +197,10 @@ export default function AlertMenu({
         <Menu.Item>
           {({ active }) => (
             <button
-              onClick={() => {
-                callAssignEndpoint();
+              onClick={async () => {
+                await callAssignEndpoint(
+                  {unassign: false, alert, session, mutate}
+                );
                 handleCloseMenu();
               }}
               className={`${

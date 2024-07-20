@@ -219,12 +219,15 @@ def assign_alert(
     else:
         assignees_last_received[last_received] = user_email
 
+    action_description = f"Alert unassigned by {user_email}" if unassign \
+        else f"Alert assigned to {user_email}"
+
     enrichment_bl = EnrichmentsBl(tenant_id)
     enrichment_bl.enrich_alert(
         fingerprint=fingerprint,
         enrichments={"assignees": assignees_last_received},
-        action_type=AlertActionType.ACKNOWLEDGE,
-        action_description=f"Alert assigned to {user_email}",
+        action_type=AlertActionType.UNASSIGN if unassign else AlertActionType.ACKNOWLEDGE,
+        action_description=action_description,
         action_callee=user_email,
     )
 

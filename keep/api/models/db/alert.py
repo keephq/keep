@@ -185,6 +185,8 @@ class AlertActionType(enum.Enum):
     TIGGERED = "alert was triggered"
     # someone acknowledged the alert
     ACKNOWLEDGE = "alert acknowledged"
+    # someone acknowledged the alert
+    UNASSIGN = "alert unassigned"
     # the alert was resolved
     AUTOMATIC_RESOLVE = "alert automatically resolved"
     # the alert was resolved manually

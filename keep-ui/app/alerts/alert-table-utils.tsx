@@ -284,7 +284,8 @@ export const useAlertTableCols = (
       id: "assignee",
       header: "Assignee",
       minSize: 100,
-      cell: (context) => <AlertAssignee assignee={context.getValue()} />,
+      cell: (context) =>
+        <AlertAssignee assignee={context.getValue()} alert={context.row.original} presetName={presetName}/>,
     }),
     columnHelper.display({
       id: "extraPayload",
