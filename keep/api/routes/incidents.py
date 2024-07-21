@@ -2,6 +2,8 @@ import logging
 import os
 import pathlib
 import sys
+import asyncio
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -10,12 +12,10 @@ from pydantic.types import UUID
 
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
-    assign_alert_to_incident,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
-    get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id, confirm_predicted_incident_by_id, create_incident_from_dict,
@@ -32,13 +32,7 @@ from keep.api.utils.pagination import IncidentsPaginatedResultsDto
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled or 1:
-    path_with_ee = (
-        str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
-    )
-    sys.path.insert(0, path_with_ee)
-    from incident_utils import mine_incidents  # noqa
+from keep.api.utils.import_ee import mine_incidents_and_create_objects
 
 
 def __update_client_on_incident_change(
@@ -334,34 +328,14 @@ def mine(
     jaccard_threshold: float = 0.0,
     fingerprint_threshold: int = 1,
 ) -> dict:
-    tenant_id = authenticated_entity.tenant_id
-    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts)
-
-    if len(alerts) == 0:
-        return {"incidents": []}
-
-    incidents = mine_incidents(
-        alerts,
-        incident_sliding_window_size,
-        statistic_sliding_window_size,
-        jaccard_threshold,
-        fingerprint_threshold,
-    )
-    if len(incidents) == 0:
-        return {"incidents": []}
-
-    for incident in incidents:
-        incident_id = create_incident_from_dict(
-            tenant_id=tenant_id,
-            incident_data={
-                "name": "Mined using algorithm",
-                "description": "Candidate",
-                "is_predicted": True
-            }
-        ).id
-
-        for alert in incident["alerts"]:
-            assign_alert_to_incident(alert.id, incident_id, tenant_id)
+    incidents = asyncio.run(mine_incidents_and_create_objects(
+        tenant_id=authenticated_entity.tenant_id,
+        use_n_historical_alerts=use_n_historical_alerts,
+        incident_sliding_window_size=incident_sliding_window_size,
+        statistic_sliding_window_size=statistic_sliding_window_size,
+        jaccard_threshold=jaccard_threshold,
+        fingerprint_threshold=fingerprint_threshold,
+    ))
 
     return {"incidents": incidents}
 

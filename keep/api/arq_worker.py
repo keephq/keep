@@ -2,7 +2,7 @@
 from typing import Optional
 
 # third-party
-from arq import Worker, create_pool
+from arq import Worker, create_pool, cron
 from arq.connections import RedisSettings
 from arq.worker import create_worker
 from pydantic.utils import import_string
@@ -10,11 +10,13 @@ from starlette.datastructures import CommaSeparatedStrings
 
 # internals
 from keep.api.core.config import config
+from keep.api.utils.import_ee import mine_incidents_and_create_objects
+
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     "ARQ_BACKGROUND_FUNCTIONS",
     cast=CommaSeparatedStrings,
-    default=["keep.api.tasks.process_event_task.process_event"],
+    default=["keep.api.tasks.process_event_task.async_process_event"],
 )
 FUNCTIONS: list = (
     [
@@ -76,3 +78,6 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     functions: list = FUNCTIONS
+    cron_jobs = [
+        cron(mine_incidents_and_create_objects, minute=1)
+    ]

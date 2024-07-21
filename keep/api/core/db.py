@@ -1452,6 +1452,14 @@ def update_key_last_used(
         session.commit()
 
 
+def get_all_tenants(tenant_id):
+    with Session(engine) as session:
+        tenants = session.exec(
+            select(Tenant)
+        ).all()
+    return tenants
+
+
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
         providers = (

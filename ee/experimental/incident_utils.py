@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -5,6 +7,62 @@ import networkx as nx
 from typing import List
 
 from keep.api.models.db.alert import Alert
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    get_last_alerts,
+    create_incident_from_dict,
+    get_all_tenants,
+)
+
+logger = logging.getLogger(__name__)
+
+async def mine_incidents_and_create_objects(
+        tenant_id: str | None = None,
+        use_n_historical_alerts: int = 10000,
+        incident_sliding_window_size: int = 6 * 24 * 60 * 60,
+        statistic_sliding_window_size: int = 60 * 60,
+        jaccard_threshold: float = 0.0,
+        fingerprint_threshold: int = 1,
+    ):
+    if tenant_id is None:
+        logger.info("No tenant_id provided, mining for all tenante")
+        tenants = get_all_tenants()
+        tenant_ids = [tenant.id for tenant in tenants]
+    else:
+        tenant_ids = [tenant_id]
+
+    for tenant_id in tenant_ids:
+        alerts = get_last_alerts(tenant_id, use_n_historical_alerts)
+
+        if len(alerts) == 0:
+            return {"incidents": []}
+        
+        incidents = mine_incidents(
+            alert,
+            incident_sliding_window_size,
+            statistic_sliding_window_size,
+            jaccard_threshold,
+            fingerprint_threshold,
+        )
+        if len(incidents) == 0:
+            return {"incidents": []}
+
+        for incident in incidents:
+            incident_id = create_incident_from_dict(
+                tenant_id=tenant_id,
+                incident_data={
+                    "name": "Mined using algorithm",
+                    "description": "Candidate",
+                    "is_predicted": True
+                }
+            ).id    
+
+            for alert in incident["alerts"]:
+                assign_alert_to_incident(alert.id, incident_id, tenant_id)
+        
+        if len(tenant_ids) == 1:
+            return {"incidents": incidents}
+
 
 
 def mine_incidents(alerts: List[Alert], incident_sliding_window_size: int=6*24*60*60, statistic_sliding_window_size: int=60*60, 
