@@ -6,6 +6,9 @@ on:
   pull_request:
     paths:
       - 'keep/**'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
 # MySQL server and Elasticsearch for testing
 env:
   PYTHON_VERSION: 3.11
