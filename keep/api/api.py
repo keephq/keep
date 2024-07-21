@@ -202,7 +202,7 @@ def get_app(
             token = jwt.encode(
                 {
                     "email": user.username,
-                    "tenant_id": SINGLE_TENANT_UUID,
+                    "keep_tenant_id": SINGLE_TENANT_UUID,
                     "role": user.role,
                 },
                 jwt_secret,
@@ -268,6 +268,7 @@ def get_app(
             f"Request started: {request.method} {request.url.path}",
             extra={"tenant_id": identity},
         )
+        request.state.tenant_id = identity
         response = await call_next(request)
         logger.info(
             f"Request finished: {request.method} {request.url.path} {response.status_code}"
