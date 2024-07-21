@@ -89,6 +89,7 @@ export default function MockWorkflowCardSection({
   mockLoading: boolean | null;
 }) {
   const router = useRouter();
+  const [loadingId, setLoadingId] = useState<string|null>(null);
 
   const getNameFromId = (id: string) => {
     if (!id) {
@@ -104,8 +105,8 @@ export default function MockWorkflowCardSection({
   }
 
   return (
-    <div className="container pt-10 mt-10">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-6">
+    <div className="pt-10 mt-10 w-full">
+      <h2 className="pl-4 text-xl sm:text-2xl font-semibold mb-6">
         Discover existing workflow templates
       </h2>
       {/* TODO: Implement the commented out code block */}
@@ -136,8 +137,8 @@ export default function MockWorkflowCardSection({
         <p className="text-center m-auto">No workflows found</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockError && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-4 p-4">
+      {mockError && (
           <p className="text-center text-red-100">
             Error: {mockError.message || "Something went wrong!"}
           </p>
@@ -148,7 +149,7 @@ export default function MockWorkflowCardSection({
           mockWorkflows.map((template: any, index: number) => {
             const workflow = template.workflow;
             return (
-              <Card key={index} className="p-4 flex flex-col justify-between">
+              <Card key={index} className="p-4 flex flex-col justify-between w-full">
                 <div>
                   <WorkflowSteps workflow={workflow} />
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
@@ -160,15 +161,18 @@ export default function MockWorkflowCardSection({
                 </div>
                 <div>
                   <Button
-                    className="inline-block mt-8 px-4 py-2 border-none bg-gray-200 hover:bg-gray-300 bold-medium transition text-black rounded"
+                    className="flex justify-center mt-8 px-4 py-2 border-none bg-gray-200 hover:bg-gray-300 bold-medium transition text-black rounded"
                     onClick={(e) => {
                       e.preventDefault();
+                      setLoadingId(workflow.id);
                       localStorage.setItem(
                         "preview_workflow",
                         JSON.stringify(template)
                       );
                       router.push(`/workflows/preview/${workflow.id}`);
                     }}
+                    disabled={!!(loadingId && loadingId !== workflow.id)}
+                    loading={loadingId === workflow.id}
                   >
                     Preview
                   </Button>

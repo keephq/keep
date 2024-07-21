@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle } from "@tremor/react";
+import { Callout, Subtitle, Switch } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
@@ -15,7 +15,7 @@ import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
-import WorkflowTile from "./workflow-tile";
+import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ export default function WorkflowsPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
@@ -44,7 +45,6 @@ export default function WorkflowsPage() {
     status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
-
 
   if (isLoading || !data) return <Loading />;
 
@@ -164,6 +164,10 @@ export default function WorkflowsPage() {
     setIsModalOpen(false);
   }
 
+  const handleSwitchChange = (value: boolean) => {
+    setIsSwitchOn(value);
+  };
+
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
       <div className="flex justify-between items-center">
@@ -251,15 +255,31 @@ export default function WorkflowsPage() {
           </div>
         </Modal>
       </div>
-      <Card className="mt-10 p-4 md:p-10 mx-auto">
+      <Card className="mt-10 p-4 md:p-10 mx-auto w-full">
         <div>
+          {/*switch to toggle between new UI and old UI */}
+          <div className="pl-4 flex items-center space-x-3">
+            <Switch
+              id="switch"
+              name="switch"
+              checked={isSwitchOn}
+              onChange={handleSwitchChange}
+            />
+            <label
+              htmlFor="switch"
+              className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+            >
+              Switch to New UI
+            </label>
+          </div>
           <div>
             {data.length === 0 ? (
               <WorkflowsEmptyState />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
-                  <WorkflowTile key={workflow.id} workflow={workflow} />
+                  isSwitchOn ? (<WorkflowTile key={workflow.id} workflow={workflow} />) :
+                    (<WorkflowTileOld key={workflow.id} workflow={workflow} />)
                 ))}
               </div>
             )}

@@ -107,7 +107,7 @@ const getDataValues = (
 
 const _getColor = (status: string, opacity: number) => {
   if (status === "success") {
-    return `rgba(75, 192, 192, ${opacity})`;
+    return `rgba(34, 197, 94, ${opacity})`;
   }
   if (["failed", "faliure", "fail", "error"].includes(status)) {
     return `rgba(255, 99, 132, ${opacity})`;
@@ -202,7 +202,7 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
           bottom: 0,
           left: 0,
         },
-        barPercentage: 0.5, // Adjust this value to control bar width
+        barPercentage: 0.6, // Adjust this value to control bar width
         // categoryPercentage: 0.7, // Adjust this value to control space between bars
       },
     ],
@@ -232,30 +232,25 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
       case "in_progress":
-        icon = <Image
-        className="animate-bounce size-6 cover"
-        src="/keep.svg"
-        alt="loading"
-        width={40}
-        height={40}
-      />
+        icon = <div className="loader"></div>;
         break;
+      default: 
+        icon = <div className="loader"></div>;
     }
     return icon;
   }
+  if(hasNoData && show_real_data) {
+    return  (<div className="flex justify-center items-center text-gray-400 h-36">
+    No data available
+  </div>)
+  }
 
   return (
-    <div className="container h-24">
+    <div className="flex felx-row items-end justify-start h-36 flex-nowrap w-full">
         <div>{getIcon()}</div>
-        {hasNoData && show_real_data ? (
-          <div className="flex justify-center h-full items-center text-gray-400">
-            No data available 1
+          <div className="overflow-hidden h-32 w-full flex-shrink-1">
+            <Bar data={chartData} options={chartOptions}/>
           </div>
-        ) : (
-          <div className="overflow-hidden h-24">
-            <Bar data={chartData} options={chartOptions} />
-          </div>
-        )}
     </div>
   );
 }

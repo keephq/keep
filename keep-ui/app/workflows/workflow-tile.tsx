@@ -33,6 +33,7 @@ import { parseISO, set, differenceInSeconds } from "date-fns";
 import TimeAgo from "react-timeago";
 import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
+import { PiDiamondsFourFill } from "react-icons/pi";
 
 function WorkflowMenuSection({
   onDelete,
@@ -381,13 +382,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
 
   return (
-    <div className="mt-2.5 flex flex-wrap gap-4 items-start">
+    <div className="mt-2.5">
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Loading />
         </div>
       )}
-      <Card className="relative flex flex-col bg-white rounded shadow w-full lg:max-w-md p-2">
+      <Card className="relative flex flex-col bg-white rounded shadow p-2 h-full">
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -398,27 +399,32 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             workflow,
           })}
         </div>
-        <div className="m-2 space-y-5">
+        <div></div>
+        <div className="m-2 flex flex-col justify-between item-start flex-wrap">
           <WorkflowGraph workflow={workflow} />
-          <div className="flex flex-col gap-2">
-            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
+          <div className="gap-2">
+            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl mb-2">
               {workflow?.name || "Unknown"}
             </h2>
-            <div className="flex flex-col sm:flex-row md:items-center justify-between w-full gap-2">
-              <div className="flex flex-wrap justify-start items-center gap-1.5">
-                <button
-                  className="border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
+            <div className="flex flex-col sm:flex-row md:items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-wrap justify-start items-center gap-2">
+                {!!workflow.interval && <Button
+                  className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                  // className="border bg-white border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
                   disabled={!workflow?.interval}
+                  icon={PiDiamondsFourFill}
                 >
                   Interval
-                </button>
+                </Button>}
 
-                <button
-                  className="bg-white border border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
-                  disabled={!workflow?.triggers || workflow?.triggers?.length === 0}
+                {!!workflow?.triggers?.length && <Button
+                  className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                  disabled={
+                    !workflow?.triggers || workflow?.triggers?.length === 0
+                  }
                 >
                   Trigger
-                </button>
+                </Button>}
               </div>
               {workflow && workflow.last_execution_started ? (
                 <TimeAgo
@@ -441,5 +447,395 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
+
+export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
+  // Create a set to keep track of unique providers
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [openPanel, setOpenPanel] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
+    null
+  );
+  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [isRunning, setIsRunning] = useState(false);
+  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
+
+  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
+  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+
+  const { providers } = useFetchProviders();
+
+  const handleConnectProvider = (provider: FullProvider) => {
+    setSelectedProvider(provider);
+    // prepopulate it with the name
+    setFormValues({ provider_name: provider.details.name || "" });
+    setOpenPanel(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenPanel(false);
+    setSelectedProvider(null);
+    setFormValues({});
+    setFormErrors({});
+  };
+  // Function to handle form change
+  const handleFormChange = (
+    updatedFormValues: Record<string, string>,
+    updatedFormErrors: Record<string, string>
+  ) => {
+    setFormValues(updatedFormValues);
+    setFormErrors(updatedFormErrors);
+  };
+
+  // todo: this logic should move to the backend
+  function extractAlertDependencies(workflowRaw: string): string[] {
+    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
+    const dependencies = workflowRaw.match(dependencyRegex);
+
+    if (!dependencies) {
+      return [];
+    }
+
+    // Convert Set to Array
+    const uniqueDependencies = Array.from(new Set(dependencies)).reduce<
+      string[]
+    >((acc, dep) => {
+      // Ensure 'dep' is treated as a string
+      const match = dep.match(/alert\.([\w.]+)/);
+      if (match) {
+        acc.push(match[1]);
+      }
+      return acc;
+    }, []);
+
+    return uniqueDependencies;
+  }
+
+  const runWorkflow = async (payload: object) => {
+    try {
+      setIsRunning(true);
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        // Workflow started successfully
+        const responseData = await response.json();
+        const { workflow_execution_id } = responseData;
+        setIsRunning(false);
+        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
+      } else {
+        console.error("Failed to start workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while starting workflow", error);
+    }
+    setIsRunning(false);
+  };
+
+  const handleRunClick = async () => {
+    const hasAlertTrigger = workflow.triggers.some(
+      (trigger) => trigger.type === "alert"
+    );
+
+    // if it needs alert payload, than open the modal
+    if (hasAlertTrigger) {
+      // extract the filters
+      // TODO: support more than one trigger
+      for (const trigger of workflow.triggers) {
+        // at least one trigger is alert, o/w hasAlertTrigger was false
+        if (trigger.type === "alert") {
+          const staticAlertFilters = trigger.filters || [];
+          setAlertFilters(staticAlertFilters);
+          break;
+        }
+      }
+      const dependencies = extractAlertDependencies(workflow.workflow_raw);
+      setAlertDependencies(dependencies);
+      setIsAlertTriggerModalOpen(true);
+      return;
+    }
+    // else, manual trigger, just run it
+    else {
+      runWorkflow({});
+    }
+  };
+
+  const handleAlertTriggerModalSubmit = (payload: any) => {
+    runWorkflow(payload); // Function to run the workflow with the payload
+  };
+
+  const handleDeleteClick = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Workflow deleted successfully
+        window.location.reload();
+      } else {
+        console.error("Failed to delete workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while deleting workflow", error);
+    }
+  };
+
+  const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
+    if (isConnected) {
+      handleCloseModal();
+      // refresh the page to show the changes
+      window.location.reload();
+    }
+  };
+  const handleDownloadClick = async () => {
+    try {
+      // Use the raw workflow data directly, as it is already in YAML format
+      const workflowYAML = workflow.workflow_raw;
+
+      // Create a Blob object representing the data as a YAML file
+      const blob = new Blob([workflowYAML], { type: "text/yaml" });
+
+      // Create an anchor element with a URL object created from the Blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a "hidden" anchor tag with the download attribute and click it
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `${workflow.workflow_raw_id}.yaml`; // The file will be named after the workflow's id
+      document.body.appendChild(a);
+      a.click();
+
+      // Release the object URL to free up resources
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("An error occurred while downloading the YAML", error);
+    }
+  };
+
+  const handleViewClick = async () => {
+    router.push(`/workflows/${workflow.id}`);
+  };
+
+  const handleBuilderClick = async () => {
+    router.push(`/workflows/builder/${workflow.id}`);
+  };
+
+  const workflowProvidersMap = new Map(
+    workflow.providers.map((p) => [p.type, p])
+  );
+
+  const uniqueProviders: FullProvider[] = Array.from(
+    new Set(workflow.providers.map((p) => p.type))
+  )
+    .map((type) => {
+      let fullProvider =
+        providers.find((fp) => fp.type === type) || ({} as FullProvider);
+      let workflowProvider =
+        workflowProvidersMap.get(type) || ({} as FullProvider);
+
+      // Merge properties
+      const mergedProvider: FullProvider = {
+        ...fullProvider,
+        ...workflowProvider,
+        installed: workflowProvider.installed || fullProvider.installed,
+        details: {
+          authentication: {},
+          name: (workflowProvider as Provider).name || fullProvider.id,
+        },
+        id: fullProvider.type,
+      };
+
+      return mergedProvider;
+    })
+    .filter(Boolean) as FullProvider[];
+  const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
+  return (
+    <div className="workflow-tile-basis mt-2.5">
+      {isRunning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Loading />
+        </div>
+      )}
+      <Card>
+        <div className="flex w-full justify-between items-center h-14">
+          <Title className="truncate max-w-64 text-left text-lightBlack">
+            {workflow.name}
+          </Title>
+          {WorkflowMenuSection({
+            onDelete: handleDeleteClick,
+            onRun: handleRunClick,
+            onDownload: handleDownloadClick,
+            onView: handleViewClick,
+            onBuilder: handleBuilderClick,
+            workflow,
+          })}
+        </div>
+
+        <div className="flex items-center justify-between h-10">
+          <Text className="truncate max-w-sm text-left text-lightBlack">
+            {workflow.description}
+          </Text>
+        </div>
+
+        <List>
+          <ListItem>
+            <span>Created By</span>
+            <span className="text-right">{workflow.created_by}</span>
+          </ListItem>
+          <ListItem>
+            <span>Created At</span>
+            <span className="text-right">
+              {workflow.creation_time
+                ? new Date(workflow.creation_time + "Z").toLocaleString()
+                : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Last Updated</span>
+            <span className="text-right">
+              {workflow.last_updated
+                ? new Date(workflow.last_updated + "Z").toLocaleString()
+                : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Last Execution</span>
+            <span className="text-right">
+              {workflow.last_execution_time
+                ? new Date(workflow.last_execution_time + "Z").toLocaleString()
+                : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Last Status</span>
+            <span className="text-right">
+              {workflow.last_execution_status
+                ? workflow.last_execution_status
+                : "N/A"}
+            </span>
+          </ListItem>
+        </List>
+
+        <Accordion className="mt-2.5">
+          <AccordionHeader>
+            <span className="mr-1">Triggers:</span>
+            {triggerTypes.map((t) => {
+              if (t === "alert") {
+                const handleImageError = (event: any) => {
+                  event.target.href.baseVal = "/icons/keep-icon.png";
+                };
+                const alertSource = workflow.triggers
+                  .find((w) => w.type === "alert")
+                  ?.filters?.find((f) => f.key === "source")?.value;
+                const DynamicIcon = (props: any) => (
+                  <svg
+                    width="24px"
+                    height="24px"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    {...props}
+                  >
+                    {" "}
+                    <image
+                      id="image0"
+                      width={"24"}
+                      height={"24"}
+                      href={`/icons/${alertSource}-icon.png`}
+                      onError={handleImageError}
+                    />
+                  </svg>
+                );
+                return (
+                  <Badge
+                    icon={DynamicIcon}
+                    key={t}
+                    size="xs"
+                    color="orange"
+                    title={`Source: ${alertSource}`}
+                  >
+                    {t}
+                  </Badge>
+                );
+              }
+              return (
+                <Badge key={t} size="xs" color="orange">
+                  {t}
+                </Badge>
+              );
+            })}
+          </AccordionHeader>
+          <AccordionBody>
+            {workflow.triggers.length > 0 ? (
+              <List>
+                {workflow.triggers.map((trigger, index) => (
+                  <TriggerTile key={index} trigger={trigger} />
+                ))}
+              </List>
+            ) : (
+              <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+                This workflow does not have any triggers.
+              </p>
+            )}
+          </AccordionBody>
+        </Accordion>
+
+        <Card className="mt-2.5">
+          <Text>Providers:</Text>
+          <div className="flex flex-wrap justify-start">
+            {uniqueProviders.map((provider) => (
+              <ProviderTile
+                key={provider.id}
+                provider={provider}
+                onConnectClick={handleConnectProvider}
+              />
+            ))}
+          </div>
+        </Card>
+        <SlidingPanel
+          type={"right"}
+          isOpen={openPanel}
+          size={30}
+          backdropClicked={handleCloseModal}
+          panelContainerClassName="bg-white z-[2000]"
+        >
+          {selectedProvider && (
+            <ProviderForm
+              provider={selectedProvider}
+              formData={formValues}
+              formErrorsData={formErrors}
+              onFormChange={handleFormChange}
+              onConnectChange={handleConnecting}
+              closeModal={handleCloseModal}
+              installedProvidersMode={selectedProvider.installed}
+              isProviderNameDisabled={true}
+            />
+          )}
+        </SlidingPanel>
+      </Card>
+      <AlertTriggerModal
+        isOpen={isAlertTriggerModalOpen}
+        onClose={() => setIsAlertTriggerModalOpen(false)}
+        onSubmit={handleAlertTriggerModalSubmit}
+        staticFields={alertFilters}
+        dependencies={alertDependencies}
+      />
+    </div>
+  );
+}
+
 
 export default WorkflowTile;
