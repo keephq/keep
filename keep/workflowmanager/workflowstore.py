@@ -17,6 +17,7 @@ from keep.api.core.db import (
     get_workflow_execution,
     get_workflows_with_last_execution,
 )
+from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflow import Workflow
 
@@ -34,9 +35,14 @@ class WorkflowStore:
         workflow_id = workflow.get("id")
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
+        if not workflow.get("name"):  # workflow name is None or empty string
+            workflow_name = workflow_id
+            workflow["name"] = workflow_name
+        else:
+            workflow_name = workflow.get("name")
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
-            name=workflow_id,
+            name=workflow_name,
             tenant_id=tenant_id,
             description=workflow.get("description"),
             created_by=created_by,
@@ -57,7 +63,7 @@ class WorkflowStore:
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
         """
-        Parse an workflow to a dictionary from either a file or a URL.
+        Parse a workflow to a dictionary from either a file or a URL.
 
         Args:
             workflow_path (str): a URL or a file path
@@ -103,7 +109,18 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
 
-    def get_all_workflows(self, tenant_id: str) -> list[Workflow]:
+    def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
+        logging.info("Parsing workflow from dict", extra={"workflow": workflow})
+        workflow = self.parser.parse(tenant_id, workflow)
+        if workflow:
+            return workflow[0]
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to parse workflow from dict",
+            )
+
+    def get_all_workflows(self, tenant_id: str) -> list[WorkflowModel]:
         # list all tenant's workflows
         workflows = get_all_workflows(tenant_id)
         return workflows
@@ -112,14 +129,18 @@ class WorkflowStore:
         # list all tenant's workflows
         workflows = get_workflows_with_last_execution(tenant_id)
         return workflows
-    
+
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
         # list all tenant's workflows yamls (Workflow.workflow_raw)
         workflow_yamls = get_all_workflows_yamls(tenant_id)
         return workflow_yamls
 
     def get_workflows_from_path(
-        self, tenant_id, workflow_path: str | tuple[str], providers_file: str = None
+        self,
+        tenant_id,
+        workflow_path: str | tuple[str],
+        providers_file: str = None,
+        actions_file: str = None,
     ) -> list[Workflow]:
         """Backward compatibility method to get workflows from a path.
 
@@ -137,22 +158,30 @@ class WorkflowStore:
             for workflow_url in workflow_path:
                 workflow_yaml = self._parse_workflow_to_dict(workflow_url)
                 workflows.extend(
-                    self.parser.parse(tenant_id, workflow_yaml, providers_file)
+                    self.parser.parse(
+                        tenant_id, workflow_yaml, providers_file, actions_file
+                    )
                 )
         elif os.path.isdir(workflow_path):
             workflows.extend(
                 self._get_workflows_from_directory(
-                    tenant_id, workflow_path, providers_file
+                    tenant_id, workflow_path, providers_file, actions_file
                 )
             )
         else:
             workflow_yaml = self._parse_workflow_to_dict(workflow_path)
-            workflows = self.parser.parse(tenant_id, workflow_yaml, providers_file)
+            workflows = self.parser.parse(
+                tenant_id, workflow_yaml, providers_file, actions_file
+            )
 
         return workflows
 
     def _get_workflows_from_directory(
-        self, tenant_id, workflows_dir: str, providers_file: str = None
+        self,
+        tenant_id,
+        workflows_dir: str,
+        providers_file: str = None,
+        actions_file: str = None,
     ) -> list[Workflow]:
         """
         Run workflows from a directory.
@@ -171,11 +200,15 @@ class WorkflowStore:
                 try:
                     workflows.extend(
                         self.parser.parse(
-                            tenant_id, parsed_workflow_yaml, providers_file
+                            tenant_id,
+                            parsed_workflow_yaml,
+                            providers_file,
+                            actions_file,
                         )
                     )
                     self.logger.info(f"Workflow from {file} fetched successfully")
                 except Exception as e:
+                    print(e)
                     self.logger.error(
                         f"Error parsing workflow from {file}", extra={"exception": e}
                     )
@@ -183,7 +216,7 @@ class WorkflowStore:
 
     def _read_workflow_from_stream(self, stream) -> dict:
         """
-        Parse an workflow from an IO stream.
+        Parse a workflow from an IO stream.
 
         Args:
             stream (IOStream): The stream to read from

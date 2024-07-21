@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from importlib import metadata
@@ -16,10 +17,13 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
+from keep.api.arq_worker import get_worker
 from keep.api.core.config import AuthenticationType
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
+    actions,
     alerts,
+    dashboard,
     extraction,
     groups,
     healthcheck,
@@ -40,13 +44,14 @@ from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 load_dotenv(find_dotenv())
-keep.api.logging.setup()
+keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
+REDIS = os.environ.get("REDIS", "false") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -55,23 +60,24 @@ except Exception:
 POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 
 
+def _extract_identity(request: Request, attribute="email") -> str:
+    try:
+        token = request.headers.get("Authorization").split(" ")[1]
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        return decoded_token.get(attribute)
+    except Exception:
+        return "anonymous"
+
+
 class EventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.posthog_client = get_posthog_client()
         self.tracer = trace.get_tracer(__name__)
 
-    def _extract_identity(self, request: Request) -> str:
-        try:
-            token = request.headers.get("Authorization").split(" ")[1]
-            decoded_token = jwt.decode(token, options={"verify_signature": False})
-            return decoded_token.get("email")
-        except Exception:
-            return "anonymous"
-
     async def capture_request(self, request: Request) -> None:
         if POSTHOG_API_ENABLED:
-            identity = self._extract_identity(request)
+            identity = _extract_identity(request)
             with self.tracer.start_as_current_span("capture_request"):
                 self.posthog_client.capture(
                     identity,
@@ -85,7 +91,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
     async def capture_response(self, request: Request, response: Response) -> None:
         if POSTHOG_API_ENABLED:
-            identity = self._extract_identity(request)
+            identity = _extract_identity(request)
             with self.tracer.start_as_current_span("capture_response"):
                 self.posthog_client.capture(
                     identity,
@@ -150,6 +156,7 @@ def get_app(
     # app.add_middleware(GZipMiddleware)
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
+    app.include_router(actions.router, prefix="/actions", tags=["actions"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
@@ -169,6 +176,7 @@ def get_app(
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
+    app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
@@ -204,12 +212,16 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
+        if REDIS:
+            event_loop = asyncio.get_event_loop()
+            worker = get_worker()
+            event_loop.create_task(worker.async_run())
         logger.info("Services started successfully")
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
-            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}"
+            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
         )
         return JSONResponse(
             status_code=500,
@@ -222,7 +234,12 @@ def get_app(
 
     @app.middleware("http")
     async def log_middeware(request: Request, call_next):
-        logger.info(f"Request started: {request.method} {request.url.path}")
+        identity = _extract_identity(request, attribute="keep_tenant_id")
+        logger.info(
+            f"Request started: {request.method} {request.url.path}",
+            extra={"tenant_id": identity},
+        )
+        request.state.tenant_id = identity
         response = await call_next(request)
         logger.info(
             f"Request finished: {request.method} {request.url.path} {response.status_code}"

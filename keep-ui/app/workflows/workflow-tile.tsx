@@ -385,7 +385,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       )}
       <Card>
         <div className="flex w-full justify-between items-center h-14">
-          <Title className="truncate max-w-64 text-left text-lightBlack">{workflow.name}</Title>
+          <Title className="truncate max-w-64 text-left text-lightBlack">
+            {workflow.name}
+          </Title>
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -397,7 +399,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
 
         <div className="flex items-center justify-between h-10">
-          <Text className="truncate max-w-sm text-left text-lightBlack">{workflow.description}</Text>
+          <Text className="truncate max-w-sm text-left text-lightBlack">
+            {workflow.description}
+          </Text>
         </div>
 
         <List>
@@ -407,17 +411,25 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           </ListItem>
           <ListItem>
             <span>Created At</span>
-            <span className="text-right">{workflow.creation_time}</span>
+            <span className="text-right">
+              {workflow.creation_time
+                ? new Date(workflow.creation_time + "Z").toLocaleString()
+                : "N/A"}
+            </span>
           </ListItem>
           <ListItem>
             <span>Last Updated</span>
-            <span className="text-right">{workflow.last_updated}</span>
+            <span className="text-right">
+              {workflow.last_updated
+                ? new Date(workflow.last_updated + "Z").toLocaleString()
+                : "N/A"}
+            </span>
           </ListItem>
           <ListItem>
             <span>Last Execution</span>
             <span className="text-right">
               {workflow.last_execution_time
-                ? workflow.last_execution_time
+                ? new Date(workflow.last_execution_time + "Z").toLocaleString()
                 : "N/A"}
             </span>
           </ListItem>

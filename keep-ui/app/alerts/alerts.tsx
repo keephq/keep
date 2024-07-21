@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
@@ -11,13 +11,39 @@ import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
 import AlertRunWorkflowModal from "./alert-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
-import { ViewAlertModal } from './ViewAlertModal';
+import { ViewAlertModal } from "./ViewAlertModal";
+import { useRouter, useSearchParams } from "next/navigation";
+import AlertChangeStatusModal from "./alert-change-status-modal";
+import { usePusher } from "utils/hooks/usePusher";
 
 const defaultPresets: Preset[] = [
-  { id: "feed", name: "feed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
-  { id: "deleted", name: "deleted", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
-  { id: "dismissed", name: "dismissed", options: [], is_private: false, is_noisy: false, alerts_count: 0, should_do_noise_now: false},
-  { id: "groups", name: "groups", options: [], is_private: false , is_noisy: false, alerts_count: 0, should_do_noise_now: false},
+  {
+    id: "feed",
+    name: "feed",
+    options: [],
+    is_private: false,
+    is_noisy: false,
+    alerts_count: 0,
+    should_do_noise_now: false,
+  },
+  {
+    id: "dismissed",
+    name: "dismissed",
+    options: [],
+    is_private: false,
+    is_noisy: false,
+    alerts_count: 0,
+    should_do_noise_now: false,
+  },
+  {
+    id: "groups",
+    name: "groups",
+    options: [],
+    is_private: false,
+    is_noisy: false,
+    alerts_count: 0,
+    should_do_noise_now: false,
+  },
 ];
 
 type AlertsProps = {
@@ -25,9 +51,9 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName }: AlertsProps) {
-  const { useAllAlertsWithSubscription } = useAlerts();
-
+  const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
+  const router = useRouter();
 
   const ticketingProviders = useMemo(
     () =>
@@ -36,25 +62,19 @@ export default function Alerts({ presetName }: AlertsProps) {
       ),
     [providersData.installed_providers]
   );
+
+  const searchParams = useSearchParams();
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
   const [runWorkflowModalAlert, setRunWorkflowModalAlert] =
     useState<AlertDto | null>();
-  const [dismissModalAlert, setDismissModalAlert] = useState<AlertDto | null>();
+  const [dismissModalAlert, setDismissModalAlert] = useState<
+    AlertDto[] | null
+  >();
+  const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
-
-  const { data: alerts, isAsyncLoading } = useAllAlertsWithSubscription(
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount:false,
-      revalidateOnReconnect: false,
-      refreshWhenOffline: false,
-      refreshWhenHidden: false,
-      refreshInterval: 0
-
-    });
 
   const { data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -64,12 +84,32 @@ export default function Alerts({ presetName }: AlertsProps) {
   const selectedPreset = presets.find(
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
+  const { data: pusher } = usePusher();
+  const {
+    data: alerts = [],
+    isLoading: isAsyncLoading,
+    mutate: mutateAlerts,
+  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+  useEffect(() => {
+    const fingerprint = searchParams?.get("alertPayloadFingerprint");
+    if (fingerprint) {
+      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
+      setViewAlertModal(alert);
+    } else {
+      setViewAlertModal(null);
+    }
+  }, [searchParams, alerts]);
+
+  useEffect(() => {
+    if (pusher?.pollAlerts) {
+      mutateAlerts();
+    }
+  }, [mutateAlerts, pusher?.pollAlerts]);
 
   if (selectedPreset === undefined) {
     return null;
   }
 
-  console.log("number of alerts: ", alerts.length)
   return (
     <>
       <AlertTableTabPanel
@@ -81,7 +121,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
-        setViewAlertModal={setViewAlertModal}
+        setChangeStatusAlert={setChangeStatusAlert}
       />
 
       {selectedPreset && (
@@ -103,13 +143,18 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
       <AlertDismissModal
         alert={dismissModalAlert}
+        preset={selectedPreset.name}
         handleClose={() => setDismissModalAlert(null)}
+      />
+      <AlertChangeStatusModal
+        alert={changeStatusAlert}
+        presetName={selectedPreset.name}
+        handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal
         alert={viewAlertModal}
-        handleClose={() => setViewAlertModal(null)}
+        handleClose={() => router.replace(`/alerts/${presetName}`)}
       />
-
     </>
   );
 }

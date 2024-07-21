@@ -9,7 +9,7 @@ from typing import Optional
 import pydantic
 import requests
 from grafana_api.model import APIEndpoints
-from pkg_resources import packaging
+from packaging.version import Version
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -207,13 +207,18 @@ class GrafanaProvider(BaseProvider):
             severity = GrafanaProvider.SEVERITIES_MAP.get(
                 labels.get("severity"), AlertSeverity.INFO
             )
-
+            service = alert.get("service", "unknown")
+            fingerprint = alert.get("fingerprint", alert.get("alertname", "") + service)
+            environment = labels.get(
+                "deployment_environment", labels.get("environment", "unknown")
+            )
             alert_dto = AlertDto(
                 id=alert.get("fingerprint"),
-                fingerprint=alert.get("fingerprint"),
+                fingerprint=fingerprint,
                 name=event.get("title"),
                 status=status,
                 severity=severity,
+                environment=environment,
                 lastReceived=datetime.datetime.now(
                     tz=datetime.timezone.utc
                 ).isoformat(),
@@ -268,7 +273,7 @@ class GrafanaProvider(BaseProvider):
             raise
         self.logger.info(f"Grafana version is {grafana_version}")
         # if grafana version is greater then 9.4.7 we can use the digest token
-        if packaging.version.parse(grafana_version) > packaging.version.parse("9.4.7"):
+        if Version(grafana_version) > Version("9.4.7"):
             self.logger.info("Installing Grafana version > 9.4.7")
             if webhook_exists:
                 webhook = webhook_exists[0]

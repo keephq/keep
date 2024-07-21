@@ -31,7 +31,6 @@ export const DEFAULT_COLS = [
   "lastReceived",
   "source",
   "assignee",
-  "extraPayload",
   "alertMenu",
 ];
 export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
@@ -108,10 +107,10 @@ interface GenerateAlertTableColsArg {
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
-  setDismissModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[]) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   presetNoisy?: boolean;
-  setViewAlertModal?: (alert: AlertDto) => void;
 }
 
 export const useAlertTableCols = (
@@ -123,9 +122,9 @@ export const useAlertTableCols = (
     setTicketModalAlert,
     setRunWorkflowModalAlert,
     setDismissModalAlert,
+    setChangeStatusAlert,
     presetName,
     presetNoisy = false,
-    setViewAlertModal,
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
@@ -332,7 +331,7 @@ export const useAlertTableCols = (
                 setIsMenuOpen={setCurrentOpenMenu}
                 setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                 setDismissModalAlert={setDismissModalAlert}
-                setViewAlertModal={setViewAlertModal}
+                setChangeStatusAlert={setChangeStatusAlert}
               />
             ),
           }),

@@ -191,3 +191,12 @@ storage
 
 # otel files
 tempo-data/
+
+# docs
+docs/node_modules/
+
+
+scripts/automatic_extraction_rules.py
+
+playwright_dump_*.html
+playwright_dump_*.png

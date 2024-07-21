@@ -23,7 +23,7 @@ class ProviderDTO(BaseModel):
 
 class WorkflowDTO(BaseModel):
     id: str
-    name: str
+    name: Optional[str] = "Workflow file doesn't contain name"
     description: Optional[str] = "Workflow file doesn't contain description"
     created_by: str
     creation_time: datetime

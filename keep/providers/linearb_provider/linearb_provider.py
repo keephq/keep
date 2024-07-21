@@ -4,6 +4,7 @@ import json
 
 import pydantic
 import requests
+from asteval import Interpreter
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -97,9 +98,11 @@ class LinearbProvider(BaseProvider):
                 if result.ok:
                     self.logger.info("Deleted incident successfully")
                 else:
-                    self.logger.warning(
-                        "Failed to delete incident", extra={**result.json()}
-                    )
+                    r = result.json()
+                    # don't override message
+                    if "message" in r:
+                        r["message_from_linearb"] = r.pop("message")
+                    self.logger.warning("Failed to delete incident", extra={**r})
                     raise Exception(f"Failed to notify linearB {result.text}")
                 return result.text
 
@@ -116,27 +119,55 @@ class LinearbProvider(BaseProvider):
                 payload = {**incident}
 
                 if "teams" in payload:
+                    self.logger.info(
+                        "Handling teams", extra={"teams": payload["teams"]}
+                    )
                     team_names = [team["name"] for team in payload["teams"]]
-                    teams = json.loads(teams) if isinstance(teams, str) else teams
-                    for team in teams:
-                        if team not in team_names:
-                            team_names.append(team)
+                    if teams and isinstance(teams, str):
+                        try:
+                            teams = json.loads(teams)
+                            for team in teams:
+                                if team not in team_names:
+                                    team_names.append(team)
+                        except json.JSONDecodeError:
+                            self.logger.warning("Failed to parse teams to JSON")
                     payload["teams"] = team_names
+                    self.logger.info("Updated teams", extra={"teams": payload["teams"]})
 
                 if repository_urls:
+                    self.logger.info(
+                        "Handling repository_urls",
+                        extra={"repository_urls": repository_urls},
+                    )
                     if isinstance(repository_urls, str):
-                        repository_urls = json.loads(repository_urls)
+                        try:
+                            repository_urls = json.loads(repository_urls)
+                        except json.JSONDecodeError:
+                            self.logger.warning(
+                                "Failed to parse repository_urls to JSON"
+                            )
                     payload["repository_urls"] = repository_urls
+                    self.logger.info(
+                        "Updated repository_urls",
+                        extra={"repository_urls": payload["repository_urls"]},
+                    )
                 else:
                     # Might received repository_urls as a key in the payload
                     payload.pop("repository_urls", None)
 
                 if services:
+                    self.logger.info(
+                        "Got services from workflow", extra={"services": services}
+                    )
                     if isinstance(services, str):
-                        services = json.loads(services)
+                        aeval = Interpreter()
+                        services: list = aeval(services)
                     if len(services) > 0 and isinstance(services[0], dict):
                         services = [service["name"] for service in services]
                     payload["services"] = services
+                    self.logger.info(
+                        "Updated services", extra={"services": payload["services"]}
+                    )
                 elif "services" in payload:
                     service_names = [service["name"] for service in payload["services"]]
                     payload["services"] = service_names
@@ -199,15 +230,20 @@ class LinearbProvider(BaseProvider):
                     "Notified LinearB successfully", extra={"payload": payload}
                 )
             else:
+                # don't override message
+                r = result.json()
+                if "message" in r:
+                    r["message_from_linearb"] = r.pop("message")
                 self.logger.warning(
                     "Failed to notify linearB",
-                    extra={**result.json(), "payload": payload},
+                    extra={**r, "payload": payload},
                 )
                 raise Exception(f"Failed to notify linearB {result.text}")
 
             return result.text
         except Exception as e:
-            raise ProviderException(f"Failed to notify linear: {e}")
+            self.logger.exception("Failed to notify LinearB")
+            raise ProviderException(f"Failed to notify LinearB: {e}")
 
 
 if __name__ == "__main__":

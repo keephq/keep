@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Table, Callout, Card, Icon } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -29,9 +30,14 @@ import AlertPresets from "./alert-presets";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
-import { useEffect, useState } from "react";
+import AlertTabs from "./alert-tabs";
+import AlertSidebar from "./alert-sidebar";
 
-
+interface PresetTab {
+  name: string;
+  filter: string;
+  id?: string;
+}
 interface Props {
   alerts: AlertDto[];
   columns: ColumnDef<AlertDto>[];
@@ -39,8 +45,12 @@ interface Props {
   presetName: string;
   presetPrivate?: boolean;
   presetNoisy?: boolean;
-  isMenuColDisplayed?: boolean;
+  presetStatic?: boolean;
+  presetId?: string;
+  presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
+  isMenuColDisplayed?: boolean;
+  setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
 }
 
 export function AlertTable({
@@ -50,13 +60,21 @@ export function AlertTable({
   presetName,
   presetPrivate = false,
   presetNoisy = false,
+  presetStatic = false,
+  presetId = '',
+  presetTabs = [],
   isRefreshAllowed = true,
+  setDismissedModalAlert,
 }: Props) {
-  const [theme, setTheme] = useLocalStorage('alert-table-theme',
-    Object.values(severityMapping).reduce<{ [key: string]: string }>((acc, severity) => {
-      acc[severity] = 'bg-white';
-      return acc;
-    }, {})
+  const [theme, setTheme] = useLocalStorage(
+    "alert-table-theme",
+    Object.values(severityMapping).reduce<{ [key: string]: string }>(
+      (acc, severity) => {
+        acc[severity] = "bg-white";
+        return acc;
+      },
+      {}
+    )
   );
 
 
@@ -81,10 +99,28 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'noise', desc: true } ]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "noise", desc: true },
+  ]);
+
+  const [tabs, setTabs] = useState([
+    { name: "All", filter: (alert: AlertDto) => true },
+    ...presetTabs.map((tab) => ({
+      name: tab.name,
+      filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
+      id: tab.id
+    })),
+    { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
+  ]);
+
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const filteredAlerts = alerts.filter(tabs[selectedTab].filter);
 
   const table = useReactTable({
-    data: alerts,
+    data: filteredAlerts,
     columns: columns,
     state: {
       columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
@@ -99,7 +135,7 @@ export function AlertTable({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     initialState: {
-      pagination: { pageSize: 10 },
+      pagination: { pageSize: 20 },
     },
     globalFilterFn: ({ original }, _id, value) => {
       return evalWithContext(original, value);
@@ -123,16 +159,33 @@ export function AlertTable({
 
   // show skeleton if no alerts are loaded
   let showSkeleton = table.getFilteredRowModel().rows.length === 0;
+  // if showSkeleton and not loading, show empty state
+  let showEmptyState = !isAsyncLoading && showSkeleton;
+
+  const handleRowClick = (alert: AlertDto) => {
+    // if presetName is alert-history, do not open sidebar
+    if (presetName === "alert-history") {
+      return;
+    }
+    setSelectedAlert(alert);
+    setIsSidebarOpen(true);
+  };
 
   return (
-    <>
-      <TitleAndFilters table={table} alerts={alerts} presetName={presetName} onThemeChange={handleThemeChange}/>
-      <Card className="mt-7 px-4 pb-4 md:pb-10 md:px-4 pt-6">
+    <div className="flex flex-col h-full overflow-hidden">
+      <TitleAndFilters
+        table={table}
+        alerts={alerts}
+        presetName={presetName}
+        onThemeChange={handleThemeChange}
+      />
+      <Card className="flex-grow h-full flex flex-col mt-4 px-4 pt-6 overflow-hidden">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
             alerts={alerts}
             clearRowSelection={table.resetRowSelection}
+            setDismissModalAlert={setDismissedModalAlert}
           />
         ) : (
           <AlertPresets
@@ -153,16 +206,33 @@ export function AlertTable({
             Alerts will show up in this table as they are added to Keep...
           </Callout>
         )}
-        <Table className="mt-4 [&>table]:table-fixed [&>table]:w-full">
+        {/* For dynamic preset, add alert tabs*/}
+        { !presetStatic &&
+          <AlertTabs presetId={presetId} tabs={tabs} setTabs={setTabs} selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
+        }
+        <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
           <AlertsTableHeaders
             columns={columns}
             table={table}
             presetName={presetName}
           />
-          <AlertsTableBody table={table} showSkeleton={showSkeleton} theme={theme} />
+          <AlertsTableBody
+            table={table}
+            showSkeleton={showSkeleton}
+            showEmptyState={showEmptyState}
+            theme={theme}
+            onRowClick={handleRowClick}
+          />
         </Table>
-        <AlertPagination table={table} isRefreshAllowed={isRefreshAllowed} />
       </Card>
-    </>
+      <div className="mt-2 mb-8">
+        <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
+      </div>
+      <AlertSidebar
+        isOpen={isSidebarOpen}
+        toggle={() => setIsSidebarOpen(false)}
+        alert={selectedAlert}
+      />
+    </div>
   );
 }

@@ -1,6 +1,13 @@
+import logging
 from datetime import datetime
 
+from opentelemetry import trace
+
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import Alert
+
+tracer = trace.get_tracer(__name__)
+logger = logging.getLogger(__name__)
 
 
 def javascript_iso_format(last_received: str) -> str:
@@ -31,3 +38,42 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     )
     if assignee:
         alert.assignee = assignee
+
+
+def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
+    """
+    Enriches the alerts with the enrichment data.
+
+    Args:
+        alerts (list[Alert]): The alerts to enrich.
+
+    Returns:
+        list[AlertDto]: The enriched alerts.
+    """
+    alerts_dto = []
+    with tracer.start_as_current_span("alerts_enrichment"):
+        # enrich the alerts with the enrichment data
+        for alert in alerts:
+            if alert.alert_enrichment:
+                alert.event.update(alert.alert_enrichment.enrichments)
+            try:
+                alert_dto = AlertDto(**alert.event)
+                if alert.alert_enrichment:
+                    parse_and_enrich_deleted_and_assignees(
+                        alert_dto, alert.alert_enrichment.enrichments
+                    )
+            except Exception:
+                # should never happen but just in case
+                logger.exception(
+                    "Failed to parse alert",
+                    extra={
+                        "alert": alert,
+                    },
+                )
+                continue
+            # enrich provider id when it's possible
+            if alert_dto.providerId is None:
+                alert_dto.providerId = alert.provider_id
+                alert_dto.providerType = alert.provider_type
+            alerts_dto.append(alert_dto)
+    return alerts_dto

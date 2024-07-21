@@ -246,6 +246,19 @@ export const Search = () => {
     );
   };
 
+  const isMac = () => {
+    const platform = navigator.platform.toLowerCase();
+    const userAgent = navigator.userAgent.toLowerCase();
+    return (
+      platform.includes('mac') ||
+      (platform.includes('iphone') && !userAgent.includes('windows'))
+    );
+  };
+
+  const placeholderText = isMac()
+    ? "Search or start with ⌘K"
+    : "Search";
+
   return (
     <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
       <Link href="/">
@@ -271,7 +284,7 @@ export const Search = () => {
               <Combobox.Input
                 as={TextInput}
                 className="z-20"
-                placeholder="Search or start with ⌘K"
+                placeholder={placeholderText}
                 color="orange"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}

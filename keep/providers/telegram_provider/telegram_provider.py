@@ -1,6 +1,8 @@
 """
 TelegramProvider is a class that implements the BaseProvider interface for Telegram messages.
 """
+
+import asyncio
 import dataclasses
 
 import pydantic
@@ -44,7 +46,7 @@ class TelegramProvider(BaseProvider):
         """
         pass
 
-    async def _notify(self, **kwargs: dict):
+    def _notify(self, chat_id: str = "", message: str = "", **kwargs: dict):
         """
         Notify alert message to Telegram using the Telegram Bot API
         https://core.telegram.org/bots/api
@@ -53,16 +55,18 @@ class TelegramProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         self.logger.debug("Notifying alert message to Telegram")
-        chat_id = kwargs.pop("chat_id", "")
-        message = kwargs.pop("message", [])
 
         if not chat_id:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Telegram: chat_id is required"
             )
+        loop = asyncio.new_event_loop()
         telegram_bot = telegram.Bot(token=self.authentication_config.bot_token)
         try:
-            await telegram_bot.send_message(chat_id=chat_id, text=message)
+            task = loop.create_task(
+                telegram_bot.send_message(chat_id=chat_id, text=message)
+            )
+            loop.run_until_complete(task)
         except Exception as e:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Telegram: {e}"
@@ -71,7 +75,7 @@ class TelegramProvider(BaseProvider):
         self.logger.debug("Alert message notified to Telegram")
 
 
-async def send_message():
+async def test_send_message():
     # Output debug messages
     import logging
 
@@ -104,4 +108,4 @@ if __name__ == "__main__":
     # Send the message
     import asyncio
 
-    asyncio.run(send_message())
+    asyncio.run(test_send_message())

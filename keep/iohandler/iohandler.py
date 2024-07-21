@@ -2,6 +2,7 @@ import ast
 import copy
 
 # TODO: fix this! It screws up the eval statement if these are not imported
+import inspect
 import io
 import logging
 import re
@@ -258,7 +259,15 @@ class IOHandler:
                         _arg = arg.id
                     if _arg:
                         _args.append(_arg)
-                val = getattr(keep_functions, func.attr)(*_args)
+                # check if we need to inject tenant_id
+                keep_func = getattr(keep_functions, func.attr)
+                func_signature = inspect.signature(keep_func)
+
+                kwargs = {}
+                if "kwargs" in func_signature.parameters:
+                    kwargs["tenant_id"] = self.context_manager.tenant_id
+
+                val = keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
                 return val
 
         try:
@@ -280,9 +289,6 @@ class IOHandler:
         return _parse(self, tree)
 
     def _render(self, key: str, safe=False, default=""):
-        # change [] to . for the key because thats what chevron uses
-        _key = key.replace("[", ".").replace("]", "")
-
         if "{{^" in key or "{{ ^" in key:
             self.logger.debug(
                 "Safe render is not supported when there are inverted sections."
@@ -293,7 +299,7 @@ class IOHandler:
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
         sys.stderr = io.StringIO()
-        rendered = chevron.render(_key, context, warn=True)
+        rendered = chevron.render(key, context, warn=True)
         # chevron.render will escape the quotes, we need to unescape them
         rendered = rendered.replace("&quot;", '"')
         stderr_output = sys.stderr.getvalue()
@@ -426,9 +432,20 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {"name": ""}
+    context_manager.event_context = {
+        "ticket_id": "1234",
+        "severity": "high",
+        "ticket_created_at": "2021-09-01T00:00:00Z",
+    }
     iohandler = IOHandler(context_manager)
-    iohandler.parse(
-        "keep.slice('{{alert.name}}', 0, 254)",
-        safe=True,
+    res = iohandler.render(
+        iohandler.quote(
+            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
+        ),
+        safe=False,
     )
+    from asteval import Interpreter
+
+    aeval = Interpreter()
+    evaluated_if_met = aeval(res)
+    print(evaluated_if_met)

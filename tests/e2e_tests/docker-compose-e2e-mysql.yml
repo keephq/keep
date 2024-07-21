@@ -1,0 +1,62 @@
+
+services:
+  keep-database:
+      image: mysql:latest
+      environment:
+        - MYSQL_ROOT_PASSWORD=keep
+        - MYSQL_DATABASE=keep
+      volumes:
+        - mysql-data:/var/lib/mysql
+      ports:
+        - "3306:3306"
+      healthcheck:
+        test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    build:
+      context: ./keep-ui/
+      dockerfile: ../docker/Dockerfile.ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - POSTHOG_DISABLED=true
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
+      - POSTHOG_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+    depends_on:
+      keep-database:
+        condition: service_healthy
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  prometheus-server-for-test-target:
+    image: prom/prometheus
+    volumes:
+      - ./tests/e2e_tests/test_pushing_prometheus_config.yaml:/etc/prometheus/prometheus.yml
+      - ./tests/e2e_tests/test_pushing_prometheus_rules.yaml:/etc/prometheus/test_pushing_prometheus_rules.yaml
+    ports:
+      - "9090:9090"
+
+volumes:
+  mysql-data:

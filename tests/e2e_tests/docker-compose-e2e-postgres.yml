@@ -1,0 +1,59 @@
+
+services:
+  keep-database:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-custom.conf:/etc/postgresql/conf.d/custom.conf
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    build:
+      context: ./keep-ui/
+      dockerfile: ../docker/Dockerfile.ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+      - POSTHOG_DISABLED=true
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_CONNECTION_STRING=postgresql://keepuser:keeppassword@keep-database:5432/keepdb
+      - POSTHOG_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+    depends_on:
+      - keep-database
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  prometheus-server-for-test-target:
+    image: prom/prometheus
+    volumes:
+      - ./tests/e2e_tests/test_pushing_prometheus_config.yaml:/etc/prometheus/prometheus.yml
+      - ./tests/e2e_tests/test_pushing_prometheus_rules.yaml:/etc/prometheus/test_pushing_prometheus_rules.yaml
+    ports:
+      - "9090:9090"
+
+volumes:
+  postgres-data:

@@ -14,7 +14,7 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
 
-from keep.api.core.db import try_create_single_tenant
+from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
 from keep.posthog.posthog import get_posthog_client
@@ -115,9 +115,9 @@ class Info:
             pass
         self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
         self.keep_api_url = (
-                self.config.get("keep_api_url")
-                or os.getenv("KEEP_API_URL")
-                or Info.KEEP_MANAGED_API_URL
+            self.config.get("keep_api_url")
+            or os.getenv("KEEP_API_URL")
+            or Info.KEEP_MANAGED_API_URL
         )
         self.random_user_id = self.config.get("random_user_id")
         # if we don't have a random user id, we create one and keep it on the config file
@@ -131,10 +131,10 @@ class Info:
 
         # if we auth, we don't need to check for api key
         if (
-                "auth" in arguments
-                or "api" in arguments
-                or "config" in arguments
-                or "version" in arguments
+            "auth" in arguments
+            or "api" in arguments
+            or "config" in arguments
+            or "version" in arguments
         ):
             return
 
@@ -236,9 +236,30 @@ def show(info: Info):
 
 
 @config.command(name="new")
-@click.option("--url", "-u", type=str, required=False, is_flag=False, flag_value="http://localhost:8080", help="The url of the keep api")
-@click.option("--api-key", "-a", type=str, required=False, is_flag=False, flag_value="", help="The api key for keep")
-@click.option("--interactive", "-i", help="Interactive mode creating keep config (default True)", is_flag=True)
+@click.option(
+    "--url",
+    "-u",
+    type=str,
+    required=False,
+    is_flag=False,
+    flag_value="http://localhost:8080",
+    help="The url of the keep api",
+)
+@click.option(
+    "--api-key",
+    "-a",
+    type=str,
+    required=False,
+    is_flag=False,
+    flag_value="",
+    help="The api key for keep",
+)
+@click.option(
+    "--interactive",
+    "-i",
+    help="Interactive mode creating keep config (default True)",
+    is_flag=True,
+)
 @pass_info
 def new_config(info: Info, url: str, api_key: str, interactive: bool):
     """create new config."""
@@ -250,7 +271,9 @@ def new_config(info: Info, url: str, api_key: str, interactive: bool):
     else:
         keep_url = click.prompt("Enter your keep url", default="http://localhost:8080")
         api_key = click.prompt(
-            "Enter your api key (leave blank for localhost)", hide_input=True, default=""
+            "Enter your api key (leave blank for localhost)",
+            hide_input=True,
+            default="",
         )
     if not api_key:
         api_key = "localhost"
@@ -362,14 +385,14 @@ def api(multi_tenant: bool, port: int, host: str):
 )
 @pass_info
 def run(
-        info: Info,
-        alerts_directory: str,
-        alert_url: list[str],
-        interval: int,
-        providers_file,
-        tenant_id,
-        api_key,
-        api_url,
+    info: Info,
+    alerts_directory: str,
+    alert_url: list[str],
+    interval: int,
+    providers_file,
+    tenant_id,
+    api_key,
+    api_url,
 ):
     """Run a workflow."""
     logger.debug(f"Running alert in {alerts_directory or alert_url}")
@@ -785,7 +808,7 @@ def list_mappings(info: Info):
 )
 @pass_info
 def create(
-        info: Info, name: str, description: str, file: str, matchers: str, priority: int
+    info: Info, name: str, description: str, file: str, matchers: str, priority: int
 ):
     """Create a mapping rule."""
     if os.path.isfile(file) and file.endswith(".csv"):
@@ -853,7 +876,6 @@ def delete_mapping(info: Info, mapping_id: int):
     )
     # Check the response
     if response.ok:
-        response = response.json()
         click.echo(
             click.style(f"Mapping rule {mapping_id} deleted successfully", bold=True)
         )
@@ -861,6 +883,201 @@ def delete_mapping(info: Info, mapping_id: int):
         click.echo(
             click.style(
                 f"Error deleting mapping rule {mapping_id}: {response.text}", bold=True
+            )
+        )
+
+
+@cli.group()
+@pass_info
+def extraction(info: Info):
+    """Manage extractions."""
+    pass
+
+
+@extraction.command(name="list")
+@pass_info
+def list_extraction(info: Info):
+    """List extractions."""
+    resp = make_keep_request(
+        "GET",
+        info.keep_api_url + "/extraction",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+    if not resp.ok:
+        raise Exception(f"Error getting extractions: {resp.text}")
+
+    extractions = resp.json()
+    if len(extractions) == 0:
+        click.echo(click.style("No extractions found.", bold=True))
+        return
+
+    # Create a new table
+    table = PrettyTable()
+    # Add column headers
+    table.field_names = [
+        "ID",
+        "Name",
+        "Description",
+        "Priority",
+        "Attribute",
+        "Condition",
+        "Disabled",
+        "Regex",
+        "Pre",
+        "Created By",
+        "Creation Time",
+        "Updated By",
+        "Update Time",
+    ]
+
+    # Add rows for each extraction
+    for e in extractions:
+        table.add_row(
+            [
+                e["id"],
+                e["name"],
+                e["description"],
+                e["priority"],
+                e["attribute"],
+                e["condition"],
+                e["disabled"],
+                e["regex"],
+                e["pre"],
+                e["created_by"],
+                e["created_at"],
+                e["updated_by"],
+                e["updated_at"],
+            ]
+        )
+    print(table)
+
+
+@extraction.command(name="create")
+@click.option(
+    "--name",
+    "-n",
+    type=str,
+    help="The name of the extraction.",
+    required=True,
+)
+@click.option(
+    "--description",
+    "-d",
+    type=str,
+    help="The description of the extraction.",
+    required=False,
+    default="",
+)
+@click.option(
+    "--priority",
+    "-p",
+    type=click.IntRange(0, 100),
+    help="The priority of the extraction, higher priority means this rule will execute first.",
+    required=False,
+    default=0,
+)
+@click.option(
+    "--pre",
+    type=bool,
+    help="Whether this rule should be applied before or after the alert is standardized.",
+    required=False,
+    default=False,
+)
+@click.option(
+    "--attribute",
+    "-a",
+    type=str,
+    help="Event attribute name to extract from.",
+    required=True,
+    default="",
+)
+@click.option(
+    "--regex",
+    "-r",
+    type=str,
+    help="The regex rule to extract by. Regex format should be like python regex pattern for group matching.",
+    required=True,
+    default="",
+)
+@click.option(
+    "--condition",
+    "-c",
+    type=str,
+    help="CEL based condition.",
+    required=True,
+    default="",
+)
+@pass_info
+def create(
+    info: Info,
+    name: str,
+    description: str,
+    priority: int,
+    pre: bool,
+    attribute: str,
+    regex: str,
+    condition: str,
+):
+    """Create a extraction rule."""
+    response = make_keep_request(
+        "POST",
+        info.keep_api_url + "/extraction",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+        json={
+            "name": name,
+            "description": description,
+            "priority": priority,
+            "pre": pre,
+            "attribute": attribute,
+            "regex": regex,
+            "condition": condition,
+        },
+    )
+
+    # Check the response
+    if response.ok:
+        click.echo(
+            click.style(f"Extraction rule {name} created successfully", bold=True)
+        )
+    else:
+        click.echo(
+            click.style(
+                f"Error creating extraction rule {name}: {response.text}",
+                bold=True,
+            )
+        )
+
+
+@extraction.command(name="delete")
+@click.option(
+    "--extraction-id",
+    type=int,
+    help="The ID of the extraction to delete.",
+    required=True,
+)
+@pass_info
+def delete_extraction(info: Info, extraction_id: int):
+    """Delete a extraction with a specified ID."""
+
+    # Delete the extraction with the specified ID
+    response = make_keep_request(
+        "DELETE",
+        info.keep_api_url + f"/extraction/{extraction_id}",
+        headers={"x-api-key": info.api_key, "accept": "application/json"},
+    )
+
+    # Check the response
+    if response.ok:
+        click.echo(
+            click.style(
+                f"Extraction rule {extraction_id} deleted successfully", bold=True
+            )
+        )
+    else:
+        click.echo(
+            click.style(
+                f"Error deleting extraction rule {extraction_id}: {response.text}",
+                bold=True,
             )
         )
 
@@ -1012,7 +1229,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
     for config in provider["config"]:
         config_as_flag = f"--{config.replace('_', '-')}"
         if config_as_flag not in options_dict and provider["config"][config].get(
-                "required", True
+            "required", True
         ):
             raise click.BadOptionUsage(
                 config_as_flag,

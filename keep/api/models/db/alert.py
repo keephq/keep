@@ -1,13 +1,16 @@
+import enum
 import hashlib
 import logging
 from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
+from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
-from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel
+from sqlalchemy_utils import UUIDType
+from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
@@ -45,13 +48,23 @@ class AlertToGroup(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
-    group_id: UUID = Field(foreign_key="group.id", primary_key=True)
+    group_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("group.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
 
 
 class Group(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    rule_id: UUID = Field(foreign_key="rule.id")
+    rule_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False), ForeignKey("rule.id", ondelete="CASCADE")
+        ),
+    )
     creation_time: datetime = Field(default_factory=datetime.utcnow)
     # the instance of the grouping criteria
     # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
@@ -145,3 +158,52 @@ class AlertRaw(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
+
+
+class AlertAudit(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    fingerprint: str
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
+    # when
+    timestamp: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    # who
+    user_id: str = Field(nullable=False)
+    # what
+    action: str = Field(nullable=False)
+    description: str = Field(sa_column=Column(TEXT))
+
+    __table_args__ = (
+        Index("ix_alert_audit_tenant_id", "tenant_id"),
+        Index("ix_alert_audit_fingerprint", "fingerprint"),
+        Index("ix_alert_audit_tenant_id_fingerprint", "tenant_id", "fingerprint"),
+        Index("ix_alert_audit_timestamp", "timestamp"),
+    )
+
+
+class AlertActionType(enum.Enum):
+    # the alert was triggered
+    TIGGERED = "alert was triggered"
+    # someone acknowledged the alert
+    ACKNOWLEDGE = "alert acknowledged"
+    # the alert was resolved
+    AUTOMATIC_RESOLVE = "alert automatically resolved"
+    # the alert was resolved manually
+    MANUAL_RESOLVE = "alert manually resolved"
+    MANUAL_STATUS_CHANGE = "alert status manually changed"
+    # the alert was escalated
+    WORKFLOW_ENRICH = "alert enriched by workflow"
+    MAPPING_RULE_ENRICH = "alert enriched by mapping rule"
+    # the alert was deduplicated
+    DEDUPLICATED = "alert was deduplicated"
+    # a ticket was created
+    TICKET_ASSIGNED = "alert was assigned with ticket"
+    # a ticket was updated
+    TICKET_UPDATED = "alert ticket was updated"
+    # disposing enriched alert
+    DISPOSE_ENRICHED_ALERT = "alert enrichments disposed"
+    # delete alert
+    DELETE_ALERT = "alert deleted"
+    # generic enrichment
+    GENERIC_ENRICH = "alert enriched"
+    # commented
+    COMMENT = "a comment was added to the alert"

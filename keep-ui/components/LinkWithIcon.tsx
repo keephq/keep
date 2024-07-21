@@ -1,15 +1,19 @@
-import { AnchorHTMLAttributes, ReactNode } from "react";
+import { AnchorHTMLAttributes, ReactNode, useState } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
+import { Trashcan } from "components/icons";
 
 type LinkWithIconProps = {
   children: ReactNode;
   icon: IconType;
   count?: number;
   isBeta?: boolean;
+  isDeletable?: boolean;
+  onDelete?: () => void;
+  className?: string;
 } & LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export const LinkWithIcon = ({
@@ -18,39 +22,60 @@ export const LinkWithIcon = ({
   tabIndex = 0,
   count,
   isBeta = false,
+  isDeletable = false,
+  onDelete,
+  className,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
-  const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === restOfLinkProps.href;
+  const [isHovered, setIsHovered] = useState(false);
+  const isActive = decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString();
 
-  const iconClasses = classNames({
-    "group-hover:text-orange-400": true,
+  const iconClasses = classNames("group-hover:text-orange-400", {
     "text-orange-400": isActive,
-    "text-slate-400": !isActive,
+    "text-black": !isActive,
+
   });
 
+  const textClasses = classNames("truncate", {
+    "text-orange-400": isActive,
+    "text-black": !isActive,
+  });
+
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
+
+  const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (restOfLinkProps.onClick) {
+      restOfLinkProps.onClick(e);
+    }
+  }
+
   return (
-    <Link
+    <div
       className={classNames(
-        "flex items-center justify-between text-sm p-1 text-slate-400 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group w-full",
-        { "bg-stone-200/50": isActive }
+        "flex items-center justify-between text-sm p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full",
+        {
+          "bg-stone-200/50": isActive,
+          "hover:bg-stone-200/50": !isActive,
+        },
+        className
       )}
-      tabIndex={tabIndex}
-      {...restOfLinkProps}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <div className="flex items-center space-x-2">
-        <Icon
-          className={iconClasses}
-          icon={icon}
-        />
-        <span className={classNames({ "text-orange-400": isActive })}>
-          {children}
-        </span>
-      </div>
+      <Link
+        tabIndex={tabIndex}
+        {...restOfLinkProps}
+        className="flex items-center space-x-2 flex-1"
+        onClick={onClick}
+      >
+        <Icon className={iconClasses} icon={icon} />
+        <span className={textClasses}>{children}</span>
+      </Link>
       <div className="flex items-center">
         {count !== undefined && count !== null && (
           <Badge
-            className="z-10"
             size="xs"
             color="orange"
           >
@@ -62,7 +87,17 @@ export const LinkWithIcon = ({
             Beta
           </Badge>
         )}
+        {isDeletable && onDelete && (
+          <button
+            onClick={onDelete}
+            className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${
+              isHovered ? 'ml-2' : ''
+            }`}
+          >
+            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
+          </button>
+        )}
       </div>
-    </Link>
+    </div>
   );
 };

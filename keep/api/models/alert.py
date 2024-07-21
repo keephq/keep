@@ -2,10 +2,12 @@ import datetime
 import hashlib
 import json
 import logging
+import uuid
 from enum import Enum
 from typing import Any, Dict
 
-from pydantic import AnyHttpUrl, BaseModel, Extra, Field, root_validator, validator
+import pytz
+from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,33 @@ class AlertSeverity(Enum):
     def __str__(self):
         return self._value_
 
+    @classmethod
+    def from_number(cls, n):
+        for severity in cls:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No AlertSeverity with order {n}")
+
+    def __lt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order < other.order
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order <= other.order
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order > other.order
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, AlertSeverity):
+            return self.order >= other.order
+        return NotImplemented
+
 
 class AlertStatus(Enum):
     # Active alert
@@ -45,7 +74,7 @@ class AlertStatus(Enum):
 
 
 class AlertDto(BaseModel):
-    id: str
+    id: str | None
     name: str
     status: AlertStatus
     severity: AlertSeverity
@@ -65,12 +94,15 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: bool = False  # Whether the alert has been deleted
+    deleted: bool = (
+        False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
+    )
     dismissUntil: str | None = None  # The time until the alert is dismissed
     # DO NOT MOVE DISMISSED ABOVE dismissedUntil since it is used in root_validator
     dismissed: bool = False  # Whether the alert has been dismissed
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
+    providerType: str | None = None  # The provider type
     group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
     startedAt: str | None = (
@@ -82,6 +114,28 @@ class AlertDto(BaseModel):
         # Convert the model instance to a dictionary
         model_dict = self.dict()
         return json.dumps(model_dict, indent=4, default=str)
+
+    def __eq__(self, other):
+        if isinstance(other, AlertDto):
+            # Convert both instances to dictionaries
+            dict_self = self.dict()
+            dict_other = other.dict()
+
+            # Fields to exclude from comparison since they are bit different in different db's
+            # todo: solve it in a better way
+            exclude_fields = {"lastReceived", "startedAt", "event_id"}
+
+            # Remove excluded fields from both dictionaries
+            for field in exclude_fields:
+                dict_self.pop(field, None)
+                dict_other.pop(field, None)
+
+            # Compare the dictionaries
+            return dict_self == dict_other
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
@@ -106,10 +160,24 @@ class AlertDto(BaseModel):
             return values.get("lastReceived") in deleted
 
     @validator("lastReceived", pre=True, always=True)
-    def validate_last_received(cls, last_received, values):
+    def validate_last_received(cls, last_received):
+        def convert_to_iso_format(date_string):
+            try:
+                dt = datetime.datetime.fromisoformat(date_string)
+                dt_utc = dt.astimezone(pytz.UTC)
+                return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            except ValueError:
+                return None
+
         if not last_received:
-            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        return last_received
+            return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Try to convert the date to iso format
+        # see: https://github.com/keephq/keep/issues/1397
+        if convert_to_iso_format(last_received):
+            return convert_to_iso_format(last_received)
+
+        raise ValueError(f"Invalid date format: {last_received}")
 
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):
@@ -138,10 +206,18 @@ class AlertDto(BaseModel):
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set id:
+        if not values.get("id"):
+            values["id"] = str(uuid.uuid4())
+
         # Check and set default severity
         severity = values.get("severity")
         try:
-            values["severity"] = AlertSeverity(severity)
+            # if severity is int, convert it to AlertSeverity
+            if isinstance(severity, int):
+                values["severity"] = AlertSeverity.from_number(severity)
+            else:
+                values["severity"] = AlertSeverity(severity)
         except ValueError:
             logging.warning(
                 f"Invalid severity value: {severity}, setting default.",
@@ -160,7 +236,18 @@ class AlertDto(BaseModel):
             )
             values["status"] = AlertStatus.FIRING
 
-        values.pop("assignees", None)
+        # this is code duplication of enrichment_helpers.py and should be refactored
+        lastReceived = values.get("lastReceived", None)
+        if not lastReceived:
+            lastReceived = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            values["lastReceived"] = lastReceived
+
+        assignees = values.pop("assignees", None)
+        if assignees:
+            dt = datetime.datetime.fromisoformat(lastReceived)
+            dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            assignee = assignees.get(lastReceived) or assignees.get(dt)
+            values["assignee"] = assignee
         values.pop("deletedAt", None)
         return values
 
@@ -223,8 +310,3 @@ class DismissRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
-
-
-class SearchAlertsRequest(BaseModel):
-    query: str = Field(..., alias="query")
-    timeframe: int = Field(..., alias="timeframe")

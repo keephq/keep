@@ -1,7 +1,6 @@
 "use client";
 
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import {
   NumberInput,
   TextInput,
@@ -9,8 +8,6 @@ import {
   Divider,
   Subtitle,
   Text,
-  MultiSelect,
-  MultiSelectItem,
   Badge,
   Button,
   Icon,
@@ -29,6 +26,7 @@ import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
+import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 
 interface Props {
   editRule: MappingRule | null;
@@ -41,7 +39,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
   const [mapDescription, setMapDescription] = useState<string>("");
-  const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
+  const [selectedLookupAttributes, setSelectedLookupAttributes] = useState<
+    string[]
+  >([]);
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
@@ -53,7 +53,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setMapName(editRule.name);
       setFileName(editRule.file_name ? editRule.file_name : "");
       setMapDescription(editRule.description ? editRule.description : "");
-      setSelectedAttributes(editRule.matchers ? editRule.matchers : []);
+      setSelectedLookupAttributes(editRule.matchers ? editRule.matchers : []);
       setPriority(editRule.priority);
     }
   }, [editRule]);
@@ -62,7 +62,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [parsedData, setParsedData] = useState<any[] | null>(null);
   const attributes = useMemo(() => {
     if (parsedData) {
-      setSelectedAttributes([]);
+      setSelectedLookupAttributes([]);
       return Object.keys(parsedData[0]);
     }
 
@@ -105,7 +105,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     setMapName("");
     setMapDescription("");
     setParsedData(null);
-    setSelectedAttributes([]);
+    setSelectedLookupAttributes([]);
     handleFileReset();
   };
 
@@ -123,7 +123,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         name: mapName,
         description: mapDescription,
         file_name: fileName,
-        matchers: selectedAttributes,
+        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: parsedData,
       }),
     });
@@ -154,7 +154,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         name: mapName,
         description: mapDescription,
         file_name: fileName,
-        matchers: selectedAttributes,
+        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: parsedData,
       }),
     });
@@ -178,10 +178,11 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const submitEnabled = (): boolean => {
     return (
       !!mapName &&
-      selectedAttributes.length > 0 &&
+      selectedLookupAttributes.length > 0 &&
       (editMode || !!parsedData) &&
-      attributes.filter((attribute) => !selectedAttributes.includes(attribute))
-        .length > 0
+      attributes.filter(
+        (attribute) => !selectedLookupAttributes.includes(attribute)
+      ).length > 0
     );
   };
 
@@ -249,20 +250,25 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         <Text className="text-xs">
           (E.g. the attributes that we will try to match before enriching)
         </Text>
-        <MultiSelect
-          className="mt-1"
-          value={selectedAttributes}
-          onValueChange={setSelectedAttributes}
+        <CreateableSearchSelect
+          onFieldChange={(key, val) => {
+            setSelectedLookupAttributes(val.split("||"));
+          }}
+          selectId="0"
+          options={attributes}
           disabled={!editMode && !parsedData}
-          icon={MagnifyingGlassIcon}
-        >
-          {attributes &&
-            attributes.map((attribute) => (
-              <MultiSelectItem key={attribute} value={attribute}>
-                {attribute}
-              </MultiSelectItem>
-            ))}
-        </MultiSelect>
+          defaultValue={selectedLookupAttributes.join("||")}
+          className="mt-1"
+        />
+        <Text className="text-xs mt-1">
+          (Use `&&` to match multiple attributes at once and `||` to
+          condtionally match others)
+        </Text>
+        <Text className="text-xs mt-2">
+          For example: `tags.service_name || labels.service_name` will match if
+          either `tags.service_name` or `labels.service_name` is present in the
+          alert and matches the CSV.
+        </Text>
       </div>
       <div className="mt-2.5">
         <Text>Result attributes</Text>
@@ -270,11 +276,13 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
           (E.g. attributes that will be added to matching incoming alerts)
         </Text>
         <div className="flex flex-col gap-1 py-1">
-          {selectedAttributes.length === 0 ? (
+          {selectedLookupAttributes.length === 0 ? (
             <Badge color="gray">...</Badge>
           ) : (
             attributes
-              .filter((attribute) => !selectedAttributes.includes(attribute))
+              .filter(
+                (attribute) => !selectedLookupAttributes.includes(attribute)
+              )
               .map((attribute) => (
                 <Badge key={attribute} color="orange">
                   {attribute}
@@ -286,7 +294,12 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       <div className={"space-x-1 flex flex-row justify-end items-center"}>
         {/*If we are in the editMode we need an extra cancel button option for the user*/}
         {editMode ? (
-          <Button color="orange" size="xs" variant="secondary" onClick={exitEditMode}>
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            onClick={exitEditMode}
+          >
             Cancel
           </Button>
         ) : (

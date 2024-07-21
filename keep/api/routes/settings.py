@@ -61,13 +61,20 @@ def webhook_settings(
     logger.info("Getting webhook settings")
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = f"{api_url}/alerts/event"
-    webhook_api_key = get_or_create_api_key(
-        session=session,
-        tenant_id=tenant_id,
-        created_by="system",
-        unique_api_key_id="webhook",
-        system_description="Webhooks API key",
-    )
+    try:
+        webhook_api_key = get_or_create_api_key(
+            session=session,
+            tenant_id=tenant_id,
+            created_by="system",
+            unique_api_key_id="webhook",
+            system_description="Webhooks API key",
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving webhook settings: {str(e)}")
+        return JSONResponse(
+            status_code=502,
+            content={"message": str(e)},
+        )
     logger.info("Webhook settings retrieved successfully")
     return WebhookSettings(
         webhookApi=keep_webhook_api_url,

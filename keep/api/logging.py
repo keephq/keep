@@ -87,6 +87,12 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
+LOG_FORMAT_OPEN_TELEMETRY = "open_telemetry"
+LOG_FORMAT_DEVELOPMENT_TERMINAL = "dev_terminal"
+
+LOG_FORMAT = os.environ.get("LOG_FORMAT", LOG_FORMAT_OPEN_TELEMETRY)
+
+
 CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -99,13 +105,13 @@ CONFIG = {
     "handlers": {
         "default": {
             "level": "DEBUG",
-            "formatter": "json",
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
         "context": {
             "level": "DEBUG",
-            "formatter": "json",
+            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
             "class": "keep.api.logging.WorkflowDBHandler",
         },
     },
@@ -218,7 +224,7 @@ class CustomizedUvicornLogger(logging.Logger):
         )
 
 
-def setup():
+def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger

@@ -10,7 +10,7 @@ from keep.api.core.db import (
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
@@ -74,14 +74,24 @@ class WorkflowManager:
                 # the provider is not configured, hence the workflow cannot be triggered
                 # todo - handle it better
                 # todo2 - handle if more than one provider is not configured
-                except ProviderConfigurationException as e:
-                    self.logger.warning(
-                        f"Workflow have a provider that is not configured: {e}"
+                except ProviderConfigurationException:
+                    self.logger.exception(
+                        "Workflow have a provider that is not configured",
+                        extra={
+                            "workflow_id": workflow_model.id,
+                            "tenant_id": tenant_id,
+                        },
                     )
                     continue
-                except Exception as e:
+                except Exception:
                     # TODO: how to handle workflows that aren't properly parsed/configured?
-                    self.logger.error(f"Error getting workflow: {e}")
+                    self.logger.exception(
+                        "Error getting workflow",
+                        extra={
+                            "workflow_id": workflow_model.id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
                     continue
                 for trigger in workflow.workflow_triggers:
                     # TODO: handle it better
@@ -147,11 +157,14 @@ class WorkflowManager:
                     self.logger.info("Alert enriched")
                     # apply only_on_change (https://github.com/keephq/keep/issues/801)
                     fields_that_needs_to_be_change = trigger.get("only_on_change", [])
+                    severity_changed = trigger.get("severity_changed", False)
                     # if there are fields that needs to be changed, get the previous alert
-                    if fields_that_needs_to_be_change:
+                    if fields_that_needs_to_be_change or severity_changed:
                         previous_alert = get_previous_alert_by_fingerprint(
                             tenant_id, event.fingerprint
                         )
+                        if severity_changed:
+                            fields_that_needs_to_be_change.append("severity")
                         # now compare:
                         #   (no previous alert means that the workflow should run)
                         if previous_alert:
@@ -170,6 +183,21 @@ class WorkflowManager:
                                     )
                                     should_run = False
                                     break
+                            if should_run and severity_changed:
+                                setattr(event, "severity_changed", True)
+                                setattr(
+                                    event,
+                                    "previous_severity",
+                                    previous_alert.event.get("severity"),
+                                )
+                                previous_severity = AlertSeverity(
+                                    previous_alert.event.get("severity")
+                                )
+                                current_severity = AlertSeverity(event.severity)
+                                if previous_severity < current_severity:
+                                    setattr(event, "severity_change", "increased")
+                                else:
+                                    setattr(event, "severity_change", "decreased")
 
                     if not should_run:
                         continue
@@ -256,9 +284,12 @@ class WorkflowManager:
                         f"Provider {provider} is a premium provider. You can self-host or contact us to get access to it."
                     )
 
-    def _run_workflow(self, workflow: Workflow, workflow_execution_id: str):
+    def _run_workflow(
+        self, workflow: Workflow, workflow_execution_id: str, test_run=False
+    ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
         errors = []
+        results = {}
         try:
             self._check_premium_providers(workflow)
             errors = workflow.run(workflow_execution_id)
@@ -279,16 +310,41 @@ class WorkflowManager:
                 workflow.on_failure.run()
             raise
         finally:
-            # todo - state should be saved in db
-            workflow.context_manager.dump()
+            if not test_run:
+                workflow.context_manager.dump()
 
-        self._save_workflow_results(workflow, workflow_execution_id)
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
         else:
             self.logger.info(f"Workflow {workflow.workflow_id} ran successfully")
 
-        return errors
+        if test_run:
+            results = self._get_workflow_results(workflow)
+        else:
+            self._save_workflow_results(workflow, workflow_execution_id)
+
+        return [errors, results]
+
+    def _get_workflow_results(self, workflow: Workflow):
+        """
+        Get the results of the workflow from the DB.
+
+        Args:
+            workflow (Workflow): The workflow to get the results for.
+
+        Returns:
+            dict: The results of the workflow.
+        """
+        print("workflowssssss", workflow.workflow_actions)
+        print(workflow.workflow_steps)
+        workflow_results = {
+            action.name: action.provider.results for action in workflow.workflow_actions
+        }
+        if workflow.workflow_steps:
+            workflow_results.update(
+                {step.name: step.provider.results for step in workflow.workflow_steps}
+            )
+        return workflow_results
 
     def _save_workflow_results(self, workflow: Workflow, workflow_execution_id: str):
         """
@@ -325,7 +381,7 @@ class WorkflowManager:
         for workflow in workflows:
             try:
                 random_workflow_id = str(uuid.uuid4())
-                errors = self._run_workflow(
+                errors, _ = self._run_workflow(
                     workflow, workflow_execution_id=random_workflow_id
                 )
                 workflows_errors.append(errors)

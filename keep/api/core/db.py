@@ -1,144 +1,53 @@
+"""
+Keep main database module.
+
+This module contains the CRUD database functions for Keep.
+"""
+
 import hashlib
 import json
 import logging
-import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
-import pymysql
 import validators
 from dotenv import find_dotenv, load_dotenv
-from google.cloud.sql.connector import Connector
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, desc, func, null, update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy_utils import create_database, database_exists
-from sqlmodel import Session, SQLModel, create_engine, or_, select
+from sqlmodel import Session, or_, select
+
+from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.config import config
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import *
-from keep.api.models.db.extraction import *
-from keep.api.models.db.mapping import *
-from keep.api.models.db.preset import *
-from keep.api.models.db.provider import *
-from keep.api.models.db.rule import *
-from keep.api.models.db.tenant import *
-from keep.api.models.db.workflow import *
+from keep.api.models.db.action import Action
+from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
-
-
-def __get_conn() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the database when running in Cloud Run.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            db="keepdb",
-            enable_iam_auth=True,
-        )
-    return conn
-
-
-def __get_conn_impersonate() -> pymysql.connections.Connection:
-    """
-    Creates a connection to the remote database when running locally.
-
-    Returns:
-        pymysql.connections.Connection: The DB connection.
-    """
-    from google.auth import default, impersonated_credentials
-    from google.auth.transport.requests import Request
-
-    # Get application default credentials
-    creds, project = default()
-    # Create impersonated credentials
-    target_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    creds = impersonated_credentials.Credentials(
-        source_credentials=creds,
-        target_principal="keep-api@keephq-sandbox.iam.gserviceaccount.com",
-        target_scopes=target_scopes,
-    )
-    # Refresh the credentials to obtain an impersonated access token
-    creds.refresh(Request())
-    # Get the access token
-    access_token = creds.token
-    # Create a new MySQL connection with the obtained access token
-    with Connector() as connector:
-        conn = connector.connect(
-            os.environ.get("DB_CONNECTION_NAME", "keephq-sandbox:us-central1:keep"),
-            "pymysql",
-            user="keep-api",
-            password=access_token,
-            host="127.0.0.1",
-            port=3306,
-            database="keepdb",
-        )
-    return conn
 
 
 # this is a workaround for gunicorn to load the env vars
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
-db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
-pool_size = config("DATABASE_POOL_SIZE", default=5, cast=int)
 
-if RUNNING_IN_CLOUD_RUN:
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn,
-    )
-elif db_connection_string == "impersonate":
-    engine = create_engine(
-        "mysql+pymysql://",
-        creator=__get_conn_impersonate,
-    )
-elif db_connection_string:
-    try:
-        logger.info(f"Creating a connection pool with size {pool_size}")
-        engine = create_engine(db_connection_string, pool_size=pool_size)
-    # SQLite does not support pool_size
-    except TypeError:
-        engine = create_engine(db_connection_string)
-else:
-    engine = create_engine(
-        "sqlite:///./keep.db", connect_args={"check_same_thread": False}
-    )
 
+engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
-
-
-def create_db_and_tables():
-    """
-    Creates the database and tables.
-    """
-    try:
-        if not database_exists(engine.url):
-            logger.info("Creating the database")
-            create_database(engine.url)
-            logger.info("Database created")
-    # On Cloud Run, it fails to check if the database exists
-    except Exception:
-        logger.warning("Failed to create the database or detect if it exists.")
-        pass
-
-    SQLModel.metadata.create_all(engine)
 
 
 def get_session() -> Session:
@@ -148,7 +57,7 @@ def get_session() -> Session:
     Yields:
         Session: A database session
     """
-    from opentelemetry import trace
+    from opentelemetry import trace  # pylint: disable=import-outside-toplevel
 
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("get_session"):
@@ -156,55 +65,14 @@ def get_session() -> Session:
             yield session
 
 
-def try_create_single_tenant(tenant_id: str) -> None:
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import User
+def get_session_sync() -> Session:
+    """
+    Creates a database session.
 
-        create_db_and_tables()
-    except Exception:
-        pass
-    with Session(engine) as session:
-        try:
-            # check if the tenant exist:
-            tenant = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
-            if not tenant:
-                # Do everything related with single tenant creation in here
-                logger.info("Creating single tenant")
-                session.add(Tenant(id=tenant_id, name="Single Tenant"))
-            else:
-                logger.info("Single tenant already exists")
-
-            # now let's create the default user
-
-            # check if at least one user exists:
-            user = session.exec(select(User)).first()
-            # if no users exist, let's create the default user
-            if not user:
-                default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                default_user = User(
-                    username=default_username,
-                    password_hash=default_password,
-                    role=AdminRole.get_name(),
-                )
-                session.add(default_user)
-            # else, if the user want to force the refresh of the default user password
-            elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
-                # update the password of the default user
-                default_password = hashlib.sha256(
-                    os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
-                ).hexdigest()
-                user.password_hash = default_password
-            # commit the changes
-            session.commit()
-        except IntegrityError:
-            # Tenant already exists
-            pass
-        except Exception:
-            pass
+    Returns:
+        Session: A database session
+    """
+    return Session(engine)
 
 
 def create_workflow_execution(
@@ -249,6 +117,18 @@ def create_workflow_execution(
             raise
 
 
+def get_mapping_rule_by_id(tenant_id: str, rule_id: str) -> MappingRule | None:
+    rule = None
+    with Session(engine) as session:
+        rule: MappingRule | None = (
+            session.query(MappingRule)
+            .filter(MappingRule.tenant_id == tenant_id)
+            .filter(MappingRule.id == rule_id)
+            .first()
+        )
+    return rule
+
+
 def get_last_completed_execution(
     session: Session, workflow_id: str
 ) -> WorkflowExecution:
@@ -267,13 +147,15 @@ def get_last_completed_execution(
 
 def get_workflows_that_should_run():
     with Session(engine) as session:
-        workflows_with_interval = session.exec(
-            select(Workflow)
-            .where(Workflow.is_deleted == False)
-            .where(Workflow.interval != None)
-            .where(Workflow.interval > 0)
-        ).all()
-
+        logger.debug("Checking for workflows that should run")
+        workflows_with_interval = (
+            session.query(Workflow)
+            .filter(Workflow.is_deleted == False)
+            .filter(Workflow.interval != None)
+            .filter(Workflow.interval > 0)
+            .all()
+        )
+        logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
         workflows_to_run = []
         # for each workflow:
         for workflow in workflows_with_interval:
@@ -748,18 +630,50 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         return execution_with_logs
 
 
-def _enrich_alert(session, tenant_id, fingerprint, enrichments):
+def _enrich_alert(
+    session,
+    tenant_id,
+    fingerprint,
+    enrichments,
+    action_type: AlertActionType,
+    action_callee: str,
+    action_description: str,
+    force=False,
+):
+    """
+    Enrich an alert with the provided enrichments.
+
+    Args:
+        session (Session): The database session.
+        tenant_id (str): The tenant ID to filter the alert enrichments by.
+        fingerprint (str): The alert fingerprint to filter the alert enrichments by.
+        enrichments (dict): The enrichments to add to the alert.
+        force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
+    """
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
+        # if force - override exisitng enrichments. being used to dispose enrichments if necessary
+        if force:
+            new_enrichment_data = enrichments
+        else:
+            new_enrichment_data = {**enrichment.enrichments, **enrichments}
         # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
         # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
-        new_enrichment_data = {**enrichment.enrichments, **enrichments}
         stmt = (
             update(AlertEnrichment)
             .where(AlertEnrichment.id == enrichment.id)
             .values(enrichments=new_enrichment_data)
         )
         session.execute(stmt)
+        # add audit event
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=action_callee,
+            action=action_type.value,
+            description=action_description,
+        )
+        session.add(audit)
         session.commit()
         # Refresh the instance to get updated data from the database
         session.refresh(enrichment)
@@ -771,16 +685,52 @@ def _enrich_alert(session, tenant_id, fingerprint, enrichments):
             enrichments=enrichments,
         )
         session.add(alert_enrichment)
+        # add audit event
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=action_callee,
+            action=action_type.value,
+            description=action_description,
+        )
+        session.add(audit)
         session.commit()
         return alert_enrichment
 
 
-def enrich_alert(tenant_id, fingerprint, enrichments, session=None):
+def enrich_alert(
+    tenant_id,
+    fingerprint,
+    enrichments,
+    action_type: AlertActionType,
+    action_callee: str,
+    action_description: str,
+    session=None,
+    force=False,
+):
     # else, the enrichment doesn't exist, create it
     if not session:
         with Session(engine) as session:
-            return _enrich_alert(session, tenant_id, fingerprint, enrichments)
-    return _enrich_alert(session, tenant_id, fingerprint, enrichments)
+            return _enrich_alert(
+                session,
+                tenant_id,
+                fingerprint,
+                enrichments,
+                action_type,
+                action_callee,
+                action_description,
+                force=force,
+            )
+    return _enrich_alert(
+        session,
+        tenant_id,
+        fingerprint,
+        enrichments,
+        action_type,
+        action_callee,
+        action_description,
+        force=force,
+    )
 
 
 def get_enrichment(tenant_id, fingerprint):
@@ -902,7 +852,9 @@ def get_alerts_with_filters(
     return alerts
 
 
-def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
+def get_last_alerts(
+    tenant_id, provider_id=None, limit=1000, timeframe=None
+) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
 
@@ -927,7 +879,16 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
             .group_by(Alert.fingerprint)
             .subquery()
         )
-
+        # if timeframe is provided, filter the alerts by the timeframe
+        if timeframe:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp
+                    >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+                )
+                .subquery()
+            )
         # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
             session.query(
@@ -950,8 +911,14 @@ def get_last_alerts(tenant_id, provider_id=None, limit=1000) -> list[Alert]:
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
+        if timeframe:
+            query = query.filter(
+                subquery.c.max_timestamp
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
+
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+        query = query.order_by(desc(Alert.timestamp)).limit(limit)
         # Execute the query
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
@@ -1270,7 +1237,10 @@ def assign_alert_to_group(
             enrich_alert(
                 tenant_id,
                 fingerprint,
-                {"group_expired": True},
+                enrichments={"group_expired": True},
+                action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
+                action_callee="system",
+                action_description="Enriched group with group_expired flag",
             )
             logger.info(f"Enriched group {group.id} with group_expired flag")
             # change the group status to resolve so it won't spam the UI
@@ -1368,9 +1338,12 @@ def get_rule_distribution(tenant_id, minute=False):
         seven_days_ago = datetime.utcnow() - timedelta(days=1)
 
         # Check the dialect
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
             timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            time_format = "YYYY-MM-DD HH:MI" if minute else "YYYY-MM-DD HH"
+            timestamp_format = func.to_char(AlertToGroup.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
             timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
@@ -1506,8 +1479,12 @@ def get_provider_distribution(tenant_id: str) -> dict:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
-        if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            # PostgreSQL requires a different syntax for the timestamp format
+            # cf: https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING
+            timestamp_format = func.to_char(Alert.timestamp, "YYYY-MM-DD HH")
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
@@ -1536,6 +1513,11 @@ def get_provider_distribution(tenant_id: str) -> dict:
 
         for provider_id, provider_type, time, hits, last_alert_timestamp in results:
             provider_key = f"{provider_id}_{provider_type}"
+            last_alert_timestamp = (
+                datetime.fromisoformat(last_alert_timestamp)
+                if isinstance(last_alert_timestamp, str)
+                else last_alert_timestamp
+            )
 
             if provider_key not in provider_distribution:
                 provider_distribution[provider_key] = {
@@ -1580,9 +1562,211 @@ def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
     return presets
 
 
+def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.name == preset_name)
+        ).first()
+    return preset
+
+
 def get_all_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
         presets = session.exec(
             select(Preset).where(Preset.tenant_id == tenant_id)
         ).all()
     return presets
+
+
+def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
+    with Session(engine) as session:
+        statement = (
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(
+                or_(
+                    Dashboard.is_private == False,
+                    Dashboard.created_by == email,
+                )
+            )
+        )
+        dashboards = session.exec(statement).all()
+    return dashboards
+
+
+def create_dashboard(
+    tenant_id, dashboard_name, created_by, dashboard_config, is_private=False
+):
+    with Session(engine) as session:
+        dashboard = Dashboard(
+            tenant_id=tenant_id,
+            dashboard_name=dashboard_name,
+            dashboard_config=dashboard_config,
+            created_by=created_by,
+            is_private=is_private,
+        )
+        session.add(dashboard)
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def update_dashboard(
+    tenant_id, dashboard_id, dashboard_name, dashboard_config, updated_by
+):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if not dashboard:
+            return None
+
+        if dashboard_name:
+            dashboard.dashboard_name = dashboard_name
+
+        if dashboard_config:
+            dashboard.dashboard_config = dashboard_config
+
+        dashboard.updated_by = updated_by
+        dashboard.updated_at = datetime.utcnow()
+        session.commit()
+        session.refresh(dashboard)
+        return dashboard
+
+
+def delete_dashboard(tenant_id, dashboard_id):
+    with Session(engine) as session:
+        dashboard = session.exec(
+            select(Dashboard)
+            .where(Dashboard.tenant_id == tenant_id)
+            .where(Dashboard.id == dashboard_id)
+        ).first()
+
+        if dashboard:
+            session.delete(dashboard)
+            session.commit()
+            return True
+        return False
+
+
+def get_all_actions(tenant_id: str) -> List[Action]:
+    with Session(engine) as session:
+        actions = session.exec(
+            select(Action).where(Action.tenant_id == tenant_id)
+        ).all()
+    return actions
+
+
+def get_action(tenant_id: str, action_id: str) -> Action:
+    with Session(engine) as session:
+        action = session.exec(
+            select(Action)
+            .where(Action.tenant_id == tenant_id)
+            .where(Action.id == action_id)
+        ).first()
+    return action
+
+
+def create_action(action: Action):
+    with Session(engine) as session:
+        session.add(action)
+        session.commit()
+        session.refresh(action)
+
+
+def create_actions(actions: List[Action]):
+    with Session(engine) as session:
+        for action in actions:
+            session.add(action)
+        session.commit()
+
+
+def delete_action(tenant_id: str, action_id: str) -> bool:
+    with Session(engine) as session:
+        found_action = session.exec(
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
+        ).first()
+        if found_action:
+            session.delete(found_action)
+            session.commit()
+            return bool(found_action)
+        return False
+
+
+def update_action(
+    tenant_id: str, action_id: str, update_payload: Action
+) -> Union[Action, None]:
+    with Session(engine) as session:
+        found_action = session.exec(
+            select(Action)
+            .where(Action.id == action_id)
+            .where(Action.tenant_id == tenant_id)
+        ).first()
+        if found_action:
+            for key, value in update_payload.dict(exclude_unset=True).items():
+                if hasattr(found_action, key):
+                    setattr(found_action, key, value)
+            session.commit()
+            session.refresh(found_action)
+    return found_action
+
+
+def get_tenants_configurations() -> List[Tenant]:
+    with Session(engine) as session:
+        try:
+            tenants = session.exec(select(Tenant)).all()
+        # except column configuration does not exist (new column added)
+        except OperationalError as e:
+            if "Unknown column" in str(e):
+                logger.warning("Column configuration does not exist in the database")
+                return {}
+            else:
+                logger.exception("Failed to get tenants configurations")
+                return {}
+
+    tenants_configurations = {}
+    for tenant in tenants:
+        tenants_configurations[tenant.id] = tenant.configuration or {}
+
+    return tenants_configurations
+
+
+def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    with Session(engine) as session:
+        preset = session.exec(
+            select(Preset)
+            .where(Preset.tenant_id == tenant_id)
+            .where(Preset.id == preset_id)
+        ).first()
+
+        stmt = (
+            update(Preset)
+            .where(Preset.id == preset_id)
+            .where(Preset.tenant_id == tenant_id)
+            .values(options=options)
+        )
+        session.execute(stmt)
+        session.commit()
+        session.refresh(preset)
+    return preset
+
+
+def get_alert_audit(
+    tenant_id: str, fingerprint: str, limit: int = 50
+) -> List[AlertAudit]:
+    with Session(engine) as session:
+        audit = session.exec(
+            select(AlertAudit)
+            .where(AlertAudit.tenant_id == tenant_id)
+            .where(AlertAudit.fingerprint == fingerprint)
+            .order_by(desc(AlertAudit.timestamp))
+            .limit(limit)
+        ).all()
+    return audit

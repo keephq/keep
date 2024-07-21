@@ -181,6 +181,7 @@ export function generateCondition(
 
 export function generateWorkflow(
   workflowId: string,
+  name: string,
   description: string,
   steps: Step[],
   conditions: Step[],
@@ -194,6 +195,7 @@ export function generateWorkflow(
     sequence: [...steps, ...conditions],
     properties: {
       id: workflowId,
+      name: name,
       description: description,
       isLocked: true,
       ...triggers,
@@ -273,6 +275,7 @@ export function parseWorkflow(
 
   return generateWorkflow(
     workflow.id,
+    workflow.name,
     workflow.description,
     steps,
     conditions,
@@ -346,6 +349,7 @@ export function downloadFileFromString(data: string, filename: string) {
 export function buildAlert(definition: Definition): Alert {
   const alert = definition;
   const alertId = alert.properties.id as string;
+  const name = (alert.properties.name as string) ?? "";
   const description = (alert.properties.description as string) ?? "";
   const owners = (alert.properties.owners as string[]) ?? [];
   const services = (alert.properties.services as string[]) ?? [];
@@ -381,13 +385,20 @@ export function buildAlert(definition: Definition): Alert {
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
+      // add 'if' only if it's not empty
       if (ifParam) {
-        provider["if"] = ifParam;
+        return {
+          name: s.name,
+          provider: provider,
+          if: ifParam as string,
+        };
       }
-      return {
-        name: s.name,
-        provider: provider,
-      };
+      else{
+        return {
+          name: s.name,
+          provider: provider,
+        };
+      }
     });
   // Actions > Foreach
   alert.sequence
@@ -461,6 +472,7 @@ export function buildAlert(definition: Definition): Alert {
   }
   const compiledAlert = {
     id: alertId,
+    name: name,
     triggers: triggers,
     description: description,
     owners: owners,

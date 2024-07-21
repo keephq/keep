@@ -297,6 +297,9 @@ const ProviderForm = ({
         if (!response.ok) {
           // If the response is not okay, throw the error message
           return response_json.then((errorData) => {
+            if (response.status === 400) {
+              throw `${errorData.detail}`;
+            }
             if (response.status === 409) {
               throw `Provider with name ${formValues.provider_name} already exists`;
             }

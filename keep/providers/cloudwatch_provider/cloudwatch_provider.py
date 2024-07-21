@@ -196,9 +196,9 @@ class CloudwatchProvider(BaseProvider):
         # otherwise, we need to test them one by one
         except Exception:
             self.logger.info("Error validating AWS IAM scopes")
-            scopes[
-                "iam:SimulatePrincipalPolicy"
-            ] = "No permissions to simulate_principal_policy (but its cool, its not a must)"
+            scopes["iam:SimulatePrincipalPolicy"] = (
+                "No permissions to simulate_principal_policy (but its cool, its not a must)"
+            )
 
         self.logger.info("Validating aws cloudwatch scopes")
         # 1. validate describe alarms
@@ -231,9 +231,9 @@ class CloudwatchProvider(BaseProvider):
                 )
                 scopes["cloudwatch:PutMetricAlarm"] = str(e)
         else:
-            scopes[
-                "cloudwatch:PutMetricAlarm"
-            ] = "cloudwatch:DescribeAlarms scope is not granted, so we cannot validate cloudwatch:PutMetricAlarm scope"
+            scopes["cloudwatch:PutMetricAlarm"] = (
+                "cloudwatch:DescribeAlarms scope is not granted, so we cannot validate cloudwatch:PutMetricAlarm scope"
+            )
         # 3. validate list subscriptions by topic
         if self.authentication_config.cloudwatch_sns_topic:
             try:
@@ -250,9 +250,9 @@ class CloudwatchProvider(BaseProvider):
                 )
                 scopes["sns:ListSubscriptionsByTopic"] = str(e)
         else:
-            scopes[
-                "sns:ListSubscriptionsByTopic"
-            ] = "cloudwatch_sns_topic is not set, so we cannot validate sns:ListSubscriptionsByTopic scope"
+            scopes["sns:ListSubscriptionsByTopic"] = (
+                "cloudwatch_sns_topic is not set, so we cannot validate sns:ListSubscriptionsByTopic scope"
+            )
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
@@ -281,9 +281,9 @@ class CloudwatchProvider(BaseProvider):
                 query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
             except Exception:
                 self.logger.exception("Error validating AWS logs:DescribeQueries scope")
-                scopes[
-                    "logs:GetQueryResults", "logs:DescribeQueries"
-                ] = "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+                scopes["logs:GetQueryResults", "logs:DescribeQueries"] = (
+                    "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
+                )
             try:
                 logs_client.get_query_results(queryId=query_id)
                 scopes["logs:StartQuery"] = True
@@ -310,10 +310,12 @@ class CloudwatchProvider(BaseProvider):
             self.client = self.__generate_client(self.aws_client_type)
         return self._client
 
-    def _query(self, **kwargs: dict) -> dict:
-        log_group = kwargs.get("log_group")
-        query = kwargs.get("query")
-        hours = kwargs.get("hours", 24)
+    def _query(
+        self, log_group: str = None, query: str = None, hours: int = 24, **kwargs: dict
+    ) -> dict:
+        # log_group = kwargs.get("log_group")
+        # query = kwargs.get("query")
+        # hours = kwargs.get("hours", 24)
         logs_client = self.__generate_client("logs")
         try:
             start_query_response = logs_client.start_query(
@@ -491,6 +493,10 @@ class CloudwatchProvider(BaseProvider):
                         "Already subscribed to topic %s, skipping...", topic
                     )
         self.logger.info("Webhook setup completed!")
+
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
+        return json.loads(raw_body)
 
     @staticmethod
     def _format_alert(

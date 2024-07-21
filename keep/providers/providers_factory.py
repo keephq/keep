@@ -483,10 +483,14 @@ class ProvidersFactory:
                 None,
             )
             if not provider:
-                logger.warning(
-                    f"Linked provider {provider_type} does not exist anymore?"
+                # It means it's a custom provider
+                provider = Provider(
+                    display_name=provider_type,
+                    type=provider_type,
+                    can_notify=False,
+                    can_query=False,
+                    tags=["alert"],
                 )
-                continue
             provider = provider.copy()
             provider.linked = True
             provider.id = provider_id

@@ -1,14 +1,11 @@
-import hashlib
-import importlib
 import os
-import sys
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.db.tenant import TenantApiKey
+
+from tests.fixtures.client import test_app, client, setup_api_key
 
 MOCK_TOKEN = "MOCKTOKEN"
 
@@ -28,40 +25,6 @@ class MockJWKClient:
 def mock_get_signing_key_from_jwt(token):
     # Return a mock key. Adjust the value as needed for your tests.
     return MockSigningKey(key="mock_key")
-
-
-@pytest.fixture
-def test_app(monkeypatch, request):
-    auth_type = request.param
-    monkeypatch.setenv("AUTH_TYPE", auth_type)
-    monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
-    # Ok this is bit complex so stay with me:
-    #   We need to reload the app to make sure the AuthVerifier is instantiated with the correct environment variable
-    #   However, we can't just reload the module because the app is instantiated in the get_app() function
-    #    So we need to delete the module from sys.modules and re-import it
-
-    # First, delete all the routes modules from sys.modules
-    for module in list(sys.modules):
-        if module.startswith("keep.api.routes"):
-            del sys.modules[module]
-    # Second, delete the api module from sys.modules
-    if "keep.api.api" in sys.modules:
-        importlib.reload(sys.modules["keep.api.api"])
-
-    # Now, import it, and it will re-instantiate the app with the correct environment variable
-    from keep.api.api import get_app
-
-    # Finally, return the app
-    app = get_app()
-    return app
-
-
-# Fixture for TestClient using the test_app fixture
-@pytest.fixture
-def client(test_app, db_session, monkeypatch):
-    # disable pusher
-    monkeypatch.setenv("PUSHER_DISABLED", "true")
-    return TestClient(test_app)
 
 
 def get_mock_jwt_payload(token, *args, **kwargs):
@@ -87,22 +50,6 @@ def get_mock_jwt_payload(token, *args, **kwargs):
         # Default payload or raise an exception if needed
         return {}
 
-
-# Common setup for tests
-def setup_api_key(
-    db_session, api_key_value, tenant_id=SINGLE_TENANT_UUID, role="admin"
-):
-    hash_api_key = hashlib.sha256(api_key_value.encode()).hexdigest()
-    db_session.add(
-        TenantApiKey(
-            tenant_id=tenant_id,
-            reference_id="test_api_key",
-            key_hash=hash_api_key,
-            created_by="admin@keephq",
-            role=role,
-        )
-    )
-    db_session.commit()
 
 
 @pytest.mark.parametrize(
@@ -184,7 +131,7 @@ def test_webhook_api_key(client, db_session, test_app):
     response = client.post(
         "/alerts/event/grafana", json={}, headers={"x-api-key": valid_api_key}
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana", json={}, headers={"x-api-key": "invalid_api_key"}
@@ -196,25 +143,25 @@ def test_webhook_api_key(client, db_session, test_app):
         json={},
         headers={"Authorization": f"Digest {valid_api_key}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"authorization": f"digest {valid_api_key}"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"authorization": "digest invalid_api_key"},
     )
-    assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
+    assert response.status_code == 401 if auth_type != "NO_AUTH" else 202
 
     response = client.post(
         "/alerts/event/grafana",
         json={},
         headers={"Authorization": "digest invalid_api_key"},
     )
-    assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
+    assert response.status_code == 401 if auth_type != "NO_AUTH" else 202

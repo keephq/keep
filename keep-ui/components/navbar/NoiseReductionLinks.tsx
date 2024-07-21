@@ -38,22 +38,30 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
-            Alert Groups
+            <Subtitle>
+              Alert Groups
+            </Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/workflows" icon={Workflows}>
+            <Subtitle>
             Workflows
+            </Subtitle>
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/mapping" icon={Mapping} isBeta={true}>
-            Mapping
+          <LinkWithIcon href="/mapping" icon={Mapping}>
+            <Subtitle>
+              Mapping
+            </Subtitle>
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/extraction" icon={ExportIcon} isBeta={true}>
+          <LinkWithIcon href="/extraction" icon={ExportIcon}>
+            <Subtitle>
             Extraction
+            </Subtitle>
           </LinkWithIcon>
         </li>
       </Disclosure.Panel>

@@ -12,7 +12,7 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import { AlertDto, Preset, severityMapping } from "./models";
+import { AlertDto, Preset, severityMapping, reverseSeverityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
@@ -20,6 +20,7 @@ import Select, { components, MenuListProps } from "react-select";
 
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -126,65 +127,105 @@ const getAllMatches = (pattern: RegExp, string: string) =>
   // make sure string is a String, and make sure pattern has the /g flag
   String(string).match(new RegExp(pattern, "g"));
 
-const sanitizeCELIntoJS = (celExpression: string): string => {
-  // First, replace "contains" with "includes"
-  let jsExpression = celExpression.replace(/contains/g, "includes");
-  // Replace severity comparisons with mapped values
-  jsExpression = jsExpression.replace(
-    /severity\s*([<>]=?|==)\s*(\d)/g,
-    (match, operator, number) => {
-      const severityValue = severityMapping[number];
-      if (!severityValue) {
-        return match; // If no mapping found, return the original match
+  const sanitizeCELIntoJS = (celExpression: string): string => {
+    // First, replace "contains" with "includes"
+    let jsExpression = celExpression.replace(/contains/g, "includes");
+
+    // Replace severity comparisons with mapped values
+    jsExpression = jsExpression.replace(
+      /severity\s*([<>]=?|==)\s*(\d+|"[^"]*")/g,
+      (match, operator, value) => {
+        let severityKey;
+
+        if (/^\d+$/.test(value)) {
+          // If the value is a number
+          severityKey = severityMapping[Number(value)];
+        } else {
+          // If the value is a string
+          severityKey = value.replace(/"/g, '').toLowerCase(); // Remove quotes from the string value and convert to lowercase
+        }
+
+        const severityValue = reverseSeverityMapping[severityKey];
+
+        if (severityValue === undefined) {
+          return match; // If no mapping found, return the original match
+        }
+
+        // For equality, directly replace with the severity level
+        if (operator === "==") {
+          return `severity == "${severityKey}"`;
+        }
+
+        // For greater than or less than, include multiple levels based on the mapping
+        const levels = Object.entries(reverseSeverityMapping);
+        let replacement = "";
+        if (operator === ">") {
+          const filteredLevels = levels
+            .filter(([, level]) => level > severityValue)
+            .map(([key]) => `severity == "${key}"`);
+          replacement = filteredLevels.join(" || ");
+        } else if (operator === "<") {
+          const filteredLevels = levels
+            .filter(([, level]) => level < severityValue)
+            .map(([key]) => `severity == "${key}"`);
+          replacement = filteredLevels.join(" || ");
+        }
+
+        return `(${replacement})`;
       }
+    );
 
-      // For equality, directly replace with the severity level
-      if (operator === "==") {
-        return `severity == "${severityValue}"`;
+    // Convert 'in' syntax to '.includes()'
+    jsExpression = jsExpression.replace(
+      /(\w+)\s+in\s+\[([^\]]+)\]/g,
+      (match, variable, list) => {
+        // Split the list by commas, trim spaces, and wrap items in quotes if not already done
+        const items = list
+          .split(",")
+          .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
+        return `[${items.join(", ")}].includes(${variable})`;
       }
+    );
 
-      // For greater than or less than, include multiple levels based on the mapping
-      const levels = Object.entries(severityMapping);
-      let replacement = "";
-      if (operator === ">") {
-        const filteredLevels = levels
-          .filter(([key]) => key > number)
-          .map(([, value]) => `severity == "${value}"`);
-        replacement = filteredLevels.join(" || ");
-      } else if (operator === "<") {
-        const filteredLevels = levels
-          .filter(([key]) => key < number)
-          .map(([, value]) => `severity == "${value}"`);
-        replacement = filteredLevels.join(" || ");
-      }
-
-      return `(${replacement})`;
-    }
-  );
-
-  // Convert 'in' syntax to '.includes()'
-  jsExpression = jsExpression.replace(
-    /(\w+)\s+in\s+\[([^\]]+)\]/g,
-    (match, variable, list) => {
-      // Split the list by commas, trim spaces, and wrap items in quotes if not already done
-      const items = list
-        .split(",")
-        .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
-      return `[${items.join(", ")}].includes(${variable})`;
-    }
-  );
-
-  return jsExpression;
-};
+    return jsExpression;
+  };
 
 // this pattern is far from robust
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
 const jsReservedWords = new Set([
-  "break", "case", "catch", "class", "const", "continue", "debugger",
-  "default", "delete", "do", "else", "export", "extends", "finally",
-  "for", "function", "if", "import", "in", "instanceof", "new", "return",
-  "super", "switch", "this", "throw", "try", "typeof", "var", "void",
-  "while", "with", "yield"
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "export",
+  "extends",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
 ]);
 
 export const evalWithContext = (context: AlertDto, celExpression: string) => {
@@ -194,9 +235,9 @@ export const evalWithContext = (context: AlertDto, celExpression: string) => {
     }
 
     const jsExpression = sanitizeCELIntoJS(celExpression);
-    let variables = (
-      getAllMatches(variablePattern, jsExpression) ?? []
-    ).filter((variable) => variable !== "true" && variable !== "false");
+    let variables = (getAllMatches(variablePattern, jsExpression) ?? []).filter(
+      (variable) => variable !== "true" && variable !== "false"
+    );
 
     // filter reserved words from variables
     variables = variables.filter((variable) => !jsReservedWords.has(variable));
@@ -236,6 +277,7 @@ type AlertsRulesBuilderProps = {
   showSqlImport?: boolean;
   customFields?: Field[];
   showSave?: boolean;
+  minimal?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -253,13 +295,36 @@ export const AlertsRulesBuilder = ({
   customFields,
   showSqlImport = true,
   showSave = true,
+  minimal = false,
 }: AlertsRulesBuilderProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
-  const [celRules, setCELRules] = useState(defaultQuery);
-
+  const [celRules, setCELRules] = useState(
+    searchParams?.get("cel") || defaultQuery
+  );
   const parsedCELRulesToQuery = parseCEL(celRules);
+
+  const setQueryParam = (key: string, value: string) => {
+    const current = new URLSearchParams(
+      Array.from(searchParams ? searchParams.entries() : [])
+    );
+
+    if (value) {
+      current.set(key, value);
+    }
+
+    // cast to string
+    const search = current.toString();
+    // or const query = `${'?'.repeat(search.length && 1)}${search}`;
+    const query = search ? `?${search}` : "";
+    router.push(`${pathname}${query}`);
+  };
+
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
   const [sqlError, setSqlError] = useState<string | null>(null);
@@ -323,8 +388,15 @@ export const AlertsRulesBuilder = ({
   useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
     const initialCELRules = constructCELRules(selectedPreset);
-    setCELRules(initialCELRules);
-  }, [selectedPreset]);
+    if (
+      (!selectedPreset || selectedPreset.name === "feed") && // Only applies if no preset is selected or the preset is "feed"
+      searchParams?.get("cel") // Check if the cel query is present in the URL and set it as the initial value
+    ) {
+      setCELRules(searchParams.get("cel") || "");
+    } else {
+      setCELRules(initialCELRules);
+    }
+  }, [selectedPreset, searchParams]);
 
   useEffect(() => {
     // This effect waits for celRules to update and applies the filter only on the initial render
@@ -371,6 +443,7 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
+        setQueryParam("cel", celRules);
         onApplyFilter();
         updateOutputCEL?.(celRules);
       }
@@ -556,7 +629,7 @@ export const AlertsRulesBuilder = ({
                   options={staticOptions}
                   onChange={handleSelectChange}
                   menuIsOpen={true}
-                  components={customComponents}
+                  components={minimal? undefined: customComponents}
                   onBlur={() => setShowSuggestions(false)}
                   styles={customStyles}
                 />

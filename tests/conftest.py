@@ -1,5 +1,8 @@
+import inspect
 import os
 import random
+import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import mysql.connector
@@ -13,12 +16,14 @@ from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.db.alert import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 
 load_dotenv(find_dotenv())
@@ -68,6 +73,23 @@ def docker_services(
 
     # Else, start the docker services
     try:
+        stack = inspect.stack()
+        # this is a hack to support more than one docker-compose file
+        for frame in stack:
+            # if its a db_session, then we need to use the mysql docker-compose file
+            if frame.function == "db_session":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-mysql.yml"
+                )
+                break
+            # if its a elastic_client, then we need to use the elastic docker-compose file
+            elif frame.function == "elastic_client":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-elastic.yml"
+                )
+                break
+
+        print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
             docker_compose_command,
             docker_compose_file,
@@ -75,12 +97,13 @@ def docker_services(
             docker_setup,
             docker_cleanup,
         ) as docker_service:
+            print("Docker services started")
             yield docker_service
 
     except Exception as e:
         print(f"Docker services could not be started: {e}")
         # Optionally, provide a fallback or mock service here
-        yield None
+        raise
 
 
 def is_mysql_responsive(host, port, user, password, database):
@@ -107,7 +130,7 @@ def mysql_container(docker_ip, docker_services):
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
             yield
-            return
+        return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
@@ -115,21 +138,21 @@ def mysql_container(docker_ip, docker_services):
                 "127.0.0.1", 3306, "root", "keep", "keep"
             ),
         )
-        yield
+        yield "mysql+pymysql://root:keep@localhost:3306/keep"
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
         print("Tearing down MySQL")
-        if docker_services:
-            docker_services.down()
 
 
 @pytest.fixture
-def db_session(request, mysql_container):
-    # Few tests require a mysql database (mainly rules)
-    if request and hasattr(request, "param") and request.param == "mysql":
-        db_connection_string = "mysql+pymysql://root:keep@localhost:3306/keep"
+def db_session(request):
+    # Create a database connection
+    if request and hasattr(request, "param") and "db" in request.param:
+        db_type = request.param.get("db")
+        db_connection_string = request.getfixturevalue(f"{db_type}_container")
         mock_engine = create_engine(db_connection_string)
+    # sqlite
     else:
         db_connection_string = "sqlite:///:memory:"
         mock_engine = create_engine(
@@ -221,3 +244,157 @@ def mocked_context_manager():
         "env": {},
     }
     return context_manager
+
+
+def is_elastic_responsive(host, port, user, password):
+    try:
+        elastic_client = ElasticClient(
+            tenant_id=SINGLE_TENANT_UUID,
+            hosts=[f"http://{host}:{port}"],
+            basic_auth=(user, password),
+        )
+        info = elastic_client._client.info()
+        return True if info else False
+    except Exception:
+        print("Elastic still not up")
+        pass
+
+    return False
+
+
+@pytest.fixture(scope="session")
+def elastic_container(docker_ip, docker_services):
+    try:
+        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
+            print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
+            yield
+            return
+        docker_services.wait_until_responsive(
+            timeout=60.0,
+            pause=0.1,
+            check=lambda: is_elastic_responsive(
+                "127.0.0.1", 9200, "elastic", "keeptests"
+            ),
+        )
+        yield True
+    except Exception:
+        print("Exception occurred while waiting for MySQL to be responsive")
+        raise
+    finally:
+        print("Tearing down ElasticSearch")
+
+
+@pytest.fixture
+def elastic_client(request):
+    # this is so if any other module initialized Elasticsearch, it will be deleted
+    ElasticClient._instance = None
+    os.environ["ELASTIC_ENABLED"] = "true"
+    os.environ["ELASTIC_USER"] = "elastic"
+    os.environ["ELASTIC_PASSWORD"] = "keeptests"
+    os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+    request.getfixturevalue("elastic_container")
+    elastic_client = ElasticClient(
+        tenant_id=SINGLE_TENANT_UUID,
+    )
+
+    yield elastic_client
+
+    # remove all from elasticsearch
+    try:
+        elastic_client.drop_index()
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="session")
+def browser():
+    from playwright.sync_api import sync_playwright
+
+    # SHAHAR: you can remove locally, but keep in github actions
+    # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    headless = True
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=headless)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_default_timeout(5000)
+        yield page
+        context.close()
+        browser.close()
+
+
+def _create_valid_event(d, lastReceived=None):
+    event = {
+        "id": str(uuid.uuid4()),
+        "name": "some-test-event",
+        "lastReceived": (
+            str(lastReceived)
+            if lastReceived
+            else datetime.now(tz=timezone.utc).isoformat()
+        ),
+    }
+    event.update(d)
+    return event
+
+
+@pytest.fixture
+def setup_alerts(elastic_client, db_session, request):
+    alert_details = request.param.get("alert_details")
+    alerts = []
+    for i, detail in enumerate(alert_details):
+        detail["fingerprint"] = f"test-{i}"
+        alerts.append(
+            Alert(
+                tenant_id=SINGLE_TENANT_UUID,
+                provider_type="test",
+                provider_id="test",
+                event=_create_valid_event(detail),
+                fingerprint=detail["fingerprint"],
+            )
+        )
+    db_session.add_all(alerts)
+    db_session.commit()
+    # add all to elasticsearch
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    elastic_client.index_alerts(alerts_dto)
+
+
+@pytest.fixture
+def setup_stress_alerts(elastic_client, db_session, request):
+    num_alerts = request.param.get(
+        "num_alerts", 1000
+    )  # Default to 1000 alerts if not specified
+    alert_details = [
+        {
+            "source": [
+                "source_{}".format(i % 10)
+            ],  # Cycle through 10 different sources
+            "severity": random.choice(
+                ["info", "warning", "critical"]
+            ),  # Alternate between 'critical' and 'warning'
+            "fingerprint": f"test-{i}",
+        }
+        for i in range(num_alerts)
+    ]
+    alerts = []
+    for i, detail in enumerate(alert_details):
+        random_timestamp = datetime.utcnow() - timedelta(days=random.uniform(0, 7))
+        alerts.append(
+            Alert(
+                timestamp=random_timestamp,
+                tenant_id=SINGLE_TENANT_UUID,
+                provider_type="test",
+                provider_id="test_{}".format(
+                    i % 5
+                ),  # Cycle through 5 different provider_ids
+                event=_create_valid_event(detail, lastReceived=random_timestamp),
+                fingerprint="fingerprint_{}".format(i),
+            )
+        )
+    db_session.add_all(alerts)
+    db_session.commit()
+
+    # add all to elasticsearch
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    elastic_client.index_alerts(alerts_dto)

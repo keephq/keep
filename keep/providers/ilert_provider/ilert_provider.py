@@ -1,14 +1,17 @@
 """
 Ilert Provider is a class that allows to create/close incidents in Ilert.
 """
+
 import dataclasses
 import enum
 import json
 import os
+from typing import Literal
 
 import pydantic
 import requests
 
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -24,35 +27,6 @@ class IlertIncidentStatus(str, enum.Enum):
     RESOLVED = "RESOLVED"
     MONITORING = "MONITORING"
     IDENTIFIED = "IDENTIFIED"
-
-
-class IlertServiceStatus(str, enum.Enum):
-    """
-    Ilert service status.
-    """
-
-    OPERATIONAL = "OPERATIONAL"
-    DEGRADED = "DEGRADED"
-    PARTIAL_OUTAGE = "PARTIAL_OUTAGE"
-    MAJOR_OUTAGE = "MAJOR_OUTAGE"
-    UNDER_MAINTENANCE = "UNDER_MAINTENANCE"
-
-
-class IlertServiceNoIncludes(pydantic.BaseModel):
-    """
-    Ilert service.
-    """
-
-    id: str
-
-
-class IlertAffectedService(pydantic.BaseModel):
-    """
-    Ilert affected service.
-    """
-
-    service: IlertServiceNoIncludes
-    impact: IlertServiceStatus
 
 
 @pydantic.dataclasses.dataclass
@@ -86,6 +60,21 @@ class IlertProvider(BaseProvider):
         ProviderScope("read_permission", "Read permission", mandatory=True),
         ProviderScope("write_permission", "Write permission", mandatory=False),
     ]
+
+    SEVERITIES_MAP = {
+        "MAJOR_OUTAGE": AlertSeverity.CRITICAL,
+        "PARTIAL_OUTAGE": AlertSeverity.HIGH,
+        "DEGRADED": AlertSeverity.WARNING,
+        "UNDER_MAINTENANCE": AlertSeverity.INFO,
+        "OPERATIONAL": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "RESOLVED": AlertStatus.RESOLVED,
+        "INVESTIGATING": AlertStatus.ACKNOWLEDGED,
+        "MONITORING": AlertStatus.ACKNOWLEDGED,
+        "IDENTIFIED": AlertStatus.ACKNOWLEDGED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -165,14 +154,67 @@ class IlertProvider(BaseProvider):
         )
         return response.json()
 
-    def _notify(
-        self,
-        summary: str = "",
-        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
-        message: str = "",
-        affectedServices: str | list = "[]",
-        id: str = "0",
-        **kwargs: dict,
+    def _get_alerts(self) -> list[AlertDto]:
+        """
+        Get incidents from Ilert.
+        """
+        if not self.authentication_config.ilert_host.endswith("/api"):
+            self.authentication_config.ilert_host = (
+                f"{self.authentication_config.ilert_host}/api"
+            )
+
+        headers = {"Authorization": f"{self.authentication_config.ilert_token}"}
+        response = requests.get(
+            f"{self.authentication_config.ilert_host}/incidents",
+            headers=headers,
+        )
+        if not response.ok:
+            self.logger.error(
+                "Failed to get alerts",
+                extra={
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get alerts: {response.status_code} {response.text}"
+            )
+
+        alerts = response.json()
+        self.logger.info(
+            "Got alerts from ilert", extra={"number_of_alerts": len(alerts)}
+        )
+
+        alert_dtos = []
+        for alert in alerts:
+            severity = IlertProvider.SEVERITIES_MAP.get(
+                alert.get("affectedServices", [{}])[0].get("impact", "OPERATIONAL")
+            )
+            status = IlertProvider.STATUS_MAP.get(
+                alert.get("status"), AlertStatus.ACKNOWLEDGED
+            )
+            alert_dto = AlertDto(
+                id=alert["id"],
+                name=alert["summary"],
+                title=alert["summary"],
+                description=alert["message"],
+                status=status,
+                severity=severity,
+                sendNotification=alert["sendNotification"],
+                createdAt=alert["createdAt"],
+                updatedAt=alert["updatedAt"],
+                affectedServices=alert["affectedServices"],
+                createdBy=alert["createdBy"],
+                lastHistory=alert["lastHistory"],
+                lastHistoryCreatedAt=alert["lastHistoryCreatedAt"],
+                lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
+                lastReceived=alert["updatedAt"],
+            )
+            alert_dtos.append(alert_dto)
+        return alert_dtos
+
+    def __create_or_update_incident(
+        self, summary, status, message, affectedServices, id
     ):
         self.logger.info(
             "Creating/updating Ilert incident",
@@ -191,7 +233,6 @@ class IlertProvider(BaseProvider):
             "id": id,
             "status": str(status),
             "message": message,
-            **kwargs,
         }
 
         # if id is set, we update the incident, otherwise we create a new one
@@ -245,6 +286,76 @@ class IlertProvider(BaseProvider):
         )
         return response.json()
 
+    def __post_ilert_event(
+        self,
+        event_type: Literal["ALERT", "ACCEPT", "RESOLVE"] = "ALERT",
+        summary: str = "",
+        details: str = "",
+        alert_key: str = "",
+        priority: Literal["HIGH", "LOW"] = "HIGH",
+        images: list = [],
+        links: list = [],
+        custom_details: dict = {},
+        routing_key: str = "",
+    ):
+        payload = {
+            "eventType": event_type,
+            "summary": summary,
+            "details": details,
+            "alertKey": alert_key,
+            "priority": priority,
+            "images": images,
+            "links": links,
+            "customDetails": custom_details,
+            "routingKey": routing_key,
+        }
+        self.logger.info("Posting Ilert event", extra=payload)
+        payload["apiKey"] = self.authentication_config.ilert_token
+        response = requests.post(
+            f"{self.authentication_config.ilert_host}/events",
+            json=payload,
+        )
+        self.logger.info(
+            "Ilert event posted", extra={"status_code": response.status_code}
+        )
+        return response.json()
+
+    def _notify(
+        self,
+        _type: Literal["incident", "event"] = "event",
+        summary: str = "",
+        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
+        message: str = "",
+        affectedServices: str | list = "[]",
+        id: str = "0",
+        event_type: Literal["ALERT", "ACCEPT", "RESOLVE"] = "ALERT",
+        details: str = "",
+        alert_key: str = "",
+        priority: Literal["HIGH", "LOW"] = "HIGH",
+        images: list = [],
+        links: list = [],
+        custom_details: dict = {},
+        routing_key: str = "",
+        **kwargs: dict,
+    ):
+        self.logger.info("Notifying Ilert", extra=locals())
+        if _type == "incident":
+            return self.__create_or_update_incident(
+                summary, status, message, affectedServices, id
+            )
+        else:
+            return self.__post_ilert_event(
+                event_type,
+                summary,
+                details,
+                alert_key,
+                priority,
+                images,
+                links,
+                custom_details,
+                routing_key,
+            )
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -259,9 +370,10 @@ if __name__ == "__main__":
     import os
 
     api_key = os.environ.get("ILERT_API_TOKEN")
+    host = os.environ.get("ILERT_API_HOST")
 
     provider_config = {
-        "authentication": {"ilert_token": api_key},
+        "authentication": {"ilert_token": api_key, "ilert_host": host},
     }
     provider: IlertProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
@@ -269,6 +381,7 @@ if __name__ == "__main__":
         provider_type="ilert",
         provider_config=provider_config,
     )
+    """
     result = provider._query(
         "Example",
         message="Lorem Ipsum",
@@ -284,3 +397,6 @@ if __name__ == "__main__":
         id="242530",
     )
     print(result)
+    """
+    alerts = provider._get_alerts()
+    print(alerts)

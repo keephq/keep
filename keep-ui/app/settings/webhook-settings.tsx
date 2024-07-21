@@ -12,6 +12,8 @@ import {
   Title,
   TabPanels,
   TabPanel,
+  Callout
+
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
@@ -21,6 +23,7 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
+import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 interface Webhook {
   webhookApi: string;
@@ -45,8 +48,19 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   );
   const router = useRouter();
 
+  if (error) return <Callout
+        className="mt-4"
+        title="Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        Failed to load webhook settings.
+        <br></br><br></br>
+        {error.message}
+      </Callout>
+
   if (!data || isLoading) return <Loading />;
-  if (error) return <div>{error.message}</div>;
+
 
   const [example] = data.modelSchema.examples;
 
