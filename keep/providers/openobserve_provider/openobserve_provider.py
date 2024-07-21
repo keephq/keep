@@ -3,6 +3,8 @@ OpenObserve Provider is a class that allows to install webhooks in OpenObserve.
 """
 
 import dataclasses
+import logging
+import uuid
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlencode, urljoin
@@ -370,26 +372,49 @@ class OpenobserveProvider(BaseProvider):
         event: dict,
         provider_instance: Optional["OpenobserveProvider"] = None,
     ) -> AlertDto:
-        return AlertDto(
-            id=event["org_name"],  # Mapping 'org_name' to 'id'
-            name=event["alert_name"],  # Mapping 'alert_name' to 'name'
-            severity=AlertSeverity.WARNING,
-            environment=event["stream_name"],  # Mapping 'stream_name' to 'environment'
-            startedAt=event[
-                "alert_start_time"
-            ],  # Mapping 'alert_start_time' to 'startedAt'
-            lastReceived=event[
-                "alert_start_time"
-            ],  # Mapping 'alert_start_time' to 'startedAt'
-            description=event["alert_type"],  # Mapping 'alert_type' to 'description'
-            labels={
-                "url": event["alert_url"],
-                "alert_period": event["alert_period"],
-                "alert_operator": event["alert_operator"],
-                "alert_threshold": event["alert_threshold"],
-                "alert_count": event["alert_count"],
-                "alert_agg_value": event["alert_agg_value"],
-                "alert_end_time": event["alert_end_time"],
-            },
+        logger = logging.getLogger(__name__)
+        alert_id = str(uuid.uuid4())
+        name = event.pop("alert_name", "")
+        # openoboserve does not provide severity
+        severity = AlertSeverity.WARNING
+        # Mapping 'stream_name' to 'environment'
+        environment = event.pop("stream_name", "")
+        # Mapping 'alert_start_time' to 'startedAt'
+        startedAt = event.pop("alert_start_time", "")
+        # Mapping 'alert_start_time' to 'startedAt'
+        lastReceived = event.pop("alert_start_time", "")
+        # Mapping 'alert_type' to 'description'
+        description = event.pop("alert_type", "")
+        labels = {
+            "url": event.pop("alert_url", ""),
+            "alert_period": event.pop("alert_period", ""),
+            "alert_operator": event.pop("alert_operator", ""),
+            "alert_threshold": event.pop("alert_threshold", ""),
+            "alert_count": event.pop("alert_count", ""),
+            "alert_agg_value": event.pop("alert_agg_value", ""),
+            "alert_end_time": event.pop("alert_end_time", ""),
+        }
+        org_name = event.pop("org_name", "")
+        alert_dto = AlertDto(
+            id=alert_id,
+            name=name,
+            severity=severity,
+            environment=environment,
+            startedAt=startedAt,
+            lastReceived=lastReceived,
+            description=description,
+            labels=labels,
             source=["openobserve"],
+            org_name=org_name,
+            **event,  # any other fields
         )
+        # calculate fingerprint based on name + environment + event keys (e.g. host)
+        fingerprint_fields = ["name", "environment", *event.keys()]
+        logger.info(
+            "Calculating fingerprint fields",
+            extra={"fingerprint_fields": fingerprint_fields},
+        )
+        alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
+            alert_dto, fingerprint_fields=fingerprint_fields
+        )
+        return alert_dto

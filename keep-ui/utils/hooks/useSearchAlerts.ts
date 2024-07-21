@@ -28,7 +28,10 @@ export const useSearchAlerts = (
         },
         method: "POST",
         body: JSON.stringify({
-          query: formatQuery(debouncedRules, "cel"),
+          query: {
+            cel_query: formatQuery(debouncedRules, "cel"),
+            sql_query: formatQuery(debouncedRules, "parameterized_named")
+          },
           timeframe: debouncedTimeframe,
         }),
       }),
