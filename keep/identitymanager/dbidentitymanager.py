@@ -64,7 +64,7 @@ class DBIdentityManager(BaseIdentityManager):
 
         self.logger.info("Added signin endpoint")
 
-    def get_users() -> list[User]:
+    def get_users(self) -> list[User]:
         users = get_users_from_db()
         users = [
             User(
@@ -91,7 +91,7 @@ class DBIdentityManager(BaseIdentityManager):
         except Exception:
             raise HTTPException(status_code=409, detail="User already exists")
 
-    def delete_user(user_email: str) -> dict:
+    def delete_user(self, user_email: str) -> dict:
         try:
             delete_user_from_db(user_email)
             return {"status": "OK"}
