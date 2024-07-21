@@ -1,6 +1,9 @@
+"use client";
 import { Card } from "@tremor/react";
 import { ReactFlow, Controls } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useEffect, useState } from "react";
+import CustomNode from "./custom-node";
 
 interface Service {
   id: string;
@@ -47,31 +50,60 @@ const serviceDefinitions: { [serviceId: string]: Service } = {
   api: api,
 };
 
-const TopologyPage = () => {
-  const nodes = Object.keys(serviceDependencies).map((service, index) => ({
-    id: service,
-    data: { label: service },
-    position: { x: Math.random() * 600, y: Math.random() * 400 },
-  }));
+const getPosition = (index: number, level: number) => ({
+  x: level * 200,
+  y: index * 100,
+});
 
-  const edges: {
-    id: string;
-    source: string;
-    target: string;
-  }[] = [];
-  Object.keys(serviceDependencies).forEach((service) => {
-    serviceDependencies[service].calls.forEach((dependency) => {
-      edges.push({
-        id: `${service}-${dependency}`,
-        source: service,
-        target: dependency,
+const TopologyPage = () => {
+  const [nodes, setNodes] = useState<any[]>([]);
+  const [edges, setEdges] = useState<
+    { id: string; source: string; target: string }[]
+  >([]);
+
+  useEffect(() => {
+    const levels: any = {};
+    Object.keys(serviceDependencies).forEach((service, index) => {
+      levels[service] = 0;
+    });
+
+    const newNodes = Object.keys(serviceDependencies).map((service, index) => ({
+      id: service,
+      data: {
+        label: service,
+        displayName: serviceDefinitions[service]?.display_name,
+        description: serviceDefinitions[service]?.description,
+        team: serviceDefinitions[service]?.team,
+        email: serviceDefinitions[service]?.email,
+      },
+      position: getPosition(index, levels[service]),
+    }));
+
+    const newEdges: { id: string; source: string; target: string }[] = [];
+    Object.keys(serviceDependencies).forEach((service, level) => {
+      serviceDependencies[service].calls.forEach((dependency, index) => {
+        levels[dependency] = level + 1;
+        newEdges.push({
+          id: `${service}-${dependency}`,
+          source: service,
+          target: dependency,
+        });
       });
     });
-  });
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }, []);
 
   return (
     <Card className="p-4 md:p-10 mx-auto h-full">
-      <ReactFlow nodes={nodes} edges={edges}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        nodeTypes={{ customNode: CustomNode }}
+      >
         <Controls />
       </ReactFlow>
     </Card>
