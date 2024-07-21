@@ -19,7 +19,10 @@ import { AlertDto } from "app/alerts/models";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { getAlertLastReceieved } from "utils/helpers";
-import { useIncidentAlerts } from "utils/hooks/useIncidents";
+import {
+  useIncidentAlerts,
+  usePollIncidentAlerts,
+} from "utils/hooks/useIncidents";
 import AlertName from "app/alerts/alert-name";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
@@ -32,6 +35,7 @@ const columnHelper = createColumnHelper<AlertDto>();
 
 export default function IncidentAlerts({ incidentId }: Props) {
   const { data: alerts } = useIncidentAlerts(incidentId);
+  usePollIncidentAlerts(incidentId);
 
   const columns = [
     columnHelper.accessor("severity", {

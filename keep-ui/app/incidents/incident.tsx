@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Card, Title, Subtitle, Button } from "@tremor/react";
+import { Card, Title, Subtitle, Button } from "@tremor/react";
 import Loading from "app/loading";
 import { useState } from "react";
 import { IncidentDto } from "./model";

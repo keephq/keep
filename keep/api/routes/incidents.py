@@ -274,6 +274,7 @@ def add_alerts_to_incident(
     incident_id: str,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -288,6 +289,7 @@ def add_alerts_to_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
 
     return Response(status_code=202)
 
