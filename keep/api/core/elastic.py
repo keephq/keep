@@ -65,7 +65,7 @@ class ElasticClient:
             "ELASTIC_INDEX_SUFFIX"
         ):
             raise ValueError(
-                "No Elastic index prefix found although Elastic is enabled for single tenant"
+                "No Elastic index suffix found although Elastic is enabled for single tenant"
             )
 
         if any(basic_auth):
@@ -82,8 +82,8 @@ class ElasticClient:
     @property
     def alerts_index(self):
         if self.tenant_id == SINGLE_TENANT_UUID:
-            prefix = os.environ.get("ELASTIC_INDEX_SUFFIX")
-            return f"keep-alerts-{prefix}"
+            suffix = os.environ.get("ELASTIC_INDEX_SUFFIX")
+            return f"keep-alerts-{suffix}"
         else:
             return f"keep-alerts-{self.tenant_id}"
 
