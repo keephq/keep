@@ -6,8 +6,8 @@ type PageProps = {
 };
 
 export const metadata = {
-  title: "Keep - Incidents",
-  description: "List of incidents",
+  title: "Keep - Incident",
+  description: "Incident view",
 };
 
 export default function Page(props: PageProps) {
