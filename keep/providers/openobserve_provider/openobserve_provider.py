@@ -395,7 +395,6 @@ class OpenobserveProvider(BaseProvider):
             "alert_end_time": event.pop("alert_end_time", ""),
         }
         org_name = event.pop("org_name", "")
-        value = event.pop("alert_value", "")
         alert_dto = AlertDto(
             id=alert_id,
             name=name,
@@ -407,7 +406,6 @@ class OpenobserveProvider(BaseProvider):
             labels=labels,
             source=["openobserve"],
             org_name=org_name,
-            value=value,
             **event,  # any other fields
         )
         # calculate fingerprint based on name + environment + event keys (e.g. host)
