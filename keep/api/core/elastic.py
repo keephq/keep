@@ -60,6 +60,14 @@ class ElasticClient:
                 "No Elastic configuration found although Elastic is enabled"
             )
 
+        # single tenant id should have an index suffix
+        if tenant_id == SINGLE_TENANT_UUID and not os.environ.get(
+            "ELASTIC_INDEX_SUFFIX"
+        ):
+            raise ValueError(
+                "No Elastic index prefix found although Elastic is enabled for single tenant"
+            )
+
         if any(basic_auth):
             self.logger.debug("Using basic auth for Elastic")
             self._client = Elasticsearch(
@@ -71,7 +79,15 @@ class ElasticClient:
                 api_key=self.api_key, hosts=self.hosts, **kwargs
             )
 
-    def _construct_alert_dto_from_results(self, results, fields):
+    @property
+    def alerts_index(self):
+        if self.tenant_id == SINGLE_TENANT_UUID:
+            prefix = os.environ.get("ELASTIC_INDEX_SUFFIX")
+            return f"keep-alerts-{prefix}"
+        else:
+            return f"keep-alerts-{self.tenant_id}"
+
+    def _construct_alert_dto_from_results(self, results):
         if not results:
             return []
 
@@ -140,15 +156,12 @@ class ElasticClient:
             dsl_query = self._client.sql.translate(
                 body={"query": query, "fetch_size": limit}
             )
-            fields = [f.get("field") for f in dict(dsl_query)["fields"]]
             # get all fields
             dsl_query = dict(dsl_query)
             dsl_query["_source"] = True
             dsl_query["fields"] = ["*"]
-            raw_alerts = self._client.search(
-                index=f"keep-alerts-{self.tenant_id}", body=dsl_query
-            )
-            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts, fields)
+            raw_alerts = self._client.search(index=self.alerts_index, body=dsl_query)
+            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
             return alerts_dtos
         except BadRequestError as e:
             # means no index. if no alert was indexed, the index is not exist
@@ -171,7 +184,7 @@ class ElasticClient:
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
             self._client.index(
-                index=f"keep-alerts-{self.tenant_id}",
+                index=self.alerts_index,
                 body=alert.dict(),
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
                 refresh="true",
@@ -191,7 +204,7 @@ class ElasticClient:
         actions = []
         for alert in alerts:
             action = {
-                "_index": f"keep-alerts-{self.tenant_id}",
+                "_index": self.alerts_index,
                 "_id": alert.fingerprint,  # use fingerprint as the document ID
                 "_source": alert.dict(),
             }
@@ -222,9 +235,7 @@ class ElasticClient:
 
         self.logger.debug(f"Enriching alert {alert_fingerprint}")
         # get the alert, enrich it and index it
-        alert = self._client.get(
-            index=f"keep-alerts-{self.tenant_id}", id=alert_fingerprint
-        )
+        alert = self._client.get(index=self.alerts_index, id=alert_fingerprint)
         if not alert:
             self.logger.error(f"Alert with fingerprint {alert_fingerprint} not found")
             return
@@ -240,4 +251,4 @@ class ElasticClient:
         if not self.enabled:
             return
 
-        self._client.indices.delete(index=f"keep-alerts-{self.tenant_id}")
+        self._client.indices.delete(index=self.alerts_index)
