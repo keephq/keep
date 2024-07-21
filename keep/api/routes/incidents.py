@@ -11,6 +11,8 @@ from pydantic.types import UUID
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     assign_alert_to_incident,
+    confirm_predicted_incident_by_id,
+    create_incident_from_dict,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
@@ -18,7 +20,7 @@ from keep.api.core.db import (
     get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, confirm_predicted_incident_by_id, create_incident_from_dict,
+    update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -33,12 +35,12 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled or 1:
+if ee_enabled:
     path_with_ee = (
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from incident_utils import mine_incidents  # noqa
+    from ee.experimental.incident_utils import mine_incidents  # noqa
 
 
 def __update_client_on_incident_change(
@@ -139,10 +141,7 @@ def get_all_incidents(
     )
 
     return IncidentsPaginatedResultsDto(
-        limit=limit,
-        offset=offset,
-        count=total_count,
-        items=incidents_dto
+        limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
 
 
@@ -356,8 +355,8 @@ def mine(
             incident_data={
                 "name": "Mined using algorithm",
                 "description": "Candidate",
-                "is_predicted": True
-            }
+                "is_predicted": True,
+            },
         ).id
 
         for alert in incident["alerts"]:
