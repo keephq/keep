@@ -176,7 +176,11 @@ class SplunkProvider(BaseProvider):
                 result.get("exception_class", raw_dict.get("exception_class")),
             ),
         )
-        stacktrace = result.pop("stacktrace", raw_dict.get("stacktrace", ""))
+
+        # override stacktrace with _raw stacktrace if it doesnt exist in result
+        stacktrace = result.get("stacktrace", raw_dict.get("stacktrace", ""))
+        result["stacktrace"] = stacktrace
+
         severity = result.get("log_level", raw_dict.get("log_level", "INFO"))
         logger = event.get("logger", result.get("logger"))
         alert = AlertDto(
@@ -193,7 +197,6 @@ class SplunkProvider(BaseProvider):
             exception=exception,
             logger=logger,
             kubernetes=kubernetes,
-            stacktrace=stacktrace,
             **event
         )
         alert.fingerprint = SplunkProvider.get_alert_fingerprint(
