@@ -1,5 +1,6 @@
 import React from "react";
 import { Handle, Position } from "@xyflow/react";
+import './custom-node.css';
 
 const CustomNode = ({ data }: { data: any }) => {
   return (
