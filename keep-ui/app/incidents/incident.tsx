@@ -1,5 +1,5 @@
 "use client";
-import { Card, Title, Subtitle, Button } from "@tremor/react";
+import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import { useState } from "react";
 import { IncidentDto } from "./model";
@@ -22,18 +22,21 @@ export default function Incident() {
     offset: 0,
   });
 
-  const { data: incidents, isLoading,
-    mutate: mutateIncidents} = useIncidents(
-      true,
-      incidentsPagination.limit,
-      incidentsPagination.offset
-  );
-  const { data: predictedIncidents, isLoading: isPredictedLoading,
-    mutate: mutatePredictedIncidents } = useIncidents(false);
+  const {
+    data: incidents,
+    isLoading,
+    mutate: mutateIncidents,
+  } = useIncidents(true, incidentsPagination.limit, incidentsPagination.offset);
+  const {
+    data: predictedIncidents,
+    isLoading: isPredictedLoading,
+    mutate: mutatePredictedIncidents,
+  } = useIncidents(false);
   usePollIncidents(mutateIncidents);
 
-  const [incidentToEdit, setIncidentToEdit] =
-    useState<IncidentDto | null>(null);
+  const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
+    null
+  );
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -54,10 +57,15 @@ export default function Incident() {
   return (
     <div className="flex h-full w-full">
       <div className="flex-grow overflow-auto p-2.5">
-        {!isPredictedLoading && predictedIncidents && predictedIncidents.items.length > 0 ?
+        {!isPredictedLoading &&
+        predictedIncidents &&
+        predictedIncidents.items.length > 0 ? (
           <Card className="mt-10 mb-10 flex-grow">
             <Title>Incident Predictions</Title>
-            <Subtitle>Possible problems predicted by Keep AI <Badge color="orange">Beta</Badge></Subtitle>
+            <Subtitle>
+              Possible problems predicted by Keep AI{" "}
+              <Badge color="orange">Beta</Badge>
+            </Subtitle>
             <PredictedIncidentsTable
               incidents={predictedIncidents}
               mutate={async () => {
@@ -67,8 +75,7 @@ export default function Incident() {
               editCallback={handleStartEdit}
             />
           </Card>
-        : null
-        }
+        ) : null}
 
         {isLoading ? (
           <Loading />
