@@ -385,11 +385,9 @@ export function buildAlert(definition: Definition): Alert {
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
-      if (ifParam) {
-        provider["if"] = ifParam;
-      }
       return {
         name: s.name,
+        if: ifParam as string,
         provider: provider,
       };
     });
