@@ -7,10 +7,7 @@ Create Date: 2024-07-17 16:46:59.386127
 """
 
 import sqlalchemy as sa
-import sqlalchemy_utils
-import sqlmodel
 from alembic import op
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import expression
 
 # revision identifiers, used by Alembic.
@@ -21,10 +18,26 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("incident", sa.Column("is_confirmed", sa.Boolean(), nullable=False, default=False,
-                                        server_default=expression.false()))
-    op.add_column("incident", sa.Column("is_predicted", sa.Boolean(), nullable=False, default=False,
-                                        server_default=expression.false()))
+    op.add_column(
+        "incident",
+        sa.Column(
+            "is_confirmed",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            server_default=expression.false(),
+        ),
+    )
+    op.add_column(
+        "incident",
+        sa.Column(
+            "is_predicted",
+            sa.Boolean(),
+            nullable=False,
+            default=False,
+            server_default=expression.false(),
+        ),
+    )
 
 
 def downgrade() -> None:
