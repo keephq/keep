@@ -292,6 +292,7 @@ def elastic_client(request):
     os.environ["ELASTIC_USER"] = "elastic"
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
+    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient(
         tenant_id=SINGLE_TENANT_UUID,
@@ -310,9 +311,11 @@ def elastic_client(request):
 def browser():
     from playwright.sync_api import sync_playwright
 
+    # SHAHAR: you can remove locally, but keep in github actions
     # headless = os.getenv("PLAYWRIGHT_HEADLESS", "true") == "true"
+    headless = True
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=headless)
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(5000)

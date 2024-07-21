@@ -78,7 +78,7 @@ class WorkflowManager:
                     self.logger.exception(
                         "Workflow have a provider that is not configured",
                         extra={
-                            "workflow_id": workflow_model.workflow_id,
+                            "workflow_id": workflow_model.id,
                             "tenant_id": tenant_id,
                         },
                     )

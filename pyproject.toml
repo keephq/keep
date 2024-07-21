@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.18.0"
+version = "0.20.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -85,6 +85,7 @@ packaging = "^24.0"
 arq = "^0.26.0"
 
 
+alembic = "^1.13.2"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"

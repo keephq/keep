@@ -11,7 +11,7 @@ from typing import Literal
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -27,35 +27,6 @@ class IlertIncidentStatus(str, enum.Enum):
     RESOLVED = "RESOLVED"
     MONITORING = "MONITORING"
     IDENTIFIED = "IDENTIFIED"
-
-
-class IlertServiceStatus(str, enum.Enum):
-    """
-    Ilert service status.
-    """
-
-    OPERATIONAL = "OPERATIONAL"
-    DEGRADED = "DEGRADED"
-    PARTIAL_OUTAGE = "PARTIAL_OUTAGE"
-    MAJOR_OUTAGE = "MAJOR_OUTAGE"
-    UNDER_MAINTENANCE = "UNDER_MAINTENANCE"
-
-
-class IlertServiceNoIncludes(pydantic.BaseModel):
-    """
-    Ilert service.
-    """
-
-    id: str
-
-
-class IlertAffectedService(pydantic.BaseModel):
-    """
-    Ilert affected service.
-    """
-
-    service: IlertServiceNoIncludes
-    impact: IlertServiceStatus
 
 
 @pydantic.dataclasses.dataclass
@@ -89,6 +60,21 @@ class IlertProvider(BaseProvider):
         ProviderScope("read_permission", "Read permission", mandatory=True),
         ProviderScope("write_permission", "Write permission", mandatory=False),
     ]
+
+    SEVERITIES_MAP = {
+        "MAJOR_OUTAGE": AlertSeverity.CRITICAL,
+        "PARTIAL_OUTAGE": AlertSeverity.HIGH,
+        "DEGRADED": AlertSeverity.WARNING,
+        "UNDER_MAINTENANCE": AlertSeverity.INFO,
+        "OPERATIONAL": AlertSeverity.INFO,
+    }
+
+    STATUS_MAP = {
+        "RESOLVED": AlertStatus.RESOLVED,
+        "INVESTIGATING": AlertStatus.ACKNOWLEDGED,
+        "MONITORING": AlertStatus.ACKNOWLEDGED,
+        "IDENTIFIED": AlertStatus.ACKNOWLEDGED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -198,13 +184,22 @@ class IlertProvider(BaseProvider):
         self.logger.info(
             "Got alerts from ilert", extra={"number_of_alerts": len(alerts)}
         )
-        return [
-            AlertDto(
+
+        alert_dtos = []
+        for alert in alerts:
+            severity = IlertProvider.SEVERITIES_MAP.get(
+                alert.get("affectedServices", [{}])[0].get("impact", "OPERATIONAL")
+            )
+            status = IlertProvider.STATUS_MAP.get(
+                alert.get("status"), AlertStatus.ACKNOWLEDGED
+            )
+            alert_dto = AlertDto(
                 id=alert["id"],
                 name=alert["summary"],
                 title=alert["summary"],
                 description=alert["message"],
-                status=alert["status"],
+                status=status,
+                severity=severity,
                 sendNotification=alert["sendNotification"],
                 createdAt=alert["createdAt"],
                 updatedAt=alert["updatedAt"],
@@ -215,8 +210,8 @@ class IlertProvider(BaseProvider):
                 lastHistoryUpdatedAt=alert["lastHistoryUpdatedAt"],
                 lastReceived=alert["updatedAt"],
             )
-            for alert in alerts
-        ]
+            alert_dtos.append(alert_dto)
+        return alert_dtos
 
     def __create_or_update_incident(
         self, summary, status, message, affectedServices, id
