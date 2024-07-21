@@ -51,8 +51,40 @@ services:
     networks:
       - keycloak-and-mysql-network
 
+  openldap:
+    image: osixia/openldap:1.5.0
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      LDAP_ORGANISATION: "Keep Organization"
+      LDAP_DOMAIN: "keep.com"
+      LDAP_ADMIN_PASSWORD: "admin_password"
+      LDAP_BASE_DN: ""
+    volumes:
+      - openldap-data:/var/lib/ldap
+      - openldap-config:/etc/ldap/slapd.d
+    networks:
+      - keycloak-and-mysql-network
+
+  ldap-ui:
+    image: dnknth/ldap-ui
+    ports:
+      - "8081:5000"
+    environment:
+      LDAP_URL: "ldap://openldap:389"
+      BASE_DN: "dc=keep,dc=com"
+      BIND_DN: "cn=admin,dc=keep,dc=com"
+      BIND_PASSWORD: "admin_password"
+    depends_on:
+      - openldap
+    networks:
+      - keycloak-and-mysql-network
+
 networks:
   keycloak-and-mysql-network:
 
 volumes:
   keycloak-and-mysql-volume:
+  openldap-data:
+  openldap-config:
