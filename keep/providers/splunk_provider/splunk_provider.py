@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import json
 from typing import Optional
 
 import pydantic
@@ -62,11 +63,11 @@ class SplunkProvider(BaseProvider):
     FINGERPRINT_FIELDS = ["exception", "logger", "service"]
 
     SEVERITIES_MAP = {
-        "1": AlertSeverity.LOW,
-        "2": AlertSeverity.INFO,
-        "3": AlertSeverity.WARNING,
-        "4": AlertSeverity.HIGH,
-        "5": AlertSeverity.CRITICAL,
+        "LOW": AlertSeverity.LOW,
+        "INFO": AlertSeverity.INFO,
+        "WARNING": AlertSeverity.WARNING,
+        "ERROR": AlertSeverity.HIGH,
+        "CRITICAL": AlertSeverity.CRITICAL,
     }
 
     def __init__(
@@ -150,7 +151,18 @@ class SplunkProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: Optional["SplunkProvider"] = None
     ) -> AlertDto:
-        result = event.get("result", event.get("_result", {}))
+        result: dict = event.get("result", event.get("_result", {}))
+
+        try:
+            raw: str = event.get("_raw", "{}")
+            raw_dict: dict = json.loads(raw)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "Error parsing _raw attribute from event",
+                extra={"err": e, "_raw": event.get("_raw")},
+            )
+            raw_dict = {}
 
         # export k8s specifics
         kubernetes = {}
@@ -159,12 +171,22 @@ class SplunkProvider(BaseProvider):
                 kubernetes[key.replace("kubernetes.", "")] = result[key]
 
         message = result.get("message")
-        name = message or event["search_name"]
+        name = message or raw_dict.get("message", event["search_name"])
         service = result.get("service")
         environment = result.get("environment", result.get("env", "undefined"))
         exception = event.get(
-            "exception", result.get("exception", result.get("exception_class"))
+            "exception",
+            result.get(
+                "exception",
+                result.get("exception_class", raw_dict.get("exception_class")),
+            ),
         )
+
+        # override stacktrace with _raw stacktrace if it doesnt exist in result
+        stacktrace = result.get("stacktrace", raw_dict.get("stacktrace", ""))
+        result["stacktrace"] = stacktrace
+
+        severity = result.get("log_level", raw_dict.get("log_level", "INFO"))
         logger = event.get("logger", result.get("logger"))
         alert = AlertDto(
             id=event["sid"],
@@ -172,7 +194,7 @@ class SplunkProvider(BaseProvider):
             source=["splunk"],
             url=event["results_link"],
             lastReceived=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            severity=SplunkProvider.SEVERITIES_MAP.get("1"),
+            severity=SplunkProvider.SEVERITIES_MAP.get(severity),
             status="firing",
             message=message,
             service=service,

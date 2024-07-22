@@ -163,6 +163,10 @@ export function AlertTable({
   let showEmptyState = !isAsyncLoading && showSkeleton;
 
   const handleRowClick = (alert: AlertDto) => {
+    // if presetName is alert-history, do not open sidebar
+    if (presetName === "alert-history") {
+      return;
+    }
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };

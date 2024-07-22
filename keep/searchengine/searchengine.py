@@ -107,7 +107,7 @@ class SearchEngine:
         query = self._create_raw_sql(sql_query.get("sql"), sql_query.get("params"))
         # get the alerts from elastic
         elastic_sql_query = (
-            f"""select * from "keep-alerts-{self.tenant_id}" where {query}"""
+            f"""select * from "{self.elastic_client.alerts_index}" where {query}"""
         )
         if timeframe:
             elastic_sql_query += f" and lastReceived > now() - {timeframe}s"
@@ -212,7 +212,7 @@ class SearchEngine:
                         preset.sql_query.get("sql"), preset.sql_query.get("params")
                     )
                     # get number of alerts and number of noisy alerts
-                    elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "keep-alerts-{self.tenant_id}" where {query}"""
+                    elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "{self.elastic_client.alerts_index}" where {query}"""
                     results = self.elastic_client.run_query(elastic_sql_query)
                     if results:
                         preset.alerts_count = results["rows"][0][0]
