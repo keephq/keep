@@ -38,12 +38,10 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def get_sso_providers(self) -> list[str]:
         return []
 
-    def get_sso_wizard_url(self) -> str:
+    def get_sso_wizard_url(self, authenticated_entity: AuthenticatedEntity) -> str:
         # http://localhost:8181/auth/realms/keep/wizard/?org_id=cb75352e-1faf-4cd5-8173-626a224e4894#iss=http%3A%2F%2Flocalhost%3A8181%2Fauth%2Frealms%2Fkeep
-        tenant_realm = "keep"  # TODO fetch it from token/tenant
-        org_id = (
-            "cb75352e-1faf-4cd5-8173-626a224e4894"  # TODO: fetch it from token/tenant
-        )
+        tenant_realm = authenticated_entity.org_realm
+        org_id = authenticated_entity.org_id
         return f"{self.server_url}realms/{tenant_realm}/wizard/?org_id={org_id}/#iss={self.server_url}/realms/{tenant_realm}"
 
     def get_users(self) -> list[User]:
@@ -163,6 +161,8 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             )
             tenant_id = payload.get("keep_tenant_id")
             email = payload.get("preferred_username")
+            org_id = payload.get("active_organization", {}).get("id")
+            org_realm = payload.get("active_organization", {}).get("name")
             role_name = "admin"
             # TODO: add groups
             # role_name = payload.get("keep_role")
@@ -180,4 +180,6 @@ class KeycloakAuthVerifier(AuthVerifierBase):
                 status_code=403,
                 detail="You don't have the required permissions to access this resource",
             )
-        return AuthenticatedEntity(tenant_id, email, None, role_name)
+        return AuthenticatedEntity(
+            tenant_id, email, None, role_name, org_id=org_id, org_realm=org_realm
+        )

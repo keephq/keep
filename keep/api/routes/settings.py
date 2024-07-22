@@ -435,7 +435,7 @@ async def get_sso_settings(
         return {
             "sso": True,
             "providers": providers,
-            "wizardUrl": identity_manager.get_sso_wizard_url(),
+            "wizardUrl": identity_manager.get_sso_wizard_url(authenticated_entity),
         }
     else:
         return {"sso": False}

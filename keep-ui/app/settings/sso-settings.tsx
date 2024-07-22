@@ -28,70 +28,43 @@ const SSOSettings: React.FC<Props> = ({ accessToken }) => {
 
   const { sso: supportsSSO, providers, wizardUrl } = data;
 
-  const handleConnectSSO = () => {
-    if (supportsSSO && wizardUrl) {
-      window.open(wizardUrl, '_blank');
-    }
-  };
-
-  const emptyStateContent = (
-    <div className="flex flex-col items-center justify-center space-y-4">
-      {supportsSSO && (
-        <div className="flex space-x-4">
-          <Image
-            src={`/icons/auth0-icon.png`}
-            width={48}
-            height={48}
-            alt="auth0"
-          />
-          <Image
-            src={`/icons/okta-icon.png`}
-            width={80}
-            height={80}
-            alt="Okta"
-          />
-        </div>
-      )}
-      <Button color="orange" onClick={handleConnectSSO} disabled={!supportsSSO}>
-        Connect a SSO Provider
-      </Button>
-    </div>
-  );
-
   return (
     <div className="p-6">
       <Title>SSO Settings</Title>
-      <Card className="mt-4 p-4">
-        {supportsSSO ? (
-          providers.length > 0 ? (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Provider</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
-                  <TableHeaderCell>Actions</TableHeaderCell>
+      {supportsSSO && providers.length > 0 && (
+        <Card className="mt-4 p-4">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>Provider</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Actions</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {providers.map(provider => (
+                <TableRow key={provider.id}>
+                  <TableCell>{provider.name}</TableCell>
+                  <TableCell>{provider.connected ? "Connected" : "Not connected"}</TableCell>
+                  <TableCell>
+                    <Button style={{ marginRight: "10px" }} onClick={() => {/* Connect logic here */}}>
+                      Connect
+                    </Button>
+                    <Button color="orange" onClick={() => {/* Disconnect logic here */}}>
+                      Disconnect
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {providers.map(provider => (
-                  <TableRow key={provider.id}>
-                    <TableCell>{provider.name}</TableCell>
-                    <TableCell>{provider.connected ? "Connected" : "Not connected"}</TableCell>
-                    <TableCell>
-                      <Button style={{ marginRight: "10px" }} onClick={() => {/* Connect logic here */}}>
-                        Connect
-                      </Button>
-                      <Button color="orange" onClick={() => {/* Disconnect logic here */}}>
-                        Disconnect
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : emptyStateContent
-        ) : emptyStateContent}
-      </Card>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+      {wizardUrl && (
+        <Card className="mt-4 p-4">
+          <iframe src={wizardUrl} style={{ width: '100%', height: '600px', border: 'none' }} />
+        </Card>
+      )}
     </div>
   );
 };

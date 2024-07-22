@@ -343,7 +343,7 @@ async def create_workflow(
 async def create_workflow_from_body(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:workflows"])
+        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id

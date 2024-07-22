@@ -2,6 +2,7 @@ import abc
 import logging
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 
 
@@ -24,7 +25,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             " for {}".format(self.__class__.__name__)
         )
 
-    def get_sso_wizard_url(self) -> str:
+    def get_sso_wizard_url(self, authenticated_entity: AuthenticatedEntity) -> str:
         raise NotImplementedError(
             "get_sso_wizard_url() method not implemented"
             " for {}".format(self.__class__.__name__)

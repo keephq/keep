@@ -1,8 +1,10 @@
-import dataclasses
 from typing import Optional
 
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
 
-@dataclasses.dataclass
+
+@dataclass(config=ConfigDict(extra="allow"))
 class AuthenticatedEntity:
     tenant_id: str
     email: str

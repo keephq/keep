@@ -46,6 +46,19 @@ const nextConfig = {
           },
         ];
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'http://localhost:8181',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
