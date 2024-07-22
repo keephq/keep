@@ -142,7 +142,7 @@
 	.st2{fill:#67308F;}
 	.st3{fill:#D1D1D1;}
 	.st4{fill:#EF5B28;}
-	.st5{stroke:#000000;stroke-width:16;stroke-miterlimit:10;}
+	.st5{stroke:#000000;strokeWidth:16;stroke-miterlimit:10;}
 	.st6{fill:url(#Triangle-3_1_);}
 	.st7{fill:#333333;}
 	.st8{fill:#CF2129;}

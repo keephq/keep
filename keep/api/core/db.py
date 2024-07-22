@@ -21,12 +21,13 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlmodel import Session, or_, select
+from sqlalchemy.sql import expression
+from sqlmodel import Session, col, or_, select
 
 from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus
+from keep.api.models.alert import AlertStatus, IncidentDtoIn
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -1756,6 +1757,41 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
         session.refresh(preset)
     return preset
 
+
+def get_incident_by_id(incident_id: UUID) -> Incident:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .options(selectinload(Incident.alerts))
+            .where(Incident.id == incident_id)
+        ).first()
+    return incident
+
+
+def assign_alert_to_incident(
+    alert_id: UUID, incident_id: UUID, tenant_id: str
+) -> AlertToIncident:
+    with Session(engine) as session:
+        assignment = AlertToIncident(
+            alert_id=alert_id, incident_id=incident_id, tenant_id=tenant_id
+        )
+        session.add(assignment)
+        session.commit()
+        session.refresh(assignment)
+
+    return assignment
+
+
+def get_incidents(tenant_id) -> List[Incident]:
+    with Session(engine) as session:
+        incidents = session.exec(
+            select(Incident)
+            .options(selectinload(Incident.alerts))
+            .where(Incident.tenant_id == tenant_id)
+            .order_by(desc(Incident.creation_time))
+        ).all()
+    return incidents
+
 def get_alert_audit(
     tenant_id: str, fingerprint: str, limit: int = 50
 ) -> List[AlertAudit]:
@@ -1768,6 +1804,7 @@ def get_alert_audit(
             .limit(limit)
         ).all()
     return audit
+
 
 def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions: int = 15) -> list[dict]:
     if fetch_last_executions is not None and fetch_last_executions > 20:
@@ -1818,3 +1855,300 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
 
     return result
    
+
+
+def get_last_incidents(
+    tenant_id: str,
+    limit: int = 25,
+    offset: int = 0,
+    timeframe: int = None,
+    is_confirmed: bool = False,
+) -> (list[Incident], int):
+    """
+    Get the last incidents and total amount of incidents.
+
+    Args:
+        tenant_id (str): The tenant_id to filter the incidents by.
+        limit (int): Amount of objects to return
+        offset (int): Current offset for
+        timeframe (int|null): Return incidents only for the last <N> days
+        is_confirmed (bool): Return confirmed incidents or predictions
+
+    Returns:
+        List[Incident]: A list of Incident objects.
+    """
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Incident,
+            )
+            .filter(Incident.tenant_id == tenant_id)
+            .filter(Incident.is_confirmed == is_confirmed)
+            .options(joinedload(Incident.alerts))
+            .order_by(desc(Incident.creation_time))
+        )
+
+        if timeframe:
+            query = query.filter(
+                Incident.start_time
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
+
+        total_count = query.count()
+
+        # Order by timestamp in descending order and limit the results
+        query = query.order_by(desc(Incident.start_time)).limit(limit).offset(offset)
+        # Execute the query
+        incidents = query.all()
+
+    return incidents, total_count
+
+
+def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
+    with Session(engine) as session:
+        query = session.query(
+            Incident,
+        ).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+        )
+
+    return query.first()
+
+
+def create_incident_from_dto(
+    tenant_id: str, incident_dto: IncidentDtoIn
+) -> Optional[Incident]:
+    return create_incident_from_dict(tenant_id, incident_dto.dict())
+
+
+def create_incident_from_dict(
+    tenant_id: str, incident_data: dict
+) -> Optional[Incident]:
+    is_predicted = incident_data.get("is_predicted", False)
+    with Session(engine) as session:
+        new_incident = Incident(
+            **incident_data,
+            tenant_id=tenant_id,
+            is_confirmed=not is_predicted
+        )
+        session.add(new_incident)
+        session.commit()
+        session.refresh(new_incident)
+        new_incident.alerts = []
+    return new_incident
+
+
+def update_incident_from_dto_by_id(
+    tenant_id: str,
+    incident_id: str,
+    updated_incident_dto: IncidentDtoIn,
+) -> Optional[Incident]:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            ).options(joinedload(Incident.alerts))
+        ).first()
+
+        if not incident:
+            return None
+
+        session.query(Incident).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+        ).update({
+            "name": updated_incident_dto.name,
+            "description": updated_incident_dto.description,
+            "assignee": updated_incident_dto.assignee,
+        })
+
+        session.commit()
+        session.refresh(incident)
+
+        return incident
+
+
+def delete_incident_by_id(
+    tenant_id: str,
+    incident_id: str,
+) -> bool:
+    with Session(engine) as session:
+        incident = (
+            session.query(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+            .first()
+        )
+
+        # Delete all associations with alerts:
+
+        (
+            session.query(AlertToIncident)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+            )
+            .delete()
+        )
+
+        session.delete(incident)
+        session.commit()
+        return True
+
+
+def get_incidents_count(
+    tenant_id: str,
+) -> int:
+    with Session(engine) as session:
+        return (
+            session.query(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+            )
+            .count()
+        )
+
+
+def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List[Alert]:
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Alert,
+            )
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .join(Incident, AlertToIncident.incident_id == Incident.id)
+            .filter(
+                AlertToIncident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+        )
+
+    return query.all()
+
+
+def add_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
+):
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+        ).first()
+
+        if not incident:
+            return None
+
+        existed_alert_ids = session.exec(
+            select(AlertToIncident.alert_id).where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+                col(AlertToIncident.alert_id).in_(alert_ids),
+            )
+        ).all()
+
+        alert_to_incident_entries = [
+            AlertToIncident(
+                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
+            )
+            for alert_id in alert_ids
+            if alert_id not in existed_alert_ids
+        ]
+
+        session.bulk_save_objects(alert_to_incident_entries)
+        session.commit()
+        return True
+
+
+def remove_alerts_to_incident_by_incident_id(
+    tenant_id: str, incident_id: str, alert_ids: List[UUID]
+) -> Optional[int]:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+        ).first()
+
+        if not incident:
+            return None
+
+        deleted = (
+            session.query(AlertToIncident)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+                col(AlertToIncident.alert_id).in_(alert_ids),
+            )
+            .delete()
+        )
+
+        session.commit()
+        return deleted
+
+
+def get_alerts_count(
+    tenant_id: str,
+) -> int:
+    with Session(engine) as session:
+        return (
+            session.query(Alert)
+            .filter(
+                Alert.tenant_id == tenant_id,
+            )
+            .count()
+        )
+
+
+def get_first_alert_datetime(
+    tenant_id: str,
+) -> datetime | None:
+    with Session(engine) as session:
+        first_alert = (
+            session.query(Alert)
+            .filter(
+                Alert.tenant_id == tenant_id,
+            )
+            .first()
+        )
+        if first_alert:
+            return first_alert.timestamp
+
+
+def confirm_predicted_incident_by_id(
+    tenant_id: str,
+    incident_id: UUID | str,
+):
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+                Incident.is_confirmed == expression.false()
+            ).options(
+                joinedload(Incident.alerts)
+            )
+        ).first()
+
+        if not incident:
+            return None
+
+        session.query(Incident).filter(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+            Incident.is_confirmed == expression.false()
+        ).update({
+            "is_confirmed": True,
+        })
+
+        session.commit()
+        session.refresh(incident)
+
+        return incident
+
