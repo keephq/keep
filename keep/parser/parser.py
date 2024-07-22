@@ -155,7 +155,7 @@ class Parser:
         workflow_steps = self._parse_steps(context_manager, workflow)
         workflow_actions = self._parse_actions(context_manager, workflow)
         workflow_interval = self.parse_interval(workflow)
-        on_failure_action = self._get_on_failure_action(workflow)
+        on_failure_action = self._get_on_failure_action(context_manager, workflow)
         workflow_triggers = self.get_triggers_from_workflow(workflow)
         workflow_provider_types = (
             self._get_workflow_provider_types_from_steps_and_actions(
@@ -531,7 +531,7 @@ class Parser:
             extended_action = actions_context.get(action.get("use"), {})
             yield ParserUtils.deep_merge(action, extended_action)
 
-    def _get_on_failure_action(self, workflow) -> Step | None:
+    def _get_on_failure_action(self, context_manager: ContextManager, workflow: dict) -> Step | None:
         """
         Parse the on-failure action
 
@@ -541,10 +541,10 @@ class Parser:
         Returns:
             Action | None: _description_
         """
-        self.logger.debug("Parsing on-faliure")
+        self.logger.debug("Parsing on-failure")
         workflow_on_failure = workflow.get("on-failure", {})
         if workflow_on_failure:
-            parsed_action = self._get_action(workflow_on_failure, "on-faliure")
+            parsed_action = self._get_action(context_manager=context_manager, action=workflow_on_failure, action_name="on-failure")
             self.logger.debug("Parsed on-failure successfully")
             return parsed_action
         self.logger.debug("No on-failure action")
