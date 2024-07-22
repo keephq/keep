@@ -41,7 +41,10 @@ export const useAlerts = () => {
 
   const usePresetAlerts = (
     presetName: string,
-    options: SWRConfiguration = { revalidateOnFocus: false }
+    options: SWRConfiguration = {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000, // Dedupe requests within 5 seconds
+    }
   ) => {
     const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
       new Map()
