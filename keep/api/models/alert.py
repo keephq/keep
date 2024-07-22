@@ -376,11 +376,12 @@ class IncidentDto(IncidentDtoIn):
 
         alerts_dto = [AlertDto(**alert.event) for alert in db_incident.alerts]
 
-        unique_sources_list = list(set([
-            source
-            for alert_dto in alerts_dto
-            for source in alert_dto.source
-        ]))
+        unique_sources_list = list(
+            set([source for alert_dto in alerts_dto for source in alert_dto.source])
+        )
+        unique_service_list = list(
+            set([alert.service for alert in alerts_dto if alert.service is not None])
+        )
 
         return cls(
             id=db_incident.id,
@@ -394,5 +395,5 @@ class IncidentDto(IncidentDtoIn):
             alert_sources=unique_sources_list,
             severity=IncidentSeverity.CRITICAL,
             assignee=db_incident.assignee,
-            services=["service1", "service2"],
+            services=unique_service_list,
         )
