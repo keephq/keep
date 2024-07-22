@@ -30,7 +30,7 @@ import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { parseISO, set, differenceInSeconds } from "date-fns";
-import TimeAgo from "react-timeago";
+import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
@@ -381,6 +381,34 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
 
+  const customFormatter: Formatter = (
+    value: number,
+    unit: Unit,
+    suffix: Suffix
+  ) => {
+    const now = Date.now();
+    const seconds = Math.floor((now - new Date(workflow?.last_execution_started! + 'Z').getTime()) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+  
+    let formattedString = '';
+    if (days > 0) {
+      formattedString += `${days}d`;
+    }
+    if (hours % 24 > 0) {
+      formattedString += ` ${hours % 24}h`;
+    }
+    if (minutes % 60 > 0) {
+      formattedString += ` ${minutes % 60}min${minutes >1 ?'s' : ''}`;
+    }
+    if (seconds % 60 > 0 && (!minutes && !hours && !days)) {
+      formattedString += ` ${seconds % 60}sec${seconds >1 ?'s' : ''}`;
+    }
+    formattedString += ` ago`;
+    return formattedString;
+  };
+
   return (
     <div className="mt-2.5">
       {isRunning && (
@@ -408,28 +436,34 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             </h2>
             <div className="flex flex-col sm:flex-row md:items-center justify-between gap-2 flex-wrap">
               <div className="flex flex-wrap justify-start items-center gap-2">
-                {!!workflow.interval && <Button
-                  className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
-                  // className="border bg-white border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
-                  disabled={!workflow?.interval}
-                  icon={PiDiamondsFourFill}
-                >
-                  Interval
-                </Button>}
+                {!!workflow.interval && (
+                  <Button
+                    className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                    // className="border bg-white border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
+                    disabled={!workflow?.interval}
+                    icon={PiDiamondsFourFill}
+                  >
+                    Interval
+                  </Button>
+                )}
 
-                {!!workflow?.triggers?.length && <Button
-                  className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
-                  disabled={
-                    !workflow?.triggers || workflow?.triggers?.length === 0
-                  }
-                >
-                  Trigger
-                </Button>}
+                {!!workflow?.triggers?.length && (
+                  <Button
+                    className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                    disabled={
+                      !workflow?.triggers || workflow?.triggers?.length === 0
+                    }
+                  >
+                    Trigger
+                  </Button>
+                )}
               </div>
               {workflow && workflow.last_execution_started ? (
                 <TimeAgo
                   date={workflow?.last_execution_started + "Z"}
                   className="text-sm text-gray-500"
+                  suffix="ago"
+                  formatter={customFormatter}
                 />
               ) : null}
             </div>
