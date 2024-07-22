@@ -5,6 +5,7 @@ from importlib import metadata
 
 import jwt
 import uvicorn
+import requests
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -62,6 +63,16 @@ try:
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
+
+
+# Monkey patch requests to disable redirects
+original_request = requests.Session.request
+
+def no_redirect_request(self, method, url, **kwargs):
+    kwargs['allow_redirects'] = False
+    return original_request(self, method, url, **kwargs)
+
+requests.Session.request = no_redirect_request
 
 
 def _extract_identity(request: Request, attribute="email") -> str:
