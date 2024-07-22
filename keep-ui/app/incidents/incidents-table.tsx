@@ -195,7 +195,7 @@ export default function IncidentsTable({
 
   return (
     <div>
-      <Table className="mt-4 [&>table]:table-fixed [&>table]:w-full h-full">
+      <Table className="mt-4">
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow

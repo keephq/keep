@@ -18,7 +18,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, confirm_predicted_incident_by_id, create_incident_from_dict,
+    update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -28,11 +28,12 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import IncidentsPaginatedResultsDto
+from keep.api.utils.import_ee import mine_incidents_and_create_objects
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-from keep.api.utils.import_ee import mine_incidents_and_create_objects
+
 
 
 def __update_client_on_incident_change(
@@ -133,10 +134,7 @@ def get_all_incidents(
     )
 
     return IncidentsPaginatedResultsDto(
-        limit=limit,
-        offset=offset,
-        count=total_count,
-        items=incidents_dto
+        limit=limit, offset=offset, count=total_count, items=incidents_dto
     )
 
 
