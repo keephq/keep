@@ -142,7 +142,7 @@ function Builder({
 
   const addWorkflow = () => {
     const apiUrl = getApiURL();
-    const url = `${apiUrl}/workflows`;
+    const url = `${apiUrl}/workflows/json`;
     const method = "POST";
     const headers = {
       "Content-Type": "text/html",
