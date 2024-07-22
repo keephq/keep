@@ -156,7 +156,12 @@ class SplunkProvider(BaseProvider):
         try:
             raw: str = event.get("_raw", "{}")
             raw_dict: dict = json.loads(raw)
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "Error parsing _raw attribute from event",
+                extra={"err": e, "_raw": event.get("_raw")},
+            )
             raw_dict = {}
 
         # export k8s specifics
