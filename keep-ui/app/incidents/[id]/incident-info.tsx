@@ -1,5 +1,10 @@
-import { Title } from "@tremor/react";
+import {Button, Title} from "@tremor/react";
 import { IncidentDto } from "../model";
+import CreateOrUpdateIncident from "../create-or-update-incident";
+import Modal from "@/components/ui/Modal";
+import React, {useState} from "react";
+import {MdModeEdit} from "react-icons/md";
+import {useIncident} from "../../../utils/hooks/useIncidents";
 // import { RiSparkling2Line } from "react-icons/ri";
 
 interface Props {
@@ -7,10 +12,40 @@ interface Props {
 }
 
 export default function IncidentInformation({ incident }: Props) {
+
+  const { mutate } = useIncident(incident.id);
+  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+  };
+
+  const handleStartEdit = () => {
+    setIsFormOpen(true);
+  };
+
+  const handleFinishEdit = () => {
+    setIsFormOpen(false);
+    mutate();
+  };
+
   return (
     <div className="flex h-full flex-col justify-between">
       <div>
-        <Title className="mb-2.5">⚔️ Incident Information</Title>
+        <div className="flex justify-between mb-2.5">
+          <Title className="">⚔️ Incident Information</Title>
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdModeEdit}
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleStartEdit();
+            }}
+          />
+        </div>
         <div className="prose-2xl">{incident.name}</div>
         <p>Description: {incident.description}</p>
         <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
@@ -29,6 +64,17 @@ export default function IncidentInformation({ incident }: Props) {
           culpa qui officia deserunt mollit anim id est laborum.
         </Callout> */}
       </div>
+      <Modal
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        className="w-[600px]"
+        title="Edit Incident"
+      >
+        <CreateOrUpdateIncident
+          incidentToEdit={incident}
+          editCallback={handleFinishEdit}
+        />
+      </Modal>
     </div>
   );
 }
