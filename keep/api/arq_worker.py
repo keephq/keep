@@ -78,6 +78,7 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     functions: list = FUNCTIONS
-    cron_jobs = [
-        cron(mine_incidents_and_create_objects, minute=1)
-    ]
+    if mine_incidents_and_create_objects is not NotImplemented:
+        cron_jobs = [
+            cron(mine_incidents_and_create_objects, minute=1, run_at_startup=True, unique=True)
+        ]

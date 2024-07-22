@@ -17,6 +17,7 @@ from keep.api.core.db import (
 logger = logging.getLogger(__name__)
 
 async def mine_incidents_and_create_objects(
+        ctx: dict | None,  # arq context
         tenant_id: str | None = None,
         use_n_historical_alerts: int = 10000,
         incident_sliding_window_size: int = 6 * 24 * 60 * 60,
@@ -25,7 +26,7 @@ async def mine_incidents_and_create_objects(
         fingerprint_threshold: int = 1,
     ):
     if tenant_id is None:
-        logger.info("No tenant_id provided, mining for all tenante")
+        logger.info("No tenant_id provided, mining incidents for all tenante")
         tenants = get_all_tenants()
         tenant_ids = [tenant.id for tenant in tenants]
     else:
@@ -33,19 +34,14 @@ async def mine_incidents_and_create_objects(
 
     for tenant_id in tenant_ids:
         alerts = get_last_alerts(tenant_id, use_n_historical_alerts)
-
-        if len(alerts) == 0:
-            return {"incidents": []}
         
         incidents = mine_incidents(
-            alert,
+            alerts,
             incident_sliding_window_size,
             statistic_sliding_window_size,
             jaccard_threshold,
             fingerprint_threshold,
         )
-        if len(incidents) == 0:
-            return {"incidents": []}
 
         for incident in incidents:
             incident_id = create_incident_from_dict(

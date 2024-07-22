@@ -1452,7 +1452,7 @@ def update_key_last_used(
         session.commit()
 
 
-def get_all_tenants(tenant_id):
+def get_all_tenants():
     with Session(engine) as session:
         tenants = session.exec(
             select(Tenant)
