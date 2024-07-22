@@ -536,7 +536,8 @@ class Parser:
         Parse the on-failure action
 
         Args:
-            workflow (_type_): _description_
+            context_manager (ContextManager): _description_
+            workflow (dict): _description_
 
         Returns:
             Action | None: _description_
