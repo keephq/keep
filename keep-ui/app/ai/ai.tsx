@@ -45,16 +45,13 @@ export default function Ai() {
       body: JSON.stringify({
       }),
     });
-    if (response.ok) {
-      setAnimate(false);
-      setNewText("Mine incidents");
-    } else {
-      setAnimate(false);
-      setNewText("Mine incidents");
+    if (!response.ok) {
       toast.error(
         "Failed to mine incidents, please contact us if this issue persists."
       );
     }
+    setAnimate(false);
+    setNewText("Mine incidents");
   };
 
   return (
