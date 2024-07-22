@@ -55,11 +55,10 @@ const DetailsSection = () => {
       </Button>
       <div className="mt-10 divide-y flex flex-col border border-gray-200 rounded bg-white shadow text-sm">
         {links.map((link) => (
-          <div
+          <a
             key={link.href}
-            onClick={() => {
-              router.push(link.href);
-            }}
+            href={link.href}
+            target="_blank"
             className="flex items-center p-2 bg-white hover:bg-gray-100 transition cursor-pointer gap-4"
           >
             <div className="flex flex-row items-center gap-2">
@@ -69,20 +68,43 @@ const DetailsSection = () => {
             <span className="ml-auto flex items-center">
               <MdArrowForwardIos className="w-4 h-4 text-gray-500 ml-2" />
             </span>
-          </div>
+          </a>
         ))}
       </div>
     </section>
   );
 };
 
-const WorkflowsEmptyState = () => {
+const WorkflowsEmptyState = ({ isNewUI }: { isNewUI?: boolean }) => {
   const loadAlert = () =>
     document.getElementById("uploadWorkflowButton")?.click();
 
+  if (isNewUI) {
+    return (
+      <div className="mt-4">
+        <DetailsSection />
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-4">
-      <DetailsSection />
+    <div className="text-center mt-4">
+      <Callout
+        title="No Workflows"
+        icon={CircleStackIcon}
+        color="yellow"
+        className="mt-5"
+      >
+        You can start by uploading a workflow file using the{" "}
+        <Italic onClick={loadAlert} className="underline cursor-pointer">
+          Load a Workflow
+        </Italic>{" "}
+        button above or by using the{" "}
+        <Italic className="underline">
+          <Link href="/workflows/builder">Workflow Builder</Link>
+        </Italic>{" "}
+        to create a new workflow.
+      </Callout>
     </div>
   );
 };

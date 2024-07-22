@@ -137,7 +137,12 @@ const getColors = (
 };
 
 function getRandomStatus() {
-  const statuses = ["success", "error", "in_progress", "providers_not_configured"];
+  const statuses = [
+    "success",
+    "error",
+    "in_progress",
+    "providers_not_configured",
+  ];
   return statuses[Math.floor(Math.random() * statuses.length)];
 }
 
@@ -178,13 +183,12 @@ const chartOptions = {
 };
 
 export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
-  console.log("realworkflow===>", workflow)
   const lastExecutions = useMemo(() => {
     const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
     return reversedExecutions.reverse();
   }, [workflow?.last_executions]);
 
-  const hasNoData = (!lastExecutions) || lastExecutions.length === 0;
+  const hasNoData = !lastExecutions || lastExecutions.length === 0;
   let status = workflow?.last_execution_status?.toLowerCase() || "";
   status = hasNoData ? getRandomStatus() : status;
 
@@ -208,7 +212,7 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
     ],
   };
   function getIcon() {
-    if (show_real_data && hasNoData ) {
+    if (show_real_data && hasNoData) {
       return null;
     }
 
@@ -228,29 +232,31 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
       case "failed":
       case "fail":
       case "failure":
-      case "error":  
+      case "error":
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
       case "in_progress":
         icon = <div className="loader"></div>;
         break;
-      default: 
+      default:
         icon = <div className="loader"></div>;
     }
     return icon;
   }
-  if(hasNoData && show_real_data) {
-    return  (<div className="flex justify-center items-center text-gray-400 h-36">
-    No data available
-  </div>)
+  if (hasNoData && show_real_data) {
+    return (
+      <div className="flex justify-center items-center text-gray-400 h-36">
+        No data available
+      </div>
+    );
   }
 
   return (
     <div className="flex felx-row items-end justify-start h-36 flex-nowrap w-full">
-        <div>{getIcon()}</div>
-          <div className="overflow-hidden h-32 w-full flex-shrink-1">
-            <Bar data={chartData} options={chartOptions}/>
-          </div>
+      <div>{getIcon()}</div>
+      <div className="overflow-hidden h-32 w-full flex-shrink-1">
+        <Bar data={chartData} options={chartOptions} />
+      </div>
     </div>
   );
 }

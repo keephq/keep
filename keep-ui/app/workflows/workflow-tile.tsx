@@ -34,6 +34,7 @@ import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
+import Modal from "@/components/ui/Modal";
 
 function WorkflowMenuSection({
   onDelete,
@@ -182,6 +183,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
 
   const { providers } = useFetchProviders();
 
@@ -453,6 +455,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                     disabled={
                       !workflow?.triggers || workflow?.triggers?.length === 0
                     }
+                    onClick={()=>{setOpenTriggerModal(true)}}
                   >
                     Trigger
                   </Button>
@@ -478,6 +481,74 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         staticFields={alertFilters}
         dependencies={alertDependencies}
       />
+      <Modal
+      isOpen={openTriggerModal}
+      onClose={()=>{setOpenTriggerModal(false)}}
+      >
+      <div className="mt-2.5">
+          <div className="flex flex-row items-center justify-start flex-wrap gap-1">
+            <span className="mr-1">Triggers:</span>
+            {triggerTypes.map((t) => {
+              if (t === "alert") {
+                const handleImageError = (event: any) => {
+                  event.target.href.baseVal = "/icons/keep-icon.png";
+                };
+                const alertSource = workflow.triggers
+                  .find((w) => w.type === "alert")
+                  ?.filters?.find((f) => f.key === "source")?.value;
+                const DynamicIcon = (props: any) => (
+                  <svg
+                    width="24px"
+                    height="24px"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    {...props}
+                  >
+                    {" "}
+                    <image
+                      id="image0"
+                      width={"24"}
+                      height={"24"}
+                      href={`/icons/${alertSource}-icon.png`}
+                      onError={handleImageError}
+                    />
+                  </svg>
+                );
+                return (
+                  <Badge
+                    icon={DynamicIcon}
+                    key={t}
+                    size="xs"
+                    color="orange"
+                    title={`Source: ${alertSource}`}
+                  >
+                    {t}
+                  </Badge>
+                );
+              }
+              return (
+                <Badge key={t} size="xs" color="orange">
+                  {t}
+                </Badge>
+              );
+            })}
+          </div>
+          <div>
+            {workflow.triggers.length > 0 ? (
+              <List>
+                {workflow.triggers.map((trigger, index) => (
+                  <TriggerTile key={index} trigger={trigger} />
+                ))}
+              </List>
+            ) : (
+              <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+                This workflow does not have any triggers.
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

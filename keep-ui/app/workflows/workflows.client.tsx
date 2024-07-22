@@ -33,7 +33,9 @@ export default function WorkflowsPage() {
 
   // Only fetch data when the user is authenticated
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    status === "authenticated" ? `${apiUrl}/workflows?is_v2=true` : null,
+    status === "authenticated"
+      ? `${apiUrl}/workflows?is_v2=${isSwitchOn}`
+      : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
 
@@ -274,20 +276,27 @@ export default function WorkflowsPage() {
           </div>
           <div>
             {data.length === 0 ? (
-              <WorkflowsEmptyState />
+              <WorkflowsEmptyState isNewUI={isSwitchOn} />
+            ) : !isSwitchOn ? (
+              <div className="flex flex-wrap gap-2">
+                {data.map((workflow) => (
+                  <WorkflowTileOld key={workflow.id} workflow={workflow} />
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
-                  isSwitchOn ? (<WorkflowTile key={workflow.id} workflow={workflow} />) :
-                    (<WorkflowTileOld key={workflow.id} workflow={workflow} />)
+                  <WorkflowTile key={workflow.id} workflow={workflow} />
                 ))}
               </div>
             )}
-            <MockWorkflowCardSection
-              mockWorkflows={mockWorkflows || []}
-              mockError={mockError}
-              mockLoading={mockLoading}
-            />
+            {isSwitchOn && (
+              <MockWorkflowCardSection
+                mockWorkflows={mockWorkflows || []}
+                mockError={mockError}
+                mockLoading={mockLoading}
+              />
+            )}
           </div>
         </div>
       </Card>
