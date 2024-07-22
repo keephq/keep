@@ -435,7 +435,7 @@ def enrich_alert(
                 else AlertActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
-        elif "note" in enrich_data.enrichments:
+        elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = AlertActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
         elif "ticket_url" in enrich_data.enrichments:
