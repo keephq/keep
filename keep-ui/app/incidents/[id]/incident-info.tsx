@@ -1,6 +1,6 @@
-import { Callout, Title } from "@tremor/react";
+import { Title } from "@tremor/react";
 import { IncidentDto } from "../model";
-import { RiSparkling2Line } from "react-icons/ri";
+// import { RiSparkling2Line } from "react-icons/ri";
 
 interface Props {
   incident: IncidentDto;
@@ -14,7 +14,7 @@ export default function IncidentInformation({ incident }: Props) {
         <div className="prose-2xl">{incident.name}</div>
         <p>Description: {incident.description}</p>
         <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
-        <Callout
+        {/* <Callout
           title="AI Summary"
           color="gray"
           icon={RiSparkling2Line}
@@ -27,7 +27,7 @@ export default function IncidentInformation({ incident }: Props) {
           reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
           pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
           culpa qui officia deserunt mollit anim id est laborum.
-        </Callout>
+        </Callout> */}
       </div>
     </div>
   );
