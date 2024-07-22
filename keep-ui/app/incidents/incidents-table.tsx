@@ -76,18 +76,18 @@ export default function IncidentsTable({
       header: "Description",
       cell: (context) => context.row.original.description,
     }),
-    columnHelper.display({
-      id: "severity",
-      header: "Severity",
-      cell: (context) => {
-        const severity = context.row.original.severity;
-        let color;
-        if (severity === "critical") color = "red";
-        else if (severity === "info") color = "blue";
-        else if (severity === "warning") color = "yellow";
-        return <Badge color={color}>{severity}</Badge>;
-      },
-    }),
+    // columnHelper.display({
+    //   id: "severity",
+    //   header: "Severity",
+    //   cell: (context) => {
+    //     const severity = context.row.original.severity;
+    //     let color;
+    //     if (severity === "critical") color = "red";
+    //     else if (severity === "info") color = "blue";
+    //     else if (severity === "warning") color = "yellow";
+    //     return <Badge color={color}>{severity}</Badge>;
+    //   },
+    // }),
     columnHelper.display({
       id: "alert_count",
       header: "Number of Alerts",
