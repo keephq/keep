@@ -83,7 +83,7 @@ export const useAlerts = () => {
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR(
-      () => (session ? `${apiUrl}/alerts/${fingerprint}/audit` : null),
+      () => (session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null),
       (url) => fetcher(url, session?.accessToken),
       options
     );

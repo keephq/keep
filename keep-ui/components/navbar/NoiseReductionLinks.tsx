@@ -7,6 +7,7 @@ import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
+import { AILink } from "./AILink";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -63,6 +64,9 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             Extraction
             </Subtitle>
           </LinkWithIcon>
+        </li>
+        <li>
+         <AILink></AILink>
         </li>
       </Disclosure.Panel>
     </Disclosure>

@@ -14,7 +14,7 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
-import { usePusher } from "utils/hooks/usePusher";
+import { useAlertPolling } from "utils/hooks/usePusher";
 
 const defaultPresets: Preset[] = [
   {
@@ -84,7 +84,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const selectedPreset = presets.find(
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
-  const { data: pusher } = usePusher();
+  const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
     isLoading: isAsyncLoading,
@@ -101,10 +101,10 @@ export default function Alerts({ presetName }: AlertsProps) {
   }, [searchParams, alerts]);
 
   useEffect(() => {
-    if (pusher?.pollAlerts) {
+    if (pollAlerts) {
       mutateAlerts();
     }
-  }, [mutateAlerts, pusher?.pollAlerts]);
+  }, [mutateAlerts, pollAlerts]);
 
   if (selectedPreset === undefined) {
     return null;
