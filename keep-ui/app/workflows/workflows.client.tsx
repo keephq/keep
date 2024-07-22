@@ -32,6 +32,18 @@ export default function WorkflowsPage() {
   const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
+  /** 
+    Redesign the workflow Card
+      The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
+      were made in the backend:
+      1. Query Search Parameter: A new query search parameter called is_v2 has been added, which accepts a boolean
+        (default is false).
+      2. Grouped Workflow Executions: When a request is made with /workflows?is_v2=true, workflow executions are grouped
+         by workflow.id.
+      3. Response Updates: The response includes the following new keys and their respective information:
+          -> last_executions: Used for the workflow execution graph.
+          ->last_execution_started: Used for showing the start time of execution in real-time. 
+  **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
     status === "authenticated"
       ? `${apiUrl}/workflows?is_v2=${isSwitchOn}`
@@ -39,6 +51,13 @@ export default function WorkflowsPage() {
     (url: string) => fetcher(url, session?.accessToken!)
   );
 
+  /**
+    Add Mock Workflows (6 Random Workflows on Every Request)
+      To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
+        1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
+           shuffled randomly.
+        2. Response: Only the first 6 files are parsed and sent in the response.
+   **/
   const {
     data: mockWorkflows,
     error: mockError,
