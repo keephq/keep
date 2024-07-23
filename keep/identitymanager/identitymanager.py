@@ -87,3 +87,50 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             "get_auth_verifier() method not implemented"
             " for {}".format(self.__class__.__name__)
         )
+
+    @abc.abstractmethod
+    def create_resource(
+        self, resource_id: str, resource_name: str, scopes: list[str]
+    ) -> None:
+        """
+        Create a resource in the identity manager.
+
+        Args:
+            resource_id (str): The ID of the resource.
+            resource_name (str): The name of the resource.
+            scopes (list): A list of scopes associated with the resource.
+        """
+        raise NotImplementedError(
+            "create_resource() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )
+
+    @abc.abstractmethod
+    def delete_resource(self, resource_id: str) -> None:
+        """
+        Delete a resource from the identity manager.
+
+        Args:
+            resource_id (str): The ID of the resource.
+        """
+        raise NotImplementedError(
+            "delete_resource() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )
+
+    @abc.abstractmethod
+    def check_permission(
+        self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
+    ) -> None:
+        """
+        Check if the authenticated entity has permission to access the resource.
+
+        Args:
+            resource_id (str): The ID of the resource.
+            scope (str): The scope to check.
+            authenticated_entity (AuthenticatedEntity): The authenticated entity.
+        """
+        raise NotImplementedError(
+            "check_permission() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )

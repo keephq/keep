@@ -2,6 +2,7 @@ import os
 
 from fastapi import Depends, HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
+from keycloak.uma_permissions import UMAPermission
 
 from keep.api.core.rbac import get_role_by_role_name
 from keep.api.models.user import User
@@ -9,7 +10,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
 from keep.identitymanager.identitymanager import BaseIdentityManager
-from keycloak import KeycloakAdmin, KeycloakOpenID
+from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 
 
 class KeycloakIdentityManager(BaseIdentityManager):
@@ -24,6 +25,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 realm_name=os.environ["KEYCLOAK_REALM"],
                 verify=True,
             )
+            keycloak_openid = KeycloakOpenID(
+                server_url=os.environ["KEYCLOAK_URL"],
+                realm_name=os.environ["KEYCLOAK_REALM"],
+                client_id=os.environ["KEYCLOAK_CLIENT_ID"],
+                client_secret_key=os.environ["KEYCLOAK_CLIENT_SECRET"],
+            )
+            self.keycloak_uma = KeycloakUMA(connection=keycloak_openid)
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -115,6 +123,67 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
     def get_auth_verifier(self, scopes: list) -> AuthVerifierBase:
         return KeycloakAuthVerifier(scopes)
+
+    def create_resource(
+        self, resource_id: str, resource_name: str, scopes: list[str]
+    ) -> None:
+        resource = {
+            "name": resource_name,
+            "type": "urn:your-app:resources:" + resource_name,
+            "uris": ["/" + resource_name + "/" + resource_id],
+            "scopes": [{"name": scope} for scope in scopes],
+        }
+        try:
+            self.keycloak_admin.create_client_authz_resource(
+                os.environ["KEYCLOAK_CLIENT_ID"], resource
+            )
+        except KeycloakPostError as e:
+            self.logger.error("Failed to create resource in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to create resource")
+
+    def delete_resource(self, resource_id: str) -> None:
+        try:
+            resources = self.keycloak_admin.get_client_authz_resources(
+                os.environ["KEYCLOAK_CLIENT_ID"]
+            )
+            for resource in resources:
+                if resource["uris"] == ["/resource/" + resource_id]:
+                    self.keycloak_admin.delete_client_authz_resource(
+                        os.environ["KEYCLOAK_CLIENT_ID"], resource["id"]
+                    )
+        except KeycloakDeleteError as e:
+            self.logger.error("Failed to delete resource from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to delete resource")
+
+    def check_permission(
+        self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
+    ) -> None:
+        try:
+            # Create UMA permission
+            permission = UMAPermission(resource=resource_id, scope=scope)
+
+            # Check permissions using the token from the authenticated entity
+            has_permission = self.keycloak_uma.permissions_check(
+                token=authenticated_entity.access_token, permissions=[permission]
+            )
+
+            if not has_permission:
+                self.logger.info(
+                    "Permission denied for resource_id: %s, scope: %s",
+                    resource_id,
+                    scope,
+                )
+                raise HTTPException(status_code=403, detail="Permission denied")
+
+            self.logger.info(
+                "Permission check successful for resource_id: %s, scope: %s",
+                resource_id,
+                scope,
+            )
+
+        except Exception as e:
+            self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to check permissions")
 
 
 class KeycloakAuthVerifier(AuthVerifierBase):
