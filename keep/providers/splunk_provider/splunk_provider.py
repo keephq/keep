@@ -154,7 +154,7 @@ class SplunkProvider(BaseProvider):
         result: dict = event.get("result", event.get("_result", {}))
 
         try:
-            raw: str = event.get("_raw", "{}")
+            raw: str = result.get("_raw", "{}")
             raw_dict: dict = json.loads(raw)
         except Exception as e:
             logger = logging.getLogger(__name__)
