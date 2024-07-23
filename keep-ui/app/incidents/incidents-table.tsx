@@ -112,12 +112,11 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: (context) =>
-        context.row.original.services.map((service) => (
-          <Badge className="mr-1" key={service}>
-            {service}
-          </Badge>
-        )),
+      cell: ({row}) =>
+        <div className="text-wrap">{row.original.services.map((service) =>
+          <Badge key={service} className="mr-1">{service}</Badge>
+        )}
+      </div>,
     }),
     columnHelper.display({
       id: "assignee",
