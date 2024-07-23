@@ -308,7 +308,7 @@ async def create_workflow(
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = __get_workflow_raw_data(request=None, file=file)
+    workflow = await __get_workflow_raw_data(request=None, file=file)
     workflowstore = WorkflowStore()
     # Create the workflow
     try:
