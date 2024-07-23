@@ -154,7 +154,7 @@ class SplunkProvider(BaseProvider):
         result: dict = event.get("result", event.get("_result", {}))
 
         try:
-            raw: str = event.get("_raw", "{}")
+            raw: str = result.get("_raw", "{}")
             raw_dict: dict = json.loads(raw)
         except Exception as e:
             logger = logging.getLogger(__name__)
@@ -178,9 +178,9 @@ class SplunkProvider(BaseProvider):
             "exception",
             result.get(
                 "exception",
-                result.get("exception_class", raw_dict.get("exception_class")),
+                result.get("exception_class"),
             ),
-        )
+        ) or raw_dict.get("exception_class", "")
 
         # override stacktrace with _raw stacktrace if it doesnt exist in result
         stacktrace = result.get("stacktrace", raw_dict.get("stacktrace", ""))
