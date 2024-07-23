@@ -16,14 +16,12 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {MdRemoveCircle, MdModeEdit, MdDone, MdBlock} from "react-icons/md";
+import { MdDone, MdBlock} from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import {IncidentDto, PaginatedIncidentsDto} from "./model";
 import React, { useState } from "react";
-import { useIncidents } from "utils/hooks/useIncidents";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const columnHelper = createColumnHelper<IncidentDto>();
@@ -68,12 +66,12 @@ export default function PredictedIncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: ({ row }) => row.original.name,
+      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
       id: "description",
       header: "Description",
-      cell: (context) => context.row.original.description,
+      cell: ({ row }) => <div className="text-wrap">{row.original.description}</div>,
     }),
     // columnHelper.display({
     //   id: "severity",
@@ -111,9 +109,10 @@ export default function PredictedIncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: (context) => context.row.original.services.map((service) =>
-        <Badge key={service} className="mr-1">{service}</Badge>
-      ),
+      cell: ({row}) => <div className="text-wrap">{row.original.services.map((service) =>
+          <Badge key={service} className="mr-1">{service}</Badge>
+        )}
+      </div>,
     }),
     columnHelper.display({
       id: "delete",
