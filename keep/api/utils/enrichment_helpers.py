@@ -39,6 +39,14 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     if assignee:
         alert.assignee = assignee
 
+    alert.enriched_fields = list(
+        filter(lambda x: not x.startswith("disposable_"),
+               list(enrichments.keys()))
+    )
+    if "assignees" in alert.enriched_fields:
+        # User can't be un-assigned. Just re-assigned to someone else
+        alert.enriched_fields.remove("assignees")
+
 
 def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
     """
