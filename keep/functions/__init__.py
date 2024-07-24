@@ -10,6 +10,7 @@ from dateutil import parser
 from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.core.db import get_alert_firing_time
 
 _len = len
 _all = all
@@ -218,3 +219,28 @@ def add_time_to_date(date, date_format, time_str):
 
     new_date = date + datetime.timedelta(**time_dict)
     return new_date
+
+
+def get_firing_time(alert: dict, time_str: str, **kwargs) -> datetime.datetime:
+    """
+    Get the firing time of an alert.
+
+    Args:
+        alert (dict): The alert dictionary.
+
+    Returns:
+        datetime.datetime: The firing time of the alert.
+    """
+    tenant_id = kwargs.get("tenant_id")
+    if not tenant_id:
+        raise ValueError("tenant_id is required")
+
+    fingerprint = alert.get("fingerprint")
+    if not fingerprint:
+        raise ValueError("fingerprint is required")
+
+    firing = get_alert_firing_time(tenant_id=tenant_id, fingerprint=fingerprint)
+
+    if firing > time_str:
+        return True
+    return False

@@ -1879,9 +1879,7 @@ def create_incident_from_dict(
     is_predicted = incident_data.get("is_predicted", False)
     with Session(engine) as session:
         new_incident = Incident(
-            **incident_data,
-            tenant_id=tenant_id,
-            is_confirmed=not is_predicted
+            **incident_data, tenant_id=tenant_id, is_confirmed=not is_predicted
         )
         session.add(new_incident)
         session.commit()
@@ -1897,10 +1895,12 @@ def update_incident_from_dto_by_id(
 ) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(
+            select(Incident)
+            .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-            ).options(joinedload(Incident.alerts))
+            )
+            .options(joinedload(Incident.alerts))
         ).first()
 
         if not incident:
@@ -1909,11 +1909,13 @@ def update_incident_from_dto_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-        ).update({
-            "name": updated_incident_dto.name,
-            "description": updated_incident_dto.description,
-            "assignee": updated_incident_dto.assignee,
-        })
+        ).update(
+            {
+                "name": updated_incident_dto.name,
+                "description": updated_incident_dto.description,
+                "assignee": updated_incident_dto.assignee,
+            }
+        )
 
         session.commit()
         session.refresh(incident)
@@ -2078,13 +2080,13 @@ def confirm_predicted_incident_by_id(
 ):
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(
+            select(Incident)
+            .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false()
-            ).options(
-                joinedload(Incident.alerts)
+                Incident.is_confirmed == expression.false(),
             )
+            .options(joinedload(Incident.alerts))
         ).first()
 
         if not incident:
@@ -2093,12 +2095,60 @@ def confirm_predicted_incident_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-            Incident.is_confirmed == expression.false()
-        ).update({
-            "is_confirmed": True,
-        })
+            Incident.is_confirmed == expression.false(),
+        ).update(
+            {
+                "is_confirmed": True,
+            }
+        )
 
         session.commit()
         session.refresh(incident)
 
         return incident
+
+
+def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
+    with Session(engine) as session:
+        # Get the latest alert for this fingerprint
+        latest_alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
+            .first()
+        )
+
+        if not latest_alert:
+            return timedelta()
+
+        # Extract status from the event column
+        latest_status = latest_alert.event.get("status")
+
+        # If the latest status is not 'firing', return 0
+        if latest_status != "firing":
+            return timedelta()
+
+        # Find the last time it wasn't firing
+        last_non_firing = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(Alert.event["status"].astext != "firing")  # JSON extraction syntax
+            .order_by(Alert.timestamp.desc())
+            .first()
+        )
+
+        if last_non_firing:
+            # Calculate the difference from the last non-firing time
+            return datetime.now(tz=timezone.utc) - last_non_firing.timestamp
+        else:
+            # If all alerts are firing, use the earliest alert time
+            earliest_alert = (
+                session.query(Alert)
+                .filter(Alert.tenant_id == tenant_id)
+                .filter(Alert.fingerprint == fingerprint)
+                .order_by(Alert.timestamp.asc())
+                .first()
+            )
+            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp
