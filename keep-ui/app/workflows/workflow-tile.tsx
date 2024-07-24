@@ -659,9 +659,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               </p>
             </div>
             <div className="flex flex-row justify-between items-center gap-1 flex-wrap text-sm">
-              {!!workflow?.interval && (
+              { (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
@@ -673,7 +673,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               )}
               {isManualTriggerPresent && (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
@@ -684,7 +684,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               )}
               {alertSource && (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
