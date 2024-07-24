@@ -9,9 +9,7 @@ const CustomNode = ({ data }: { data: Service }) => {
   const { data: alerts } = useAllAlerts("feed");
   const router = useRouter();
 
-  const relevantAlerts = alerts?.filter(
-    (alert) => alert.service === data.display_name
-  );
+  const relevantAlerts = alerts?.filter((alert) => alert.service === data.id);
 
   const handleClick = () => {
     // router.push(
@@ -19,12 +17,22 @@ const CustomNode = ({ data }: { data: Service }) => {
     // );
   };
 
+  const alertCount = relevantAlerts?.length || 0;
+  const badgeColor = alertCount < 5 ? "bg-orange-500" : "bg-red-500";
+
   return (
     <div
       onClick={handleClick}
       className="bg-white p-4 border rounded-xl shadow-lg relative"
     >
       <strong className="text-lg">{data.id}</strong>
+      {alertCount > 0 && (
+        <span
+          className={`absolute top-[-20px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-xs font-bold rounded-full ${badgeColor}`}
+        >
+          {alertCount}
+        </span>
+      )}
       <Handle type="source" position={Position.Right} id="right" />
       <Handle type="target" position={Position.Left} id="left" />
     </div>
