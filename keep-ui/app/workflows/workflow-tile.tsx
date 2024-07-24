@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { Workflow, Filter } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import Loading from "../loading";
@@ -29,7 +29,16 @@ import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
-import { set } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
+import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
+import WorkflowGraph from "./workflow-graph";
+import { PiDiamondsFourFill } from "react-icons/pi";
+import Modal from "@/components/ui/Modal";
+import { FaHandPointer } from "react-icons/fa";
+import {
+  MdOutlineKeyboardArrowRight,
+  MdOutlineKeyboardArrowLeft,
+} from "react-icons/md";
 
 function WorkflowMenuSection({
   onDelete,
@@ -162,7 +171,592 @@ function ProviderTile({
   );
 }
 
+export const ProvidersCarousel = ({
+  providers,
+  onConnectClick,
+}: {
+  providers: FullProvider[];
+  onConnectClick: (provider: FullProvider) => void;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const providersPerPage = 3;
+
+  const nextIcons = () => {
+    if (currentIndex + providersPerPage < providers.length) {
+      setCurrentIndex(currentIndex + providersPerPage);
+    }
+  };
+
+  const prevIcons = () => {
+    if (currentIndex - providersPerPage >= 0) {
+      setCurrentIndex(currentIndex - providersPerPage);
+    }
+  };
+
+  const displayedProviders = providers.slice(
+    currentIndex,
+    currentIndex + providersPerPage
+  );
+
+  return (
+    <div className="contianer flex flex-row justify-around items-center">
+      <button
+        className={`bg-transparent border-none text-2xl cursor-pointer ${
+          currentIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+        onClick={prevIcons}
+        disabled={currentIndex === 0}
+      >
+        <MdOutlineKeyboardArrowLeft size="2rem" />
+      </button>
+      <div className="container flex items-center justify-around overflow-hidden p-2">
+        {displayedProviders.map((provider, index) => (
+          <div
+            key={index}
+            className="relative p-2 hover:grayscale-0 text-2xl h-full shadow-md"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            {provider.installed ? (
+              <Icon
+                icon={CheckCircleIcon}
+                className="absolute top-[-15px] right-[-15px]"
+                color="green"
+                size="sm"
+                tooltip="Connected"
+              />
+            ) : (
+              <Icon
+                icon={XCircleIcon}
+                className="absolute top-[-15px] right-[-15px]"
+                color="red"
+                size="sm"
+                tooltip="Disconnected"
+              />
+            )}
+            <Button
+              onClick={() => onConnectClick(provider)}
+              disabled={provider.installed}
+              className="bg-transparent border-none hover:bg-transparent p-0"
+            >
+              <Image
+                src={`/icons/${provider.type}-icon.png`}
+                width={30}
+                height={30}
+                alt={provider.type}
+                className={`${
+                  provider.installed ? "" : "grayscale hover:grayscale-0"
+                }`}
+              />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <button
+        className={`bg-transparent border-none text-2xl cursor-pointer ${
+          currentIndex + providersPerPage >= providers.length
+            ? "opacity-50 cursor-not-allowed"
+            : ""
+        }`}
+        onClick={nextIcons}
+        disabled={currentIndex + providersPerPage >= providers.length}
+      >
+        <MdOutlineKeyboardArrowRight size="2rem" />
+      </button>
+    </div>
+  );
+};
+
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
+  // Create a set to keep track of unique providers
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [openPanel, setOpenPanel] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
+    null
+  );
+  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [isRunning, setIsRunning] = useState(false);
+  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
+
+  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
+  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
+
+  const { providers } = useFetchProviders();
+
+  const handleConnectProvider = (provider: FullProvider) => {
+    setSelectedProvider(provider);
+    // prepopulate it with the name
+    setFormValues({ provider_name: provider.details.name || "" });
+    setOpenPanel(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenPanel(false);
+    setSelectedProvider(null);
+    setFormValues({});
+    setFormErrors({});
+  };
+  // Function to handle form change
+  const handleFormChange = (
+    updatedFormValues: Record<string, string>,
+    updatedFormErrors: Record<string, string>
+  ) => {
+    setFormValues(updatedFormValues);
+    setFormErrors(updatedFormErrors);
+  };
+
+  // todo: this logic should move to the backend
+  function extractAlertDependencies(workflowRaw: string): string[] {
+    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
+    const dependencies = workflowRaw.match(dependencyRegex);
+
+    if (!dependencies) {
+      return [];
+    }
+
+    // Convert Set to Array
+    const uniqueDependencies = Array.from(new Set(dependencies)).reduce<
+      string[]
+    >((acc, dep) => {
+      // Ensure 'dep' is treated as a string
+      const match = dep.match(/alert\.([\w.]+)/);
+      if (match) {
+        acc.push(match[1]);
+      }
+      return acc;
+    }, []);
+
+    return uniqueDependencies;
+  }
+
+  const runWorkflow = async (payload: object) => {
+    try {
+      setIsRunning(true);
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        // Workflow started successfully
+        const responseData = await response.json();
+        const { workflow_execution_id } = responseData;
+        setIsRunning(false);
+        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
+      } else {
+        console.error("Failed to start workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while starting workflow", error);
+    }
+    setIsRunning(false);
+  };
+
+  const handleRunClick = async () => {
+    const hasAlertTrigger = workflow.triggers.some(
+      (trigger) => trigger.type === "alert"
+    );
+
+    // if it needs alert payload, than open the modal
+    if (hasAlertTrigger) {
+      // extract the filters
+      // TODO: support more than one trigger
+      for (const trigger of workflow.triggers) {
+        // at least one trigger is alert, o/w hasAlertTrigger was false
+        if (trigger.type === "alert") {
+          const staticAlertFilters = trigger.filters || [];
+          setAlertFilters(staticAlertFilters);
+          break;
+        }
+      }
+      const dependencies = extractAlertDependencies(workflow.workflow_raw);
+      setAlertDependencies(dependencies);
+      setIsAlertTriggerModalOpen(true);
+      return;
+    }
+    // else, manual trigger, just run it
+    else {
+      runWorkflow({});
+    }
+  };
+
+  const handleAlertTriggerModalSubmit = (payload: any) => {
+    runWorkflow(payload); // Function to run the workflow with the payload
+  };
+
+  const handleDeleteClick = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Workflow deleted successfully
+        window.location.reload();
+      } else {
+        console.error("Failed to delete workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while deleting workflow", error);
+    }
+  };
+
+  const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
+    if (isConnected) {
+      handleCloseModal();
+      // refresh the page to show the changes
+      window.location.reload();
+    }
+  };
+  const handleDownloadClick = async () => {
+    try {
+      // Use the raw workflow data directly, as it is already in YAML format
+      const workflowYAML = workflow.workflow_raw;
+
+      // Create a Blob object representing the data as a YAML file
+      const blob = new Blob([workflowYAML], { type: "text/yaml" });
+
+      // Create an anchor element with a URL object created from the Blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a "hidden" anchor tag with the download attribute and click it
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `${workflow.workflow_raw_id}.yaml`; // The file will be named after the workflow's id
+      document.body.appendChild(a);
+      a.click();
+
+      // Release the object URL to free up resources
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("An error occurred while downloading the YAML", error);
+    }
+  };
+
+  const handleViewClick = async () => {
+    router.push(`/workflows/${workflow.id}`);
+  };
+
+  const handleBuilderClick = async () => {
+    router.push(`/workflows/builder/${workflow.id}`);
+  };
+
+  const workflowProvidersMap = new Map(
+    workflow.providers.map((p) => [p.type, p])
+  );
+
+  const uniqueProviders: FullProvider[] = Array.from(
+    new Set(workflow.providers.map((p) => p.type))
+  )
+    .map((type) => {
+      let fullProvider =
+        providers.find((fp) => fp.type === type) || ({} as FullProvider);
+      let workflowProvider =
+        workflowProvidersMap.get(type) || ({} as FullProvider);
+
+      // Merge properties
+      const mergedProvider: FullProvider = {
+        ...fullProvider,
+        ...workflowProvider,
+        installed: workflowProvider.installed || fullProvider.installed,
+        details: {
+          authentication: {},
+          name: (workflowProvider as Provider).name || fullProvider.id,
+        },
+        id: fullProvider.type,
+      };
+
+      return mergedProvider;
+    })
+    .filter(Boolean) as FullProvider[];
+  const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
+
+  const lastExecutions = workflow?.last_executions?.slice(0, 15) || [];
+  const lastProviderConfigRequiredExec = lastExecutions.filter(
+    (execution) => execution?.status === "providers_not_configured"
+  );
+  const isAllExecutionProvidersConfigured =
+    lastProviderConfigRequiredExec.length === lastExecutions.length;
+
+  const customFormatter: Formatter = (
+    value: number,
+    unit: Unit,
+    suffix: Suffix
+  ) => {
+    if (!workflow.last_execution_started && isAllExecutionProvidersConfigured) {
+      return "";
+    }
+
+    const formattedString = formatDistanceToNowStrict(
+      new Date(workflow.last_execution_started + "Z"),
+      { addSuffix: true }
+    );
+
+    return formattedString
+      .replace("about ", "")
+      .replace("minute", "min")
+      .replace("second", "sec");
+  };
+
+  const DynamicIconForTrigger = ({
+    onlyIcons,
+    interval,
+    ...props
+  }: {
+    onlyIcons?: boolean;
+    interval?: string;
+    className?: string;
+  }) => {
+    return (
+      <>
+        {triggerTypes.map((t, index) => {
+          if (t === "alert") {
+            const handleImageError = (event: any) => {
+              event.target.href.baseVal = "/icons/keep-icon.png";
+            };
+            const alertSource = workflow.triggers
+              .find((w) => w.type === "alert")
+              ?.filters?.find((f) => f.key === "source")?.value;
+            const DynamicIcon = (props: any) => (
+              <svg
+                width="24px"
+                height="24px"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                {...props}
+              >
+                {" "}
+                <image
+                  id="image0"
+                  width={"24"}
+                  height={"24"}
+                  href={`/icons/${alertSource}-icon.png`}
+                  onError={handleImageError}
+                />
+              </svg>
+            );
+            return onlyIcons ? (
+              <Badge
+              key={t}
+              size="xs"
+              color="orange"
+              title={`Source: ${alertSource}`}
+              {...props}
+              >
+                <div className="flex justify-center items-center">
+                  <DynamicIcon width="16px" height="16px" color="orange"/>
+                </div>
+              </Badge>
+            ) : (
+              <Badge
+                icon={DynamicIcon}
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${alertSource}`}
+                {...props}
+              >
+                {t}
+              </Badge>
+            );
+          }
+          if (t === "manual") {
+            return onlyIcons ? (
+              <Badge
+              key={t}
+              size="xs"
+              color="orange"
+              title={t}
+              {...props}
+              >
+                <div className="flex justify-center items-center">
+                <FaHandPointer size={16} color="orange"/>
+                </div>
+              </Badge>
+            ) : (
+              <Badge
+                key={t}
+                size="xs"
+                color="orange"
+                icon={FaHandPointer}
+                title={`Source: ${t}`}
+                {...props}
+              >
+                {t}
+              </Badge>
+            );
+          }
+
+          if (t === "interval" && onlyIcons) {
+            return (
+              <Badge
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${t}`}
+                {...props}
+              >
+                <div className="flex justify-center items-center">
+
+                <PiDiamondsFourFill size={16} color="orange"/>
+                <div>{interval}</div>
+                </div>
+
+              </Badge>
+            );
+          }
+          return !onlyIcons ? (
+            <Badge key={t} color="orange">
+              {t}
+            </Badge>
+          ) : null;
+        })}
+      </>
+    );
+  };
+
+  return (
+    <div className="mt-2.5">
+      {isRunning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Loading />
+        </div>
+      )}
+      <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
+          {WorkflowMenuSection({
+            onDelete: handleDeleteClick,
+            onRun: handleRunClick,
+            onDownload: handleDownloadClick,
+            onView: handleViewClick,
+            onBuilder: handleBuilderClick,
+            workflow,
+          })}
+        </div>
+        <div className="m-2 flex flex-col justify-around item-start flex-wrap">
+          <WorkflowGraph workflow={workflow} />
+          <div className="container flex flex-col space-between">
+            <div className="h-24">
+              <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
+                {workflow?.name || "Unkown"}
+              </h2>
+              <p className="text-gray-500 line-clamp-2">
+                {workflow?.description || "no description"}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row md:items-center justify-between gap-4 flex-wrap">
+              <Button
+                className={`flex-1 border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                onClick={() => {
+                  setOpenTriggerModal(true);
+                }}
+              >
+                <div className="flex items-center justify-around gap-2 overflow-hidden">
+                  Trigger{" "}
+                  <DynamicIconForTrigger
+                    onlyIcons={true}
+                    className="bg-white rounded-full border-none"
+                    interval={workflow?.interval ?? ""}
+                  />
+                </div>
+              </Button>
+            </div>
+            <div className="font-bold text-sm text-right h-2 p-2 cursor-pointer">
+              {!isAllExecutionProvidersConfigured &&
+                workflow?.last_execution_started && (
+                  <TimeAgo
+                    date={workflow?.last_execution_started + "Z"}
+                    formatter={customFormatter}
+                  />
+                )}
+            </div>
+          </div>
+        </div>
+        <div className="container p-2">
+          <Card className="mt-2.5 p-2">
+            <Text className="">Providers:</Text>
+            <ProvidersCarousel
+              providers={uniqueProviders}
+              onConnectClick={handleConnectProvider}
+            />
+            {/* </div> */}
+          </Card>
+          <SlidingPanel
+            type={"right"}
+            isOpen={openPanel}
+            size={30}
+            backdropClicked={handleCloseModal}
+            panelContainerClassName="bg-white z-[2000]"
+          >
+            {selectedProvider && (
+              <ProviderForm
+                provider={selectedProvider}
+                formData={formValues}
+                formErrorsData={formErrors}
+                onFormChange={handleFormChange}
+                onConnectChange={handleConnecting}
+                closeModal={handleCloseModal}
+                installedProvidersMode={selectedProvider.installed}
+                isProviderNameDisabled={true}
+              />
+            )}
+          </SlidingPanel>
+        </div>
+      </Card>
+
+      <AlertTriggerModal
+        isOpen={isAlertTriggerModalOpen}
+        onClose={() => setIsAlertTriggerModalOpen(false)}
+        onSubmit={handleAlertTriggerModalSubmit}
+        staticFields={alertFilters}
+        dependencies={alertDependencies}
+      />
+      <Modal
+        isOpen={openTriggerModal}
+        onClose={() => {
+          setOpenTriggerModal(false);
+        }}
+      >
+        <div className="mt-2.5">
+          <div className="flex flex-row items-center justify-start flex-wrap gap-1">
+            <span className="mr-1">Triggers:</span>
+            <DynamicIconForTrigger />
+          </div>
+          <div>
+            {workflow.triggers.length > 0 ? (
+              <List>
+                {workflow.triggers.map((trigger, index) => (
+                  <TriggerTile key={index} trigger={trigger} />
+                ))}
+              </List>
+            ) : (
+              <p className="text-xs text-center mx-4 mt-5 text-tremor-content dark:text-dark-tremor-content">
+                This workflow does not have any triggers.
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -550,5 +1144,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
+
 
 export default WorkflowTile;
