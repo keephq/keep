@@ -1,6 +1,6 @@
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
-import { Bars3Icon, ChevronDownIcon } from "@heroicons/react/20/solid";
+import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { EyeIcon, PencilIcon, PlayIcon, TrashIcon, WrenchIcon } from "@heroicons/react/24/outline";
 import { DownloadIcon } from "@radix-ui/react-icons";
@@ -46,7 +46,7 @@ export default function WorkflowMenu({
         <Menu.Button className="inline-flex w-full justify-center rounded-md text-sm" onClick={stopPropagation} >
         <Icon
             size="sm"
-            icon={Bars3Icon}
+            icon={EllipsisHorizontalIcon}
             className="hover:bg-gray-100 w-8 h-8"  // you can manually adjust the size here
             color="gray"
             />
