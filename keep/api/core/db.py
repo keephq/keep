@@ -2187,14 +2187,29 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
             session.query(Alert)
             .filter(Alert.tenant_id == tenant_id)
             .filter(Alert.fingerprint == fingerprint)
-            .filter(Alert.event["status"].astext != "firing")  # JSON extraction syntax
+            .filter(func.json_extract(Alert.event, "$.status") != "firing")
             .order_by(Alert.timestamp.desc())
             .first()
         )
 
         if last_non_firing:
-            # Calculate the difference from the last non-firing time
-            return datetime.now(tz=timezone.utc) - last_non_firing.timestamp
+            # Find the next firing alert after the last non-firing alert
+            next_firing = (
+                session.query(Alert)
+                .filter(Alert.tenant_id == tenant_id)
+                .filter(Alert.fingerprint == fingerprint)
+                .filter(Alert.timestamp > last_non_firing.timestamp)
+                .filter(func.json_extract(Alert.event, "$.status") == "firing")
+                .order_by(Alert.timestamp.asc())
+                .first()
+            )
+            if next_firing:
+                return datetime.now(tz=timezone.utc) - next_firing.timestamp.replace(
+                    tzinfo=timezone.utc
+                )
+            else:
+                # If no firing alert after the last non-firing, return 0
+                return timedelta()
         else:
             # If all alerts are firing, use the earliest alert time
             earliest_alert = (
@@ -2204,4 +2219,6 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
                 .order_by(Alert.timestamp.asc())
                 .first()
             )
-            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp
+            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
+                tzinfo=timezone.utc
+            )

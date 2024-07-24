@@ -1,10 +1,13 @@
 import datetime
 import json
+from datetime import datetime, timedelta
 
 import pytest
 import pytz
 
 import keep.functions as functions
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.alert import AlertStatus
 
 
 @pytest.mark.parametrize(
@@ -336,3 +339,104 @@ def test_add_time_to_date_with_datetime_string():
         2024, 8, 24, 15, 22, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))
     )
     assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
+
+
+def test_get_firing_time_case1(create_alert):
+    fingerprint = "fp1"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=15))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=90))
+
+    alert = {"fingerprint": fingerprint}
+    result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
+    assert abs(float(result) - 15.0) < 1  # Allow for small time differences
+
+
+def test_get_firing_time_case2(create_alert):
+    fingerprint = "fp2"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time)
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=30))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=90))
+
+    alert = {"fingerprint": fingerprint}
+    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.0"
+
+
+def test_get_firing_time_case3(create_alert):
+    fingerprint = "fp3"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time)
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=30))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=90))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=120))
+
+    alert = {"fingerprint": fingerprint}
+    result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
+    assert abs(float(result) - 30.0) < 1  # Allow for small time differences
+
+
+def test_get_firing_time_case4(create_alert):
+    fingerprint = "fp4"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=15))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=90))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=120))
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=150))
+
+    alert = {"fingerprint": fingerprint}
+    result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
+    assert abs(float(result) - 15.0) < 1  # Allow for small time differences
+
+
+def test_get_firing_time_no_firing(create_alert):
+    fingerprint = "fp5"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time)
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=60))
+
+    alert = {"fingerprint": fingerprint}
+    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.0"
+
+
+def test_get_firing_time_other_statuses(create_alert):
+    fingerprint = "fp6"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(
+        fingerprint, AlertStatus.ACKNOWLEDGED, base_time - timedelta(minutes=30)
+    )
+    create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=45))
+    create_alert(fingerprint, AlertStatus.SUPPRESSED, base_time - timedelta(minutes=60))
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=90))
+
+    alert = {"fingerprint": fingerprint}
+    result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
+    assert abs(float(result)) < 1  # Allow for small time differences
+
+
+def test_get_firing_time_minutes_and_seconds(create_alert):
+    fingerprint = "fp7"
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time)
+    create_alert(
+        fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=2, seconds=30)
+    )
+    create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=5))
+
+    alert = {"fingerprint": fingerprint}
+    result = functions.get_firing_time(alert, "s", tenant_id=SINGLE_TENANT_UUID)
+    assert (
+        abs(float(result) - 150.0) < 1
+    )  # Allow for small time differences (150 seconds = 2.5 minutes)

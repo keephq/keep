@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
+import pytz
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -398,3 +399,21 @@ def setup_stress_alerts(elastic_client, db_session, request):
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
+
+
+@pytest.fixture
+def create_alert(db_session):
+    def _create_alert(fingerprint, status, timestamp):
+        alert = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"fingerprint": fingerprint, "status": status.value},
+            fingerprint=fingerprint,
+            alert_hash="test_hash",
+            timestamp=timestamp.replace(tzinfo=pytz.utc),
+        )
+        db_session.add(alert)
+        db_session.commit()
+
+    return _create_alert
