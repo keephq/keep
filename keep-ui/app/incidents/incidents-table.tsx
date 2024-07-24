@@ -69,12 +69,12 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: ({ row }) => row.original.name,
+      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
       id: "description",
       header: "Description",
-      cell: (context) => context.row.original.description,
+      cell: ({ row }) => <div className="text-wrap">{row.original.description}</div>,
     }),
     // columnHelper.display({
     //   id: "severity",
@@ -112,12 +112,11 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: (context) =>
-        context.row.original.services.map((service) => (
-          <Badge className="mr-1" key={service}>
-            {service}
-          </Badge>
-        )),
+      cell: ({row}) =>
+        <div className="text-wrap">{row.original.services.map((service) =>
+          <Badge key={service} className="mr-1">{service}</Badge>
+        )}
+      </div>,
     }),
     columnHelper.display({
       id: "assignee",
@@ -166,7 +165,7 @@ export default function IncidentsTable({
   const table = useReactTable({
     columns,
     data: incidents.items,
-    state: { expanded, pagination},
+    state: { expanded, pagination },
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     rowCount: incidents.count,

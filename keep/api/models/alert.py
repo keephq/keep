@@ -134,6 +134,8 @@ class AlertDto(BaseModel):
     )
     isNoisy: bool = False  # Whether the alert is noisy
 
+    enriched_fields: list = []
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
@@ -322,6 +324,11 @@ class DismissRequestBody(BaseModel):
 
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
+    fingerprint: str
+
+
+class UnEnrichAlertRequestBody(BaseModel):
+    enrichments: list[str]
     fingerprint: str
 
 

@@ -3,6 +3,7 @@ Slack provider is an interface for Slack messages.
 """
 
 import dataclasses
+import json
 import os
 
 import pydantic
@@ -133,7 +134,7 @@ class SlackProvider(BaseProvider):
             payload = {
                 "channel": channel,
                 "text": message,
-                "blocks": blocks,
+                "blocks": json.dumps(blocks) if isinstance(blocks, str) else blocks,
                 "token": self.authentication_config.access_token,
             }
             response = requests.post(
@@ -151,6 +152,8 @@ if __name__ == "__main__":
     # Output debug messages
     import logging
 
+    from keep.providers.providers_factory import ProvidersFactory
+
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
         tenant_id="singletenant",
@@ -162,10 +165,41 @@ if __name__ == "__main__":
     slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
 
     # Initalize the provider and provider config
-    config = ProviderConfig(
-        id="slack-test",
-        description="Slack Output Provider",
-        authentication={"webhook_url": slack_webhook_url},
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
     )
-    provider = SlackProvider(context_manager, provider_id="slack", config=config)
-    provider.notify(message="Simple alert showing context with name: John Doe")
+    access_token = os.environ.get("SLACK_ACCESS_TOKEN")
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+
+    if access_token:
+        config = {
+            "authentication": {"access_token": access_token},
+        }
+    elif webhook_url:
+        config = {
+            "authentication": {"webhook_url": webhook_url},
+        }
+    # you need some creds
+    else:
+        raise Exception("please provide either access token or webhook url")
+
+    provider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="slack-keephq",
+        provider_type="slack",
+        provider_config=config,
+    )
+    provider.notify(
+        message="Simple alert showing context with name: John Doe",
+        channel="alerts-playground",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "A message *with some bold text* and _some italicized text_.",
+                },
+            }
+        ],
+    )
