@@ -1,6 +1,7 @@
 import datetime
 import os
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 import validators
@@ -57,7 +58,7 @@ tracer = trace.get_tracer(__name__)
 #      by workflow.id.
 #   3. Response Updates: The response includes the following new keys and their respective information:
 #       -> last_executions: Used for the workflow execution graph.
-#       ->last_execution_started: Used for showing the start time of execution in real-time. 
+#       ->last_execution_started: Used for showing the start time of execution in real-time.
 @router.get(
     "",
     description="Get workflows",
@@ -84,26 +85,27 @@ def get_workflows(
                 installed_provider.name
             ] = installed_provider
     # get all workflows
-    workflows = workflowstore.get_all_workflows_with_last_execution(tenant_id=tenant_id, is_v2=is_v2)
+    workflows = workflowstore.get_all_workflows_with_last_execution(
+        tenant_id=tenant_id, is_v2=is_v2
+    )
 
     # Group last workflow executions by workflow
     if is_v2:
-        workflows= workflowstore.group_last_workflow_executions(workflows=workflows)
+        workflows = workflowstore.group_last_workflow_executions(workflows=workflows)
 
     # iterate workflows
     for _workflow in workflows:
         # extract the providers
         if is_v2:
-           workflow = _workflow['workflow']
-           workflow_last_run_time = _workflow['workflow_last_run_time']
-           workflow_last_run_status = _workflow['workflow_last_run_status']
-           last_executions = _workflow['workflow_last_executions']
-           last_execution_started = _workflow['workflow_last_run_started']
-        else:    
+            workflow = _workflow["workflow"]
+            workflow_last_run_time = _workflow["workflow_last_run_time"]
+            workflow_last_run_status = _workflow["workflow_last_run_status"]
+            last_executions = _workflow["workflow_last_executions"]
+            last_execution_started = _workflow["workflow_last_run_started"]
+        else:
             workflow, workflow_last_run_time, workflow_last_run_status = _workflow
             last_executions = None
-            last_execution_started=None
-
+            last_execution_started = None
         try:
             workflow_yaml = yaml.safe_load(workflow.workflow_raw)
             providers = parser.get_providers_from_workflow(workflow_yaml)
@@ -172,7 +174,7 @@ def get_workflows(
             revision=workflow.revision,
             last_updated=workflow.last_updated,
             last_executions=last_executions,
-            last_execution_started=last_execution_started
+            last_execution_started=last_execution_started,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
@@ -415,6 +417,29 @@ def get_random_workflow_templates(
     default_directory = os.path.join(os.path.dirname(__file__), '../../../examples/workflows')
     workflows = workflowstore.get_random_workflow_templates(tenant_id=tenant_id, workflows_dir=default_directory, limit=6)
     return workflows
+
+# Add Mock Workflows (6 Random Workflows on Every Request)
+#    To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
+#      1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
+#         shuffled randomly.
+#      2. Response: Only the first 6 files are parsed and sent in the response.
+@router.get("/random-templates", description="Get random workflow templates")
+def get_random_workflow_templates(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["read:workflows"])
+    ),
+) -> list[dict]:
+    tenant_id = authenticated_entity.tenant_id
+    workflowstore = WorkflowStore()
+    default_directory = os.environ.get(
+        "KEEP_WORKFLOWS_PATH",
+        os.path.join(os.path.dirname(__file__), "../../../examples/workflows"),
+    )
+    workflows = workflowstore.get_random_workflow_templates(
+        tenant_id=tenant_id, workflows_dir=default_directory, limit=6
+    )
+    return workflows
+
 
 @router.put(
     "/{workflow_id}",

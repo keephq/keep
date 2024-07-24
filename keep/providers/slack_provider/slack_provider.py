@@ -134,7 +134,7 @@ class SlackProvider(BaseProvider):
             payload = {
                 "channel": channel,
                 "text": message,
-                "blocks": json.dumps(blocks) if isinstance(blocks, str) else blocks,
+                "blocks": json.dumps(blocks) if isinstance(blocks, dict) else blocks,
                 "token": self.authentication_config.access_token,
             }
             response = requests.post(
