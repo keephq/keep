@@ -31,7 +31,7 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
-import WorkflowGraph from "./workfflow-graph";
+import WorkflowGraph from "./workflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import Modal from "@/components/ui/Modal";
 import { FaHandPointer } from "react-icons/fa";
