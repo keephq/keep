@@ -337,6 +337,7 @@ def mine(
     fingerprint_threshold: int = 1,
 ) -> dict:
     incidents = asyncio.run(mine_incidents_and_create_objects(
+        None,
         tenant_id=authenticated_entity.tenant_id,
         use_n_historical_alerts=use_n_historical_alerts,
         incident_sliding_window_size=incident_sliding_window_size,
