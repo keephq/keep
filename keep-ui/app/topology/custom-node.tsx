@@ -23,7 +23,7 @@ const CustomNode = ({ data }: { data: Service }) => {
   return (
     <div
       onClick={handleClick}
-      className="bg-white p-4 border rounded shadow-lg"
+      className="bg-white p-4 border rounded-xl shadow-lg relative"
     >
       <strong className="text-lg">{data.id}</strong>
       <Handle type="source" position={Position.Right} id="right" />

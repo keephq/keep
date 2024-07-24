@@ -14,16 +14,20 @@ import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
 import { serviceDefinitions, serviceDependencies } from "./mock-topology-data";
 import { Card } from "@tremor/react";
+import "./topology.css";
+
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 80;
 
 // Function to create a Dagre layout
 const dagreGraph = new graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
 const getLayoutedElements = (nodes: any[], edges: any[]) => {
-  dagreGraph.setGraph({ rankdir: "LR", nodesep: 50, ranksep: 100 });
+  dagreGraph.setGraph({ rankdir: "LR", nodesep: 50, ranksep: 200 });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: 200, height: 100 });
+    dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   });
 
   edges.forEach((edge) => {
@@ -38,8 +42,8 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
     node.sourcePosition = "right";
 
     node.position = {
-      x: nodeWithPosition.x - 200 / 2,
-      y: nodeWithPosition.y - 100 / 2,
+      x: nodeWithPosition.x - NODE_WIDTH / 2,
+      y: nodeWithPosition.y - NODE_HEIGHT / 2,
     };
 
     return node;
@@ -47,6 +51,8 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
 
   return { nodes, edges };
 };
+
+const onEdgeHover = (edge: any, event: any) => {};
 
 const TopologyPage = () => {
   // State for nodes and edges
@@ -74,8 +80,15 @@ const TopologyPage = () => {
           target: dependency.service,
           label: dependency.protocol,
           animated: true,
-          // style: { stroke: "red", strokeWidth: 2, strokeDasharray: "5,5" },
-          labelStyle: { fill: "orange", fontWeight: 700 },
+          labelStyle: { fill: "black" },
+          labelBgPadding: [10, 5],
+          labelBgStyle: {
+            strokeWidth: 1,
+            strokeDasharray: "5,5",
+            stroke: "gray",
+          },
+          labelBgBorderRadius: 10,
+          className: "edge-path",
           markerEnd: {
             type: MarkerType.ArrowClosed,
           },
@@ -95,7 +108,10 @@ const TopologyPage = () => {
           nodes={nodes}
           edges={edges}
           fitView
+          snapToGrid
           fitViewOptions={{ padding: 0.2 }}
+          onEdgeMouseEnter={onEdgeHover}
+          onEdgeMouseLeave={onEdgeHover}
           nodeTypes={{ customNode: CustomNode }}
         >
           <Background variant={BackgroundVariant.Dots} />
