@@ -60,6 +60,7 @@ def __save_to_db(
     formatted_events: list[AlertDto],
     deduplicated_events: list[AlertDto],
     provider_id: str | None = None,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     try:
         # keep raw events in the DB if the user wants to
@@ -124,6 +125,7 @@ def __save_to_db(
                 provider_id=provider_id,
                 fingerprint=formatted_event.fingerprint,
                 alert_hash=formatted_event.alert_hash,
+                timestamp=timestamp_forced
             )
             session.add(alert)
             audit = AlertAudit(
@@ -190,6 +192,7 @@ def __handle_formatted_events(
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
     notify_client: bool = True,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     """
     this is super important function and does five things:
@@ -239,6 +242,7 @@ def __handle_formatted_events(
         formatted_events,
         deduplicated_events,
         provider_id,
+        timestamp_forced,
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
