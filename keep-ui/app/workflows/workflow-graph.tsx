@@ -32,7 +32,7 @@ Chart.register(
   Legend
 );
 
-const show_real_data = false;
+const show_real_data = true;
 
 export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
   const router = useRouter();
