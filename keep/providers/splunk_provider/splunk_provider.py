@@ -181,6 +181,7 @@ class SplunkProvider(BaseProvider):
                 result.get("exception_class"),
             ),
         ) or raw_dict.get("exception_class", "")
+        result["exception_class"] = exception
 
         # override stacktrace with _raw stacktrace if it doesnt exist in result
         stacktrace = result.get("stacktrace", raw_dict.get("stacktrace", ""))
