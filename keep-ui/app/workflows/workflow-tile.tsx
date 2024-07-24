@@ -636,7 +636,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full">
+      <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 hover:border-spacing-1">
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -661,7 +661,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             <div className="flex flex-row justify-between items-center gap-1 flex-wrap text-sm">
               {!!workflow?.interval && (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
@@ -671,10 +671,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   Interval
                 </Button>
               )}
-
               {isManualTriggerPresent && (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
@@ -685,7 +684,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               )}
               {alertSource && (
                 <Button
-                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
                   onClick={() => {
                     setOpenTriggerModal(true);
                   }}
@@ -696,8 +695,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                       <Image
                         src={`/icons/${alertSource}-icon.png`}
                         alt="Alert"
-                        width={16}
-                        height={16}
+                        width={20}
+                        height={20}
                         onError={handleImageError}
                       />
                     )}

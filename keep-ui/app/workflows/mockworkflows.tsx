@@ -21,9 +21,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
           <>
             {provider && (
               <div key={`step-${index}`} className="flex items-end gap-2">
-                {index > 0 && (
-                  <TiArrowRight className="text-gray-500 size-8" />
-                )}
+                {index > 0 && <TiArrowRight className="text-gray-500 size-8" />}
                 <Image
                   src={`/icons/${provider?.type}-icon.png`}
                   width={30}
@@ -89,7 +87,7 @@ export default function MockWorkflowCardSection({
   mockLoading: boolean | null;
 }) {
   const router = useRouter();
-  const [loadingId, setLoadingId] = useState<string|null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const getNameFromId = (id: string) => {
     if (!id) {
@@ -138,7 +136,7 @@ export default function MockWorkflowCardSection({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-4 p-4">
-      {mockError && (
+        {mockError && (
           <p className="text-center text-red-100">
             Error: {mockError.message || "Something went wrong!"}
           </p>
@@ -149,7 +147,10 @@ export default function MockWorkflowCardSection({
           mockWorkflows.map((template: any, index: number) => {
             const workflow = template.workflow;
             return (
-              <Card key={index} className="p-4 flex flex-col justify-between w-full">
+              <Card
+                key={index}
+                className="p-4 flex flex-col justify-between w-full hover:border-orange-400 hover:border-2"
+              >
                 <div>
                   <WorkflowSteps workflow={workflow} />
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
