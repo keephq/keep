@@ -4,9 +4,11 @@ import os
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
 
+from keep.api.core.db import get_enrichments
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.rulesengine.rulesengine import RulesEngine
 
 
@@ -93,9 +95,22 @@ class ElasticClient:
 
         alert_dtos = []
 
+        fingerprints = [result["_source"]["fingerprint"] for result in results["hits"]["hits"]]
+
+        enrichments = get_enrichments(self.tenant_id, fingerprints)
+        enrichments_by_fingerprint = {
+            enrichment.alert_fingerprint: enrichment.enrichments
+            for enrichment in enrichments
+        }
+
         for result in results["hits"]["hits"]:
             alert = result["_source"]
-            alert_dtos.append(AlertDto(**alert))
+            alert_dto = AlertDto(**alert)
+            if alert_dto.fingerprint in enrichments:
+                parse_and_enrich_deleted_and_assignees(
+                    alert_dto, enrichments_by_fingerprint[alert.fingerprint]
+                )
+            alert_dtos.append(alert_dto)
 
         return alert_dtos
 
