@@ -33,9 +33,8 @@ async def mine_incidents_and_create_objects(
         tenant_ids = [tenant_id]
 
     for tenant_id in tenant_ids:
-        alerts = get_last_alerts(tenant_id, use_n_historical_alerts)
+        alerts = get_last_alerts(tenant_id=tenant_id, limit=use_n_historical_alerts)
         if len(alerts) > 0:
-        
             incidents = mine_incidents(
                 alerts,
                 incident_sliding_window_size,
