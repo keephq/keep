@@ -189,6 +189,7 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
+    notify_client: bool = True,
 ):
     """
     this is super important function and does five things:
@@ -306,7 +307,7 @@ def __handle_formatted_events(
         )
 
     # Tell the client to poll alerts
-    if pusher_client:
+    if pusher_client and notify_client:
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -352,7 +353,7 @@ def __handle_formatted_events(
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
         # send with pusher
-        if pusher_client:
+        if pusher_client and notify_client:
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
@@ -384,6 +385,7 @@ def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
+    notify_client: bool = True,
 ):
     extra_dict = {
         "tenant_id": tenant_id,

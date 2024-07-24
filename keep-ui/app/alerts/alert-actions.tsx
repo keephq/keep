@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
@@ -7,6 +8,7 @@ import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
+import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 
 interface Props {
   selectedRowIds: string[];
@@ -26,6 +28,7 @@ export default function AlertActions({
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState<boolean>(false);
 
   const selectedAlerts = alerts.filter((_alert, index) =>
     selectedRowIds.includes(index.toString())
@@ -75,6 +78,18 @@ export default function AlertActions({
     }
   }
 
+  const showIncidentSelector = () => {
+    setIsIncidentSelectorOpen(true);
+  }
+  const hideIncidentSelector = () => {
+    setIsIncidentSelectorOpen(false);
+  }
+
+  const handleSuccessfulAlertsAssociation = () => {
+    hideIncidentSelector();
+    clearRowSelection();
+  }
+
   return (
     <div className="w-full flex justify-end items-center">
       <Button
@@ -99,6 +114,21 @@ export default function AlertActions({
       >
         Create Preset
       </Button>
+      <Button
+        icon={PlusIcon}
+        size="xs"
+        color="orange"
+        className="ml-2.5"
+        onClick={showIncidentSelector}
+        tooltip="Associate events with incident"
+      >
+        Associate with incident
+      </Button>
+      <AlertAssociateIncidentModal
+          isOpen={isIncidentSelectorOpen}
+          alerts={selectedAlerts}
+          handleSuccess={handleSuccessfulAlertsAssociation}
+          handleClose={hideIncidentSelector}/>
     </div>
   );
 }

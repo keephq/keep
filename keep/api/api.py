@@ -5,6 +5,7 @@ from importlib import metadata
 
 import jwt
 import uvicorn
+import requests
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -29,6 +30,7 @@ from keep.api.routes import (
     extraction,
     groups,
     healthcheck,
+    incidents,
     mapping,
     preset,
     providers,
@@ -39,6 +41,8 @@ from keep.api.routes import (
     users,
     whoami,
     workflows,
+    incidents,
+    ai
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
@@ -59,6 +63,16 @@ try:
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
+
+
+# Monkey patch requests to disable redirects
+original_request = requests.Session.request
+
+def no_redirect_request(self, method, url, **kwargs):
+    kwargs['allow_redirects'] = False
+    return original_request(self, method, url, **kwargs)
+
+requests.Session.request = no_redirect_request
 
 
 def _extract_identity(request: Request, attribute="email") -> str:
@@ -160,6 +174,8 @@ def get_app(
     app.include_router(actions.router, prefix="/actions", tags=["actions"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+    app.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
+    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]
