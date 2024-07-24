@@ -559,14 +559,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             );
             return onlyIcons ? (
               <Badge
-              key={t}
-              size="xs"
-              color="orange"
-              title={`Source: ${alertSource}`}
-              {...props}
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${alertSource}`}
+                {...props}
               >
                 <div className="flex justify-center items-center">
-                  <DynamicIcon width="16px" height="16px" color="orange"/>
+                  <DynamicIcon width="16px" height="16px" color="orange" />
                 </div>
               </Badge>
             ) : (
@@ -584,15 +584,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           }
           if (t === "manual") {
             return onlyIcons ? (
-              <Badge
-              key={t}
-              size="xs"
-              color="orange"
-              title={t}
-              {...props}
-              >
+              <Badge key={t} size="xs" color="orange" title={t} {...props}>
                 <div className="flex justify-center items-center">
-                <FaHandPointer size={16} color="orange"/>
+                  <FaHandPointer size={16} color="orange" />
                 </div>
               </Badge>
             ) : (
@@ -619,8 +613,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {...props}
               >
                 <div className="flex justify-center items-center">
-                <PiDiamondsFourFill size={16} color="orange"/>
-                <div>{interval}</div>
+                  <PiDiamondsFourFill size={16} color="orange" />
+                  <div>{interval}</div>
                 </div>
               </Badge>
             );
@@ -643,7 +637,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       )}
       <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2">
-       <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -665,10 +659,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               </p>
             </div>
             <div className="flex flex-row justify-between items-center gap-1 flex-wrap text-sm">
-              { (
+              {!!workflow?.interval && (
                 <Button
-                className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed shadow`}
-                onClick={() => {
+                  className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  onClick={() => {
                     setOpenTriggerModal(true);
                   }}
                   icon={PiDiamondsFourFill}
@@ -1180,6 +1174,5 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
-
 
 export default WorkflowTile;
