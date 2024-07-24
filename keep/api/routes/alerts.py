@@ -31,7 +31,7 @@ from keep.api.core.dependencies import (
     get_pusher_client,
 )
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
+from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody, UnEnrichAlertRequestBody
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
@@ -435,7 +435,7 @@ def enrich_alert(
                 else AlertActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
-        elif "note" in enrich_data.enrichments:
+        elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = AlertActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
         elif "ticket_url" in enrich_data.enrichments:
@@ -497,6 +497,108 @@ def enrich_alert(
         logger.exception("Failed to enrich alert", extra={"error": str(e)})
         return {"status": "failed"}
 
+
+
+@router.post(
+    "/unenrich",
+    description="Un-Enrich an alert",
+)
+def enrich_alert(
+    enrich_data: UnEnrichAlertRequestBody,
+    pusher_client: Pusher = Depends(get_pusher_client),
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Un-Enriching alert",
+        extra={
+            "fingerprint": enrich_data.fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    if "assignees" in enrich_data.enrichments:
+        return {"status": "failed"}
+
+    alert = get_alerts_by_fingerprint(
+        authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+    )
+    if not alert:
+        logger.warning(
+            "Alert not found", extra={"fingerprint": enrich_data.fingerprint}
+        )
+        return {"status": "failed"}
+
+    try:
+        enrichement_bl = EnrichmentsBl(tenant_id)
+        if "status" in enrich_data.enrichments:
+            action_type = AlertActionType.STATUS_UNENRICH
+            action_description = f"Alert status was un-enriched by {authenticated_entity.email}"
+        elif "note" in enrich_data.enrichments:
+            action_type = AlertActionType.UNCOMMENT
+            action_description = f"Comment removed by {authenticated_entity.email}"
+        elif "ticket_url" in enrich_data.enrichments:
+            action_type = AlertActionType.TICKET_UNASSIGNED
+            action_description = f"Ticket unassigned by {authenticated_entity.email}"
+        else:
+            action_type = AlertActionType.GENERIC_UNENRICH
+            action_description = f"Alert en-enriched by {authenticated_entity.email}"
+
+        enrichments_object = get_enrichment(tenant_id, enrich_data.fingerprint)
+        enrichments = enrichments_object.enrichments
+
+        new_enrichments = {
+            key: value for key, value in enrichments.items()
+                       if key not in enrich_data.enrichments
+        }
+
+        enrichement_bl.enrich_alert(
+            fingerprint=enrich_data.fingerprint,
+            enrichments=new_enrichments,
+            action_type=action_type,
+            action_callee=authenticated_entity.email,
+            action_description=action_description,
+            force=True
+        )
+
+        alert = get_alerts_by_fingerprint(
+            authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+        )
+
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+        # push the enriched alert to the elasticsearch
+        try:
+            logger.info("Pushing enriched alert to elasticsearch")
+            elastic_client = ElasticClient(tenant_id)
+            elastic_client.index_alert(
+                alert=enriched_alerts_dto[0],
+            )
+            logger.info("Pushed un-enriched alert to elasticsearch")
+        except Exception:
+            logger.exception("Failed to push alert to elasticsearch")
+            pass
+        # use pusher to push the enriched alert to the client
+        if pusher_client:
+            logger.info("Telling client to poll alerts")
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "poll-alerts",
+                    "{}",
+                )
+                logger.info("Told client to poll alerts")
+            except Exception:
+                logger.exception("Failed to tell client to poll alerts")
+                pass
+        logger.info(
+            "Alert un-enriched successfully",
+            extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
+        )
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.exception("Failed to un-enrich alert", extra={"error": str(e)})
+        return {"status": "failed"}
 
 @router.post(
     "/search",

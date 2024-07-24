@@ -1797,6 +1797,7 @@ def get_incidents(tenant_id) -> List[Incident]:
             select(Incident)
             .options(selectinload(Incident.alerts))
             .where(Incident.tenant_id == tenant_id)
+            .order_by(desc(Incident.creation_time))
         ).all()
     return incidents
 
@@ -1843,6 +1844,7 @@ def get_last_incidents(
             .filter(Incident.tenant_id == tenant_id)
             .filter(Incident.is_confirmed == is_confirmed)
             .options(joinedload(Incident.alerts))
+            .order_by(desc(Incident.creation_time))
         )
 
         if timeframe:

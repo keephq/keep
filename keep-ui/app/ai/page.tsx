@@ -7,5 +7,5 @@ export default function Page() {
 export const metadata = {
   title: "Keep - AI Correlation",
   description:
-    "Map new event attributes from existing event attributes with Regex",
+    "Correlate Alerts and Incidents with AI to identify patterns and trends.",
 };

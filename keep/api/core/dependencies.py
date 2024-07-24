@@ -364,7 +364,7 @@ class AuthVerifierSingleTenant:
                 jwt_secret,
                 algorithms="HS256",
             )
-            tenant_id = payload.get("tenant_id")
+            tenant_id = payload.get("keep_tenant_id")
             email = payload.get("email")
             role_name = payload.get(
                 "role", AdminRole.get_name()

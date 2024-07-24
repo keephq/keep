@@ -301,15 +301,53 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
     "", description="Create or update a workflow", status_code=status.HTTP_201_CREATED
 )
 async def create_workflow(
-    request: Request,
-    file: UploadFile = None,
+    file: UploadFile,
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:workflows"])
     ),
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request, file)
+    workflow = await __get_workflow_raw_data(request=None, file=file)
+    workflowstore = WorkflowStore()
+    # Create the workflow
+    try:
+        workflow = workflowstore.create_workflow(
+            tenant_id=tenant_id, created_by=created_by, workflow=workflow
+        )
+    except Exception:
+        logger.exception(
+            "Failed to create workflow",
+            extra={"tenant_id": tenant_id, "workflow": workflow},
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to upload workflow. Please contact us via Slack for help.",
+        )
+    if workflow.revision == 1:
+        return WorkflowCreateOrUpdateDTO(
+            workflow_id=workflow.id, status="created", revision=workflow.revision
+        )
+    else:
+        return WorkflowCreateOrUpdateDTO(
+            workflow_id=workflow.id, status="updated", revision=workflow.revision
+        )
+
+
+@router.post(
+    "/json",
+    description="Create or update a workflow",
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_workflow_from_body(
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        AuthVerifier(["write:workflows"])
+    ),
+) -> WorkflowCreateOrUpdateDTO:
+    tenant_id = authenticated_entity.tenant_id
+    created_by = authenticated_entity.email
+    workflow = await __get_workflow_raw_data(request, None)
     workflowstore = WorkflowStore()
     # Create the workflow
     try:

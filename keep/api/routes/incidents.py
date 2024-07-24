@@ -12,10 +12,14 @@ from pydantic.types import UUID
 
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    assign_alert_to_incident,
+    confirm_predicted_incident_by_id,
+    create_incident_from_dict,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
+    get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
@@ -33,7 +37,13 @@ from keep.api.utils.import_ee import mine_incidents_and_create_objects
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
+ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
+if ee_enabled:
+    path_with_ee = (
+        str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
+    )
+    sys.path.insert(0, path_with_ee)
+    from ee.experimental.incident_utils import mine_incidents  # noqa
 
 
 def __update_client_on_incident_change(

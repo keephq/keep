@@ -385,13 +385,20 @@ export function buildAlert(definition: Definition): Alert {
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
+      // add 'if' only if it's not empty
       if (ifParam) {
-        provider["if"] = ifParam;
+        return {
+          name: s.name,
+          provider: provider,
+          if: ifParam as string,
+        };
       }
-      return {
-        name: s.name,
-        provider: provider,
-      };
+      else{
+        return {
+          name: s.name,
+          provider: provider,
+        };
+      }
     });
   // Actions > Foreach
   alert.sequence
