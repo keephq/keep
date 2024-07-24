@@ -1,13 +1,19 @@
 import enum
+import importlib
 import os
+from typing import Type
 
-from keep.api.core.config import AuthenticationType, config
+from keep.api.core.config import config
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identitymanager import BaseIdentityManager
 
 
 class IdentityManagerTypes(enum.Enum):
+    """
+    Enum class representing different types of identity managers.
+    """
+
     AUTH0 = "auth0"
     KEYCLOAK = "keycloak"
     DB = "db"
@@ -15,6 +21,10 @@ class IdentityManagerTypes(enum.Enum):
 
 
 class IdentityManagerFactory:
+    """
+    Factory class for creating identity managers and authentication verifiers.
+    """
+
     @staticmethod
     def get_identity_manager(
         tenant_id: str = None,
@@ -22,102 +32,74 @@ class IdentityManagerFactory:
         identity_manager_type: IdentityManagerTypes = None,
         **kwargs,
     ) -> BaseIdentityManager:
+        """
+        Get an instance of the identity manager based on the specified type.
+
+        Args:
+            tenant_id (str, optional): The ID of the tenant.
+            context_manager (ContextManager, optional): The context manager instance.
+            identity_manager_type (IdentityManagerTypes, optional): The type of identity manager to create.
+            **kwargs: Additional keyword arguments to pass to the identity manager.
+
+        Returns:
+            BaseIdentityManager: An instance of the specified identity manager.
+        """
         if not identity_manager_type:
             identity_manager_type = IdentityManagerTypes[
                 config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH)
             ].value.lower()
         else:
-            # Cast to lower to avoid case sensitivity
-            identity_manager_type = identity_manager_type.lower()
+            identity_manager_type = identity_manager_type.value.lower()
 
-        # backward compatibility - cast old values to new ones
-        if identity_manager_type == "no_auth":
-            identity_manager_type = "noauth"  # new
-        elif identity_manager_type == "multi_tenant":
-            identity_manager_type = "auth0"  # new
-        elif identity_manager_type == "single_tenant":
-            identity_manager_type = "db"  # new
-        elif identity_manager_type == "keycloak":
-            identity_manager_type = "keycloak"
-        # new values are allowed
-        elif identity_manager_type in IdentityManagerTypes.__members__:
-            pass
-        else:
-            raise ValueError(f"Invalid AUTH_TYPE: {identity_manager_type}")
-
-        # Auth0 (multi tenant)
-        if identity_manager_type == IdentityManagerTypes.AUTH0.value:
-            from keep.identitymanager.auth0identitymanager import Auth0IdentityManager
-
-            return Auth0IdentityManager(tenant_id, context_manager, **kwargs)
-        # Database (single tenant)
-        elif identity_manager_type == IdentityManagerTypes.DB.value:
-            from keep.identitymanager.dbidentitymanager import DBIdentityManager
-
-            return DBIdentityManager(tenant_id, context_manager, **kwargs)
-        # Keycloak (multi tenant)
-        elif identity_manager_type == IdentityManagerTypes.KEYCLOAK.value:
-            from keep.identitymanager.keycloakidentitymanager import (
-                KeycloakIdentityManager,
-            )
-
-            return KeycloakIdentityManager(tenant_id, context_manager, **kwargs)
-        # No Auth (no authentication)
-        elif identity_manager_type == IdentityManagerTypes.NOAUTH.value:
-            from keep.identitymanager.noauthidentitymanager import NoAuthIdentityManager
-
-            return NoAuthIdentityManager(tenant_id, context_manager, **kwargs)
-
-        # If the identity manager type is not implemented
-        raise NotImplementedError(
-            f"Identity manager type {str(identity_manager_type)} not implemented"
+        return IdentityManagerFactory._load_manager(
+            identity_manager_type,
+            "identitymanager",
+            tenant_id,
+            context_manager,
+            **kwargs,
         )
 
     @staticmethod
     def get_auth_verifier(scopes: list[str] = []) -> AuthVerifierBase:
-        # Took the implementation from here:
-        #   https://github.com/auth0-developer-hub/api_fastapi_python_hello-world/blob/main/application/json_web_token.py
+        """
+        Get an instance of the authentication verifier.
 
-        # Basically it's a factory function that returns the appropriate verifier based on the auth type
+        Args:
+            scopes (list[str], optional): A list of scopes for the auth verifier.
 
-        # Determine the authentication type from the environment variable
-        auth_type = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+        Returns:
+            AuthVerifierBase: An instance of the authentication verifier.
+        """
+        auth_type = os.environ.get(
+            "AUTH_TYPE", IdentityManagerTypes.NOAUTH.value
+        ).lower()
+        return IdentityManagerFactory._load_manager(auth_type, "authverifier", scopes)
 
-        # backward compatibility - cast old values to new ones
-        if auth_type == "NO_AUTH":
-            auth_type = "noauth"
-        elif auth_type == "MULTI_TENANT":
-            auth_type = "auth0"
-        elif auth_type == "SINGLE_TENANT":
-            auth_type = "db"
-        elif auth_type == "KEYCLOAK":
-            auth_type = "keycloak"
-        else:
-            raise ValueError(f"Invalid AUTH_TYPE: {auth_type}")
+    @staticmethod
+    def _load_manager(manager_type: str, manager_class: str, *args, **kwargs):
+        """
+        Load and instantiate a manager class based on the specified type and class.
 
-        # Auth0 (multi tenant)
-        if auth_type == IdentityManagerTypes.AUTH0.value:
-            from keep.identitymanager.auth0identitymanager import Auth0AuthVerifier
+        Args:
+            manager_type (str): The type of manager to load.
+            manager_class (str): The class of manager to load.
+            *args: Positional arguments to pass to the manager constructor.
+            **kwargs: Keyword arguments to pass to the manager constructor.
 
-            return Auth0AuthVerifier(scopes)
-        # Database (single tenant)
-        elif auth_type == IdentityManagerTypes.DB.value:
-            from keep.identitymanager.dbidentitymanager import DBAuthVerifier
+        Returns:
+            The instantiated manager object.
 
-            return DBAuthVerifier(scopes)
-        # Keycloak (multi tenant)
-        elif auth_type == IdentityManagerTypes.KEYCLOAK.value:
-            from keep.identitymanager.keycloakidentitymanager import (
-                KeycloakAuthVerifier,
+        Raises:
+            NotImplementedError: If the specified manager type or class is not implemented.
+        """
+        try:
+            module = importlib.import_module(
+                f"keep.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
             )
-
-            return KeycloakAuthVerifier(scopes)
-        # No Auth (no authentication)
-        elif auth_type == IdentityManagerTypes.NOAUTH.value:
-            from keep.identitymanager.noauthidentitymanager import NoAuthVerifier
-
-            return NoAuthVerifier(scopes)
-
-        raise NotImplementedError(
-            f"Identity manager type {str(auth_type)} not implemented"
-        )
+            class_name = f"{manager_type.capitalize()}{manager_class.capitalize()}"
+            manager_class: Type = getattr(module, class_name)
+            return manager_class(*args, **kwargs)
+        except (ImportError, AttributeError):
+            raise NotImplementedError(
+                f"{manager_class.capitalize()} for {manager_type} not implemented"
+            )

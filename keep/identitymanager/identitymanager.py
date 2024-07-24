@@ -88,49 +88,57 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             " for {}".format(self.__class__.__name__)
         )
 
-    @abc.abstractmethod
     def create_resource(
         self, resource_id: str, resource_name: str, scopes: list[str]
     ) -> None:
         """
-        Create a resource in the identity manager.
+        Create a resource in the identity manager for authorization purposes.
+
+        This method is used to define a new resource that can be protected by
+        the authorization system. It allows specifying the resource's unique
+        identifier, name, and associated scopes, which are used to control
+        access to the resource.
 
         Args:
-            resource_id (str): The ID of the resource.
-            resource_name (str): The name of the resource.
-            scopes (list): A list of scopes associated with the resource.
+            resource_id (str): The unique identifier of the resource.
+            resource_name (str): The human-readable name of the resource.
+            scopes (list): A list of scopes associated with the resource,
+                           defining the types of actions that can be performed.
         """
-        raise NotImplementedError(
-            "create_resource() method not implemented"
-            " for {}".format(self.__class__.__name__)
-        )
+        pass
 
-    @abc.abstractmethod
     def delete_resource(self, resource_id: str) -> None:
         """
-        Delete a resource from the identity manager.
+        Delete a resource from the identity manager's authorization system.
+
+        This method removes a previously created resource from the authorization
+        system. After deletion, the resource will no longer be available for
+        permission checks or access control.
 
         Args:
-            resource_id (str): The ID of the resource.
+            resource_id (str): The unique identifier of the resource to be deleted.
         """
-        raise NotImplementedError(
-            "delete_resource() method not implemented"
-            " for {}".format(self.__class__.__name__)
-        )
+        pass
 
-    @abc.abstractmethod
     def check_permission(
         self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
     ) -> None:
         """
         Check if the authenticated entity has permission to access the resource.
 
+        This method is a crucial part of the authorization process. It verifies
+        whether the given authenticated entity has the necessary permissions to
+        perform a specific action (defined by the scope) on a particular resource.
+
         Args:
-            resource_id (str): The ID of the resource.
-            scope (str): The scope to check.
-            authenticated_entity (AuthenticatedEntity): The authenticated entity.
+            resource_id (str): The unique identifier of the resource being accessed.
+            scope (str): The specific action or permission being checked.
+            authenticated_entity (AuthenticatedEntity): The entity (user or service)
+                                                        requesting access.
+
+        Raises:
+            HTTPException: If the authenticated entity does not have the required
+                           permission, an exception with a 403 status code should
+                           be raised.
         """
-        raise NotImplementedError(
-            "check_permission() method not implemented"
-            " for {}".format(self.__class__.__name__)
-        )
+        pass

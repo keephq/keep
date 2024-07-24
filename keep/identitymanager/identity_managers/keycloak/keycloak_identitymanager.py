@@ -1,16 +1,17 @@
 import os
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
 from keycloak.uma_permissions import UMAPermission
 
-from keep.api.core.rbac import get_role_by_role_name
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
-from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
+from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identitymanager import BaseIdentityManager
 from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
+
+from .keycloak_authverifier import KeycloakAuthVerifier
 
 
 class KeycloakIdentityManager(BaseIdentityManager):
@@ -47,7 +48,6 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return []
 
     def get_sso_wizard_url(self, authenticated_entity: AuthenticatedEntity) -> str:
-        # http://localhost:8181/auth/realms/keep/wizard/?org_id=cb75352e-1faf-4cd5-8173-626a224e4894#iss=http%3A%2F%2Flocalhost%3A8181%2Fauth%2Frealms%2Fkeep
         tenant_realm = authenticated_entity.org_realm
         org_id = authenticated_entity.org_id
         return f"{self.server_url}realms/{tenant_realm}/wizard/?org_id={org_id}/#iss={self.server_url}/realms/{tenant_realm}"
@@ -55,13 +55,6 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def get_users(self) -> list[User]:
         try:
             users = self.keycloak_admin.get_users({})
-            # we want only users with 'keep_role' attribute so we know they are related to Keep
-            # todo: created_at for users spinned up
-            # todo: support groups
-
-            # users = [
-            #     user for user in users if "keep_role" in user.get("attributes", {})
-            # ]
             users = [user for user in users if "firstName" in user]
 
             users_dto = []
@@ -81,28 +74,17 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
     def create_user(self, user_email: str, password: str, role: str) -> dict:
         try:
-            # if this is user/password - create user with password
+            user_data = {
+                "username": user_email,
+                "enabled": True,
+                "attributes": {"keep_role": [role]},
+            }
             if password:
-                user_id = self.keycloak_admin.create_user(
-                    {
-                        "username": user_email,
-                        "enabled": True,
-                        "credentials": [
-                            {"type": "password", "value": password, "temporary": False}
-                        ],
-                        "attributes": {"keep_role": [role]},
-                    }
-                )
-            # else - sso, saml, etc
-            else:
-                user_id = self.keycloak_admin.create_user(
-                    {
-                        "username": user_email,
-                        "enabled": True,
-                        "attributes": {"keep_role": [role]},
-                    }
-                )
-            # TODO: assign real roles self.keycloak_admin.assign_client_role(elf.keycloak_admin.assign_client_role(user_id, client_id=self.keycloak_admin.client_id, roles=[{"id": role_id, "name": role}])
+                user_data["credentials"] = [
+                    {"type": "password", "value": password, "temporary": False}
+                ]
+
+            user_id = self.keycloak_admin.create_user(user_data)
             return {
                 "status": "success",
                 "message": "User created successfully",
@@ -159,10 +141,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
     ) -> None:
         try:
-            # Create UMA permission
             permission = UMAPermission(resource=resource_id, scope=scope)
-
-            # Check permissions using the token from the authenticated entity
             has_permission = self.keycloak_uma.permissions_check(
                 token=authenticated_entity.access_token, permissions=[permission]
             )
@@ -184,71 +163,3 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except Exception as e:
             self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to check permissions")
-
-
-class KeycloakAuthVerifier(AuthVerifierBase):
-    """Handles authentication and authorization for Keycloak"""
-
-    def __init__(self, scopes: list[str] = []) -> None:
-        super().__init__(scopes)
-        self.keycloak_url = os.environ.get("KEYCLOAK_URL")
-        self.keycloak_realm = os.environ.get("KEYCLOAK_REALM")
-        self.keycloak_client_id = os.environ.get("KEYCLOAK_CLIENT_ID")
-        self.keycloak_audience = os.environ.get("KEYCLOAK_AUDIENCE")
-        if (
-            not self.keycloak_url
-            or not self.keycloak_realm
-            or not self.keycloak_client_id
-        ):
-            raise Exception(
-                "Missing KEYCLOAK_URL, KEYCLOAK_REALM or KEYCLOAK_CLIENT_ID environment variable"
-            )
-
-        self.keycloak_client = KeycloakOpenID(
-            server_url=self.keycloak_url,
-            realm_name=self.keycloak_realm,
-            client_id=self.keycloak_client_id,
-        )
-        self.keycloak_public_key = (
-            "-----BEGIN PUBLIC KEY-----\n"
-            + self.keycloak_client.public_key()
-            + "\n-----END PUBLIC KEY-----"
-        )
-        self.verify_options = {
-            "verify_signature": True,
-            "verify_aud": True,
-            "verify_exp": True,
-        }
-
-    def _verify_bearer_token(
-        self, token: str = Depends(oauth2_scheme)
-    ) -> AuthenticatedEntity:
-        # verify keycloak token
-        try:
-            payload = self.keycloak_client.decode_token(
-                token, key=self.keycloak_public_key, options=self.verify_options
-            )
-            tenant_id = payload.get("keep_tenant_id")
-            email = payload.get("preferred_username")
-            org_id = payload.get("active_organization", {}).get("id")
-            org_realm = payload.get("active_organization", {}).get("name")
-            role_name = "admin"
-            # TODO: add groups
-            # role_name = payload.get("keep_role")
-            # if not role_name:
-            #    raise HTTPException(
-            #        status_code=401, detail="Invalid Keycloak token - no role in token"
-            #    )
-            role = get_role_by_role_name(role_name)
-        except Exception:
-            raise HTTPException(status_code=401, detail="Invalid Keycloak token")
-
-        # validate scopes
-        if not role.has_scopes(self.scopes):
-            raise HTTPException(
-                status_code=403,
-                detail="You don't have the required permissions to access this resource",
-            )
-        return AuthenticatedEntity(
-            tenant_id, email, None, role_name, org_id=org_id, org_realm=org_realm
-        )
