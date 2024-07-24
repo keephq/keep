@@ -509,8 +509,21 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     return formattedString
       .replace("about ", "")
       .replace("minute", "min")
-      .replace("second", "sec");
+      .replace("second", "sec")
+      .replace("hour", "hr");
   };
+
+  const handleImageError = (event: any) => {
+    event.target.href.baseVal = "/icons/keep-icon.png";
+  };
+
+  const alertSource = workflow.triggers
+    .find((w) => w.type === "alert")
+    ?.filters?.find((f) => f.key === "source")?.value;
+
+  const isManualTriggerPresent = workflow?.triggers?.find(
+    (t) => t.type === "manual"
+  );
 
   const DynamicIconForTrigger = ({
     onlyIcons,
@@ -525,12 +538,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <>
         {triggerTypes.map((t, index) => {
           if (t === "alert") {
-            const handleImageError = (event: any) => {
-              event.target.href.baseVal = "/icons/keep-icon.png";
-            };
-            const alertSource = workflow.triggers
-              .find((w) => w.type === "alert")
-              ?.filters?.find((f) => f.key === "source")?.value;
             const DynamicIcon = (props: any) => (
               <svg
                 width="24px"
@@ -552,14 +559,14 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             );
             return onlyIcons ? (
               <Badge
-              key={t}
-              size="xs"
-              color="orange"
-              title={`Source: ${alertSource}`}
-              {...props}
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${alertSource}`}
+                {...props}
               >
                 <div className="flex justify-center items-center">
-                  <DynamicIcon width="16px" height="16px" color="orange"/>
+                  <DynamicIcon width="16px" height="16px" color="orange" />
                 </div>
               </Badge>
             ) : (
@@ -577,15 +584,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           }
           if (t === "manual") {
             return onlyIcons ? (
-              <Badge
-              key={t}
-              size="xs"
-              color="orange"
-              title={t}
-              {...props}
-              >
+              <Badge key={t} size="xs" color="orange" title={t} {...props}>
                 <div className="flex justify-center items-center">
-                <FaHandPointer size={16} color="orange"/>
+                  <FaHandPointer size={16} color="orange" />
                 </div>
               </Badge>
             ) : (
@@ -612,11 +613,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {...props}
               >
                 <div className="flex justify-center items-center">
-
-                <PiDiamondsFourFill size={16} color="orange"/>
-                <div>{interval}</div>
+                  <PiDiamondsFourFill size={16} color="orange" />
+                  <div>{interval}</div>
                 </div>
-
               </Badge>
             );
           }
@@ -659,35 +658,67 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {workflow?.description || "no description"}
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row md:items-center justify-between gap-4 flex-wrap">
-              <Button
-                className={`flex-1 border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
-                onClick={() => {
-                  setOpenTriggerModal(true);
-                }}
-              >
-                <div className="flex items-center justify-around gap-2 overflow-hidden">
-                  Trigger{" "}
-                  <DynamicIconForTrigger
-                    onlyIcons={true}
-                    className="bg-white rounded-full border-none"
-                    interval={workflow?.interval ?? ""}
-                  />
-                </div>
-              </Button>
-            </div>
-            <div className="font-bold text-sm text-right h-2 p-2 cursor-pointer">
-              {!isAllExecutionProvidersConfigured &&
-                workflow?.last_execution_started && (
-                  <TimeAgo
-                    date={workflow?.last_execution_started + "Z"}
-                    formatter={customFormatter}
-                  />
-                )}
+            <div className="flex flex-row justify-between items-center gap-1 flex-wrap text-sm">
+              {!!workflow?.interval && (
+                <Button
+                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  onClick={() => {
+                    setOpenTriggerModal(true);
+                  }}
+                  icon={PiDiamondsFourFill}
+                  tooltip={`time: ${workflow?.interval} secs`}
+                >
+                  Interval
+                </Button>
+              )}
+
+              {isManualTriggerPresent && (
+                <Button
+                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  onClick={() => {
+                    setOpenTriggerModal(true);
+                  }}
+                  icon={FaHandPointer}
+                >
+                  Manual
+                </Button>
+              )}
+              {alertSource && (
+                <Button
+                  className={`border bg-white border-gray-500 p-0.5 pr-2 pl-2 text-black placeholder-opacity-100 text-xs rounded-2xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
+                  onClick={() => {
+                    setOpenTriggerModal(true);
+                  }}
+                  tooltip={`Source: ${alertSource}`}
+                >
+                  <div className="flex items-center justify-center gap-0.5">
+                    {alertSource && (
+                      <Image
+                        src={`/icons/${alertSource}-icon.png`}
+                        alt="Alert"
+                        width={16}
+                        height={16}
+                        onError={handleImageError}
+                      />
+                    )}
+                    Trigger
+                  </div>
+                </Button>
+              )}
+              {/* </div> */}
+              <div className="flex-1 text-gray-500 text-sm text-right cursor-pointer truncate max-w-full">
+                {!isAllExecutionProvidersConfigured &&
+                  workflow?.last_execution_started && (
+                    <TimeAgo
+                      date={workflow?.last_execution_started + "Z"}
+                      formatter={customFormatter}
+                    />
+                  )}
+              </div>
             </div>
           </div>
         </div>
-        <div className="container p-2">
+        <div className="container p-2 hidden">
           <Card className="mt-2.5 p-2">
             <Text className="">Providers:</Text>
             <ProvidersCarousel
@@ -1144,6 +1175,5 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
-
 
 export default WorkflowTile;
