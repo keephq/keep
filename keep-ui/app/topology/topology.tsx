@@ -4,6 +4,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Edge,
   MarkerType,
   MiniMap,
   ReactFlow,
@@ -52,14 +53,19 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   return { nodes, edges };
 };
 
-const onEdgeHover = (edge: any, event: any) => {};
-
 const TopologyPage = () => {
   // State for nodes and edges
   const [nodes, setNodes] = useState<any[]>([]);
-  const [edges, setEdges] = useState<
-    { id: string; source: string; target: string; label: string }[]
-  >([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+
+  const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
+    const newEdges = [...edges];
+    const currentEdge = newEdges.find((e) => e.id === edge.id);
+    if (currentEdge) {
+      currentEdge.style = eventType === "enter" ? { stroke: "orange" } : {};
+      setEdges(newEdges);
+    }
+  };
 
   useEffect(() => {
     // Create nodes from service definitions
@@ -88,7 +94,6 @@ const TopologyPage = () => {
             stroke: "gray",
           },
           labelBgBorderRadius: 10,
-          className: "edge-path",
           markerEnd: {
             type: MarkerType.ArrowClosed,
           },
@@ -110,8 +115,8 @@ const TopologyPage = () => {
           fitView
           snapToGrid
           fitViewOptions={{ padding: 0.2 }}
-          onEdgeMouseEnter={onEdgeHover}
-          onEdgeMouseLeave={onEdgeHover}
+          onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
+          onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
           nodeTypes={{ customNode: CustomNode }}
         >
           <Background variant={BackgroundVariant.Dots} />

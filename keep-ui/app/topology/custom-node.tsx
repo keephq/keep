@@ -5,19 +5,18 @@ import { useRouter } from "next/navigation";
 import { Service } from "./models";
 
 const CustomNode = ({ data }: { data: Service }) => {
-  console.log(data);
   const { useAllAlerts } = useAlerts();
   const { data: alerts } = useAllAlerts("feed");
   const router = useRouter();
 
-  const relevantService = alerts?.find(
+  const relevantAlerts = alerts?.filter(
     (alert) => alert.service === data.display_name
   );
 
   const handleClick = () => {
-    router.push(
-      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`${data.id}`)}`
-    );
+    // router.push(
+    //   `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`${data.id}`)}`
+    // );
   };
 
   return (

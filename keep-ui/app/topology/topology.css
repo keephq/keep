@@ -4,7 +4,3 @@
 .react-flow__handle-bottom {
   opacity: 0;
 }
-
-.edge-hover:hover path {
-    stroke: orange; /* Change to your desired hover color */
-  }
