@@ -1,12 +1,33 @@
 import React from "react";
 import { Handle, Position } from "@xyflow/react";
+import { useAlerts } from "utils/hooks/useAlerts";
+import { useRouter } from "next/navigation";
+import { Service } from "./models";
 
-const CustomNode = ({ data }: { data: any }) => {
+const CustomNode = ({ data }: { data: Service }) => {
+  console.log(data);
+  const { useAllAlerts } = useAlerts();
+  const { data: alerts } = useAllAlerts("feed");
+  const router = useRouter();
+
+  const relevantService = alerts?.find(
+    (alert) => alert.service === data.display_name
+  );
+
+  const handleClick = () => {
+    router.push(
+      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`${data.id}`)}`
+    );
+  };
+
   return (
-    <div className="custom-node">
-      <strong>{data.label}</strong>
-      <Handle type="target" position={Position.Top} isConnectable={false} />
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+    <div
+      onClick={handleClick}
+      className="bg-white p-4 border rounded shadow-lg"
+    >
+      <strong className="text-lg">{data.id}</strong>
+      <Handle type="source" position={Position.Right} id="right" />
+      <Handle type="target" position={Position.Left} id="left" />
     </div>
   );
 };
