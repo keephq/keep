@@ -18,6 +18,7 @@ from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
+from keep.api.models.db.statistics import *
 
 target_metadata = SQLModel.metadata
 
