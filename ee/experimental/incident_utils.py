@@ -34,30 +34,31 @@ async def mine_incidents_and_create_objects(
 
     for tenant_id in tenant_ids:
         alerts = get_last_alerts(tenant_id, use_n_historical_alerts)
+        if len(alerts) > 0:
         
-        incidents = mine_incidents(
-            alerts,
-            incident_sliding_window_size,
-            statistic_sliding_window_size,
-            jaccard_threshold,
-            fingerprint_threshold,
-        )
+            incidents = mine_incidents(
+                alerts,
+                incident_sliding_window_size,
+                statistic_sliding_window_size,
+                jaccard_threshold,
+                fingerprint_threshold,
+            )
 
-        for incident in incidents:
-            incident_id = create_incident_from_dict(
-                tenant_id=tenant_id,
-                incident_data={
-                    "name": "Mined using algorithm",
-                    "description": "Candidate",
-                    "is_predicted": True
-                }
-            ).id    
+            for incident in incidents:
+                incident_id = create_incident_from_dict(
+                    tenant_id=tenant_id,
+                    incident_data={
+                        "name": "Mined using algorithm",
+                        "description": "Candidate",
+                        "is_predicted": True
+                    }
+                ).id    
 
-            for alert in incident["alerts"]:
-                assign_alert_to_incident(alert.id, incident_id, tenant_id)
-        
-        if len(tenant_ids) == 1:
-            return {"incidents": incidents}
+                for alert in incident["alerts"]:
+                    assign_alert_to_incident(alert.id, incident_id, tenant_id)
+            
+            if len(tenant_ids) == 1:
+                return {"incidents": incidents}
 
 
 
