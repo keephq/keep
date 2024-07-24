@@ -667,7 +667,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 }}
               >
                 <div className="flex items-center justify-around gap-2 overflow-hidden">
-                  Trigger{" "}
+                  Triggers: {" "}
                   <DynamicIconForTrigger
                     onlyIcons={true}
                     className="bg-white rounded-full border-none"
