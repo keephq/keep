@@ -14,6 +14,7 @@ import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import { Workflow, WorkflowExecution } from "./models";
 import { differenceInSeconds } from "date-fns";
+import { useRouter } from "next/navigation";
 
 Chart.register(
   CategoryScale,
@@ -24,55 +25,55 @@ Chart.register(
   Legend
 );
 
-const show_real_data = true;
+const show_real_data = false;
 
 const demoLabels = [
   "Jan",
   "Feb",
-  //  'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
-  //  'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+   'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
+   'Dec', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
 const demoData = [
   1, 3,
-  // 2, 2, 8, 1, 3, 5, 2,
-  // 10, 1, 3, 5, 2, 10
+  2, 2, 8, 1, 3, 5, 2,
+  10, 1, 3, 5, 2, 10
 ];
 
 const demoBgColors = [
   "rgba(75, 192, 192, 0.2)", // Green
   "rgba(255, 99, 132, 0.2)", // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(255, 99, 132, 0.2)', // Red
-  //   'rgba(75, 192, 192, 0.2)', // Green
-  //   'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(255, 99, 132, 0.2)', // Red
+    'rgba(75, 192, 192, 0.2)', // Green
+    'rgba(255, 99, 132, 0.2)', // Red
 ];
 
 const demoColors = [
   "rgba(75, 192, 192, 1)", // Green
   "rgba(255, 99, 132, 1)", // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(255, 99, 132, 1)', // Red
-  //   'rgba(75, 192, 192, 1)', // Green
-  //   'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(255, 99, 132, 1)', // Red
+    'rgba(75, 192, 192, 1)', // Green
+    'rgba(255, 99, 132, 1)', // Red
 ];
 const getLabels = (
   lastExecutions: Pick<
@@ -84,7 +85,8 @@ const getLabels = (
     return show_real_data ? [] : demoLabels;
   }
   return lastExecutions?.map((workflowExecution) => {
-    return workflowExecution?.started;
+    let started = workflowExecution?.started ? new Date(workflowExecution?.started + "Z").toLocaleString() : "N/A";
+    return `${started}(${workflowExecution.status})`;
   });
 };
 
@@ -100,7 +102,7 @@ const getDataValues = (
   return lastExecutions?.map((workflowExecution) => {
     return (
       workflowExecution?.execution_time ||
-      differenceInSeconds(Date.now(), new Date(workflowExecution?.started))
+      differenceInSeconds(new Date(Date.now().toLocaleString()), new Date(new Date(workflowExecution?.started + 'Z').toLocaleString()))
     );
   });
 };
@@ -183,9 +185,12 @@ const chartOptions = {
 };
 
 export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
+  const router = useRouter();
   const lastExecutions = useMemo(() => {
-    const reversedExecutions = workflow?.last_executions?.slice(0, 15) || [];
-    return reversedExecutions.reverse();
+    let executions = workflow?.last_executions?.slice(0, 15) || [];
+    //as discussed making usre if all the executions are providers_not_configured. thne ignoring it
+    const providerNotConfiguredExecutions  = executions.filter((execution) => execution?.status==="providers_not_configured");
+    return providerNotConfiguredExecutions.length  ==  executions.length ? [] : executions.reverse();
   }, [workflow?.last_executions]);
 
   const hasNoData = !lastExecutions || lastExecutions.length === 0;
@@ -196,7 +201,7 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
     labels: getLabels(lastExecutions),
     datasets: [
       {
-        label: "Execution Time (mins)",
+        label: "Execution Time (seconds)",
         data: getDataValues(lastExecutions),
         backgroundColor: getColors(lastExecutions, status, true),
         borderColor: getColors(lastExecutions, status),
@@ -254,7 +259,11 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
   return (
     <div className="flex felx-row items-end justify-start h-36 flex-nowrap w-full">
       <div>{getIcon()}</div>
-      <div className="overflow-hidden h-32 w-full flex-shrink-1">
+      <div className="overflow-hidden h-32 w-full flex-shrink-1"
+      onClick={()=>{
+        router.push(`/workflows/${workflow.id}`);
+      }}
+      >
         <Bar data={chartData} options={chartOptions} />
       </div>
     </div>

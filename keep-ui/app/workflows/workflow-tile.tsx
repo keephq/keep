@@ -29,12 +29,16 @@ import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
-import { parseISO, set, differenceInSeconds } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
-import { WorkflowExecution } from "./builder/types";
 import WorkflowGraph from "./workfflow-graph";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import Modal from "@/components/ui/Modal";
+import { FaHandPointer } from "react-icons/fa";
+import {
+  MdOutlineKeyboardArrowRight,
+  MdOutlineKeyboardArrowLeft,
+} from "react-icons/md";
 
 function WorkflowMenuSection({
   onDelete,
@@ -166,6 +170,104 @@ function ProviderTile({
     </div>
   );
 }
+
+export const ProvidersCarousel = ({
+  providers,
+  onConnectClick,
+}: {
+  providers: FullProvider[];
+  onConnectClick: (provider: FullProvider) => void;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const providersPerPage = 3;
+
+  const nextIcons = () => {
+    if (currentIndex + providersPerPage < providers.length) {
+      setCurrentIndex(currentIndex + providersPerPage);
+    }
+  };
+
+  const prevIcons = () => {
+    if (currentIndex - providersPerPage >= 0) {
+      setCurrentIndex(currentIndex - providersPerPage);
+    }
+  };
+
+  const displayedProviders = providers.slice(
+    currentIndex,
+    currentIndex + providersPerPage
+  );
+
+  return (
+    <div className="contianer flex flex-row justify-around items-center">
+      <button
+        className={`bg-transparent border-none text-2xl cursor-pointer ${
+          currentIndex === 0 ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+        onClick={prevIcons}
+        disabled={currentIndex === 0}
+      >
+        <MdOutlineKeyboardArrowLeft size="2rem" />
+      </button>
+      <div className="container flex items-center justify-around overflow-hidden p-2">
+        {displayedProviders.map((provider, index) => (
+          <div
+            key={index}
+            className="relative p-2 hover:grayscale-0 text-2xl h-full shadow-md"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            {provider.installed ? (
+              <Icon
+                icon={CheckCircleIcon}
+                className="absolute top-[-15px] right-[-15px]"
+                color="green"
+                size="sm"
+                tooltip="Connected"
+              />
+            ) : (
+              <Icon
+                icon={XCircleIcon}
+                className="absolute top-[-15px] right-[-15px]"
+                color="red"
+                size="sm"
+                tooltip="Disconnected"
+              />
+            )}
+            <Button
+              onClick={() => onConnectClick(provider)}
+              disabled={provider.installed}
+              className="bg-transparent border-none hover:bg-transparent p-0"
+            >
+              <Image
+                src={`/icons/${provider.type}-icon.png`}
+                width={30}
+                height={30}
+                alt={provider.type}
+                className={`${
+                  provider.installed ? "" : "grayscale hover:grayscale-0"
+                }`}
+              />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <button
+        className={`bg-transparent border-none text-2xl cursor-pointer ${
+          currentIndex + providersPerPage >= providers.length
+            ? "opacity-50 cursor-not-allowed"
+            : ""
+        }`}
+        onClick={nextIcons}
+        disabled={currentIndex + providersPerPage >= providers.length}
+      >
+        <MdOutlineKeyboardArrowRight size="2rem" />
+      </button>
+    </div>
+  );
+};
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
@@ -383,32 +485,149 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     .filter(Boolean) as FullProvider[];
   const triggerTypes = workflow.triggers.map((trigger) => trigger.type);
 
+  const lastExecutions = workflow?.last_executions?.slice(0, 15) || [];
+  const lastProviderConfigRequiredExec = lastExecutions.filter(
+    (execution) => execution?.status === "providers_not_configured"
+  );
+  const isAllExecutionProvidersConfigured =
+    lastProviderConfigRequiredExec.length === lastExecutions.length;
+
   const customFormatter: Formatter = (
     value: number,
     unit: Unit,
     suffix: Suffix
   ) => {
-    const now = Date.now();
-    const seconds = Math.floor((now - new Date(workflow?.last_execution_started! + 'Z').getTime()) / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-  
-    let formattedString = '';
-    if (days > 0) {
-      formattedString += `${days}d`;
+    if (!workflow.last_execution_started && isAllExecutionProvidersConfigured) {
+      return "";
     }
-    if (hours % 24 > 0) {
-      formattedString += ` ${hours % 24}h`;
-    }
-    if (minutes % 60 > 0) {
-      formattedString += ` ${minutes % 60}min${minutes >1 ?'s' : ''}`;
-    }
-    if (seconds % 60 > 0 && (!minutes && !hours && !days)) {
-      formattedString += ` ${seconds % 60}sec${seconds >1 ?'s' : ''}`;
-    }
-    formattedString += ` ago`;
-    return formattedString;
+
+    const formattedString = formatDistanceToNowStrict(
+      new Date(workflow.last_execution_started + "Z"),
+      { addSuffix: true }
+    );
+
+    return formattedString
+      .replace("about ", "")
+      .replace("minute", "min")
+      .replace("second", "sec");
+  };
+
+  const DynamicIconForTrigger = ({
+    onlyIcons,
+    interval,
+    ...props
+  }: {
+    onlyIcons?: boolean;
+    interval?: string;
+    className?: string;
+  }) => {
+    return (
+      <>
+        {triggerTypes.map((t, index) => {
+          if (t === "alert") {
+            const handleImageError = (event: any) => {
+              event.target.href.baseVal = "/icons/keep-icon.png";
+            };
+            const alertSource = workflow.triggers
+              .find((w) => w.type === "alert")
+              ?.filters?.find((f) => f.key === "source")?.value;
+            const DynamicIcon = (props: any) => (
+              <svg
+                width="24px"
+                height="24px"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                {...props}
+              >
+                {" "}
+                <image
+                  id="image0"
+                  width={"24"}
+                  height={"24"}
+                  href={`/icons/${alertSource}-icon.png`}
+                  onError={handleImageError}
+                />
+              </svg>
+            );
+            return onlyIcons ? (
+              <Badge
+              key={t}
+              size="xs"
+              color="orange"
+              title={`Source: ${alertSource}`}
+              {...props}
+              >
+                <div className="flex justify-center items-center">
+                  <DynamicIcon width="16px" height="16px" color="orange"/>
+                </div>
+              </Badge>
+            ) : (
+              <Badge
+                icon={DynamicIcon}
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${alertSource}`}
+                {...props}
+              >
+                {t}
+              </Badge>
+            );
+          }
+          if (t === "manual") {
+            return onlyIcons ? (
+              <Badge
+              key={t}
+              size="xs"
+              color="orange"
+              title={t}
+              {...props}
+              >
+                <div className="flex justify-center items-center">
+                <FaHandPointer size={16} color="orange"/>
+                </div>
+              </Badge>
+            ) : (
+              <Badge
+                key={t}
+                size="xs"
+                color="orange"
+                icon={FaHandPointer}
+                title={`Source: ${t}`}
+                {...props}
+              >
+                {t}
+              </Badge>
+            );
+          }
+
+          if (t === "interval" && onlyIcons) {
+            return (
+              <Badge
+                key={t}
+                size="xs"
+                color="orange"
+                title={`Source: ${t}`}
+                {...props}
+              >
+                <div className="flex justify-center items-center">
+
+                <PiDiamondsFourFill size={16} color="orange"/>
+                <div>{interval}</div>
+                </div>
+
+              </Badge>
+            );
+          }
+          return !onlyIcons ? (
+            <Badge key={t} color="orange">
+              {t}
+            </Badge>
+          ) : null;
+        })}
+      </>
+    );
   };
 
   return (
@@ -418,7 +637,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card className="relative flex flex-col bg-white rounded shadow p-2 h-full">
+      <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full">
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -429,48 +648,74 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             workflow,
           })}
         </div>
-        <div></div>
-        <div className="m-2 flex flex-col justify-between item-start flex-wrap">
+        <div className="m-2 flex flex-col justify-around item-start flex-wrap">
           <WorkflowGraph workflow={workflow} />
-          <div className="gap-2">
-            <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl mb-2">
-              {workflow?.name || "Unknown"}
-            </h2>
-            <div className="flex flex-col sm:flex-row md:items-center justify-between gap-2 flex-wrap">
-              <div className="flex flex-wrap justify-start items-center gap-2">
-                {!!workflow.interval && (
-                  <Button
-                    className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
-                    // className="border bg-white border-gray-200 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 font-bold disabled:cursor-not-allowed"
-                    disabled={!workflow?.interval}
-                    icon={PiDiamondsFourFill}
-                  >
-                    Interval
-                  </Button>
+          <div className="container flex flex-col space-between">
+            <div className="h-24">
+              <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
+                {workflow?.name || "Unkown"}
+              </h2>
+              <p className="text-gray-500 line-clamp-2">
+                {workflow?.description || "no description"}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row md:items-center justify-between gap-4 flex-wrap">
+              <Button
+                className={`flex-1 border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
+                onClick={() => {
+                  setOpenTriggerModal(true);
+                }}
+              >
+                <div className="flex items-center justify-around gap-2 overflow-hidden">
+                  Trigger{" "}
+                  <DynamicIconForTrigger
+                    onlyIcons={true}
+                    className="bg-white rounded-full border-none"
+                    interval={workflow?.interval ?? ""}
+                  />
+                </div>
+              </Button>
+            </div>
+            <div className="font-bold text-sm text-right h-2 p-2 cursor-pointer">
+              {!isAllExecutionProvidersConfigured &&
+                workflow?.last_execution_started && (
+                  <TimeAgo
+                    date={workflow?.last_execution_started + "Z"}
+                    formatter={customFormatter}
+                  />
                 )}
-
-                {!!workflow?.triggers?.length && (
-                  <Button
-                    className={`border bg-white border-gray-500 text-black py-1 px-3 text-xs rounded-full hover:bg-gray-100 hover:border-gray font-bold disabled:cursor-not-allowed flex items-center justify-center shadow`}
-                    disabled={
-                      !workflow?.triggers || workflow?.triggers?.length === 0
-                    }
-                    onClick={()=>{setOpenTriggerModal(true)}}
-                  >
-                    Trigger
-                  </Button>
-                )}
-              </div>
-              {workflow && workflow.last_execution_started ? (
-                <TimeAgo
-                  date={workflow?.last_execution_started + "Z"}
-                  className="text-sm text-gray-500"
-                  suffix="ago"
-                  formatter={customFormatter}
-                />
-              ) : null}
             </div>
           </div>
+        </div>
+        <div className="container p-2">
+          <Card className="mt-2.5 p-2">
+            <Text className="">Providers:</Text>
+            <ProvidersCarousel
+              providers={uniqueProviders}
+              onConnectClick={handleConnectProvider}
+            />
+            {/* </div> */}
+          </Card>
+          <SlidingPanel
+            type={"right"}
+            isOpen={openPanel}
+            size={30}
+            backdropClicked={handleCloseModal}
+            panelContainerClassName="bg-white z-[2000]"
+          >
+            {selectedProvider && (
+              <ProviderForm
+                provider={selectedProvider}
+                formData={formValues}
+                formErrorsData={formErrors}
+                onFormChange={handleFormChange}
+                onConnectChange={handleConnecting}
+                closeModal={handleCloseModal}
+                installedProvidersMode={selectedProvider.installed}
+                isProviderNameDisabled={true}
+              />
+            )}
+          </SlidingPanel>
         </div>
       </Card>
 
@@ -482,57 +727,15 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         dependencies={alertDependencies}
       />
       <Modal
-      isOpen={openTriggerModal}
-      onClose={()=>{setOpenTriggerModal(false)}}
+        isOpen={openTriggerModal}
+        onClose={() => {
+          setOpenTriggerModal(false);
+        }}
       >
-      <div className="mt-2.5">
+        <div className="mt-2.5">
           <div className="flex flex-row items-center justify-start flex-wrap gap-1">
             <span className="mr-1">Triggers:</span>
-            {triggerTypes.map((t) => {
-              if (t === "alert") {
-                const handleImageError = (event: any) => {
-                  event.target.href.baseVal = "/icons/keep-icon.png";
-                };
-                const alertSource = workflow.triggers
-                  .find((w) => w.type === "alert")
-                  ?.filters?.find((f) => f.key === "source")?.value;
-                const DynamicIcon = (props: any) => (
-                  <svg
-                    width="24px"
-                    height="24px"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    {...props}
-                  >
-                    {" "}
-                    <image
-                      id="image0"
-                      width={"24"}
-                      height={"24"}
-                      href={`/icons/${alertSource}-icon.png`}
-                      onError={handleImageError}
-                    />
-                  </svg>
-                );
-                return (
-                  <Badge
-                    icon={DynamicIcon}
-                    key={t}
-                    size="xs"
-                    color="orange"
-                    title={`Source: ${alertSource}`}
-                  >
-                    {t}
-                  </Badge>
-                );
-              }
-              return (
-                <Badge key={t} size="xs" color="orange">
-                  {t}
-                </Badge>
-              );
-            })}
+            <DynamicIconForTrigger />
           </div>
           <div>
             {workflow.triggers.length > 0 ? (
