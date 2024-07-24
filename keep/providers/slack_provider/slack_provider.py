@@ -134,7 +134,11 @@ class SlackProvider(BaseProvider):
             payload = {
                 "channel": channel,
                 "text": message,
-                "blocks": json.dumps(blocks) if isinstance(blocks, dict) else blocks,
+                "blocks": (
+                    json.dumps(blocks)
+                    if isinstance(blocks, dict) or isinstance(blocks, list)
+                    else blocks
+                ),
                 "token": self.authentication_config.access_token,
             }
             response = requests.post(
@@ -195,10 +199,11 @@ if __name__ == "__main__":
         channel="alerts-playground",
         blocks=[
             {
-                "type": "section",
+                "type": "header",
                 "text": {
-                    "type": "mrkdwn",
-                    "text": "A message *with some bold text* and _some italicized text_.",
+                    "type": "plain_text",
+                    "text": "Alert! :alarm_clock:",
+                    "emoji": True,
                 },
             }
         ],
