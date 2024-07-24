@@ -106,6 +106,7 @@ def get_workflows(
             workflow, workflow_last_run_time, workflow_last_run_status = _workflow
             last_executions = None
             last_execution_started = None
+         
         try:
             workflow_yaml = yaml.safe_load(workflow.workflow_raw)
             providers = parser.get_providers_from_workflow(workflow_yaml)

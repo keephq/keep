@@ -89,7 +89,6 @@ export default function MockWorkflowCardSection({
   mockLoading: boolean | null;
 }) {
   const router = useRouter();
-
   const [loadingId, setLoadingId] = useState<string|null>(null);
 
   const getNameFromId = (id: string) => {
