@@ -239,6 +239,7 @@ class AlertActionType(enum.Enum):
     # the alert was resolved manually
     MANUAL_RESOLVE = "alert manually resolved"
     MANUAL_STATUS_CHANGE = "alert status manually changed"
+    STATUS_UNENRICH = "alert status undone"
     # the alert was escalated
     WORKFLOW_ENRICH = "alert enriched by workflow"
     MAPPING_RULE_ENRICH = "alert enriched by mapping rule"
@@ -246,6 +247,7 @@ class AlertActionType(enum.Enum):
     DEDUPLICATED = "alert was deduplicated"
     # a ticket was created
     TICKET_ASSIGNED = "alert was assigned with ticket"
+    TICKET_UNASSIGNED = "alert was unassigned from ticket"
     # a ticket was updated
     TICKET_UPDATED = "alert ticket was updated"
     # disposing enriched alert
@@ -254,5 +256,7 @@ class AlertActionType(enum.Enum):
     DELETE_ALERT = "alert deleted"
     # generic enrichment
     GENERIC_ENRICH = "alert enriched"
+    GENERIC_UNENRICH = "alert un-enriched"
     # commented
     COMMENT = "a comment was added to the alert"
+    UNCOMMENT = "a comment was removed from the alert"

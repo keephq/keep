@@ -154,6 +154,7 @@ export default function Alerts({ presetName }: AlertsProps) {
       <ViewAlertModal
         alert={viewAlertModal}
         handleClose={() => router.replace(`/alerts/${presetName}`)}
+        mutate={mutateAlerts}
       />
     </>
   );

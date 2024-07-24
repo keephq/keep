@@ -60,6 +60,7 @@ export interface AlertDto {
   group?: boolean;
   note?: string;
   isNoisy?: boolean;
+  enriched_fields: string[];
 }
 
 interface Option {
