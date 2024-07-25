@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
+import pytz
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -130,7 +131,7 @@ def mysql_container(docker_ip, docker_services):
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
             yield
-        return
+            return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
@@ -148,7 +149,12 @@ def mysql_container(docker_ip, docker_services):
 @pytest.fixture
 def db_session(request):
     # Create a database connection
-    if request and hasattr(request, "param") and "db" in request.param:
+    if (
+        request
+        and hasattr(request, "param")
+        and request.param
+        and "db" in request.param
+    ):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         mock_engine = create_engine(db_connection_string)
@@ -180,7 +186,7 @@ def db_session(request):
     workflow_data = [
         Workflow(
             id="test-id-1",
-            name="test-name-1",
+            name="test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -189,7 +195,7 @@ def db_session(request):
         ),
         Workflow(
             id="test-id-2",
-            name="test-name-2",
+            name="test-id-2",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -198,7 +204,7 @@ def db_session(request):
         ),
         WorkflowExecution(
             id="test-execution-id-1",
-            workflow_id="mock_alert",
+            workflow_id="test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             triggered_by="keep-test",
             status="success",
@@ -398,3 +404,21 @@ def setup_stress_alerts(elastic_client, db_session, request):
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
+
+
+@pytest.fixture
+def create_alert(db_session):
+    def _create_alert(fingerprint, status, timestamp):
+        alert = Alert(
+            tenant_id=SINGLE_TENANT_UUID,
+            provider_type="test",
+            provider_id="test",
+            event={"fingerprint": fingerprint, "status": status.value},
+            fingerprint=fingerprint,
+            alert_hash="test_hash",
+            timestamp=timestamp.replace(tzinfo=pytz.utc),
+        )
+        db_session.add(alert)
+        db_session.commit()
+
+    return _create_alert
