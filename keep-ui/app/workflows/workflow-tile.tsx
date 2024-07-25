@@ -286,6 +286,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
+  const alertSource = workflow?.triggers?.find((w) => w.type === "alert")
+    ?.filters?.find((f) => f.key === "source")?.value;
+  const [imgSrc, setImgSrc] = useState(`/icons/${alertSource}-icon.png`);
 
   const { providers } = useFetchProviders();
 
@@ -517,9 +520,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     event.target.href.baseVal = "/icons/keep-icon.png";
   };
 
-  const alertSource = workflow.triggers
-    .find((w) => w.type === "alert")
-    ?.filters?.find((f) => f.key === "source")?.value;
+  
 
   const isManualTriggerPresent = workflow?.triggers?.find(
     (t) => t.type === "manual"
@@ -693,11 +694,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   <div className="flex items-center justify-center gap-0.5">
                     {alertSource && (
                       <Image
-                        src={`/icons/${alertSource}-icon.png`}
-                        alt="Alert"
-                        width={20}
-                        height={20}
-                        onError={handleImageError}
+                        src={imgSrc ?? ''}
+                        width={16}
+                        height={16}
+                        alt={alertSource}
+                        onError={()=>setImgSrc("/icons/keep-icon.png")
+                        }
+                        className="object-cover"  
                       />
                     )}
                     Trigger
