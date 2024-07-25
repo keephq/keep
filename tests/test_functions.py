@@ -1,6 +1,6 @@
 import datetime
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 import pytz
@@ -343,7 +343,7 @@ def test_add_time_to_date_with_datetime_string():
 
 def test_get_firing_time_case1(create_alert):
     fingerprint = "fp1"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=15))
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
@@ -357,7 +357,7 @@ def test_get_firing_time_case1(create_alert):
 
 def test_get_firing_time_case2(create_alert):
     fingerprint = "fp2"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time)
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=30))
@@ -369,7 +369,7 @@ def test_get_firing_time_case2(create_alert):
 
 def test_get_firing_time_case3(create_alert):
     fingerprint = "fp3"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.FIRING, base_time)
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=30))
@@ -383,7 +383,7 @@ def test_get_firing_time_case3(create_alert):
 
 def test_get_firing_time_case4(create_alert):
     fingerprint = "fp4"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=15))
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
@@ -399,7 +399,7 @@ def test_get_firing_time_case4(create_alert):
 
 def test_get_firing_time_no_firing(create_alert):
     fingerprint = "fp5"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time)
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=30))
@@ -411,7 +411,7 @@ def test_get_firing_time_no_firing(create_alert):
 
 def test_get_firing_time_other_statuses(create_alert):
     fingerprint = "fp6"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(
         fingerprint, AlertStatus.ACKNOWLEDGED, base_time - timedelta(minutes=30)
@@ -427,7 +427,7 @@ def test_get_firing_time_other_statuses(create_alert):
 
 def test_get_firing_time_minutes_and_seconds(create_alert):
     fingerprint = "fp7"
-    base_time = datetime.now(tz=pytz.utc)
+    base_time = datetime.datetime.now(tz=pytz.utc)
 
     create_alert(fingerprint, AlertStatus.FIRING, base_time)
     create_alert(
