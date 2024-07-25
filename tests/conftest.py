@@ -130,7 +130,7 @@ def mysql_container(docker_ip, docker_services):
     try:
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
-            yield
+            yield "mysql+pymysql://root:keep@localhost:3306/keep"
             return
         docker_services.wait_until_responsive(
             timeout=60.0,
@@ -140,11 +140,7 @@ def mysql_container(docker_ip, docker_services):
             ),
         )
         # set this as environment variable
-        os.environ["DATABASE_CONNECTION_STRING"] = (
-            "mysql+pymysql://root:keep@localhost:3306/keep"
-        )
         yield "mysql+pymysql://root:keep@localhost:3306/keep"
-        os.environ["DATABASE_CONNECTION_STRING"] = ""
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
