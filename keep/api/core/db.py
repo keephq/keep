@@ -1850,7 +1850,6 @@ def get_workflows_with_last_executions_v2(
                 latest_executions_subquery.c.started,
                 latest_executions_subquery.c.execution_time,
                 latest_executions_subquery.c.status,
-                latest_executions_subquery.c.status,
             )
             .outerjoin(
                 latest_executions_subquery,
