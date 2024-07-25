@@ -2,12 +2,12 @@ import React from "react";
 import { Handle, Position } from "@xyflow/react";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
-import { Service } from "./models";
+import { Service } from "./models.ts";
 
 const CustomNode = ({ data }: { data: Service }) => {
   const { useAllAlerts } = useAlerts();
   const { data: alerts } = useAllAlerts("feed");
-  const router = useRouter();
+  // const router = useRouter();
 
   const relevantAlerts = alerts?.filter((alert) => alert.service === data.id);
 
