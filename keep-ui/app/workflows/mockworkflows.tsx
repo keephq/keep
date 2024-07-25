@@ -149,7 +149,10 @@ export default function MockWorkflowCardSection({
           mockWorkflows.map((template: any, index: number) => {
             const workflow = template.workflow;
             return (
-              <Card key={index} className="p-4 flex flex-col justify-between w-full">
+              <Card
+                key={index}
+                className="p-4 flex flex-col justify-between w-full hover:border-orange-400 hover:border-2"
+              >
                 <div>
                   <WorkflowSteps workflow={workflow} />
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
