@@ -1396,15 +1396,17 @@ def test_alerts_enrichment_in_search(client, db_session, test_app, elastic_clien
     os.environ["ELASTIC_ENABLED"] = "true"
 
     # Test alert without enrichments
-    elastic_filtered_low_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
-        search_query_low
-    )
+    elastic_filtered_low_alerts = SearchEngine(
+        tenant_id=SINGLE_TENANT_UUID
+    ).search_alerts(search_query_low)
     assert len(elastic_filtered_low_alerts) == 1
 
     elastic_filtered_low_alert = elastic_filtered_low_alerts[0].dict()
 
     assert "enriched_fields" in elastic_filtered_low_alert
-    assert elastic_filtered_low_alert["enriched_fields"] == []
+    assert elastic_filtered_low_alert["enriched_fields"] == [
+        "status"
+    ]  # status was enriched by the mapping rule
 
     # Now let's get alert with some enrichments
     elastic_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(

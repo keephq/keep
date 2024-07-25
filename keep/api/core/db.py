@@ -1142,7 +1142,14 @@ def create_rule(
 
 
 def update_rule(
-    tenant_id, rule_id, name, timeframe, definition, definition_cel, updated_by
+    tenant_id,
+    rule_id,
+    name,
+    timeframe,
+    definition,
+    definition_cel,
+    updated_by,
+    grouping_criteria,
 ):
     with Session(engine) as session:
         rule = session.exec(
@@ -1154,6 +1161,7 @@ def update_rule(
             rule.timeframe = timeframe
             rule.definition = definition
             rule.definition_cel = definition_cel
+            rule.grouping_criteria = grouping_criteria
             rule.updated_by = updated_by
             rule.update_time = datetime.utcnow()
             session.commit()
@@ -1792,6 +1800,7 @@ def get_incidents(tenant_id) -> List[Incident]:
         ).all()
     return incidents
 
+
 def get_alert_audit(
     tenant_id: str, fingerprint: str, limit: int = 50
 ) -> List[AlertAudit]:
@@ -1806,7 +1815,9 @@ def get_alert_audit(
     return audit
 
 
-def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions: int = 15) -> list[dict]:
+def get_workflows_with_last_executions_v2(
+    tenant_id: str, fetch_last_executions: int = 15
+) -> list[dict]:
     if fetch_last_executions is not None and fetch_last_executions > 20:
         fetch_last_executions = 20
 
@@ -1818,10 +1829,12 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
                 WorkflowExecution.started,
                 WorkflowExecution.execution_time,
                 WorkflowExecution.status,
-                func.row_number().over(
+                func.row_number()
+                .over(
                     partition_by=WorkflowExecution.workflow_id,
-                    order_by=desc(WorkflowExecution.started)
-                ).label("row_num")
+                    order_by=desc(WorkflowExecution.started),
+                )
+                .label("row_num"),
             )
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(
@@ -1836,14 +1849,14 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
                 Workflow,
                 latest_executions_subquery.c.started,
                 latest_executions_subquery.c.execution_time,
-                latest_executions_subquery.c.status
+                latest_executions_subquery.c.status,
             )
             .outerjoin(
                 latest_executions_subquery,
                 and_(
                     Workflow.id == latest_executions_subquery.c.workflow_id,
-                    latest_executions_subquery.c.row_num <= fetch_last_executions
-                )
+                    latest_executions_subquery.c.row_num <= fetch_last_executions,
+                ),
             )
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.is_deleted == False)
@@ -1854,7 +1867,6 @@ def get_workflows_with_last_executions_v2(tenant_id: str, fetch_last_executions:
         result = session.execute(workflows_with_last_executions_query).all()
 
     return result
-   
 
 
 def get_last_incidents(
@@ -1928,9 +1940,7 @@ def create_incident_from_dict(
     is_predicted = incident_data.get("is_predicted", False)
     with Session(engine) as session:
         new_incident = Incident(
-            **incident_data,
-            tenant_id=tenant_id,
-            is_confirmed=not is_predicted
+            **incident_data, tenant_id=tenant_id, is_confirmed=not is_predicted
         )
         session.add(new_incident)
         session.commit()
@@ -1946,10 +1956,12 @@ def update_incident_from_dto_by_id(
 ) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(
+            select(Incident)
+            .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-            ).options(joinedload(Incident.alerts))
+            )
+            .options(joinedload(Incident.alerts))
         ).first()
 
         if not incident:
@@ -1958,11 +1970,13 @@ def update_incident_from_dto_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-        ).update({
-            "name": updated_incident_dto.name,
-            "description": updated_incident_dto.description,
-            "assignee": updated_incident_dto.assignee,
-        })
+        ).update(
+            {
+                "name": updated_incident_dto.name,
+                "description": updated_incident_dto.description,
+                "assignee": updated_incident_dto.assignee,
+            }
+        )
 
         session.commit()
         session.refresh(incident)
@@ -2127,13 +2141,13 @@ def confirm_predicted_incident_by_id(
 ):
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(
+            select(Incident)
+            .where(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
-                Incident.is_confirmed == expression.false()
-            ).options(
-                joinedload(Incident.alerts)
+                Incident.is_confirmed == expression.false(),
             )
+            .options(joinedload(Incident.alerts))
         ).first()
 
         if not incident:
@@ -2142,13 +2156,14 @@ def confirm_predicted_incident_by_id(
         session.query(Incident).filter(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
-            Incident.is_confirmed == expression.false()
-        ).update({
-            "is_confirmed": True,
-        })
+            Incident.is_confirmed == expression.false(),
+        ).update(
+            {
+                "is_confirmed": True,
+            }
+        )
 
         session.commit()
         session.refresh(incident)
 
         return incident
-
