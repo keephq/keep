@@ -92,26 +92,24 @@ class ElasticClient:
     def _construct_alert_dto_from_results(self, results):
         if not results:
             return []
-
         alert_dtos = []
 
-        fingerprints = [result["_source"]["fingerprint"] for result in results["hits"]["hits"]]
-
+        fingerprints = [
+            result["_source"]["fingerprint"] for result in results["hits"]["hits"]
+        ]
         enrichments = get_enrichments(self.tenant_id, fingerprints)
         enrichments_by_fingerprint = {
             enrichment.alert_fingerprint: enrichment.enrichments
             for enrichment in enrichments
         }
-
         for result in results["hits"]["hits"]:
             alert = result["_source"]
             alert_dto = AlertDto(**alert)
-            if alert_dto.fingerprint in enrichments:
+            if alert_dto.fingerprint in enrichments_by_fingerprint:
                 parse_and_enrich_deleted_and_assignees(
-                    alert_dto, enrichments_by_fingerprint[alert.fingerprint]
+                    alert_dto, enrichments_by_fingerprint[alert_dto.fingerprint]
                 )
             alert_dtos.append(alert_dto)
-
         return alert_dtos
 
     def run_query(self, query: str, limit: int = 1000):
@@ -175,8 +173,10 @@ class ElasticClient:
             dsl_query = dict(dsl_query)
             dsl_query["_source"] = True
             dsl_query["fields"] = ["*"]
+
             raw_alerts = self._client.search(index=self.alerts_index, body=dsl_query)
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
+
             return alerts_dtos
         except BadRequestError as e:
             # means no index. if no alert was indexed, the index is not exist
