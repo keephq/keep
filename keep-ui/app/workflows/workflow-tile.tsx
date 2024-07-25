@@ -520,8 +520,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     event.target.href.baseVal = "/icons/keep-icon.png";
   };
 
-  
-
   const isManualTriggerPresent = workflow?.triggers?.find(
     (t) => t.type === "manual"
   );
