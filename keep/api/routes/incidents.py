@@ -426,7 +426,6 @@ def mine_v01(
     tenant_id = authenticated_entity.tenant_id
     alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    # TODO: fix not seeing old incidents
     nc_queue = NodeCandidateQueue()
     
     for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:

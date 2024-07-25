@@ -52,6 +52,7 @@ REDIS = os.environ.get("REDIS", "false") == "true"
 )
 def get_all_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    limit: int = 1000,
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -60,7 +61,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id)
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
