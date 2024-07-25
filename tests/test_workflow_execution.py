@@ -5,9 +5,10 @@ from datetime import datetime, timedelta
 import pytest
 import pytz
 
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.workflow import Workflow, WorkflowExecution
+from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 # This workflow definition is used to test the execution of workflows based on alert firing times.
@@ -76,20 +77,49 @@ def setup_workflow(db_session):
 
 
 @pytest.mark.parametrize(
-    "test_case, alert_statuses, expected_tier",
+    "test_case, alert_statuses, expected_tier, db_session",
     [
-        ("No action", [[0, "firing"]], None),
-        ("Tier 1", [[20, "firing"]], 1),
-        ("Tier 2", [[35, "firing"]], 2),
-        ("Resolved before tier 1", [[10, "firing"], [11, "resolved"]], None),
-        ("Resolved after tier 1", [[20, "firing"], [25, "resolved"]], 1),
-        ("Resolved after tier 2", [[35, "firing"], [40, "resolved"]], 2),
+        ("No action", [[0, "firing"]], None, None),
+        ("Tier 1", [[20, "firing"]], 1, None),
+        ("Tier 2", [[35, "firing"]], 2, None),
+        ("Resolved before tier 1", [[10, "firing"], [11, "resolved"]], None, None),
+        ("Resolved after tier 1", [[20, "firing"], [25, "resolved"]], 1, None),
+        ("Resolved after tier 2", [[35, "firing"], [40, "resolved"]], 2, None),
         (
             "Multiple firings, last one tier 2",
             [[10, "firing"], [20, "firing"], [35, "firing"]],
             2,
+            None,
+        ),
+        ("No action", [[0, "firing"]], None, {"db": "mysql"}),
+        ("Tier 1", [[20, "firing"]], 1, {"db": "mysql"}),
+        ("Tier 2", [[35, "firing"]], 2, {"db": "mysql"}),
+        (
+            "Resolved before tier 1",
+            [[10, "firing"], [11, "resolved"]],
+            None,
+            {"db": "mysql"},
+        ),
+        (
+            "Resolved after tier 1",
+            [[20, "firing"], [25, "resolved"]],
+            1,
+            {"db": "mysql"},
+        ),
+        (
+            "Resolved after tier 2",
+            [[35, "firing"], [40, "resolved"]],
+            2,
+            {"db": "mysql"},
+        ),
+        (
+            "Multiple firings, last one tier 2",
+            [[10, "firing"], [20, "firing"], [35, "firing"]],
+            2,
+            {"db": "mysql"},
         ),
     ],
+    indirect=["db_session"],
 )
 def test_workflow_execution(
     db_session,
@@ -103,6 +133,7 @@ def test_workflow_execution(
     """
     This test function verifies the execution of the workflow based on different alert scenarios.
     It uses parameterized testing to cover various cases of alert firing and resolution times.
+    It now also tests with both SQLite (default) and MySQL databases.
 
     The test does the following:
     1. Creates alerts with specified statuses and timestamps.
@@ -149,13 +180,9 @@ def test_workflow_execution(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 100 and status != "success":
-        workflow_execution = (
-            db_session.query(WorkflowExecution)
-            .filter(
-                WorkflowExecution.workflow_id == "alert-time-check",
-            )
-            .first()
+    while workflow_execution is None and count < 120 and status != "success":
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "alert-time-check"
         )
         if workflow_execution is not None:
             status = workflow_execution.status
