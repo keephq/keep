@@ -39,6 +39,7 @@ import {
   MdOutlineKeyboardArrowRight,
   MdOutlineKeyboardArrowLeft,
 } from "react-icons/md";
+import { HiBellAlert } from "react-icons/hi2";
 
 function WorkflowMenuSection({
   onDelete,
@@ -286,9 +287,10 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
-  const alertSource = workflow?.triggers?.find((w) => w.type === "alert")
+  const alertSource = workflow?.triggers
+    ?.find((w) => w.type === "alert")
     ?.filters?.find((f) => f.key === "source")?.value;
-  const [imgSrc, setImgSrc] = useState(`/icons/${alertSource}-icon.png`);
+  const [fallBackIcon, setFallBackIcon] = useState(false);
 
   const { providers } = useFetchProviders();
 
@@ -690,16 +692,17 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                   tooltip={`Source: ${alertSource}`}
                 >
                   <div className="flex items-center justify-center gap-0.5">
-                    {alertSource && (
+                    {!fallBackIcon ? (
                       <Image
-                        src={imgSrc ?? ''}
-                        width={16}
-                        height={16}
+                        src={`/icons/${alertSource}-icon.png`}
+                        width={20}
+                        height={20}
                         alt={alertSource}
-                        onError={()=>setImgSrc("/icons/keep-icon.png")
-                        }
-                        className="object-cover"  
+                        onError={() => setFallBackIcon(true)}
+                        className="object-cover"
                       />
+                    ) : (
+                     <HiBellAlert size={20}/>
                     )}
                     Trigger
                   </div>
@@ -1174,6 +1177,5 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     </div>
   );
 }
-
 
 export default WorkflowTile;
