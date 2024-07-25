@@ -1142,7 +1142,14 @@ def create_rule(
 
 
 def update_rule(
-    tenant_id, rule_id, name, timeframe, definition, definition_cel, updated_by
+    tenant_id,
+    rule_id,
+    name,
+    timeframe,
+    definition,
+    definition_cel,
+    updated_by,
+    grouping_criteria,
 ):
     with Session(engine) as session:
         rule = session.exec(
@@ -1154,6 +1161,7 @@ def update_rule(
             rule.timeframe = timeframe
             rule.definition = definition
             rule.definition_cel = definition_cel
+            rule.grouping_criteria = grouping_criteria
             rule.updated_by = updated_by
             rule.update_time = datetime.utcnow()
             session.commit()
@@ -1841,6 +1849,7 @@ def get_workflows_with_last_executions_v2(
                 Workflow,
                 latest_executions_subquery.c.started,
                 latest_executions_subquery.c.execution_time,
+                latest_executions_subquery.c.status,
                 latest_executions_subquery.c.status,
             )
             .outerjoin(
