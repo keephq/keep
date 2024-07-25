@@ -27,7 +27,7 @@ from sqlmodel import Session, col, or_, select
 from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn
+from keep.api.models.alert import AlertStatus, IncidentDtoIn, AlertDto
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -1929,7 +1929,6 @@ def get_last_incidents(
             )
             .filter(Incident.tenant_id == tenant_id)
             .filter(Incident.is_confirmed == is_confirmed)
-            .options(joinedload(Incident.alerts))
             .order_by(desc(Incident.creation_time))
         )
 
@@ -2099,15 +2098,34 @@ def add_alerts_to_incident_by_incident_id(
             )
         ).all()
 
+        new_alert_ids = [alert_id for alert_id in alert_ids
+                         if alert_id not in existed_alert_ids]
+
+        new_alerts = session.exec(
+            select(Alert).where(
+                col(Alert.id).in_(new_alert_ids),
+            )
+        ).all()
+
+        alerts_dto = [AlertDto(**alert.event) for alert in new_alerts]
+
+        incident.sources = list(
+           set(incident.sources) | set([source for alert_dto in alerts_dto for source in alert_dto.source])
+        )
+        incident.affected_services = list(
+           set(incident.affected_services) | set([alert.service for alert in alerts_dto if alert.service is not None])
+        )
+        incident.alerts_count += len(new_alerts)
+
         alert_to_incident_entries = [
             AlertToIncident(
                 alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
             )
-            for alert_id in alert_ids
-            if alert_id not in existed_alert_ids
+            for alert_id in new_alert_ids
         ]
 
         session.bulk_save_objects(alert_to_incident_entries)
+        session.add(incident)
         session.commit()
         return True
 
