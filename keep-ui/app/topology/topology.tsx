@@ -92,9 +92,9 @@ const TopologyPage = () => {
     Object.keys(serviceDependencies).forEach((service) => {
       serviceDependencies[service].forEach((dependency) => {
         newEdges.push({
-          id: `${service}-${dependency.service}`,
+          id: `${service}-${dependency.serviceId}`,
           source: service,
-          target: dependency.service,
+          target: dependency.serviceId,
           label: dependency.protocol,
           animated: true,
           labelBgPadding: edgeLabelBgPaddingNoHover,

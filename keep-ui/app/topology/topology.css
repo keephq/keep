@@ -4,3 +4,7 @@
 .react-flow__handle-bottom {
   opacity: 0;
 }
+
+.react-flow__edge.selectable {
+  cursor: default;
+}
