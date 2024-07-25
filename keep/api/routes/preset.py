@@ -73,6 +73,7 @@ def pull_alerts_from_providers(
                 None,
                 trace_id,
                 alert,
+                notify_client=False,
             )
 
 

@@ -10,6 +10,7 @@ from dateutil import parser
 from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.core.db import get_alert_firing_time
 
 _len = len
 _all = all
@@ -218,3 +219,44 @@ def add_time_to_date(date, date_format, time_str):
 
     new_date = date + datetime.timedelta(**time_dict)
     return new_date
+
+
+def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
+    """
+    Get the firing time of an alert.
+
+    Args:
+        alert (dict): The alert dictionary.
+        time_unit (str): The time unit to return the result in ('m', 's', or 'h').
+        **kwargs: Additional keyword arguments.
+
+    Returns:
+        str: The firing time of the alert in the specified time unit.
+    """
+    tenant_id = kwargs.get("tenant_id")
+    if not tenant_id:
+        raise ValueError("tenant_id is required")
+
+    try:
+        alert = json.loads(alert) if isinstance(alert, str) else alert
+    except Exception:
+        raise ValueError("alert is not a valid JSON")
+
+    fingerprint = alert.get("fingerprint")
+    if not fingerprint:
+        raise ValueError("fingerprint is required")
+
+    firing = get_alert_firing_time(tenant_id=tenant_id, fingerprint=fingerprint)
+
+    if time_unit in ["m", "minutes"]:
+        result = firing.total_seconds() / 60
+    elif time_unit in ["h", "hours"]:
+        result = firing.total_seconds() / 3600
+    elif time_unit in ["s", "seconds"]:
+        result = firing.total_seconds()
+    else:
+        raise ValueError(
+            "Invalid time_unit. Use 'minutes', 'hours', 'seconds', 'm', 'h', or 's'."
+        )
+
+    return f"{result:.1f}"

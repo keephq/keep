@@ -64,7 +64,7 @@ async def create_rule(
     rule_name = rule_create_request.ruleName
     cel_query = rule_create_request.celQuery
     timeframe = rule_create_request.timeframeInSeconds
-    grouping_creteria = rule_create_request.groupingCriteria
+    grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
@@ -94,7 +94,7 @@ async def create_rule(
         timeframe=timeframe,
         definition_cel=cel_query,
         created_by=created_by,
-        grouping_criteria=grouping_creteria,
+        grouping_criteria=grouping_criteria,
         group_description=group_description,
     )
     logger.info("Rule created")
@@ -142,6 +142,7 @@ async def update_rule(
         sql_query = body["sqlQuery"]
         cel_query = body["celQuery"]
         timeframe = body["timeframeInSeconds"]
+        grouping_criteria = body.get("groupingCriteria", [])
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -174,6 +175,7 @@ async def update_rule(
         timeframe=timeframe,
         definition_cel=cel_query,
         updated_by=updated_by,
+        grouping_criteria=grouping_criteria,
     )
 
     if rule:

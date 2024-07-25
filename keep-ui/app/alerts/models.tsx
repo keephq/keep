@@ -34,6 +34,7 @@ export enum Status {
 
 export interface AlertDto {
   id: string;
+  event_id: string;
   name: string;
   status: Status;
   lastReceived: Date;
@@ -59,6 +60,7 @@ export interface AlertDto {
   group?: boolean;
   note?: string;
   isNoisy?: boolean;
+  enriched_fields: string[];
 }
 
 interface Option {

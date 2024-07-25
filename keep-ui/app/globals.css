@@ -11,3 +11,23 @@
     @apply w-72; /* This sets the width to 16rem. Adjust the number as needed. */
     @apply break-words; /* This will wrap long words if needed. */
   }
+
+  /* styles/globals.css */
+.loader {
+  border: 4px solid #f3f3f3; /* Light grey */
+  border-top: 4px solid #838885; /* Green */
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
