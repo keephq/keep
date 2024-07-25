@@ -1,13 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { useRouter } from "next/navigation";
-import { Service } from "./models.ts";
+import { Service } from "./models";
+import { useAlertPolling } from "utils/hooks/usePusher";
 
 const CustomNode = ({ data }: { data: Service }) => {
   const { useAllAlerts } = useAlerts();
-  const { data: alerts } = useAllAlerts("feed");
-  // const router = useRouter();
+  const { data: alerts, mutate } = useAllAlerts("feed");
+  const { data: pollAlerts } = useAlertPolling();
+
+  useEffect(() => {
+    if (pollAlerts) {
+      mutate();
+    }
+  }, [pollAlerts, mutate]);
 
   const relevantAlerts = alerts?.filter((alert) => alert.service === data.id);
 

@@ -5,20 +5,26 @@ import {
   BackgroundVariant,
   Controls,
   Edge,
-  MarkerType,
-  MiniMap,
+  Node,
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
-import { serviceDefinitions, serviceDependencies } from "./mock-topology-data";
 import { Card } from "@tremor/react";
+import { serviceDefinitions, serviceDependencies } from "./mock-topology-data";
+import {
+  edgeLabelBgPaddingNoHover,
+  edgeLabelBgStyleNoHover,
+  edgeLabelBgBorderRadiusNoHover,
+  edgeMarkerEndNoHover,
+  edgeLabelBgStyleHover,
+  edgeMarkerEndHover,
+  nodeHeight,
+  nodeWidth,
+} from "./styles";
 import "./topology.css";
-
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 80;
 
 // Function to create a Dagre layout
 const dagreGraph = new graphlib.Graph();
@@ -28,7 +34,7 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   dagreGraph.setGraph({ rankdir: "LR", nodesep: 50, ranksep: 200 });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
   });
 
   edges.forEach((edge) => {
@@ -43,8 +49,8 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
     node.sourcePosition = "right";
 
     node.position = {
-      x: nodeWithPosition.x - NODE_WIDTH / 2,
-      y: nodeWithPosition.y - NODE_HEIGHT / 2,
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
     };
 
     return node;
@@ -55,7 +61,7 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
 
 const TopologyPage = () => {
   // State for nodes and edges
-  const [nodes, setNodes] = useState<any[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
@@ -63,6 +69,11 @@ const TopologyPage = () => {
     const currentEdge = newEdges.find((e) => e.id === edge.id);
     if (currentEdge) {
       currentEdge.style = eventType === "enter" ? { stroke: "orange" } : {};
+      currentEdge.labelBgStyle =
+        eventType === "enter" ? edgeLabelBgStyleHover : edgeLabelBgStyleNoHover;
+      currentEdge.markerEnd =
+        eventType === "enter" ? edgeMarkerEndHover : edgeMarkerEndNoHover;
+      currentEdge.labelStyle = eventType === "enter" ? { fill: "white" } : {};
       setEdges(newEdges);
     }
   };
@@ -86,17 +97,10 @@ const TopologyPage = () => {
           target: dependency.service,
           label: dependency.protocol,
           animated: true,
-          labelStyle: { fill: "black" },
-          labelBgPadding: [10, 5],
-          labelBgStyle: {
-            strokeWidth: 1,
-            strokeDasharray: "5,5",
-            stroke: "gray",
-          },
-          labelBgBorderRadius: 10,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
+          labelBgPadding: edgeLabelBgPaddingNoHover,
+          labelBgStyle: edgeLabelBgStyleNoHover,
+          labelBgBorderRadius: edgeLabelBgBorderRadiusNoHover,
+          markerEnd: edgeMarkerEndNoHover,
         });
       });
     });
@@ -120,7 +124,7 @@ const TopologyPage = () => {
           nodeTypes={{ customNode: CustomNode }}
         >
           <Background variant={BackgroundVariant.Dots} />
-          <MiniMap pannable zoomable />
+          {/* <MiniMap pannable zoomable /> */}
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>
