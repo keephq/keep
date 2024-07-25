@@ -139,7 +139,12 @@ def mysql_container(docker_ip, docker_services):
                 "127.0.0.1", 3306, "root", "keep", "keep"
             ),
         )
+        # set this as environment variable
+        os.environ["DATABASE_CONNECTION_STRING"] = (
+            "mysql+pymysql://root:keep@localhost:3306/keep"
+        )
         yield "mysql+pymysql://root:keep@localhost:3306/keep"
+        os.environ["DATABASE_CONNECTION_STRING"] = ""
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:

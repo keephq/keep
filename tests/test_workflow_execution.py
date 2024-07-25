@@ -180,7 +180,7 @@ def test_workflow_execution(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 120 and status != "success":
+    while workflow_execution is None and count < 30 and status != "success":
         workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-time-check"
         )
