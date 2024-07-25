@@ -2167,3 +2167,66 @@ def confirm_predicted_incident_by_id(
         session.refresh(incident)
 
         return incident
+
+
+def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
+    with Session(engine) as session:
+        # Get the latest alert for this fingerprint
+        latest_alert = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .order_by(Alert.timestamp.desc())
+            .first()
+        )
+
+        if not latest_alert:
+            return timedelta()
+
+        # Extract status from the event column
+        latest_status = latest_alert.event.get("status")
+
+        # If the latest status is not 'firing', return 0
+        if latest_status != "firing":
+            return timedelta()
+
+        # Find the last time it wasn't firing
+        last_non_firing = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint == fingerprint)
+            .filter(func.json_extract(Alert.event, "$.status") != "firing")
+            .order_by(Alert.timestamp.desc())
+            .first()
+        )
+
+        if last_non_firing:
+            # Find the next firing alert after the last non-firing alert
+            next_firing = (
+                session.query(Alert)
+                .filter(Alert.tenant_id == tenant_id)
+                .filter(Alert.fingerprint == fingerprint)
+                .filter(Alert.timestamp > last_non_firing.timestamp)
+                .filter(func.json_extract(Alert.event, "$.status") == "firing")
+                .order_by(Alert.timestamp.asc())
+                .first()
+            )
+            if next_firing:
+                return datetime.now(tz=timezone.utc) - next_firing.timestamp.replace(
+                    tzinfo=timezone.utc
+                )
+            else:
+                # If no firing alert after the last non-firing, return 0
+                return timedelta()
+        else:
+            # If all alerts are firing, use the earliest alert time
+            earliest_alert = (
+                session.query(Alert)
+                .filter(Alert.tenant_id == tenant_id)
+                .filter(Alert.fingerprint == fingerprint)
+                .order_by(Alert.timestamp.asc())
+                .first()
+            )
+            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
+                tzinfo=timezone.utc
+            )
