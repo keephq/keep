@@ -496,6 +496,8 @@ class CloudwatchProvider(BaseProvider):
 
     @staticmethod
     def parse_event_raw_body(raw_body: bytes | dict) -> dict:
+        if isinstance(raw_body, dict):
+            return raw_body
         return json.loads(raw_body)
 
     @staticmethod
