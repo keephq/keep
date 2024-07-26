@@ -1,10 +1,12 @@
-import { TableBody, TableRow, TableCell, Card, Callout } from "@tremor/react";
+import { TableBody, TableRow, TableCell, Card, Button } from "@tremor/react";
 import { AlertDto } from "./models";
 import "./alerts-table-body.css";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { Table, flexRender } from "@tanstack/react-table";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
+import React, { useState } from "react";
+import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 
 interface Props {
   table: Table<AlertDto>;
@@ -12,6 +14,7 @@ interface Props {
   showEmptyState: boolean;
   theme: { [key: string]: string };
   onRowClick: (alert: AlertDto) => void;
+  presetName: string;
 }
 
 export function AlertsTableBody({
@@ -20,7 +23,13 @@ export function AlertsTableBody({
   showEmptyState,
   theme,
   onRowClick,
+  presetName
 }: Props) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleModalClose = () => setModalOpen(false);
+  const handleModalOpen = () => setModalOpen(true);
+
   if (showEmptyState) {
     return (
       <TableBody>
@@ -40,9 +49,15 @@ export function AlertsTableBody({
                     It is because you have not connected any data source yet or
                     there are no alerts matching the filter.
                   </p>
+                  <Button className="mt-4" color="orange" onClick={handleModalOpen}>
+                    Add Alert
+                  </Button>
                 </div>
               </Card>
             </div>
+            {modalOpen && (
+              <PushAlertToServerModal handleClose={handleModalClose} presetName={presetName}/>
+            )}
           </TableCell>
         </TableRow>
       </TableBody>
