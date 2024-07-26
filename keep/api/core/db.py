@@ -18,7 +18,7 @@ from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, func, null, update
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload, aliased
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import expression
@@ -2076,6 +2076,42 @@ def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List
     return query.all()
 
 
+def get_alerts_data_for_incident(
+    alert_ids: list[str | UUID],
+    session: Optional[Session]
+) -> dict:
+
+    def inner(db_session: Session):
+        alerts_data = db_session.exec(
+            select(
+                func.json_extract(Alert.event, '$.service').label("service"),
+                func.json_extract(Alert.event, '$.source').label("source")
+            ).where(
+                col(Alert.id).in_(alert_ids),
+            )
+        ).all()
+
+        sources = []
+        services = []
+
+        for (service, source) in alerts_data:
+            if source:
+                sources.extend(json.loads(source))
+            if service:
+                services.append(service)
+
+        return {
+            "sources": set(sources),
+            "services": set(services),
+            "count": len(alerts_data)
+        }
+
+    if not session:
+        with Session(engine) as session:
+            return inner(session)
+    return inner(session)
+
+
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str, alert_ids: List[UUID]
 ):
@@ -2101,21 +2137,15 @@ def add_alerts_to_incident_by_incident_id(
         new_alert_ids = [alert_id for alert_id in alert_ids
                          if alert_id not in existed_alert_ids]
 
-        new_alerts = session.exec(
-            select(Alert).where(
-                col(Alert.id).in_(new_alert_ids),
-            )
-        ).all()
-
-        alerts_dto = [AlertDto(**alert.event) for alert in new_alerts]
+        alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
         incident.sources = list(
-           set(incident.sources) | set([source for alert_dto in alerts_dto for source in alert_dto.source])
+           set(incident.sources) | set(alerts_data_for_incident["sources"])
         )
         incident.affected_services = list(
-           set(incident.affected_services) | set([alert.service for alert in alerts_dto if alert.service is not None])
+           set(incident.affected_services) | set(alerts_data_for_incident["services"])
         )
-        incident.alerts_count += len(new_alerts)
+        incident.alerts_count += alerts_data_for_incident["count"]
 
         alert_to_incident_entries = [
             AlertToIncident(
@@ -2153,8 +2183,44 @@ def remove_alerts_to_incident_by_incident_id(
             )
             .delete()
         )
-
         session.commit()
+
+        alerts_data_for_incident = get_alerts_data_for_incident(alert_ids, session)
+
+        source_json_each_alias = aliased(func.json_each(Alert.event, '$.source').table_valued("value"))
+
+        services_existed = session.exec(
+            session.query(func.distinct(func.json_extract(Alert.event, '$.service')))
+            .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .filter(
+                AlertToIncident.incident_id == incident_id,
+                func.json_extract(Alert.event, '$.service').in_(alerts_data_for_incident["services"])
+            )
+        ).scalars()
+
+        sources_existed = session.exec(
+            session.query(source_json_each_alias.c.value.distinct()).select_from(Alert)
+            .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .filter(
+                AlertToIncident.incident_id == incident_id,
+                source_json_each_alias.c.value.in_(alerts_data_for_incident["sources"])
+            )
+        ).scalars()
+
+        services_to_remove = [service for service in alerts_data_for_incident["services"]
+                              if service not in services_existed]
+        sources_to_remove = [source for source in alerts_data_for_incident["sources"]
+                             if source not in sources_existed]
+
+        incident.affected_services = [service for service in incident.affected_services
+                                      if service not in services_to_remove]
+        incident.sources = [source for source in incident.sources
+                            if source not in sources_to_remove]
+
+        incident.alerts_count -= alerts_data_for_incident["count"]
+        session.add(incident)
+        session.commit()
+
         return deleted
 
 
