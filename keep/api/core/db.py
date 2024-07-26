@@ -27,7 +27,7 @@ from sqlmodel import Session, col, or_, select
 from keep.api.core.db_utils import create_db_engine
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn, AlertDto
+from keep.api.models.alert import AlertStatus, IncidentDtoIn
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
