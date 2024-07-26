@@ -18,7 +18,7 @@ from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload, aliased
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import expression
