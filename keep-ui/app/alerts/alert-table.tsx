@@ -222,6 +222,7 @@ export function AlertTable({
             showEmptyState={showEmptyState}
             theme={theme}
             onRowClick={handleRowClick}
+            presetName={presetName}
           />
         </Table>
       </Card>
