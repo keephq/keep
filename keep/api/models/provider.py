@@ -36,3 +36,4 @@ class Provider(BaseModel):
     docs: str | None = None
     tags: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = []
     alertsDistribution: dict[str, int] | None = None
+    alertExample: dict | None = None

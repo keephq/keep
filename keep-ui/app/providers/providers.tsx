@@ -87,6 +87,7 @@ export interface Provider {
   methods?: ProviderMethod[];
   tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
   alertsDistribution?: AlertDistritbuionData[];
+  alertExample?: { [key: string]: string };
 }
 
 export type Providers = Provider[];
