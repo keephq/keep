@@ -11,11 +11,11 @@ from keep.api.core.db import get_users as get_users_from_db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
-from keep.identitymanager.identity_managers.db.db_authverifier import DBAuthVerifier
+from keep.identitymanager.identity_managers.db.db_authverifier import DbAuthVerifier
 from keep.identitymanager.identitymanager import BaseIdentityManager
 
 
-class DBIdentityManager(BaseIdentityManager):
+class DbIdentityManager(BaseIdentityManager):
     def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
         super().__init__(tenant_id, context_manager, **kwargs)
         self.logger.info("DB Identity Manager initialized")
@@ -95,5 +95,5 @@ class DBIdentityManager(BaseIdentityManager):
         except Exception:
             raise HTTPException(status_code=404, detail="User not found")
 
-    def get_auth_verifier(self, scopes) -> DBAuthVerifier:
-        return DBAuthVerifier(scopes)
+    def get_auth_verifier(self, scopes) -> DbAuthVerifier:
+        return DbAuthVerifier(scopes)

@@ -163,3 +163,11 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except Exception as e:
             self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to check permissions")
+
+    def get_groups(self) -> list[dict]:
+        try:
+            groups = self.keycloak_admin.get_groups()
+            return groups
+        except KeycloakGetError as e:
+            self.logger.error("Failed to fetch groups from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch groups")

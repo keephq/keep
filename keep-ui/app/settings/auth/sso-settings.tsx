@@ -14,6 +14,7 @@ interface SSOProvider {
 
 interface Props {
   accessToken: string;
+  selectedTab: string;
 }
 
 const SSOSettings: React.FC<Props> = ({ accessToken }) => {

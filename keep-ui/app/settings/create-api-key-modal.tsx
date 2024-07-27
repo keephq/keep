@@ -14,7 +14,7 @@ import {
   Icon,
 } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { ApiKey } from "./api-key-settings";
+import { ApiKey } from "./auth/api-key-settings";
 import Modal from "@/components/ui/Modal";
 
 const roleOptions = [

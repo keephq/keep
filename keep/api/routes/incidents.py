@@ -22,14 +22,12 @@ from keep.api.core.db import (
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
 )
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import IncidentsPaginatedResultsDto
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -83,7 +81,9 @@ def __update_client_on_incident_change(
 )
 def create_incident_endpoint(
     incident_dto: IncidentDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
@@ -113,7 +113,9 @@ def get_all_incidents(
     confirmed: bool = True,
     limit: int = 25,
     offset: int = 0,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -151,7 +153,9 @@ def get_all_incidents(
 )
 def get_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -177,7 +181,9 @@ def get_incident(
 def update_incident(
     incident_id: str,
     updated_incident_dto: IncidentDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -205,7 +211,9 @@ def update_incident(
 )
 def delete_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -229,7 +237,9 @@ def delete_incident(
 )
 def get_incident_alerts(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> List[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -272,7 +282,9 @@ def get_incident_alerts(
 def add_alerts_to_incident(
     incident_id: str,
     alert_ids: List[UUID],
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -302,7 +314,9 @@ def add_alerts_to_incident(
 def delete_alerts_from_incident(
     incident_id: str,
     alert_ids: List[UUID],
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -326,7 +340,9 @@ def delete_alerts_from_incident(
     description="Create incidents using historical alerts",
 )
 def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier()
+    ),
     use_n_historical_alerts: int = 10000,
     incident_sliding_window_size: int = 6 * 24 * 60 * 60,
     statistic_sliding_window_size: int = 60 * 60,
@@ -371,7 +387,9 @@ def mine(
 )
 def update_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

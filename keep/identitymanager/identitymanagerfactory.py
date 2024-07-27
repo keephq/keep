@@ -45,10 +45,10 @@ class IdentityManagerFactory:
             BaseIdentityManager: An instance of the specified identity manager.
         """
         if not identity_manager_type:
-            identity_manager_type = IdentityManagerTypes[
-                config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH)
-            ].value.lower()
-        else:
+            identity_manager_type = config(
+                "AUTH_TYPE", default=IdentityManagerTypes.NOAUTH
+            )
+        elif isinstance(identity_manager_type, IdentityManagerTypes):
             identity_manager_type = identity_manager_type.value.lower()
 
         return IdentityManagerFactory._load_manager(
@@ -93,13 +93,37 @@ class IdentityManagerFactory:
             NotImplementedError: If the specified manager type or class is not implemented.
         """
         try:
+            manager_type = (
+                IdentityManagerFactory._backward_compatible_get_identity_manager(
+                    manager_type
+                )
+            )
             module = importlib.import_module(
                 f"keep.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
             )
-            class_name = f"{manager_type.capitalize()}{manager_class.capitalize()}"
+            for _attr in dir(module):
+                if manager_class in _attr.lower() and "base" not in _attr.lower():
+                    class_name = _attr
+                    break
             manager_class: Type = getattr(module, class_name)
             return manager_class(*args, **kwargs)
         except (ImportError, AttributeError):
             raise NotImplementedError(
                 f"{manager_class.capitalize()} for {manager_type} not implemented"
             )
+
+    @staticmethod
+    def _backward_compatible_get_identity_manager(
+        auth_type: str = None,
+    ):
+        """
+        Map old auth_type to new IdentityManagerTypes enum.
+        """
+        if auth_type.lower() == "single_tenant":
+            return IdentityManagerTypes.DB.value
+        elif auth_type.lower() == "no_auth":
+            return IdentityManagerTypes.NOAUTH.value
+        elif auth_type.lower() == "multi_tenant":
+            return IdentityManagerTypes.AUTH0.value
+        else:
+            return auth_type

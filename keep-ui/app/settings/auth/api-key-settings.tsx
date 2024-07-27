@@ -22,7 +22,7 @@ import { fetcher } from "utils/fetcher";
 import { useState } from "react";
 import { AuthenticationType } from "utils/authenticationType";
 import { Config } from "./users-settings";
-import CreateApiKeyModal from "./create-api-key-modal";
+import CreateApiKeyModal from "../create-api-key-modal";
 import ApiKeysMenu from "./api-key-menu";
 
 interface ApiKeyResponse {

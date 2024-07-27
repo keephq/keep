@@ -6,7 +6,7 @@ import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
-import { User } from "./models";
+import { User } from "../models";
 import { User as AuthUser } from "next-auth";
 import { mutate } from "swr";
 import { useFloating } from "@floating-ui/react";

@@ -26,6 +26,11 @@ echo "Configuring theme"
 /opt/keycloak/bin/kcadm.sh update realms/keep -s "loginTheme=phasetwo.v2"
 echo "Theme configured"
 
+# Export the realm
+echo "Exporting realm"
+/opt/keycloak/bin/kcadm.sh get realms/keep -o /tmp/realm-export.json
+echo "Realm exported"
+
 # just to keep the container running
 tail -f /dev/null
 

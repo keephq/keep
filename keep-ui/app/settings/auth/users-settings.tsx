@@ -16,12 +16,12 @@ import useSWR, { mutate } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import Image from "next/image";
-import { User } from "./models";
+import { User } from "../models";
 import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
-import AddUserModal from "./add-user-modal";
+import AddUserModal from "../add-user-modal";
 import { AuthenticationType } from "utils/authenticationType";
 
 interface Props {
