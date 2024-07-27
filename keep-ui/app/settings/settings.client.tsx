@@ -70,11 +70,11 @@ export default function SettingsPage() {
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
-        : newUserSubTab === "groups"
-        ? 1
-        : newUserSubTab === "roles"
-        ? 2
         : newUserSubTab === "api-keys"
+        ? 1
+        : newUserSubTab === "groups"
+        ? 2
+        : newUserSubTab === "roles"
         ? 3
         : 4;
     setTabIndex(tabIndex);
@@ -106,14 +106,14 @@ export default function SettingsPage() {
               <Tab icon={UsersIcon} onClick={() => handleUserSubTabChange("users")}>
                 Users
               </Tab>
+              <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
+                API Keys
+              </Tab>
               <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
                 Groups
               </Tab>
               <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
                 Roles
-              </Tab>
-              <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
-                API Keys
               </Tab>
               <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
                 SSO
@@ -124,13 +124,13 @@ export default function SettingsPage() {
                 <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
               </TabPanel>
               <TabPanel>
+                <APIKeysTab accessToken={session?.accessToken!} />
+              </TabPanel>
+              <TabPanel>
                 <GroupsTab accessToken={session?.accessToken!} />
               </TabPanel>
               <TabPanel>
                 <RolesTab accessToken={session?.accessToken!} />
-              </TabPanel>
-              <TabPanel>
-                <APIKeysTab accessToken={session?.accessToken!} />
               </TabPanel>
               <TabPanel>
                 <SSOTab accessToken={session?.accessToken!} />

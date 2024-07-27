@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
 from keycloak.uma_permissions import UMAPermission
 
-from keep.api.models.user import User
+from keep.api.models.user import Group, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
@@ -166,8 +166,30 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
     def get_groups(self) -> list[dict]:
         try:
-            groups = self.keycloak_admin.get_groups()
-            return groups
+            groups = self.keycloak_admin.get_groups(
+                query={"briefRepresentation": False}
+            )
+            result = []
+            for group in groups:
+                group_id = group["id"]
+                group_name = group["name"]
+                roles = group.get("clientRoles", {}).get("keep", [])
+
+                # Fetch members for each group
+                members = self.keycloak_admin.get_group_members(group_id)
+                member_names = [member.get("username", "") for member in members]
+                member_count = len(members)
+
+                result.append(
+                    Group(
+                        id=group_id,
+                        name=group_name,
+                        roles=roles,
+                        memberCount=member_count,
+                        members=member_names,
+                    )
+                )
+            return result
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch groups from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch groups")

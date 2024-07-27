@@ -36,20 +36,13 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             + self.keycloak_client.public_key()
             + "\n-----END PUBLIC KEY-----"
         )
-        self.verify_options = {
-            "verify_signature": True,
-            "verify_aud": True,
-            "verify_exp": True,
-        }
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
     ) -> AuthenticatedEntity:
         # verify keycloak token
         try:
-            payload = self.keycloak_client.decode_token(
-                token, key=self.keycloak_public_key, options=self.verify_options
-            )
+            payload = self.keycloak_client.decode_token(token, validate=True)
             tenant_id = payload.get("keep_tenant_id")
             email = payload.get("preferred_username")
             org_id = payload.get("active_organization", {}).get("id")

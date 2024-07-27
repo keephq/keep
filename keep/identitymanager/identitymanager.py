@@ -50,6 +50,18 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             " for {}".format(self.__class__.__name__)
         )
 
+    def get_groups(self) -> str | dict:
+        """
+        Get groups
+
+        Returns:
+            list: The list of groups.
+        """
+        raise NotImplementedError(
+            "get_groups() method not implemented"
+            " for {}".format(self.__class__.__name__)
+        )
+
     @abc.abstractmethod
     def create_user(self, user_email, password, role) -> None:
         """

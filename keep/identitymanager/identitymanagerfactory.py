@@ -109,7 +109,7 @@ class IdentityManagerFactory:
             return manager_class(*args, **kwargs)
         except (ImportError, AttributeError):
             raise NotImplementedError(
-                f"{manager_class.capitalize()} for {manager_type} not implemented"
+                f"{manager_class.__name__} for {manager_type} not implemented"
             )
 
     @staticmethod
@@ -126,4 +126,4 @@ class IdentityManagerFactory:
         elif auth_type.lower() == "multi_tenant":
             return IdentityManagerTypes.AUTH0.value
         else:
-            return auth_type
+            return auth_type.lower()

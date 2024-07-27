@@ -65,8 +65,8 @@ export default function UsersSettings({
   if (!data || isLoading) return <Loading />;
 
   return (
-    <div className="mt-10">
-      <div className="flex justify-between">
+    <div className="mt-10 h-full flex flex-col">
+      <div className="flex justify-between mb-4">
         <div className="flex flex-col">
           <Title>Users Management</Title>
           <Subtitle>Add or remove users from your tenant</Subtitle>
@@ -91,66 +91,68 @@ export default function UsersSettings({
           </Button>
         </div>
       </div>
-      <Card className="mt-2.5">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>{/** Image */}</TableHeaderCell>
-              <TableHeaderCell>
-                {authType == AuthenticationType.MULTI_TENANT
-                  ? "Email"
-                  : "Username"}
-              </TableHeaderCell>
-              <TableHeaderCell className="text-right">Name</TableHeaderCell>
-              <TableHeaderCell className="text-right">Role</TableHeaderCell>
-              <TableHeaderCell className="text-right">
-                Created At
-              </TableHeaderCell>
-              <TableHeaderCell className="text-right">
-                Last Login
-              </TableHeaderCell>
-              <TableHeaderCell>{/**Menu */}</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow
-                key={user.name}
-                className={`${
-                  user.email === currentUser?.email ? "bg-orange-50" : null
-                }`}
-              >
-                <TableCell>
-                  {user.picture && (
-                    <Image
-                      src={user.picture}
-                      alt="user picture"
-                      className="rounded-full"
-                      width={24}
-                      height={24}
-                    />
-                  )}
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="text-right">
-                  <Text>{user.name}</Text>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Text>{user.role}</Text>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Text>{user.created_at}</Text>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Text>{user.last_login}</Text>
-                </TableCell>
-                <TableCell>
-                  <UsersMenu user={user} currentUser={currentUser} />
-                </TableCell>
+      <Card className="flex-grow overflow-auto h-full">
+        <div className="h-full overflow-auto">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>{/** Image */}</TableHeaderCell>
+                <TableHeaderCell>
+                  {authType == AuthenticationType.MULTI_TENANT
+                    ? "Email"
+                    : "Username"}
+                </TableHeaderCell>
+                <TableHeaderCell className="text-right">Name</TableHeaderCell>
+                <TableHeaderCell className="text-right">Role</TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Created At
+                </TableHeaderCell>
+                <TableHeaderCell className="text-right">
+                  Last Login
+                </TableHeaderCell>
+                <TableHeaderCell>{/**Menu */}</TableHeaderCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow
+                  key={user.name}
+                  className={`${
+                    user.email === currentUser?.email ? "bg-orange-50" : null
+                  }`}
+                >
+                  <TableCell>
+                    {user.picture && (
+                      <Image
+                        src={user.picture}
+                        alt="user picture"
+                        className="rounded-full"
+                        width={24}
+                        height={24}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="text-right">
+                    <Text>{user.name}</Text>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Text>{user.role}</Text>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Text>{user.created_at}</Text>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Text>{user.last_login}</Text>
+                  </TableCell>
+                  <TableCell>
+                    <UsersMenu user={user} currentUser={currentUser} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
       <AddUserModal
         isOpen={isAddUserModalOpen}

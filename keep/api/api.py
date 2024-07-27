@@ -37,10 +37,10 @@ from keep.api.routes import (
     rules,
     settings,
     status,
-    users,
     whoami,
     workflows,
 )
+from keep.api.routes.auth import groups, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client

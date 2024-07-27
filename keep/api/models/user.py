@@ -10,3 +10,11 @@ class User(BaseModel, extra=Extra.ignore):
     picture: Optional[str]
     created_at: str
     last_login: Optional[str]
+
+
+class Group(BaseModel, extra=Extra.ignore):
+    id: str
+    name: str
+    roles: list[str]
+    members: list[str] = []
+    memberCount: int
