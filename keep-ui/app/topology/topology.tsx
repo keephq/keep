@@ -1,12 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
   Edge,
+  MiniMap,
   Node,
   ReactFlow,
+  ReactFlowInstance,
   ReactFlowProvider,
 } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
@@ -63,6 +65,8 @@ const TopologyPage = () => {
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance<Node, Edge>>();
 
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
     const newEdges = [...edges];
@@ -75,6 +79,13 @@ const TopologyPage = () => {
         eventType === "enter" ? edgeMarkerEndHover : edgeMarkerEndNoHover;
       currentEdge.labelStyle = eventType === "enter" ? { fill: "white" } : {};
       setEdges(newEdges);
+    }
+  };
+
+  const zoomToNode = (nodeId: string) => {
+    const node = reactFlowInstance?.getNode(nodeId);
+    if (node && reactFlowInstance) {
+      reactFlowInstance.setCenter(node.position.x, node.position.y);
     }
   };
 
@@ -122,6 +133,9 @@ const TopologyPage = () => {
           onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
           onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
           nodeTypes={{ customNode: CustomNode }}
+          onInit={(instance) => {
+            setReactFlowInstance(instance);
+          }}
         >
           <Background variant={BackgroundVariant.Dots} />
           {/* <MiniMap pannable zoomable /> */}
