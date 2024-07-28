@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import get_provider_distribution, get_session
+from keep.api.core.db import get_provider_distribution, get_session, count_alerts
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.webhook import ProviderWebhookSettings
@@ -227,6 +227,35 @@ def get_alerts_schema(
         return provider.get_alert_schema()
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
+
+
+@router.get("/{provider_type}/{provider_id}/alerts/count")
+def get_alert_count(
+    provider_type: str,
+    provider_id: str,
+    ever: bool,
+    start_time: Optional[datetime.datetime] = None,
+    end_time: Optional[datetime.datetime] = None,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+):
+    tenant_id = authenticated_entity.tenant_id
+    if ever is False and (start_time is None or end_time is None):
+        return JSONResponse(
+            status_code=400, content={"message": "Missing start_time or end_time"}
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "alert_count": count_alerts(
+                provider_type=provider_type,
+                provider_id=provider_id,
+                start_time=start_time,
+                end_time=end_time,
+                ever=ever,
+                tenant_id=tenant_id,
+            )
+        },
+    )
 
 
 @router.post(
