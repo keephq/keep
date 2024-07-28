@@ -4,8 +4,6 @@ import pathlib
 import sys
 import asyncio
 
-import networkx as nx
-
 from typing import List
 from datetime import datetime, timedelta
 

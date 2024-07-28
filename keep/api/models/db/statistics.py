@@ -1,4 +1,3 @@
-from sqlalchemy import PrimaryKeyConstraint
 from sqlmodel import Field, SQLModel
 
 
