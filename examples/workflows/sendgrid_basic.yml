@@ -1,0 +1,21 @@
+workflow:
+  name: sendgrid-action2
+  provider:
+    config: '{{ providers.Sendgrid }}'
+    type: sendgrid
+    with:
+      html: Test workflow
+      subject: Test workflow
+      to: umar.mukthar@radius.ai
+  description: Test workflow
+  id: 737badbc-e15d-49cd-8701-faa937dd5497
+  owners: []
+  services: []
+  steps: []
+  triggers:
+  - filters:
+    - key: source
+      value: openobserve
+    - key: name
+      value: Disk_space_2
+    type: alert
