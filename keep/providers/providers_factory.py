@@ -333,6 +333,13 @@ class ProvidersFactory:
                     "PROVIDER_DISPLAY_NAME",
                     provider_type,
                 )
+
+                # Load alert examples if available
+                try:
+                    alert_example = provider_class.simulate_alert()
+                # not all providers have this method (yet ^^)
+                except Exception:
+                    alert_example = None
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -350,6 +357,7 @@ class ProvidersFactory:
                         docs=docs,
                         methods=provider_methods,
                         tags=provider_tags,
+                        alertExample=alert_example,
                     )
                 )
             except ModuleNotFoundError:

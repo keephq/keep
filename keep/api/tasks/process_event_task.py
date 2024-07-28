@@ -440,6 +440,7 @@ def process_event(
             raw_event,
             event,
             provider_id,
+            notify_client,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)

@@ -76,7 +76,7 @@ export const CorrelationSidebarBody = ({
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
-            grouping_criteria: alertsFound.length ? groupedAttributes : [],
+            groupingCriteria: alertsFound.length ? groupedAttributes : [],
           }),
         }
       );

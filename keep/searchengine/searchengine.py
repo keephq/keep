@@ -120,7 +120,6 @@ class SearchEngine:
             filtered_alerts = self.elastic_client.search_alerts(
                 elastic_sql_query, limit
             )
-
         self.logger.info("Finished searching alerts by SQL")
         return filtered_alerts
 

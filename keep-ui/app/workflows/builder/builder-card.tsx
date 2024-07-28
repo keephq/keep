@@ -23,6 +23,7 @@ interface Props {
   triggerRun: number;
   workflow?: string;
   workflowId?: string;
+  isPreview?:boolean;
 }
 
 export function BuilderCard({
@@ -36,6 +37,7 @@ export function BuilderCard({
   triggerSave,
   workflow,
   workflowId,
+  isPreview
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
@@ -93,6 +95,7 @@ export function BuilderCard({
           workflow={workflow}
           accessToken={accessToken}
           workflowId={workflowId}
+          isPreview={isPreview}
         />
       )}
     </Card>

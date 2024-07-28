@@ -5,9 +5,12 @@ import pytest
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.searchengine.searchengine import SearchEngine
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
 
@@ -1306,6 +1309,131 @@ def test_severity_comparisons(
     assert set([alert.id for alert in elastic_filtered_alerts]) == set(
         [alert.id for alert in db_filtered_alerts]
     )
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_alerts_enrichment_in_search(client, db_session, test_app, elastic_client):
+
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["name", "severity"],
+        rows=[
+            {"severity": "low", "status": "dismissed"},
+            {"severity": "high", "service": "high_severity_service"},
+        ],
+        name="new_rule",
+        disabled=False,
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    alert_high_dto = AlertDto(
+        id="test_high_id",
+        name="Test High Alert",
+        status="firing",
+        severity="high",
+        lastReceived="2021-01-01T00:00:00Z",
+        source=["test_source"],
+        labels={},
+    )
+    alert_low_dto = AlertDto(
+        id="test_low_id",
+        name="Test Low Alert",
+        status="firing",
+        severity="low",
+        fingerprint="test-alert",
+        lastReceived="2021-01-01T00:00:00Z",
+        source=["test_source_low"],
+        labels={},
+    )
+
+    search_query_high = SearchQuery(
+        sql_query={
+            "sql": "(source in (:source_1))",
+            "params": {
+                "source_1": "test_source",
+            },
+        },
+        cel_query="(source == 'test_source')",
+    )
+
+    search_query_low = SearchQuery(
+        sql_query={
+            "sql": "(source in (:source_1))",
+            "params": {
+                "source_1": "test_source_low",
+            },
+        },
+        cel_query="(source == 'test_source_low')",
+    )
+
+    # Create alert without enrichment rules
+    client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=alert_low_dto.dict(),
+    )
+    # And another with them
+    client.post(
+        "/alerts/event",
+        headers={"x-api-key": "some-key"},
+        json=alert_high_dto.dict(),
+    )
+    # And add manual enrichment
+    client.post(
+        "/alerts/enrich",
+        headers={"x-api-key": "some-key"},
+        json={
+            "fingerprint": alert_high_dto.fingerprint,
+            "enrichments": {
+                "note": "test note",
+            },
+        },
+    )
+    # first, use elastic
+    os.environ["ELASTIC_ENABLED"] = "true"
+
+    # Test alert without enrichments
+    elastic_filtered_low_alerts = SearchEngine(
+        tenant_id=SINGLE_TENANT_UUID
+    ).search_alerts(search_query_low)
+    assert len(elastic_filtered_low_alerts) == 1
+
+    elastic_filtered_low_alert = elastic_filtered_low_alerts[0].dict()
+
+    assert "enriched_fields" in elastic_filtered_low_alert
+    assert elastic_filtered_low_alert["enriched_fields"] == [
+        "status"
+    ]  # status was enriched by the mapping rule
+
+    # Now let's get alert with some enrichments
+    elastic_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query_high
+    )
+    assert len(elastic_filtered_alerts) == 1
+
+    elastic_filtered_alert = elastic_filtered_alerts[0].dict()
+
+    assert "note" in elastic_filtered_alert
+    assert elastic_filtered_alert["note"] == "test note"
+    assert "enriched_fields" in elastic_filtered_alert
+    assert sorted(elastic_filtered_alert["enriched_fields"]) == ["note", "service"]
+
+    # then, use db
+    os.environ["ELASTIC_ENABLED"] = "false"
+    db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
+        search_query_high
+    )
+    assert len(db_filtered_alerts) == 1
+
+    db_filtered_alert = db_filtered_alerts[0].dict()
+
+    assert "note" in db_filtered_alert
+    assert db_filtered_alert["note"] == "test note"
+    assert "enriched_fields" in db_filtered_alert
+    assert sorted(db_filtered_alert["enriched_fields"]) == ["note", "service"]
 
 
 """
