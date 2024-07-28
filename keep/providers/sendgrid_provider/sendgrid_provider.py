@@ -149,7 +149,7 @@ class SendgridProvider(BaseProvider):
             return {
                 "status_code": response.status_code,
                 "body": response.body,
-                "headers": response.headers,
+                "headers": dict(response.headers),
             }
         except UnauthorizedError:
             logger.error("Unauthorized: Invalid API key or insufficient permissions.")
