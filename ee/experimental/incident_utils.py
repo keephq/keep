@@ -6,59 +6,108 @@ import networkx as nx
 
 from typing import List
 
+from datetime import datetime, timedelta
+
+from fastapi import Depends
+
+from ee.experimental.note_utils import NodeCandidateQueue, NodeCandidate
+from ee.experimental.graph_utils import create_graph
+from ee.experimental.statistical_utils import get_alert_pmi_matrix
+
 from keep.api.models.db.alert import Alert
 from keep.api.core.db import (
     assign_alert_to_incident,
     get_last_alerts,
     create_incident_from_dict,
-    get_all_tenants,
+)
+
+from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
+)
+
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    create_incident_from_dict,
+    get_incident_by_id,
+    get_last_alerts,
+    get_last_incidents,
+    write_pmi_matrix_to_db,
 )
 
 logger = logging.getLogger(__name__)
 
+
+def calculate_pmi_matrix(
+    ctx: dict | None,  # arq context
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    upper_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60),
+    use_n_historical_alerts: int = 10e10,
+    sliding_window: int = 4 * 60 * 60,
+    stride: int = 60 * 60,
+) -> dict:
+    
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Calculating PMI coefficients for alerts",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
+    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    
+    return {"status": "success"}
+
+
 async def mine_incidents_and_create_objects(
         ctx: dict | None,  # arq context
-        tenant_id: str | None = None,
-        use_n_historical_alerts: int = 10000,
-        incident_sliding_window_size: int = 6 * 24 * 60 * 60,
-        statistic_sliding_window_size: int = 60 * 60,
-        jaccard_threshold: float = 0.0,
-        fingerprint_threshold: int = 1,
+        authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+        alert_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60 * 60),
+        alert_upper_timestamp: datetime = datetime.now(),
+        use_n_historical_alerts: int = 10e10,
+        incident_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 4 * 60 * 60),
+        incident_upper_timestamp: datetime = datetime.now(),
+        use_n_hist_incidents: int = 10e10,
+        pmi_threshold: float = 0.0,
+        knee_threshold: float = 0.8,
+        min_incident_size: int = 5,
+        incident_similarity_threshold: float = 0.8,
     ):
-    if tenant_id is None:
-        logger.info("No tenant_id provided, mining incidents for all tenante")
-        tenants = get_all_tenants()
-        tenant_ids = [tenant.id for tenant in tenants]
-    else:
-        tenant_ids = [tenant_id]
 
-    for tenant_id in tenant_ids:
-        alerts = get_last_alerts(tenant_id=tenant_id, limit=use_n_historical_alerts)
-        if len(alerts) > 0:
-            incidents = mine_incidents(
-                alerts,
-                incident_sliding_window_size,
-                statistic_sliding_window_size,
-                jaccard_threshold,
-                fingerprint_threshold,
-            )
+    calculate_pmi_matrix(ctx, authenticated_entity)
 
-            for incident in incidents:
-                incident_id = create_incident_from_dict(
-                    tenant_id=tenant_id,
-                    incident_data={
-                        "name": "Mined using algorithm",
-                        "description": "Candidate",
-                        "is_predicted": True
-                    }
-                ).id    
-
-                for alert in incident["alerts"]:
+    tenant_id = authenticated_entity.tenant_id
+    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
+    nc_queue = NodeCandidateQueue()
+    
+    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
+        nc_queue.push_candidate(candidate)
+    candidates = nc_queue.get_candidates()          
+    
+    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
+    ids = []
+    
+    for component in nx.connected_components(graph):
+        if len(component) > min_incident_size:            
+            alerts_appended = False
+            for incident in incidents:        
+                intersection = incident.fingerprints().intersection(component)
+        
+                if len(intersection) / len(component) >= incident_similarity_threshold:
+                    alerts_appended = True
+                    for alert in [alert for alert in alerts if alert.fingerprint in component]:
+                        assign_alert_to_incident(alert.id, incident.id, tenant_id)
+                    
+            if not alerts_appended:
+                incident_id = create_incident_from_dict(tenant_id, {"name": "Mined using algorithm", "description": "Candidate", "is_predicted": True}).id
+                ids.append(incident_id)
+                for alert in [alert for alert in alerts if alert.fingerprint in component]:
                     assign_alert_to_incident(alert.id, incident_id, tenant_id)
-            
-            if len(tenant_ids) == 1:
-                return {"incidents": incidents}
 
+    return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
 
 
 def mine_incidents(alerts: List[Alert], incident_sliding_window_size: int=6*24*60*60, statistic_sliding_window_size: int=60*60, 

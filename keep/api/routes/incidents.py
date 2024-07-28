@@ -15,18 +15,14 @@ from pydantic.types import UUID
 
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
-    assign_alert_to_incident,
     confirm_predicted_incident_by_id,
-    create_incident_from_dict,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
-    get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    write_pmi_matrix_to_db,
 )
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
@@ -36,8 +32,7 @@ from keep.api.core.dependencies import (
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import IncidentsPaginatedResultsDto
-from keep.api.utils.import_ee import mine_incidents_and_create_objects, \
-    get_alert_pmi_matrix, create_graph, NodeCandidateQueue, NodeCandidate
+from keep.api.utils.import_ee import mine_incidents_and_create_objects
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -328,30 +323,39 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
 )
 def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-    use_n_historical_alerts: int = 10000,
-    incident_sliding_window_size: int = 6 * 24 * 60 * 60,
-    statistic_sliding_window_size: int = 60 * 60,
-    jaccard_threshold: float = 0.0,
-    fingerprint_threshold: int = 1,
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    alert_lower_timestamp: datetime = datetime.now() - timedelta(days=60),
+    alert_upper_timestamp: datetime = datetime.now(),
+    use_n_historical_alerts: int = 10e10,
+    incident_lower_timestamp: datetime = datetime.now() - timedelta(days=60),
+    incident_upper_timestamp: datetime = datetime.now(),
+    use_n_hist_incidents: int = 10e10,
+    pmi_threshold: float = 0.0,
+    knee_threshold: float = 0.8,
+    min_incident_size: int = 5,
+    incident_similarity_threshold: float = 0.8,
 ) -> dict:
-    incidents = asyncio.run(mine_incidents_and_create_objects(
+    result = asyncio.run(mine_incidents_and_create_objects(
         None,
-        tenant_id=authenticated_entity.tenant_id,
-        use_n_historical_alerts=use_n_historical_alerts,
-        incident_sliding_window_size=incident_sliding_window_size,
-        statistic_sliding_window_size=statistic_sliding_window_size,
-        jaccard_threshold=jaccard_threshold,
-        fingerprint_threshold=fingerprint_threshold,
+        authenticated_entity,
+        alert_lower_timestamp,
+        alert_upper_timestamp,
+        use_n_historical_alerts,
+        incident_lower_timestamp,
+        incident_upper_timestamp,
+        use_n_hist_incidents,
+        pmi_threshold,
+        knee_threshold,
+        min_incident_size,
+        incident_similarity_threshold,
     ))
 
-    return {"incidents": incidents}
+    return result
 
 
 @router.post(
@@ -378,78 +382,3 @@ def update_incident(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
-
-
-@router.post(
-    "/calculate_pmi_matrix",
-    description="Calculate PMI coefficients for alerts",
-)
-def calculate_pmi_matrix(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    upper_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60),
-    use_n_historical_alerts: int = 10e10,
-    sliding_window: int = 4 * 60 * 60,
-    stride: int = 60 * 60,
-) -> dict:
-    
-    tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Calculating PMI coefficients for alerts",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
-    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
-    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
-    
-    return {"status": "success"}
-
-@router.post(
-    "/mine_v01",
-    description="Create incidents using historical alerts",
-)
-def mine_v01(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    alert_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60 * 60),
-    alert_upper_timestamp: datetime = datetime.now(),
-    use_n_historical_alerts: int = 10e10,
-    incident_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 4 * 60 * 60),
-    incident_upper_timestamp: datetime = datetime.now(),
-    use_n_hist_incidents: int = 10e10,
-    pmi_threshold: float = 0.0,
-    knee_threshold: float = 0.8,
-    min_incident_size: int = 5,
-    incident_similarity_threshold: float = 0.8,
-):
-
-    tenant_id = authenticated_entity.tenant_id
-    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
-    incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    nc_queue = NodeCandidateQueue()
-    
-    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
-        nc_queue.push_candidate(candidate)
-    candidates = nc_queue.get_candidates()          
-    
-    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
-    ids = []
-    
-    for component in nx.connected_components(graph):
-        if len(component) > min_incident_size:            
-            alerts_appended = False
-            for incident in incidents:        
-                intersection = incident.fingerprints().intersection(component)
-        
-                if len(intersection) / len(component) >= incident_similarity_threshold:
-                    alerts_appended = True
-                    for alert in [alert for alert in alerts if alert.fingerprint in component]:
-                        assign_alert_to_incident(alert.id, incident.id, tenant_id)
-                    
-            if not alerts_appended:
-                incident_id = create_incident_from_dict(tenant_id, {"name": "Mined using algorithm", "description": "Candidate", "is_predicted": True}).id
-                ids.append(incident_id)
-                for alert in [alert for alert in alerts if alert.fingerprint in component]:
-                    assign_alert_to_incident(alert.id, incident_id, tenant_id)
-
-    return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
