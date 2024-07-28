@@ -16,6 +16,7 @@ from keep.api.core.config import config
 from keep.api.core.db import get_provider_distribution, get_session, count_alerts
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
+from keep.api.models.provider import ProviderAlertsCountDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
@@ -229,7 +230,10 @@ def get_alerts_schema(
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
 
 
-@router.get("/{provider_type}/{provider_id}/alerts/count")
+@router.get(
+    "/{provider_type}/{provider_id}/alerts/count",
+    description="Get number of alerts a specific provider has received (in a specific time time period or ever)",
+)
 def get_alert_count(
     provider_type: str,
     provider_id: str,
@@ -240,19 +244,21 @@ def get_alert_count(
 ):
     tenant_id = authenticated_entity.tenant_id
     if ever is False and (start_time is None or end_time is None):
-        return JSONResponse(
-            status_code=400, content={"message": "Missing start_time or end_time"}
+        return HTTPException(
+            status_code=400, detail="Missing start_time and/or end_time"
         )
     return JSONResponse(
         status_code=200,
         content={
             "alert_count": count_alerts(
-                provider_type=provider_type,
-                provider_id=provider_id,
-                start_time=start_time,
-                end_time=end_time,
-                ever=ever,
-                tenant_id=tenant_id,
+                count_dto=ProviderAlertsCountDTO(
+                    provider_type=provider_type,
+                    provider_id=provider_id,
+                    ever=ever,
+                    start_time=start_time,
+                    end_time=end_time,
+                    tenant_id=tenant_id,
+                ),
             )
         },
     )

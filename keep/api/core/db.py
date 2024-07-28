@@ -38,6 +38,7 @@ from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.provider import ProviderAlertsCountDTO
 
 logger = logging.getLogger(__name__)
 
@@ -734,21 +735,16 @@ def enrich_alert(
 
 
 def count_alerts(
-    ever: bool,
-    start_time: Optional[datetime],
-    end_time: Optional[datetime],
-    provider_id: str,
-    provider_type: str,
-    tenant_id: str,
+    count_dto: ProviderAlertsCountDTO,
 ):
     with Session(engine) as session:
-        if ever:
+        if count_dto.ever:
             return (
                 session.query(Alert)
                 .filter(
-                    Alert.tenant_id == tenant_id,
-                    Alert.provider_id == provider_id,
-                    Alert.provider_type == provider_type,
+                    Alert.tenant_id == count_dto.tenant_id,
+                    Alert.provider_id == count_dto.provider_id,
+                    Alert.provider_type == count_dto.provider_type,
                 )
                 .count()
             )
@@ -756,11 +752,11 @@ def count_alerts(
             return (
                 session.query(Alert)
                 .filter(
-                    Alert.tenant_id == tenant_id,
-                    Alert.provider_id == provider_id,
-                    Alert.provider_type == provider_type,
-                    Alert.timestamp >= start_time,
-                    Alert.timestamp <= end_time,
+                    Alert.tenant_id == count_dto.tenant_id,
+                    Alert.provider_id == count_dto.provider_id,
+                    Alert.provider_type == count_dto.provider_type,
+                    Alert.timestamp >= count_dto.start_time,
+                    Alert.timestamp <= count_dto.end_time,
                 )
                 .count()
             )
