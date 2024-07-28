@@ -100,6 +100,8 @@ class Incident(SQLModel, table=True):
     tenant: Tenant = Relationship()
     name: str
     description: str
+    user_summary: str | None
+    generated_summary: str | None
 
     assignee: str | None
 

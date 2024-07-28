@@ -1827,6 +1827,16 @@ def assign_alert_to_incident(
 
     return assignment
 
+def is_alert_assigned_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> bool:
+    with Session(engine) as session:
+        assignment = session.exec(
+            select(AlertToIncident)
+            .where(AlertToIncident.alert_id == alert_id)
+            .where(AlertToIncident.incident_id == incident_id)
+            .where(AlertToIncident.tenant_id == tenant_id)
+        ).first()
+    return bool(assignment)
+
 
 def get_incidents(tenant_id) -> List[Incident]:
     with Session(engine) as session:
@@ -2325,3 +2335,19 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
             return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
                 tzinfo=timezone.utc
             )
+
+def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .where(Incident.id == incident_id)
+        ).first()
+
+        if not incident:
+            return None
+
+        incident.generated_summary = summary
+        session.commit()
+        session.refresh(incident)
+
+        return incident
