@@ -134,7 +134,7 @@ def get_all_incidents(
 
     incidents_dto = []
     for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident))
+        incidents_dto.append(IncidentDto.from_db_incident(incident.Incident))
 
     logger.info(
         "Fetched incidents from DB",
@@ -329,10 +329,10 @@ def delete_alerts_from_incident(
 )
 def mine(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    alert_lower_timestamp: datetime = datetime.now() - timedelta(days=60),
+    alert_lower_timestamp: datetime = datetime.now() - timedelta(days=100),
     alert_upper_timestamp: datetime = datetime.now(),
     use_n_historical_alerts: int = 10e10,
-    incident_lower_timestamp: datetime = datetime.now() - timedelta(days=60),
+    incident_lower_timestamp: datetime = datetime.now() - timedelta(days=100),
     incident_upper_timestamp: datetime = datetime.now(),
     use_n_hist_incidents: int = 10e10,
     pmi_threshold: float = 0.0,
