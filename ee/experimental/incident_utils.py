@@ -93,8 +93,9 @@ async def mine_incidents_and_create_objects(
     for component in nx.connected_components(graph):
         if len(component) > min_incident_size:            
             alerts_appended = False
-            for incident in incidents:        
-                intersection = incident.fingerprints().intersection(component)
+            for incident in incidents:
+                incident_fingerprints = set([alert.fingerprint for alert in incident.alerts])        
+                intersection = incident_fingerprints.intersection(component)
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
                     alerts_appended = True
