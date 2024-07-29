@@ -16,7 +16,7 @@ from keep.api.core.config import config
 from keep.api.core.db import get_provider_distribution, get_session, count_alerts
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
-from keep.api.models.provider import ProviderAlertsCountDTO
+from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
@@ -247,20 +247,15 @@ def get_alert_count(
         return HTTPException(
             status_code=400, detail="Missing start_time and/or end_time"
         )
-    return JSONResponse(
-        status_code=200,
-        content={
-            "alert_count": count_alerts(
-                count_dto=ProviderAlertsCountDTO(
-                    provider_type=provider_type,
-                    provider_id=provider_id,
-                    ever=ever,
-                    start_time=start_time,
-                    end_time=end_time,
-                    tenant_id=tenant_id,
-                ),
-            )
-        },
+    return ProviderAlertsCountResponseDTO(
+        count=count_alerts(
+            provider_type=provider_type,
+            provider_id=provider_id,
+            ever=ever,
+            start_time=start_time,
+            end_time=end_time,
+            tenant_id=tenant_id,
+        ),
     )
 
 

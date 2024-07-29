@@ -7,13 +7,8 @@ from keep.providers.models.provider_config import ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
 
-class ProviderAlertsCountDTO(BaseModel):
-    provider_type: str
-    provider_id: str
-    ever: bool
-    start_time: Optional[datetime]
-    end_time: Optional[datetime]
-    tenant_id: str
+class ProviderAlertsCountResponseDTO(BaseModel):
+    count: int
 
 
 class Provider(BaseModel):
