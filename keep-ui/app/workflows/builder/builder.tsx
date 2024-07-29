@@ -15,7 +15,7 @@ import {
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import StepEditor, { GlobalEditor } from "./editors";
-import { Callout, Card } from "@tremor/react";
+import { Callout, Card, Switch } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
@@ -38,6 +38,7 @@ import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
+import ReactFlowBuilder from "./ReactFlowBuilder";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -51,7 +52,7 @@ interface Props {
   workflowId?: string;
   accessToken?: string;
   installedProviders?: Provider[] | undefined | null;
-  isPreview?:boolean;
+  isPreview?: boolean;
 }
 
 function Builder({
@@ -68,6 +69,8 @@ function Builder({
   installedProviders,
   isPreview,
 }: Props) {
+  const [useReactFlow, setUseReactFlow] = useState(false);
+
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
@@ -86,6 +89,8 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
+
+  console.log("definition", definition);
 
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
@@ -282,8 +287,26 @@ function Builder({
     setRunningWorkflowExecution(null);
   };
 
+  const handleSwitchChange = (value: boolean) => {
+    setUseReactFlow(value);
+  };
+
   return (
     <>
+      <div className="pl-4 flex items-center space-x-3">
+        <Switch
+          id="switch"
+          name="switch"
+          checked={useReactFlow}
+          onChange={handleSwitchChange}
+        />
+        <label
+          htmlFor="switch"
+          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+        >
+          Switch to New Builder
+        </label>
+      </div>
       <Modal
         onRequestClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -325,17 +348,35 @@ function Builder({
               Alert can be generated successfully
             </Callout>
           )}
-          <SequentialWorkflowDesigner
-            definition={definition}
-            onDefinitionChange={setDefinition}
-            stepsConfiguration={stepsConfiguration}
-            validatorConfiguration={validatorConfiguration}
-            toolboxConfiguration={getToolboxConfiguration(providers)}
-            undoStackSize={10}
-            controlBar={true}
-            globalEditor={<GlobalEditor />}
-            stepEditor={<StepEditor installedProviders={installedProviders} />}
-          />
+          {useReactFlow && (
+            <div className="w-full h-full m-2">
+              <ReactFlowBuilder
+                workflow={workflow}
+                loadedAlertFile={loadedAlertFile}
+                providers={providers}
+                toolboxConfiguration={getToolboxConfiguration(providers)}
+                globalEditor={<GlobalEditor />}
+                stepEditor={
+                  <StepEditor installedProviders={installedProviders} />
+                }
+              />
+            </div>
+          )}
+          {!useReactFlow && (
+            <SequentialWorkflowDesigner
+              definition={definition}
+              onDefinitionChange={setDefinition}
+              stepsConfiguration={stepsConfiguration}
+              validatorConfiguration={validatorConfiguration}
+              toolboxConfiguration={getToolboxConfiguration(providers)}
+              undoStackSize={10}
+              controlBar={true}
+              globalEditor={<GlobalEditor />}
+              stepEditor={
+                <StepEditor installedProviders={installedProviders} />
+              }
+            />
+          )}
         </>
       )}
     </>

@@ -5,10 +5,11 @@ import { useAlertTableCols } from "./alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
 import AlertHistoryCharts from "./alert-history-charts";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toDateObjectWithFallback } from "utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
+import { useSearchParams } from "../hooks/use-search-params";
 
 interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
