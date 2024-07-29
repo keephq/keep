@@ -266,7 +266,6 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 
 
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
-    # TODO: Add dynamic request length adjustment for big incidents handling
     if not "OPENAI_API_KEY" in os.environ:
         return "OpenAI API key is not set. Incident summary generation is not available."
     
@@ -276,16 +275,18 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
     if incident.user_summary:
         prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
 
-    description_strings = [
-        f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
+    # description_strings = [
+    #     f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
+    
+    description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
     
     if use_n_alerts_for_summary > 0:
         incident_description = "\n".join(description_strings[:use_n_alerts_for_summary])
     else:
         incident_description = "\n".join(description_strings)
 
-    incident_start = min([alert.timestamp for alert in incident.alerts])
-    incident_end = max([alert.timestamp for alert in incident.alerts])
+    incident_start = min([alert.timestamp for alert in incident.alerts]).replace(microsecond=0)
+    incident_end = max([alert.timestamp for alert in incident.alerts]).replace(microsecond=0)
 
     summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
         {

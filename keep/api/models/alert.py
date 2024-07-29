@@ -334,7 +334,7 @@ class UnEnrichAlertRequestBody(BaseModel):
 
 class IncidentDtoIn(BaseModel):
     name: str
-    description: str
+    user_summary: str
     assignee: str | None
 
     class Config:
@@ -344,7 +344,7 @@ class IncidentDtoIn(BaseModel):
                 {
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
-                    "description": "Keep: Incident description",
+                    "user_summary": "Keep: Incident description",
                 }
             ]
         }
@@ -363,6 +363,7 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
+    generated_summary: str | None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -393,7 +394,8 @@ class IncidentDto(IncidentDtoIn):
         return cls(
             id=db_incident.id,
             name=db_incident.name,
-            description=db_incident.description,
+            user_summary=db_incident.user_summary,
+            generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,

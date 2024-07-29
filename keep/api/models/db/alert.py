@@ -99,7 +99,7 @@ class Incident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
     name: str
-    description: str
+
     user_summary: str | None
     generated_summary: str | None
 
