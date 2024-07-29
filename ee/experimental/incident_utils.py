@@ -285,8 +285,9 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
     else:
         incident_description = "\n".join(description_strings)
 
-    incident_start = min([alert.timestamp for alert in incident.alerts]).replace(microsecond=0)
-    incident_end = max([alert.timestamp for alert in incident.alerts]).replace(microsecond=0)
+    timestamps = [alert.timestamp for alert in incident.alerts]
+    incident_start = min(timestamps).replace(microsecond=0)
+    incident_end = max(timestamps).replace(microsecond=0)
 
     summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
         {
