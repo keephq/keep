@@ -1,6 +1,7 @@
 """
 Datadog Provider is a class that allows to ingest/digest data from Datadog.
 """
+
 import dataclasses
 import datetime
 import json
@@ -26,10 +27,12 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
+from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.datadog_provider.datadog_alert_format_description import (
     DatadogAlertFormatDescription,
@@ -74,6 +77,15 @@ class DatadogProviderAuthConfig:
         },
         default="https://api.datadoghq.com",
     )
+    environment: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Topology environment name",
+            "sensitive": False,
+            "hint": "Defaults to *",
+        },
+        default="*",
+    )
     oauth_token: dict = dataclasses.field(
         metadata={
             "description": "For OAuth flow",
@@ -85,7 +97,7 @@ class DatadogProviderAuthConfig:
     )
 
 
-class DatadogProvider(BaseProvider):
+class DatadogProvider(BaseTopologyProvider):
     """Pull/push alerts from Datadog."""
 
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
@@ -201,12 +213,12 @@ class DatadogProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.configuration = Configuration(request_timeout=5)
         if self.authentication_config.api_key and self.authentication_config.app_key:
-            self.configuration.api_key[
-                "apiKeyAuth"
-            ] = self.authentication_config.api_key
-            self.configuration.api_key[
-                "appKeyAuth"
-            ] = self.authentication_config.app_key
+            self.configuration.api_key["apiKeyAuth"] = (
+                self.authentication_config.api_key
+            )
+            self.configuration.api_key["appKeyAuth"] = (
+                self.authentication_config.app_key
+            )
             domain = self.authentication_config.domain or "https://api.datadoghq.com"
             self.configuration.host = domain
         elif self.authentication_config.oauth_token:
@@ -627,9 +639,11 @@ class DatadogProvider(BaseProvider):
                         tags=tags,
                         environment=tags.get("environment", "undefined"),
                         service=tags.get("service"),
-                        created_by=monitor.creator.email
-                        if monitor and monitor.creator
-                        else None,
+                        created_by=(
+                            monitor.creator.email
+                            if monitor and monitor.creator
+                            else None
+                        ),
                     )
                     alert.fingerprint = self.get_alert_fingerprint(
                         alert, self.fingerprint_fields
@@ -766,6 +780,7 @@ class DatadogProvider(BaseProvider):
         severity = DatadogProvider.SEVERITIES_MAP.get(
             event.get("severity"), AlertSeverity.INFO
         )
+        service = tags.get("service")
 
         url = event.pop("url", None)
 
@@ -785,6 +800,7 @@ class DatadogProvider(BaseProvider):
             message=event.get("body"),
             groups=groups,
             severity=severity,
+            service=service,
             url=url,
             tags=tags,
             monitor_id=event.get("monitor_id"),
@@ -854,6 +870,88 @@ class DatadogProvider(BaseProvider):
         ).hexdigest()
         return simulated_alert
 
+    def get_topology(self) -> list[TopologyServiceInDto]:
+        services = {}
+        with ApiClient(self.configuration) as api_client:
+            api_instance = ServiceDefinitionApi(api_client)
+            service_definitions = api_instance.list_service_definitions(
+                schema_version="v1"
+            )
+            # Get the current time
+            current_time = datetime.datetime.now()
+
+            # Calculate the time one year ago
+            one_year_ago = current_time - datetime.timedelta(days=365)
+
+            # Convert the time one year ago to epoch time
+            epoch_time_one_year_ago = int(time.mktime(one_year_ago.timetuple()))
+            endpoint = Endpoint(
+                settings={
+                    "auth": ["apiKeyAuth", "appKeyAuth", "AuthZ"],
+                    "endpoint_path": "/api/v1/service_dependencies",
+                    "response_type": (dict,),
+                    "http_method": "GET",
+                    "operation_id": "get_service_dependencies",
+                    "version": "v1",
+                },
+                params_map={
+                    "start": {
+                        "openapi_types": (str,),
+                        "attribute": "start",
+                        "location": "query",
+                    },
+                    "env": {
+                        "openapi_types": (str,),
+                        "attribute": "env",
+                        "location": "query",
+                    },
+                },
+                headers_map={
+                    "accept": ["application/json"],
+                    "content_type": ["application/json"],
+                },
+                api_client=api_client,
+            )
+            service_dependencies = endpoint.call_with_http_info(
+                env=self.authentication_config.environment,
+                start=str(epoch_time_one_year_ago),
+            )
+
+        # Parse data
+        environment = self.authentication_config.environment
+        if environment == "*":
+            environment = "unknown"
+        for service_definition in service_definitions.data:
+            name = service_definition.attributes.schema.info.dd_service
+            services[name] = TopologyServiceInDto(
+                source_provider_id=self.provider_id,
+                repository=service_definition.attributes.schema.integrations.github,
+                tags=service_definition.attributes.schema.tags,
+                service=name,
+                display_name=service_definition.attributes.schema.info.display_name,
+                environment=environment,
+                description=service_definition.attributes.schema.info.description,
+                team=service_definition.attributes.schema.org.team,
+                application=service_definition.attributes.schema.org.application,
+                email=service_definition.attributes.schema.contact.email,
+                slack=service_definition.attributes.schema.contact.slack,
+            )
+        for service_dep in service_dependencies:
+            service = services.get(service_dep)
+            if not service:
+                service = TopologyServiceInDto(
+                    source_provider_id=self.provider_id,
+                    service=service_dep,
+                    display_name=service_dep,
+                    environment=environment,
+                )
+            dependencies = service_dependencies[service_dep].get("calls", [])
+            service.dependencies = {
+                dependency: "unknown" for dependency in dependencies
+            }
+            services[service_dep] = service
+        return list(services.values())
+
 
 if __name__ == "__main__":
     # Output debug messages
@@ -873,11 +971,11 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
-    provider = ProvidersFactory.get_provider(
+    provider: BaseTopologyProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="datadog-keephq",
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider._get_alerts()
+    result = provider.get_topology()
     print(result)

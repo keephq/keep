@@ -5,7 +5,7 @@ import {
   BackgroundVariant,
   Controls,
   Edge,
-  MiniMap,
+  // MiniMap,
   Node,
   ReactFlow,
   ReactFlowInstance,
@@ -133,8 +133,6 @@ const TopologyPage = () => {
     });
 
     const newEdges = Array.from(edgeMap.values());
-    console.log(newEdges);
-    console.log(newNodes);
     const layoutedElements = getLayoutedElements(newNodes, newEdges);
     setNodes(layoutedElements.nodes);
     setEdges(layoutedElements.edges);
@@ -159,8 +157,8 @@ const TopologyPage = () => {
             setReactFlowInstance(instance);
           }}
         >
-          <Background variant={BackgroundVariant.Dots} />
-          <MiniMap pannable zoomable />
+          <Background variant={BackgroundVariant.Lines} />
+          {/* <MiniMap pannable zoomable /> */}
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>

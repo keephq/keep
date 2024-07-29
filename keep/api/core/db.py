@@ -2274,12 +2274,35 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
 # Fetch all topology data
 def get_all_topology_data(
     tenant_id: str,
+    provider_id: Optional[str] = None,
+    service: Optional[str] = None,
+    environment: Optional[str] = None,
 ) -> List[TopologyServiceDtoOut]:
     with Session(engine) as session:
-        # Fetch services for the tenant
-        services = session.exec(
-            select(TopologyService).where(TopologyService.tenant_id == tenant_id)
-        ).all()
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+
+        if provider_id is not None and service is not None and environment is not None:
+            query = query.where(
+                TopologyService.source_provider_id == provider_id,
+                TopologyService.service == service,
+                TopologyService.environment == environment,
+            )
+
+            service_instance = session.exec(query).first()
+            if not service_instance:
+                return []
+
+            services = session.exec(
+                select(TopologyServiceDependency)
+                .where(
+                    TopologyServiceDependency.depends_on_service_id
+                    == service_instance.id
+                )
+                .options(joinedload(TopologyServiceDependency.service))
+            ).all()
+        else:
+            # Fetch services for the tenant
+            services = session.exec(query).all()
 
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 

@@ -9,7 +9,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 class TopologyService(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
-    source_provider_id: Optional[str]
+    source_provider_id: str = "unknown"
     repository: Optional[str]
     tags: Optional[List[str]] = Field(sa_column=Column(JSON))
     service: str
@@ -38,16 +38,18 @@ class TopologyService(SQLModel, table=True):
 
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "service", "environment"]
+        unique_together = ["tenant_id", "service", "environment", "source_provider_id"]
 
 
 class TopologyServiceDependency(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
-    service_id: int = Field(sa_column=Column(ForeignKey("topologyservice.id")))
-    dependent_service_id: int = Field(
-        sa_column=Column(ForeignKey("topologyservice.id"))
+    service_id: int = Field(
+        sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
     )
-    protocol: Optional[str]
+    depends_on_service_id: int = Field(
+        sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
+    )  # service_id calls deponds_on_service_id (A->B)
+    protocol: Optional[str] = "unknown"
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -65,24 +67,27 @@ class TopologyServiceDependency(SQLModel, table=True):
     )
     dependent_service: TopologyService = Relationship(
         sa_relationship_kwargs={
-            "foreign_keys": "[TopologyServiceDependency.dependent_service_id]"
+            "foreign_keys": "[TopologyServiceDependency.depends_on_service_id]"
         }
     )
 
 
 class TopologyServiceDtoBase(BaseModel, extra="ignore"):
-    id: int
     source_provider_id: Optional[str]
-    repository: Optional[str]
-    tags: Optional[List[str]]
+    repository: Optional[str] = None
+    tags: Optional[List[str]] = None
     service: str
     display_name: str
     environment: str = "unknown"
-    description: Optional[str]
-    team: Optional[str]
-    application: Optional[str]
-    email: Optional[str]
-    slack: Optional[str]
+    description: Optional[str] = None
+    team: Optional[str] = None
+    application: Optional[str] = None
+    email: Optional[str] = None
+    slack: Optional[str] = None
+
+
+class TopologyServiceInDto(TopologyServiceDtoBase):
+    dependencies: dict[str, str] = {}  # dict of service it depends on : protocol
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
@@ -91,6 +96,7 @@ class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
 
 
 class TopologyServiceDtoOut(TopologyServiceDtoBase):
+    id: int
     dependencies: List[TopologyServiceDependencyDto]
     updated_at: Optional[datetime]
 
@@ -111,7 +117,7 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             slack=service.slack,
             dependencies=[
                 TopologyServiceDependencyDto(
-                    serviceId=dep.dependent_service_id, protocol=dep.protocol
+                    serviceId=dep.depends_on_service_id, protocol=dep.protocol
                 )
                 for dep in service.dependencies
             ],

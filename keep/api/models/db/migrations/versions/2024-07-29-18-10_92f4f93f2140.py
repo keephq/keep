@@ -1,8 +1,8 @@
 """Topology Migrations
 
-Revision ID: 2a39d663fdda
+Revision ID: 92f4f93f2140
 Revises: dcbd2873dcfd
-Create Date: 2024-07-28 13:32:45.450918
+Create Date: 2024-07-29 18:10:37.723465
 
 """
 
@@ -11,7 +11,7 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "2a39d663fdda"
+revision = "92f4f93f2140"
 down_revision = "dcbd2873dcfd"
 branch_labels = None
 depends_on = None
@@ -31,7 +31,7 @@ def upgrade() -> None:
         ),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
-            "source_provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True
+            "source_provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False
         ),
         sa.Column("repository", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("service", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -51,7 +51,7 @@ def upgrade() -> None:
     op.create_table(
         "topologyservicedependency",
         sa.Column("service_id", sa.Integer(), nullable=True),
-        sa.Column("dependent_service_id", sa.Integer(), nullable=True),
+        sa.Column("depends_on_service_id", sa.Integer(), nullable=True),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
@@ -61,12 +61,10 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("protocol", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.ForeignKeyConstraint(
-            ["dependent_service_id"],
-            ["topologyservice.id"],
+            ["depends_on_service_id"], ["topologyservice.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(
-            ["service_id"],
-            ["topologyservice.id"],
+            ["service_id"], ["topologyservice.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
     )

@@ -22,6 +22,7 @@ from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.db import get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -583,3 +584,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         simulated_alert = alert_data["payload"].copy()
 
         return simulated_alert
+
+
+class BaseTopologyProvider(BaseProvider):
+    def get_topology(self) -> list[TopologyServiceInDto]:
+        raise NotImplementedError("get_topology() method not implemented")
