@@ -5,6 +5,8 @@ import { useAlertPolling } from "utils/hooks/usePusher";
 import { useRouter } from "next/navigation";
 import { TopologyService } from "./models";
 
+const THRESHOLD = 5;
+
 const CustomNode = ({ data }: { data: TopologyService }) => {
   const { useAllAlerts } = useAlerts();
   const { data: alerts, mutate } = useAllAlerts("feed");
@@ -17,16 +19,16 @@ const CustomNode = ({ data }: { data: TopologyService }) => {
     }
   }, [pollAlerts, mutate]);
 
-  const relevantAlerts = alerts?.filter((alert) => alert.service === data.id);
+  const relevantAlerts = alerts?.filter((alert) => alert.service === data.service);
 
   const handleClick = () => {
     router.push(
-      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`"${data.id}"`)}`
+      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`"${data.service}"`)}`
     );
   };
 
   const alertCount = relevantAlerts?.length || 0;
-  const badgeColor = alertCount < 5 ? "bg-orange-500" : "bg-red-500";
+  const badgeColor = alertCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
 
   return (
     <div className="bg-white p-4 border rounded-xl shadow-lg relative">

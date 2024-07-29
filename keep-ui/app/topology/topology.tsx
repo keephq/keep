@@ -121,7 +121,7 @@ const TopologyPage = () => {
             id: edgeId,
             source: service.id.toString(),
             target: dependency.serviceId.toString(),
-            label: dependency.protocol,
+            label: dependency.protocol === "unknown" ? "" : dependency.protocol,
             animated: true,
             labelBgPadding: edgeLabelBgPaddingNoHover,
             labelBgStyle: edgeLabelBgStyleNoHover,

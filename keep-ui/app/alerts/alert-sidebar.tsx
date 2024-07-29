@@ -71,6 +71,9 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                     <strong>Name:</strong> {alert.name}
                     </p>
                     <p>
+                    <strong>Service:</strong> {alert.service}
+                    </p>
+                    <p>
                       <strong>Severity:</strong> {alert.severity}
                     </p>
                     <p>

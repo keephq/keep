@@ -2300,6 +2300,7 @@ def get_all_topology_data(
                 )
                 .options(joinedload(TopologyServiceDependency.service))
             ).all()
+            services = [service_instance, *[service.service for service in services]]
         else:
             # Fetch services for the tenant
             services = session.exec(query).all()
