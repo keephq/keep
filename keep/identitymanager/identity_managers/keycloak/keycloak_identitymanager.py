@@ -137,6 +137,39 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to delete resource from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to delete resource")
 
+    def check_permissions(
+        self,
+        resource_ids: list[str],
+        scope: str,
+        authenticated_entity: AuthenticatedEntity,
+    ) -> None:
+        try:
+            permissions = [
+                UMAPermission(resource=resource_id, scope=scope)
+                for resource_id in resource_ids
+            ]
+            has_permission = self.keycloak_uma.permissions_check(
+                token=authenticated_entity.access_token,
+                permissions=permissions,
+            )
+
+            if not has_permission:
+                self.logger.info(
+                    "Permission denied for resource_ids: %s, scope: %s",
+                    resource_ids,
+                    scope,
+                )
+                raise HTTPException(status_code=403, detail="Permission denied")
+
+            self.logger.info(
+                "Permission check successful for resource_ids: %s, scope: %s",
+                resource_ids,
+                scope,
+            )
+        except Exception as e:
+            self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to check permissions")
+
     def check_permission(
         self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
     ) -> None:

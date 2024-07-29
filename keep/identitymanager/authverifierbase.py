@@ -143,6 +143,7 @@ class AuthVerifierBase:
         """
         self.logger.debug(f"Authorizing entity: {authenticated_entity}")
         self._authorize(authenticated_entity)
+        self.logger.debug("Authorization successful")
 
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
         """
