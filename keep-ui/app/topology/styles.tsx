@@ -10,7 +10,7 @@ export const edgeLabelBgStyleNoHover = {
   stroke: "#b1b1b7", // default graph stroke line color
 };
 export const edgeLabelBgBorderRadiusNoHover = 10;
-export const edgeLabelBgPaddingNoHover = [10, 5];
+export const edgeLabelBgPaddingNoHover: [number, number] = [10, 5];
 export const edgeMarkerEndNoHover = {
   type: MarkerType.ArrowClosed,
 };

@@ -2269,3 +2269,18 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
             return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
                 tzinfo=timezone.utc
             )
+
+
+# Fetch all topology data
+def get_all_topology_data(
+    tenant_id: str,
+) -> List[TopologyServiceDtoOut]:
+    with Session(engine) as session:
+        # Fetch services for the tenant
+        services = session.exec(
+            select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        ).all()
+
+        service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
+
+        return service_dtos

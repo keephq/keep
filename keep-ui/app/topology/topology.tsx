@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -15,7 +15,6 @@ import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
 import { Card } from "@tremor/react";
-import { serviceDefinitions, serviceDependencies } from "./mock-topology-data";
 import {
   edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
@@ -27,6 +26,8 @@ import {
   nodeWidth,
 } from "./styles";
 import "./topology.css";
+import { useTopology } from "utils/hooks/useTopology";
+import Loading from "app/loading";
 
 // Function to create a Dagre layout
 const dagreGraph = new graphlib.Graph();
@@ -68,6 +69,8 @@ const TopologyPage = () => {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<Node, Edge>>();
 
+  const { topologyData, error, isLoading } = useTopology();
+
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
     const newEdges = [...edges];
     const currentEdge = newEdges.find((e) => e.id === edge.id);
@@ -90,36 +93,55 @@ const TopologyPage = () => {
   };
 
   useEffect(() => {
+    if (!topologyData) return;
+
     // Create nodes from service definitions
-    const newNodes = Object.keys(serviceDefinitions).map((serviceId) => ({
-      id: serviceId,
+    const newNodes = topologyData.map((service) => ({
+      id: service.id.toString(),
       type: "customNode",
-      data: serviceDefinitions[serviceId],
+      data: service,
       position: { x: 0, y: 0 }, // Dagre will handle the actual position
     }));
 
     // Create edges from service dependencies
-    const newEdges: any = [];
-    Object.keys(serviceDependencies).forEach((service) => {
-      serviceDependencies[service].forEach((dependency) => {
-        newEdges.push({
-          id: `${service}-${dependency.serviceId}`,
-          source: service,
-          target: dependency.serviceId,
-          label: dependency.protocol,
-          animated: true,
-          labelBgPadding: edgeLabelBgPaddingNoHover,
-          labelBgStyle: edgeLabelBgStyleNoHover,
-          labelBgBorderRadius: edgeLabelBgBorderRadiusNoHover,
-          markerEnd: edgeMarkerEndNoHover,
-        });
+    const edgeMap = new Map<string, Edge>();
+
+    topologyData.forEach((service) => {
+      service.dependencies.forEach((dependency) => {
+        const dependencyService = topologyData.find(
+          (s) => s.id === dependency.serviceId
+        );
+        const edgeId = `${service.service}_${dependency.protocol}_${
+          dependencyService
+            ? dependencyService.service
+            : dependency.serviceId.toString()
+        }`;
+        if (!edgeMap.has(edgeId)) {
+          edgeMap.set(edgeId, {
+            id: edgeId,
+            source: service.id.toString(),
+            target: dependency.serviceId.toString(),
+            label: dependency.protocol,
+            animated: true,
+            labelBgPadding: edgeLabelBgPaddingNoHover,
+            labelBgStyle: edgeLabelBgStyleNoHover,
+            labelBgBorderRadius: edgeLabelBgBorderRadiusNoHover,
+            markerEnd: edgeMarkerEndNoHover,
+          });
+        }
       });
     });
 
+    const newEdges = Array.from(edgeMap.values());
+    console.log(newEdges);
+    console.log(newNodes);
     const layoutedElements = getLayoutedElements(newNodes, newEdges);
     setNodes(layoutedElements.nodes);
     setEdges(layoutedElements.edges);
-  }, []);
+  }, [topologyData]);
+
+  if (isLoading || !topologyData) return <Loading />;
+  if (error) return <div>Error loading topology data</div>;
 
   return (
     <Card className="p-4 md:p-10 mx-auto h-full">
@@ -138,7 +160,7 @@ const TopologyPage = () => {
           }}
         >
           <Background variant={BackgroundVariant.Dots} />
-          {/* <MiniMap pannable zoomable /> */}
+          <MiniMap pannable zoomable />
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>

@@ -1,6 +1,11 @@
-export interface Service {
+export interface TopologyServiceDependency {
+  serviceId: string;
+  protocol?: string;
+}
+
+export interface TopologyService {
   id: string;
-  soruce_provider_id?: string;
+  source_provider_id?: string;
   repository?: string;
   tags?: string[];
   service: string;
@@ -10,10 +15,5 @@ export interface Service {
   application?: string;
   email?: string;
   slack?: string;
-}
-
-// ServiceDependency interface to define the structure of service dependencies
-export interface ServiceDependency {
-  serviceId: string;
-  protocol?: string;
+  dependencies: TopologyServiceDependency[];
 }
