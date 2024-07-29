@@ -444,3 +444,7 @@ def process_event(
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+async def async_process_event(*args, **kwargs):
+    return process_event(*args, **kwargs)
