@@ -13,7 +13,6 @@ from sqlmodel import Session
 
 from keep.api.core.config import AuthenticationType, config
 from keep.api.core.db import get_session
-from keep.api.core.rbac import get_role_by_role_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
 from keep.api.models.user import User
@@ -29,6 +28,7 @@ from keep.api.utils.tenant_utils import (
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.identitymanager.rbac import get_role_by_role_name
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()

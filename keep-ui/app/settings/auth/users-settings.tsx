@@ -21,8 +21,9 @@ import UsersMenu from "./users-menu";
 import { User as AuthUser } from "next-auth";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
-import AddUserModal from "../add-user-modal";
+import AddUserModal from "./add-user-modal";
 import { AuthenticationType } from "utils/authenticationType";
+import { useUsers } from "utils/hooks/useUsers";
 
 interface Props {
   accessToken: string;
@@ -39,22 +40,13 @@ export default function UsersSettings({
   selectedTab,
 }: Props) {
   const apiUrl = getApiURL();
-  const { data, error, isLoading } = useSWR<User[]>(
-    selectedTab === "users" ? `${apiUrl}/users` : null,
-    async (url) => {
-      const response = await fetcher(url, accessToken);
-      setUsers(response); // Update users state
-      return response;
-    },
-    { revalidateOnFocus: false }
-  );
+  const { data: users, isLoading, error, mutate: mutateUsers} = useUsers();
 
   const { data: configData } = useSWR<Config>("/api/config", fetcher, {
     revalidateOnFocus: false,
   });
 
   const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
   const [addUserError, setAddUserError] = useState("");
 
   // Determine runtime configuration
@@ -62,7 +54,7 @@ export default function UsersSettings({
   // The add user disabled if authType is none
   const addUserEnabled = authType !== AuthenticationType.NO_AUTH;
 
-  if (!data || isLoading) return <Loading />;
+  if (!users || isLoading) return <Loading />;
 
   return (
     <div className="mt-10 h-full flex flex-col">
@@ -158,7 +150,7 @@ export default function UsersSettings({
         isOpen={isAddUserModalOpen}
         onClose={() => setAddUserModalOpen(false)}
         authType={authType}
-        setUsers={setUsers}
+        mutateUsers={mutateUsers}
         accessToken={accessToken}
       />
     </div>

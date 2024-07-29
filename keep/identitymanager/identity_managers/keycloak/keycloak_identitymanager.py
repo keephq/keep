@@ -1,10 +1,11 @@
+import json
 import os
 
 from fastapi import HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
 from keycloak.uma_permissions import UMAPermission
 
-from keep.api.models.user import Group, User
+from keep.api.models.user import Group, PermissionEntity, ResourcePermission, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
@@ -26,6 +27,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 realm_name=os.environ["KEYCLOAK_REALM"],
                 verify=True,
             )
+            self.client_id = self.keycloak_admin.get_client_id(
+                os.environ["KEYCLOAK_CLIENT_ID"]
+            )
             keycloak_openid = KeycloakOpenID(
                 server_url=os.environ["KEYCLOAK_URL"],
                 realm_name=os.environ["KEYCLOAK_REALM"],
@@ -33,6 +37,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 client_secret_key=os.environ["KEYCLOAK_CLIENT_SECRET"],
             )
             self.keycloak_uma = KeycloakUMA(connection=keycloak_openid)
+            self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -107,7 +112,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return KeycloakAuthVerifier(scopes)
 
     def create_resource(
-        self, resource_id: str, resource_name: str, scopes: list[str]
+        self, resource_id: str, resource_name: str, scopes: list[str] = []
     ) -> None:
         resource = {
             "name": resource_name,
@@ -226,3 +231,239 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch groups from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch groups")
+
+    def create_permissions(self, permissions: list[ResourcePermission]) -> None:
+        try:
+            existing_permissions = self.keycloak_admin.get_client_authz_permissions(
+                self.client_id,
+            )
+            existing_permission_names_to_permissions = {
+                permission["name"]: permission for permission in existing_permissions
+            }
+            for permission in permissions:
+                # 1. first, create the resource if its not already created
+                resp = self.keycloak_admin.create_client_authz_resource(
+                    self.client_id,
+                    {
+                        "name": permission.resource_id,
+                        "displayName": permission.resource_name,
+                        "type": permission.resource_type,
+                        "scopes": [],
+                    },
+                    skip_exists=True,
+                )
+                # 2. create the policy if it doesn't exist:
+                policies = []
+                for perm in permission.permissions:
+                    try:
+                        if perm.type == "user":
+                            # we need the user id from email:
+                            # TODO: this is not efficient, we should cache this
+                            users = self.keycloak_admin.get_users({})
+                            user = next(
+                                (user for user in users if user["email"] == perm.id),
+                                None,
+                            )
+                            if not user:
+                                raise HTTPException(
+                                    status_code=400, detail="User not found"
+                                )
+                            resp = self.keycloak_admin.connection.raw_post(
+                                f"{self.admin_url}/authz/resource-server/policy/user",
+                                data=json.dumps(
+                                    {
+                                        "name": f"Allow user {user.get('id')} to access resource type {permission.resource_type} with name {permission.resource_name}",
+                                        "description": json.dumps(
+                                            {
+                                                "user_id": user.get("id"),
+                                                "user_email": user.get("email"),
+                                                "resource_id": permission.resource_id,
+                                            }
+                                        ),
+                                        "logic": "POSITIVE",
+                                        "users": [user.get("id")],
+                                    }
+                                ),
+                            )
+                            try:
+                                resp.raise_for_status()
+                            # 409 is ok, it means the policy already exists
+                            except Exception as e:
+                                if resp.status_code != 409:
+                                    raise e
+                                # just continue to next policy
+                                else:
+                                    continue
+                            policy_id = resp.json().get("id")
+                            policies.append(policy_id)
+                        else:
+                            resp = self.keycloak_admin.connection.raw_post(
+                                f"{self.admin_url}/authz/resource-server/policy/group",
+                                data=json.dumps(
+                                    {
+                                        "name": f"Allow group {perm.id} to access resource type {permission.resource_type} with name {permission.resource_name}",
+                                        "description": json.dumps(
+                                            {
+                                                "group_id": perm.id,
+                                                "resource_id": permission.resource_id,
+                                            }
+                                        ),
+                                        "logic": "POSITIVE",
+                                        "groups": [
+                                            {"id": perm.id, "extendChildren": False}
+                                        ],
+                                        "groupsClaim": "",
+                                    }
+                                ),
+                            )
+                            try:
+                                resp.raise_for_status()
+                            # 409 is ok, it means the policy already exists
+                            except Exception as e:
+                                if resp.status_code != 409:
+                                    raise e
+                                else:
+                                    continue
+                            policy_id = resp.json().get("id")
+                            policies.append(policy_id)
+                    except KeycloakPostError as e:
+                        if "already exists" in str(e):
+                            self.logger.info("Policy already exists in Keycloak")
+                            # its ok!
+                            pass
+                        else:
+                            self.logger.error(
+                                "Failed to create policy in Keycloak: %s", str(e)
+                            )
+                            raise HTTPException(
+                                status_code=500, detail="Failed to create policy"
+                            )
+                    except Exception as e:
+                        self.logger.error(
+                            "Failed to create policy in Keycloak: %s", str(e)
+                        )
+                        raise HTTPException(
+                            status_code=500, detail="Failed to create policy"
+                        )
+
+                # 3. Finally, create the resource
+                # 3.0 try to get the resource based permission
+                permission_name = f"Permission on resource type {permission.resource_type} with name {permission.resource_name}"
+                if existing_permission_names_to_permissions.get(permission_name):
+                    # update the permission
+                    existing_permissions = existing_permission_names_to_permissions[
+                        permission_name
+                    ]
+                    existing_permission_id = existing_permissions["id"]
+                    # if no new policies, continue
+                    if not policies:
+                        continue
+                    # add the new policies
+                    associated_policies = self.keycloak_admin.get_client_authz_permission_associated_policies(
+                        self.client_id, existing_permission_id
+                    )
+                    existing_permissions["policies"] = [
+                        policy["id"] for policy in associated_policies
+                    ]
+                    existing_permissions["policies"].extend(policies)
+                    # update the policy to include the new policy
+                    resp = self.keycloak_admin.connection.raw_put(
+                        f"{self.admin_url}/authz/resource-server/permission/resource/{existing_permission_id}",
+                        data=json.dumps(existing_permissions),
+                    )
+                    resp.raise_for_status()
+                else:
+                    # 3.2 else, create it
+                    self.keycloak_admin.create_client_authz_resource_based_permission(
+                        self.client_id,
+                        {
+                            "type": "resource",
+                            "name": f"Permission on resource type {permission.resource_type} with name {permission.resource_name}",
+                            "scopes": [],
+                            "policies": policies,
+                            "resources": [
+                                permission.resource_id,
+                            ],
+                            "decisionStrategy": "Affirmative".upper(),
+                        },
+                    )
+        except KeycloakPostError as e:
+            if "already exists" in str(e):
+                self.logger.info("Permission already exists in Keycloak")
+                raise HTTPException(status_code=409, detail="Permission already exists")
+            else:
+                self.logger.error(
+                    "Failed to create permissions in Keycloak: %s", str(e)
+                )
+                raise HTTPException(
+                    status_code=500, detail="Failed to create permissions"
+                )
+        except Exception as e:
+            self.logger.error("Failed to create permissions in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to create permissions")
+
+    def get_permissions(self) -> list[ResourcePermission]:
+        try:
+            resources = self.keycloak_admin.get_client_authz_resources(self.client_id)
+            resources_to_policies = {}
+            permissions = self.keycloak_admin.get_client_authz_permissions(
+                self.client_id
+            )
+            for permission in permissions:
+                permission_id = permission["id"]
+                associated_policies = (
+                    self.keycloak_admin.get_client_authz_permission_associated_policies(
+                        self.client_id, permission_id
+                    )
+                )
+                for policy in associated_policies:
+                    details = json.loads(policy["description"])
+                    resource_id = details["resource_id"]
+                    if resource_id not in resources_to_policies:
+                        resources_to_policies[resource_id] = []
+                    if policy.get("type") == "user":
+                        resources_to_policies[resource_id].append(
+                            {"id": details.get("user_email"), "type": "user"}
+                        )
+                    else:
+                        resources_to_policies[resource_id].append(
+                            {"id": details["group_id"], "type": "group"}
+                        )
+            permissions_dto = []
+            for resource in resources:
+                resource_id = resource["name"]
+                resource_name = resource["displayName"]
+                resource_type = resource["type"]
+                permissions_dto.append(
+                    ResourcePermission(
+                        resource_id=resource_id,
+                        resource_name=resource_name,
+                        resource_type=resource_type,
+                        permissions=[
+                            PermissionEntity(
+                                id=policy["id"],
+                                type=policy["type"],
+                            )
+                            for policy in resources_to_policies.get(resource_id, [])
+                        ],
+                    )
+                )
+            return permissions_dto
+        except KeycloakGetError as e:
+            self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch permissions")
+
+    def get_user_permission_on_resource_type(
+        self, resource_type: str, authenticated_entity: AuthenticatedEntity
+    ) -> list[ResourcePermission]:
+        """
+        Get permissions for a specific user on a specific resource type.
+
+        Args:
+            resource_type (str): The type of resource for which to retrieve permissions.
+            user_id (str): The ID of the user for which to retrieve permissions.
+
+        Returns:
+            list: A list of permission objects.
+        """
+        pass

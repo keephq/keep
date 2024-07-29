@@ -1,22 +1,15 @@
-import { Title, Subtitle, Card, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell, Text } from "@tremor/react";
+import { Title, Subtitle, Card, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell, Text, Button } from "@tremor/react";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
 import { useConfig } from "utils/hooks/useConfig";
-import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
-import { fetcher } from "utils/fetcher";
 import Loading from "app/loading";
+import { useGroups } from "utils/hooks/useGroups";
+import { Group } from "app/settings/models";
 
 interface Props {
   accessToken: string;
 }
 
-interface Group {
-  id: string;
-  name: string;
-  memberCount: number;
-  members: string[];
-  roles: string[];
-}
 
 const mockGroups: Group[] = [
   { id: "1", name: "Administrators", memberCount: 5, members: ["admin1", "admin2"], roles: ["Admin"] },
@@ -30,10 +23,7 @@ export default function GroupsTab({ accessToken }: Props) {
   const { data: configData } = useConfig();
   const apiUrl = getApiURL();
 
-  const { data: groups, error, isLoading } = useSWR<Group[]>(
-    configData?.AUTH_TYPE === "KEYCLOAK" ? `${apiUrl}/groups` : null,
-    (url) => fetcher(url, accessToken)
-  );
+  const { data: groups, error, isLoading } = useGroups();
 
   if (isLoading) return <Loading />;
 
@@ -41,9 +31,18 @@ export default function GroupsTab({ accessToken }: Props) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-4">
-        <Title>Groups Management</Title>
-        <Subtitle>Manage user groups</Subtitle>
+      <div className="mb-4 flex justify-between items-center">
+        <div>
+          <Title>Groups Management</Title>
+          <Subtitle>Manage user groups</Subtitle>
+        </div>
+        <Button
+          disabled
+          variant="secondary"
+          tooltip="Groups are managed through LDAP"
+        >
+          Manage Groups
+        </Button>
       </div>
       <Card className="flex-grow overflow-auto relative">
         {configData?.AUTH_TYPE !== "KEYCLOAK" && (

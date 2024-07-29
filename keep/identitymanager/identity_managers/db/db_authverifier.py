@@ -3,10 +3,10 @@ import os
 import jwt
 from fastapi import HTTPException
 
-from keep.api.core.rbac import Admin as AdminRole
-from keep.api.core.rbac import get_role_by_role_name
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
+from keep.identitymanager.rbac import Admin as AdminRole
+from keep.identitymanager.rbac import get_role_by_role_name
 
 
 class DbAuthVerifier(AuthVerifierBase):

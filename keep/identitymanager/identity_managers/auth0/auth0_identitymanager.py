@@ -4,7 +4,6 @@ import secrets
 import jwt
 from fastapi import HTTPException
 
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.identity_managers.auth0.auth0_authverifier import (
@@ -12,6 +11,7 @@ from keep.identitymanager.identity_managers.auth0.auth0_authverifier import (
 )
 from keep.identitymanager.identity_managers.auth0.auth0_utils import getAuth0Client
 from keep.identitymanager.identitymanager import BaseIdentityManager
+from keep.identitymanager.rbac import Admin as AdminRole
 
 
 class Auth0IdentityManager(BaseIdentityManager):

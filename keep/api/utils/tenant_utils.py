@@ -5,11 +5,11 @@ from uuid import uuid4
 
 from sqlmodel import Session, select
 
-from keep.api.core.rbac import Admin as AdminRole
-from keep.api.core.rbac import Role
-from keep.api.core.rbac import Webhook as WebhookRole
 from keep.api.models.db.tenant import TenantApiKey
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.rbac import Admin as AdminRole
+from keep.identitymanager.rbac import Role
+from keep.identitymanager.rbac import Webhook as WebhookRole
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 logger = logging.getLogger(__name__)

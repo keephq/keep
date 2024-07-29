@@ -2,9 +2,9 @@ import os
 
 from fastapi import Depends, HTTPException
 
-from keep.api.core.rbac import get_role_by_role_name
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
+from keep.identitymanager.rbac import get_role_by_role_name
 from keycloak import KeycloakOpenID
 
 

@@ -1,6 +1,7 @@
 import abc
 import logging
 
+from keep.api.models.user import ResourcePermission
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
@@ -152,5 +153,51 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             HTTPException: If the authenticated entity does not have the required
                            permission, an exception with a 403 status code should
                            be raised.
+        """
+        pass
+
+    def create_permissions(self, permissions: list[ResourcePermission]) -> None:
+        """
+        Create permissions in the identity manager for authorization purposes.
+
+        This method is used to define new permissions that can be used to control
+        access to resources. It allows specifying the resources, scopes, and users
+        or groups associated with each permission.
+
+        Args:
+            permissions (list): A list of permission objects, each containing the
+                                resource, scope, and user or group information.
+        """
+        pass
+
+    def get_permissions(self) -> list[ResourcePermission]:
+        """
+        Get permissions in the identity manager for authorization purposes.
+
+        This method is used to retrieve the permissions that have been defined
+        in the identity manager. It returns a list of permission objects, each
+        containing the resource, scope, and user or group information.
+
+        Args:
+            resource_ids (list): A list of resource IDs for which to retrieve
+                                 permissions.
+
+        Returns:
+            list: A list of permission objects.
+        """
+        pass
+
+    def get_user_permission_on_resource_type(
+        self, resource_type: str, authenticated_entity: AuthenticatedEntity
+    ) -> list[ResourcePermission]:
+        """
+        Get permissions for a specific user on a specific resource type.
+
+        Args:
+            resource_type (str): The type of resource for which to retrieve permissions.
+            user_id (str): The ID of the user for which to retrieve permissions.
+
+        Returns:
+            list: A list of permission objects.
         """
         pass

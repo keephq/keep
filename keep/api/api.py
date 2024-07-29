@@ -40,7 +40,8 @@ from keep.api.routes import (
     whoami,
     workflows,
 )
-from keep.api.routes.auth import groups, users
+from keep.api.routes.auth import groups as auth_groups
+from keep.api.routes.auth import permissions, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client
@@ -186,9 +187,15 @@ def get_app(
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
     app.include_router(groups.router, prefix="/groups", tags=["groups"])
-    app.include_router(users.router, prefix="/users", tags=["users"])
+    app.include_router(users.router, prefix="/auth/users", tags=["users"])
+    app.include_router(
+        permissions.router, prefix="/auth/permissions", tags=["permissions"]
+    )
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
+    )
+    app.include_router(
+        auth_groups.router, prefix="/auth/groups", tags=["auth", "groups"]
     )
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]

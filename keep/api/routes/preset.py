@@ -89,8 +89,22 @@ def get_presets(
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    allowed_preset_ids = identity_manager.get_permissions(
+        resource_type="preset",
+        authenticated_entity=authenticated_entity,
+    )
+
     # both global and private presets
-    presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
+    presets = get_presets_db(
+        tenant_id=tenant_id,
+        email=authenticated_entity.email,
+        preset_ids=allowed_preset_ids,
+    )
     presets_dto = [PresetDto(**preset.dict()) for preset in presets]
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])

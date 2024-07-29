@@ -1554,7 +1554,7 @@ def get_provider_distribution(tenant_id: str) -> dict:
     return provider_distribution
 
 
-def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
+def get_presets(tenant_id: str, email, preset_ids: list[str]) -> List[Dict[str, Any]]:
     with Session(engine) as session:
         statement = (
             select(Preset)

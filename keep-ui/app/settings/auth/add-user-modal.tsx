@@ -14,7 +14,7 @@ import {
   Icon,
 } from "@tremor/react";
 import { AuthenticationType } from "utils/authenticationType";
-import { User } from "./models";
+import { User } from "../models";
 import { getApiURL } from "utils/apiUrl";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import "./add-user-modal.css";
@@ -31,7 +31,7 @@ interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   authType: string;
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  mutateUsers: (data?: User[] | Promise<User[]> | undefined, shouldRevalidate?: boolean | undefined) => Promise<User[] | undefined>;
   accessToken: string;
 }
 
@@ -58,7 +58,7 @@ export default function AddUserModal({
   isOpen,
   onClose,
   authType,
-  setUsers,
+  mutateUsers,
   accessToken,
 }: AddUserModalProps) {
   const {
@@ -83,7 +83,7 @@ export default function AddUserModal({
 
       if (response.ok) {
         const newUser = await response.json();
-        setUsers((prevUsers) => [...prevUsers, newUser]);
+        mutateUsers();
         handleClose();
       } else {
         const errorData = await response.json();

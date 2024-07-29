@@ -10,8 +10,8 @@ from fastapi.security import (
 )
 
 from keep.api.core.db import get_api_key, update_key_last_used
-from keep.api.core.rbac import get_role_by_role_name
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.rbac import get_role_by_role_name
 
 auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key", auto_error=False)
 http_basic = HTTPBasic(auto_error=False)

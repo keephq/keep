@@ -3,9 +3,9 @@ import os
 import jwt
 from fastapi import HTTPException
 
-from keep.api.core.rbac import Admin as AdminRole
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
+from keep.identitymanager.rbac import Admin as AdminRole
 
 # Note: cache_keys is set to True to avoid fetching the jwks keys on every request
 auth_domain = os.environ.get("AUTH0_DOMAIN")

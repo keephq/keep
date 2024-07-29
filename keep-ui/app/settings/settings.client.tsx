@@ -8,6 +8,7 @@ import {
   UsersIcon,
   UserIcon,
   ShieldCheckIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { MdOutlineSecurity } from "react-icons/md";
 import WebhookSettings from "./webhook-settings";
@@ -21,6 +22,7 @@ import GroupsTab from "./auth/groups-tab";
 import RolesTab from "./auth/roles-tab";
 import APIKeysTab from "./auth//api-key-tab";
 import SSOTab from "./auth/sso-tab";
+import PermissionsTab from "./auth/permissions-tab";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -76,7 +78,9 @@ export default function SettingsPage() {
         ? 2
         : newUserSubTab === "roles"
         ? 3
-        : 4;
+        : newUserSubTab === "permissions"
+        ? 4
+        : 5;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -87,70 +91,78 @@ export default function SettingsPage() {
   if (status === "unauthenticated") router.push("/signin");
 
   return (
-    <TabGroup index={tabIndex}>
-      <TabList color="orange">
-        <Tab icon={UserGroupIcon} onClick={() => handleTabChange("users")}>
-          Users and Access
-        </Tab>
-        <Tab icon={GlobeAltIcon} onClick={() => handleTabChange("webhook")}>
-          Webhook
-        </Tab>
-        <Tab icon={EnvelopeIcon} onClick={() => handleTabChange("smtp")}>
-          SMTP
-        </Tab>
-      </TabList>
-      <TabPanels>
-        <TabPanel>
-          <TabGroup index={userSubTabIndex}>
-            <TabList color="orange">
-              <Tab icon={UsersIcon} onClick={() => handleUserSubTabChange("users")}>
-                Users
-              </Tab>
-              <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
-                API Keys
-              </Tab>
-              <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
-                Groups
-              </Tab>
-              <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
-                Roles
-              </Tab>
-              <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
-                SSO
-              </Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
-              </TabPanel>
-              <TabPanel>
-                <APIKeysTab accessToken={session?.accessToken!} />
-              </TabPanel>
-              <TabPanel>
-                <GroupsTab accessToken={session?.accessToken!} />
-              </TabPanel>
-              <TabPanel>
-                <RolesTab accessToken={session?.accessToken!} />
-              </TabPanel>
-              <TabPanel>
-                <SSOTab accessToken={session?.accessToken!} />
-              </TabPanel>
-            </TabPanels>
-          </TabGroup>
-        </TabPanel>
-        <TabPanel>
-          <WebhookSettings
-            accessToken={session?.accessToken!}
-            selectedTab={selectedTab}
-          />
-        </TabPanel>
-        <TabPanel>
-          <SmtpSettings
-            accessToken={session?.accessToken!}
-            selectedTab={selectedTab}
-          />
-        </TabPanel>
-      </TabPanels>
-    </TabGroup>
+    <div className="flex flex-col h-full">
+      <TabGroup index={tabIndex} className="flex-grow flex flex-col">
+        <TabList color="orange">
+          <Tab icon={UserGroupIcon} onClick={() => handleTabChange("users")}>
+            Users and Access
+          </Tab>
+          <Tab icon={GlobeAltIcon} onClick={() => handleTabChange("webhook")}>
+            Webhook
+          </Tab>
+          <Tab icon={EnvelopeIcon} onClick={() => handleTabChange("smtp")}>
+            SMTP
+          </Tab>
+        </TabList>
+        <TabPanels className="flex-grow overflow-auto">
+          <TabPanel className="h-full">
+            <TabGroup index={userSubTabIndex} className="h-full flex flex-col">
+              <TabList color="orange">
+                <Tab icon={UsersIcon} onClick={() => handleUserSubTabChange("users")}>
+                  Users
+                </Tab>
+                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
+                  API Keys
+                </Tab>
+                <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
+                  Groups
+                </Tab>
+                <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
+                  Roles
+                </Tab>
+                <Tab icon={LockClosedIcon} onClick={() => handleUserSubTabChange("permissions")}>
+                  Permissions
+                </Tab>
+                <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
+                  SSO
+                </Tab>
+              </TabList>
+              <TabPanels className="flex-grow overflow-auto">
+                <TabPanel className="h-full mt-6">
+                  <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <APIKeysTab accessToken={session?.accessToken!} />
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <GroupsTab accessToken={session?.accessToken!} />
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <RolesTab accessToken={session?.accessToken!} />
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <PermissionsTab accessToken={session?.accessToken!} />
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <SSOTab accessToken={session?.accessToken!} />
+                </TabPanel>
+              </TabPanels>
+            </TabGroup>
+          </TabPanel>
+          <TabPanel className="h-full">
+            <WebhookSettings
+              accessToken={session?.accessToken!}
+              selectedTab={selectedTab}
+            />
+          </TabPanel>
+          <TabPanel className="h-full">
+            <SmtpSettings
+              accessToken={session?.accessToken!}
+              selectedTab={selectedTab}
+            />
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
+    </div>
   );
 }
