@@ -13,8 +13,9 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import get_provider_distribution, get_session
+from keep.api.core.db import count_alerts, get_provider_distribution, get_session
 from keep.api.models.db.provider import Provider
+from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
@@ -228,6 +229,37 @@ def get_alerts_schema(
         return provider.get_alert_schema()
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
+
+
+@router.get(
+    "/{provider_type}/{provider_id}/alerts/count",
+    description="Get number of alerts a specific provider has received (in a specific time time period or ever)",
+)
+def get_alert_count(
+    provider_type: str,
+    provider_id: str,
+    ever: bool,
+    start_time: Optional[datetime.datetime] = None,
+    end_time: Optional[datetime.datetime] = None,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    if ever is False and (start_time is None or end_time is None):
+        return HTTPException(
+            status_code=400, detail="Missing start_time and/or end_time"
+        )
+    return ProviderAlertsCountResponseDTO(
+        count=count_alerts(
+            provider_type=provider_type,
+            provider_id=provider_id,
+            ever=ever,
+            start_time=start_time,
+            end_time=end_time,
+            tenant_id=tenant_id,
+        ),
+    )
 
 
 @router.post(

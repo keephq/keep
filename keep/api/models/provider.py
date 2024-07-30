@@ -7,6 +7,10 @@ from keep.providers.models.provider_config import ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
 
+class ProviderAlertsCountResponseDTO(BaseModel):
+    count: int
+
+
 class Provider(BaseModel):
     id: str | None = None
     display_name: str
