@@ -23,7 +23,7 @@
 }
 
 .page-container {
-  @apply p-4 mx-auto max-w-full;
+  @apply p-4 mx-auto w-full;
   @screen xl {
     @apply p-10;
   }
