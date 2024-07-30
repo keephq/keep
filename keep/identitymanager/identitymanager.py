@@ -1,10 +1,24 @@
 import abc
+import importlib
+import inspect
 import logging
 
-from keep.api.models.user import ResourcePermission
+from keep.api.models.user import ResourcePermission, Role
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
+from keep.identitymanager.rbac import get_role_by_role_name
+
+rbac_module = importlib.import_module("keep.identitymanager.rbac")
+PREDEFINED_ROLES = []
+# Dynamically import all roles from rbac.py
+for name, obj in inspect.getmembers(rbac_module):
+    if (
+        inspect.isclass(obj)
+        and issubclass(obj, rbac_module.Role)
+        and obj != rbac_module.Role
+    ):
+        PREDEFINED_ROLES.append({"name": obj.get_name(), "scopes": obj.SCOPES})
 
 
 class BaseIdentityManager(metaclass=abc.ABCMeta):
@@ -14,6 +28,14 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             self.logger = context_manager.get_logger()
         else:
             self.logger = logging.getLogger(__name__)
+
+    def on_start(self, app) -> None:
+        """
+        Initialize the identity manager.
+
+        Do all the necessary setup for the identity manager.
+        """
+        pass
 
     # default identity manager does not support sso
     @property
@@ -31,12 +53,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             "get_sso_wizard_url() method not implemented"
             " for {}".format(self.__class__.__name__)
         )
-
-    def on_start(self, app) -> None:
-        """
-        Initialize the identity manager.
-        """
-        pass
 
     @abc.abstractmethod
     def get_users(self) -> str | dict:
@@ -201,3 +217,38 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             list: A list of permission objects.
         """
         pass
+
+    def get_roles(self) -> list[Role]:
+        """
+        Get roles in the identity manager for authorization purposes.
+
+        This method is used to retrieve the roles that have been defined
+        in the identity manager. It returns a list of role objects, each
+        containing the resource, scope, and user or group information.
+
+        Returns:
+            list: A list of role objects.
+        """
+        roles_dto = []
+        for role in PREDEFINED_ROLES:
+            role_name = role.get("name")
+            _role = get_role_by_role_name(role_name)
+            roles_dto.append(
+                Role(name=role_name, description=_role.DESCRIPTION, scopes=_role.SCOPES)
+            )
+        return roles_dto
+
+    def create_role(self, role: Role) -> Role:
+        """
+        Create role in the identity manager for authorization purposes.
+
+        This method is used to define new role that can be used to control
+        access to resources. It allows specifying the resources, scopes, and users
+        or groups associated with each role.
+
+        Args:
+            role (Role): A role object, containing the
+                                resource, scope, and user or group information.
+        """
+        # default implementation does not support creating roles
+        return role

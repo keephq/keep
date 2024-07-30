@@ -94,7 +94,7 @@ def get_presets(
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
-    allowed_preset_ids = identity_manager.get_permissions(
+    allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
         resource_type="preset",
         authenticated_entity=authenticated_entity,
     )

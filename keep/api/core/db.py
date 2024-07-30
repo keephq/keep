@@ -1556,16 +1556,25 @@ def get_provider_distribution(tenant_id: str) -> dict:
 
 def get_presets(tenant_id: str, email, preset_ids: list[str]) -> List[Dict[str, Any]]:
     with Session(engine) as session:
-        statement = (
-            select(Preset)
-            .where(Preset.tenant_id == tenant_id)
-            .where(
-                or_(
-                    Preset.is_private == False,
-                    Preset.created_by == email,
+        # v2 with RBAC and roles
+        if preset_ids:
+            statement = (
+                select(Preset)
+                .where(Preset.tenant_id == tenant_id)
+                .where(Preset.id.in_(preset_ids))
+            )
+        # v1, no RBAC and roles
+        else:
+            statement = (
+                select(Preset)
+                .where(Preset.tenant_id == tenant_id)
+                .where(
+                    or_(
+                        Preset.is_private == False,
+                        Preset.created_by == email,
+                    )
                 )
             )
-        )
         presets = session.exec(statement).all()
     return presets
 

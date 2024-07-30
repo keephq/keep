@@ -1,6 +1,14 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from pydantic import BaseModel, Extra
+
+
+class Group(BaseModel, extra=Extra.ignore):
+    id: str
+    name: str
+    roles: list[str] = []
+    members: list[str] = []
+    memberCount: int = 0
 
 
 class User(BaseModel, extra=Extra.ignore):
@@ -10,14 +18,15 @@ class User(BaseModel, extra=Extra.ignore):
     picture: Optional[str]
     created_at: str
     last_login: Optional[str]
+    ldap: Optional[bool] = False
+    groups: Optional[list[Group]] = []
 
 
-class Group(BaseModel, extra=Extra.ignore):
-    id: str
+class Role(BaseModel):
     name: str
-    roles: list[str]
-    members: list[str] = []
-    memberCount: int
+    description: str
+    scopes: Set[str]
+    predefined: bool = True
 
 
 class PermissionEntity(BaseModel):

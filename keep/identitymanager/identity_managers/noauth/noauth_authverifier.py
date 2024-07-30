@@ -9,7 +9,7 @@ from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.rbac import Admin as AdminRole
 
 
-class NoAuthverifier(AuthVerifierBase):
+class NoAuthVerifier(AuthVerifierBase):
     """Handles authentication and authorization for single tenant mode"""
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:

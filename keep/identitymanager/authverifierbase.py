@@ -17,6 +17,9 @@ auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key", auto_error=F
 http_basic = HTTPBasic(auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
+ALL_SCOPES = set()
+ALL_RESOURCES = set()
+
 
 class AuthVerifierBase:
     """
@@ -42,6 +45,8 @@ class AuthVerifierBase:
     """
 
     def __init__(self, scopes: list[str] = []) -> None:
+        ALL_SCOPES.update(scopes)
+        ALL_RESOURCES.update([scope.split(":")[1] for scope in scopes])
         self.scopes = scopes
         self.logger = logging.getLogger(__name__)
 

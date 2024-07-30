@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends
 
 from keep.api.models.user import ResourcePermission
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.authverifierbase import ALL_RESOURCES
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
@@ -38,3 +39,22 @@ def create_permissions(
     )
     identity_manager.create_permissions(resource_permissions)
     return {"message": "Permissions created successfully"}
+
+
+@router.get("/scopes", description="Get all resources types")
+def get_scopes(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
+    ),
+) -> List[str]:
+    scopes = []
+    for resource in ALL_RESOURCES:
+        scopes.extend(
+            [
+                f"read:{resource}",
+                f"write:{resource}",
+                f"delete:{resource}",
+                f"update:{resource}",
+            ]
+        )
+    return scopes

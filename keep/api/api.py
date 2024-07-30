@@ -41,7 +41,7 @@ from keep.api.routes import (
     workflows,
 )
 from keep.api.routes.auth import groups as auth_groups
-from keep.api.routes.auth import permissions, users
+from keep.api.routes.auth import permissions, roles, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client
@@ -191,6 +191,7 @@ def get_app(
     app.include_router(
         permissions.router, prefix="/auth/permissions", tags=["permissions"]
     )
+    app.include_router(roles.router, prefix="/auth/roles", tags=["roles"])
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
     )

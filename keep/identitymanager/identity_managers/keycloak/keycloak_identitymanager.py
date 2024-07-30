@@ -3,16 +3,28 @@ import os
 
 from fastapi import HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
+from keycloak.openid_connection import KeycloakOpenIDConnection
 from keycloak.uma_permissions import UMAPermission
 
-from keep.api.models.user import Group, PermissionEntity, ResourcePermission, User
+from keep.api.models.user import Group, PermissionEntity, ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
-from keep.identitymanager.authverifierbase import AuthVerifierBase
-from keep.identitymanager.identitymanager import BaseIdentityManager
-from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
+from keep.identitymanager.authverifierbase import (
+    ALL_RESOURCES,
+    ALL_SCOPES,
+    AuthVerifierBase,
+)
+from keep.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
+    KeycloakAuthVerifier,
+)
+from keep.identitymanager.identitymanager import PREDEFINED_ROLES, BaseIdentityManager
+from keycloak import KeycloakAdmin, KeycloakUMA
 
-from .keycloak_authverifier import KeycloakAuthVerifier
+# Some good sources on this topic:
+# 1. https://stackoverflow.com/questions/42186537/resources-scopes-permissions-and-policies-in-keycloak
+# 2. MUST READ - https://www.keycloak.org/docs/24.0.4/authorization_services/
+# 3. ADMIN REST API - https://www.keycloak.org/docs-api/22.0.1/rest-api/index.html
+# 4. (TODO) PROTECTION API - https://www.keycloak.org/docs/latest/authorization_services/index.html#_service_protection_api
 
 
 class KeycloakIdentityManager(BaseIdentityManager):
@@ -30,13 +42,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.client_id = self.keycloak_admin.get_client_id(
                 os.environ["KEYCLOAK_CLIENT_ID"]
             )
-            keycloak_openid = KeycloakOpenID(
+            self.keycloak_id_connection = KeycloakOpenIDConnection(
                 server_url=os.environ["KEYCLOAK_URL"],
-                realm_name=os.environ["KEYCLOAK_REALM"],
                 client_id=os.environ["KEYCLOAK_CLIENT_ID"],
+                realm_name=os.environ["KEYCLOAK_REALM"],
                 client_secret_key=os.environ["KEYCLOAK_CLIENT_SECRET"],
             )
-            self.keycloak_uma = KeycloakUMA(connection=keycloak_openid)
+            self.keycloak_uma = KeycloakUMA(connection=self.keycloak_id_connection)
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
         except Exception as e:
             self.logger.error(
@@ -44,6 +56,81 @@ class KeycloakIdentityManager(BaseIdentityManager):
             )
             raise
         self.logger.info("Keycloak Identity Manager initialized")
+
+    def on_start(self, app) -> None:
+        """
+        Initialize the keycloak identity manager.
+
+        Do all the necessary setup for Keycloak.
+        """
+        # 1. make sure all scopes are created, and if not, create them
+        for scope in ALL_SCOPES:
+            try:
+                self.keycloak_admin.create_client_authz_scopes(
+                    self.client_id,
+                    {
+                        "name": scope,
+                        "displayName": f"Scope for {scope}",
+                    },
+                )
+            except KeycloakPostError as e:
+                self.logger.error("Failed to create scopes in Keycloak: %s", str(e))
+                raise HTTPException(status_code=500, detail="Failed to create scopes")
+        # 2. create all generic resources (preset, dashboard, alert, etc)
+        for resource in ALL_RESOURCES:
+            try:
+                self.keycloak_admin.create_client_authz_resource(
+                    self.client_id,
+                    {
+                        "name": resource,
+                        "displayName": f"Generic resource for {resource}",
+                        "type": "urn:keep:resources:" + resource,
+                        "scopes": [],
+                    },
+                )
+            except KeycloakPostError as e:
+                if "already exists" in str(e):
+                    self.logger.info("Resource already exists in Keycloak")
+                    # its ok!
+                    pass
+                else:
+                    self.logger.error(
+                        "Failed to create resources in Keycloak: %s", str(e)
+                    )
+                    raise HTTPException(
+                        status_code=500, detail="Failed to create resources"
+                    )
+        # 3. make sure all static roles are created, and if not, create them
+        for role in PREDEFINED_ROLES:
+            try:
+                role_name = self.keycloak_admin.create_client_role(
+                    self.client_id,
+                    {
+                        "name": role["name"],
+                        "description": f"Role for {role['name']}",
+                        # we will use this to identify the role as predefined
+                        "attributes": {
+                            "predefined": ["true"],
+                        },
+                    },
+                    skip_exists=True,
+                )
+                # create the policy for the role
+
+                # create the scope-permission for the role and policy
+
+                # finally return
+                return role_name
+            except KeycloakPostError as e:
+                if "already exists" in str(e):
+                    self.logger.info("Role already exists in Keycloak")
+                    # its ok!
+                    pass
+                else:
+                    self.logger.error("Failed to create roles in Keycloak: %s", str(e))
+                    raise HTTPException(
+                        status_code=500, detail="Failed to create roles"
+                    )
 
     @property
     def support_sso(self) -> bool:
@@ -64,12 +151,27 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
             users_dto = []
             for user in users:
+                # todo: should be more efficient
+                groups = self.keycloak_admin.get_user_groups(user["id"])
+                groups = [
+                    {
+                        "id": group["id"],
+                        "name": group["name"],
+                    }
+                    for group in groups
+                ]
                 role = user.get("attributes", {}).get("keep_role", ["admin"])[0]
                 user_dto = User(
                     email=user["email"],
                     name=user["firstName"],
                     role=role,
                     created_at=user.get("createdTimestamp", ""),
+                    ldap=(
+                        True
+                        if user.get("attributes", {}).get("LDAP_ID", False)
+                        else False
+                    ),
+                    groups=groups,
                 )
                 users_dto.append(user_dto)
             return users_dto
@@ -215,7 +317,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
                 # Fetch members for each group
                 members = self.keycloak_admin.get_group_members(group_id)
-                member_names = [member.get("username", "") for member in members]
+                member_names = [member.get("email", "") for member in members]
                 member_count = len(members)
 
                 result.append(
@@ -417,7 +519,15 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     )
                 )
                 for policy in associated_policies:
-                    details = json.loads(policy["description"])
+                    try:
+                        details = json.loads(policy["description"])
+                    # with Keep convention, the description should be a json
+                    except json.JSONDecodeError:
+                        self.logger.warning(
+                            "Failed to parse policy description: %s",
+                            policy["description"],
+                        )
+                        continue
                     resource_id = details["resource_id"]
                     if resource_id not in resources_to_policies:
                         resources_to_policies[resource_id] = []
@@ -466,4 +576,117 @@ class KeycloakIdentityManager(BaseIdentityManager):
         Returns:
             list: A list of permission objects.
         """
-        pass
+        # there is two ways to do this:
+        # 1. admin api
+        # 2. token endpoint directly
+        # we will use the admin api and put (2) on TODO
+        # https://keycloak.discourse.group/t/keyycloak-authz-policy-evaluation-using-rest-api/798/2
+        # https://keycloak.discourse.group/t/how-can-i-evaluate-user-permission-over-rest-api/10619
+
+        # also, we should see how it scale with many resources
+        try:
+            user_id = self.keycloak_admin.get_user_id(authenticated_entity.email)
+            resp = self.keycloak_admin.connection.raw_post(
+                f"{self.admin_url}/authz/resource-server/policy/evaluate",
+                data=json.dumps(
+                    {
+                        "userId": user_id,
+                        "resources": [
+                            {
+                                "type": resource_type,
+                            }
+                        ],
+                        "context": {"attributes": {}},
+                        "clientId": self.client_id,
+                    }
+                ),
+            )
+            results = resp.json()
+            results = results.get("results", [])
+            allowed_resources_ids = [
+                result["resource"]["name"]
+                for result in results
+                if result["status"] == "PERMIT"
+            ]
+            return allowed_resources_ids
+        except Exception as e:
+            self.logger.error(
+                "Failed to fetch user permissions from Keycloak: %s", str(e)
+            )
+            raise HTTPException(
+                status_code=500, detail="Failed to fetch user permissions"
+            )
+
+    def create_role(self, role: Role) -> Role:
+        """
+        Create role in the identity manager for authorization purposes.
+
+        This method is used to define new role that can be used to control
+        access to resources. It allows specifying the resources, scopes, and users
+        or groups associated with each role.
+
+        Args:
+            role (Role): A role object, containing the
+                                resource, scope, and user or group information.
+        """
+        resp = self.keycloak_admin.create_client_role(
+            self.client_id,
+            {
+                "name": role["name"],
+                "description": f"Role for {role['name']}",
+            },
+        )
+        return resp
+
+    def get_roles(self) -> list[Role]:
+        """
+        Get roles in the identity manager for authorization purposes.
+
+        This method is used to retrieve the roles that have been defined
+        in the identity manager. It returns a list of role objects, each
+        containing the resource, scope, and user or group information.
+
+        # TODO: Still to review if this is the correct way to fetch roles
+        """
+        try:
+            roles = self.keycloak_admin.get_client_roles(
+                self.client_id, brief_representation=False
+            )
+            # filter out the uma role
+            roles = [role for role in roles if role["name"] != "uma_protection"]
+            roles_dto = {
+                role.get("id"): Role(
+                    name=role["name"],
+                    description=role["description"],
+                    scopes=set([]),  # will populate this later
+                    predefined=(
+                        True
+                        if role.get("attributes", {}).get("predefined", None)
+                        else False
+                    ),
+                )
+                for role in roles
+            }
+            # now for each role we need to get the scopes
+            policies = self.keycloak_admin.get_client_authz_policies(self.client_id)
+            roles_related_policies = [
+                policy
+                for policy in policies
+                if policy.get("config", {}).get("roles", [])
+            ]
+            for policy in roles_related_policies:
+                role_id = json.loads(policy["config"]["roles"])[0].get("id")
+                policy_id = policy["id"]
+                # get dependent permissions
+                dependentPolicies = self.keycloak_admin.connection.raw_get(
+                    f"{self.admin_url}/authz/resource-server/policy/{policy_id}/dependentPolicies",
+                ).json()
+                dependentPoliciesId = dependentPolicies[0].get("id")
+                scopes = self.keycloak_admin.connection.raw_get(
+                    f"{self.admin_url}/authz/resource-server/policy/{dependentPoliciesId}/scopes",
+                ).json()
+                roles_dto[role_id].scopes.update(scopes)
+            return list(roles_dto.values())
+        except KeycloakGetError as e:
+            self.logger.error("Failed to fetch roles from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch roles")

@@ -5,6 +5,8 @@ export interface User {
   picture?: string;
   created_at: string;
   last_login?: string;
+  ldap?: boolean;
+  groups?: Group[];
 }
 
 export interface Group {
@@ -19,4 +21,15 @@ export interface Permission {
   id: string;
   resource_id: string; // id of the resource
   entity_id: string; // id of the entity
+}
+
+export interface Role {
+  name: string;
+  description: string;
+  predefined: boolean;
+  scopes: string[];
+}
+
+export interface Scope {
+  id: string;
 }
