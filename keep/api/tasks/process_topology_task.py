@@ -17,12 +17,28 @@ def process_topology(
     tenant_id: str, topology_data: list[TopologyServiceInDto], provider_id: str
 ):
     session = get_session_sync()
+
+    if not topology_data:
+        logger.info(
+            "No topology data to process",
+            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+        )
+        return
+
     try:
+        logger.info(
+            "Deleting existing topology data",
+            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+        )
         session.query(TopologyService).filter(
             TopologyService.source_provider_id == provider_id,
             TopologyService.tenant_id == tenant_id,
         ).delete()
         session.commit()
+        logger.info(
+            "Deleted existing topology data",
+            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+        )
     except Exception as e:
         logger.exception(
             "Failed to delete TopologyService",
@@ -30,6 +46,10 @@ def process_topology(
         )
         return
 
+    logger.info(
+        "Creating new topology data",
+        extra={"provider_id": provider_id, "tenant_id": tenant_id},
+    )
     service_to_keep_service_id_map = {}
     # First create the services so we have ids
     for service in topology_data:
@@ -52,6 +72,11 @@ def process_topology(
             )
 
     session.commit()
+    logger.info(
+        "Created new topology data",
+        extra={"provider_id": provider_id, "tenant_id": tenant_id},
+    )
+    return True
 
 
 async def async_process_topology(*args, **kwargs):
