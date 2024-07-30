@@ -5,7 +5,6 @@ import {
   BackgroundVariant,
   Controls,
   Edge,
-  // MiniMap,
   Node,
   ReactFlow,
   ReactFlowInstance,
@@ -210,7 +209,6 @@ const TopologyPage = ({
           }}
         >
           <Background variant={BackgroundVariant.Lines} />
-          {/* <MiniMap pannable zoomable /> */}
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>
