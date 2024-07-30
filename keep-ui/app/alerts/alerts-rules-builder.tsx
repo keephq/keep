@@ -590,7 +590,7 @@ export const AlertsRulesBuilder = ({
 
       {/* Docs */}
       <div className="flex flex-wrap items-center gap-x-2">
-        <div className="flex items-center space-x-2 relative flex-grow">
+        <div className="flex flex-wrap gap-2 items-center relative flex-grow">
           {/* CEL badge and (i) icon container */}
           <div className="flex items-center space-x-2">
             <Badge
