@@ -150,6 +150,11 @@ export default function AlertTriggerModal({
       }
     });
 
+    // Add staticFields to the payload
+    staticFields.forEach((field) => {
+      buildNestedObject(payload, field.key, field.value);
+    });
+
     // Add fingerprint key with a random number
     const randomNum = Math.floor(Math.random() * 1000000);
     payload["fingerprint"] = `test-workflow-fingerprint-${randomNum}`;

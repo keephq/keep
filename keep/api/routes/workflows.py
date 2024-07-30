@@ -226,6 +226,8 @@ def run_workflow(
             body["lastReceived"] = datetime.datetime.now(
                 tz=datetime.timezone.utc
             ).isoformat()
+            if "source" in body and not isinstance(body["source"], list):
+                body["source"] = [body["source"]]
         try:
             alert = AlertDto(**body)
         except TypeError:

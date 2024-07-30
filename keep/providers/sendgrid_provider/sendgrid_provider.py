@@ -148,8 +148,16 @@ class SendgridProvider(BaseProvider):
             logger.info(f"Email sent to {to} with subject {subject}")
             return {
                 "status_code": response.status_code,
-                "body": response.body,
-                "headers": response.headers,
+                "body": (
+                    response.body.decode("utf-8")
+                    if isinstance(response.body, bytes)
+                    else response.body
+                ),
+                "headers": {
+                    k: v
+                    for k, v in response.headers.items()
+                    if isinstance(v, (str, int, float, bool, type(None)))
+                },
             }
         except UnauthorizedError:
             logger.error("Unauthorized: Invalid API key or insufficient permissions.")
