@@ -90,10 +90,10 @@ const getEmptyDistribution = () => {
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="tile-basis px-4 relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer gap-2"
       onClick={onClick}
     >
-      <div className="w-48">
+      <div className="flex-1 min-w-0">
         {(provider.can_setup_webhook || provider.supports_webhook) &&
           !provider.installed &&
           !provider.linked && (
