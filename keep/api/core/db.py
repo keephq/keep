@@ -1799,16 +1799,6 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def get_incident_by_id(incident_id: UUID) -> Incident:
-    with Session(engine) as session:
-        incident = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.id == incident_id)
-        ).first()
-    return incident
-
-
 def assign_alert_to_incident(
     alert_id: UUID, incident_id: UUID, tenant_id: str
 ) -> AlertToIncident:
@@ -1948,7 +1938,7 @@ def get_last_incidents(
     return incidents, total_count
 
 
-def get_incident_by_id(tenant_id: str, incident_id: str) -> Optional[Incident]:
+def get_incident_by_id(tenant_id: str, incident_id: str | UUID) -> Optional[Incident]:
     with Session(engine) as session:
         query = session.query(
             Incident,
@@ -2078,7 +2068,7 @@ def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List
 
 def get_alerts_data_for_incident(
     alert_ids: list[str | UUID],
-    session: Optional[Session]
+    session: Optional[Session] = None
 ) -> dict:
 
     def inner(db_session: Session):
@@ -2113,7 +2103,7 @@ def get_alerts_data_for_incident(
 
 
 def add_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str, alert_ids: List[UUID]
+    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ):
     with Session(engine) as session:
         incident = session.exec(
@@ -2161,7 +2151,7 @@ def add_alerts_to_incident_by_incident_id(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str, alert_ids: List[UUID]
+    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(

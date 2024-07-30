@@ -334,8 +334,8 @@ class UnEnrichAlertRequestBody(BaseModel):
 
 class IncidentDtoIn(BaseModel):
     name: str
-    description: str
     assignee: str | None
+    user_summary: str | None
 
     class Config:
         extra = Extra.allow
@@ -363,6 +363,8 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
+
+    generated_summary: str | None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
