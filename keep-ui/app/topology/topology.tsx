@@ -154,8 +154,9 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
   if (isLoading) return <Loading includeMinHeight={true} />;
   if (error)
     return (
-      <div>
+      <div className="flex flex-col justify-center h-full">
         <EmptyStateCard
+          className="mb-20"
           title="Error Loading Topology Data"
           description="Seems like we encountred some problem while trying to load your topology data, please contact us if this issue continues"
           buttonText="Slack Us"
@@ -190,7 +191,7 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
       {!topologyData ||
         (topologyData?.length === 0 && (
           <>
-            <div className="absolute top-0 right-0 bg-gray-200 opacity-25 h-full w-full" />
+            <div className="absolute top-0 right-0 bg-gray-200 opacity-30 h-full w-full" />
             <div className="absolute top-0 right-0 h-full w-full">
               <div className="relative w-full h-full flex flex-col justify-center mb-20">
                 <EmptyStateCard
