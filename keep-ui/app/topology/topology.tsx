@@ -28,6 +28,8 @@ import {
 import "./topology.css";
 import { useTopology } from "utils/hooks/useTopology";
 import Loading from "app/loading";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { useRouter } from "next/navigation";
 
 interface Props {
   providerId?: string;
@@ -69,6 +71,7 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
 };
 
 const TopologyPage = ({ providerId, service, environment }: Props) => {
+  const router = useRouter();
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -148,11 +151,23 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
     setEdges(layoutedElements.edges);
   }, [topologyData]);
 
-  if (isLoading || !topologyData) return <Loading />;
-  if (error) return <div>Error loading topology data</div>;
+  if (isLoading) return <Loading includeMinHeight={true} />;
+  if (error)
+    return (
+      <div>
+        <EmptyStateCard
+          title="Error Loading Topology Data"
+          description="Seems like we encountred some problem while trying to load your topology data, please contact us if this issue continues"
+          buttonText="Slack Us"
+          onClick={() => {
+            window.open("https://slack.keephq.dev/", "_blank");
+          }}
+        />
+      </div>
+    );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto h-full">
+    <Card className="p-4 md:p-10 mx-auto h-full relative">
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
@@ -172,6 +187,23 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
           <Controls />
         </ReactFlow>
       </ReactFlowProvider>
+      {!topologyData ||
+        (topologyData?.length === 0 && (
+          <>
+            <div className="absolute top-0 right-0 bg-gray-200 opacity-25 h-full w-full" />
+            <div className="absolute top-0 right-0 h-full w-full">
+              <div className="relative w-full h-full flex flex-col justify-center mb-20">
+                <EmptyStateCard
+                  className="mb-20"
+                  title="No Topology Available"
+                  description="Seems like no topology data is available, start by connecting providers that support topology."
+                  buttonText="Connect Providers"
+                  onClick={() => router.push("/providers?labels=topology")}
+                />
+              </div>
+            </div>
+          </>
+        ))}
     </Card>
   );
 };

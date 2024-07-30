@@ -145,6 +145,18 @@ class DatadogProvider(BaseTopologyProvider):
             mandatory=False,
             alias="Logs Read Data",
         ),
+        ProviderScope(
+            name="apm_read",
+            description="Read APM data for Topology creation.",
+            mandatory=False,
+            alias="Read APM Data",
+        ),
+        ProviderScope(
+            name="apm_service_catalog_read",
+            description="Read APM service catalog for Topology creation.",
+            mandatory=False,
+            alias="Read APM service catalog Data",
+        ),
     ]
     PROVIDER_METHODS = [
         ProviderMethod(
@@ -504,6 +516,16 @@ class DatadogProvider(BaseTopologyProvider):
                         api.list_events(
                             start=int(start.timestamp()), end=int(end.timestamp())
                         )
+                    elif scope.name == "apm_read":
+                        api_instance = ServiceDefinitionApi(api_client)
+                        api_instance.list_service_definitions(schema_version="v1")
+                    elif scope.name == "apm_service_catalog_read":
+                        endpoint = self.__get_service_deps_endpoint(api_client)
+                        epoch_time_one_year_ago = self.__get_epoch_one_year_ago()
+                        endpoint.call_with_http_info(
+                            env=self.authentication_config.environment,
+                            start=str(epoch_time_one_year_ago),
+                        )
                 except ApiException as e:
                     # API failed and it means we're probably lacking some permissions
                     # perhaps we should check if status code is 403 and otherwise mark as valid?
@@ -836,6 +858,47 @@ class DatadogProvider(BaseTopologyProvider):
     def get_alert_schema():
         return DatadogAlertFormatDescription.schema()
 
+    @staticmethod
+    def __get_epoch_one_year_ago() -> int:
+        # Get the current time
+        current_time = datetime.datetime.now()
+
+        # Calculate the time one year ago
+        one_year_ago = current_time - datetime.timedelta(days=365)
+
+        # Convert the time one year ago to epoch time
+        return int(time.mktime(one_year_ago.timetuple()))
+
+    @staticmethod
+    def __get_service_deps_endpoint(api_client) -> Endpoint:
+        return Endpoint(
+            settings={
+                "auth": ["apiKeyAuth", "appKeyAuth", "AuthZ"],
+                "endpoint_path": "/api/v1/service_dependencies",
+                "response_type": (dict,),
+                "http_method": "GET",
+                "operation_id": "get_service_dependencies",
+                "version": "v1",
+            },
+            params_map={
+                "start": {
+                    "openapi_types": (str,),
+                    "attribute": "start",
+                    "location": "query",
+                },
+                "env": {
+                    "openapi_types": (str,),
+                    "attribute": "env",
+                    "location": "query",
+                },
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
+            },
+            api_client=api_client,
+        )
+
     @classmethod
     def simulate_alert(cls) -> dict:
         # Choose a random alert type
@@ -877,41 +940,8 @@ class DatadogProvider(BaseTopologyProvider):
             service_definitions = api_instance.list_service_definitions(
                 schema_version="v1"
             )
-            # Get the current time
-            current_time = datetime.datetime.now()
-
-            # Calculate the time one year ago
-            one_year_ago = current_time - datetime.timedelta(days=365)
-
-            # Convert the time one year ago to epoch time
-            epoch_time_one_year_ago = int(time.mktime(one_year_ago.timetuple()))
-            endpoint = Endpoint(
-                settings={
-                    "auth": ["apiKeyAuth", "appKeyAuth", "AuthZ"],
-                    "endpoint_path": "/api/v1/service_dependencies",
-                    "response_type": (dict,),
-                    "http_method": "GET",
-                    "operation_id": "get_service_dependencies",
-                    "version": "v1",
-                },
-                params_map={
-                    "start": {
-                        "openapi_types": (str,),
-                        "attribute": "start",
-                        "location": "query",
-                    },
-                    "env": {
-                        "openapi_types": (str,),
-                        "attribute": "env",
-                        "location": "query",
-                    },
-                },
-                headers_map={
-                    "accept": ["application/json"],
-                    "content_type": ["application/json"],
-                },
-                api_client=api_client,
-            )
+            epoch_time_one_year_ago = self.__get_epoch_one_year_ago()
+            endpoint = self.__get_service_deps_endpoint(api_client)
             service_dependencies = endpoint.call_with_http_info(
                 env=self.authentication_config.environment,
                 start=str(epoch_time_one_year_ago),

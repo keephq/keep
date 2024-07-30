@@ -6,14 +6,18 @@ export function EmptyStateCard({
   description,
   buttonText,
   onClick,
+  className,
 }: {
   title: string;
   description: string;
   buttonText: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
-    <Card className="sm:mx-auto w-full max-w-5xl">
+    <Card
+      className={`sm:mx-auto w-full max-w-5xl ${className ? className : ""}`}
+    >
       <div className="text-center">
         <CircleStackIcon
           className="mx-auto h-7 w-7 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
