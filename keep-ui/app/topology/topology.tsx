@@ -29,6 +29,12 @@ import "./topology.css";
 import { useTopology } from "utils/hooks/useTopology";
 import Loading from "app/loading";
 
+interface Props {
+  providerId?: string;
+  service?: string;
+  environment?: string;
+}
+
 // Function to create a Dagre layout
 const dagreGraph = new graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -62,14 +68,18 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   return { nodes, edges };
 };
 
-const TopologyPage = () => {
+const TopologyPage = ({ providerId, service, environment }: Props) => {
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<Node, Edge>>();
 
-  const { topologyData, error, isLoading } = useTopology();
+  const { topologyData, error, isLoading } = useTopology(
+    providerId,
+    service,
+    environment
+  );
 
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
     const newEdges = [...edges];
@@ -100,7 +110,7 @@ const TopologyPage = () => {
       id: service.id.toString(),
       type: "customNode",
       data: service,
-      position: { x: 0, y: 0 }, // Dagre will handle the actual position
+      position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
     }));
 
     // Create edges from service dependencies

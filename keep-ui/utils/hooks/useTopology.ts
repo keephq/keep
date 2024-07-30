@@ -4,12 +4,22 @@ import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useTopology = () => {
+export const useTopology = (
+  providerId?: string,
+  service?: string,
+  environment?: string
+) => {
   const { data: session } = useSession();
   const apiUrl = getApiURL();
 
+  const url = !session
+    ? null
+    : providerId && service && environment
+    ? `${apiUrl}/topology?provider_id=${providerId}&service_id=${service}&environment=${environment}`
+    : `${apiUrl}/topology`;
+
   const { data, error, mutate } = useSWR<TopologyService[]>(
-    session ? `${apiUrl}/topology` : null,
+    url,
     (url: string) => fetcher(url, session!.accessToken)
   );
 
