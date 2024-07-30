@@ -6,7 +6,7 @@ export default function Layout({ children }: { children: any }) {
       <main className="p-4 mx-auto max-w-7xl">
         <Title>Settings</Title>
         <Subtitle>Setup and configure Keep</Subtitle>
-        <Card className="mt-10 p-4 mx-auto">{children}</Card>
+        <Card className="card-container mt-10">{children}</Card>
       </main>
     </>
   );
