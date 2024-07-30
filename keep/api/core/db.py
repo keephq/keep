@@ -733,6 +733,39 @@ def enrich_alert(
     )
 
 
+def count_alerts(
+    provider_type: str,
+    provider_id: str,
+    ever: bool,
+    start_time: Optional[datetime],
+    end_time: Optional[datetime],
+    tenant_id: str,
+):
+    with Session(engine) as session:
+        if ever:
+            return (
+                session.query(Alert)
+                .filter(
+                    Alert.tenant_id == tenant_id,
+                    Alert.provider_id == provider_id,
+                    Alert.provider_type == provider_type,
+                )
+                .count()
+            )
+        else:
+            return (
+                session.query(Alert)
+                .filter(
+                    Alert.tenant_id == tenant_id,
+                    Alert.provider_id == provider_id,
+                    Alert.provider_type == provider_type,
+                    Alert.timestamp >= start_time,
+                    Alert.timestamp <= end_time,
+                )
+                .count()
+            )
+
+
 def get_enrichment(tenant_id, fingerprint):
     with Session(engine) as session:
         alert_enrichment = session.exec(
