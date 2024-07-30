@@ -90,7 +90,7 @@ const getEmptyDistribution = () => {
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="tile-basis px-4 relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer gap-2"
+      className="tile-basis py-2 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer gap-2"
       onClick={onClick}
     >
       <div className="flex-1 min-w-0">
@@ -128,7 +128,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             Linked
           </Text>
         ) : null}
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           <div>
             <Title
               className={`${
@@ -155,9 +155,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {provider.linked && provider.id ? (
               <Text className="truncate">Id: {provider.id}</Text>
-            ) : (
-              <br></br>
-            )}
+            ) : null}
             {(provider.installed || provider.linked) &&
             provider.alertsDistribution &&
             provider.alertsDistribution.length > 0 ? (
@@ -186,7 +184,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               />
             ) : null}
           </div>
-          <div className="labels flex group-hover:hidden">
+          <div className="labels flex flex-wrap group-hover:hidden gap-1">
             {!provider.installed &&
               !provider.linked &&
               provider.tags.map((tag) => {
@@ -205,10 +203,9 @@ export default function ProviderTile({ provider, onClick }: Props) {
                     key={tag}
                     icon={icon}
                     size="xs"
-                    className="mr-1"
                     color="slate"
                   >
-                    <p className="ml-1">{tag}</p>
+                    <p>{tag}</p>
                   </Badge>
                 );
               })}
