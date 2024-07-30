@@ -1,5 +1,6 @@
 export interface TopologyServiceDependency {
   serviceId: string;
+  serviceName: string;
   protocol?: string;
 }
 

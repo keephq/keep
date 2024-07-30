@@ -92,6 +92,7 @@ class TopologyServiceInDto(TopologyServiceDtoBase):
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
     serviceId: int
+    serviceName: str
     protocol: Optional[str] = "unknown"
 
 
@@ -117,7 +118,9 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             slack=service.slack,
             dependencies=[
                 TopologyServiceDependencyDto(
-                    serviceId=dep.depends_on_service_id, protocol=dep.protocol
+                    serviceId=dep.depends_on_service_id,
+                    protocol=dep.protocol,
+                    serviceName=dep.dependent_service.service,
                 )
                 for dep in service.dependencies
             ],

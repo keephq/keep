@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -14,7 +14,7 @@ import {
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
-import { Card } from "@tremor/react";
+import { Card, TextInput } from "@tremor/react";
 import {
   edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
@@ -35,6 +35,7 @@ interface Props {
   providerId?: string;
   service?: string;
   environment?: string;
+  showSearch?: boolean;
 }
 
 // Function to create a Dagre layout
@@ -70,11 +71,17 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   return { nodes, edges };
 };
 
-const TopologyPage = ({ providerId, service, environment }: Props) => {
+const TopologyPage = ({
+  providerId,
+  service,
+  environment,
+  showSearch = true,
+}: Props) => {
   const router = useRouter();
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [serviceInput, setServiceInput] = useState<string>("");
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<Node, Edge>>();
 
@@ -98,19 +105,28 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
     }
   };
 
-  const zoomToNode = (nodeId: string) => {
-    const node = reactFlowInstance?.getNode(nodeId);
-    if (node && reactFlowInstance) {
-      reactFlowInstance.setCenter(node.position.x, node.position.y);
+  const zoomToNode = useCallback(
+    (nodeId: string) => {
+      const node = reactFlowInstance?.getNode(nodeId);
+      if (node && reactFlowInstance) {
+        reactFlowInstance.setCenter(node.position.x, node.position.y);
+      }
+    },
+    [reactFlowInstance]
+  );
+
+  useEffect(() => {
+    if (serviceInput) {
+      zoomToNode(serviceInput);
     }
-  };
+  }, [serviceInput, zoomToNode]);
 
   useEffect(() => {
     if (!topologyData) return;
 
     // Create nodes from service definitions
     const newNodes = topologyData.map((service) => ({
-      id: service.id.toString(),
+      id: service.service.toString(),
       type: "customNode",
       data: service,
       position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
@@ -122,7 +138,7 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
     topologyData.forEach((service) => {
       service.dependencies.forEach((dependency) => {
         const dependencyService = topologyData.find(
-          (s) => s.id === dependency.serviceId
+          (s) => s.service === dependency.serviceName
         );
         const edgeId = `${service.service}_${dependency.protocol}_${
           dependencyService
@@ -132,10 +148,10 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
         if (!edgeMap.has(edgeId)) {
           edgeMap.set(edgeId, {
             id: edgeId,
-            source: service.id.toString(),
-            target: dependency.serviceId.toString(),
+            source: service.service.toString(),
+            target: dependency.serviceName.toString(),
             label: dependency.protocol === "unknown" ? "" : dependency.protocol,
-            animated: true,
+            animated: false,
             labelBgPadding: edgeLabelBgPaddingNoHover,
             labelBgStyle: edgeLabelBgStyleNoHover,
             labelBgBorderRadius: edgeLabelBgBorderRadiusNoHover,
@@ -169,6 +185,16 @@ const TopologyPage = ({ providerId, service, environment }: Props) => {
 
   return (
     <Card className="p-4 md:p-10 mx-auto h-full relative">
+      {showSearch && (
+        <div className="flex justify-end items-center w-full">
+          <TextInput
+            placeholder="Search for a service"
+            value={serviceInput}
+            onValueChange={setServiceInput}
+            className="mb-5 w-96"
+          />
+        </div>
+      )}
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
