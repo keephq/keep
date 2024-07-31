@@ -47,7 +47,7 @@ export default function UsersSettings({
 }: Props) {
   const apiUrl = getApiURL();
   const { data: users, isLoading, error, mutate: mutateUsers} = useUsers();
-  const { data: roles } = useRoles();
+  const { data: roles = []} = useRoles();
   const { data: groups } = useGroups();
 
   const { data: configData } = useConfig();

@@ -42,7 +42,7 @@ export default function RolesTab({ accessToken }: Props) {
   const apiUrl = getApiURL();
   const { data: configData } = useConfig();
   const { data: scopes, isLoading: scopesLoading, error: scopesError } = useScopes();
-  const { data: roles, isLoading: rolesLoading, error: rolesError, mutate: mutateRoles } = useRoles();
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError, mutate: mutateRoles } = useRoles();
 
   const [resources, setResources] = useState<string[]>([]);
   const [roleStates, setRoleStates] = useState<{ [key: string]: { scopes: string[] } }>({});
@@ -61,7 +61,7 @@ export default function RolesTab({ accessToken }: Props) {
   }, [scopes]);
 
   useEffect(() => {
-    if (roles) {
+    if (roles  && roles.length > 0) {
       const initialRoleStates = roles.reduce((acc, role) => {
         acc[role.name] = {
           scopes: role.scopes || [],

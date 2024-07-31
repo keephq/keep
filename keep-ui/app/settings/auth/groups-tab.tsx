@@ -31,7 +31,7 @@ export default function GroupsTab({ accessToken }: Props) {
   const apiUrl = getApiURL();
   const { data: groups, isLoading: groupsLoading, error: groupsError, mutate: mutateGroups } = useGroups();
   const { data: users, isLoading: usersLoading, error: usersError } = useUsers();
-  const { data: roles, isLoading: rolesLoading, error: rolesError } = useRoles();
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useRoles();
 
   const [groupStates, setGroupStates] = useState<{ [key: string]: { members: string[], roles: string[] } }>({});
   const [hasChanges, setHasChanges] = useState(false);

@@ -638,7 +638,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         )
         return resp
 
-    def get_roles(self) -> list[Role]:
+    def _get_roles(self) -> list[Role]:
         """
         Get roles in the identity manager for authorization purposes.
 
