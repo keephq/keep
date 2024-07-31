@@ -109,8 +109,8 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                 </Card>
                 <Title>Related Services</Title>
                 <TopologyPage
-                  providerId={alert.providerId || "NoProviderId"}
-                  service={alert.service || "NoService"}
+                  providerId={alert.providerId || ""}
+                  service={alert.service || ""}
                   environment={"unknown"}
                   showSearch={false}
                 />

@@ -4,6 +4,8 @@ import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
+const isNullOrUndefined = (value: any) => value === null || value === undefined;
+
 export const useTopology = (
   providerId?: string,
   service?: string,
@@ -14,7 +16,9 @@ export const useTopology = (
 
   const url = !session
     ? null
-    : providerId && service && environment
+    : !isNullOrUndefined(providerId) &&
+      !isNullOrUndefined(service) &&
+      !isNullOrUndefined(environment)
     ? `${apiUrl}/topology?provider_id=${providerId}&service_id=${service}&environment=${environment}`
     : `${apiUrl}/topology`;
 
