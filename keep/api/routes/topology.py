@@ -28,13 +28,15 @@ def get_topology_data(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting topology data", extra={tenant_id: tenant_id})
 
-    if (
-        provider_id is not None or service_id is not None or environment is not None
-    ) and not (provider_id and service_id and environment):
-        raise HTTPException(
-            status_code=400,
-            detail="If any of provider_id, service_id, or environment are provided, all must be provided.",
-        )
+    # @tb: althought we expect all, we just take service_id for now.
+    #   Checkout the `get_all_topology_data` function in db.py for more details
+    # if (
+    #     provider_id is not None or service_id is not None or environment is not None
+    # ) and not (provider_id and service_id and environment):
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="If any of provider_id, service_id, or environment are provided, all must be provided.",
+    #     )
 
     try:
         topology_data = get_all_topology_data(

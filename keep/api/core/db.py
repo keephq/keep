@@ -2281,11 +2281,15 @@ def get_all_topology_data(
     with Session(engine) as session:
         query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
 
-        if provider_id is not None and service is not None and environment is not None:
+        # @tb: let's filter by service only for now and take care of it when we handle multilpe
+        # services and environments and cmdbs
+        # the idea is that we show the service topology regardless of the underlying provider/env
+        # if provider_id is not None and service is not None and environment is not None:
+        if service is not None:
             query = query.where(
-                TopologyService.source_provider_id == provider_id,
                 TopologyService.service == service,
-                TopologyService.environment == environment,
+                # TopologyService.source_provider_id == provider_id,
+                # TopologyService.environment == environment,
             )
 
             service_instance = session.exec(query).first()

@@ -166,10 +166,10 @@ const TopologyPage = ({
     setEdges(layoutedElements.edges);
   }, [topologyData]);
 
-  if (isLoading) return <Loading includeMinHeight={true} />;
+  if (isLoading) return <Loading />;
   if (error)
     return (
-      <div className="flex flex-col justify-center h-full">
+      <div className="flex flex-col justify-center">
         <EmptyStateCard
           className="mb-20"
           title="Error Loading Topology Data"
@@ -185,12 +185,12 @@ const TopologyPage = ({
   return (
     <Card className="p-4 md:p-10 mx-auto h-full relative">
       {showSearch && (
-        <div className="flex justify-end items-center w-full">
+        <div className="flex justify-end items-center w-full absolute top-0 left-0">
           <TextInput
             placeholder="Search for a service"
             value={serviceInput}
             onValueChange={setServiceInput}
-            className="mb-5 w-96"
+            className="w-96 mr-9 mt-2"
           />
         </div>
       )}
@@ -200,7 +200,7 @@ const TopologyPage = ({
           edges={edges}
           fitView
           snapToGrid
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.3 }}
           onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
           onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
           nodeTypes={{ customNode: CustomNode }}
