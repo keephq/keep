@@ -440,3 +440,42 @@ def test_get_firing_time_minutes_and_seconds(create_alert):
     assert (
         abs(float(result) - 150.0) < 1
     )  # Allow for small time differences (150 seconds = 2.5 minutes)
+
+
+def test_first_time(create_alert):
+    fingerprint = "fp1"
+    base_time = datetime.datetime.now(tz=pytz.utc)
+    create_alert(fingerprint, AlertStatus.FIRING, base_time)
+
+    result = functions.is_first_time(fingerprint, tenant_id=SINGLE_TENANT_UUID)
+    assert result == True
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time)
+    result = functions.is_first_time(fingerprint, tenant_id=SINGLE_TENANT_UUID)
+    assert result == False
+
+
+def test_first_time_with_since(create_alert):
+    fingerprint = "fp2"
+    base_time = datetime.datetime.now(tz=pytz.utc)
+
+    create_alert(fingerprint, AlertStatus.FIRING, base_time)
+    create_alert(
+        fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=24 * 60 + 1)
+    )
+    result = functions.is_first_time(fingerprint, "24h", tenant_id=SINGLE_TENANT_UUID)
+    assert result == True
+
+    create_alert(
+        fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=24 * 60 - 1)
+    )
+    result = functions.is_first_time(fingerprint, "24h", tenant_id=SINGLE_TENANT_UUID)
+    assert result == False
+
+    create_alert(
+        fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=12 * 60 - 1)
+    )
+    result = functions.is_first_time(fingerprint, "12h", tenant_id=SINGLE_TENANT_UUID)
+    assert result == False
+    result = functions.is_first_time(fingerprint, "6h", tenant_id=SINGLE_TENANT_UUID)
+    assert result == True

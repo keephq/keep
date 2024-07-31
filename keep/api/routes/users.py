@@ -2,41 +2,33 @@ import logging
 import os
 import secrets
 from typing import Optional
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-)
 
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from keep.api.core.db import (
-    get_users as get_users_from_db,
-    create_user as create_user_in_db,
-    delete_user as delete_user_from_db
-)
-
 from keep.api.core.config import AuthenticationType
+from keep.api.core.db import create_user as create_user_in_db
+from keep.api.core.db import delete_user as delete_user_from_db
+from keep.api.core.db import get_users as get_users_from_db
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.user import User
 from keep.api.utils.auth0_utils import getAuth0Client
-from keep.api.core.rbac import Admin as AdminRole
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 class CreateUserRequest(BaseModel):
     email: str = Field(alias="username")
-    password: Optional[str] = None # auth0 does not need password
+    password: Optional[str] = None  # auth0 does not need password
     role: str
 
     class Config:
         allow_population_by_field_name = True
 
-@router.get(
-    "",
-    description="Get all users"
-)
+
+@router.get("", description="Get all users")
 def get_users(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:settings"])
@@ -50,6 +42,7 @@ def get_users(
         return _get_users_auth0(tenant_id)
 
     return _get_users_db(tenant_id)
+
 
 def _get_users_auth0(tenant_id: str) -> list[User]:
     auth0 = getAuth0Client()
@@ -83,9 +76,8 @@ def _get_users_db(tenant_id: str) -> list[User]:
     ]
     return users
 
-@router.delete(
-    "/{user_email}",
-    description="Delete a user")
+
+@router.delete("/{user_email}", description="Delete a user")
 def delete_user(
     user_email: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -118,9 +110,9 @@ def _delete_user_db(user_email: str, tenant_id: str) -> dict:
         return {"status": "OK"}
     except Exception:
         raise HTTPException(status_code=404, detail="User not found")
-    
-@router.post("",
-             description="Create a user")
+
+
+@router.post("", description="Create a user")
 async def create_user(
     request_data: CreateUserRequest,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -159,7 +151,7 @@ def _create_user_auth0(user_email: str, tenant_id: str, role: str) -> dict:
             "password": secrets.token_urlsafe(13),
             "email_verified": True,
             "app_metadata": {"keep_tenant_id": tenant_id, "keep_role": role},
-            "connection": "keep-users",  # TODO: move to env
+            "connection": os.environ.get("AUTH0_DB_NAME", "keep-users"),
         }
     )
     user_dto = User(
@@ -186,5 +178,3 @@ def _create_user_db(tenant_id: str, user_email: str, password: str, role: str) -
         )
     except Exception:
         raise HTTPException(status_code=409, detail="User already exists")
-
-
