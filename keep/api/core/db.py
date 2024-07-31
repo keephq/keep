@@ -16,7 +16,8 @@ from uuid import uuid4
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, null, update
+from sqlalchemy import and_, desc, null, update, cast
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload, aliased
 from sqlalchemy.orm.attributes import flag_modified
