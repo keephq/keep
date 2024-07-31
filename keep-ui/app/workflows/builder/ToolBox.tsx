@@ -1,55 +1,42 @@
-// ToolBox.tsx
 import React from 'react';
-import { useDrag } from 'react-dnd';
-// import { ItemType } from './constants'; // Define item types
 
-interface ToolBoxItemProps {
-  id: string;
-  name: string;
-  type: string;
-}
+const DragAndDropSidebar = () => {
 
-const ToolBoxItem: React.FC<ToolBoxItemProps> = ({ id, name, type }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'input',
-    item: { id, type, name },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }));
+  const handleDragStart = (event, nodeType) => {
+    event.dataTransfer.setData('application/reactflow', nodeType);
+    event.dataTransfer.effectAllowed = 'move';
+  };
 
   return (
     <div
-      ref={drag}
-      style={{
-        padding: 10,
-        border: '1px solid black',
-        borderRadius: 5,
-        marginBottom: 5,
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'move',
-      }}
+      className="sidebar"
     >
-      {name}
+      <div className="description">
+        You can drag these nodes to the pane on the right.
+      </div>
+      <div
+        className="dndnode input"
+        onDragStart={(event) => handleDragStart(event, 'custom')}
+        draggable
+      >
+        Input Node
+      </div>
+      <div
+        className="dndnode"
+        onDragStart={(event) => handleDragStart(event, 'custom')}
+        draggable
+      >
+        Default Node
+      </div>
+      <div
+        className="dndnode output"
+        onDragStart={(event) => handleDragStart(event, 'custom')}
+        draggable
+      >
+        Output Node
+      </div>
     </div>
   );
 };
 
-const ToolBox: React.FC = ({ toolboxConfiguration }: { toolboxConfiguration: { groups: Record<string, any> } }) => {
-  const { groups } = toolboxConfiguration;
-
-  return (
-    <div style={{ padding: 10, border: '1px solid black', borderRadius: 5, width: 250 }}>
-      {groups.map((group) => (
-        <div key={group.name}>
-          <h4>{group.name}</h4>
-          {group.steps.map((step) => (
-            <ToolBoxItem key={step.id} id={step.id} name={step.name} type={step.type} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export default ToolBox;
+export default DragAndDropSidebar;

@@ -39,6 +39,7 @@ import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
+import { ReactFlowProvider } from "@xyflow/react";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -350,16 +351,18 @@ function Builder({
           )}
           {useReactFlow && (
             <div className="w-full h-full m-2">
-              <ReactFlowBuilder
-                workflow={workflow}
-                loadedAlertFile={loadedAlertFile}
-                providers={providers}
-                toolboxConfiguration={getToolboxConfiguration(providers)}
-                globalEditor={<GlobalEditor />}
-                stepEditor={
-                  <StepEditor installedProviders={installedProviders} />
-                }
-              />
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  workflow={workflow}
+                  loadedAlertFile={loadedAlertFile}
+                  providers={providers}
+                  toolboxConfiguration={getToolboxConfiguration(providers)}
+                  globalEditor={<GlobalEditor />}
+                  stepEditor={
+                    <StepEditor installedProviders={installedProviders} />
+                  }
+                />
+                </ReactFlowProvider>
             </div>
           )}
           {!useReactFlow && (
