@@ -2064,7 +2064,19 @@ def get_alerts_data_for_incident(
     session: Optional[Session] = None
 ) -> dict:
 
+    """
+    Function to prepare aggregated data for incidents from the given list of alert_ids
+    Logic is wrapped to the inner function for better usability with an optional database session
+
+    Args:
+        alert_ids (list[str | UUID]): list of alert ids for aggregation
+        session (Optional[Session]): The database session or None
+
+    Returns: dict {sources: list[str], services: list[str], count: int}
+    """
+
     def inner(db_session: Session):
+
         fields = (
             get_json_extract_field(session, Alert.event, 'service'),
             Alert.provider_type
@@ -2162,6 +2174,7 @@ def remove_alerts_to_incident_by_incident_id(
         if not incident:
             return None
 
+        # Removing alerts-to-incident relation for provided alerts_ids
         deleted = (
             session.query(AlertToIncident)
             .where(
@@ -2173,10 +2186,13 @@ def remove_alerts_to_incident_by_incident_id(
         )
         session.commit()
 
+        # Getting aggregated data for incidents for alerts which just was removed
         alerts_data_for_incident = get_alerts_data_for_incident(alert_ids, session)
 
         service_field = get_json_extract_field(session, Alert.event, 'service')
 
+        # checking if services of removed alerts are still presented in alerts
+        # which still assigned with the incident
         services_existed = session.exec(
             session.query(func.distinct(service_field))
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
@@ -2186,6 +2202,8 @@ def remove_alerts_to_incident_by_incident_id(
             )
         ).scalars()
 
+        # checking if sources (providers) of removed alerts are still presented in alerts
+        # which still assigned with the incident
         sources_existed = session.exec(
             session.query(col(Alert.provider_type).distinct())
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
@@ -2195,11 +2213,13 @@ def remove_alerts_to_incident_by_incident_id(
             )
         ).scalars()
 
+        # Making lists of services and sources to remove from the incident
         services_to_remove = [service for service in alerts_data_for_incident["services"]
                               if service not in services_existed]
         sources_to_remove = [source for source in alerts_data_for_incident["sources"]
                              if source not in sources_existed]
 
+        # filtering removed entities from affected services and sources in the incident
         incident.affected_services = [service for service in incident.affected_services
                                       if service not in services_to_remove]
         incident.sources = [source for source in incident.sources
