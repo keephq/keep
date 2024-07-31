@@ -3,6 +3,7 @@ import datetime
 import json
 import re
 import urllib.parse
+from datetime import timedelta
 from itertools import groupby
 
 import pytz
@@ -10,7 +11,7 @@ from dateutil import parser
 from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
-from keep.api.core.db import get_alert_firing_time
+from keep.api.core.db import get_alert_firing_time, get_alerts_by_fingerprint
 
 _len = len
 _all = all
@@ -260,3 +261,57 @@ def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
         )
 
     return f"{result:.1f}"
+
+
+def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
+    """
+    Get the firing time of an alert.
+
+    Args:
+        alert (dict): The alert dictionary.
+        **kwargs: Additional keyword arguments.
+
+    Returns:
+        str: The firing time of the alert in the specified time unit.
+    """
+    tenant_id = kwargs.get("tenant_id")
+    if not tenant_id:
+        raise ValueError("tenant_id is required")
+
+    if not fingerprint:
+        raise ValueError("fingerprint is required")
+
+    prev_alerts = get_alerts_by_fingerprint(
+        tenant_id=tenant_id, fingerprint=fingerprint, limit=2, status="firing"
+    )
+
+    if not prev_alerts:
+        # this should not happen since workflows are running only after the alert is saved in the database
+        raise ValueError("No previous alerts found for the given fingerprint.")
+
+    # if there is only one alert, it is the first time 100%
+    if len(prev_alerts) == 1:
+        return True
+    # if there is more than one alert and no 'since' specified, it is not the first time
+    elif not since:
+        return False
+
+    # since is "24h" or "1d" or "1w" etc.
+    prevAlert = prev_alerts[1]
+
+    if since[-1] == "d":
+        time_delta = timedelta(days=int(since[:-1]))
+    elif since[-1] == "w":
+        time_delta = timedelta(weeks=int(since[:-1]))
+    elif since[-1] == "h":
+        time_delta = timedelta(hours=int(since[:-1]))
+    elif since[-1] == "m":
+        time_delta = timedelta(minutes=int(since[:-1]))
+    else:
+        raise ValueError("Invalid time unit. Use 'm', 'h', 'd', or 'w'.")
+
+    current_time = datetime.datetime.utcnow()
+    if current_time - prevAlert.timestamp > time_delta:
+        return True
+    else:
+        return False
