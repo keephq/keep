@@ -391,7 +391,7 @@ def setup_stress_alerts_no_elastic(db_session):
                 Alert(
                     timestamp=random_timestamp,
                     tenant_id=SINGLE_TENANT_UUID,
-                    provider_type="test",
+                    provider_type=detail['source'][0],
                     provider_id="test_{}".format(
                         i % 5
                     ),  # Cycle through 5 different provider_ids
@@ -424,7 +424,7 @@ def create_alert(db_session):
         details = details or {}
         alert = Alert(
             tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
+            provider_type=details["source"][0] if details and "source" in details else "test",
             provider_id="test",
             event={"fingerprint": fingerprint, "status": status.value, **details},
             fingerprint=fingerprint,

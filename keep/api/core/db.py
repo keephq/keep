@@ -16,7 +16,8 @@ from uuid import uuid4
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, func, null, update
+from sqlalchemy import and_, desc, func, null, update, cast
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload, aliased
 from sqlalchemy.orm.attributes import flag_modified
@@ -24,7 +25,7 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import expression
 from sqlmodel import Session, col, or_, select
 
-from keep.api.core.db_utils import create_db_engine
+from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
 from keep.api.models.alert import AlertStatus, IncidentDtoIn
@@ -1801,16 +1802,8 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
 
 def assign_alert_to_incident(
     alert_id: UUID, incident_id: UUID, tenant_id: str
-) -> AlertToIncident:
-    with Session(engine) as session:
-        assignment = AlertToIncident(
-            alert_id=alert_id, incident_id=incident_id, tenant_id=tenant_id
-        )
-        session.add(assignment)
-        session.commit()
-        session.refresh(assignment)
-
-    return assignment
+):
+    return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id])
 
 
 def get_incidents(tenant_id) -> List[Incident]:
@@ -2072,10 +2065,14 @@ def get_alerts_data_for_incident(
 ) -> dict:
 
     def inner(db_session: Session):
+        fields = (
+            get_json_extract_field(session, Alert.event, 'service'),
+            Alert.provider_type
+        )
+
         alerts_data = db_session.exec(
             select(
-                func.json_extract(Alert.event, '$.service').label("service"),
-                func.json_extract(Alert.event, '$.source').label("source")
+                *fields
             ).where(
                 col(Alert.id).in_(alert_ids),
             )
@@ -2086,7 +2083,7 @@ def get_alerts_data_for_incident(
 
         for (service, source) in alerts_data:
             if source:
-                sources.extend(json.loads(source))
+                sources.append(source)
             if service:
                 services.append(service)
 
@@ -2096,6 +2093,7 @@ def get_alerts_data_for_incident(
             "count": len(alerts_data)
         }
 
+    # Ensure that we have a session to execute the query. If not - make new one
     if not session:
         with Session(engine) as session:
             return inner(session)
@@ -2177,23 +2175,23 @@ def remove_alerts_to_incident_by_incident_id(
 
         alerts_data_for_incident = get_alerts_data_for_incident(alert_ids, session)
 
-        source_json_each_alias = aliased(func.json_each(Alert.event, '$.source').table_valued("value"))
+        service_field = get_json_extract_field(session, Alert.event, 'service')
 
         services_existed = session.exec(
-            session.query(func.distinct(func.json_extract(Alert.event, '$.service')))
+            session.query(func.distinct(service_field))
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
-                func.json_extract(Alert.event, '$.service').in_(alerts_data_for_incident["services"])
+                service_field.in_(alerts_data_for_incident["services"])
             )
         ).scalars()
 
         sources_existed = session.exec(
-            session.query(source_json_each_alias.c.value.distinct()).select_from(Alert)
+            session.query(col(Alert.provider_type).distinct())
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
-                source_json_each_alias.c.value.in_(alerts_data_for_incident["sources"])
+                col(Alert.provider_type).in_(alerts_data_for_incident["sources"])
             )
         ).scalars()
 

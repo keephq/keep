@@ -10,6 +10,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     remove_alerts_to_incident_by_incident_id,
 )
+from keep.api.core.db_utils import get_json_extract_field
 from keep.api.models.alert import AlertStatus
 from keep.api.models.db.alert import Alert
 
@@ -41,10 +42,12 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert sorted(incident.affected_services) == sorted(["service_{}".format(i) for i in range(10)])
     assert sorted(incident.sources) == sorted(["source_{}".format(i) for i in range(10)])
 
+    service_field = get_json_extract_field(db_session, Alert.event, 'service')
+
     service_0 = (
         db_session.query(Alert.id)
         .filter(
-            func.json_extract(Alert.event, "$.service") == "service_0"
+            service_field == "service_0"
         )
         .all()
     )
@@ -78,7 +81,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     source_1 = (
         db_session.query(Alert.id)
         .filter(
-            func.json_extract(Alert.event, "$.source") == '["source_1"]'
+            Alert.provider_type == "source_1"
         )
         .all()
     )
@@ -107,25 +110,3 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     assert len(incident.sources) == 8
     assert sorted(incident.sources) == sorted(["source_{}".format(i) for i in range(2, 10)])
-
-
-def test_remove_alert_with_multiple_source_from_incident(db_session, create_alert):
-    incident = create_incident_from_dict("keep", {"name": "test", "description": "test"})
-
-    timestamp = datetime.now(tz=pytz.utc)
-    alert1 = create_alert("fp1", AlertStatus.FIRING, timestamp, {"source": ["source_0", "source_1"]})
-    alert2 = create_alert("fp2", AlertStatus.FIRING, timestamp, {"source": ["source_1"]})
-
-    add_alerts_to_incident_by_incident_id("keep", incident.id, [alert1.id, alert2.id])
-
-    incident = get_incident_by_id("keep", incident.id)
-
-    assert len(incident.alerts) == 2
-    assert sorted(incident.sources) == sorted(["source_{}".format(i) for i in range(2)])
-
-    remove_alerts_to_incident_by_incident_id("keep", incident.id, [alert2.id])
-
-    incident = get_incident_by_id("keep", incident.id)
-
-    assert len(incident.alerts) == 1
-    assert sorted(incident.sources) == sorted(["source_{}".format(i) for i in range(2)])
