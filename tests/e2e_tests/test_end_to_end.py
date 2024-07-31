@@ -106,7 +106,8 @@ def test_providers_page_is_accessible(browser):
         # wait a bit
         browser.wait_for_selector("text=Connected", timeout=15000)
         # make sure the provider is connected
-        browser.get_by_text(f"resend id: {random_provider_name}").click()
+        # forcing the click to avoid subtree interception pointer events
+        browser.get_by_text(f"resend id: {random_provider_name}").click(force=True)
     except Exception:
         # Current file + test name for unique html and png dump.
         current_test_name = \
