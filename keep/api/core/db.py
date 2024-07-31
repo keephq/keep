@@ -964,7 +964,9 @@ def get_last_alerts(
     return alerts
 
 
-def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List[Alert]:
+def get_alerts_by_fingerprint(
+    tenant_id: str, fingerprint: str, limit=1, status=None
+) -> List[Alert]:
     """
     Get all alerts for a given fingerprint.
 
@@ -988,6 +990,9 @@ def get_alerts_by_fingerprint(tenant_id: str, fingerprint: str, limit=1) -> List
         query = query.filter(Alert.fingerprint == fingerprint)
 
         query = query.order_by(Alert.timestamp.desc())
+
+        if status:
+            query = query.filter(func.json_extract(Alert.event, "$.status") == status)
 
         if limit:
             query = query.limit(limit)

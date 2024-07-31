@@ -1,4 +1,4 @@
-import { Icon, Subtitle, Switch, Button } from "@tremor/react";
+import { Icon, Subtitle, Switch } from "@tremor/react";
 import { useEffect } from "react";
 import { MdDarkMode } from "react-icons/md";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -42,9 +42,9 @@ export default function DarkModeToggle() {
   }, [darkMode]);
 
   return (
-    <button
+    <label
+      htmlFor="dark-mode"
       className="flex items-center justify-between space-x-3 w-full text-sm p-1 text-slate-400 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group"
-      onClick={toggleDarkMode}
     >
       <span className="flex items-center justify-between">
         <Icon
@@ -53,7 +53,7 @@ export default function DarkModeToggle() {
         />
         <Subtitle className="ml-2">Dark Mode</Subtitle>
       </span>
-      <Switch color="orange" checked={darkMode} />
-    </button>
+      <Switch id="dark-mode" name="dark-mode" color="orange" onChange={toggleDarkMode} checked={darkMode} />
+    </label>
   );
 }

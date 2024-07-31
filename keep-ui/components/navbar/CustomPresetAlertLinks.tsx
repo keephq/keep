@@ -21,9 +21,11 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
+// Using dynamic import to avoid hydration issues with react-player
+import dynamic from 'next/dynamic'
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
-import ReactPlayer from "react-player";
 
 type PresetAlertProps = {
   preset: Preset;
