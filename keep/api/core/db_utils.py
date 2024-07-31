@@ -11,8 +11,7 @@ import os
 import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
-from sqlalchemy import func, cast
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import func
 from sqlmodel import create_engine
 
 # This import is required to create the tables
