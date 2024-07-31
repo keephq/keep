@@ -255,6 +255,8 @@ export const Search = () => {
     );
   };
 
+  const [placeholderText, setPlaceholderText] = useState("Search");
+
   // Using effect to avoid mismatch on hydration. TODO: context provider for user agent
   useEffect(function updatePlaceholderText() {
     if (!isMac()) {
