@@ -255,9 +255,13 @@ export const Search = () => {
     );
   };
 
-  const placeholderText = isMac()
-    ? "Search or start with ⌘K"
-    : "Search";
+  // Using effect to avoid mismatch on hydration. TODO: context provider for user agent
+  useEffect(function updatePlaceholderText() {
+    if (!isMac()) {
+      return;
+    }
+    setPlaceholderText("Search or start with ⌘K");
+  }, []);
 
   return (
     <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
