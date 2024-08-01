@@ -17,6 +17,7 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     default=[
         "keep.api.tasks.process_event_task.async_process_event",
         "keep.api.tasks.process_topology_task.async_process_topology",
+        "keep.api.tasks.process_incidents_task.async_process_incidents",
     ],
 )
 FUNCTIONS: list = (

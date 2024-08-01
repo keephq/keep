@@ -90,11 +90,11 @@ class AlertStatus(Enum):
 
 
 class IncidentSeverity(Enum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+    P4 = "P4"
+    P5 = "P5"
 
 
 class AlertDto(BaseModel):
@@ -363,6 +363,10 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
+
+    source_provider_id: str | None
+    source_provider_type: str | None
+    source_unique_identifier: str
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary

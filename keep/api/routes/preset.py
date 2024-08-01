@@ -20,9 +20,10 @@ from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incidents_task import process_incidents
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -60,18 +61,36 @@ def pull_data_from_providers(
             "tenant_id": tenant_id,
         }
 
-        logger.info(
-            f"Pulling alerts from provider {provider.type} ({provider.id})",
-            extra=extra,
-        )
-        sorted_provider_alerts_by_fingerprint = (
-            provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
-        )
+        try:
+            logger.info(
+                f"Pulling alerts from provider {provider.type} ({provider.id})",
+                extra=extra,
+            )
+            sorted_provider_alerts_by_fingerprint = (
+                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+            )
+            for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
+                process_event(
+                    {},
+                    tenant_id,
+                    provider.type,
+                    provider.id,
+                    fingerprint,
+                    None,
+                    trace_id,
+                    alert,
+                    notify_client=False,
+                )
+        except Exception as e:
+            logger.error(
+                f"Unknown error pulling alerts from provider {provider.type} ({provider.id})",
+                extra={**extra, "error": str(e)},
+            )
 
         try:
             if isinstance(provider_class, BaseTopologyProvider):
                 logger.info("Getting topology data", extra=extra)
-                topology_data = provider_class.get_topology_data(tenant_id=tenant_id)
+                topology_data = provider_class.get_topology()
                 logger.info("Got topology data, processing", extra=extra)
                 process_topology(tenant_id, topology_data, provider.id)
                 logger.info("Processed topology data", extra=extra)
@@ -86,17 +105,22 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
-        for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            process_event(
-                {},
-                tenant_id,
-                provider.type,
-                provider.id,
-                fingerprint,
-                None,
-                trace_id,
-                alert,
-                notify_client=False,
+        try:
+            if isinstance(provider_class, BaseIncidentProvider):
+                logger.info("Getting incidents from provider", extra=extra)
+                incidents = provider_class.pull_incidents()
+                logger.info("Got incidents, processing", extra=extra)
+                process_incidents(tenant_id, incidents)
+                logger.info("Processed incidents", extra=extra)
+        except NotImplementedError:
+            logger.warning(
+                f"Provider {provider.type} ({provider.id}) does not support incidents",
+                extra=extra,
+            )
+        except Exception as e:
+            logger.error(
+                f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
+                extra={**extra, "error": str(e)},
             )
 
 

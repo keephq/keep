@@ -101,6 +101,14 @@ class Incident(SQLModel, table=True):
     name: str
     description: str
 
+    # When we pull incidents from external providers, we need to know if this incident is already pulled by
+    # the same provider. If it is, we should update the incident instead of creating a new one.
+    # When it's a manually created incident, source_provider_id and source_provider_type will be None,
+    # and source_unique_identifier will just be something random (uuid).
+    source_provider_id: str | None
+    source_provider_type: str | None
+    source_unique_identifier: str = Field(default_factory=uuid4)
+
     assignee: str | None
 
     creation_time: datetime = Field(default_factory=datetime.utcnow)
@@ -125,6 +133,11 @@ class Incident(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
+        unique_together = [
+            "source_provider_id",
+            "source_provider_type",
+            "source_unique_identifier",
+        ]
 
 
 class Alert(SQLModel, table=True):

@@ -7,10 +7,16 @@ import uuid
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import (
+    AlertDto,
+    AlertSeverity,
+    AlertStatus,
+    IncidentDto,
+    IncidentSeverity,
+)
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -37,7 +43,7 @@ class PagerdutyProviderAuthConfig:
     )
 
 
-class PagerdutyProvider(BaseProvider):
+class PagerdutyProvider(BaseIncidentProvider):
     """Pull alerts and query incidents from PagerDuty."""
 
     PROVIDER_SCOPES = [
@@ -99,7 +105,7 @@ class PagerdutyProvider(BaseProvider):
                 "PagerdutyProvider requires either routing_key or api_key",
                 provider_id=self.provider_id,
             )
-        
+
     def validate_scopes(self):
         """
         Validate that the provider has the required scopes.
@@ -289,7 +295,7 @@ class PagerdutyProvider(BaseProvider):
             raise Exception("Could not create webhook")
         self.logger.info("Webhook created")
 
-    def _get_alerts(self) -> list[AlertDto]:
+    def pull_incidents(self) -> list[IncidentDto]:
         request = requests.get(
             "https://api.pagerduty.com/incidents",
             headers={
@@ -299,10 +305,32 @@ class PagerdutyProvider(BaseProvider):
         if not request.ok:
             self.logger.error("Failed to get alerts", extra=request.json())
             raise Exception("Could not get alerts")
-        incidents = request.json().get("incidents", [])
-        incidents = [
-            self._format_alert({"event": {"data": incident}}) for incident in incidents
-        ]
+        incidents = []
+        raw_incidents = request.json().get("incidents", [])
+        for raw_incident in raw_incidents:
+            incidents.append(
+                IncidentDto(
+                    id=uuid.uuid4(),
+                    name=raw_incident.get("title"),
+                    description=raw_incident.get("summary"),
+                    start_time=raw_incident.get("created_at"),
+                    end_time=raw_incident.get("resolved_at"),
+                    number_of_alerts=raw_incident.get("alert_counts", {}).get(
+                        "total", 0
+                    ),
+                    alert_sources=["pagerduty"],
+                    severity=IncidentSeverity[
+                        raw_incident.get("priority", {}).get("summary", "P5")
+                    ],
+                    services=[
+                        raw_incident.get("service", {}).get("summary", "unknown")
+                    ],
+                    is_predicted=False,
+                    source_provider_id=self.provider_id,
+                    source_provider_type="pagerduty",
+                    source_unique_identifier=raw_incident.get("id"),
+                )
+            )
         return incidents
 
     @staticmethod
@@ -347,7 +375,6 @@ class PagerdutyProvider(BaseProvider):
             "conference_bridge": conference_bridge,
             "impacted_services": service,
         }
-
 
         return AlertDto(
             **data,

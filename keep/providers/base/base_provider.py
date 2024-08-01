@@ -20,7 +20,7 @@ import requests
 
 from keep.api.bl.enrichments import EnrichmentsBl
 from keep.api.core.db import get_enrichments
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -589,3 +589,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
 class BaseTopologyProvider(BaseProvider):
     def get_topology(self) -> list[TopologyServiceInDto]:
         raise NotImplementedError("get_topology() method not implemented")
+
+
+class BaseIncidentProvider(BaseProvider):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    def pull_incidents() -> list[IncidentDto]:
+        """
+        Validate provider configuration.
+        """
+        raise NotImplementedError("validate_config() method not implemented")
