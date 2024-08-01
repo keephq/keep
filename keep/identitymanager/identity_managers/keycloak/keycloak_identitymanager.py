@@ -12,8 +12,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import (
     ALL_RESOURCES,
-    ALL_SCOPES,
     AuthVerifierBase,
+    get_all_scopes,
 )
 from keep.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
     KeycloakAuthVerifier,
@@ -59,7 +59,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         self.logger.info("Keycloak Identity Manager initialized")
 
     def on_start(self, app) -> None:
-        for scope in ALL_SCOPES:
+        for scope in get_all_scopes():
             self.create_scope(scope)
         for resource in ALL_RESOURCES:
             self.create_resource(resource)
