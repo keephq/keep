@@ -409,7 +409,7 @@ def process_event(
         # Pre alert formatting extraction rules
         enrichments_bl = EnrichmentsBl(tenant_id, session)
         try:
-            event = enrichments_bl.run_extraction_rules(event)
+            event = enrichments_bl.run_extraction_rules(event, pre=True)
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
