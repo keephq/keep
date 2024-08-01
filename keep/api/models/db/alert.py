@@ -107,7 +107,7 @@ class Incident(SQLModel, table=True):
     # and source_unique_identifier will just be something random (uuid).
     source_provider_id: str | None
     source_provider_type: str | None
-    source_unique_identifier: str = Field(default_factory=uuid4)
+    source_unique_identifier: str = Field(default_factory=lambda: str(uuid4()))
 
     assignee: str | None
 

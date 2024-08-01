@@ -43,7 +43,7 @@ if ee_enabled:
     from ee.experimental.incident_utils import mine_incidents  # noqa
 
 
-def __update_client_on_incident_change(
+def update_client_on_incident_change(
     pusher_client: Pusher | None, tenant_id: str, incident_id: str | None = None
 ):
     """
@@ -101,7 +101,7 @@ def create_incident_endpoint(
             "tenant_id": tenant_id,
         },
     )
-    __update_client_on_incident_change(pusher_client, tenant_id)
+    update_client_on_incident_change(pusher_client, tenant_id)
     return new_incident_dto
 
 
@@ -219,7 +219,7 @@ def delete_incident(
     deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Incident not found")
-    __update_client_on_incident_change(pusher_client, tenant_id)
+    update_client_on_incident_change(pusher_client, tenant_id)
     return Response(status_code=202)
 
 
@@ -288,7 +288,7 @@ def add_alerts_to_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
-    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+    update_client_on_incident_change(pusher_client, tenant_id, incident_id)
 
     return Response(status_code=202)
 

@@ -308,20 +308,33 @@ class PagerdutyProvider(BaseIncidentProvider):
         incidents = []
         raw_incidents = request.json().get("incidents", [])
         for raw_incident in raw_incidents:
+            start_time = raw_incident.get("created_at")
+            if start_time:
+                start_time = datetime.datetime.fromisoformat(start_time)
+            end_time = raw_incident.get("resolved_at")
+            if end_time:
+                end_time = datetime.datetime.fromisoformat(end_time)
+            assignees = ",".join(
+                [
+                    x.get("assignee", {}).get("summary")
+                    for x in raw_incident.get("assignments", [])
+                ]
+            )
             incidents.append(
                 IncidentDto(
                     id=uuid.uuid4(),
                     name=raw_incident.get("title"),
                     description=raw_incident.get("summary"),
-                    start_time=raw_incident.get("created_at"),
-                    end_time=raw_incident.get("resolved_at"),
+                    start_time=start_time,
+                    end_time=end_time,
                     number_of_alerts=raw_incident.get("alert_counts", {}).get(
                         "total", 0
                     ),
+                    assignee=assignees,
                     alert_sources=["pagerduty"],
                     severity=IncidentSeverity[
                         raw_incident.get("priority", {}).get("summary", "P5")
-                    ],
+                    ].value,
                     services=[
                         raw_incident.get("service", {}).get("summary", "unknown")
                     ],

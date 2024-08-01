@@ -1,8 +1,10 @@
 import logging
 
-from keep.api.core.db import create_incident_from_dto, get_session_sync
+from keep.api.core.db import get_session_sync
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import IncidentDto
 from keep.api.models.db.alert import Incident
+from keep.api.routes.incidents import update_client_on_incident_change
 
 logger = logging.getLogger(__name__)
 
@@ -14,15 +16,28 @@ def process_incidents(tenant_id: str, incidents: list[IncidentDto]):
         return
 
     session = get_session_sync()
+    pusher_client = get_pusher_client()
     for incident in incidents:
-        logger.info("Processing incident", extra={"incident": incident.dict()})
-        session.query(Incident).filter(
-            Incident.source_provider_id == incident.source_provider_id,
-            Incident.source_provider_type == incident.source_provider_type,
-            Incident.source_unique_identifier == incident.source_unique_identifier,
-        ).delete()
-        create_incident_from_dto(tenant_id, incident)
-        logger.info("Created incident", extra={"incident": incident.dict()})
+        with session.begin():
+            logger.info("Processing incident", extra={"incident": incident.dict()})
+            session.query(Incident).filter(
+                Incident.source_provider_id == incident.source_provider_id,
+                Incident.source_provider_type == incident.source_provider_type,
+                Incident.source_unique_identifier == incident.source_unique_identifier,
+            ).delete()
+            new_incident = Incident(
+                **incident.dict(), tenant_id=tenant_id, is_confirmed=True
+            )
+            session.add(new_incident)
+            session.commit()
+
+            try:
+                update_client_on_incident_change(pusher_client, tenant_id)
+            except Exception:
+                # We failed notifying the client but it's not that important atm
+                pass
+
+            logger.info("Created incident", extra={"incident": incident.dict()})
 
 
 async def async_process_incidents(*args, **kwargs):
