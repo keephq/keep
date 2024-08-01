@@ -75,7 +75,7 @@ class Auth0IdentityManager(BaseIdentityManager):
                 "password": secrets.token_urlsafe(13),
                 "email_verified": True,
                 "app_metadata": {"keep_tenant_id": tenant_id, "keep_role": role},
-                "connection": "keep-users",  # TODO: move to env
+                "connection": os.environ.get("AUTH0_DB_NAME", "keep-users"),
             }
         )
         user_dto = User(
