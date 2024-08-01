@@ -14,7 +14,7 @@ import {
   wrapDefinition,
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
-import StepEditor, { GlobalEditor } from "./editors";
+import StepEditor, { GlobalEditor, GlobalEditorV2 } from "./editors";
 import { Callout, Card, Switch } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
@@ -39,6 +39,7 @@ import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
+import { ReactFlowProvider } from "@xyflow/react";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -69,7 +70,7 @@ function Builder({
   installedProviders,
   isPreview,
 }: Props) {
-  const [useReactFlow, setUseReactFlow] = useState(false);
+  const [useReactFlow, setUseReactFlow] = useState(true);
 
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
@@ -291,6 +292,28 @@ function Builder({
     setUseReactFlow(value);
   };
 
+  const getworkflowStatus = () => {
+    return stepValidationError || globalValidationError ? (
+      <Callout
+        className="mt-2.5 mb-2.5"
+        title="Validation Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        {stepValidationError || globalValidationError}
+      </Callout>
+    ) : (
+      <Callout
+        className="mt-2.5 mb-2.5"
+        title="Schema Valid"
+        icon={CheckCircleIcon}
+        color="teal"
+      >
+        Alert can be generated successfully
+      </Callout>
+    );
+  };
+
   return (
     <>
       <div className="pl-4 flex items-center space-x-3">
@@ -329,53 +352,35 @@ function Builder({
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
-          {stepValidationError || globalValidationError ? (
-            <Callout
-              className="mt-2.5 mb-2.5"
-              title="Validation Error"
-              icon={ExclamationCircleIcon}
-              color="rose"
-            >
-              {stepValidationError || globalValidationError}
-            </Callout>
-          ) : (
-            <Callout
-              className="mt-2.5 mb-2.5"
-              title="Schema Valid"
-              icon={CheckCircleIcon}
-              color="teal"
-            >
-              Alert can be generated successfully
-            </Callout>
-          )}
+         {getworkflowStatus()}
           {useReactFlow && (
-            <div className="w-full h-full m-2">
-              <ReactFlowBuilder
-                workflow={workflow}
-                loadedAlertFile={loadedAlertFile}
-                providers={providers}
+            <div className="w-full h-full">
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  workflow={workflow}
+                  loadedAlertFile={loadedAlertFile}
+                  providers={providers}
+                  toolboxConfiguration={getToolboxConfiguration(providers)}
+                />
+              </ReactFlowProvider>
+              </div>
+          )}
+          {!useReactFlow && (
+            <>
+              <SequentialWorkflowDesigner
+                definition={definition}
+                onDefinitionChange={setDefinition}
+                stepsConfiguration={stepsConfiguration}
+                validatorConfiguration={validatorConfiguration}
                 toolboxConfiguration={getToolboxConfiguration(providers)}
+                undoStackSize={10}
+                controlBar={true}
                 globalEditor={<GlobalEditor />}
                 stepEditor={
                   <StepEditor installedProviders={installedProviders} />
                 }
               />
-            </div>
-          )}
-          {!useReactFlow && (
-            <SequentialWorkflowDesigner
-              definition={definition}
-              onDefinitionChange={setDefinition}
-              stepsConfiguration={stepsConfiguration}
-              validatorConfiguration={validatorConfiguration}
-              toolboxConfiguration={getToolboxConfiguration(providers)}
-              undoStackSize={10}
-              controlBar={true}
-              globalEditor={<GlobalEditor />}
-              stepEditor={
-                <StepEditor installedProviders={installedProviders} />
-              }
-            />
+            </>
           )}
         </>
       )}

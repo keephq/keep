@@ -3,23 +3,20 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
-  useReactFlow,
 } from '@xyflow/react';
+import type { EdgeProps } from '@xyflow/react';
+import useStore from './builder-store';
 
-interface CustomEdgeProps {
-  id: string;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
+interface CustomEdgeProps extends EdgeProps {
   label?: string;
+  type?: string;
 }
 
-const CustomEdge: React.FC<CustomEdgeProps> = ({ id, sourceX, sourceY, targetX, targetY, label }) => {
-  const { setEdges } = useReactFlow(); Provider
+const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, label }: CustomEdgeProps) => {
+  const { deleteEdges } = useStore();
 
   // Calculate the path and midpoint
-  const [edgePath] = getSmoothStepPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
@@ -30,9 +27,42 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({ id, sourceX, sourceY, targetX, 
   const midpointX = (sourceX + targetX) / 2;
   const midpointY = (sourceY + targetY) / 2;
 
+  const handleDelete = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteEdges(id);
+  };
+
   return (
     <>
-      <BaseEdge id={id} path={edgePath} />
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        className="stroke-gray-700 stroke-2" // Tailwind class for edge color and thickness
+      />
+      <defs>
+        <marker
+          id={`arrow-${id}`}
+          markerWidth="10"
+          markerHeight="10"
+          refX="10"
+          refY="5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M 0,0 L 10,5 L 0,10 L 3,5 Z"
+            fill="currentColor"
+            className="text-gray-700" // Tailwind class for arrow color
+          />
+        </marker>
+      </defs>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        className="stroke-gray-700 stroke-2"
+        style={{ markerEnd: `url(#arrow-${id})` }} // Add arrowhead
+      />
       <EdgeLabelRenderer>
         {!!label && (
           <div
@@ -46,17 +76,15 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({ id, sourceX, sourceY, targetX, 
           </div>
         )}
         <button
-          className="absolute bg-red-500 text-white rounded px-2 py-1 hover:bg-red-700"
           style={{
-            transform: `translate(${midpointX}px, ${midpointY + 20}px)`,
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            pointerEvents: 'all',
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log("Deleting edge with id:", id); // Debugging statement
-            setEdges((eds) => eds.filter((e) => e.id !== id));
-          }}
+          className="text-red-500 hover:text-red-700 focus:outline-none"
+          onClick={handleDelete}
         >
-          delete
+          ❌ {/* Unicode for delete icon */}
         </button>
       </EdgeLabelRenderer>
     </>
