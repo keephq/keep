@@ -6,7 +6,6 @@ import useStore, { FlowNode } from "./builder-store";
 import { HiOutlineDuplicate } from "react-icons/hi";
 import { IoMdSettings } from "react-icons/io";
 
-
 interface NodeMenuProps {
   node: FlowNode;
 }
@@ -16,7 +15,7 @@ export default function NodeMenu({ node }: NodeMenuProps) {
     e.stopPropagation();
   };
 
-  const { deleteNodes, duplicateNode } = useStore();
+  const { deleteNodes, duplicateNode, setSelectedNode, setStepEditorOpenForNode } = useStore();
 
   return (
     <>
@@ -79,7 +78,11 @@ export default function NodeMenu({ node }: NodeMenuProps) {
                 <Menu.Item>
                   {({ active }) => (
                     <button
-                      onClick={stopPropagation}
+                      onClick={(e) => {
+                        stopPropagation(e);
+                        setSelectedNode(node);
+                        setStepEditorOpenForNode(node.id);
+                      }}
                       className={`${
                         active ? "bg-slate-200" : "text-gray-900"
                       } group flex w-full items-center rounded-md px-2 py-2 text-xs`}

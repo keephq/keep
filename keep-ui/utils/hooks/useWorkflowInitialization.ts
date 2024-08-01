@@ -1,4 +1,10 @@
-import { useEffect, useState, useLayoutEffect, useRef, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Connection, Edge, Node, Position, useReactFlow } from "@xyflow/react";
 import dagre from "dagre";
 import { parseWorkflow, generateWorkflow } from "app/workflows/builder/utils";
@@ -6,13 +12,27 @@ import { v4 as uuidv4 } from "uuid";
 import { useSearchParams } from "next/navigation";
 import useStore from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
+import { Properties } from 'sequential-workflow-designer';
 
 const useWorkflowInitialization = (
   workflow: string,
   loadedAlertFile: string,
   providers: any[]
 ) => {
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onConnect, onDragOver, onDrop } = useStore();
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onDragOver,
+    onDrop,
+    setV2Properties,
+    openGlobalEditor,
+    selectedNode,
+  } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [alertName, setAlertName] = useState<string | null | undefined>(null);
@@ -33,8 +53,6 @@ const useWorkflowInitialization = (
     },
     [screenToFlowPosition]
   );
-
-  
 
   const newEdgesFromNodes = (nodes: FlowNode[]): Edge[] => {
     const edges: Edge[] = [];
@@ -84,7 +102,9 @@ const useWorkflowInitialization = (
       } else {
         parsedWorkflow = parseWorkflow(loadedAlertFile, providers);
       }
-      
+
+      console.log("parsedWorkflow=======>", parsedWorkflow);
+      setV2Properties(parsedWorkflow?.properties ?? {});
       let newNodes = processWorkflow(parsedWorkflow.sequence);
       let newEdges = newEdgesFromNodes(newNodes);
 
@@ -119,7 +139,7 @@ const useWorkflowInitialization = (
 
     nodes.forEach((node: FlowNode) => {
       const nodeWithPosition = dagreGraph.node(node.id);
-      node.targetPosition = "top" as Position; 
+      node.targetPosition = "top" as Position;
       node.sourcePosition = "bottom" as Position;
 
       node.position = {
@@ -160,28 +180,28 @@ const useWorkflowInitialization = (
 
     if (step.componentType === "switch") {
       const subflowId = uuidv4();
-    //   newNode = {
-    //     id: subflowId,
-    //     type: "custom",
-    //     position,
-    //     data: {
-    //       label: "Switch",
-    //       type: "sub_flow",
-    //     },
-    //     style: {
-    //       border: "2px solid orange",
-    //       width: "100%",
-    //       height: "100%",
-    //       display: "flex",
-    //       flexDirection: "column",
-    //       justifyContent: "space-between",
-    //     },
-    //     prevStepId: prevStepId,
-    //     parentId: parentId,
-    //   };
-    //   if (parentId) {
-    //     newNode.extent = "parent";
-    //   }
+      //   newNode = {
+      //     id: subflowId,
+      //     type: "custom",
+      //     position,
+      //     data: {
+      //       label: "Switch",
+      //       type: "sub_flow",
+      //     },
+      //     style: {
+      //       border: "2px solid orange",
+      //       width: "100%",
+      //       height: "100%",
+      //       display: "flex",
+      //       flexDirection: "column",
+      //       justifyContent: "space-between",
+      //     },
+      //     prevStepId: prevStepId,
+      //     parentId: parentId,
+      //   };
+      //   if (parentId) {
+      //     newNode.extent = "parent";
+      //   }
 
       // newNodes.push(newNode);
 
@@ -247,7 +267,8 @@ const useWorkflowInitialization = (
     onConnect: onConnect,
     onDragOver: onDragOver,
     onDrop: handleDrop,
-
+    openGlobalEditor,
+    selectedNode,
   };
 };
 

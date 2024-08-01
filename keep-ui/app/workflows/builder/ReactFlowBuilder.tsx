@@ -6,6 +6,8 @@ import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
 import "@xyflow/react/dist/style.css";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "app/providers/providers";
+import ReactFlowEditor from "./ReactFlowEditor";
+
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { "custom-edge": CustomEdge };
@@ -16,7 +18,7 @@ const ReactFlowBuilder = ({
   providers,
   toolboxConfiguration,
 }: {
-  workflow: string;
+  workflow: string | undefined;
   loadedAlertFile: string;
   providers: Provider[];
   toolboxConfiguration?: Record<string, any>;
@@ -34,7 +36,8 @@ const ReactFlowBuilder = ({
 
 
   return (
-    <div className="flex flex-col space-between gap-2 w-full h-full">
+    <div className="relative flex w-full h-full gap-2">
+      <DragAndDropSidebar toolboxConfiguration={toolboxConfiguration}/>
       {!isLoading && (
         <ReactFlow
           nodes={nodes}
@@ -52,7 +55,7 @@ const ReactFlowBuilder = ({
           <Background />
         </ReactFlow>
       )}
-      <DragAndDropSidebar />
+      <ReactFlowEditor />
     </div>
   );
 };

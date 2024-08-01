@@ -11,18 +11,29 @@ import {
   Node,
 } from "@xyflow/react";
 
+export type V2Properties = Record<string, any>;
+
+export type V2Step = {
+  id: string;
+  name?: string;
+  componentType: string;
+  type: string;
+  properties?: V2Properties;
+  branches?: {
+    "true"?: V2Step[];
+    "false"?: V2Step[];
+  };
+  sequence?: V2Step[] | V2Step;
+};
+
+export type NodeData = Node['data'] & Record<string, any>;
 export type FlowNode = Node & {
   prevStepId?: string;
   edge_label?: string;
-  data: Node["data"] & {
-    id: string;
-    type: string;
-    componentType: string;
-    name: string;
-  };
+  data: NodeData;
 };
 
-const initialNodes = [
+const initialNodes: FlowNode[] = [
   {
     id: "a",
     position: { x: 0, y: 0 },
@@ -43,7 +54,7 @@ const initialNodes = [
   },
 ];
 
-const initialEdges = [
+const initialEdges: Edge[] = [
   { id: "a->b", type: "custom-edge", source: "a", target: "b" },
   { id: "b->c", type: "custom-edge", source: "b", target: "c" },
 ];
@@ -51,6 +62,10 @@ const initialEdges = [
 export type FlowState = {
   nodes: FlowNode[];
   edges: Edge[];
+  selectedNode: FlowNode | null;
+  v2Properties: V2Properties;
+  openGlobalEditor: boolean;
+  stepEditorOpenForNode: string|null;
   onNodesChange: OnNodesChange<FlowNode>;
   onEdgesChange: OnEdgesChange<Edge>;
   onConnect: OnConnect;
@@ -70,13 +85,45 @@ export type FlowState = {
   deleteNodes: (ids: string | string[]) => void;
   updateNode: (node: FlowNode) => void;
   duplicateNode: (node: FlowNode) => void;
-  addNode: (node: Partial<FlowNode>) => void; // Add this function
-  createNode: (node: Partial<FlowNode>) => FlowNode;
+  // addNode: (node: Partial<FlowNode>) => void;
+  setSelectedNode: (node: FlowNode | null) => void;
+  setV2Properties: (properties: V2Properties) => void;
+  setOpneGlobalEditor: (open: boolean) => void;
+  // updateNodeData: (nodeId: string, key: string, value: any) => void;
+  updateSelectedNodeData: (key: string, value: any) => void;
+  updateV2Properties: (key: string, value: any) => void;
+  setStepEditorOpenForNode: (nodeId: string, open: boolean) => void;
 };
 
 const useStore = create<FlowState>((set, get) => ({
-  nodes: initialNodes as FlowNode[],
-  edges: initialEdges as Edge[],
+  nodes: initialNodes,
+  edges: initialEdges,
+  selectedNode: null,
+  v2Properties: {},
+  openGlobalEditor: true,
+  stepEditorOpenForNode: null,
+  setOpneGlobalEditor: (open) => set({ openGlobalEditor: open }),
+  updateSelectedNodeData: (key, value) => {
+    const currentSelectedNode = get().selectedNode;
+    if (currentSelectedNode) {
+      const updatedNodes = get().nodes.map((node) =>
+        node.id === currentSelectedNode.id
+          ? { ...node, data: { ...node.data, [key]: value } }
+          : node
+      );
+      set({ nodes: updatedNodes, selectedNode: { ...currentSelectedNode, data: { ...currentSelectedNode.data, [key]: value } } });
+    }
+  },
+  setV2Properties: (properties) => set({ v2Properties: properties }),
+  updateV2Properties: (key, value) => {
+    const updatedProperties = { ...get().v2Properties, [key]: value };
+    set({ v2Properties: updatedProperties });
+  },
+  setSelectedNode: (node) =>{ set({ selectedNode: node }); set({ openGlobalEditor: false }); },
+  setStepEditorOpenForNode: (nodeId:string) => {
+    set({openGlobalEditor: false});
+    set({ stepEditorOpenForNode: nodeId });
+  },
   onNodesChange: (changes) =>
     set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) =>
@@ -89,51 +136,37 @@ const useStore = create<FlowState>((set, get) => ({
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   },
-  // onDrop: (event, position) => {
-  //   event.preventDefault();
-  //   event.stopPropagation();
-
-  //   const nodeType = event.dataTransfer.getData('application/reactflow');
-  //   if (!nodeType) return;
-
-  //   const newUuid = uuidv4();
-  //   const newNode =  {
-  //     id: newUuid,
-  //     type: nodeType,
-  //     position: { x: position.x, y: position.y }, // Ensure position is an object with x and y
-  //     data: { label: `${nodeType} node`, type: nodeType, name: `${nodeType} node`, componentType: nodeType, id: newUuid },
-  //   };
-  //  set({ nodes: [...get().nodes, newNode] });
-  // },
   onDrop: (event, screenToFlowPosition) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const nodeType = event.dataTransfer.getData("application/reactflow");
+    try {
+      let step: any = event.dataTransfer.getData("application/reactflow");
+      step = JSON.parse(step);
+      console.log("nodeType=======>", step);
+      if (!step) return;
 
-    console.log("nodeType=======>", nodeType)
-    if (!nodeType) return;
-
-    // Use the screenToFlowPosition function to get flow coordinates
-    const position = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-    const newUuid = uuidv4();
-    const newNode = {
-      id: newUuid,
-      type: nodeType,
-      position, // Use the position object with x and y
-      data: {
-        label: `${nodeType} node`,
-        type: nodeType,
-        name: `${nodeType} node`,
-        componentType: nodeType,
+      // Use the screenToFlowPosition function to get flow coordinates
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const newUuid = uuidv4();
+      const newNode: FlowNode = {
         id: newUuid,
-      },
-    };
+        type: "custom",
+        position, // Use the position object with x and y
+        data: {
+          label: step.name! as string,
+          ...step,
+          id: newUuid,
+        },
+      };
 
-    set({ nodes: [...get().nodes, newNode] });
+      set({ nodes: [...get().nodes, newNode] });
+    } catch (err) {
+      console.error(err);
+    }
   },
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -152,7 +185,7 @@ const useStore = create<FlowState>((set, get) => ({
   duplicateNode: (node) => {
     const { data, position } = node;
     const newUuid = uuidv4();
-    const newNode = {
+    const newNode: FlowNode = {
       ...node,
       data: { ...data, id: newUuid },
       id: newUuid,
@@ -160,43 +193,22 @@ const useStore = create<FlowState>((set, get) => ({
     };
     set({ nodes: [...get().nodes, newNode] });
   },
-  addNode: (node: Partial<FlowNode>) => {
-    const newUuid = uuidv4();
-    // console.log("node in addNode", node);
-    const newNode = {
-      ...node,
-      id: uuidv4(),
-      type: "custom",
-      data: {
-        type: "custom",
-        componentType: "custom",
-        name: "custom",
-        ...(node?.data ?? {}),
-        id: newUuid,
-      },
-    };
-    const newNodes = [...get().nodes, newNode];
-    // console.log("newNodes in add Node", newNodes , newNode);
-    set({
-      nodes: newNodes,
-    });
-  },
-  createNode: (node: Partial<FlowNode>) => {
-    const newUuid = uuidv4();
-    const newNode = {
-      type: "custom",
-      data: {
-        type: "custom",
-        componentType: "custom",
-        name: "custom",
-        ...(node?.data ?? {}),
-        id: newUuid,
-      },
-      ...node,
-      id: newUuid,
-    };
-    return newNode;
-  },
+  // addNode: (node) => {
+  //   const newUuid = uuidv4();
+  //   const newNode: FlowNode = {
+  //     ...node,
+  //     id: newUuid,
+  //     type: "custom",
+  //     data: {
+  //       type: "custom",
+  //       componentType: "custom",
+  //       name: "custom",
+  //       ...(node?.data ?? {}),
+  //       id: newUuid,
+  //     },
+  //   };
+  //   set({ nodes: [...get().nodes, newNode] });
+  // },
 }));
 
 export default useStore;
