@@ -410,6 +410,11 @@ class OpenobserveProvider(BaseProvider):
         )
         # calculate fingerprint based on name + environment + event keys (e.g. host)
         fingerprint_fields = ["name", "environment", *event.keys()]
+        # remove 'value' as its too dynamic
+        try:
+            fingerprint_fields.remove("value")
+        except ValueError:
+            pass
         logger.info(
             "Calculating fingerprint fields",
             extra={"fingerprint_fields": fingerprint_fields},
