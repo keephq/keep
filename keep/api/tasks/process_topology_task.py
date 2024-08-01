@@ -16,14 +16,14 @@ TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failur
 def process_topology(
     tenant_id: str, topology_data: list[TopologyServiceInDto], provider_id: str
 ):
-    session = get_session_sync()
-
     if not topology_data:
         logger.info(
             "No topology data to process",
             extra={"provider_id": provider_id, "tenant_id": tenant_id},
         )
         return
+
+    session = get_session_sync()
 
     try:
         logger.info(

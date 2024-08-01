@@ -587,5 +587,5 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
 
 class BaseTopologyProvider(BaseProvider):
-    def get_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> list[TopologyServiceInDto]:
         raise NotImplementedError("get_topology() method not implemented")

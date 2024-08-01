@@ -933,7 +933,7 @@ class DatadogProvider(BaseTopologyProvider):
         ).hexdigest()
         return simulated_alert
 
-    def get_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> list[TopologyServiceInDto]:
         services = {}
         with ApiClient(self.configuration) as api_client:
             api_instance = ServiceDefinitionApi(api_client)
@@ -1007,5 +1007,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.get_topology()
+    result = provider.pull_topology()
     print(result)

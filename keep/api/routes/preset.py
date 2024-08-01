@@ -71,7 +71,7 @@ def pull_data_from_providers(
         try:
             if isinstance(provider_class, BaseTopologyProvider):
                 logger.info("Getting topology data", extra=extra)
-                topology_data = provider_class.get_topology_data(tenant_id=tenant_id)
+                topology_data = provider_class.pull_topology()
                 logger.info("Got topology data, processing", extra=extra)
                 process_topology(tenant_id, topology_data, provider.id)
                 logger.info("Processed topology data", extra=extra)
