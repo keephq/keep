@@ -26,6 +26,7 @@ import Modal from "@/components/ui/Modal";
 import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
 import React from "react";
 import "./multiselect.css";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   accessToken: string;
@@ -42,7 +43,7 @@ interface ScopeMatrix {
 export default function RolesTab({ accessToken }: Props) {
   const apiUrl = getApiURL();
   const { data: configData } = useConfig();
-  const { data: scopes, isLoading: scopesLoading, error: scopesError } = useScopes();
+  const { data: scopes = [] , isLoading: scopesLoading, error: scopesError } = useScopes();
   const { data: roles = [], isLoading: rolesLoading, error: rolesError, mutate: mutateRoles } = useRoles();
 
   const [resources, setResources] = useState<string[]>([]);
@@ -51,6 +52,7 @@ export default function RolesTab({ accessToken }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newRoleScopes, setNewRoleScopes] = useState<{ [key: string]: ScopeMatrix }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hoveredRole, setHoveredRole] = useState<string | null>(null);
 
   const { control, handleSubmit, reset, formState: { errors }, setError, clearErrors } = useForm();
 
@@ -110,6 +112,12 @@ export default function RolesTab({ accessToken }: Props) {
     await mutateRoles();
     setHasChanges(false);
   };
+
+  const deleteRole = async (roleName: string) => {
+    // Implement the logic to delete a role
+    console.log("Deleting role:", roleName);
+    await mutateRoles();
+  }
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     setIsSubmitting(true);
@@ -197,44 +205,70 @@ export default function RolesTab({ accessToken }: Props) {
               <TableHeaderCell className="w-1/6">Role Name</TableHeaderCell>
               <TableHeaderCell className="w-1/6">Description</TableHeaderCell>
               <TableHeaderCell className="w-2/3">Scopes</TableHeaderCell>
+              <TableHeaderCell className="w-1/12"></TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {roles.map((role) => (
-              <TableRow key={role.name}>
-                <TableCell className="w-1/6">
-                  <div className="flex items-center justify-between">
-                    <Text className="truncate">{role.name}</Text>
-                    {role.predefined && (
-                      <Badge color="orange" className="ml-2">Predefined</Badge>
+            {roles
+              .sort((a, b) => {
+                if (a.predefined === b.predefined) return 0;
+                return a.predefined ? -1 : 1;
+              })
+              .map((role) => (
+                <TableRow
+                  key={role.name}
+                  className="hover:bg-gray-50 transition-colors duration-200"
+                  onMouseEnter={() => setHoveredRole(role.name)}
+                  onMouseLeave={() => setHoveredRole(null)}
+                >
+                  <TableCell className="w-1/6">
+                    <div className="flex items-center justify-between">
+                      <Text className="truncate">{role.name}</Text>
+                      {role.predefined ? (
+                        <Badge color="orange" className="ml-2 w-24 text-center">Predefined</Badge>
+                      ) : (
+                        <Badge color="orange" className="ml-2 w-24 text-center">Custom</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-1/6">
+                    <Text>{role.description}</Text>
+                  </TableCell>
+                  <TableCell className="text-right w-2/3">
+                    <div className="flex items-center justify-between">
+                      <div className="max-h-60 flex-grow">
+                        <MultiSelect
+                          placeholder="Select scopes"
+                          className="custom-multiselect"
+                          value={roleStates[role.name]?.scopes || []}
+                          onValueChange={(value) => handleScopeChange(role.name, value)}
+                          disabled={role.predefined}
+                        >
+                          {expandedScopes.map((scope) => (
+                            <MultiSelectItem
+                              key={scope}
+                              value={scope}
+                            >
+                              {scope}
+                            </MultiSelectItem>
+                          ))}
+                        </MultiSelect>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-1/12">
+                    {!role.predefined && hoveredRole === role.name && (
+                      <Button
+                        icon={TrashIcon}
+                        color="orange"
+                        title="Delete role"
+                        onClick={async () => await deleteRole(role.name)}
+                        className="ml-2"
+                        size="xs"
+                      ></Button>
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="w-1/6">
-                  <Text>{role.description}</Text>
-                </TableCell>
-                <TableCell className="text-right w-2/3">
-  <div className="max-h-60 overflow-y-auto">
-    <MultiSelect
-      placeholder="Select scopes"
-      className="custom-multiselect"
-
-      value={roleStates[role.name]?.scopes || []}
-      onValueChange={(value) => handleScopeChange(role.name, value)}
-      disabled={role.predefined}
-    >
-      {expandedScopes.map((scope) => (
-        <MultiSelectItem
-          key={scope}
-          value={scope}
-        >
-          {scope}
-        </MultiSelectItem>
-      ))}
-    </MultiSelect>
-  </div>
-</TableCell>
-              </TableRow>
+                  </TableCell>
+                </TableRow>
             ))}
           </TableBody>
         </Table>

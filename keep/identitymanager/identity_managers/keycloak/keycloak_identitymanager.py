@@ -65,9 +65,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.create_resource(resource)
         for role in PREDEFINED_ROLES:
             role_id = self.create_role(role, predefined=True)
-            policy_id = self.create_role_policy(
-                role_id, role["name"], role["description"]
-            )
+            policy_id = self.create_role_policy(role_id, role.name, role.description)
             self.create_scope_based_permission(role, policy_id)
 
     def _scope_name_to_id(self, all_scopes, scope_name: str) -> str:
@@ -87,9 +85,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
             )
             return [scope["id"]]
 
-    def create_scope_based_permission(self, role: dict, policy_id: str) -> None:
+    def create_scope_based_permission(self, role: Role, policy_id: str) -> None:
         try:
-            scopes = role.get("scopes", [])
+            scopes = role.scopes
             all_scopes = self.keycloak_admin.get_client_authz_scopes(self.client_id)
             scopes_ids = set()
             for scope in scopes:
@@ -98,7 +96,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             resp = self.keycloak_admin.create_client_authz_scope_permission(
                 client_id=self.client_id,
                 payload={
-                    "name": f"Permission for {role['name']}",
+                    "name": f"Permission for {role.name}",
                     "scopes": list(scopes_ids),
                     "policies": [policy_id],
                     "resources": [],
@@ -133,13 +131,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to create scopes in Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to create scopes")
 
-    def create_role(self, role: dict, predefined=False) -> str:
+    def create_role(self, role: Role, predefined=False) -> str:
         try:
             role_name = self.keycloak_admin.create_client_role(
                 self.client_id,
                 {
-                    "name": role["name"],
-                    "description": f"Role for {role['name']}",
+                    "name": role.name,
+                    "description": f"Role for {role.name}",
                     # we will use this to identify the role as predefined
                     "attributes": {
                         "predefined": [str(predefined).lower()],
@@ -727,7 +725,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     scopes=set([]),  # will populate this later
                     predefined=(
                         True
-                        if role.get("attributes", {}).get("predefined", None)
+                        if role.get("attributes", {}).get("predefined", ["false"])[0]
+                        == "true"
                         else False
                     ),
                 )

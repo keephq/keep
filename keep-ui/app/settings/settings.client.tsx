@@ -104,7 +104,7 @@ export default function SettingsPage() {
             SMTP
           </Tab>
         </TabList>
-        <TabPanels className="flex-grow overflow-auto">
+        <TabPanels className="flex-grow overflow-hidden">
           <TabPanel className="h-full">
             <TabGroup index={userSubTabIndex} className="h-full flex flex-col">
               <TabList color="orange">
@@ -127,7 +127,7 @@ export default function SettingsPage() {
                   SSO
                 </Tab>
               </TabList>
-              <TabPanels className="flex-grow overflow-auto">
+              <TabPanels className="flex-grow overflow-hidden">
                 <TabPanel className="h-full mt-6">
                   <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
                 </TabPanel>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   <GroupsTab accessToken={session?.accessToken!} />
-                </TabPanel>
+              </TabPanel>
                 <TabPanel className="h-full mt-6">
                   <RolesTab accessToken={session?.accessToken!} />
                 </TabPanel>

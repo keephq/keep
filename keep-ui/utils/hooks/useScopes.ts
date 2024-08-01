@@ -9,7 +9,7 @@ export const useScopes = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  return useSWRImmutable<Scope[]>(
+  return useSWRImmutable<string[]>(
     () => (session ? `${apiUrl}/auth/permissions/scopes` : null),
     (url) => fetcher(url, session?.accessToken),
     options
