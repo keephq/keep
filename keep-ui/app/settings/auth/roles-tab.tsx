@@ -25,6 +25,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import Modal from "@/components/ui/Modal";
 import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
 import React from "react";
+import "./multiselect.css";
 
 interface Props {
   accessToken: string;
@@ -194,8 +195,8 @@ export default function RolesTab({ accessToken }: Props) {
           <TableHead>
             <TableRow>
               <TableHeaderCell className="w-1/6">Role Name</TableHeaderCell>
-              <TableHeaderCell className="w-1/3">Description</TableHeaderCell>
-              <TableHeaderCell className="w-1/2 text-right">Scopes</TableHeaderCell>
+              <TableHeaderCell className="w-1/6">Description</TableHeaderCell>
+              <TableHeaderCell className="w-2/3">Scopes</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -209,23 +210,30 @@ export default function RolesTab({ accessToken }: Props) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="w-1/3">
+                <TableCell className="w-1/6">
                   <Text>{role.description}</Text>
                 </TableCell>
-                <TableCell className="text-right w-1/2">
-                  <MultiSelect
-                    placeholder="Select scopes"
-                    value={roleStates[role.name]?.scopes || []}
-                    onValueChange={(value) => handleScopeChange(role.name, value)}
-                    disabled={role.predefined}
-                  >
-                    {expandedScopes.map((scope) => (
-                      <MultiSelectItem key={scope} value={scope}>
-                        {scope}
-                      </MultiSelectItem>
-                    ))}
-                  </MultiSelect>
-                </TableCell>
+                <TableCell className="text-right w-2/3">
+  <div className="max-h-60 overflow-y-auto">
+    <MultiSelect
+      placeholder="Select scopes"
+      className="custom-multiselect"
+
+      value={roleStates[role.name]?.scopes || []}
+      onValueChange={(value) => handleScopeChange(role.name, value)}
+      disabled={role.predefined}
+    >
+      {expandedScopes.map((scope) => (
+        <MultiSelectItem
+          key={scope}
+          value={scope}
+        >
+          {scope}
+        </MultiSelectItem>
+      ))}
+    </MultiSelect>
+  </div>
+</TableCell>
               </TableRow>
             ))}
           </TableBody>

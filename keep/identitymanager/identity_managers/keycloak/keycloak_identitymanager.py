@@ -1,6 +1,7 @@
 import json
 import os
 
+import requests
 from fastapi import HTTPException
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
 from keycloak.openid_connection import KeycloakOpenIDConnection
@@ -58,79 +59,143 @@ class KeycloakIdentityManager(BaseIdentityManager):
         self.logger.info("Keycloak Identity Manager initialized")
 
     def on_start(self, app) -> None:
-        """
-        Initialize the keycloak identity manager.
-
-        Do all the necessary setup for Keycloak.
-        """
-        # 1. make sure all scopes are created, and if not, create them
         for scope in ALL_SCOPES:
-            try:
-                self.keycloak_admin.create_client_authz_scopes(
-                    self.client_id,
-                    {
-                        "name": scope,
-                        "displayName": f"Scope for {scope}",
-                    },
-                )
-            except KeycloakPostError as e:
-                self.logger.error("Failed to create scopes in Keycloak: %s", str(e))
-                raise HTTPException(status_code=500, detail="Failed to create scopes")
-        # 2. create all generic resources (preset, dashboard, alert, etc)
+            self.create_scope(scope)
         for resource in ALL_RESOURCES:
-            try:
-                self.keycloak_admin.create_client_authz_resource(
-                    self.client_id,
-                    {
-                        "name": resource,
-                        "displayName": f"Generic resource for {resource}",
-                        "type": "urn:keep:resources:" + resource,
-                        "scopes": [],
-                    },
-                )
-            except KeycloakPostError as e:
-                if "already exists" in str(e):
-                    self.logger.info("Resource already exists in Keycloak")
-                    # its ok!
-                    pass
-                else:
-                    self.logger.error(
-                        "Failed to create resources in Keycloak: %s", str(e)
-                    )
-                    raise HTTPException(
-                        status_code=500, detail="Failed to create resources"
-                    )
-        # 3. make sure all static roles are created, and if not, create them
+            self.create_resource(resource)
         for role in PREDEFINED_ROLES:
-            try:
-                role_name = self.keycloak_admin.create_client_role(
-                    self.client_id,
-                    {
-                        "name": role["name"],
-                        "description": f"Role for {role['name']}",
-                        # we will use this to identify the role as predefined
-                        "attributes": {
-                            "predefined": ["true"],
-                        },
-                    },
-                    skip_exists=True,
+            role_id = self.create_role(role, predefined=True)
+            policy_id = self.create_role_policy(
+                role_id, role["name"], role["description"]
+            )
+            self.create_scope_based_permission(role, policy_id)
+
+    def _scope_name_to_id(self, all_scopes, scope_name: str) -> str:
+        # if its ":*":
+        if scope_name.split(":")[1] == "*":
+            scope_verb = scope_name.split(":")[0]
+            scope_ids = [
+                scope["id"]
+                for scope in all_scopes
+                if scope["name"].startswith(scope_verb)
+            ]
+            return scope_ids
+        else:
+            scope = next(
+                (scope for scope in all_scopes if scope["name"] == scope_name),
+                None,
+            )
+            return [scope["id"]]
+
+    def create_scope_based_permission(self, role: dict, policy_id: str) -> None:
+        try:
+            scopes = role.get("scopes", [])
+            all_scopes = self.keycloak_admin.get_client_authz_scopes(self.client_id)
+            scopes_ids = set()
+            for scope in scopes:
+                scope_ids = self._scope_name_to_id(all_scopes, scope)
+                scopes_ids.update(scope_ids)
+            resp = self.keycloak_admin.create_client_authz_scope_permission(
+                client_id=self.client_id,
+                payload={
+                    "name": f"Permission for {role['name']}",
+                    "scopes": list(scopes_ids),
+                    "policies": [policy_id],
+                    "resources": [],
+                    "decisionStrategy": "Affirmative".upper(),
+                    "type": "scope",
+                    "logic": "POSITIVE",
+                },
+            )
+            return resp
+        except KeycloakPostError as e:
+            if "already exists" in str(e):
+                self.logger.info("Scope based permission already exists in Keycloak")
+                pass
+            else:
+                self.logger.error(
+                    "Failed to create scope based permission in Keycloak: %s", str(e)
                 )
-                # create the policy for the role
+                raise HTTPException(
+                    status_code=500, detail="Failed to create scope based permission"
+                )
 
-                # create the scope-permission for the role and policy
+    def create_scope(self, scope: str) -> None:
+        try:
+            self.keycloak_admin.create_client_authz_scopes(
+                self.client_id,
+                {
+                    "name": scope,
+                    "displayName": f"Scope for {scope}",
+                },
+            )
+        except KeycloakPostError as e:
+            self.logger.error("Failed to create scopes in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to create scopes")
 
-                # finally return
-                return role_name
-            except KeycloakPostError as e:
-                if "already exists" in str(e):
-                    self.logger.info("Role already exists in Keycloak")
-                    # its ok!
-                    pass
-                else:
-                    self.logger.error("Failed to create roles in Keycloak: %s", str(e))
-                    raise HTTPException(
-                        status_code=500, detail="Failed to create roles"
-                    )
+    def create_role(self, role: dict, predefined=False) -> str:
+        try:
+            role_name = self.keycloak_admin.create_client_role(
+                self.client_id,
+                {
+                    "name": role["name"],
+                    "description": f"Role for {role['name']}",
+                    # we will use this to identify the role as predefined
+                    "attributes": {
+                        "predefined": [str(predefined).lower()],
+                    },
+                },
+                skip_exists=True,
+            )
+            role_id = self.keycloak_admin.get_client_role_id(self.client_id, role_name)
+            return role_id
+        except KeycloakPostError as e:
+            if "already exists" in str(e):
+                self.logger.info("Role already exists in Keycloak")
+                # its ok!
+                pass
+            else:
+                self.logger.error("Failed to create roles in Keycloak: %s", str(e))
+                raise HTTPException(status_code=500, detail="Failed to create roles")
+
+    def create_role_policy(self, role_id: str, role_name: str, role_description) -> str:
+        try:
+            resp = self.keycloak_admin.connection.raw_post(
+                f"{self.admin_url}/authz/resource-server/policy/role",
+                data=json.dumps(
+                    {
+                        "name": f"Allow {role_name} to {role_description}",
+                        "description": f"Allow {role_name} to {role_description}",  # future use
+                        "roles": [{"id": role_id, "required": False}],
+                        "logic": "POSITIVE",
+                        "fetchRoles": False,
+                    }
+                ),
+            )
+            resp.raise_for_status()
+            resp = resp.json()
+            return resp.get("id")
+        except requests.exceptions.HTTPError as e:
+            if "Conflict" in str(e):
+                self.logger.info("Policy already exists in Keycloak")
+                # get its id
+                policies = self.get_policies()
+                # find by name
+                policy = next(
+                    (
+                        policy
+                        for policy in policies
+                        if policy["name"] == f"Allow {role_name} to {role_description}"
+                    ),
+                    None,
+                )
+                return policy["id"]
+            else:
+                self.logger.error("Failed to create policies in Keycloak: %s", str(e))
+                raise HTTPException(status_code=500, detail="Failed to create policies")
+        except Exception as e:
+            self.logger.error("Failed to create policies in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to create policies")
 
     @property
     def support_sso(self) -> bool:
@@ -213,22 +278,22 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def get_auth_verifier(self, scopes: list) -> AuthVerifierBase:
         return KeycloakAuthVerifier(scopes)
 
-    def create_resource(
-        self, resource_id: str, resource_name: str, scopes: list[str] = []
-    ) -> None:
+    def create_resource(self, resource_name: str, scopes: list[str] = []) -> None:
         resource = {
             "name": resource_name,
-            "type": "urn:your-app:resources:" + resource_name,
-            "uris": ["/" + resource_name + "/" + resource_id],
+            "displayName": f"Resource for {resource_name}",
+            "type": "urn:keep:resources:" + resource_name,
             "scopes": [{"name": scope} for scope in scopes],
         }
         try:
-            self.keycloak_admin.create_client_authz_resource(
-                os.environ["KEYCLOAK_CLIENT_ID"], resource
-            )
+            self.keycloak_admin.create_client_authz_resource(self.client_id, resource)
         except KeycloakPostError as e:
-            self.logger.error("Failed to create resource in Keycloak: %s", str(e))
-            raise HTTPException(status_code=500, detail="Failed to create resource")
+            if "already exists" in str(e):
+                self.logger.info("Resource already exists in Keycloak")
+                pass
+            else:
+                self.logger.error("Failed to create resource in Keycloak: %s", str(e))
+                raise HTTPException(status_code=500, detail="Failed to create resource")
 
     def delete_resource(self, resource_id: str) -> None:
         try:
@@ -334,6 +399,75 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to fetch groups from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch groups")
 
+    def create_user_policy(self, perm, permission: ResourcePermission) -> None:
+        # we need the user id from email:
+        # TODO: this is not efficient, we should cache this
+        users = self.keycloak_admin.get_users({})
+        user = next(
+            (user for user in users if user["email"] == perm.id),
+            None,
+        )
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        resp = self.keycloak_admin.connection.raw_post(
+            f"{self.admin_url}/authz/resource-server/policy/user",
+            data=json.dumps(
+                {
+                    "name": f"Allow user {user.get('id')} to access resource type {permission.resource_type} with name {permission.resource_name}",
+                    "description": json.dumps(
+                        {
+                            "user_id": user.get("id"),
+                            "user_email": user.get("email"),
+                            "resource_id": permission.resource_id,
+                        }
+                    ),
+                    "logic": "POSITIVE",
+                    "users": [user.get("id")],
+                }
+            ),
+        )
+        try:
+            resp.raise_for_status()
+        # 409 is ok, it means the policy already exists
+        except Exception as e:
+            if resp.status_code != 409:
+                raise e
+            # just continue to next policy
+            else:
+                return None
+        policy_id = resp.json().get("id")
+        return policy_id
+
+    def create_group_policy(self, perm, permission: ResourcePermission) -> None:
+        resp = self.keycloak_admin.connection.raw_post(
+            f"{self.admin_url}/authz/resource-server/policy/group",
+            data=json.dumps(
+                {
+                    "name": f"Allow group {perm.id} to access resource type {permission.resource_type} with name {permission.resource_name}",
+                    "description": json.dumps(
+                        {
+                            "group_id": perm.id,
+                            "resource_id": permission.resource_id,
+                        }
+                    ),
+                    "logic": "POSITIVE",
+                    "groups": [{"id": perm.id, "extendChildren": False}],
+                    "groupsClaim": "",
+                }
+            ),
+        )
+        try:
+            resp.raise_for_status()
+        # 409 is ok, it means the policy already exists
+        except Exception as e:
+            if resp.status_code != 409:
+                raise e
+            # just continue to next policy
+            else:
+                return None
+        policy_id = resp.json().get("id")
+        return policy_id
+
     def create_permissions(self, permissions: list[ResourcePermission]) -> None:
         try:
             existing_permissions = self.keycloak_admin.get_client_authz_permissions(
@@ -359,75 +493,18 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 for perm in permission.permissions:
                     try:
                         if perm.type == "user":
-                            # we need the user id from email:
-                            # TODO: this is not efficient, we should cache this
-                            users = self.keycloak_admin.get_users({})
-                            user = next(
-                                (user for user in users if user["email"] == perm.id),
-                                None,
-                            )
-                            if not user:
-                                raise HTTPException(
-                                    status_code=400, detail="User not found"
-                                )
-                            resp = self.keycloak_admin.connection.raw_post(
-                                f"{self.admin_url}/authz/resource-server/policy/user",
-                                data=json.dumps(
-                                    {
-                                        "name": f"Allow user {user.get('id')} to access resource type {permission.resource_type} with name {permission.resource_name}",
-                                        "description": json.dumps(
-                                            {
-                                                "user_id": user.get("id"),
-                                                "user_email": user.get("email"),
-                                                "resource_id": permission.resource_id,
-                                            }
-                                        ),
-                                        "logic": "POSITIVE",
-                                        "users": [user.get("id")],
-                                    }
-                                ),
-                            )
-                            try:
-                                resp.raise_for_status()
-                            # 409 is ok, it means the policy already exists
-                            except Exception as e:
-                                if resp.status_code != 409:
-                                    raise e
-                                # just continue to next policy
-                                else:
-                                    continue
-                            policy_id = resp.json().get("id")
-                            policies.append(policy_id)
+                            policy_id = self.create_user_policy(perm, permission)
+                            if policy_id:
+                                policies.append(policy_id)
+                            else:
+                                self.logger.info("Policy already exists in Keycloak")
                         else:
-                            resp = self.keycloak_admin.connection.raw_post(
-                                f"{self.admin_url}/authz/resource-server/policy/group",
-                                data=json.dumps(
-                                    {
-                                        "name": f"Allow group {perm.id} to access resource type {permission.resource_type} with name {permission.resource_name}",
-                                        "description": json.dumps(
-                                            {
-                                                "group_id": perm.id,
-                                                "resource_id": permission.resource_id,
-                                            }
-                                        ),
-                                        "logic": "POSITIVE",
-                                        "groups": [
-                                            {"id": perm.id, "extendChildren": False}
-                                        ],
-                                        "groupsClaim": "",
-                                    }
-                                ),
-                            )
-                            try:
-                                resp.raise_for_status()
-                            # 409 is ok, it means the policy already exists
-                            except Exception as e:
-                                if resp.status_code != 409:
-                                    raise e
-                                else:
-                                    continue
-                            policy_id = resp.json().get("id")
-                            policies.append(policy_id)
+                            policy_id = self.create_group_policy(perm, permission)
+                            if policy_id:
+                                policies.append(policy_id)
+                            else:
+                                self.logger.info("Policy already exists in Keycloak")
+
                     except KeycloakPostError as e:
                         if "already exists" in str(e):
                             self.logger.info("Policy already exists in Keycloak")
@@ -617,28 +694,17 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 status_code=500, detail="Failed to fetch user permissions"
             )
 
-    def create_role(self, role: Role) -> Role:
-        """
-        Create role in the identity manager for authorization purposes.
+    def get_policies(self) -> list[dict]:
+        try:
+            policies = self.keycloak_admin.connection.raw_get(
+                f"{self.admin_url}/authz/resource-server/policy"
+            ).json()
+            return policies
+        except KeycloakGetError as e:
+            self.logger.error("Failed to fetch policies from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch policies")
 
-        This method is used to define new role that can be used to control
-        access to resources. It allows specifying the resources, scopes, and users
-        or groups associated with each role.
-
-        Args:
-            role (Role): A role object, containing the
-                                resource, scope, and user or group information.
-        """
-        resp = self.keycloak_admin.create_client_role(
-            self.client_id,
-            {
-                "name": role["name"],
-                "description": f"Role for {role['name']}",
-            },
-        )
-        return resp
-
-    def _get_roles(self) -> list[Role]:
+    def get_roles(self) -> list[Role]:
         """
         Get roles in the identity manager for authorization purposes.
 
@@ -685,7 +751,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 scopes = self.keycloak_admin.connection.raw_get(
                     f"{self.admin_url}/authz/resource-server/policy/{dependentPoliciesId}/scopes",
                 ).json()
-                roles_dto[role_id].scopes.update(scopes)
+                scope_names = [scope["name"] for scope in scopes]
+                roles_dto[role_id].scopes.update(scope_names)
             return list(roles_dto.values())
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch roles from Keycloak: %s", str(e))

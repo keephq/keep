@@ -18,7 +18,13 @@ for name, obj in inspect.getmembers(rbac_module):
         and issubclass(obj, rbac_module.Role)
         and obj != rbac_module.Role
     ):
-        PREDEFINED_ROLES.append({"name": obj.get_name(), "scopes": obj.SCOPES})
+        PREDEFINED_ROLES.append(
+            {
+                "name": obj.get_name(),
+                "scopes": obj.SCOPES,
+                "description": obj.DESCRIPTION,
+            }
+        )
 
 
 class BaseIdentityManager(metaclass=abc.ABCMeta):

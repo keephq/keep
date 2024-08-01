@@ -21,7 +21,7 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useUsers } from "utils/hooks/useUsers";
 import { usePermissions } from "utils/hooks/usePermissions";
 import { getApiURL } from "utils/apiUrl";
-
+import "./multiselect.css";
 interface Props {
   accessToken: string;
 }
@@ -148,6 +148,7 @@ export default function PermissionsTab({ accessToken }: Props) {
                 <TableCell className="w-2/3">
                   <MultiSelect
                     placeholder="Select permissions"
+                    className="custom-multiselect"
                     value={selectedPermissions[preset.id] || []}
                     onValueChange={(value) => handlePermissionChange(preset.id, value)}
                   >

@@ -46,20 +46,20 @@ class Role:
 # Noc has read permissions and it can assign itself to alert
 class Noc(Role):
     SCOPES = ["read:*"]
-    DESCRIPTION = "Noc has read permissions and it can assign itself to alert"
+    DESCRIPTION = "read permissions and assign itself to alert"
 
 
 # Admin has all permissions
 class Admin(Role):
     SCOPES = ["read:*", "write:*", "delete:*", "update:*"]
-    DESCRIPTION = "Admin has all permissions"
+    DESCRIPTION = "do everything"
 
 
 # Webhook has write:alert permission to write alerts
 # this is internal role used by API keys
 class Webhook(Role):
     SCOPES = ["write:alert"]
-    DESCRIPTION = "Webhook has write:alert permission to write alerts"
+    DESCRIPTION = "write alerts using API keys"
 
 
 def get_role_by_role_name(role_name: str) -> list[str]:

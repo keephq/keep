@@ -1,0 +1,48 @@
+/* Override styles for the MultiSelect component */
+.custom-multiselect .h-6 {
+    height: auto !important;
+  }
+
+  .custom-multiselect .flex-nowrap {
+    flex-wrap: wrap !important;
+  }
+
+  .custom-multiselect .overflow-x-scroll {
+    overflow-x: hidden !important;
+    overflow-y: visible !important; /* Allow vertical overflow to be visible */
+  }
+
+  .custom-multiselect .max-w-[300px],
+  .custom-multiselect .lg:max-w-[300px] {
+    max-width: none !important;
+  }
+
+  .custom-multiselect .flex-nowrap > div {
+    max-width: 300px !important; /* Increase max-width as needed */
+    margin: 4px 0 !important; /* Add equal margin to top and bottom */
+    background-color: rgba(234, 88, 12, 0.1) !important; /* Set background color with opacity */
+    color: rgb(234, 88, 12) !important; /* Set text color */
+    border-radius: 0.25rem !important; /* Set border radius */
+    display: inline-flex !important; /* Set display to inline-flex */
+    justify-content: center !important; /* Center content horizontally */
+    align-items: center !important; /* Center content vertically */
+    cursor: default !important; /* Set cursor to default */
+    padding: 0.25rem 1rem !important; /* Set padding */
+    font-size: 0.875rem !important; /* Set font size */
+    margin-left: 0.25rem !important; /* Add margin to the left */
+    border: 1px solid rgba(234, 88, 12, 0.2) !important; /* Set border color and opacity */
+    box-sizing: border-box !important; /* Set box-sizing to border-box */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; /* Add shadow for visual separation */
+  }
+
+  .custom-multiselect .text-xs {
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding: 2px 0 !important; /* Add padding to create space between lines */
+  }
+
+  /* Ensure the MultiSelect container can grow as needed */
+  .custom-multiselect .relative {
+    max-height: none !important; /* Remove max-height to prevent scrolling */
+    overflow: visible !important; /* Ensure overflow is visible */
+  }

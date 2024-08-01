@@ -1592,7 +1592,9 @@ def get_provider_distribution(tenant_id: str) -> dict:
     return provider_distribution
 
 
-def get_presets(tenant_id: str, email, preset_ids: list[str]) -> List[Dict[str, Any]]:
+def get_presets(
+    tenant_id: str, email, preset_ids: list[str] = None
+) -> List[Dict[str, Any]]:
     with Session(engine) as session:
         # v2 with RBAC and roles
         if preset_ids:
