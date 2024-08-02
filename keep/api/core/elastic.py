@@ -198,6 +198,8 @@ class ElasticClient:
             # change severity to number so we can sort by it
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
+            alert = alert.dict()
+            alert["dismissed"] = bool(alert["dismissed"])
             self._client.index(
                 index=self.alerts_index,
                 body=alert.dict(),
